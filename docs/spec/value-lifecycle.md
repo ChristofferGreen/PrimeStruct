@@ -64,6 +64,10 @@
   | `[T move] x` | the value itself (passed by reference, no copy); the callee owns it | the binding ends: it is moved-from after the call |
   | `[T move mut] x` | as for `move`, and it may change it | as for `move` |
 
+- **A `Reference` result as an argument:** a call that returns `Reference<T>` (`[return<Reference<T>>]`) yields its
+  referent, so passing it to a `[Reference<T>]` or `[T mut]` scalar parameter gives the callee the referent itself, not a
+  copy: `bump(borrow_of(slot))` and a closure body called as `body(borrow_of(slot))` write through to `slot`. A call
+  that returns a value still gives the parameter a temporary.
 - **Borrows at a call:** borrowed parameters (`[T]`, `[T mut]`) follow the borrow rules of `type-system.md` for the
   duration of the call: a place passed to a `mut` parameter may not also be passed to any other parameter of the same
   call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved).

@@ -2229,6 +2229,7 @@ are left unarchived.
 | TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5849 | A destructured multi-wait keeps each result's own type | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5850 | A call that returns a `Reference` is a closure argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5851 | A `[ref]` closure written in a generic call infers the closure type | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5852 | `wait(a, b)` takes `Task<void>` handles | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5855 | A method call on a `pick` payload of struct type lowers | [2026-11.md](todo_archive/2026-11.md) | - |

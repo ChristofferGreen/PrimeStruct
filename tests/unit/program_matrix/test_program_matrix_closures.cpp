@@ -683,6 +683,52 @@ main() {
                     170);
 }
 
+// A call that returns `Reference<T>` yields the address of its referent, which a `Reference<T>` or `[T mut]` scalar
+// parameter takes as it is (TODO-5850); it used to borrow a temporary copy of the address.
+TEST_CASE("a call that returns a Reference is a closure and a parameter argument") {
+  runClosureProgram("closure_reference_returning_call_argument",
+                    R"(
+[return<Reference<i64>>]
+borrow_of([Pointer<uninitialized<i64>> mut] slot) {
+  return(borrow(dereference(slot)))
+}
+
+[return<i64>]
+value_of([Pointer<uninitialized<i64>> mut] slot) {
+  [i64] copy{dereference(slot)}
+  return(copy)
+}
+
+[return<void>]
+bump([Reference<i64> mut] value) {
+  value = value + 1i64
+}
+
+[effects(heap_alloc), return<void>]
+apply<Body>([Body mut] body, [Pointer<uninitialized<i64>> mut] slot) {
+  body(borrow_of(slot))
+}
+
+[effects(heap_alloc), return<void>]
+apply_copy<Body>([Body mut] body, [Pointer<uninitialized<i64>> mut] slot) {
+  body(value_of(slot))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Pointer<uninitialized<i64>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<i64>>(1i32)}
+  init(dereference(slot), 5i64)
+  apply([]([Reference<i64> mut] value) { value = value + 10i64 }, slot)
+  apply([]([i64 mut] value) { value = value + 20i64 }, slot)
+  bump(borrow_of(slot))
+  apply_copy([]([i64 mut] value) { value = value + 1000i64 }, slot)
+  [Reference<i64>] after{borrow_of(slot)}
+  return(convert<i32>(after) - 36i32)
+}
+)",
+                    0);
+}
+
 TEST_CASE("ref-captured vector of Function routes passes to a parameter") {
   runClosureProgram("closure_ref_capture_struct_vector_parameter", R"(
 import /std/collections/*

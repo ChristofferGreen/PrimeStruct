@@ -279,6 +279,31 @@ bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
   return true;
 }
 
+// Whether `arg` calls a definition declared `return<Reference<T>>`: the call yields the address of its referent, which
+// a `Reference<T>` or `[T mut]` scalar parameter takes as it is instead of borrowing a temporary copy of it.
+bool isReferenceReturningCallExpr(
+    const Expr &arg, const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall) {
+  if (arg.kind != Expr::Kind::Call || arg.isMethodCall || arg.isBinding || !resolveDefinitionCall) {
+    return false;
+  }
+  const Definition *callee = resolveDefinitionCall(arg);
+  if (callee == nullptr) {
+    return false;
+  }
+  for (const Transform &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argList;
+    if (splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+      return normalizeCollectionBindingTypeName(base) == "Reference";
+    }
+  }
+  return false;
+}
+
 bool resolveIdentityReferenceForwardParamIndex(const Definition &callee, size_t &indexOut) {
   indexOut = 0;
   if (!callee.returnExpr.has_value() || !callee.statements.empty()) {
@@ -726,6 +751,10 @@ bool emitInlineDefinitionCallParameters(
           }
         }
 
+        if (isReferenceReturningCallExpr(arg, resolveDefinitionCall)) {
+          return emitExpr(arg, callerLocals);
+        }
+
         if (!emitExpr(arg, callerLocals)) {
           return false;
         }
@@ -1020,7 +1049,8 @@ bool emitInlineDefinitionCallParameters(
           }
         }
 
-        if (isSimpleCallName(arg, "location") && arg.args.size() == 1) {
+        if ((isSimpleCallName(arg, "location") && arg.args.size() == 1) ||
+            isReferenceReturningCallExpr(arg, resolveDefinitionCall)) {
           return emitExpr(arg, callerLocals);
         }
 

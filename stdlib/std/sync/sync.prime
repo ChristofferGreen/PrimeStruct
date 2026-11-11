@@ -220,8 +220,7 @@ namespace std {
     locked<Body>([Body mut] body) {
       __psmutex_lock(this.cell)
       [MutexHold] hold{MutexHold{this.cell}}
-      [Reference<T>] target{mutexValueBorrow<T>(this.value)}
-      return(body(target))
+      return(body(mutexValueBorrow<T>(this.value)))
     }
 
     [mut]
