@@ -269,12 +269,13 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
       token.append(rewritten);
       token.push_back(closeChar);
       pos = close + 1;
-      // `pick(subject) { arms }`: the arms on the subject's line are part of the operand, so the whole `pick` is
-      // the right side of `name = pick(...) { ... }`.
+      // `pick(subject) { arms }`: the arms block is part of the operand, also when its brace opens on a later
+      // line, so the whole `pick` is the right side of `name = pick(...) { ... }`.
       if (pickHead && openChar == '(' && !tookPickArms) {
         tookPickArms = true;
         size_t armsStart = pos;
-        while (armsStart < input.size() && (input[armsStart] == ' ' || input[armsStart] == '\t')) {
+        while (armsStart < input.size() &&
+               std::isspace(static_cast<unsigned char>(input[armsStart])) != 0) {
           ++armsStart;
         }
         if (armsStart < input.size() && input[armsStart] == '{') {

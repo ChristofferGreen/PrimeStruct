@@ -563,4 +563,19 @@ TEST_CASE("member chain after an indexed element keeps call arguments and later 
         std::string::npos);
 }
 
+TEST_CASE("an assigned pick keeps arms that open on a later line") {
+  const std::string source =
+      "main(){\n  v = pick(get(1i32))\n  {\n    some(x) { x+1i32 }\n    none { 0i32 }\n  }\n"
+      "  w = pick(get(2i32)) { some(x) { x } none { 0i32 } }\n}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(v, pick(get(1i32))\n  {") != std::string::npos);
+  CHECK(output.find("some(x) { plus(x, 1i32) }") != std::string::npos);
+  CHECK(output.find("assign(w, pick(get(2i32)) {") != std::string::npos);
+  CHECK(output.find("assign(v, pick(get(1i32)))") == std::string::npos);
+}
+
 TEST_SUITE_END();

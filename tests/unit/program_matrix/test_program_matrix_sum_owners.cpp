@@ -174,4 +174,37 @@ pass_on([Maybe<String> move] value) {
                      "49\n52\n-1\n54\n54\n55\n55\n");
 }
 
+TEST_CASE("the arms of an assigned pick may open on the line after the subject") {
+  runSumOwnerProgram("sum_pick_arms_on_next_line",
+                     "",
+                     R"(
+    [i32 mut] value{0i32}
+    value = pick(get(1i32))
+    {
+      some(text) { first_byte(text) }
+      none { -1i32 }
+    }
+    print_line(value)
+    value = 1i32 + pick(get(-1i32))
+
+    {
+      some(text) { first_byte(text) }
+      none { -1i32 }
+    }
+    print_line(value)
+    [i32] bound{pick(get(2i32))
+    {
+      some(text) { first_byte(text) }
+      none { -1i32 }
+    }}
+    print_line(bound)
+    pick(get(3i32))
+    {
+      some(text) { print_line(first_byte(text)) }
+      none { print_line(-1i32) }
+    }
+)",
+                     "49\n0\n50\n51\n");
+}
+
 TEST_SUITE_END();
