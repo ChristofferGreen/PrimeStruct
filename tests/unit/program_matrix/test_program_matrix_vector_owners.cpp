@@ -366,6 +366,81 @@ TEST_CASE("a vector of sums destroys the payload of each element") {
                         "4\n54\n3\n0\n49\n2\n-1\n1\n");
 }
 
+TEST_CASE("remove_at and remove_swap destroy the sum element they remove") {
+  // TODO-5887: the removed payload is destroyed by its tag and the elements that move keep theirs.
+  runVectorOwnerProgram("vector_sum_elements_removed",
+                        SumElementDefinitions + R"(
+[effects(heap_alloc, io_out)]
+show_maybe([Maybe<String>] value) {
+  pick(value) {
+    none {
+      print_line(0i32)
+    }
+    some(text) {
+      print_line(first_byte(text))
+    }
+  }
+}
+)",
+                        R"(
+    [vector<Maybe<String>> mut] all{vector<Maybe<String>>{}}
+    all.push(get(5i32))
+    all.push(get(-1i32))
+    all.push(get(6i32))
+    all.push(get(7i32))
+    all.remove_at(0i32)
+    print_line(all.count())
+    show_maybe(all[0i32])
+    show_maybe(all[1i32])
+    show_maybe(all[2i32])
+    all.remove_swap(0i32)
+    print_line(all.count())
+    show_maybe(all[0i32])
+    show_maybe(all[1i32])
+    all.remove_swap(1i32)
+    all.remove_at(0i32)
+    print_line(all.count())
+    [vector<Item> mut] items{make_items(1i32)}
+    items.remove_at(1i32)
+    show(items[0i32])
+    show(items[1i32])
+    items.remove_swap(0i32)
+    print_line(items.count())
+    show(items[0i32])
+    [vector<Maybe<i32>> mut] plain{vector<Maybe<i32>>{}}
+    plain.push(some<i32>(4i32))
+    plain.push(none<i32>())
+    plain.remove_at(0i32)
+    plain.remove_swap(0i32)
+    print_line(plain.count())
+)",
+                        "3\n0\n54\n55\n2\n55\n54\n0\n49\n-1\n1\n-1\n0\n");
+}
+
+TEST_CASE("remove_at past the end of a vector of sums traps") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_sum_remove_out_of_range";
+  program.source = VectorOwnerPrelude + SumElementDefinitions + R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [vector<Maybe<String>> mut] all{vector<Maybe<String>>{}}
+  all.push(get(5i32))
+  all.push(get(6i32))
+  all.remove_swap(1i32)
+  print_line(all.count())
+  all.remove_at(1i32)
+  print_line(99i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "1\n";
+  program.vmStderr = "array index out of bounds\n";
+  program.nativeStderr = "array index out of bounds\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a vector of sums without owning payloads frees only its buffer") {
   runVectorOwnerProgram("vector_sum_elements_plain",
                         SumElementDefinitions,

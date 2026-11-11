@@ -267,7 +267,8 @@
     ownership-sensitive and relocation-sensitive element types on the capacity-guarded heap-backed builtin runtime
     path. The lowerer has a reusable lifecycle-aware destroy-at-pointer helper, a shared vector destroy-at-slot
     primitive, and shared survivor-motion helpers, so both builtin indexed-removal helpers now destroy the removed slot
-    and move survivors without depending on relocation-trivial raw copies. Canonical `/std/collections/vector/*`
+    and move survivors without depending on relocation-trivial raw copies. A sum element (`Maybe<String>`, a user
+    `[sum]`) is removed the same way: its payload is destroyed by its tag. Canonical `/std/collections/vector/*`
     indexed-removal helpers on explicit experimental `Vector<T>` bindings remain exempt from builtin-runtime constraints
     because they route onto the experimental `.prime` implementation instead. There is no corresponding
     SoA indexed-removal surface yet.

@@ -391,7 +391,8 @@ bool SemanticsValidator::extractCollectionVectorElementTypeFromStructPath(
                           importAliases_,
                           fieldBinding,
                           restrictType,
-                          parseError)) {
+                          parseError,
+                          &sumNames_)) {
       continue;
     }
     if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" ||
@@ -552,7 +553,8 @@ bool SemanticsValidator::extractExperimentalSoaColumnElementTypeFromStructPath(
                           importAliases_,
                           fieldBinding,
                           restrictType,
-                          parseError)) {
+                          parseError,
+                          &sumNames_)) {
       continue;
     }
     if (normalizeBindingTypeName(fieldBinding.typeName) != "Pointer" ||

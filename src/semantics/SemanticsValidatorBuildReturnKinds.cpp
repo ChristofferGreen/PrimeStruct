@@ -423,9 +423,27 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
               formatLocalGeneratedStructEscapeDiagnostic(localStructPath);
           break;
         }
+        // A pointer or a reference to a sum, or its uninitialized storage, is an address like one to a struct
+        // (`bufferAlloc<Maybe<String>>` returns `Pointer<Maybe<String>>`).
+        std::string sumTypeText = transform.templateArgs.front();
+        for (;;) {
+          std::string wrapperBase;
+          std::string wrapperArg;
+          std::vector<std::string> wrapperArgs;
+          if (!splitTemplateTypeName(
+                  normalizeBindingTypeName(sumTypeText), wrapperBase, wrapperArg) ||
+              !splitTopLevelTemplateArgs(wrapperArg, wrapperArgs) || wrapperArgs.size() != 1) {
+            break;
+          }
+          wrapperBase = normalizeBindingTypeName(wrapperBase);
+          if (wrapperBase != "Pointer" && wrapperBase != "Reference" &&
+              wrapperBase != "uninitialized") {
+            break;
+          }
+          sumTypeText = wrapperArgs.front();
+        }
         hasExplicitSumReturn =
-            resolveSumDefinitionForTypeText(transform.templateArgs.front(),
-                                            def.namespacePrefix) != nullptr;
+            resolveSumDefinitionForTypeText(sumTypeText, def.namespacePrefix) != nullptr;
         break;
       }
       if (!hasExplicitSumReturn) {

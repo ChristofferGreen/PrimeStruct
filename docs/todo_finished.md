@@ -2249,6 +2249,7 @@ are left unarchived.
 | TODO-5883 | Assigning to a `mut` builtin vector local destroys what it held and copies a place | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5884 | Assigning to a `mut` vector parameter or an inferred vector-of-struct local keeps one owner | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5885 | A vector temporary that is only read is destroyed after the read | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5887 | `remove_at` and `remove_swap` compile on a vector of sums | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5888 | An element of a vector temporary read as a struct or a String | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5889 | `a = move(b)` of a vector local takes the vector over | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5890 | The arms of an assigned `pick` may open on the next line | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
