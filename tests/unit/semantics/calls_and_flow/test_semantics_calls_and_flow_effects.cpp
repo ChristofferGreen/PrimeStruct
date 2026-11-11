@@ -363,6 +363,65 @@ TEST_CASE("destructured multi wait consumes each task handle") {
   CHECK(error.find("task handle already waited: left") != std::string::npos);
 }
 
+namespace {
+
+std::string mixedDestructuredWaitSource(const std::string &tupleImport, const std::string &field) {
+  return tupleImport + R"(
+[struct]
+Reply() {
+  [i32] code{0i32}
+}
+
+[return<i64>]
+compute_left() {
+  return(7i64)
+}
+
+[return<Reply>]
+compute_right() {
+  return(Reply{11i32})
+}
+
+[effects(task, io_out), return<int>]
+main() {
+  [Task<i64>] left{[spawn] compute_left()};
+  [Task<Reply>] right{[spawn] compute_right()};
+  [leftResult rightResult] wait(left, right)
+  print_line(leftResult)
+  return(rightResult.)" +
+         field + R"()
+}
+)";
+}
+
+} // namespace
+
+TEST_CASE("destructured multi wait gives each binding its own result type") {
+  std::string error;
+  CHECK(validateProgram(
+      mixedDestructuredWaitSource("import /std/tuple/*\n", "code"), "/main", error));
+  CHECK(error.empty());
+  error.clear();
+  CHECK_FALSE(validateProgram(
+      mixedDestructuredWaitSource("import /std/tuple/*\n", "missing"), "/main", error));
+  CHECK(error.find("unknown field: missing") != std::string::npos);
+}
+
+TEST_CASE("multi wait without the tuple import is one located diagnostic") {
+  const std::string source = mixedDestructuredWaitSource("", "code");
+  const size_t waitOffset = source.find("wait(left, right)");
+  REQUIRE(waitOffset != std::string::npos);
+  const int waitLine =
+      1 + static_cast<int>(std::count(source.begin(), source.begin() + waitOffset, '\n'));
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK(error.find("wait of several tasks returns a tuple: import /std/tuple/*") !=
+        std::string::npos);
+  CHECK(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == waitLine);
+}
+
 TEST_CASE("return of a waited String task result matches a String return") {
   const auto source = [](const std::string &resultType, const std::string &resultBody) {
     return R"(

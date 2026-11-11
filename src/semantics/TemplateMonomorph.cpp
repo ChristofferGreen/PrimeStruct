@@ -60,25 +60,34 @@ bool monomorphizeTemplates(Program &program,
                            const std::string &entryPath,
                            std::string &error,
                            uint64_t *explicitTemplateArgFactHitCountOut,
-                           uint64_t *implicitTemplateArgFactHitCountOut) {
+                           uint64_t *implicitTemplateArgFactHitCountOut,
+                           int *errorLineOut,
+                           int *errorColumnOut) {
   Context ctx = makeTemplateMonomorphContext(program);
+  const auto fail = [&]() {
+    if (errorLineOut != nullptr && errorColumnOut != nullptr) {
+      *errorLineOut = ctx.errorSourceLine;
+      *errorColumnOut = ctx.errorSourceColumn;
+    }
+    return false;
+  };
 
   if (!applyImplicitAutoTemplates(program, ctx, error)) {
-    return false;
+    return fail();
   }
 
   std::unordered_set<std::string> templateRoots;
   if (!initializeTemplateMonomorphSourceDefinitions(ctx, entryPath, templateRoots, error)) {
-    return false;
+    return fail();
   }
 
   buildImportAliases(ctx);
 
   if (!rewriteMonomorphizedDefinitions(ctx, templateRoots, error)) {
-    return false;
+    return fail();
   }
   if (!rewriteMonomorphizedExecutions(ctx, error)) {
-    return false;
+    return fail();
   }
 
   program.definitions = std::move(ctx.outputDefs);
@@ -92,14 +101,34 @@ bool monomorphizeTemplates(Program &program,
   return true;
 }
 
-bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
-  uint64_t ignoredExplicitTemplateArgFactHits = 0;
-  uint64_t ignoredImplicitTemplateArgFactHits = 0;
+bool monomorphizeTemplates(Program &program,
+                           const std::string &entryPath,
+                           std::string &error,
+                           uint64_t *explicitTemplateArgFactHitCountOut,
+                           uint64_t *implicitTemplateArgFactHitCountOut) {
   return monomorphizeTemplates(program,
                                entryPath,
                                error,
-                               &ignoredExplicitTemplateArgFactHits,
-                               &ignoredImplicitTemplateArgFactHits);
+                               explicitTemplateArgFactHitCountOut,
+                               implicitTemplateArgFactHitCountOut,
+                               nullptr,
+                               nullptr);
+}
+
+// The line and column of the error, when the failed rewrite knows them (0 otherwise).
+bool monomorphizeTemplates(Program &program,
+                           const std::string &entryPath,
+                           std::string &error,
+                           int &errorLineOut,
+                           int &errorColumnOut) {
+  errorLineOut = 0;
+  errorColumnOut = 0;
+  return monomorphizeTemplates(
+      program, entryPath, error, nullptr, nullptr, &errorLineOut, &errorColumnOut);
+}
+
+bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error) {
+  return monomorphizeTemplates(program, entryPath, error, nullptr, nullptr, nullptr, nullptr);
 }
 
 bool collectExplicitTemplateArgResolutionFactsForTesting(

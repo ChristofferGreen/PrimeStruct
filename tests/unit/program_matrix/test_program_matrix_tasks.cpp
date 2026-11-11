@@ -472,6 +472,83 @@ main() {
   runTaskProgram(program);
 }
 
+TEST_CASE("a destructured multi-wait gives each binding its own result type") {
+  program_matrix::ProgramCase program;
+  program.name = "task_destructured_wait_types";
+  program.source = R"(
+import /std/text/*
+import /std/tuple/*
+
+[struct]
+Reply() {
+  [String] body{String{}}
+  [i32] code{0i32}
+}
+
+[return<String> effects(heap_alloc)]
+greet([String] name) {
+  [String mut] out{String{}}
+  out.append("hello ")
+  out.appendString(name)
+  return(out)
+}
+
+[return<Reply> effects(heap_alloc)]
+make_reply([String] text, [i32] code) {
+  [String mut] body{String{}}
+  body.append("body of ")
+  body.appendString(text)
+  return(Reply{body, code})
+}
+
+[return<i64>]
+widen([i32] value) {
+  [i64 mut] result{0i64}
+  result = convert<i64>(value) * 1000i64
+  return(result)
+}
+
+// Destructuring is a statement of the definition's own body (not of a nested block, TODO-5894).
+[return<void> effects(task, io_out, heap_alloc)]
+round() {
+  [String mut] who{String{}}
+  who.append("world, a name long enough to live on the string heap")
+  [Task<String>] x{[spawn] greet(who)};
+  [Task<Reply>] y{[spawn] make_reply(who, 7i32)};
+  [a b] wait(x, y)
+  print_line(a.count())
+  print_line(b.code)
+  [Task<i64>] w{[spawn] widen(3i32)};
+  [Task<String>] x2{[spawn] greet(who)};
+  [Task<Reply>] y2{[spawn] make_reply(who, 9i32)};
+  [n line reply] wait(w, x2, y2)
+  print_line(n)
+  print_line(line.count())
+  print_line(reply.code)
+  print_line(reply.body.count())
+  [auto] pair{make_tuple(widen(2i32), make_reply(who, 5i32))}
+  [wide made] pair
+  print_line(wide)
+  print_line(made.code)
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  round()
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "58\n7\n3000\n58\n9\n60\n2000\n5\n0\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 TEST_CASE("struct results of tasks are waited together and in a loop") {
   // Two tasks of a pair run at once here, so only the spawner's heap is measured.
   program_matrix::ProgramCase program;

@@ -2228,6 +2228,7 @@ are left unarchived.
 | TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5849 | A destructured multi-wait keeps each result's own type | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5855 | A method call on a `pick` payload of struct type lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5856 | `pick` on a call result frees an owning payload | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5857 | A `vector<T>` payload of a sum reads its count and elements in a `pick` arm | [2026-11.md](todo_archive/2026-11.md) | - |

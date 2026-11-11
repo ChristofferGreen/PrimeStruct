@@ -341,8 +341,12 @@ Expr makeTupleDestructuringBindingExpr(const std::string &bindingName,
   binding.kind = Expr::Kind::Call;
   binding.name = bindingName;
   binding.sourceName = bindingName;
-  binding.sourceLine = source.sourceLine;
-  binding.sourceColumn = source.sourceColumn;
+  // Each binding at its own name's position: the type facts of inferred locals are keyed by position, and bindings
+  // that shared the statement's would share one type.
+  const Transform &nameEntry = source.transforms[index];
+  const bool hasNamePosition = nameEntry.sourceLine > 0;
+  binding.sourceLine = hasNamePosition ? nameEntry.sourceLine : source.sourceLine;
+  binding.sourceColumn = hasNamePosition ? nameEntry.sourceColumn : source.sourceColumn;
   binding.isBinding = true;
   Transform autoTransform;
   autoTransform.name = "auto";

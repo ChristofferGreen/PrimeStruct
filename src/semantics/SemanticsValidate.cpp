@@ -52,7 +52,11 @@
 namespace primec {
 
 namespace semantics {
-bool monomorphizeTemplates(Program &program, const std::string &entryPath, std::string &error);
+bool monomorphizeTemplates(Program &program,
+                           const std::string &entryPath,
+                           std::string &error,
+                           int &errorLineOut,
+                           int &errorColumnOut);
 
 namespace {
 
@@ -414,8 +418,13 @@ bool runSemanticValidationManifestPass(
       return rewriteCompileTimeIfBranches(state.program, true, state.error);
     case PassId::TemplateMonomorphization:
       try {
+        int errorLine = 0;
+        int errorColumn = 0;
         if (!semantics::monomorphizeTemplates(
-                state.program, state.entryPath, state.error)) {
+                state.program, state.entryPath, state.error, errorLine, errorColumn)) {
+          if (errorLine > 0) {
+            DiagnosticSink(state.diagnosticInfo).capturePrimarySpanIfUnset(errorLine, errorColumn);
+          }
           return false;
         }
         return semantics::rewriteReflectionGeneratedHelpersForPackSpecializations(

@@ -193,7 +193,10 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   arguments and homogeneous `args<T>` spread forwarding are rejected.
   Tuple destructuring, such as `[left right] pair`, is accepted for named
   ordinary tuple values and lowers to the same `get<I, Ts...>` helper path in
-  tuple order. Destructuring rejects non-tuple operands, arity mismatches,
+  tuple order; each name is a binding of its own element's type, so
+  `[size reply] pair` of a `tuple<i64, Reply>` gives an `i64` and a `Reply`.
+  The statement is expanded in a definition's own body. Destructuring rejects
+  non-tuple operands, arity mismatches,
   duplicate names, mixed type/modifier entries, and borrowed tuple operands.
   Imported `get_ref<I, Ts...>(location(value))` type-checks as
   `Reference<TI>` when borrowed field access is available, but direct native

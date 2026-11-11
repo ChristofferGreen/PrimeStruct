@@ -479,6 +479,11 @@ The statement is sugar for a hidden tuple binding of `wait(left, right)`
 followed by tuple destructuring of it, so a pattern with the wrong number of
 names is `tuple destructuring arity mismatch: pattern has 3 names but tuple has
 2 elements`, and a later `wait(left)` is `task handle already waited: left`.
+Each name is a binding of its own task's result type: with a `Task<String>` and
+a `Task<Reply>`, the first name is a `String` and the second a `Reply`.
+
+A multi-wait needs the tuple import. Without it the `wait` is the diagnostic
+`wait of several tasks returns a tuple: import /std/tuple/*`.
 
 Semantically:
 

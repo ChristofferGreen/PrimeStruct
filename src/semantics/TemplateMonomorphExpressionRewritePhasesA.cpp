@@ -205,6 +205,13 @@ PhaseStatus rewriteExprPhase2([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
       }
       tupleArgs.push_back(std::move(resolvedArg.text));
     }
+    if (ctx.sourceDefs.find("/std/tuple/tuple") == ctx.sourceDefs.end()) {
+      // The result of a multi-wait is a stdlib tuple, which only a program that imports it has.
+      error = "wait of several tasks returns a tuple: import /std/tuple/*";
+      ctx.errorSourceLine = expr.sourceLine;
+      ctx.errorSourceColumn = expr.sourceColumn;
+      return st.done(false);
+    }
     std::string tuplePath;
     if (!instantiateTemplate("/std/tuple/tuple",
                              tupleArgs,

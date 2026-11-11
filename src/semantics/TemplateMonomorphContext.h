@@ -59,6 +59,11 @@ struct Context {
   explicit Context(Program &inputProgram)
       : program(inputProgram) {}
 
+  // Where the error of a failed rewrite is, when the rewrite knows (0: unknown). The semantic diagnostic takes it as
+  // its primary span.
+  int errorSourceLine = 0;
+  int errorSourceColumn = 0;
+
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
   // Lazily-built, sorted view of sourceDefs' keys, used by
