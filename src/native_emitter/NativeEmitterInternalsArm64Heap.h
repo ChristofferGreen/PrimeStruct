@@ -409,13 +409,23 @@ inline void Arm64Emitter::emitHeapRuntime() {
   emitMessage(FreeMessage, freeMessage);
   emitMessage(ReallocMessage, reallocMessage);
 
+  // A threaded module calls the routines through entries that hold the heap lock (realloc's own calls of alloc and
+  // free go to the routines directly, under its lock).
+  size_t allocEntry = allocIndex;
+  size_t freeEntry = freeIndex;
+  size_t reallocEntry = reallocIndex;
+  if (threaded_) {
+    allocEntry = emitLockedHeapEntry(allocIndex);
+    freeEntry = emitLockedHeapEntry(freeIndex);
+    reallocEntry = emitLockedHeapEntry(reallocIndex);
+  }
   for (const size_t site : heapAllocCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(allocIndex) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(allocEntry) - static_cast<int32_t>(site)));
   }
   for (const size_t site : heapFreeCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(freeIndex) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(freeEntry) - static_cast<int32_t>(site)));
   }
   for (const size_t site : heapReallocCalls_) {
-    patchWord(site, encodeBl(static_cast<int32_t>(reallocIndex) - static_cast<int32_t>(site)));
+    patchWord(site, encodeBl(static_cast<int32_t>(reallocEntry) - static_cast<int32_t>(site)));
   }
 }

@@ -234,13 +234,15 @@ bool validateFunction(const IrModule &module,
     }
     if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&
         target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
-        target != IrValidationTarget::OptCpp) {
-      return failInstruction(functionIndex,
-                             function.name,
-                             instructionIndex,
-                             "task opcodes are only supported by the vm and optimized C++ targets "
-                             "and serialized bytecode",
-                             error);
+        target != IrValidationTarget::OptCpp &&
+        !(target == IrValidationTarget::Native && nativeEmitsByteMemory())) {
+      return failInstruction(
+          functionIndex,
+          function.name,
+          instructionIndex,
+          "task opcodes are only supported by the vm, optimized C++ and arm64 native targets "
+          "and serialized bytecode",
+          error);
     }
     if (inst.op == IrOpcode::CallHost) {
       // The arm64 native backend answers the string heap functions itself and imports any other host function

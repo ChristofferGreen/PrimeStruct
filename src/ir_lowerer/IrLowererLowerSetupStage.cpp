@@ -45,9 +45,6 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.inferenceSetupBootstrap = {};
   stateOut.expandedSource = input.expandedSource;
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
-  stateOut.tasksRunOnScheduler = input.validationTarget == IrValidationTarget::Vm ||
-                                 input.validationTarget == IrValidationTarget::Serialized ||
-                                 input.validationTarget == IrValidationTarget::OptCpp;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
   // The address ABI needs a local address that names the same slot in every frame: the VM and optcpp number all live
@@ -59,6 +56,12 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
 #else
       false;
 #endif
+  // The vm, serialized bytecode, optimized C++ and (where it has threads, TODO-5799) arm64 native run tasks.
+  stateOut.tasksRunOnScheduler =
+      input.validationTarget == IrValidationTarget::Vm ||
+      input.validationTarget == IrValidationTarget::Serialized ||
+      input.validationTarget == IrValidationTarget::OptCpp ||
+      (NativeHasFrameAddresses && input.validationTarget == IrValidationTarget::Native);
   stateOut.realCallAllowStructs =
       input.validationTarget == IrValidationTarget::Vm ||
       input.validationTarget == IrValidationTarget::OptCpp ||

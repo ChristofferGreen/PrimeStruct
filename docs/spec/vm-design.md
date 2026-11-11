@@ -193,6 +193,18 @@
   accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them for native, Wasm and GLSL
   before it looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by
   the native backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `channel` is `1 << 15`.
+- **Tasks on threads (arm64 native, PSIR v34):** the direct Mach-O emitter runs each `TaskSpawn` on a pthread
+  (TODO-5942; `src/native_emitter/NativeEmitterInternalsArm64Tasks.h`). The spawner allocates a task block on the
+  heap (result, `pthread_t`, argc, argv, then the parameters; the handle is its address), fills it from the value
+  stack and calls the spawn routine of the callee, which starts a pthread with an 8 MiB stack (`pthread_create`,
+  bound from libSystem like any imported function) at a thread entry of its own per callee: it saves x19-x30, gives
+  the task a 1 MiB value stack below them, pushes the parameters as a caller would, calls the function and stores
+  x0. A spawn target never takes register arguments. `TaskWait` checks the handle's block header (`task handle
+  already waited` for a freed block, `invalid task handle in IR` otherwise; a freed block that was reused reads as a
+  handle), joins the thread, reads the result and frees the block. A module with `TaskSpawn` takes one spin lock
+  (CASAL, store-release) around the heap routines; a module without it emits the code it did before. A fault leaves
+  through the exit system call, which ends every thread. Atomics, mutexes and conditions are not supported there yet
+  (TODO-5801): validation still rejects them for native.
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,

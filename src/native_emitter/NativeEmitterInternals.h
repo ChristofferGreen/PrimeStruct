@@ -310,6 +310,18 @@ class Arm64Emitter {
   bool usesHeapRuntime() const {
     return !heapAllocCalls_.empty() || !heapFreeCalls_.empty() || !heapReallocCalls_.empty();
   }
+  // Tasks on pthreads (NativeEmitterInternalsArm64Tasks.h): a threaded module (one with TaskSpawn) locks its heap
+  // routines and emits the spawn and wait routines.
+  void setThreaded(bool threaded) {
+    threaded_ = threaded;
+  }
+  bool threaded() const {
+    return threaded_;
+  }
+  bool emitTaskSpawn(uint32_t parameterCount, size_t targetFunction, std::string &error);
+  void emitTaskWait();
+  void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
+                       std::vector<std::pair<size_t, std::string>> &slotLoads);
   const std::vector<size_t> &heapStateFixups() const {
     return heapStateFixups_;
   }
@@ -549,6 +561,8 @@ class Arm64Emitter {
     size_t heapFreeCalls = 0;
     size_t heapReallocCalls = 0;
     size_t heapStateFixups = 0;
+    size_t taskSpawnCalls = 0;
+    size_t taskWaitCalls = 0;
     Arm64InstrumentationCounters counters;
   };
   Checkpoint checkpoint() const {
@@ -557,6 +571,8 @@ class Arm64Emitter {
             heapFreeCalls_.size(),
             heapReallocCalls_.size(),
             heapStateFixups_.size(),
+            taskSpawnCalls_.size(),
+            taskWaitCalls_.size(),
             counters_};
   }
   void rollBack(const Checkpoint &point) {
@@ -565,6 +581,8 @@ class Arm64Emitter {
     heapFreeCalls_.resize(point.heapFreeCalls);
     heapReallocCalls_.resize(point.heapReallocCalls);
     heapStateFixups_.resize(point.heapStateFixups);
+    taskSpawnCalls_.resize(point.taskSpawnCalls);
+    taskWaitCalls_.resize(point.taskWaitCalls);
     counters_ = point.counters;
   }
 
@@ -656,6 +674,8 @@ class Arm64Emitter {
   void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitHeapPoolClass();
   void emitHeapStateAddress();
+  void emitHeapLockAddress();
+  size_t emitLockedHeapEntry(size_t inner);
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);
   void emitWriteSyscall(uint64_t fd, uint8_t bufferReg, uint8_t lengthReg);
@@ -764,6 +784,15 @@ class Arm64Emitter {
   std::vector<size_t> heapFreeCalls_;
   std::vector<size_t> heapReallocCalls_;
   std::vector<size_t> heapStateFixups_;
+  // The BL sites of TaskSpawn (with the spawned function and its parameter count) and TaskWait.
+  struct TaskSpawnCall {
+    size_t site = 0;
+    size_t function = 0;
+    uint32_t parameterCount = 0;
+  };
+  std::vector<TaskSpawnCall> taskSpawnCalls_;
+  std::vector<size_t> taskWaitCalls_;
+  bool threaded_ = false;
   bool registerAllocationEnabled_ = false;
   bool registerAllocationFarBranches_ = false;
 };
@@ -773,6 +802,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
 #include "NativeEmitterInternalsArm64Heap.h"
+#include "NativeEmitterInternalsArm64Tasks.h"
 #include "NativeEmitterInternalsArm64FloatRegisters.h"
 #include "NativeEmitterInternalsArm64RegAlloc.h"
 

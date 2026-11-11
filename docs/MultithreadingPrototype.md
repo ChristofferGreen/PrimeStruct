@@ -516,7 +516,7 @@ VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
 results (TODO-5845), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
 running those tasks on one OS thread each (TODO-5795, docs/spec/vm-design.md,
 Tasks on threads), and `Atomic<i32>` and `Atomic<i64>` on the VM and `optexe`
-([Atomic](#atomic); docs/spec/vm-design.md, Atomics). The leaves are the Multithreading lane of `docs/todo.md`, which
+([Atomic](#atomic); docs/spec/vm-design.md, Atomics). Tasks run on pthreads on arm64 native, with its heap behind one lock (TODO-5942; per-thread heaps and the primitives are TODO-5800 and TODO-5801). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 
@@ -648,8 +648,8 @@ The design is per-thread arenas, with a lock only on a shared slow path:
   (`pthread_getspecific`, null on the main thread). Pooled chunks are aligned to their 256 KiB size and start
   with their owner's state pointer, so `HeapFree` finds the owner by masking the address. A module without
   `TaskSpawn` emits today's routines byte for byte, so single-threaded programs (PrimeScroll) pay nothing in
-  size or startup. The first native step puts one LSE spin lock around the routines; per-thread states replace
-  it in a second step that has to show its gain.
+  size or startup. The first native step (done, TODO-5942) puts one LSE spin lock around the routines, in the
+  module's heap entries; per-thread states replace it in a second step that has to show its gain.
 - **Freed by another thread:** a block freed by a thread other than its owner goes on the owner's remote-free
   list (native: a compare-and-swap push with LSE `casal`; `optexe`: a queue behind the arena's lock), which the
   owner drains when it next allocates (native: when a size class's list is empty). A double free found while

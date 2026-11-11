@@ -320,19 +320,29 @@ TEST_CASE("validation rejects a wait whose operand is not a task handle on every
   CHECK(error.find("invalid task function") != std::string::npos);
 }
 
-TEST_CASE("only the vm and optcpp targets and serialized bytecode accept the task opcodes") {
+TEST_CASE("only the vm, optcpp and arm64 native targets and serialized bytecode accept the task "
+          "opcodes") {
   std::string error;
   CHECK(validateIrModule(twoTasks(), IrValidationTarget::Vm, error));
   CHECK(validateIrModule(twoTasks(), IrValidationTarget::Serialized, error));
   CHECK(validateIrModule(twoTasks(), IrValidationTarget::OptCpp, error));
-  for (const IrValidationTarget target : {IrValidationTarget::Native,
-                                          IrValidationTarget::Cpp,
-                                          IrValidationTarget::Wasm,
-                                          IrValidationTarget::Glsl}) {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  CHECK(validateIrModule(twoTasks(), IrValidationTarget::Native, error));
+  const std::vector<IrValidationTarget> rejecting = {
+      IrValidationTarget::Cpp, IrValidationTarget::Wasm, IrValidationTarget::Glsl};
+#else
+  const std::vector<IrValidationTarget> rejecting = {IrValidationTarget::Native,
+                                                     IrValidationTarget::Cpp,
+                                                     IrValidationTarget::Wasm,
+                                                     IrValidationTarget::Glsl};
+#endif
+  for (const IrValidationTarget target : rejecting) {
     error.clear();
     CHECK_FALSE(validateIrModule(twoTasks(), target, error));
-    CHECK(error.find("task opcodes are only supported by the vm and optimized C++ targets and "
-                     "serialized bytecode") != std::string::npos);
+    CHECK(
+        error.find(
+            "task opcodes are only supported by the vm, optimized C++ and arm64 native targets and "
+            "serialized bytecode") != std::string::npos);
   }
 }
 

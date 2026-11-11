@@ -168,6 +168,14 @@ bool emitNativeFunctions(const IrModule &module,
         }
       }
     }
+    // A spawned function takes its parameters from the value stack: its thread entry pushes them there.
+    for (size_t caller = 0; caller < module.functions.size(); ++caller) {
+      for (const IrInstruction &inst : module.functions[caller].instructions) {
+        if (inst.op == IrOpcode::TaskSpawn && inst.imm < module.functions.size()) {
+          registerArguments[static_cast<size_t>(inst.imm)] = false;
+        }
+      }
+    }
   }
   for (size_t functionIndex : emitOrder) {
     const auto countersBefore = emitter.instrumentationCounters();
@@ -664,6 +672,27 @@ bool emitNativeFunctions(const IrModule &module,
         callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
         break;
       }
+      case IrOpcode::TaskSpawn:
+      case IrOpcode::TaskWait:
+        if constexpr (kIsArm64) {
+          if (inst.op == IrOpcode::TaskWait) {
+            emitter.emitTaskWait();
+            break;
+          }
+          if (inst.imm >= module.functions.size()) {
+            error = "native backend detected invalid call target";
+            return false;
+          }
+          if (!emitter.emitTaskSpawn(module.functions[static_cast<size_t>(inst.imm)].parameterCount,
+                                     static_cast<size_t>(inst.imm),
+                                     error)) {
+            return false;
+          }
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       case IrOpcode::ReturnVoid:
         emitter.emitReturnVoidWithFrameAndLink(layout.framePointerLocalIndex, layout.linkLocalIndex);
         break;

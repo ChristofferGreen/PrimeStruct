@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.tasks");
 
 // Spawned tasks (docs/spec/vm-design.md, Tasks): the VM runs them under its scheduler, on the eager default schedule
-// and on seeds 1 to 8, optexe runs each on a thread, and native runs the spawned calls inline. A program free of races
+// and on seeds 1 to 8, optexe runs each on a thread, and arm64 native runs each on a pthread (the others run the spawned calls inline). A program free of races
 // prints the same on every schedule. Each case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
 namespace {
@@ -832,6 +832,80 @@ main() {
   program.stdoutText = "373\n0\n0\n0\n";
   // The native backend has no heap statistics.
   program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
+// Four tasks that allocate and free blocks from the start: the answers do not depend on the order the tasks run in,
+// and on the threaded backends the heap routines take their lock (arm64 native) or each thread its own arena.
+TEST_CASE("tasks that allocate and free blocks all finish with their answers") {
+  program_matrix::ProgramCase program;
+  program.name = "task_heap_churn";
+  program.source = R"(
+import /std/text/*
+
+[effects(heap_alloc) return<i64>]
+churn([i32] rounds, [i32] width) {
+  [i64 mut] total{0i64}
+  [i32 mut] i{0i32}
+  while(i < rounds) {
+    [String mut] text{String{}}
+    [i32 mut] j{0i32}
+    while(j < width) {
+      text.append("ab")
+      j = j + 1i32
+    }
+    total = total + convert<i64>(text.count())
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[effects(task, heap_alloc, io_out) return<int>]
+main() {
+  [Task<i64>] a{[spawn] churn(2000i32, 3i32)};
+  [Task<i64>] b{[spawn] churn(2000i32, 11i32)};
+  [Task<i64>] c{[spawn] churn(2000i32, 40i32)};
+  [Task<i64>] d{[spawn] churn(2000i32, 300i32)};
+  [i64] ra{wait(a)}
+  [i64] rb{wait(b)}
+  [i64] rc{wait(c)}
+  [i64] rd{wait(d)}
+  print_line(ra)
+  print_line(rb)
+  print_line(rc)
+  print_line(rd)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "12000\n44000\n160000\n1200000\n";
+  runTaskProgram(program);
+}
+
+// A runtime error in a spawned call ends the whole program with exit code 3 and the usual message.
+TEST_CASE("a runtime error in a task stops the program") {
+  program_matrix::ProgramCase program;
+  program.name = "task_runtime_error";
+  program.source = R"(
+[return<i32>]
+pick([i32] index) {
+  [array<i32>] values{array<i32>(10i32, 20i32, 30i32)}
+  return(values[index])
+}
+
+[effects(task, io_out) return<int>]
+main() {
+  print_line(1i32)
+  [Task<i32>] bad{[spawn] pick(7i32)};
+  print_line(wait(bad))
+  print_line(2i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "1\n";
+  program.vmStderr = "array index out of bounds\n";
+  program.nativeStderr = "array index out of bounds\n";
   runTaskProgram(program);
 }
 

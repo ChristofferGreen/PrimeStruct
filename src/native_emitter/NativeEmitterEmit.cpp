@@ -200,6 +200,16 @@ bool buildNativeImage(const IrModule &module,
   X64Emitter emitter;
 #endif
   emitter.setValueStackCacheEnabled(options.enableRegisterCache);
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  // A module with TaskSpawn runs its tasks on pthreads and locks its heap (NativeEmitterInternalsArm64Tasks.h).
+  for (const IrFunction &fn : module.functions) {
+    for (const IrInstruction &inst : fn.instructions) {
+      if (inst.op == IrOpcode::TaskSpawn) {
+        emitter.setThreaded(true);
+      }
+    }
+  }
+#endif
   bool registerAllocation = options.registerAllocation;
   if (const char *forced = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC"); forced != nullptr) {
     registerAllocation = std::string_view(forced) == "1";
@@ -248,7 +258,8 @@ bool buildNativeImage(const IrModule &module,
     const size_t caller = pending.back();
     pending.pop_back();
     for (const IrInstruction &inst : module.functions[caller].instructions) {
-      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+      if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
+           inst.op == IrOpcode::TaskSpawn) &&
           inst.imm < module.functions.size() && !reachable[static_cast<size_t>(inst.imm)]) {
         reachable[static_cast<size_t>(inst.imm)] = true;
         pending.push_back(static_cast<size_t>(inst.imm));
@@ -296,7 +307,26 @@ bool buildNativeImage(const IrModule &module,
     jit->trampolineOffset = emitter.emitJitRuntime(functionOffsets[entryIndex]);
   }
 #else
-  // The heap routines follow the functions; their allocator state takes the data segment's runtime state.
+  // The task routines (spawn, thread entries, wait) call libSystem's pthread functions and the heap routines; the
+  // heap routines follow them, and their allocator state takes the data segment's runtime state.
+  {
+    std::vector<std::pair<size_t, size_t>> taskCallFixups;
+    std::vector<std::pair<size_t, std::string>> taskSlotLoads;
+    emitter.emitTaskRuntime(taskCallFixups, taskSlotLoads);
+    for (const auto &[codeIndex, function] : taskCallFixups) {
+      callFixups.push_back({codeIndex, function});
+    }
+    for (const auto &[codeIndex, symbol] : taskSlotLoads) {
+      size_t slot = 0;
+      while (slot < hostImports.symbols.size() && hostImports.symbols[slot] != symbol) {
+        ++slot;
+      }
+      if (slot == hostImports.symbols.size()) {
+        hostImports.symbols.push_back(symbol);
+      }
+      hostImports.fixups.push_back({codeIndex, slot});
+    }
+  }
   emitter.emitHeapRuntime();
 #endif
   if (instrumentation != nullptr) {
@@ -368,7 +398,8 @@ bool buildNativeImage(const IrModule &module,
   MachOData machOData;
   machOData.imports = hostImports.symbols;
   machOData.dylibs = options.dylibs;
-  machOData.stateBytes = emitter.usesHeapRuntime() ? HeapStateBytes : 0;
+  machOData.stateBytes =
+      emitter.usesHeapRuntime() ? HeapStateBytes + (emitter.threaded() ? 16 : 0) : 0;
   uint32_t codeBaseOffset = computeMachOCodeOffset(&machOData);
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif
