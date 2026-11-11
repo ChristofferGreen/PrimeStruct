@@ -72,9 +72,9 @@ constexpr uint64_t HeapHeaderMagicBytes = 0x5053484541503032ull;
 constexpr uint64_t HeapHeaderMagicPooled = HeapHeaderMagic + 2;
 constexpr uint64_t HeapHeaderMagicPooledBytes = HeapHeaderMagicBytes + 2;
 constexpr uint64_t HeapHeaderMagicFree = 0x5053484541503046ull;
-constexpr uint64_t HeapPoolMaxSlots = 512;
+constexpr uint64_t HeapPoolMaxSlots = 2048;
 constexpr uint64_t HeapPoolChunkBytes = 256 * 1024;
-constexpr uint64_t HeapPoolClassCount = 31;
+constexpr uint64_t HeapPoolClassCount = 39;
 constexpr uint64_t HeapStateBytes = 16 + 8 * HeapPoolClassCount;
 
 inline uint64_t alignTo(uint64_t value, uint64_t alignment) {

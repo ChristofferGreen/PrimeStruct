@@ -328,6 +328,8 @@ inline void Arm64Emitter::emitHeapRuntime() {
     bind(at, CondCode::Eq);
   }
   emit(encodeLdrRegBase(3, 10, 8));
+  // A text block's size is its text block size plus the header, which may not be whole slots: round up.
+  emitAddRegImm(3, 3, static_cast<uint16_t>(IrSlotBytes - 1));
   emit(lsrImm(3, 3, 4));
   emitHeapPoolClass();
   size_t freeRemoteDone = SIZE_MAX;

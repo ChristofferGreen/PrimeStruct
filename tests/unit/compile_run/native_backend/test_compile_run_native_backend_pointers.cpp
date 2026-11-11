@@ -138,6 +138,22 @@ uint64_t nativePeakFootprint(const std::string &exePath, const std::string &outP
   }
   return 0;
 }
+
+// The page reclaims (minor faults) `/usr/bin/time -l` reports for a run of `exePath` (0 when it reports none).
+uint64_t nativePageReclaims(const std::string &exePath, const std::string &outPath) {
+  const std::string timePath = outPath + ".time";
+  if (runCommand("/usr/bin/time -l " + exePath + " > " + outPath + " 2> " + timePath) != 0) {
+    return 0;
+  }
+  std::istringstream lines(readFile(timePath));
+  std::string line;
+  while (std::getline(lines, line)) {
+    if (line.find("page reclaims") != std::string::npos) {
+      return std::stoull(line);
+    }
+  }
+  return 0;
+}
 } // namespace
 
 TEST_CASE("native heap blocks share pages and freed blocks are reused") {
@@ -197,6 +213,83 @@ main() {
   CHECK(peak > 0);
   CHECK(peak < 16ull * 1024 * 1024);
 #endif
+}
+
+TEST_CASE("native text blocks and 16 KiB blocks freed in a loop are reused") {
+  // 30000 times: a String grows by two appends and is dropped, and a 1025-slot block (what a vector literal
+  // allocates) is allocated and freed. Neither returns a mapping to the system each time: one page reclaim per
+  // iteration would be 30000 or more, and the pooled heap needs a few hundred for the whole run.
+  const std::string source = R"(
+import /std/text/*
+[unsafe return<int> effects(heap_alloc, io_out)]
+main() {
+  [i64 mut] i{0i64}
+  [i64 mut] total{0i64}
+  while(i < 30000i64) {
+    [String mut] s{String{}}
+    s.append("hello")
+    s.append(" world, a text of more than one size class")
+    total = total + convert<i64>(s.count())
+    [mut] box{/std/intrinsics/memory/alloc<i64>(1024i32)}
+    assign(dereference(plus(box, 16i32)), 3i64)
+    total = total + dereference(plus(box, 16i32))
+    /std/intrinsics/memory/free(box)
+    i = i + 1i64
+  }
+  print_line(total)
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_heap_reuse_loop.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_heap_reuse_loop_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_heap_reuse_loop_out.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "1500000\n");
+#if defined(__APPLE__)
+  const uint64_t reclaims = nativePageReclaims(exePath, outPath);
+  CHECK(reclaims > 0);
+  CHECK(reclaims < 3000);
+#endif
+}
+
+TEST_CASE("native text capacities are the string heap's block sizes") {
+  // The pooled heap rounds a block up to a size class, but capacity() stays the VM's block size less the NUL byte.
+  const std::string source = R"(
+import /std/text/*
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [String mut] a{String{}}
+  a.reserve(40i32)
+  print_line(a.capacity())
+  [String mut] b{String{}}
+  b.reserve(100i32)
+  b.append("xyz")
+  print_line(b.capacity())
+  print_line(b.count())
+  [String mut] c{String{}}
+  c.reserve(9000i32)
+  print_line(c.capacity())
+  [String mut] d{String{}}
+  d.reserve(70000i32)
+  print_line(d.capacity())
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_text_capacity.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_text_capacity_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_text_capacity_out.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "47\n111\n3\n10239\n70000\n");
 }
 
 TEST_CASE("native heap realloc keeps the leading slots across pooled and mapped blocks") {

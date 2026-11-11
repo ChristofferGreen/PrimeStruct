@@ -41,29 +41,25 @@ inline void Arm64Emitter::emitTextAlloc() {
   patchCondBranch(jumpLarge, static_cast<int32_t>(sizedIndex - jumpLarge), CondCode::Hi);
   patchCondBranch(jumpSmall, static_cast<int32_t>(sizedIndex - jumpSmall), CondCode::Ls);
 
-  emitAddRegImm(6, 2, static_cast<uint16_t>(IrSlotBytes)); // the block and its header
-  emitMovReg(1, 6);
-  emitMovImm64(0, 0);
-  emitMovImm64(2, MmapProtReadWrite);
-  emitMovImm64(3, MmapFlagsPrivateAnon);
-  emitMovImm64(4, ~0ull);
-  emitMovImm64(5, 0);
-  emitMovImm64(16, SysMmap);
-  emit(encodeSvc());
-  emitCompareRegZero(0);
-  const size_t jumpMapped = emitCondBranchPlaceholder(CondCode::Ge);
-  emitMovImm64(0, 0);
-  const size_t jumpDoneFailed = emitJumpPlaceholder();
-  const size_t mappedIndex = currentWordIndex();
-  patchCondBranch(jumpMapped, static_cast<int32_t>(mappedIndex - jumpMapped), CondCode::Ge);
+  // The block comes from the pooled heap, as a byte region, so a text block that is freed and allocated again costs
+  // no system call (a block above the pool's limit has a mapping of its own). x12 keeps the text block size, which
+  // the heap routines leave alone. The pool rounds the block up to a size class; the header's size is set back to the
+  // text block size plus the header, so capacity() is the VM's and a free rounds the size up to whole slots.
+  emitMovReg(12, 2);
+  emitAddRegImm(1, 2, static_cast<uint16_t>(IrSlotBytes - 1));
+  emit(0xD344FC21u); // LSR x1, x1, #4: the slots that hold the block size
   emitMovImm64(2, HeapHeaderMagicBytes);
-  emit(encodeStrRegBase(2, 0, 0));
-  emit(encodeStrRegBase(6, 0, 8));
-  emitAddRegImm(0, 0, static_cast<uint16_t>(IrSlotBytes));
+  heapAllocCalls_.push_back(currentWordIndex());
+  emit(encodeBl(0));
+  emitCompareRegZero(0);
+  const size_t jumpDoneFailed = emitCondBranchPlaceholder(CondCode::Eq);
+  emitAddRegImm(3, 12, static_cast<uint16_t>(IrSlotBytes));
+  emitSubRegImm(1, 0, 8);
+  emit(encodeStrRegBase(3, 1, 0));
 
   const size_t doneIndex = currentWordIndex();
   patchJump(jumpDoneZero, static_cast<int32_t>(doneIndex - jumpDoneZero));
-  patchJump(jumpDoneFailed, static_cast<int32_t>(doneIndex - jumpDoneFailed));
+  patchCondBranch(jumpDoneFailed, static_cast<int32_t>(doneIndex - jumpDoneFailed), CondCode::Eq);
   emitPushReg(0);
 }
 
@@ -78,7 +74,12 @@ inline void Arm64Emitter::emitTextBlockSize() {
   emit(encodeLdrRegBase(10, 9, 0));
   emitMovImm64(11, HeapHeaderMagicBytes);
   emitCompareReg(10, 11);
+  const size_t jumpMagicOk = emitCondBranchPlaceholder(CondCode::Eq);
+  emitMovImm64(11, HeapHeaderMagicPooledBytes);
+  emitCompareReg(10, 11);
   const size_t jumpInvalid = emitCondBranchPlaceholder(CondCode::Ne);
+  patchCondBranch(
+      jumpMagicOk, static_cast<int32_t>(currentWordIndex() - jumpMagicOk), CondCode::Eq);
   emit(encodeLdrRegBase(8, 9, 8));
   emitSubRegImm(8, 8, static_cast<uint16_t>(IrSlotBytes));
   const size_t endIndex = currentWordIndex();

@@ -267,7 +267,7 @@
   an allocation that are never written cost no memory. The VM, the
   debugger, the native execution tier and the IR-to-C++ and optexe runtimes share one implementation
   (`include/primec/runtime/VmHeapCore.h`), so all of them produce the same addresses. The arm64 native backend uses
-  machine addresses instead: a block of up to 8 KiB (header included) comes from 256 KiB chunks that every size class
+  machine addresses instead: a block of up to 32 KiB (header included) comes from 256 KiB chunks that every size class
   shares (exact sizes up to 128 bytes, then four classes per doubling), a freed one goes on its class's free list and
   is handed out again zeroed, and a larger block has a mapping of its own; a double free or a realloc of a freed block
   prints `invalid heap free address` / `invalid heap realloc address` and exits with code 3
