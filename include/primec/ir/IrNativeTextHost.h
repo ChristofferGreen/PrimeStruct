@@ -8,18 +8,19 @@ namespace primec {
 // answers itself with emitted code. A text block is a byte region of its own sized by the VM's size
 // classes; the pooled heap, statistics, limit and entry arguments are not there yet (docs/todo.md).
 enum class NativeTextHost {
-  NotText,     // not a `__pstext_*` function
-  Alloc,       // __pstext_alloc(size) -> Pointer<u8>
-  TryAlloc,    // __pstext_try_alloc(size) -> Pointer<u8> (null on failure)
-  Free,        // __pstext_free(Pointer<u8>)
-  Capacity,    // __pstext_capacity(Pointer<u8>) -> u64
-  Length,      // __pstext_length(Pointer<u8>) -> i32
-  Usable,      // __pstext_usable(Pointer<u8>) -> u64
-  Argument,    // __pstext_argument(i32) -> Pointer<u8>: the entry argument at the index in a fresh block
-  Move,        // __pstext_move(Pointer<u8> destination, Pointer<u8> source, u64 count): overlap allowed
-  Fill,        // __pstext_fill(Pointer<u8> destination, u64 value, u64 count)
-  Compare,     // __pstext_compare(Pointer<u8> a, Pointer<u8> b, u64 count) -> i32: -1, 0 or 1
-  Find,        // __pstext_find(Pointer<u8> address, u64 count, u64 value) -> i32: the index or -1
+  NotText,  // not a `__pstext_*` function
+  Alloc,    // __pstext_alloc(size) -> Pointer<u8>
+  TryAlloc, // __pstext_try_alloc(size) -> Pointer<u8> (null on failure)
+  Free,     // __pstext_free(Pointer<u8>)
+  Capacity, // __pstext_capacity(Pointer<u8>) -> u64
+  Length,   // __pstext_length(Pointer<u8>) -> i32
+  Usable,   // __pstext_usable(Pointer<u8>) -> u64
+  Argument, // __pstext_argument(i32) -> Pointer<u8>: the entry argument at the index in a fresh block
+  Move,    // __pstext_move(Pointer<u8> destination, Pointer<u8> source, u64 count): overlap allowed
+  Fill,    // __pstext_fill(Pointer<u8> destination, u64 value, u64 count)
+  Compare, // __pstext_compare(Pointer<u8> a, Pointer<u8> b, u64 count) -> i32: -1, 0 or 1
+  Find,    // __pstext_find(Pointer<u8> address, u64 count, u64 value) -> i32: the index or -1
+  Literal, // __pstext_literal(string) -> Pointer<u8>: the address of a string literal's bytes in the image
   Unsupported, // a `__pstext_*` function the native backend does not answer yet
 };
 
@@ -63,6 +64,9 @@ inline NativeTextHost nativeTextHost(std::string_view importName) {
   }
   if (leaf == "__pstext_find") {
     return NativeTextHost::Find;
+  }
+  if (leaf == "__pstext_literal") {
+    return NativeTextHost::Literal;
   }
   return NativeTextHost::Unsupported;
 }

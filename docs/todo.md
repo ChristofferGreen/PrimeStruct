@@ -113,8 +113,8 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
-| TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | ready | optexe-bytes |
 | TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
+| TODO-5938 | A byte loop over one large region on `optexe` takes the cycles it took before the granule table | ready | optexe-bytes |
 | TODO-5847 | A spawned call with a collection parameter or result runs as a task | ready | mt-vm-tasks |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
@@ -263,7 +263,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5840, TODO-5844; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5799, TODO-5800, TODO-5801, TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
@@ -758,19 +758,18 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
   - stop_rule: the debug session on the default schedule; seeded schedules in the debugger are later work.
   - notes: deferred: no debugger user needs tasks yet.
 
-- [ ] TODO-5840: A byte loop over one large region on `optexe` runs as fast as before the granule table
+- [ ] TODO-5938: A byte loop over one large region on `optexe` takes the cycles it took before the granule table
   - owner: ai
   - status: ready
-  - created_at: 2026-11-10
-  - phase: Optimizing backends (found in TODO-5793)
+  - created_at: 2026-11-11
+  - phase: Optimizing backends (residual of TODO-5840)
   - parallel_track: optexe-bytes
-  - scope: TODO-5793 replaced `VmHeapCore`'s last-region cache (three compares against members, but written on every miss) with a per-granule state table (one dependent load and compare, no write). On `optexe` `benchmarks/strings/append_chunks.prime` (43-byte appends into one String growing to 8.6 MB, byte by byte through `ps_store_u8`) takes 10% more CPU time (51.8 ms against 56.9 ms, median of 31 interleaved runs); every other string benchmark is within 4% and two_region_copy is 13% faster. With the check removed entirely both versions are within 2%, so the cost is the check in the hot loop: the generated program calls `VmHeapCore::byteAt` out of line, and forcing it inline (fast path inline, map search out of line) made append_chunks 15-20% slower, not faster. Find where the time goes (instruction count of the String.append loop in the generated code, the inlining of `textStore`) and win it back without a write on the read path.
-  - implementation_notes: include/primec/runtime/VmHeapCoreBody.inc (`byteAt`, `byteAtEdge`), src/backend/IrToOptCppRuntime.h (`ps_load_u8`, `ps_store_u8`); measure with CPU time of interleaved runs (wall time on a shared machine varied by 50%).
+  - scope: TODO-5840 removed the per-byte loop from `String.append` of a literal (one bulk move), which took `append_chunks` from 234e6 to 93e6 cycles, but a loop that stores or loads every byte of one large region through `ps_byte_at` (`pushByte`, `textStore`, `byteAt` loops: `benchmarks/strings/append_bytes.prime`, 2.9e9 instructions, 480e6 cycles) still pays the granule-table check that TODO-5793 added (a dependent load and compare per byte, no write): the 10% cycles the predecessor measured on the byte loop of `append_chunks` before the bulk move (51.8 ms against 56.9 ms). Win it back for loops that remain per byte without a write on the read path, for example a loop that checks the region once per run of bytes (the bulk host functions already check once per call) or a `textStore` range form.
+  - implementation_notes: include/primec/runtime/VmHeapCoreBody.inc (`byteAt`, `byteAtEdge`), src/backend/IrToOptCppRuntime.h (`ps_byte_at`, `ps_load_u8`, `ps_store_u8`). The check inlined into the byte loops costs 8% more instructions on short_strings and made `append_chunks` slower, so `ps_byte_at` stays out of line (TODO-5794 notes). Compare instruction counts and cycles of the program itself (`proc_pid_rusage`), minimum of interleaved runs, on a quiet machine; the one before this change is the build before e8a547504.
   - acceptance:
-    - `append_chunks` on `optexe` within 2% of the pre-TODO-5793 build; the other string benchmarks and two_region_copy no slower than now
+    - `append_bytes` on `optexe` within 2% of the cycles of the build before e8a547504, averaged over several code layouts; no other string benchmark slower than now
     - no write on the byte read path; full release gate green
-  - stop_rule: the optexe byte check; VM changes only if the shared heap code needs them.
-  - notes: TODO-5794 (per-thread heap arenas) left this open: it has no per-thread region cache (a state-table read needs none), and append_chunks runs 0.7% more instructions than before it. Measured there again: the byte check inlined into the byte loops costs 8% more instructions on short_strings, so `ps_byte_at` (src/backend/IrToOptCppRuntime.h) keeps it out of line. The cycles of the same source move by 15% with `-falign-functions`/`-falign-loops`, so compare instruction counts and several layouts, not one CPU time.
+  - stop_rule: the `optexe` byte check of per-byte loops; the bulk host functions and the VM are unchanged.
 
 - [ ] TODO-5844: Short-string `optexe` benchmarks take the cycles they took before the heap arenas
   - owner: ai
@@ -784,6 +783,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - request_heap, request_arena and short_strings on `optexe`: cycles within 3% of the e8a547504 build, averaged over five layouts; instructions no higher than now; the other string benchmarks no slower
     - full release gate green
   - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
+  - notes: TODO-5840 made `String.append` of a literal one bulk move, which cut these benchmarks (instructions and cycles, `proc_pid_rusage`, minimum of three on a machine at a load average of 27 to 64): `short_strings` 4.66e9 and 823e6 -> 3.90e9 and 748e6, `request_arena` 5.54e9 and 1115e6 -> 5.14e9 and 1039e6, `request_heap` 5.37e9 and 1073e6 -> 5.02e9 and 1049e6. That is a gain of 2 to 9% in cycles, the size of the 4 to 7% this task measured, but it does not show the cycles of the e8a547504 build: no build of that commit was made, so the acceptance (cycles within 3% of it, averaged over five layouts) is not checked and the task stays open; the first step is that baseline.
 
 - [ ] TODO-5847: A spawned call with a collection parameter or result runs as a task
   - owner: ai

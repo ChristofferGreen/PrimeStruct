@@ -52,6 +52,12 @@ namespace std {
   __pstext_move([Pointer<u8>] destination, [Pointer<u8>] source, [u64] count) {
   }
 
+  // The address of a string literal's bytes (std/text/view.prime): `append` copies from it in one bulk move, one
+  // range check per call, where a loop of `textStore` checked every byte (a few-byte `replace` costs more that way).
+  [host return<Pointer<u8>>]
+  __pstext_literal([string] text) {
+  }
+
   // fill: sets `count` bytes to the low byte of `value`.
   [host return<void>]
   __pstext_fill([Pointer<u8>] destination, [u64] value, [u64] count) {
@@ -355,9 +361,7 @@ namespace std {
       [i32] extra{text.count()}
       if(extra > 0i32) {
         this.growFor(extra)
-        for([i32 mut] i{0i32}, i < extra, i++) {
-          textStore(this.data, this.fieldLength + i, convert<u8>(at(text, i)))
-        }
+        __pstext_move(textAddress(this.data, this.fieldLength), __pstext_literal(text), convert<u64>(extra))
         this.fieldLength = this.fieldLength + extra
         textStore(this.data, this.fieldLength, 0u8)
       }

@@ -12,7 +12,7 @@ namespace std {
   namespace text {
   namespace view {
   // The address of a string literal's bytes (NUL terminated, valid for the whole run): a byte region the VM and the
-  // optimized C++ runtime make the first time the literal is asked for. Not on the native backends yet.
+  // optimized C++ runtime make the first time the literal is asked for. The arm64 native backend answers it with the address of the bytes in its string table (not NUL terminated); the other native backends do not.
   [host return<Pointer<u8>>]
   __pstext_literal([string] text) {
   }

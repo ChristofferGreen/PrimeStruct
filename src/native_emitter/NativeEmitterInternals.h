@@ -449,6 +449,8 @@ class Arm64Emitter {
   size_t emitPrintStringPlaceholderReg(uint64_t lengthBytes, uint32_t scratchOffset, bool newline, uint8_t fdReg);
   size_t emitFileOpenPlaceholder(uint64_t flags, uint64_t mode);
   size_t emitFileOpenDynamicPlaceholder(uint64_t offsetTableDelta, uint64_t flags, uint64_t mode);
+  // `__pstext_literal`: pops a string index and pushes the address of its bytes in the string table.
+  size_t emitTextLiteral(uint64_t offsetTableDelta);
   void emitOpenResultFromSyscall();
   void emitFileWriteI32(uint32_t scratchOffset, uint32_t scratchBytes);
   void emitFileWriteI64(uint32_t scratchOffset, uint32_t scratchBytes);

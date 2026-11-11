@@ -363,6 +363,9 @@ bool emitNativeFunctions(const IrModule &module,
           case NativeTextHost::Find:
             emitter.emitTextFind();
             break;
+          case NativeTextHost::Literal:
+            stringTableFixups.push_back(emitter.emitTextLiteral(stringTableOffsetDelta));
+            break;
           case NativeTextHost::NotText: {
             // Any other host function is a C function the image imports by name.
             const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];

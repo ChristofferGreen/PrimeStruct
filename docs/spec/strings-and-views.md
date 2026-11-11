@@ -350,9 +350,12 @@ Two steps got there. The string heap fixes of TODO-5640 (an O(1) double-free che
 free blocks, an empty-chunk counter and a one-entry region cache in `byteAt`) took `short_strings` from 110 to 140x
 down to about 9x. The bulk byte host functions of TODO-5629 (`__pstext_move`, `_fill`, `_compare`, `_find`, one
 range check per call, then a library loop on the VM and `optexe` and a plain byte loop on the arm64 native backend)
-took `insert_front`, `copy_text` and `replace_middle` from 20 to 60x to about 1 to 2x. What is left: appending a
-string literal still copies byte by byte from the module string table until the string view lands (TODO-5540), and
-every non-empty `String` takes a heap block (`short_strings`). Lower a budget whenever its ratio drops.
+took `insert_front`, `copy_text` and `replace_middle` from 20 to 60x to about 1 to 2x. Appending a string literal is one bulk move from
+the literal's cached byte region (`__pstext_literal`, the address of the literal's bytes, copied once per literal and
+thread heap) since TODO-5840: `append_chunks` retires 0.35e9 instructions where it retired 1.26e9, `short_strings`
+3.90e9 where it retired 4.66e9. What is left: `replace` and `equalsText` still copy or compare a literal byte by byte
+(two host calls cost more than the loop for a few bytes), and every non-empty `String` takes a heap block
+(`short_strings`). Lower a budget whenever its ratio drops.
 
 Found by the suite: a binding initialized from another `String` binding aliases the heap block and frees it twice
 (TODO-5639); the supported way to duplicate text is a `[String copy]` parameter. Known limits: counts are `i32`, so text
@@ -473,8 +476,9 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   deliberate: a member named `plus` would capture every bare `plus(a, b)` inside the struct. Operands must be names, calls of
   free functions or operator results; bind a field or method-chain result to a local first. `+=` has no token yet, write
   `a = a + b`.
-- Not yet: `Result<..., TextError>` results (the result lane, TODO-5524 to TODO-5526), the native backends for
-  `__pstext_literal` and the float functions, and unifying `string`
+- Not yet: `Result<..., TextError>` results (the result lane, TODO-5524 to TODO-5526), the float functions on the native backends (the arm64 native backend answers
+  `__pstext_literal` since TODO-5840, with the address of the literal's bytes in the image's string table, for
+  `String.append`; the bytes are not NUL terminated there and StringView over it is untested), and unifying `string`
   and `StringView` into the single type described above (TODO-5621).
 
 ## Host functions and embedding

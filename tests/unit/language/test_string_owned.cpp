@@ -1,10 +1,13 @@
 #include "primec/embed/Script.h"
 #include "primec/embed/ScriptEngine.h"
+#include "primec/ir/Ir.h"
+#include "primec/ir/IrSerializer.h"
 
 #include "third_party/doctest.h"
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 using primec::embed::ScriptEngine;
 
@@ -675,4 +678,60 @@ TEST_CASE("move-only structs move but do not copy") {
   rejected("  [Handle] a{Handle{}}\n  [Handle] b{a}\n  return(0i32)");
   rejected("  [Handle] a{Handle{}}\n  [Handle mut] b{Handle{}}\n  b = a\n  return(0i32)");
   rejected("  [Handle] a{Handle{}}\n  return(keep(a))");
+}
+
+// `append` of a literal is one bulk move from the literal's bytes, not a store per byte: every length
+// of text, across the growth of the block, ends up where a byte loop put it.
+TEST_CASE("appending literals of every length keeps the bytes in order") {
+  CHECK(
+      exitOf(
+          "  [String mut] s{String{}}\n"
+          "  s.append(\"\")\n"
+          "  s.append(\"a\")\n"
+          "  s.append(\"hello world, this is a longer chunk of text that grows the block past its "
+          "first size\")\n"
+          "  s.append(\"\")\n"
+          "  s.append(\"tail\")\n"
+          "  [bool] ok{s.count() == 89i32 && s.byteAt(0i32) == 97u8 && s.byteAt(1i32) == 104u8 && "
+          "s.byteAt(85i32) == 116u8 && s.byteAt(88i32) == 108u8 && s.equalsText(\"ahello world, "
+          "this is a longer chunk "
+          "of text that grows the block past its first sizetail\")}\n"
+          "  return(if(ok, then() { 1i32 }, else() { 0i32 }))") == 1);
+  CHECK(exitOf("  [String mut] s{String{}}\n"
+               "  [i32 mut] total{0i32}\n"
+               "  for([i32 mut] i{0i32}, i < 300i32, i++) {\n"
+               "    s.append(\"0123456789\")\n"
+               "    s.append(\"x\")\n"
+               "  }\n"
+               "  for([i32 mut] i{0i32}, i < s.count(), i++) {\n"
+               "    total = total + convert<i32>(s.byteAt(i))\n"
+               "  }\n"
+               "  return(if(s.count() == 3300i32 && total == 300i32 * (525i32 + 120i32), then() { "
+               "1i32 }, "
+               "else() { 0i32 }))") == 1);
+}
+
+// The structural claim: nothing in a program that appends a literal steps through the module string table byte by
+// byte (`append` is inlined into `main`), and it makes the two bulk host calls (the literal's address and the move).
+TEST_CASE("String append has no per-byte loop over its literal") {
+  ScriptEngine engine;
+  const auto script =
+      engine.compileSource("/string_append_ir.prime",
+                           Prelude + "[return<int> effects(heap_alloc)]\nmain() {\n  [String mut] "
+                                     "s{String{}}\n  s.append(\"abc\")\n"
+                                     "  return(s.count())\n}\n");
+  REQUIRE(script.valid());
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE_MESSAGE(script.saveBytecode(bytes, error), error);
+  primec::IrModule module;
+  REQUIRE_MESSAGE(primec::deserializeIr(bytes, module, error), error);
+  size_t hostCalls = 0;
+  for (const primec::IrFunction &function : module.functions) {
+    for (const primec::IrInstruction &instruction : function.instructions) {
+      CHECK(instruction.op != primec::IrOpcode::LoadStringByteDynamic);
+      hostCalls += instruction.op == primec::IrOpcode::CallHost ? 1u : 0u;
+    }
+  }
+  CHECK(hostCalls >= 2);
 }

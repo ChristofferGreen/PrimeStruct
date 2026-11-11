@@ -1389,8 +1389,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_u8_scalar_tests)
   # One ctest entry per suite: together they ran long enough to hit the timeout under load.
-  # string_owned (43 cases, 171 s in a loaded gate) and slices (21 cases, 67 s) are shards of ten cases.
-  primestructAddDoctestShards(PrimeStruct_u8_scalar_string_owned PrimeStruct_u8_scalar_tests 43 10 300
+  # string_owned (45 cases, 171 s in a loaded gate) and slices (21 cases, 67 s) are shards of ten cases.
+  primestructAddDoctestShards(PrimeStruct_u8_scalar_string_owned PrimeStruct_u8_scalar_tests 45 10 300
                               "--test-suite=primestruct.language.string_owned")
   primestructAddDoctestShards(PrimeStruct_u8_scalar_slices PrimeStruct_u8_scalar_tests 21 10 300
                               "--test-suite=primestruct.language.slices")

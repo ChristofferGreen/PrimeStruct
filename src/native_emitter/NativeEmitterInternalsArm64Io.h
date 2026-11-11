@@ -152,6 +152,20 @@ inline size_t Arm64Emitter::emitFileOpenDynamicPlaceholder(uint64_t offsetTableD
   return fixupIndex;
 }
 
+inline size_t Arm64Emitter::emitTextLiteral(uint64_t offsetTableDelta) {
+  emitPopReg(0);
+  size_t fixupIndex = emitAdrPlaceholder(1);
+  emitMovImm64(2, offsetTableDelta);
+  emitSubReg(2, 1, 2);
+  emitMovImm64(3, 8);
+  emitMulReg(3, 0, 3);
+  emitAddReg(4, 1, 3);
+  emit(encodeLdrRegBase(4, 4, 0));
+  emitAddReg(5, 2, 4);
+  emitPushReg(5);
+  return fixupIndex;
+}
+
 inline void Arm64Emitter::emitFileWriteI32(uint32_t scratchOffset, uint32_t scratchBytes) {
   emitPopReg(0);
   emitPopReg(1);
