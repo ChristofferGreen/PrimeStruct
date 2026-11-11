@@ -1025,6 +1025,10 @@ bool isFreshBuiltinVectorExpr(
   if (getBuiltinCollectionName(expr, collectionName)) {
     return collectionName == "vector";
   }
+  // A `pick` expression that yields a vector builds a record of its own (`tryEmitPickExpr`).
+  if (isSimpleCallName(expr, "pick") && expr.args.size() == 1 && !expr.bodyArguments.empty()) {
+    return true;
+  }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee == nullptr) {
     return false;

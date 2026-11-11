@@ -650,4 +650,78 @@ make_held() {
   runPickSubjectProgram("pick_payload_fresh_vector_argument", source, "2\n3\n2\n2\n2\n1\n0\n0\n");
 }
 
+TEST_CASE("a pick expression yields a vector") {
+  const std::string source = pickSubjectProgram(VectorPayloadDefinitions + R"(
+[return<i32>]
+count_of_values([vector<i32>] items) {
+  return(items.count())
+}
+)",
+                                                R"(
+    [vector<i32>] kept{pick(get_values(7i32)) { none { vector<i32>{} } some(values) { values } }}
+    print_line(kept.count())
+    print_line(kept[0i32])
+    print_line(kept[1i32])
+    [vector<i32>] empty{pick(get_values(0i32 - 1i32)) { none { vector<i32>{} } some(values) { values } }}
+    print_line(empty.count())
+    [Maybe<vector<i32>>] held{get_values(3i32)}
+    [vector<i32>] from_local{pick(held) { none { vector<i32>{} } some(values) { values } }}
+    print_line(from_local.count())
+    print_line(from_local[1i32])
+    [vector<i32> mut] grown{pick(get_values(7i32)) { none { vector<i32>{} } some(values) { values } }}
+    grown.push(1i32)
+    print_line(grown.count())
+    print_line(count_of_values(pick(get_values(7i32)) { none { vector<i32>{} } some(values) { values } })))");
+  runPickSubjectProgram("pick_vector_result", source, "2\n7\n8\n0\n2\n4\n3\n2\n0\n0\n");
+}
+
+TEST_CASE("a vector a pick expression yields owns its elements") {
+  const std::string source = pickSubjectProgram(VectorPayloadDefinitions + R"(
+[effects(heap_alloc), return<vector<i32>>]
+values_or_empty([i32] first) {
+  [vector<i32>] chosen{pick(get_values(first)) { none { vector<i32>{} } some(values) { values } }}
+  return(chosen)
+}
+
+[effects(heap_alloc), return<Maybe<vector<String>>>]
+get_labels([i32] id) {
+  [vector<String> mut] labels{vector<String>{}}
+  labels.push(label(id))
+  labels.push(label(id + 1i32))
+  return(some<vector<String>>(labels))
+}
+)",
+                                                R"(
+    [vector<i32> mut] other{vector<i32>{}}
+    other.push(9i32)
+    [vector<i32>] taken{pick(get_values(3i32)) { none { vector<i32>{} } some(values) { other } }}
+    print_line(taken.count())
+    print_line(taken[0i32])
+    [vector<i32>] returned{values_or_empty(4i32)}
+    print_line(returned.count())
+    print_line(returned[1i32])
+    [vector<i32>] returned_empty{values_or_empty(0i32 - 1i32)}
+    print_line(returned_empty.count())
+    [vector<String>] lines{pick(get_labels(4i32)) { none { vector<String>{} } some(values) { values } }}
+    print_line(lines.count())
+    print_line(first_byte(lines[1i32])))");
+  runPickSubjectProgram("pick_vector_result_owned", source, "1\n9\n2\n5\n0\n2\n53\n0\n0\n");
+}
+
+TEST_CASE("pick arms that yield a vector and an integer are rejected") {
+  const program_matrix::Outcome outcome = compilePickProgram(
+      "pick_vector_result_mismatch",
+      "import /std/maybe/*\nimport /std/collections/*\n" + VectorPayloadDefinitions + R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [vector<i32>] kept{pick(get_values(7i32)) { none { vector<i32>{} } some(values) { 1i32 } }}
+  print_line(kept.count())
+  return(0i32)
+}
+)");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("pick branches must return compatible types") != std::string::npos,
+                outcome.err);
+}
+
 TEST_SUITE_END();

@@ -749,11 +749,14 @@ namespace primec::ir_lowerer {
       return true;
     }
 
-    std::optional<bool> SumHelpersContext::resolveSemanticProductPickAggregateResultStructPath(const Expr &valueExpr,
-            const Definition &sumDef,
-            const SumVariant &variant,
-            std::string &structPathOut) {
+    std::optional<bool> SumHelpersContext::resolveSemanticProductPickAggregateResultStructPath(
+        const Expr &valueExpr,
+        const Definition &sumDef,
+        const SumVariant &variant,
+        std::string &structPathOut,
+        std::string &vectorLifecyclePathOut) {
       structPathOut.clear();
+      vectorLifecyclePathOut.clear();
       const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
       if (!semanticTargets.hasSemanticProduct || valueExpr.semanticNodeId == 0) {
         return std::nullopt;
@@ -803,6 +806,16 @@ namespace primec::ir_lowerer {
         if (valueKindOrPointerLikeFromTypeName(normalizedTypeText) != LocalInfo::ValueKind::Unknown) {
           return true;
         }
+        // A `vector<T>` result is its five-slot record, copied and destroyed by the builtin vector helpers.
+        if (std::string vectorPath;
+            ir_lowerer::resolveVectorPayloadRecordPath(normalizedTypeText, structPathOut) &&
+            ir_lowerer::resolveBuiltinVectorElementStructPath(
+                normalizedTypeText, sumDef.namespacePrefix, resolveStructTypeName, vectorPath) &&
+            ir_lowerer::isNestedBuiltinVectorElementPath(vectorPath)) {
+          vectorLifecyclePathOut = std::move(vectorPath);
+          return true;
+        }
+        structPathOut.clear();
 
         auto tryResolveStruct = [&](const std::string &namespacePrefix) {
           std::string candidateStructPath;
@@ -833,11 +846,13 @@ namespace primec::ir_lowerer {
     }
 
     bool SumHelpersContext::inferPickAggregateResult(const Expr &expr,
-            const Definition &sumDef,
-            const LocalMap &valueLocals,
-            std::string &structPathOut,
-            StructSlotLayout &layoutOut) {
+                                                     const Definition &sumDef,
+                                                     const LocalMap &valueLocals,
+                                                     std::string &structPathOut,
+                                                     StructSlotLayout &layoutOut,
+                                                     std::string &vectorLifecyclePathOut) {
       structPathOut.clear();
+      vectorLifecyclePathOut.clear();
       bool sawAggregateResult = false;
       for (const Expr &arm : expr.bodyArguments) {
         const bool payloadArm = isPayloadPickArmEnvelope(arm);
@@ -875,9 +890,13 @@ namespace primec::ir_lowerer {
           return false;
         }
         std::string branchStructPath;
+        std::string branchVectorLifecyclePath;
         const std::optional<bool> resolvedBySemanticProduct =
             resolveSemanticProductPickAggregateResultStructPath(
-                *valueExpr, sumDef, *variant, branchStructPath);
+                *valueExpr, sumDef, *variant, branchStructPath, branchVectorLifecyclePath);
+        if (!branchVectorLifecyclePath.empty()) {
+          vectorLifecyclePathOut = branchVectorLifecyclePath;
+        }
         if (resolvedBySemanticProduct.has_value() && !*resolvedBySemanticProduct) {
           return false;
         }
@@ -886,6 +905,7 @@ namespace primec::ir_lowerer {
         }
         if (branchStructPath.empty()) {
           structPathOut.clear();
+          vectorLifecyclePathOut.clear();
           return true;
         }
         if (!sawAggregateResult) {
@@ -900,6 +920,7 @@ namespace primec::ir_lowerer {
       }
       if (!sawAggregateResult) {
         structPathOut.clear();
+        vectorLifecyclePathOut.clear();
         return true;
       }
       if (!resolveStructSlotLayout(structPathOut, layoutOut)) {
@@ -937,11 +958,13 @@ namespace primec::ir_lowerer {
           expr.args.front(), *sumDef, sumPtrLocal, valueLocals, subjectDropFlagLocal);
       std::string aggregateResultStructPath;
       StructSlotLayout aggregateResultLayout;
+      std::string vectorResultLifecyclePath;
       if (!inferPickAggregateResult(expr,
                                     *sumDef,
                                     valueLocals,
                                     aggregateResultStructPath,
-                                    aggregateResultLayout)) {
+                                    aggregateResultLayout,
+                                    vectorResultLifecyclePath)) {
         return LoweredSumPickEmitResult::Error;
       }
       const bool emitsAggregateResult = !aggregateResultStructPath.empty();
@@ -1007,7 +1030,46 @@ namespace primec::ir_lowerer {
           if (!emitStructCopyFromPtrs(resultLocal, srcPtrLocal, aggregateResultLayout.totalSlots)) {
             return LoweredSumPickEmitResult::Error;
           }
-          if (shouldDisarmStructCopySourceExpr(*valueExpr)) {
+          if (!vectorResultLifecyclePath.empty()) {
+            // A vector result owns its buffer: a fresh vector is taken over as it is, and so is a local whose
+            // owner can be released (the payload binding gives up the sum that owns it); any other place is
+            // copied (docs/spec/value-lifecycle.md).
+            int32_t releasedDropFlagLocal = -1;
+            if (valueExpr->kind == Expr::Kind::Name) {
+              if (const auto localIt = branchLocals.find(valueExpr->name);
+                  localIt != branchLocals.end()) {
+                releasedDropFlagLocal = localIt->second.dropFlagLocal;
+              }
+              if (releasedDropFlagLocal < 0 && payloadArm &&
+                  valueExpr->name == arm.args.front().name) {
+                releasedDropFlagLocal = subjectDropFlagLocal;
+              }
+            }
+            if (releasedDropFlagLocal >= 0) {
+              function.instructions.push_back({IrOpcode::PushI32, 0});
+              function.instructions.push_back(
+                  {IrOpcode::StoreLocal, static_cast<uint64_t>(releasedDropFlagLocal)});
+            } else if (!ir_lowerer::isFreshBuiltinVectorExpr(*valueExpr, resolveDefinitionCall)) {
+              bool ranCopyHelper = false;
+              if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
+                      resultLocal,
+                      srcPtrLocal,
+                      vectorResultLifecyclePath,
+                      [&](const std::string &path) -> const Definition * {
+                        auto copyIt = defMap.find(path + "/Copy");
+                        return copyIt == defMap.end() ? nullptr : copyIt->second;
+                      },
+                      resolveStructSlotLayout,
+                      allocTempLocal,
+                      function.instructions,
+                      branchLocals,
+                      emitInlineDefinitionCall,
+                      ranCopyHelper,
+                      error)) {
+                return LoweredSumPickEmitResult::Error;
+              }
+            }
+          } else if (shouldDisarmStructCopySourceExpr(*valueExpr)) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,

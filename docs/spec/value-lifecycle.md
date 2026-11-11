@@ -140,7 +140,9 @@
   `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it
-  like any named vector. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  like any named vector. A `pick` expression whose arms yield a `vector<T>` makes a vector of its own, which the binding,
+  argument or assignment it initializes owns: an arm's fresh vector is taken over, so is an owning vector local, and so
+  is the payload binding, whose sum then no longer destroys the payload; any other place is copied. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a

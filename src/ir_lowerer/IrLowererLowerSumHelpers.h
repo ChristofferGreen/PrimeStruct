@@ -136,8 +136,20 @@ public:
   const Expr * findPickArmValueExpr(const Expr &arm);
   const SumVariant * resolvePickArmVariant(const Definition &sumDef, const Expr &arm);
   bool emitPickArmPrefixStatements(const Expr &arm, const Expr *valueExpr, LocalMap &branchLocals);
-  std::optional<bool> resolveSemanticProductPickAggregateResultStructPath(const Expr &valueExpr, const Definition &sumDef, const SumVariant &variant, std::string &structPathOut);
-  bool inferPickAggregateResult(const Expr &expr, const Definition &sumDef, const LocalMap &valueLocals, std::string &structPathOut, StructSlotLayout &layoutOut);
+  // `vectorLifecyclePathOut` gets the builtin vector element path when the arm yields a `vector<T>`, whose
+  // result is the vector record `structPathOut` names.
+  std::optional<bool>
+  resolveSemanticProductPickAggregateResultStructPath(const Expr &valueExpr,
+                                                      const Definition &sumDef,
+                                                      const SumVariant &variant,
+                                                      std::string &structPathOut,
+                                                      std::string &vectorLifecyclePathOut);
+  bool inferPickAggregateResult(const Expr &expr,
+                                const Definition &sumDef,
+                                const LocalMap &valueLocals,
+                                std::string &structPathOut,
+                                StructSlotLayout &layoutOut,
+                                std::string &vectorLifecyclePathOut);
   LoweredSumPickEmitResult tryEmitPickExpr(const Expr &expr, const LocalMap &valueLocals);
   LoweredSumPickEmitResult tryEmitPickStatement(const Expr &stmt, LocalMap &localsIn);
 
