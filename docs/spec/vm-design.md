@@ -23,6 +23,9 @@
 - **Call-opcode status:** `Call` and `CallVoid` are serialized/validated and execute in both VM and native backends with
   frame/call-stack semantics. Lowering inlines small source-level definitions and emits call opcodes for the rest
   (recursive and larger functions), including recursion up to the VM's call-depth limit.
+  The arguments written at a call are lowered before the inlined callee starts, so a call to the same definition
+  or template instantiation inside one of them (`twice(twice(x))`, `some<String>(f(some<String>(g())))`) is not
+  recursion; a definition inlined into its own body is still rejected (`does not support recursive calls`).
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
 - **PSIR versioning:** current portable IR is PSIR v37 (v24 to v37 are listed in `include/primec/ir/Ir.h`'s opcode

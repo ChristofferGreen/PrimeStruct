@@ -207,4 +207,89 @@ TEST_CASE("the arms of an assigned pick may open on the line after the subject")
                      "49\n0\n50\n51\n");
 }
 
+// The arguments written at a call are evaluated before the callee starts, so a call to the same definition (or to
+// the same instantiation of a template) inside one of them is not recursion.
+TEST_CASE("a call takes a call to the same definition as its argument") {
+  runSumOwnerProgram("sum_owner_same_definition_argument",
+                     R"(
+[effects(heap_alloc), return<String>]
+first_or([Maybe<String>] value) {
+  return(pick(value) {
+    some(text) { text }
+    none { label(0i32) }
+  })
+}
+
+[effects(heap_alloc), return<Maybe<String>>]
+wrap_again([i32] id) {
+  return(some<String>(first_or(get(id))))
+}
+
+[effects(heap_alloc), return<Maybe<vector<i32>>>]
+get_values([i32] id) {
+  if(id < 0i32) {
+    return(none<vector<i32>>())
+  }
+  return(some<vector<i32>>(vector<i32>(id, id + 1i32)))
+}
+
+[effects(heap_alloc), return<Maybe<vector<i32>>>]
+values_or_empty([i32] id) {
+  return(some<vector<i32>>(pick(get_values(id)) {
+    some(values) { values }
+    none { vector<i32>() }
+  }))
+}
+
+[effects(io_out)]
+show_count([Maybe<vector<i32>>] value) {
+  pick(value) {
+    some(values) {
+      print_line(values.count())
+    }
+    none {
+      print_line(-1i32)
+    }
+  }
+}
+
+[return<i32>]
+twice([i32] value) {
+  return(value * 2i32)
+}
+)",
+                     R"(
+    [Maybe<String>] again{some<String>(first_or(get(3i32)))}
+    show(again)
+    show(wrap_again(4i32))
+    show(wrap_again(-1i32))
+    show(some<String>(first_or(some<String>(first_or(get(5i32))))))
+    show_count(values_or_empty(7i32))
+    show_count(values_or_empty(-1i32))
+    print_line(twice(twice(twice(3i32))))
+)",
+                     "51\n52\n48\n53\n2\n0\n24\n");
+}
+
+TEST_CASE("a definition inlined into itself through an argument is still rejected on the VM") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_owner_recursive_argument_rejected";
+  program.source = R"(
+[return<int>]
+same([int] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(same(same(main())))
+}
+)";
+  program.exitCode = 2;
+  program.stdoutText = "";
+  program.vmStderr = "VM lowering error: vm backend does not support recursive calls: /main\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

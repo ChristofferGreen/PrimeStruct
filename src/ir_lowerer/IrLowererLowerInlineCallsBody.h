@@ -436,6 +436,24 @@
       return true;
     }
 
+    // The arguments written at the call site are evaluated in the caller, before the callee
+    // starts, so one of them may call this same definition: `twice(twice(x))` is not recursion.
+    // A default argument belongs to the callee and stays guarded.
+    bool argumentsFromCallSite = callSetup.insertedInlineStackEntry;
+    auto writtenAtCallSite = [&](const Expr *arg) {
+      return arg == nullptr ||
+             (!callExpr.args.empty() && !std::less<const Expr *>{}(arg, callExpr.args.data()) &&
+              std::less<const Expr *>{}(arg, callExpr.args.data() + callExpr.args.size()));
+    };
+    for (const Expr *arg : orderedArgs) {
+      argumentsFromCallSite = argumentsFromCallSite && writtenAtCallSite(arg);
+    }
+    for (const Expr *arg : packedArgs) {
+      argumentsFromCallSite = argumentsFromCallSite && writtenAtCallSite(arg);
+    }
+    if (argumentsFromCallSite) {
+      inlineStack.erase(callee.fullPath);
+    }
     LocalMap calleeLocals;
     if (!ir_lowerer::emitInlineDefinitionCallParameters(
             callParams,
@@ -568,6 +586,9 @@
       }
       popInlineStack();
       return false;
+    }
+    if (argumentsFromCallSite) {
+      inlineStack.insert(callee.fullPath);
     }
     // A `copy` or `move` parameter is the callee's own value, and so is a temporary argument (a
     // call result or constructor nobody else owns): the callee body's scope destroys it unless
