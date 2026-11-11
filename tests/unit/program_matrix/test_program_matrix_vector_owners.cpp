@@ -439,4 +439,86 @@ Bag() {
                         "5\n4\n5\n4\n4\n3\n2\n49\n51\n2\n");
 }
 
+namespace {
+
+const std::string RowDefinitions = R"(
+[struct]
+Row() {
+  [i32] id{0i32}
+  [String] text{String{}}
+}
+
+[effects(heap_alloc), return<vector<Row>>]
+make_rows([i32] id) {
+  [vector<Row> mut] out{vector<Row>{}}
+  out.push(Row{id, label(id)})
+  out.push(Row{id + 1i32, label(id + 1i32)})
+  return(out)
+}
+
+[effects(heap_alloc), return<i32>]
+count_of([i32] first) {
+  return(make_values(first).count())
+}
+)";
+
+} // namespace
+
+TEST_CASE("a vector temporary that is only read is destroyed after the read") {
+  // The receiver of `count()`, `capacity()` or an index with a scalar result is a hidden local of a scope
+  // that spans the read: the buffer and every element are freed once the result is loaded.
+  runVectorOwnerProgram("vector_temporary_read",
+                        RowDefinitions,
+                        R"(
+    print_line(make_values(3i32).count())
+    print_line(make_values(5i32)[0i32])
+    print_line(make_values(5i32).at(1i32))
+    print_line(make_values(7i32).at_unsafe(1i32))
+    print_line(count(make_values(3i32)))
+    print_line(make_values(3i32).capacity() > 0i32)
+    print_line(vector<i32>{1i32, 2i32, 3i32}.count())
+    print_line(make_rows(3i32).count())
+    print_line(make_rows(5i32)[1i32].id)
+    print_line(make_named(3i32).count())
+    print_line(count_of(4i32))
+)",
+                        "2\n5\n6\n8\n2\n1\n3\n2\n6\n2\n2\n");
+}
+
+TEST_CASE(
+    "a vector temporary read in an expression, a condition and a loop is destroyed each time") {
+  runVectorOwnerProgram("vector_temporary_read_nested",
+                        RowDefinitions,
+                        R"(
+    [i32] total{make_values(1i32).count() + make_values(10i32)[1i32]}
+    print_line(total)
+    if(make_values(1i32).count() > 1i32) {
+      print_line(make_rows(8i32)[0i32].id + make_rows(9i32).count())
+    }
+    [i32 mut] sum{0i32}
+    for([i32 mut] i{0i32}, i < make_values(0i32).count(), ++i) {
+      sum = sum + make_values(i)[i]
+    }
+    print_line(sum)
+)",
+                        "13\n10\n2\n");
+}
+
+TEST_CASE("reading a named vector leaves it usable") {
+  runVectorOwnerProgram("vector_named_read",
+                        RowDefinitions,
+                        R"(
+    [vector<i32>] kept{make_values(4i32)}
+    print_line(kept.count())
+    print_line(kept[1i32])
+    print_line(kept.count())
+    [vector<Row>] rows{make_rows(6i32)}
+    print_line(rows.count())
+    print_line(rows[1i32].id)
+    print_line(first_byte(rows[1i32].text))
+    print_line(rows.count())
+)",
+                        "2\n5\n2\n2\n7\n55\n2\n");
+}
+
 TEST_SUITE_END();

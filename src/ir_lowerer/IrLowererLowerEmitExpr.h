@@ -26,6 +26,92 @@
       error = "IR backends do not support lambdas";
       return false;
     }
+    // A fresh builtin vector that is only read (`make_values().count()`, `make_rows()[1i32].id`) is a hidden
+    // local of a scope that spans the read: it is lowered like any named vector and destroyed once the scalar
+    // result is loaded (docs/spec/value-lifecycle.md, Ownership).
+    if (expr.kind == Expr::Kind::Call && !expr.isBinding && !fileScopeStack.empty()) {
+      size_t fieldDepth = 0;
+      const Expr *read = &expr;
+      while (read->isFieldAccess && read->args.size() == 1 &&
+             read->args.front().kind == Expr::Kind::Call) {
+        read = &read->args.front();
+        ++fieldDepth;
+      }
+      const bool countRead =
+          read->args.size() == 1 && fieldDepth == 0 &&
+          (isSimpleCallName(*read, "count") || isSimpleCallName(*read, "capacity"));
+      const bool elementRead = read->args.size() == 2 && (isSimpleCallName(*read, "at") ||
+                                                          isSimpleCallName(*read, "at_unsafe"));
+      if ((countRead || elementRead) && !read->isFieldAccess && !read->isBinding &&
+          read->bodyArguments.empty() &&
+          ir_lowerer::isFreshBuiltinVectorExpr(read->args.front(), [&](const Expr &candidate) {
+            return resolveDefinitionCall(candidate);
+          })) {
+        const Definition *reader = read->isMethodCall ? resolveMethodCallDefinition(*read, localsIn)
+                                                      : resolveDefinitionCall(*read);
+        const auto resultKind =
+            countRead ? LocalInfo::ValueKind::Int32 : inferExprKind(expr, localsIn);
+        const bool scalarResult = resultKind != LocalInfo::ValueKind::Unknown &&
+                                  resultKind != LocalInfo::ValueKind::String &&
+                                  (countRead || inferStructExprPath(expr, localsIn).empty());
+        if ((reader == nullptr || reader->fullPath.rfind("/std/", 0) == 0) && scalarResult) {
+          const Expr &receiver = read->args.front();
+          Expr hiddenBinding;
+          hiddenBinding.kind = Expr::Kind::Call;
+          hiddenBinding.isBinding = true;
+          hiddenBinding.name = "__vector_read_" + std::to_string(allocTempLocal());
+          hiddenBinding.namespacePrefix = receiver.namespacePrefix;
+          hiddenBinding.sourceLine = receiver.sourceLine;
+          hiddenBinding.sourceColumn = receiver.sourceColumn;
+          hiddenBinding.args.push_back(receiver);
+          // The declared type of the hidden local: the constructor's element or the callee's return type.
+          Transform vectorType;
+          vectorType.name = "vector";
+          std::string collectionName;
+          if (getBuiltinCollectionName(receiver, collectionName)) {
+            vectorType.templateArgs = receiver.templateArgs;
+          } else if (const Definition *maker = resolveDefinitionCall(receiver); maker != nullptr) {
+            hiddenBinding.namespacePrefix = maker->namespacePrefix;
+            for (const auto &transform : maker->transforms) {
+              std::string base;
+              std::string elementText;
+              if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+                  splitTemplateTypeName(
+                      trimTemplateTypeText(transform.templateArgs.front()), base, elementText)) {
+                vectorType.templateArgs.push_back(trimTemplateTypeText(elementText));
+                break;
+              }
+            }
+          }
+          if (vectorType.templateArgs.size() == 1) {
+            hiddenBinding.transforms.push_back(std::move(vectorType));
+          }
+          Expr readExpr = expr;
+          Expr *readCopy = &readExpr;
+          for (size_t depth = 0; depth < fieldDepth; ++depth) {
+            readCopy = &readCopy->args.front();
+          }
+          Expr &receiverName = readCopy->args.front();
+          receiverName = Expr{};
+          receiverName.kind = Expr::Kind::Name;
+          receiverName.name = hiddenBinding.name;
+          receiverName.namespacePrefix = receiver.namespacePrefix;
+          pushFileScope();
+          LocalMap readLocals = localsIn;
+          if (!emitStatement(hiddenBinding, readLocals) || !emitExpr(readExpr, readLocals)) {
+            return false;
+          }
+          const int32_t resultLocal = allocTempLocal();
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+          emitFileScopeCleanup(fileScopeStack.back());
+          popFileScope();
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
+          return true;
+        }
+      }
+    }
     const auto stdCollectionsRoot = []() {
       return std::string("/std/collections");
     };

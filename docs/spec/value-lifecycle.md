@@ -88,7 +88,10 @@
   destroyed at the end of its statement (a call result, a constructor statement such as `Named{...}`, a bindings-only
   definition called as a statement, which constructs its implicit struct, and a fresh `vector<T>(...)` or call
   returning one, whose elements are destroyed and buffer freed), and a temporary field-access receiver (`make().id`) is destroyed once the
-  field is read.
+  field is read. A fresh builtin vector that is only read (`make_values().count()`, `capacity()`,
+  `make_values()[0i32]`, `at`, `at_unsafe`, and a scalar field of an element such as `make_rows()[1i32].id`) is
+  destroyed, elements and buffer, once the scalar result is loaded. An element of a vector temporary read as a
+  struct, a `String` or a vector is not supported yet (TODO-5888).
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
   fields that have one. A user `Copy` helper runs after that field-wise copy, so `this` already owns copies of its
