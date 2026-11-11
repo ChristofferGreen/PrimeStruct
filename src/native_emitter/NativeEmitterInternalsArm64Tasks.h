@@ -24,7 +24,9 @@ constexpr uint64_t BlockResult = 0;
 constexpr uint64_t BlockThread = 8;
 constexpr uint64_t BlockArgc = 16;
 constexpr uint64_t BlockArgv = 24;
-constexpr uint64_t BlockArguments = 32;
+constexpr uint64_t BlockDone =
+    32; // set with the gate held when the thread's function has returned (synchronized)
+constexpr uint64_t BlockArguments = 40;
 constexpr uint64_t ThreadStackBytes = 8ull * 1024ull * 1024ull;
 constexpr uint32_t SubSpValueStack =
     0xD14403FFu; // SUB sp, sp, #256, lsl #12 (the 1 MiB value stack)
@@ -70,6 +72,47 @@ inline uint32_t cbnzW(uint8_t rt, int32_t imm19) { // CBNZ Wt
 }
 
 } // namespace arm64_tasks
+
+namespace arm64_atomics {
+
+inline uint32_t ldar(uint8_t rt, uint8_t rn) {
+  return 0xC8DFFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
+}
+inline uint32_t stlr(uint8_t rt, uint8_t rn) {
+  return 0xC89FFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
+}
+inline uint32_t casal(uint8_t compare, uint8_t desired, uint8_t address) {
+  return 0xC8E0FC00u | (static_cast<uint32_t>(compare) << 16) |
+         (static_cast<uint32_t>(address) << 5) | desired;
+}
+inline uint32_t swpal(uint8_t value, uint8_t old, uint8_t address) {
+  return 0xF8E08000u | (static_cast<uint32_t>(value) << 16) |
+         (static_cast<uint32_t>(address) << 5) | old;
+}
+inline uint32_t ldaddal(uint8_t delta, uint8_t old, uint8_t address) {
+  return 0xF8E00000u | (static_cast<uint32_t>(delta) << 16) |
+         (static_cast<uint32_t>(address) << 5) | old;
+}
+inline uint32_t sxtw(uint8_t rd, uint8_t rn) {
+  return 0x93407C00u | (static_cast<uint32_t>(rn) << 5) | rd;
+}
+
+} // namespace arm64_atomics
+
+namespace arm64_sync {
+
+constexpr uint64_t GateOffset = 0;
+constexpr uint64_t ChangedOffset = 64;
+constexpr uint64_t SleepersOffset = 112;
+constexpr uint64_t LiveOffset = 120;
+constexpr uint64_t BlockedOffset = 128;
+constexpr uint64_t RoundOffset = 136;
+constexpr uint64_t MutexSignature = 0x32AAABA7ull; // _PTHREAD_MUTEX_SIG_init
+constexpr uint64_t CondSignature = 0x3CB0B1BBull;  // _PTHREAD_COND_SIG_init
+constexpr uint32_t MrsThreadPointer = 0xD53BD060u; // MRS x0, TPIDRRO_EL0
+constexpr uint32_t AndClearLowBits = 0x927DF000u;  // AND x0, x0, #~7 (rn and rd in bits 5 and 0)
+
+} // namespace arm64_sync
 
 // One spin lock around the heap routines of a threaded module: the entry takes the lock word (CASAL 0 -> 1 until it
 // succeeds), calls the routine and releases it with a store-release. The routine's arguments and result are in
@@ -175,6 +218,14 @@ inline void Arm64Emitter::emitTaskRuntime(std::vector<std::pair<size_t, size_t>>
   emit(encodeStrRegBase(30, 31, 64));
   emit(encodeStrRegBase(0, 31, 72));
   emit(encodeStrRegBase(2, 31, 80));
+  if (sync_) {
+    // The new thread runs program code from now on (the spawner is one of the live threads, so a waiter that counts
+    // before this add cannot see everyone blocked).
+    emitSyncAddress();
+    emitAddRegImm(10, 9, static_cast<uint16_t>(arm64_sync::LiveOffset));
+    emitMovImm64(11, 1);
+    emit(arm64_atomics::ldaddal(11, 12, 10));
+  }
   emit(movSpToReg(0));
   callImport("pthread_attr_init");
   emit(movSpToReg(0));
@@ -236,6 +287,21 @@ inline void Arm64Emitter::emitTaskRuntime(std::vector<std::pair<size_t, size_t>>
     emit(AddSpValueStack);
     emit(encodeLdrRegBase(1, 31, 96));
     emit(encodeStrRegBase(0, 1, static_cast<uint16_t>(BlockResult)));
+    if (sync_) {
+      // With the gate held: the task is done, one thread fewer runs, everyone who sleeps looks again.
+      emit(
+          encodeBl(static_cast<int32_t>(syncGateLock_) - static_cast<int32_t>(currentWordIndex())));
+      emit(encodeLdrRegBase(1, 31, 96));
+      emitMovImm64(2, 1);
+      emit(encodeStrRegBase(2, 1, static_cast<uint16_t>(BlockDone)));
+      emitSyncAddress();
+      emitAddRegImm(10, 9, static_cast<uint16_t>(arm64_sync::LiveOffset));
+      emitMovImm64(11, ~0ull);
+      emit(arm64_atomics::ldaddal(11, 12, 10));
+      emit(encodeBl(static_cast<int32_t>(syncSignal_) - static_cast<int32_t>(currentWordIndex())));
+      emit(encodeBl(static_cast<int32_t>(syncGateUnlock_) -
+                    static_cast<int32_t>(currentWordIndex())));
+    }
     emit(ldpOffset(21, 22, 31, 16));
     emit(ldpOffset(23, 24, 31, 32));
     emit(ldpOffset(25, 26, 31, 48));
@@ -284,6 +350,25 @@ inline void Arm64Emitter::emitTaskRuntime(std::vector<std::pair<size_t, size_t>>
                 encodeBCond(static_cast<int32_t>(currentWordIndex() - at),
                             static_cast<uint8_t>(CondCode::Eq)));
     }
+    if (sync_) {
+      // Sleep until the thread's function has returned (a wait that can never finish is the deadlock fault), then
+      // join it. [24] holds the round this thread was counted in.
+      emit(encodeStrRegBase(31, 31, 24));
+      emit(
+          encodeBl(static_cast<int32_t>(syncGateLock_) - static_cast<int32_t>(currentWordIndex())));
+      const size_t doneLoop = currentWordIndex();
+      emit(encodeLdrRegBase(1, 31, 8));
+      emit(encodeLdrRegBase(2, 1, static_cast<uint16_t>(BlockDone)));
+      const size_t isDone = currentWordIndex();
+      emit(cbnzW(2, 0));
+      emit(0x910003E0u | (24u << 10)); // ADD x0, sp, #24
+      emit(encodeBl(static_cast<int32_t>(syncSleep_) - static_cast<int32_t>(currentWordIndex())));
+      emit(encodeB(static_cast<int32_t>(doneLoop) - static_cast<int32_t>(currentWordIndex())));
+      patchWord(isDone, cbnzW(2, static_cast<int32_t>(currentWordIndex() - isDone)));
+      emit(encodeBl(static_cast<int32_t>(syncGateUnlock_) -
+                    static_cast<int32_t>(currentWordIndex())));
+      emit(encodeLdrRegBase(0, 31, 8));
+    }
     emit(encodeLdrRegBase(0, 0, static_cast<uint16_t>(BlockThread)));
     emit(encodeMovz(1, 0, 0));
     callImport("pthread_join");
@@ -319,31 +404,6 @@ inline void Arm64Emitter::emitTaskRuntime(std::vector<std::pair<size_t, size_t>>
 // operation is sequentially consistent (load-acquire, store-release and the acquire-release forms are RCsc). A
 // 32-bit operation works on the low 32 bits and keeps the 8-byte cell sign-extended, like every i32 value, so it
 // computes in 64 bits on sign-extended operands (add through a compare-and-swap loop).
-namespace arm64_atomics {
-
-inline uint32_t ldar(uint8_t rt, uint8_t rn) {
-  return 0xC8DFFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
-}
-inline uint32_t stlr(uint8_t rt, uint8_t rn) {
-  return 0xC89FFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
-}
-inline uint32_t casal(uint8_t compare, uint8_t desired, uint8_t address) {
-  return 0xC8E0FC00u | (static_cast<uint32_t>(compare) << 16) |
-         (static_cast<uint32_t>(address) << 5) | desired;
-}
-inline uint32_t swpal(uint8_t value, uint8_t old, uint8_t address) {
-  return 0xF8E08000u | (static_cast<uint32_t>(value) << 16) |
-         (static_cast<uint32_t>(address) << 5) | old;
-}
-inline uint32_t ldaddal(uint8_t delta, uint8_t old, uint8_t address) {
-  return 0xF8E00000u | (static_cast<uint32_t>(delta) << 16) |
-         (static_cast<uint32_t>(address) << 5) | old;
-}
-inline uint32_t sxtw(uint8_t rd, uint8_t rn) {
-  return 0x93407C00u | (static_cast<uint32_t>(rn) << 5) | rd;
-}
-
-} // namespace arm64_atomics
 
 inline void Arm64Emitter::emitAtomic(IrOpcode op, uint64_t width) {
   using namespace arm64_atomics;

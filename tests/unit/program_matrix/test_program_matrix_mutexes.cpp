@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.mutexes");
 
 // `/std/sync` `Mutex<T>` (docs/spec/stdlib-reference.md, std/sync): tasks reach one value through copies of a
 // `Mutex`, one at a time. The VM runs each program on the eager default schedule and on seeds 1 to 3, where every
-// lock and unlock is a switch point; optexe runs each task on a thread. Nothing here depends on how the threads are
+// lock and unlock is a switch point; optexe and arm64 native run each task on a thread. Nothing here depends on how the threads are
 // scheduled or on time: a program has one output on every schedule, or (the opposite-order case, VM only) one
 // outcome per seed. Each matrix case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
@@ -17,6 +17,10 @@ void runMutexProgram(program_matrix::ProgramCase program) {
       {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
+  if (program_matrix::nativeSupported()) {
+    configs.push_back({"native-O0", program_matrix::Backend::Native, 0, false});
+    configs.push_back({"native-O2", program_matrix::Backend::Native, 2, false});
+  }
   for (int seed = 1; seed <= 3; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
@@ -235,6 +239,8 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "copy\nmade\n10\ncopy\ncopied\n10\ndestroy\ndestroy\ndestroy\n3\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
   runMutexProgram(program);
 }
 
@@ -346,22 +352,14 @@ main() {
   runMutexProgram(program);
 }
 
-TEST_CASE("the native and Wasm backends reject a program with a mutex by name") {
-  // Making a mutex stores its lock and handle count with atomic opcodes, which these backends meet first; the
+TEST_CASE("the Wasm backend rejects a program with a mutex by name") {
+  // Making a mutex stores its lock and handle count with atomic opcodes, which this backend meets first; the
   // mutex opcodes' own message is checked on hand-built IR in tests/unit/runtime/test_vm_mutexes.cpp.
   const program_matrix::Outcome wasm = compileFor("mutex_rejected_wasm", "wasm", SmallMutexProgram);
   CHECK(wasm.exitCode != 0);
   CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm backend") !=
                     std::string::npos,
                 wasm.err);
-  if (program_matrix::nativeSupported()) {
-    const program_matrix::Outcome native =
-        compileFor("mutex_rejected_native", "native", SmallMutexProgram);
-    CHECK(native.exitCode != 0);
-    CHECK_MESSAGE(native.err.find("mutex operations are not supported by the native backend") !=
-                      std::string::npos,
-                  native.err);
-  }
 }
 
 TEST_SUITE_END();

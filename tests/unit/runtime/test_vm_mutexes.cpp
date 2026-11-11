@@ -329,15 +329,21 @@ TEST_CASE("a mutex operation faults on a bad address and needs its operand") {
   CHECK(underflowRun.error == "IR stack underflow on mutex operation");
 }
 
-TEST_CASE("the native, wasm and glsl targets reject a module with mutex opcodes by name") {
+TEST_CASE("the wasm and glsl targets (and native off arm64 macOS) reject a module with mutex "
+          "opcodes by name") {
   const IrModule module = lockOnly();
   std::string error;
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Serialized, error), error);
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Cpp, error), error);
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Native, error), error);
+#endif
   const std::pair<IrValidationTarget, const char *> rejecting[] = {
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
       {IrValidationTarget::Native, "native"},
+#endif
       {IrValidationTarget::Wasm, "wasm"},
       {IrValidationTarget::WasmBrowser, "wasm-browser"},
       {IrValidationTarget::Glsl, "glsl"},

@@ -320,7 +320,33 @@ class Arm64Emitter {
   }
   bool emitTaskSpawn(uint32_t parameterCount, size_t targetFunction, std::string &error);
   void emitTaskWait();
+  // One atomic, lock, condition or task opcode; `imm` is the opcode's immediate and `spawnedParameters` the parameter
+  // count of the function a TaskSpawn starts.
+  bool
+  emitConcurrencyOpcode(IrOpcode op, uint64_t imm, uint32_t spawnedParameters, std::string &error);
   void emitAtomic(IrOpcode op, uint64_t width);
+  // Locks and conditions (NativeEmitterInternalsArm64Sync.h): a synchronized module (one with a lock or condition
+  // opcode) initializes the program's wait state in its entry function and emits the routines.
+  void setSynchronized(bool synchronized) {
+    sync_ = synchronized;
+  }
+  bool synchronized() const {
+    return sync_;
+  }
+  void emitSyncInit();
+  void emitMutexLock();
+  void emitMutexUnlock();
+  void emitConditionWait();
+  void emitConditionNotify();
+  void emitSyncRuntime(std::vector<std::pair<size_t, std::string>> &slotLoads);
+  // The bytes of runtime state in the data segment: the allocator state, then the heap lock of a threaded or
+  // synchronized module, then the wait state of a synchronized one.
+  uint64_t runtimeStateBytes() const {
+    if (!usesHeapRuntime() && !sync_) {
+      return 0;
+    }
+    return HeapStateBytes + ((threaded_ || sync_) ? 16 : 0) + (sync_ ? 144 : 0);
+  }
   void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
                        std::vector<std::pair<size_t, std::string>> &slotLoads);
   const std::vector<size_t> &heapStateFixups() const {
@@ -564,6 +590,7 @@ class Arm64Emitter {
     size_t heapStateFixups = 0;
     size_t taskSpawnCalls = 0;
     size_t taskWaitCalls = 0;
+    size_t syncCalls[4] = {0, 0, 0, 0};
     Arm64InstrumentationCounters counters;
   };
   Checkpoint checkpoint() const {
@@ -574,6 +601,10 @@ class Arm64Emitter {
             heapStateFixups_.size(),
             taskSpawnCalls_.size(),
             taskWaitCalls_.size(),
+            {mutexLockCalls_.size(),
+             mutexUnlockCalls_.size(),
+             conditionWaitCalls_.size(),
+             conditionNotifyCalls_.size()},
             counters_};
   }
   void rollBack(const Checkpoint &point) {
@@ -584,6 +615,10 @@ class Arm64Emitter {
     heapStateFixups_.resize(point.heapStateFixups);
     taskSpawnCalls_.resize(point.taskSpawnCalls);
     taskWaitCalls_.resize(point.taskWaitCalls);
+    mutexLockCalls_.resize(point.syncCalls[0]);
+    mutexUnlockCalls_.resize(point.syncCalls[1]);
+    conditionWaitCalls_.resize(point.syncCalls[2]);
+    conditionNotifyCalls_.resize(point.syncCalls[3]);
     counters_ = point.counters;
   }
 
@@ -676,6 +711,7 @@ class Arm64Emitter {
   void emitHeapPoolClass();
   void emitHeapStateAddress();
   void emitHeapLockAddress();
+  void emitSyncAddress();
   size_t emitLockedHeapEntry(size_t inner);
 
   void emitStrbRegBase(uint8_t rt, uint8_t rn, uint16_t offsetBytes);
@@ -794,6 +830,16 @@ class Arm64Emitter {
   std::vector<TaskSpawnCall> taskSpawnCalls_;
   std::vector<size_t> taskWaitCalls_;
   bool threaded_ = false;
+  // Locks and conditions: the BL sites of the four opcodes and the entries of the routines the task routines share.
+  std::vector<size_t> mutexLockCalls_;
+  std::vector<size_t> mutexUnlockCalls_;
+  std::vector<size_t> conditionWaitCalls_;
+  std::vector<size_t> conditionNotifyCalls_;
+  bool sync_ = false;
+  size_t syncGateLock_ = 0;
+  size_t syncGateUnlock_ = 0;
+  size_t syncSignal_ = 0;
+  size_t syncSleep_ = 0;
   bool registerAllocationEnabled_ = false;
   bool registerAllocationFarBranches_ = false;
 };
@@ -804,6 +850,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Host.h"
 #include "NativeEmitterInternalsArm64Heap.h"
 #include "NativeEmitterInternalsArm64Tasks.h"
+#include "NativeEmitterInternalsArm64Sync.h"
 #include "NativeEmitterInternalsArm64FloatRegisters.h"
 #include "NativeEmitterInternalsArm64RegAlloc.h"
 

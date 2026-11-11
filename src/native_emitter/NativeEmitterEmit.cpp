@@ -207,6 +207,10 @@ bool buildNativeImage(const IrModule &module,
       if (inst.op == IrOpcode::TaskSpawn) {
         emitter.setThreaded(true);
       }
+      if (inst.op == IrOpcode::MutexLock || inst.op == IrOpcode::MutexUnlock ||
+          inst.op == IrOpcode::ConditionWait || inst.op == IrOpcode::ConditionNotify) {
+        emitter.setSynchronized(true);
+      }
     }
   }
 #endif
@@ -312,6 +316,7 @@ bool buildNativeImage(const IrModule &module,
   {
     std::vector<std::pair<size_t, size_t>> taskCallFixups;
     std::vector<std::pair<size_t, std::string>> taskSlotLoads;
+    emitter.emitSyncRuntime(taskSlotLoads);
     emitter.emitTaskRuntime(taskCallFixups, taskSlotLoads);
     for (const auto &[codeIndex, function] : taskCallFixups) {
       callFixups.push_back({codeIndex, function});
@@ -398,8 +403,7 @@ bool buildNativeImage(const IrModule &module,
   MachOData machOData;
   machOData.imports = hostImports.symbols;
   machOData.dylibs = options.dylibs;
-  machOData.stateBytes =
-      emitter.usesHeapRuntime() ? HeapStateBytes + (emitter.threaded() ? 16 : 0) : 0;
+  machOData.stateBytes = emitter.runtimeStateBytes();
   uint32_t codeBaseOffset = computeMachOCodeOffset(&machOData);
   emitter.setCodeBaseOffset(codeBaseOffset);
 #endif

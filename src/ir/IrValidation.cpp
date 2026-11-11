@@ -65,7 +65,12 @@ bool isConditionOpcode(IrOpcode op) {
 const char *atomicRejectingBackendName(IrValidationTarget target) {
   switch (target) {
   case IrValidationTarget::Native:
+    // arm64 native runs atomics, locks and conditions; the x86_64 emitter does not.
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    return nullptr;
+#else
     return "native";
+#endif
   case IrValidationTarget::Wasm:
     return "wasm";
   case IrValidationTarget::WasmBrowser:
@@ -762,10 +767,6 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
            ++instructionIndex) {
         const IrOpcode op = function.instructions[instructionIndex].op;
-        // arm64 native runs the atomic opcodes; its mutexes and conditions are not emitted yet.
-        if (isAtomicOpcode(op) && target == IrValidationTarget::Native && nativeEmitsByteMemory()) {
-          continue;
-        }
         if (isAtomicOpcode(op) || isMutexOpcode(op)) {
           return failInstruction(functionIndex,
                                  function.name,

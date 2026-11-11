@@ -56,7 +56,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
 #else
       false;
 #endif
-  // The vm, serialized bytecode, optimized C++ and (where it has threads, TODO-5799) arm64 native run tasks.
+  // The vm, serialized bytecode, optimized C++ and (where it has threads) arm64 native run tasks.
   stateOut.tasksRunOnScheduler =
       input.validationTarget == IrValidationTarget::Vm ||
       input.validationTarget == IrValidationTarget::Serialized ||

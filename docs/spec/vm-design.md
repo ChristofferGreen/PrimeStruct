@@ -162,9 +162,15 @@
   condition variable of the program that an unlock signals (`OptCppMutexRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with mutex opcodes, so other programs are
   unchanged). A thread that sleeps for a lock counts as waiting (Tasks on threads, below), so a wait that can
-  never finish is the VM's `deadlock: every task is waiting` there too. IR validation accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them
-  for native, Wasm and GLSL: `mutex operations are not supported by the native backend` (`wasm`, `wasm-browser`,
-  `glsl`). The effect mask bit of `lock` is `1 << 14`.
+  never finish is the VM's `deadlock: every task is waiting` there too. arm64 native (TODO-5951) keeps the holder's thread token (the thread pointer, TPIDRRO_EL0 without its low
+  bits) in the slot: taking a free lock is one `casal`, freeing one nobody sleeps for a store-release; a contended
+  thread sleeps on a program-wide `pthread_cond_t` behind a `pthread_mutex_t` in the data segment, with the live,
+  blocked and round counts of `optexe`'s `OptCppWaitRuntime`, so a wait that can never finish is `deadlock: every
+  task is waiting` there too (`src/native_emitter/NativeEmitterInternalsArm64Sync.h`; the entry function of a module
+  with a lock or condition opcode writes the static initializers of the gate and the condition variable, and its
+  tasks count themselves as live and signal when they end). IR validation accepts the opcodes for the VM, serialized
+  IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `mutex operations are not supported by
+  the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `lock` is `1 << 14`.
 - **Conditions (PSIR v37):** `ConditionWait` and `ConditionNotify` let a task that holds a lock wait until another
   task has changed what the lock guards. A condition is the address of one heap slot. `ConditionWait` pops the
   address of a lock the task holds (on top) and the address of a condition, frees the lock and leaves the task
@@ -194,10 +200,11 @@
   frees the lock with the program's wait gate held, then sleeps on the program's condition variable until the
   count has changed, and a notify adds one and signals when a thread sleeps (`OptCppConditionRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with condition opcodes, so other programs are
-  unchanged). A thread that sleeps for a notify counts as waiting (Tasks on threads, below). IR validation
-  accepts the opcodes for the VM, serialized IR and the C++ emitters and rejects them for native, Wasm and GLSL
-  before it looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by
-  the native backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `channel` is `1 << 15`.
+  unchanged). A thread that sleeps for a notify counts as waiting (Tasks on threads, below). arm64 native sleeps a condition
+  waiter on the same program-wide condition variable (the slot counts the notifies). IR validation accepts the
+  opcodes for the VM, serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL before it
+  looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by the wasm
+  backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `channel` is `1 << 15`.
 - **Tasks on threads (arm64 native, PSIR v34):** the direct Mach-O emitter runs each `TaskSpawn` on a pthread
   (TODO-5942; `src/native_emitter/NativeEmitterInternalsArm64Tasks.h`). The spawner allocates a task block on the
   heap (result, `pthread_t`, argc, argv, then the parameters; the handle is its address), fills it from the value
@@ -208,8 +215,7 @@
   already waited` for a freed block, `invalid task handle in IR` otherwise; a freed block that was reused reads as a
   handle), joins the thread, reads the result and frees the block. A module with `TaskSpawn` takes one spin lock
   (CASAL, store-release) around the heap routines; a module without it emits the code it did before. A fault leaves
-  through the exit system call, which ends every thread. Atomics, mutexes and conditions are not supported there yet
-  (TODO-5801): validation still rejects them for native.
+  through the exit system call, which ends every thread. Atomics, mutexes and conditions on native are described in their own entries (Atomics, Mutexes, Conditions).
 - **Tasks on threads (`optexe`, `optcpp`):** the optimized C++ emitter runs each `TaskSpawn` on an OS thread of its
   own (`OptCppTaskRuntime` in `src/backend/IrToOptCppRuntime.h`, pasted into the program only when the module has
   task opcodes, so a program without tasks is unchanged). The spawner copies the arguments into a task block,

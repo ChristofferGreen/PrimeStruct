@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.channels");
 
 // `/std/sync` `Channel<T>` (docs/spec/stdlib-reference.md, std/sync): tasks hand values to each other through
 // copies of a bounded queue. The VM runs each program on the eager default schedule and on seeds 1 to 3, where
-// every lock, unlock and condition wait is a switch point; optexe runs each task on a thread. Nothing here depends
+// every lock, unlock and condition wait is a switch point; optexe and arm64 native run each task on a thread. Nothing here depends
 // on how the threads are scheduled or on time: every program has one output on every schedule (a total, a count
 // of the items that arrived exactly once, a fault). Each matrix case builds one optexe binary (host C++
 // compiler), which takes a few seconds.
@@ -37,6 +37,10 @@ void runChannelProgram(program_matrix::ProgramCase program) {
       {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
+  if (program_matrix::nativeSupported()) {
+    configs.push_back({"native-O0", program_matrix::Backend::Native, 0, false});
+    configs.push_back({"native-O2", program_matrix::Backend::Native, 2, false});
+  }
   for (program_matrix::ExecutionConfig &config : seedConfigs()) {
     configs.push_back(std::move(config));
   }
@@ -249,9 +253,13 @@ TEST_CASE("three producers and three consumers move 9000 Strings and each arrive
   program.source = replaceAll(StringFanProgram, "PER_PRODUCER", "3000");
   program.exitCode = 0;
   program.stdoutText = "9000\n9000\n";
-  runOn(program,
-        {{"vm-O2", program_matrix::Backend::Vm, 2, false},
-         {"optexe-O2", program_matrix::Backend::OptExe, 2, true}});
+  std::vector<program_matrix::ExecutionConfig> configs = {
+      {"vm-O2", program_matrix::Backend::Vm, 2, false},
+      {"optexe-O2", program_matrix::Backend::OptExe, 2, true}};
+  if (program_matrix::nativeSupported()) {
+    configs.push_back({"native-O2", program_matrix::Backend::Native, 2, false});
+  }
+  runOn(program, std::move(configs));
 }
 
 TEST_CASE("three producers and three consumers move 1500 Strings exactly once on every VM seed") {
@@ -339,6 +347,8 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "2\n0\n0\n15\n0\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
   runChannelProgram(program);
 }
 
@@ -618,21 +628,13 @@ main() {
   runChannelProgram(program);
 }
 
-TEST_CASE("the native and Wasm backends reject a program with a channel by name") {
+TEST_CASE("the Wasm backend rejects a program with a channel by name") {
   const program_matrix::Outcome wasm =
       compileFor("channel_rejected_wasm", "wasm", SmallChannelProgram);
   CHECK(wasm.exitCode != 0);
   CHECK_MESSAGE(wasm.err.find("channel operations are not supported by the wasm backend") !=
                     std::string::npos,
                 wasm.err);
-  if (program_matrix::nativeSupported()) {
-    const program_matrix::Outcome native =
-        compileFor("channel_rejected_native", "native", SmallChannelProgram);
-    CHECK(native.exitCode != 0);
-    CHECK_MESSAGE(native.err.find("channel operations are not supported by the native backend") !=
-                      std::string::npos,
-                  native.err);
-  }
 }
 
 TEST_SUITE_END();

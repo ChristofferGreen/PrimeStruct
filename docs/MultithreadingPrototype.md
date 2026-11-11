@@ -516,7 +516,7 @@ VM lowering of `[spawn]` to them for scalar callees, `Task<void>` included
 results (TODO-5845), the per-thread heap arenas of `optexe` (TODO-5794), and `optexe`
 running those tasks on one OS thread each (TODO-5795, docs/spec/vm-design.md,
 Tasks on threads), and `Atomic<i32>` and `Atomic<i64>` on the VM and `optexe`
-([Atomic](#atomic); docs/spec/vm-design.md, Atomics). Tasks run on pthreads on arm64 native, with its heap behind one lock (TODO-5942; per-thread heaps and the primitives are TODO-5800 and TODO-5801). The leaves are the Multithreading lane of `docs/todo.md`, which
+([Atomic](#atomic); docs/spec/vm-design.md, Atomics). Tasks, atomics, mutexes and channels run on pthreads on arm64 native, with its heap behind one lock (TODO-5942, TODO-5950, TODO-5951; per-thread heaps are TODO-5800). The leaves are the Multithreading lane of `docs/todo.md`, which
 comes after the PrimeScroll startup lane and the first two native optimization
 leaves (TODO-5770, TODO-5772).
 

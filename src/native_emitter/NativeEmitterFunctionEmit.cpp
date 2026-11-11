@@ -246,6 +246,9 @@ bool emitNativeFunctions(const IrModule &module,
       // x17 addresses a far slot: x0-x7 may hold register arguments here.
       emitter.emitStoreLocalFromReg(layout.framePointerLocalIndex, 21, 17);
       emitter.emitStoreLocalFromReg(layout.linkLocalIndex, 30, 17);
+      if (isEntryFunction && emitter.synchronized()) {
+        emitter.emitSyncInit();
+      }
     } else {
       // X64Emitter::emitCaptureEntryArgs() already placed argc/argv in
       // r12/r13; framePointerLocalIndex/linkLocalIndex have no x86_64
@@ -677,27 +680,23 @@ bool emitNativeFunctions(const IrModule &module,
       case IrOpcode::AtomicAdd:
       case IrOpcode::AtomicExchange:
       case IrOpcode::AtomicCompareExchange:
-        if constexpr (kIsArm64) {
-          emitter.emitAtomic(inst.op, inst.imm);
-          break;
-        } else {
-          error = "unsupported IR opcode for native backend";
-          return false;
-        }
+      case IrOpcode::MutexLock:
+      case IrOpcode::MutexUnlock:
+      case IrOpcode::ConditionWait:
+      case IrOpcode::ConditionNotify:
       case IrOpcode::TaskSpawn:
       case IrOpcode::TaskWait:
+        // Atomics, locks, conditions and tasks (NativeEmitterInternalsArm64Tasks.h and ...Sync.h).
         if constexpr (kIsArm64) {
-          if (inst.op == IrOpcode::TaskWait) {
-            emitter.emitTaskWait();
-            break;
-          }
-          if (inst.imm >= module.functions.size()) {
+          if (inst.op == IrOpcode::TaskSpawn && inst.imm >= module.functions.size()) {
             error = "native backend detected invalid call target";
             return false;
           }
-          if (!emitter.emitTaskSpawn(module.functions[static_cast<size_t>(inst.imm)].parameterCount,
-                                     static_cast<size_t>(inst.imm),
-                                     error)) {
+          const uint32_t spawnedParameters =
+              inst.op == IrOpcode::TaskSpawn
+                  ? module.functions[static_cast<size_t>(inst.imm)].parameterCount
+                  : 0;
+          if (!emitter.emitConcurrencyOpcode(inst.op, inst.imm, spawnedParameters, error)) {
             return false;
           }
           break;

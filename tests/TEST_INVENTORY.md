@@ -8058,7 +8058,7 @@ Total: 10634 test cases across 596 files.
 - a sender waiting on a full channel faults when the channel is closed
 - a task receiving from a channel nobody sends on is the deadlock fault
 - a struct of a namespace is a Channel, Mutex and vector element without its path
-- the native and Wasm backends reject a program with a channel by name
+- the Wasm backend rejects a program with a channel by name
 
 ### test_program_matrix_closures.cpp
 
@@ -8221,7 +8221,7 @@ Total: 10634 test cases across 596 files.
 - locking a mutex again inside its own body faults
 - two tasks locking two mutexes in opposite order deadlock on a VM seed that interleaves them
 - a locked body names a struct of its namespace
-- the native and Wasm backends reject a program with a mutex by name
+- the Wasm backend rejects a program with a mutex by name
 
 ### test_program_matrix_optimizer.cpp
 
@@ -8445,7 +8445,7 @@ Total: 10634 test cases across 596 files.
 - a wait nobody notifies is a deadlock, and a notify on another condition does not wake it
 - a task that waits without holding the lock faults
 - a condition operation faults on a bad address and needs its operands
-- the native, wasm and glsl targets reject a module with condition opcodes as one with 
+- the wasm and glsl targets (and native off arm64 macOS) reject a module with condition 
 - condition opcodes survive serialization and a v36 module cannot hold them
 
 ### test_vm_heap_arenas.cpp
@@ -8467,7 +8467,7 @@ Total: 10634 test cases across 596 files.
 - waiting a task that needs a lock the waiter holds is a deadlock
 - two tasks taking two locks in opposite order deadlock on a seed that interleaves them
 - a mutex operation faults on a bad address and needs its operand
-- the native, wasm and glsl targets reject a module with mutex opcodes by name
+- the wasm and glsl targets (and native off arm64 macOS) reject a module with mutex 
 - mutex opcodes survive serialization and a v35 module cannot hold them
 
 ### test_vm_tasks.cpp
