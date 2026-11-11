@@ -257,29 +257,59 @@ TEST_CASE("heap core reuses the smallest free run that fits and coalesces neighb
   VmHeapCore heap;
   std::string error;
   uint64_t a = 0, b = 0, c = 0, d = 0;
-  REQUIRE(heap.allocateBytes(10, a, error));
-  REQUIRE(heap.allocateBytes(10, b, error));
-  REQUIRE(heap.allocateBytes(10, c, error));
-  CHECK(heap.liveByteCount() == 30);
+  REQUIRE(heap.allocateBytes(16, a, error));
+  REQUIRE(heap.allocateBytes(16, b, error));
+  REQUIRE(heap.allocateBytes(16, c, error));
+  CHECK(heap.liveByteCount() == 48);
   CHECK(VmHeapCore::isByteAddress(a));
-  CHECK((b & VmHeapCore::ByteOffsetMask) == 10);
+  CHECK((b & VmHeapCore::ByteOffsetMask) == 16);
   REQUIRE(heap.release(a, error));
   REQUIRE(heap.release(b, error));
-  CHECK(heap.liveByteCount() == 10);
-  // The freed neighbours form one run of 20 bytes, so 15 bytes reuse it from the start.
-  REQUIRE(heap.allocateBytes(15, d, error));
+  CHECK(heap.liveByteCount() == 16);
+  // The freed neighbours form one run of 32 bytes, so 24 bytes reuse it from the start.
+  REQUIRE(heap.allocateBytes(24, d, error));
   CHECK((d & VmHeapCore::ByteOffsetMask) == 0);
   CHECK(heap.byteAt(a) == nullptr); // an earlier generation of those bytes
-  CHECK(heap.byteAt(d + 14) != nullptr);
-  CHECK(heap.byteAt(d + 15) == nullptr);
+  CHECK(heap.byteAt(d + 23) != nullptr);
+  CHECK(heap.byteAt(d + 24) == nullptr);
   CHECK(heap.byteAt(c) != nullptr);
-  // The remaining five bytes are still free: five bytes fit exactly, six extend the heap.
+  // The remaining eight bytes are still free: eight bytes fit exactly, nine extend the heap.
   uint64_t e = 0, f = 0;
-  REQUIRE(heap.allocateBytes(5, e, error));
-  CHECK((e & VmHeapCore::ByteOffsetMask) == 15);
-  REQUIRE(heap.allocateBytes(6, f, error));
-  CHECK((f & VmHeapCore::ByteOffsetMask) == 30);
-  CHECK(heap.bytes.size() == 36);
+  REQUIRE(heap.allocateBytes(8, e, error));
+  CHECK((e & VmHeapCore::ByteOffsetMask) == 24);
+  REQUIRE(heap.allocateBytes(9, f, error));
+  CHECK((f & VmHeapCore::ByteOffsetMask) == 48);
+  CHECK(heap.bytes.size() == 64);
+}
+
+// Every region starts at a multiple of 8 (a 64-bit value in a region, such as the owner count of a SharedString, is
+// aligned for the atomic opcodes) and is exactly as long as it was asked to be: the bytes between its end and the next
+// multiple of 8 belong to no region and are not addressable.
+TEST_CASE("heap core starts every byte region at a multiple of 8 and keeps its exact length") {
+  VmHeapCore heap;
+  std::string error;
+  uint64_t a = 0, b = 0, c = 0, d = 0;
+  REQUIRE(heap.allocateBytes(1, a, error));
+  REQUIRE(heap.allocateBytes(3, b, error));
+  REQUIRE(heap.allocateBytes(10, c, error));
+  REQUIRE(heap.allocateBytes(5, d, error));
+  CHECK((a & VmHeapCore::ByteOffsetMask) == 0);
+  CHECK((b & VmHeapCore::ByteOffsetMask) == 8);
+  CHECK((c & VmHeapCore::ByteOffsetMask) == 16);
+  CHECK((d & VmHeapCore::ByteOffsetMask) == 32);
+  CHECK(heap.liveByteCount() == 19);
+  CHECK(heap.byteAt(a) != nullptr);
+  CHECK(heap.byteAt(a + 1) == nullptr);
+  CHECK(heap.byteAt(b + 2) != nullptr);
+  CHECK(heap.byteAt(b + 3) == nullptr);
+  CHECK(heap.byteAt(c + 9) != nullptr);
+  CHECK(heap.byteAt(c + 10) == nullptr);
+  // A freed region frees its whole footprint: the next region of the same size reuses it.
+  REQUIRE(heap.release(b, error));
+  uint64_t again = 0;
+  REQUIRE(heap.allocateBytes(7, again, error));
+  CHECK((again & VmHeapCore::ByteOffsetMask) == 8);
+  CHECK(heap.liveByteCount() == 23);
 }
 
 TEST_CASE("heap core extends a free run at the end of the heap") {

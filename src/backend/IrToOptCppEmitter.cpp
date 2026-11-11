@@ -562,7 +562,7 @@ private:
       }
       const std::string narrow = instruction.imm == 32u ? "true" : "false";
       const auto cell = [&](int64_t addressDepth) {
-        return "ps_resolve(rt, " + frameArgs() + ", " + slot(addressDepth) + ")";
+        return "ps_resolve_atomic(rt, " + frameArgs() + ", " + slot(addressDepth) + ")";
       };
       switch (instruction.op) {
       case IrOpcode::AtomicLoad:

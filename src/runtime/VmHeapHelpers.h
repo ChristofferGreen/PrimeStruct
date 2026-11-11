@@ -17,6 +17,16 @@ bool resolveIndirectAddress(uint64_t address,
                             uint64_t *&slotOut,
                             std::string &error);
 
+// The cell of an atomic opcode: the slot resolveIndirectAddress names, or the 8 bytes at an 8-byte aligned address of
+// a byte region, which must lie in one live region (the owner count in a SharedString's text block). An unaligned or
+// stale byte address faults by name.
+bool resolveAtomicAddress(uint64_t address,
+                          uint64_t slotBytes,
+                          std::vector<uint64_t> &locals,
+                          VmHeapCore &heap,
+                          uint64_t *&slotOut,
+                          std::string &error);
+
 // The byte a byte-region address names (HeapAllocBytes, LoadU8, StoreU8), or the VM's fault
 // message: a slot address, a frame address and a stale or out-of-range byte address all fault.
 // Byte access: a byte-region address reads or writes that byte; any other address must be an aligned

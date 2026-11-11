@@ -31,6 +31,12 @@ public:
                               std::string &error) override {
     return vm_detail::resolveIndirectAddress(address, slotBytes(), locals, heap_, slot, error);
   }
+  bool resolveAtomicAddress(uint64_t address,
+                            std::vector<uint64_t> &locals,
+                            uint64_t *&slot,
+                            std::string &error) override {
+    return vm_detail::resolveAtomicAddress(address, slotBytes(), locals, heap_, slot, error);
+  }
   bool allocateHeapSlots(uint64_t slotCount, uint64_t &address, std::string &error) override {
     return heap_.allocate(slotCount, address, error);
   }

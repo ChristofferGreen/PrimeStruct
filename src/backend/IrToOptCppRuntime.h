@@ -698,6 +698,22 @@ struct PsAtomicSlot {
 };
 #endif
 
+// The cell of an atomic opcode: a slot, or the 8 bytes at an 8-byte aligned address of a byte region (the owner count
+// inside a SharedString's text block), which must lie in one live region.
+inline uint64_t *ps_resolve_atomic(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
+  if (!VmHeapCore::isByteAddress(address)) {
+    return ps_resolve(rt, frame, base, frameCount, address);
+  }
+  if (address % sizeof(uint64_t) != 0) {
+    ps_fault("unaligned atomic address in IR: " + std::to_string(address));
+  }
+  uint8_t *cell = rt.heap.byteSpan(address, sizeof(uint64_t));
+  if (cell == nullptr) {
+    ps_fault("invalid atomic address in IR: " + std::to_string(address));
+  }
+  return reinterpret_cast<uint64_t *>(cell);
+}
+
 inline uint64_t ps_atomic_value(uint64_t value, bool narrow) {
   return narrow ? static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(value))) : value;
 }

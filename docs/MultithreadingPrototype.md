@@ -658,8 +658,8 @@ The design is per-thread arenas, with a lock only on a shared slow path:
   reserves a 1 MiB value stack, so the thread trampoline asks for 8 MiB (`pthread_attr_setstacksize`), like the
   main thread.
 - **Strings:** `String` blocks come from these heaps, so `String` is sendable once a block can be freed on any
-  thread. `SharedString` keeps its owner count in a heap slot of its own beside the text block and counts with
-  the atomic opcodes, so it is sendable too: the last owner frees the text and the count on whichever thread it is.
+  thread. `SharedString` keeps its owner count in the text block (the 8 bytes before the text) and counts with
+  the atomic opcodes, so it is sendable too: the last owner frees the block on whichever thread it is.
 
 ### Sendable Values
 

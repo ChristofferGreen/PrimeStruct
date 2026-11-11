@@ -33,6 +33,28 @@ bool resolveIndirectAddress(uint64_t address,
   return true;
 }
 
+bool resolveAtomicAddress(uint64_t address,
+                          uint64_t slotBytes,
+                          std::vector<uint64_t> &locals,
+                          VmHeapCore &heap,
+                          uint64_t *&slotOut,
+                          std::string &error) {
+  if (!VmHeapCore::isByteAddress(address)) {
+    return resolveIndirectAddress(address, slotBytes, locals, heap, slotOut, error);
+  }
+  if (address % sizeof(uint64_t) != 0) {
+    error = "unaligned atomic address in IR: " + std::to_string(address);
+    return false;
+  }
+  uint8_t *cell = heap.byteSpan(address, sizeof(uint64_t));
+  if (cell == nullptr) {
+    error = "invalid atomic address in IR: " + std::to_string(address);
+    return false;
+  }
+  slotOut = reinterpret_cast<uint64_t *>(cell);
+  return true;
+}
+
 namespace {
 
 bool byteAddressFault(uint64_t address, std::string &error) {

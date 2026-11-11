@@ -1,8 +1,10 @@
 // An immutable, reference-counted text (docs/spec/strings-and-views.md): copying a SharedString shares the bytes and
 // adds one to the count, so a clone and a view cost nothing, and the bytes are freed when the last owner is destroyed.
-// The count is one heap slot of its own, beside the block of the text and its 0 byte, and is counted with the atomic
-// operations of `/std/sync`: a SharedString is sendable, its owners may live on different threads, and the last one
-// frees the text and the count on whichever thread it is (docs/MultithreadingPrototype.md, Heaps).
+// The block is the owner count as one 8-byte integer, then the text and its 0 byte: one allocation holds both, and the
+// count is the 8 bytes before the text. Every byte region of the heap starts at a multiple of 8 and so does every text
+// block, which makes the count an aligned cell for the atomic operations of `/std/sync`. A SharedString is sendable:
+// its owners may live on different threads, and the last one frees the block on whichever thread it is
+// (docs/MultithreadingPrototype.md, Heaps).
 // A module of its own: `import /std/text/shared/*`.
 
 import /std/text/*
@@ -15,7 +17,6 @@ namespace std {
   [public struct sendable]
   SharedString() {
     [private Pointer<u8> mut] bytes{__pstext_alloc(0u64)}
-    [private Pointer<i64> mut] ownerCount{/std/intrinsics/memory/alloc<i64>(0i32)}
     [private i32 mut] fieldLength{0i32}
     [private bool mut] live{false}
 
@@ -41,36 +42,35 @@ namespace std {
       if(!this.live) {
         return(0i32)
       }
-      return(sharedOwnersLoad(this.ownerCount))
+      return(sharedOwnersLoad(sharedOwnersCell(this.bytes)))
     }
 
     // Takes `source` in as the first owner (used by sharedFrom).
     [mut effects(heap_alloc)]
     fill([/std/text/view/StringView] source) {
       [i32] size{source.fieldLength}
-      this.bytes = __pstext_alloc(convert<u64>(size) + 1u64)
+      [Pointer<u8>] block{__pstext_alloc(convert<u64>(size) + 9u64)}
+      this.bytes = textAddress(block, 8i32)
       moveBytes(this.bytes, source.data, size)
       textStore(this.bytes, size, 0u8)
       this.fieldLength = size
       this.live = true
-      this.ownerCount = sharedOwnersAlloc()
+      sharedOwnersStart(sharedOwnersCell(this.bytes))
     }
 
     [mut]
     Copy([Reference<Self>] other) {
       this.bytes = other.bytes
-      this.ownerCount = other.ownerCount
       this.fieldLength = other.fieldLength
       this.live = other.live
       if(other.live) {
-        sharedOwnersAdd(other.ownerCount)
+        sharedOwnersAdd(sharedOwnersCell(other.bytes))
       }
     }
 
     [mut]
     Move([Reference<Self>] other) {
       this.bytes = other.bytes
-      this.ownerCount = other.ownerCount
       this.fieldLength = other.fieldLength
       this.live = other.live
       other.live = false
@@ -79,20 +79,25 @@ namespace std {
     [mut effects(heap_alloc)]
     Destroy() {
       if(this.live) {
-        if(sharedOwnersRelease(this.ownerCount)) {
-          __pstext_free(this.bytes)
+        if(sharedOwnersRelease(sharedOwnersCell(this.bytes))) {
+          __pstext_free(textAddress(this.bytes, -8i32))
         }
         this.live = false
       }
     }
   }
 
-  // The count of a new SharedString: one heap slot holding 1.
-  [unsafe effects(heap_alloc), return<Pointer<i64>>]
-  sharedOwnersAlloc() {
-    [Pointer<i64>] count{/std/intrinsics/memory/alloc<i64>(1i32)}
+  // The count of the block: the aligned 8 bytes before the text.
+  [unsafe return<Pointer<i64>>]
+  sharedOwnersCell([Pointer<u8>] text) {
+    [Pointer<u8>] address{textAddress(text, -8i32)}
+    return(/std/intrinsics/memory/reinterpret<i64>(address))
+  }
+
+  // The count of a new SharedString is 1.
+  [unsafe return<void>]
+  sharedOwnersStart([Pointer<i64>] count) {
     /std/sync/__psatomic_store_i64(count, 1i64)
-    return(count)
   }
 
   [unsafe return<i32>]
@@ -106,14 +111,10 @@ namespace std {
     /std/sync/__psatomic_add_i64(count, 1i64)
   }
 
-  // An owner is gone; the last one frees the count and returns true, and then frees the text.
-  [unsafe effects(heap_alloc), return<bool>]
+  // An owner is gone; the last one returns true, and then frees the block that holds the count.
+  [unsafe return<bool>]
   sharedOwnersRelease([Pointer<i64>] count) {
-    if(/std/sync/__psatomic_add_i64(count, -1i64) == 1i64) {
-      /std/intrinsics/memory/free(count)
-      return(true)
-    }
-    return(false)
+    return(/std/sync/__psatomic_add_i64(count, -1i64) == 1i64)
   }
 
   // A SharedString holding a copy of `text`.

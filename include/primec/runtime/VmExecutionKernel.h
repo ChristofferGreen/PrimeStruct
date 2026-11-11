@@ -30,6 +30,15 @@ public:
                                       std::vector<uint64_t> &locals,
                                       uint64_t *&slot,
                                       std::string &error) = 0;
+  // The 8-byte cell an atomic opcode works on: what resolveIndirectAddress answers, and also an 8-byte aligned address
+  // of a byte region (the owner count inside a SharedString's text block). A host whose heap has no byte regions keeps
+  // this default.
+  virtual bool resolveAtomicAddress(uint64_t address,
+                                    std::vector<uint64_t> &locals,
+                                    uint64_t *&slot,
+                                    std::string &error) {
+    return resolveIndirectAddress(address, locals, slot, error);
+  }
   virtual bool allocateHeapSlots(uint64_t slotCount,
                                  uint64_t &address,
                                  std::string &error) = 0;

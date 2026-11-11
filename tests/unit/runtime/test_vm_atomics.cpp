@@ -220,6 +220,91 @@ TEST_CASE("an atomic operation faults on a bad address or width") {
   CHECK_FALSE(validateIrModule(underflow, IrValidationTarget::Vm, error));
 }
 
+namespace {
+
+// local 0 is a byte region of `size` bytes; the address `offset` bytes into it is on the stack for each operation.
+std::vector<IrInstruction> withByteRegion(uint64_t size, std::vector<IrInstruction> body) {
+  std::vector<IrInstruction> instructions = {
+      {IrOpcode::PushI32, size}, {IrOpcode::HeapAllocBytes, 0}, {IrOpcode::StoreLocal, 0}};
+  instructions.insert(instructions.end(), body.begin(), body.end());
+  return instructions;
+}
+
+void appendByteCellOperation(std::vector<IrInstruction> &out,
+                             uint64_t offset,
+                             IrOpcode op,
+                             std::vector<int64_t> operands) {
+  out.push_back({IrOpcode::LoadLocal, 0});
+  out.push_back(pushI64(static_cast<int64_t>(offset)));
+  out.push_back({IrOpcode::AddI64, 0});
+  for (const int64_t operand : operands) {
+    out.push_back(pushI64(operand));
+  }
+  out.push_back({op, 64});
+  if (op != IrOpcode::AtomicStore) {
+    out.push_back({IrOpcode::PrintI64, Newline});
+  }
+}
+
+Run runByteCell(uint64_t regionSize, uint64_t offset, bool freeFirst) {
+  std::vector<IrInstruction> body;
+  if (freeFirst) {
+    body.push_back({IrOpcode::LoadLocal, 0});
+    body.push_back({IrOpcode::HeapFree, 0});
+  }
+  appendByteCellOperation(body, offset, IrOpcode::AtomicStore, {5});
+  appendByteCellOperation(body, offset, IrOpcode::AtomicAdd, {3});
+  body.push_back({IrOpcode::PushI32, 0});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  return run(moduleOf({functionOf("/main", 0, withByteRegion(regionSize, std::move(body)))}));
+}
+
+} // namespace
+
+TEST_CASE("an atomic operation works on an aligned cell of a byte region") {
+  std::vector<IrInstruction> body;
+  appendByteCellOperation(body, 8, IrOpcode::AtomicStore, {5});
+  appendByteCellOperation(body, 8, IrOpcode::AtomicAdd, {3});
+  appendByteCellOperation(body, 8, IrOpcode::AtomicLoad, {});
+  appendByteCellOperation(body, 8, IrOpcode::AtomicCompareExchange, {8, 258});
+  // The cell is plain bytes: the 64-bit value 258 is the bytes 2 and 1, low byte first, and the bytes around it are
+  // untouched.
+  for (const uint64_t offset : {7u, 8u, 9u, 10u, 16u}) {
+    body.push_back({IrOpcode::LoadLocal, 0});
+    body.push_back(pushI64(static_cast<int64_t>(offset)));
+    body.push_back({IrOpcode::AddI64, 0});
+    body.push_back({IrOpcode::LoadU8, 0});
+    body.push_back({IrOpcode::PrintI32, Newline});
+  }
+  body.push_back({IrOpcode::PushI32, 0});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  const IrModule module = moduleOf({functionOf("/main", 0, withByteRegion(24, std::move(body)))});
+  std::string error;
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
+  const Run result = run(module);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.out == "5\n8\n1\n0\n2\n1\n0\n0\n");
+}
+
+TEST_CASE(
+    "an atomic operation on a byte region faults by name when the cell is not whole and aligned") {
+  const Run aligned = runByteCell(16, 8, false);
+  REQUIRE_MESSAGE(aligned.ok, aligned.error);
+  CHECK(aligned.out == "5\n");
+
+  const Run unaligned = runByteCell(24, 12, false);
+  CHECK_FALSE(unaligned.ok);
+  CHECK(unaligned.error.find("unaligned atomic address in IR") != std::string::npos);
+
+  // Eight bytes must lie in the region: a region of 12 bytes has no cell at 8, and a freed region has none at all.
+  const Run beyond = runByteCell(12, 8, false);
+  CHECK_FALSE(beyond.ok);
+  CHECK(beyond.error.find("invalid atomic address in IR") != std::string::npos);
+  const Run freed = runByteCell(16, 8, true);
+  CHECK_FALSE(freed.ok);
+  CHECK(freed.error.find("invalid atomic address in IR") != std::string::npos);
+}
+
 TEST_CASE("the native, wasm and glsl targets reject a module with atomic opcodes by name") {
   const IrModule module = oneOperation(IrOpcode::AtomicAdd, 64, {1});
   std::string error;

@@ -220,4 +220,42 @@ main() {
   runSharedStringProgram(program);
 }
 
+// The owner count lives in the text block (TODO-5861): making a SharedString takes one string block and no slot
+// allocation of the heap, a copy takes none, and the last owner frees the block.
+TEST_CASE("a SharedString is one string block that holds its text and its owner count") {
+  program_matrix::ProgramCase program;
+  program.name = "shared_string_one_block";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    [String] owner{stringFrom("hello world")}
+    [i32] baseline{heapLiveBlocks()}
+    [u64] baselineBytes{stringHeapBytesInUse()}
+    [SharedString] made{sharedFrom(owner.view())}
+    print_line(heapLiveBlocks() - baseline)
+    print_line(stringHeapBytesInUse() - baselineBytes)
+    [SharedString] copy{made}
+    print_line(heapLiveBlocks() - baseline)
+    print_line(stringHeapBytesInUse() - baselineBytes)
+    print_line(copy.owners())
+    print_line(copy.view().byteAt(4i32))
+    print_line(made.count())
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n32\n0\n32\n2\n111\n11\n0\n0\n";
+  runSharedStringProgram(program);
+}
+
 TEST_SUITE_END();

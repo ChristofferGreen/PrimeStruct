@@ -107,6 +107,13 @@
   | `AtomicExchange` | address, value | the value before the store |
   | `AtomicCompareExchange` | address, expected, desired | 1 when the slot held `expected` and now holds `desired`, else 0 |
 
+  The address is a slot, or an 8-byte aligned address of a byte region whose 8 bytes lie in one live region (the owner
+  count inside a `SharedString`'s text block): the cell is those 8 bytes as a native-endian 64-bit integer. An
+  unaligned byte address faults with `unaligned atomic address in IR` and one whose 8 bytes are not in a live region
+  with `invalid atomic address in IR`, on the VM and in `optexe`. Every byte region starts at a multiple of 8 and
+  occupies a multiple of 8 bytes of the heap (it is exactly as long as it was asked to be, and the rest is not
+  addressable).
+
   A 32-bit operation works on the low half of the slot's value and leaves the slot sign-extended, like every `i32`.
   The source of these opcodes is `/std/sync` (docs/spec/stdlib-reference.md, Shared state): its `[host]`
   definitions named `/std/sync/__psatomic_*` are not host imports; the lowerer turns a call of one into its opcode,

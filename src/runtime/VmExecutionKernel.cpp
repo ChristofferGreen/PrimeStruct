@@ -441,7 +441,7 @@ template <bool TrackEvents>
     uint64_t *slot = nullptr;
     std::vector<uint64_t> *addressLocals = nullptr;
     localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
-    if (!host.resolveIndirectAddress(address, *addressLocals, slot, error)) {
+    if (!host.resolveAtomicAddress(address, *addressLocals, slot, error)) {
       return VmKernelStepOutcome::Fault;
     }
     const uint64_t before = canonical(*slot);

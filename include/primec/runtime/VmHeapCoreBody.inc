@@ -507,11 +507,15 @@ private:
       address = 0;
       return true;
     }
+    // A region occupies a multiple of 8 bytes, so every region starts at a multiple of 8 (the storage does too): a
+    // 64-bit value in a byte region, such as the owner count of a SharedString, is aligned for the atomic opcodes.
+    // The region itself is exactly `count` bytes; the bytes after it up to the multiple belong to no region.
+    const uint64_t footprint = (count + 7) & ~uint64_t{7};
     uint64_t base = 0;
-    const auto fit = byteFreeBySize_.lower_bound(std::make_pair(count, uint64_t{0}));
+    const auto fit = byteFreeBySize_.lower_bound(std::make_pair(footprint, uint64_t{0}));
     if (fit != byteFreeBySize_.end()) {
       base = fit->second;
-      takeByteFree(base, count);
+      takeByteFree(base, footprint);
     } else {
       base = bytes.size();
       uint64_t tailFree = 0;
@@ -522,14 +526,14 @@ private:
           tailFree = last->second;
         }
       }
-      if (count > ArenaSpan || base > ArenaSpan - count || (pinned_ && base + count > bytes.capacity())) {
+      if (footprint > ArenaSpan || base > ArenaSpan - footprint || (pinned_ && base + footprint > bytes.capacity())) {
         error = "VM heap allocation overflow";
         return false;
       }
       if (tailFree != 0) {
         takeByteFree(base, tailFree);
       }
-      bytes.resize(static_cast<size_t>(base + count));
+      bytes.resize(static_cast<size_t>(base + footprint));
       byteStates.resize(static_cast<size_t>((bytes.size() + GranuleBytes - 1) >> GranuleShift));
       if (!pinned_) {
         granuleBound_ = byteStates.size();
@@ -857,13 +861,14 @@ private:
 
   void releaseByteRegion(LiveMap::iterator region) {
     uint64_t base = region->first;
-    uint64_t count = region->second.first;
-    for (uint64_t i = base; i < base + count; ++i) {
+    const uint64_t regionBytes = region->second.first;
+    uint64_t count = (regionBytes + 7) & ~uint64_t{7};
+    for (uint64_t i = base; i < base + regionBytes; ++i) {
       bytes[static_cast<size_t>(i)] = 0;
     }
-    liveBytes_ -= count;
+    liveBytes_ -= regionBytes;
     byteLive_.erase(region);
-    markGranules(base, count, 0);
+    markGranules(base, regionBytes, 0);
     const auto next = byteFreeByBase_.find(base + count);
     if (next != byteFreeByBase_.end()) {
       count += next->second;

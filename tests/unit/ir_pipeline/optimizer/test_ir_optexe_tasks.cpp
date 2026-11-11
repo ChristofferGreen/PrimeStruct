@@ -948,6 +948,48 @@ TEST_CASE("optexe runs the atomic opcodes like the vm") {
   expectMatchesVm(sharedModule, "atomic_shared_add");
 }
 
+// local 0 is a byte region of `size` bytes; `offset` bytes into it an atomic store of 9, an add of 3 and a load.
+static IrModule byteCellProgram(uint64_t size, uint64_t offset) {
+  std::vector<IrInstruction> body = {
+      {IrOpcode::PushI32, size}, {IrOpcode::HeapAllocBytes, 0}, {IrOpcode::StoreLocal, 0}};
+  const auto cell = [&]() {
+    body.push_back({IrOpcode::LoadLocal, 0});
+    body.push_back({IrOpcode::PushI64, offset});
+    body.push_back({IrOpcode::AddI64, 0});
+  };
+  cell();
+  body.push_back({IrOpcode::PushI64, 9});
+  body.push_back({IrOpcode::AtomicStore, 64});
+  cell();
+  body.push_back({IrOpcode::PushI64, 3});
+  body.push_back({IrOpcode::AtomicAdd, 64});
+  body.push_back({IrOpcode::PrintI64, Newline});
+  cell();
+  body.push_back({IrOpcode::AtomicLoad, 64});
+  body.push_back({IrOpcode::PrintI64, Newline});
+  body.push_back({IrOpcode::PushI32, 0});
+  body.push_back({IrOpcode::ReturnI32, 0});
+  return moduleOf({functionOf("/main", 0, body)});
+}
+
+TEST_CASE("optexe runs atomic opcodes on an aligned byte-region cell like the vm") {
+  const IrModule whole = byteCellProgram(24, 8);
+  CHECK(optimizer_test::run(whole, {"program"}).output == "9\n12\n");
+  expectMatchesVm(whole, "atomic_byte_cell");
+}
+
+TEST_CASE("optexe faults by name on an atomic opcode at an unaligned or partial byte-region cell") {
+  const IrModule unaligned = byteCellProgram(24, 12);
+  CHECK(optimizer_test::run(unaligned, {"program"})
+            .error.rfind("unaligned atomic address in IR: ", 0) == 0);
+  expectMatchesVm(unaligned, "atomic_byte_cell_unaligned");
+
+  const IrModule beyond = byteCellProgram(12, 8);
+  CHECK(optimizer_test::run(beyond, {"program"}).error.rfind("invalid atomic address in IR: ", 0) ==
+        0);
+  expectMatchesVm(beyond, "atomic_byte_cell_beyond");
+}
+
 TEST_CASE("only an optexe module with atomic opcodes gets the atomic runtime") {
   const auto emitted = [](const IrModule &module) {
     std::string source;
@@ -975,9 +1017,9 @@ TEST_CASE("only an optexe module with atomic opcodes gets the atomic runtime") {
                                                             {IrOpcode::AtomicLoad, 64},
                                                             {IrOpcode::ReturnI32, 0}})}));
   CHECK(contains(atomics, "std::atomic_ref<uint64_t>"));
-  CHECK(contains(atomics, " = ps_atomic_add(ps_resolve(rt, "));
+  CHECK(contains(atomics, " = ps_atomic_add(ps_resolve_atomic(rt, "));
   CHECK(contains(atomics, ", true);"));
-  CHECK(contains(atomics, " = ps_atomic_load(ps_resolve(rt, "));
+  CHECK(contains(atomics, " = ps_atomic_load(ps_resolve_atomic(rt, "));
   // No task opcode, so no task runtime.
   CHECK_FALSE(contains(atomics, "pthread_create"));
 }
