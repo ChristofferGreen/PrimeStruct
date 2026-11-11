@@ -413,4 +413,62 @@ TEST_CASE("address ABI takes any struct but a sum by move or copy") {
   CHECK(ownedParameterShapeEligible("/main/Item", "mut", true));
 }
 
+namespace {
+// A definition `describe([string] text)` whose body is `body` (built from the parameter), and whether the address
+// ABI takes it with `string` parameters allowed or not.
+bool stringParameterShapeEligible(const std::function<primec::Expr(const primec::Expr &)> &makeBody,
+                                  bool allowStringParams,
+                                  bool mutParam = false) {
+  primec::Definition describe = makeDef("/main/describe");
+  primec::Expr param =
+      mutParam ? makeMutScalarParam("text", "string") : makeScalarParam("text", "string");
+  describe.parameters.push_back(param);
+  addReturnTransform(describe, "i32");
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "text";
+  describe.statements.push_back(makeBody(nameExpr));
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {describe.fullPath, &describe}};
+  const std::unordered_set<std::string> structNames;
+  return primec::ir_lowerer::isRealCallShapeEligible(
+      describe,
+      primec::ir_lowerer::RealCallShapeContext{
+          &byPath, &structNames, true, false, allowStringParams});
+}
+
+primec::Expr callOf(const std::string &name, std::vector<primec::Expr> args) {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = name;
+  call.args = std::move(args);
+  return call;
+}
+} // namespace
+
+TEST_CASE(
+    "address ABI takes a string parameter that is only counted or passed to __pstext_literal") {
+  const auto counted = [](const primec::Expr &text) { return callOf("count", {text}); };
+  const auto literal = [](const primec::Expr &text) {
+    return callOf("assign", {callOf("/std/text/__pstext_literal", {text})});
+  };
+  CHECK(stringParameterShapeEligible(counted, true));
+  CHECK(stringParameterShapeEligible(literal, true));
+  // Targets that read no module string by a computed index keep the definition inline.
+  CHECK_FALSE(stringParameterShapeEligible(counted, false));
+}
+
+TEST_CASE("address ABI keeps a string parameter that is indexed, forwarded or mut inline") {
+  const auto indexed = [](const primec::Expr &text) {
+    primec::Expr index;
+    index.kind = primec::Expr::Kind::Literal;
+    return callOf("at", {text, index});
+  };
+  const auto forwarded = [](const primec::Expr &text) { return callOf("/main/other", {text}); };
+  const auto counted = [](const primec::Expr &text) { return callOf("count", {text}); };
+  CHECK_FALSE(stringParameterShapeEligible(indexed, true));
+  CHECK_FALSE(stringParameterShapeEligible(forwarded, true));
+  CHECK_FALSE(stringParameterShapeEligible(counted, true, true));
+}
+
 TEST_SUITE_END();

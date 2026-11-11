@@ -103,7 +103,6 @@ of sync with them.
 | TODO-5738 | Sum results return through the caller's block in real calls | ready | ir-real-calls |
 | TODO-5739 | Large struct copies lower to a slot loop | ready | ir-struct-copies |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
-| TODO-5741 | `string` parameters become real calls on the VM and optexe | ready | ir-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
@@ -260,7 +259,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls and struct copies TODO-5739, TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
@@ -322,18 +321,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
     - full release gate green
   - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
-
-- [ ] TODO-5741: `string` parameters become real calls on the VM and optexe
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Optimizing backends (found while finishing TODO-5734)
-  - parallel_track: ir-real-calls
-  - scope: A definition with a `string` (module-table text) parameter stays inline, because the inline binding records where the text comes from (`stringSource`) and the body indexes it statically. `String.append([string] text)` is inlined about 40 times in todo_web. Pass the string index and read it with `LoadStringByteDynamic`/`LoadStringLength` in the callee on the VM and optcpp.
-  - acceptance:
-    - `String.append` with a `string` argument is a real call in todo_web, same output on every backend
-    - full release gate green
-  - stop_rule: `string` parameters of real calls only.
 
 - [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai
@@ -789,12 +776,12 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-vm-tasks
   - scope: A spawned call runs as a task on the VM and `optexe` when its parameters and result are scalars, `String`s, other structs outside the collections, closures, or `copy`/`copy mut`/`move` scalars and structs (`resolveTaskSpawnShape`, src/ir_lowerer/IrLowererRecursionAnalysis.h; TODO-5895 did the owned shapes). It still runs inline, with an `--opt-report` note, when a parameter or the result is a `vector`, a `map` or another collection, and when a parameter is a `copy` or `move` sum: the address ABI has no real call for those shapes. Give those shapes a real call and lower their spawns to `TaskSpawn` through the task block the struct shapes use (`LowerSetupStageState::TaskSpawnSite`): a collection argument is copied (or moved) in the spawner, the task reads it through the block, an owned parameter is destroyed by the task, and a collection result is taken over by the waiter.
-  - implementation_notes: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) rejects template types and owned sums; a collection local carries element metadata (`LocalInfo`) the callee's parameter needs. An owned sum stays inline because a `[Item move]` real call freed the payload twice on the VM (the call site's inline binding of a sum temporary destroys it, and the body's drop flag destroys it again; TODO-5895 found it): decide one owner before taking sums. A `string` parameter is TODO-5741: once a real call takes it, drop the `string` reason in `resolveTaskSpawnShape` and pass the module string index as a scalar. Tests: tests/unit/program_matrix/test_program_matrix_tasks.cpp, tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp (the notes for /total and /numbers there turn into tasks).
+  - implementation_notes: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) rejects template types and owned sums; a collection local carries element metadata (`LocalInfo`) the callee's parameter needs. An owned sum stays inline because a `[Item move]` real call freed the payload twice on the VM (the call site's inline binding of a sum temporary destroys it, and the body's drop flag destroys it again; TODO-5895 found it): decide one owner before taking sums. A `string` parameter is TODO-5741: a real call takes it since TODO-5741: drop the `string` reason in `resolveTaskSpawnShape` and pass the module string index as a scalar. Tests: tests/unit/program_matrix/test_program_matrix_tasks.cpp, tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp (the notes for /total and /numbers there turn into tasks).
   - acceptance:
     - positive: a task that takes a `vector<i32>` and one that returns a `vector<String>` give the waiter the values on the VM (default schedule and seeds 1 to 8) and on `optexe`, with the heap empty afterwards (heap statistics); `--opt-report` has no inline note for these spawns
     - negative: a spawned call that still runs inline keeps its note naming the reason
     - full release gate green
-  - stop_rule: collection parameters and results, and owned sums, of spawned calls on the VM and `optexe`; `string` parameters are TODO-5741 and native is TODO-5799.
+  - stop_rule: collection parameters and results, and owned sums, of spawned calls on the VM and `optexe`; `string` parameters stay inline for a task (it would need the module-table index passed as a scalar); native is TODO-5799.
 
 - [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
   - owner: ai

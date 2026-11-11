@@ -424,6 +424,47 @@ bool isAddressAbiStruct(const std::string &path,
          path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0;
 }
 
+// Whether every use of the `string` parameter `name` in `def` is `count()` of it or its passing to
+// `__pstext_literal`: the two reads of a runtime string that cost one instruction. Any other use (indexing, a
+// comparison, a print, forwarding it) keeps the definition inline, where the string is a table index the lowering
+// knows statically.
+bool stringParameterUseIsCountOrLiteral(const Expr &expr,
+                                        const std::string &name,
+                                        const Expr *parent) {
+  if (expr.kind == Expr::Kind::Name && expr.name == name) {
+    if (parent == nullptr || parent->kind != Expr::Kind::Call || parent->args.size() != 1 ||
+        &parent->args.front() != &expr) {
+      return false;
+    }
+    const size_t slash = parent->name.rfind('/');
+    const std::string_view leaf = slash == std::string::npos
+                                      ? std::string_view(parent->name)
+                                      : std::string_view(parent->name).substr(slash + 1);
+    return leaf == "count" || leaf == "__pstext_literal";
+  }
+  for (const Expr &arg : expr.args) {
+    if (!stringParameterUseIsCountOrLiteral(arg, name, &expr)) {
+      return false;
+    }
+  }
+  for (const Expr &bodyArg : expr.bodyArguments) {
+    if (!stringParameterUseIsCountOrLiteral(bodyArg, name, &expr)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool stringParameterUsedOnlyAsCountOrLiteral(const Definition &def, const std::string &name) {
+  for (const Expr &stmt : def.statements) {
+    if (!stringParameterUseIsCountOrLiteral(stmt, name, nullptr)) {
+      return false;
+    }
+  }
+  return !def.returnExpr.has_value() ||
+         stringParameterUseIsCountOrLiteral(*def.returnExpr, name, nullptr);
+}
+
 // Whether `path` names a sum definition (`[sum]`), whose owned parameters stay inline: the call site's inline
 // binding destroys a sum temporary itself, and the real-call body would destroy the payload again.
 bool isSumDefinitionPath(
@@ -442,7 +483,8 @@ bool isAddressAbiParameter(
     const Definition &def,
     const Expr &param,
     const std::unordered_set<std::string> &structNames,
-    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath,
+    bool allowStringParams) {
   // A default (`[i32] limit{3i32}`) is fine: the call site binds the parameter, default included, as an inlined call
   // would, and the callee gets its value.
   if (isArgsPackBinding(param) || param.args.size() > 1) {
@@ -471,6 +513,10 @@ bool isAddressAbiParameter(
     }
     if (!transform.arguments.empty()) {
       return false;
+    }
+    if (transform.name == "string" && transform.templateArgs.empty()) {
+      return allowStringParams && !paramHasMutTransform(param) &&
+             stringParameterUsedOnlyAsCountOrLiteral(def, param.name);
     }
     std::string target = transform.name;
     if (transform.name == "Pointer" || transform.name == "Reference") {
@@ -540,7 +586,7 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     }
   }
   for (const Expr &param : def.parameters) {
-    if (!isAddressAbiParameter(def, param, structNames, byPath)) {
+    if (!isAddressAbiParameter(def, param, structNames, byPath, context.allowStringParams)) {
       return false;
     }
   }
@@ -765,7 +811,8 @@ bool isTinyInlineLeaf(const Definition &def) {
 std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
                                                                        const std::string &entryPath,
                                                                        bool allowMutReceivers,
-                                                                       bool allowNeverResult) {
+                                                                       bool allowNeverResult,
+                                                                       bool allowStringParams) {
   const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
   const std::unordered_set<std::string> reachable =
       findReachableDefinitionPaths(program, entryPath);
@@ -781,7 +828,8 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       structNames.insert(def.fullPath);
     }
   }
-  const RealCallShapeContext context{&byPath, &structNames, allowMutReceivers, allowNeverResult};
+  const RealCallShapeContext context{
+      &byPath, &structNames, allowMutReceivers, allowNeverResult, allowStringParams};
 
   std::unordered_set<std::string> eligible;
   for (const std::string &path : reachable) {

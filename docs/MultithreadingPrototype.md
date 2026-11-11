@@ -135,7 +135,7 @@ returns scalars, `String`s, other structs outside the collections, or closures
 (TODO-5845; a struct argument is copied in the spawner before the task starts,
 and the waiter owns the result), and `optexe` runs it on an OS thread of its own
 (Threads For Real, Runtime Model); other callees (collection or `copy`
-parameters, TODO-5847; `string` parameters, TODO-5741), and every other backend,
+parameters, TODO-5847; `string` parameters), and every other backend,
 keep the inline form, which starts no thread and runs the calls one after
 another.
 

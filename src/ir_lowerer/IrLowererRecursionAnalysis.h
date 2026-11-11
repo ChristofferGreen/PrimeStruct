@@ -68,7 +68,8 @@ std::unordered_set<std::string>
 computeRealCallEligibleDefinitionPaths(const Program &program,
                                        const std::string &entryPath,
                                        bool allowMutReceivers = false,
-                                       bool allowNeverResult = false);
+                                       bool allowNeverResult = false,
+                                       bool allowStringParams = false);
 
 // What the real-call shape check needs to know about the program.
 struct RealCallShapeContext {
@@ -78,6 +79,11 @@ struct RealCallShapeContext {
   bool allowStructs = false;
   // A `never` result on the scalar ABI (the address ABI always takes it): the target traps on runtime errors.
   bool allowNeverResult = false;
+  // A `string` parameter on the address ABI (the VM and optcpp, which read a module string by a computed index): the
+  // call site passes the string's table index and the body reads it as a runtime string. Only for a body that uses
+  // the parameter as `count()` or as the argument of `__pstext_literal`, since indexing a runtime string expands to
+  // a branch per table string.
+  bool allowStringParams = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),

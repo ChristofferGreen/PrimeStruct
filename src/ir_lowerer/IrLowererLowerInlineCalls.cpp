@@ -491,8 +491,11 @@ bool emitInlineDefinitionCallImpl(
         &callee != setupStage.entryDef && !ir_lowerer::isTinyInlineLeaf(callee) &&
         ir_lowerer::isRealCallShapeEligible(
             callee,
-            ir_lowerer::RealCallShapeContext{
-                &setupStage.defMap, &structNames, setupStage.realCallAllowStructs})) {
+            ir_lowerer::RealCallShapeContext{&setupStage.defMap,
+                                             &structNames,
+                                             setupStage.realCallAllowStructs,
+                                             false,
+                                             setupStage.realCallAllowStrings})) {
       // The first call of a definition with a real-call shape reserves it; its body is lowered once, after the entry.
       realCallReservationIndex.emplace(
           callee.fullPath, static_cast<uint64_t>(setupStage.realCallEligibleOrder.size()));
@@ -507,6 +510,8 @@ bool emitInlineDefinitionCallImpl(
         realCallIt != realCallReservationIndex.end() && setupStage.realCallAllowStructs) {
       addressAbiCallImm = (uint64_t(1) << 32) | realCallIt->second;
     }
+    // A `string` parameter of a real call is the string's module-table index, which the body reads as a runtime
+    // string (semantics rejects an entry argument string as a call argument, so none is passed here).
     if (const auto realCallIt = realCallReservationIndex.find(callee.fullPath);
         realCallIt != realCallReservationIndex.end() && !addressAbiCallImm.has_value()) {
       ReturnInfo calleeReturnInfo;

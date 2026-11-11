@@ -389,11 +389,14 @@
   `copy` or `move` is bound (copied or moved) by the call site too, but belongs to the callee: a scalar arrives as the
   value of the call site's copy (a `copy mut` scalar is the body's own slot, not an address), a struct as the copy's
   address, and the body holds the drop flag and destroys the struct on every exit unless it moves it on, as the
-  inlined body does. Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, `string`, collection,
+  inlined body does. Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, collection,
   `File` and template-typed parameters; sum results (`Result`, `Maybe`);
   definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
-  (docs/spec/value-lifecycle.md, Borrowing).
+  (docs/spec/value-lifecycle.md, Borrowing). A `string` parameter is a real call only on the VM and the optimizing C++
+  emitters, which read a module string by a computed index, and only when the body uses it as `count()` or as the
+  argument of `__pstext_literal` (`String.append`): the call passes the string's module-table index and the body reads
+  a runtime string, where any other use (indexing expands to a branch per table string) stays inline.
   The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
   a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame. On
   the scalar targets that run `Trap` (`cpp`/`exe`, x86_64 native) a `never` result counts as void, so `panic` is one

@@ -280,6 +280,12 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
             return false;
           }
           LocalInfo &info = localIt->second;
+          if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty() &&
+              info.valueKind == LocalInfo::ValueKind::String) {
+            // The call site passed the string's module-table index: the body reads it as a runtime string.
+            info.stringSource = LocalInfo::StringSource::RuntimeIndex;
+            info.stringIndex = -1;
+          }
           // A `copy` or `move` scalar is the body's own slot (the call site bound a copy and passed its value), not
           // the address of a caller's place; an owned struct still arrives as the address of the call site's copy.
           const bool ownedScalar =

@@ -94,6 +94,8 @@ struct LowerSetupStageState {
   // Struct parameters and results and `mut` receivers take real calls (the VM, the optimizing C++ emitters and the
   // arm64 native backend).
   bool realCallAllowStructs = false;
+  // `string` parameters of real calls: the targets that read a module string by a computed index (the VM, optcpp).
+  bool realCallAllowStrings = false;
   // A runtime error inside a called function ends the program (`Trap`): the VM, the C++ emitters and native. On
   // these targets a `never` definition (panic) is a real call too; elsewhere it returns an error code to its caller,
   // so it stays inline.

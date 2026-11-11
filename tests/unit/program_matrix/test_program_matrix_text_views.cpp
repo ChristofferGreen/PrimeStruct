@@ -81,6 +81,52 @@ main() {
                      47);
 }
 
+TEST_CASE(
+    "a string parameter is a real call: literals and string values reach count and the byte move") {
+  // `String.append` and `weigh` take a `string` parameter that a body reads only as `count()` and through
+  // `__pstext_literal`; the call sites pass the module-table index (a literal's, or a string binding's) and the
+  // callee reads it as a runtime string. The program runs on every backend; the VM and optcpp take real calls.
+  program_matrix::ProgramCase program;
+  program.name = "string_parameter_real_call";
+  program.source = R"(
+import /std/text/*
+
+[return<i32>]
+weigh([string] text, [i32] times) {
+  [i32 mut] i{0i32}
+  [i32 mut] total{0i32}
+  while(i < times) {
+    total = total + text.count()
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String mut] s{String{}}
+  s.append("alpha")
+  s.append("-")
+  [string] word{"beta"}
+  s.append(word)
+  s.append("")
+  [string] again{word}
+  s.append(again)
+  [i32] weighed{weigh("xyz", 3i32) + weigh(word, 2i32) + weigh("", 4i32) + weigh(again, 1i32)}
+  // 5 + 1 + 4 + 0 + 4 = 14; 9 + 8 + 0 + 4 = 21
+  if(s.count() != 14i32 || weighed != 21i32) {
+    return(1i32)
+  }
+  if(!s.equalsText("alpha-betabeta")) {
+    return(2i32)
+  }
+  return(s.count() + weighed)
+}
+)";
+  program.exitCode = 35;
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("http handlers take literal header names and bodies") {
   runTextViewProgram("text_view_http_literals", R"(
 import /std/http/*
