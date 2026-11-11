@@ -989,6 +989,12 @@ bool isOwnedTemporaryArgumentExpr(
   if (expr.isBraceConstructor) {
     return true;
   }
+  // The builtin vector constructor `vector<T>(...)` has no definition and makes a vector nobody else owns.
+  if (std::string collectionName; !expr.isMethodCall &&
+                                  getBuiltinCollectionName(expr, collectionName) &&
+                                  collectionName == "vector") {
+    return true;
+  }
   const Definition *callee =
       (expr.isMethodCall || !resolveDefinitionCall) ? nullptr : resolveDefinitionCall(expr);
   if (callee == nullptr) {

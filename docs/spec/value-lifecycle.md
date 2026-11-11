@@ -127,7 +127,7 @@
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
   copy. A builtin `[vector<T> copy]` parameter gets a buffer of its own holding a copy of each element, except from a
   fresh vector (a constructor or a call returning one) or `move(v)`, which it takes over; the callee frees it when
-  its body ends, and a fresh vector passed to a read-only `vector<T>` parameter is freed there too. The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
+  its body ends, and a fresh vector passed to a read-only `vector<T>` parameter is freed there too, also when the parameter is declared as the stdlib `Vector<T>` or as a template type bound to it (`some<Vector<i32>>(vector<i32>(1i32))`). The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
   element. A struct's own `Destroy` runs first and its fields are destroyed after it, last declared first. A sum local
   (`Maybe<T>`, a user `[sum]`, the stdlib `Result`) initialized from a fresh value destroys its active payload the same
   way (`try(r)` on a named `Result` copies the ok payload out through its `Copy` helper, so `r` and the copy each destroy

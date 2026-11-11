@@ -607,4 +607,47 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a fresh Vector argument belongs to the callee") {
+  const std::string source = pickSubjectProgram(R"(
+[return<i32>]
+count_of([Vector<i32>] items) {
+  return(vectorCount<i32>(items))
+}
+
+[effects(heap_alloc), return<Maybe<Vector<i32>>>]
+make_held() {
+  return(some<Vector<i32>>(vector<i32>(8i32)))
+}
+)",
+                                                R"(
+    [Maybe<Vector<i32>>] held{some<Vector<i32>>(vector<i32>(1i32, 2i32))}
+    pick(held) {
+      none {
+      }
+      some(values) {
+        print_line(vectorCount<i32>(values))
+      }
+    }
+    print_line(count_of(vector<i32>(3i32, 4i32, 5i32)))
+    [Vector<i32>] kept{vector<i32>(6i32, 7i32)}
+    [Maybe<Vector<i32>>] shared{some<Vector<i32>>(kept)}
+    print_line(count_of(kept))
+    print_line(vectorCount<i32>(kept))
+    pick(shared) {
+      none {
+      }
+      some(values) {
+        print_line(vectorCount<i32>(values))
+      }
+    }
+    pick(make_held()) {
+      none {
+      }
+      some(values) {
+        print_line(vectorCount<i32>(values))
+      }
+    })");
+  runPickSubjectProgram("pick_payload_fresh_vector_argument", source, "2\n3\n2\n2\n2\n1\n0\n0\n");
+}
+
 TEST_SUITE_END();
