@@ -828,4 +828,64 @@ main() {
                 outcome.err);
 }
 
+TEST_CASE("a closure captures a pick payload binding") {
+  const std::string source = pickSubjectProgram("", R"(
+    [Maybe<i32>] held{some<i32>(2i32)}
+    pick(held) {
+      none {
+      }
+      some(job) {
+        [mut] show{[job]([i32] more) { return(job + more) }}
+        print_line(show(3i32))
+      }
+    }
+    pick(get(5i32)) {
+      none {
+      }
+      some(line) {
+        [mut] by_value{[line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(by_value(1i32))
+        [mut] by_ref{[ref line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(by_ref(2i32))
+        print_line(first_byte(line))
+      }
+    }
+    [Maybe<String>] kept{get(6i32)}
+    pick(kept) {
+      none {
+      }
+      some(line) {
+        [mut] by_value{[line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(by_value(1i32))
+        [mut] by_ref{[ref line]([i32] more) { return(first_byte(line) + more) }}
+        print_line(by_ref(2i32))
+      }
+    }
+    [i32] got{pick(get(7i32)) { none { 0i32 } some(line) { [mut] add{[line]([i32] more) { return(first_byte(line) + more) }} add(1i32) } }}
+    print_line(got))");
+  runPickSubjectProgram("pick_binder_capture", source, "5\n54\n55\n53\n55\n56\n56\n0\n0\n");
+}
+
+TEST_CASE("a closure cannot capture the payload binding of another arm") {
+  const program_matrix::Outcome outcome =
+      compilePickProgram("pick_binder_capture_other_arm", PickSubjectPrelude + R"(
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Result<i32, i32>] held{ok<i32, i32>(2i32)}
+  pick(held) {
+    ok(job) {
+      print_line(job)
+    }
+    error(code) {
+      [mut] show{[job]([i32] more) { return(job + more) }}
+      print_line(show(3i32))
+    }
+  }
+  return(0i32)
+}
+)");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("unknown capture: job") != std::string::npos, outcome.err);
+}
+
 TEST_SUITE_END();

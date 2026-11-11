@@ -319,6 +319,9 @@ bad_set() {
   | `[name{expr}]`, `[mut name{expr}]` | init capture: a field initialized by `expr`, evaluated where the lambda is written |
   | `[=]`, `[&]` | capture by value / by reference every enclosing binding the body uses (not every local) |
 
+  The payload binding of a `pick` arm is an enclosing binding for the lambdas written in that arm's body, and for no
+  other arm.
+
   A body that reads an enclosing binding it does not capture is `unknown identifier: name (the lambda does not
   capture it; add [name])`; writing a non-`mut` capture is `assign target must be a mutable binding`. A `[ref name]`
   of a binding that already is a `Reference` or `Pointer` copies that reference.

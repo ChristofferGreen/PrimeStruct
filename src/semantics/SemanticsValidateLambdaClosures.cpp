@@ -534,6 +534,26 @@ private:
         scoped.insert(arg.name);
       }
     }
+    if (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.isMethodCall &&
+        expr.name == "pick" && expr.args.size() == 1) {
+      // A `variant(payload) { ... }` arm binds its payload for its own body only.
+      for (Expr &arm : expr.bodyArguments) {
+        NameSet armVisible = scoped;
+        if (arm.kind == Expr::Kind::Call && !arm.isBinding && !arm.isMethodCall &&
+            arm.args.size() == 1 && arm.args.front().kind == Expr::Kind::Name &&
+            !arm.bodyArguments.empty()) {
+          armVisible.insert(arm.args.front().name);
+          if (!rewriteList(arm.bodyArguments, armVisible)) {
+            return false;
+          }
+          continue;
+        }
+        if (!rewriteExpr(arm, armVisible, false)) {
+          return false;
+        }
+      }
+      return true;
+    }
     return rewriteList(expr.bodyArguments, scoped);
   }
 

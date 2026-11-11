@@ -128,7 +128,6 @@ of sync with them.
 | TODO-5863 | A struct named without its namespace is a `Channel` element | ready | mt-primitives |
 | TODO-5864 | A lambda in a generic definition names the definition's type parameters | ready | closures-generics |
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | ready | closures-lifecycle |
-| TODO-5866 | A closure captures a `pick` payload binding | ready | pick-payloads |
 | TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | ready | result-question |
 | TODO-5871 | `serveWorkers` answers more new connections a second than one thread can accept | ready | mt-server |
 | TODO-5872 | A thread reads the bytes of a block another thread allocated as fast as its own | ready | mt-heap |
@@ -137,6 +136,7 @@ of sync with them.
 | TODO-5875 | `count()` on a local declared `Vector<T>` lowers | ready | pick-payloads |
 | TODO-5876 | `return(pick(...))` of a vector and assignment from a `pick` expression | ready | pick-payloads |
 | TODO-5877 | A field an arm of a `pick` expression yields is copied | ready | pick-payloads |
+| TODO-5878 | A `[move name]` lambda capture compiles | ready | pick-payloads |
 | TODO-5870 | A VM program that uses tasks runs its string code on the fast kernel | ready | vm-tasks |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
@@ -220,7 +220,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5866, TODO-5868, TODO-5873, TODO-5874, TODO-5875, TODO-5876, TODO-5877
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5868, TODO-5873, TODO-5874, TODO-5875, TODO-5876, TODO-5877, TODO-5878
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -236,7 +236,7 @@ of sync with them.
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name) are done, and found with them and ready: TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5876 (`return(pick(...))` and assignment from a `pick` expression) and TODO-5877 (a field an arm of a `pick` expression yields is copied). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; ready: TODO-5871 (every server stops near 14,600 new connections a second, which caps the form with 4 workers), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name) and TODO-5866 (a closure captures a `pick` payload binding) are done, and found with them and ready: TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5876 (`return(pick(...))` and assignment from a `pick` expression), TODO-5877 (a field an arm of a `pick` expression yields is copied) and TODO-5878 (a `[move name]` lambda capture compiles). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; ready: TODO-5871 (every server stops near 14,600 new connections a second, which caps the form with 4 workers), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
 
 ### Task Blocks
 
@@ -929,20 +929,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: positional brace-constructor arguments of `Function` type.
 
-- [ ] TODO-5866: A closure captures a `pick` payload binding
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-11
-  - phase: Result and control flow (docs/spec/errors-and-file-io.md; found with `serveWorkers`)
-  - parallel_track: pick-payloads
-  - scope: In `pick(held) { some(job) { [mut] show{[job]([i32] more) { return(job + more) }} ... } }` with `held` a `Maybe<i32>`, the capture is `unknown capture: job`. Copying the payload to a local first (`[i32] amount{job}`, then `[amount]`) works. Let a capture list name a payload binding of the enclosing `pick` arm.
-  - implementation_notes: the capture lookup does not see payload bindings.
-  - acceptance:
-    - positive: the program prints 5 on the VM and `optexe`; a `String` payload captured by value and by `ref` works
-    - negative: a capture of a name that is bound in another arm is still `unknown capture`
-    - full release gate green
-  - stop_rule: captures of `pick` payload bindings.
-
 
 - [ ] TODO-5868: `serve(app)?` in an `if` block of `main` compiles
   - owner: ai
@@ -1027,6 +1013,20 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - negative: a `String` field and an `i32` arm are still incompatible
     - full release gate green
   - stop_rule: field and element values of `pick` expression arms.
+
+- [ ] TODO-5878: A `[move name]` lambda capture compiles
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `[i32 mut] n{4i32}` followed by `[mut] show{[move n]([i32] more) { return(n + more) }}` is rejected with `unable to infer implicit template arguments for /main__lambda0_make`; the same for a `String`, a `vector<i32>` and a `pick` payload binding. docs/spec/value-lifecycle.md lists `[move name]` as a capture form, and no test uses it. Make the capture move `name` into the closure, so that `name` is moved-from afterwards and the closure destroys the value.
+  - implementation_notes: `desugarLambda` (src/semantics/SemanticsValidateLambdaClosures.cpp) passes `move(name)` to the closure's factory; the factory's template inference does not see through the `move` call.
+  - acceptance:
+    - positive: the program prints 5 on the VM and `optexe`; a moved `String` and a moved `vector<i32>` print their value with the heap statistics balanced
+    - negative: a use of `name` after the lambda is `use-after-move`
+    - full release gate green
+  - stop_rule: `[move name]` captures.
 
 - [ ] TODO-5871: `serveWorkers` answers more new connections a second than one thread can accept
   - owner: ai
