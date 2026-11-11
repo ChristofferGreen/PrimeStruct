@@ -2206,6 +2206,7 @@ are left unarchived.
 | TODO-5796 | `Atomic<i32>` and `Atomic<i64>` with the `atomic` effect | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5797 | `Mutex<T>` with scoped `locked(body)` and the `lock` effect | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5798 | Bounded `Channel<T>` with the `channel` effect | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2277,6 +2278,7 @@ are left unarchived.
 | TODO-5939 | Stopping a script never signals a reaped pid and reports a stop as stopped | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5941 | Assigning to a struct local of one scalar kind copies it instead of aliasing the source | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5942 | arm64 native starts a task on a pthread and joins it, its heap behind a lock | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5943 | arm64 native tasks: the measured speedup and the heap stress | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5944 | Parallel definition validation does not crash | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5950 | arm64 native runs the atomic opcodes and `SharedString` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5951 | arm64 native runs `Mutex` and `Channel` | [2026-11.md](todo_archive/2026-11.md) | - |
