@@ -422,6 +422,67 @@ TEST_CASE("multi wait without the tuple import is one located diagnostic") {
   CHECK(diagnosticInfo.primarySpan.line == waitLine);
 }
 
+namespace {
+
+// Two tasks waited together by `waitStatement`; `rightType` is the second task's result type.
+std::string voidMultiWaitSource(const std::string &rightType, const std::string &waitStatement) {
+  return R"(
+[effects(task), return<void>]
+work() {
+}
+
+[effects(task), return<)" +
+         rightType + R"(>]
+other() {
+)" + (rightType == "void" ? "" : "  return(7i32)\n") +
+         R"(}
+
+[effects(task), return<i32>]
+main() {
+  [Task<void>] left{[spawn] work()};
+  [Task<)" +
+         rightType + R"(>] right{[spawn] other()};
+  [i32] plain{1i32}
+  )" + waitStatement +
+         R"(
+  return(0i32)
+}
+)";
+}
+
+} // namespace
+
+TEST_CASE("multi wait of tasks without results needs no tuple") {
+  std::string error;
+  CHECK(validateProgram(voidMultiWaitSource("void", "wait(left, right)"), "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("multi wait of tasks without results consumes each handle") {
+  std::string error;
+  CHECK_FALSE(validateProgram(
+      voidMultiWaitSource("void", "wait(left, right)\n  wait(right)"), "/main", error));
+  CHECK(error.find("task handle already waited: right") != std::string::npos);
+  error.clear();
+  CHECK_FALSE(validateProgram(voidMultiWaitSource("void", "wait(left, plain)"), "/main", error));
+  CHECK(error.find("wait requires a task handle binding") != std::string::npos);
+}
+
+TEST_CASE("multi wait that mixes void and value tasks is one located diagnostic") {
+  const std::string source = voidMultiWaitSource("i32", "wait(left, right)");
+  const size_t waitOffset = source.find("wait(left, right)");
+  REQUIRE(waitOffset != std::string::npos);
+  const int waitLine =
+      1 + static_cast<int>(std::count(source.begin(), source.begin() + waitOffset, '\n'));
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK(error.find("wait of several tasks cannot mix Task<void> with tasks that have a result") !=
+        std::string::npos);
+  CHECK(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == waitLine);
+}
+
 TEST_CASE("return of a waited String task result matches a String return") {
   const auto source = [](const std::string &resultType, const std::string &resultBody) {
     return R"(

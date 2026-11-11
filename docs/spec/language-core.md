@@ -341,7 +341,8 @@ module {
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
   `[spawn] f(...)`, infers `wait(Task<T>) -> T` and multi-task `wait(...) -> tuple<...>` (`[a b] wait(left, right)`
-  binds the results in task order), requires the `task` effect for both operations, and rejects live task handles on return, double waits, task-handle escapes, and
+  binds the results in task order; a multi-wait of `Task<void>` handles has no value, and a mix of `Task<void>` and
+  value tasks is rejected), requires the `task` effect for both operations, and rejects live task handles on return, double waits, task-handle escapes, and
   spawn arguments that are not sendable. VM/native lower the structured runtime slice by storing spawned call results in task handle bindings,
   lowering `wait(handle)` to return that stored result, and lowering multi-wait to ordinary stdlib tuple construction.
   Detached tasks, task groups and scheduler controls remain future work; tasks hand values to each other through a `Channel` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state).

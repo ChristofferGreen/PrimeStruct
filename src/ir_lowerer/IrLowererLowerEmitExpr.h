@@ -435,6 +435,22 @@
             expr.templateArgs.empty()) {
           return emitExpr(expr.args.front(), localsIn);
         }
+        if (!expr.isMethodCall && !expr.isFieldAccess && expr.transforms.empty() &&
+            isSimpleCallName(expr, "wait") && expr.args.size() > 1 && !expr.hasBodyArguments &&
+            expr.bodyArguments.empty() && expr.templateArgs.empty()) {
+          // A multi-wait that is still a call waits tasks without results (one with results is a tuple
+          // constructor by now): each handle in order, and the last wait's 0 is the call's value, which its
+          // statement pops.
+          for (size_t argIndex = 0; argIndex < expr.args.size(); ++argIndex) {
+            if (!emitExpr(expr.args[argIndex], localsIn)) {
+              return false;
+            }
+            if (argIndex + 1 < expr.args.size()) {
+              function.instructions.push_back({IrOpcode::Pop, 0});
+            }
+          }
+          return true;
+        }
         const auto pickExprResult = sumHelpers.tryEmitPickExpr(expr, localsIn);
         if (pickExprResult == LoweredSumPickEmitResult::Error) {
           return false;

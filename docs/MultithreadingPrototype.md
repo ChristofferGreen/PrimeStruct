@@ -482,6 +482,14 @@ names is `tuple destructuring arity mismatch: pattern has 3 names but tuple has
 Each name is a binding of its own task's result type: with a `Task<String>` and
 a `Task<Reply>`, the first name is a `String` and the second a `Reply`.
 
+Tasks without results are waited together too: `wait(left, right)` of
+`Task<void>` handles waits each in argument order, consumes every handle and has
+no value, so it needs no tuple import. A multi-wait that mixes `Task<void>`
+with tasks that have a result is rejected at the `wait` (`wait of several tasks
+cannot mix Task<void> with tasks that have a result: wait them separately`): a
+tuple has no `void` element, and leaving the void tasks out would shift the
+positions of the others.
+
 A multi-wait needs the tuple import. Without it the `wait` is the diagnostic
 `wait of several tasks returns a tuple: import /std/tuple/*`.
 
@@ -791,8 +799,7 @@ main() {
   tally{Mutex<Tally>{Tally{}}}
   [Task<void>] left{[spawn] record(tally, 3i64)}
   [Task<void>] right{[spawn] record(tally, 4i64)}
-  wait(left)
-  wait(right)
+  wait(left, right)
   [i64] total{tally.locked([]([Reference<Tally>] state) { return(state.total) })}
   print_line(total)
   return(0i32)
@@ -800,8 +807,7 @@ main() {
 ```
 
 This prints `7`. Implemented on the VM and `optexe` (`stdlib/std/sync/sync.prime`); the library reference is
-docs/spec/stdlib-reference.md, Shared state. The two waits are separate statements because `wait(left, right)`
-of two `Task<void>` does not compile yet (TODO-5852).
+docs/spec/stdlib-reference.md, Shared state.
 
 - `locked` is generic over the closure type (`locked<Body>([Body mut] body)`), so `body` may borrow the caller's
   locals with `[ref name]`: it runs inline, on the calling thread. `locked` returns what `body` returns. Today
@@ -850,8 +856,7 @@ main() {
   hits{Atomic<i64>{0i64}}
   [Task<void>] first{[spawn] count_hits(hits, 1000i32)}
   [Task<void>] second{[spawn] count_hits(hits, 1000i32)}
-  wait(first)
-  wait(second)
+  wait(first, second)
   print_line(hits.load())
   return(0i32)
 }

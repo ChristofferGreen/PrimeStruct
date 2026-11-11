@@ -1158,8 +1158,7 @@ main() {
   hits{Atomic<i64>{0i64}}
   [Task<void>] first{[spawn] count_hits(hits, 1000i32)}
   [Task<void>] second{[spawn] count_hits(hits, 1000i32)}
-  wait(first)
-  wait(second)
+  wait(first, second)
   print_line(hits.load())
   return(0i32)
 }
@@ -1202,8 +1201,7 @@ main() {
   tally{Mutex<Tally>{Tally{}}}
   [Task<void>] left{[spawn] record(tally, 3i64)}
   [Task<void>] right{[spawn] record(tally, 4i64)}
-  wait(left)
-  wait(right)
+  wait(left, right)
   [i64] total{tally.locked([]([Reference<Tally>] state) { return(state.total) })}
   print_line(total)
   return(0i32)

@@ -308,6 +308,15 @@ bool SemanticsValidator::inferTaskWaitBinding(
     }
     resultTypes.push_back(std::move(resultType));
   }
+  if (resultTypes.size() > 1 &&
+      std::all_of(resultTypes.begin(), resultTypes.end(), [](const std::string &resultType) {
+        return normalizeBindingTypeName(resultType) == "void";
+      })) {
+    // A multi-wait of tasks without results has no value (docs/MultithreadingPrototype.md, Multi-Wait).
+    bindingOut.typeName = "void";
+    bindingOut.typeTemplateArg.clear();
+    return true;
+  }
   if (resultTypes.size() > 1) {
     bindingOut.typeName = "/std/tuple/tuple";
     bindingOut.typeTemplateArg = joinTemplateArgs(resultTypes);

@@ -154,6 +154,7 @@ PhaseStatus rewriteExprPhase2([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     }
     std::vector<std::string> tupleArgs;
     tupleArgs.reserve(expr.args.size());
+    size_t voidTaskCount = 0;
     for (Expr &arg : expr.args) {
       if (!rewriteExpr(arg,
                        mapping,
@@ -203,7 +204,23 @@ PhaseStatus rewriteExprPhase2([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         error = "multi-wait task result types must be concrete";
         return st.done(false);
       }
+      if (semantics::normalizeBindingTypeName(resolvedArg.text) == "void") {
+        ++voidTaskCount;
+      }
       tupleArgs.push_back(std::move(resolvedArg.text));
+    }
+    if (voidTaskCount == expr.args.size()) {
+      // Tasks without results: the wait stays a call that waits each handle in order and has no value
+      // (docs/MultithreadingPrototype.md, Multi-Wait).
+      return st.done(true);
+    }
+    if (voidTaskCount > 0) {
+      // A tuple has no void element, and dropping the void tasks would shift the positions of the others.
+      error = "wait of several tasks cannot mix Task<void> with tasks that have a result: wait "
+              "them separately";
+      ctx.errorSourceLine = expr.sourceLine;
+      ctx.errorSourceColumn = expr.sourceColumn;
+      return st.done(false);
     }
     if (ctx.sourceDefs.find("/std/tuple/tuple") == ctx.sourceDefs.end()) {
       // The result of a multi-wait is a stdlib tuple, which only a program that imports it has.

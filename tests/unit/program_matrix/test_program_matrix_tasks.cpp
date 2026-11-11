@@ -89,6 +89,46 @@ main() {
   runTaskProgram(program);
 }
 
+// `wait(a, b)` of tasks without results waits each and has no value; no tuple, so no tuple import (TODO-5852).
+TEST_CASE("several tasks without results are waited together") {
+  program_matrix::ProgramCase program;
+  program.name = "task_void_multi_wait";
+  program.source = R"(
+import /std/sync/*
+
+[effects(atomic), return<void>]
+count_hits([Atomic<i64>] hits, [i32] times) {
+  [i32 mut] i{0i32}
+  while(i < times) {
+    hits.add(1i64)
+    i = i + 1i32
+  }
+}
+
+[effects(atomic, heap_alloc, io_out, task), return<int>]
+main() {
+  hits{Atomic<i64>{0i64}}
+  [Task<void>] first{[spawn] count_hits(hits, 1000i32)}
+  [Task<void>] second{[spawn] count_hits(hits, 500i32)}
+  wait(first, second)
+  print_line(hits.load())
+  if(hits.load() > 0i64) {
+    [Task<void>] third{[spawn] count_hits(hits, 100i32)}
+    [Task<void>] fourth{[spawn] count_hits(hits, 20i32)}
+    [Task<void>] fifth{[spawn] count_hits(hits, 3i32)}
+    wait(third, fourth, fifth)
+  }
+  print_line(hits.load())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1500\n1623\n";
+  // The tasks count in an Atomic so the output does not depend on their order; native has no atomics yet.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 TEST_CASE("a task spawned in a loop is waited in every iteration") {
   program_matrix::ProgramCase program;
   program.name = "task_spawn_in_loop";
