@@ -1025,6 +1025,35 @@ TEST_CASE("editor brings back the preview of the tabs that had it on at the last
   CHECK_FALSE(headless::windowState(EditorWindow).preview);
 }
 
+TEST_CASE("a restored markdown tab saved as text alone stays text alone with the preference on") {
+  const std::string a = writeScratch("session_alone_a.md", "# a");
+  const std::string b = writeScratch("session_alone_b.md", "# b");
+  headless::reset();
+  headless::setBoolPref("previewMarkdown", true);
+  headless::setPrefList("session.files", {a, b});
+  headless::setPrefList("session.previews", {"0"});
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK_FALSE(headless::windowState(EditorWindow).preview);
+  // A tab with no saved mode still follows the preference.
+  CHECK(headless::windowState(SecondWindow).preview);
+}
+
+TEST_CASE("a skipped missing file does not shift the restored active tab") {
+  const std::string a = writeScratch("session_shift_a.txt", "a");
+  const std::string b = writeScratch("session_shift_b.txt", "b");
+  headless::reset();
+  headless::setPrefList("session.files", {"/definitely/not/here.txt", a, b});
+  headless::setIntPref("session.active", 2);
+  headless::pushCloseWindow(SecondWindow);
+  headless::pushCloseWindow(EditorWindow);
+  runEditor();
+  CHECK(headless::windowPath(EditorWindow) == a);
+  CHECK(headless::windowPath(SecondWindow) == b);
+  CHECK(countCalls("ps_ui_window_select(15)") == 1);
+}
+
 TEST_CASE("editor remembers which tabs show their preview") {
   const std::string a = writeScratch("session_remember_a.md", "# a");
   const std::string b = writeScratch("session_remember_b.md", "# b");

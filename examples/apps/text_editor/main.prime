@@ -745,6 +745,9 @@ restore_preview([App] app, [Window] tab, [i32] position) {
   [bool mut] shown{false}
   if(position < app.listCount("session.previews")) {
     [String] flag{app.listGet("session.previews", position)}
+    if(flag.equalsText("0")) {
+      shown = tab.setPreviewMode(0i32)
+    }
     if(flag.equalsText("1")) {
       shown = tab.setPreviewMode(1i32)
     }
@@ -767,6 +770,9 @@ restore_session([App] app, [Window] first) {
   [i32 mut] opened{0i32}
   // Each tab opens right after the one before it, behind the selected one.
   [Window mut] last{first}
+  // The place among the opened tabs of the file at the saved active place: a skipped file shifts the tabs after it.
+  [i32] savedActive{app.intPref("session.active", 0i32)}
+  [i32 mut] chosenIndex{0i32}
   [i32 mut] position{0i32}
   while(position < saved) {
     [String] path{app.listGet("session.files", position)}
@@ -776,6 +782,9 @@ restore_session([App] app, [Window] first) {
     }
     if(already) {
       opened = opened + 1i32
+      if(position == savedActive) {
+        chosenIndex = opened - 1i32
+      }
     } else {
       if(opened == 0i32 && !keepFirst) {
         if(firstView.loadFile(path)) {
@@ -785,6 +794,9 @@ restore_session([App] app, [Window] first) {
           [bool] firstPreviewed{preview_if_markdown(app, first, path)}
           [bool] firstRestored{restore_preview(app, first, position)}
           opened = 1i32
+          if(position == savedActive) {
+            chosenIndex = opened - 1i32
+          }
         }
       } else {
         [Window] extra{background_tab(app, last)}
@@ -796,6 +808,9 @@ restore_session([App] app, [Window] first) {
           [bool] extraPreviewed{preview_if_markdown(app, extra, path)}
           [bool] extraRestored{restore_preview(app, extra, position)}
           opened = opened + 1i32
+          if(position == savedActive) {
+            chosenIndex = opened - 1i32
+          }
           last = extra
         } else {
           extra.close()
@@ -807,9 +822,8 @@ restore_session([App] app, [Window] first) {
   // The session's tabs open behind the first one: a document opened at launch keeps the selection, otherwise the
   // tab that was active is selected.
   if(!keepFirst) {
-    [i32] active{app.intPref("session.active", 0i32)}
-    if(opened > 1i32 && active >= 0i32 && active < first.tabCount()) {
-      [Window] chosen{first.tabAt(active)}
+    if(opened > 1i32 && chosenIndex < first.tabCount()) {
+      [Window] chosen{first.tabAt(chosenIndex)}
       chosen.select()
     }
   }
