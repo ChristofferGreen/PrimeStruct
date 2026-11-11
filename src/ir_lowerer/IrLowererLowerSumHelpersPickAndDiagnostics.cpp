@@ -1030,56 +1030,56 @@ namespace primec::ir_lowerer {
           if (!emitStructCopyFromPtrs(resultLocal, srcPtrLocal, aggregateResultLayout.totalSlots)) {
             return LoweredSumPickEmitResult::Error;
           }
-          if (!vectorResultLifecyclePath.empty()) {
-            // A vector result owns its buffer: a fresh vector is taken over as it is, and so is a local whose
-            // owner can be released (the payload binding gives up the sum that owns it); any other place is
-            // copied (docs/spec/value-lifecycle.md).
-            int32_t releasedDropFlagLocal = -1;
-            if (valueExpr->kind == Expr::Kind::Name) {
+          // The result owns its value. A fresh value is taken over as it is, and so is a local that ends with
+          // the arm: one the arm declared, or the payload binding of a subject the `pick` owns, whose sum then
+          // has nothing left to destroy. Any other place (a local of the enclosing scope, the payload of a sum
+          // somebody else owns, a field, an element) keeps its value and is copied
+          // (docs/spec/value-lifecycle.md).
+          int32_t releasedDropFlagLocal = -1;
+          if (valueExpr->kind == Expr::Kind::Name) {
+            const bool isPayloadBinding = payloadArm && valueExpr->name == arm.args.front().name;
+            if (isPayloadBinding) {
+              releasedDropFlagLocal = ownsSubject ? subjectDropFlagLocal : -1;
+            } else if (valueLocals.find(valueExpr->name) == valueLocals.end()) {
               if (const auto localIt = branchLocals.find(valueExpr->name);
                   localIt != branchLocals.end()) {
                 releasedDropFlagLocal = localIt->second.dropFlagLocal;
               }
-              if (releasedDropFlagLocal < 0 && payloadArm &&
-                  valueExpr->name == arm.args.front().name) {
-                releasedDropFlagLocal = subjectDropFlagLocal;
-              }
             }
-            if (releasedDropFlagLocal >= 0) {
-              function.instructions.push_back({IrOpcode::PushI32, 0});
-              function.instructions.push_back(
-                  {IrOpcode::StoreLocal, static_cast<uint64_t>(releasedDropFlagLocal)});
-            } else if (!ir_lowerer::isFreshBuiltinVectorExpr(*valueExpr, resolveDefinitionCall)) {
-              bool ranCopyHelper = false;
-              if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
-                      resultLocal,
-                      srcPtrLocal,
-                      vectorResultLifecyclePath,
-                      [&](const std::string &path) -> const Definition * {
-                        auto copyIt = defMap.find(path + "/Copy");
-                        return copyIt == defMap.end() ? nullptr : copyIt->second;
-                      },
-                      resolveStructSlotLayout,
-                      allocTempLocal,
-                      function.instructions,
-                      branchLocals,
-                      emitInlineDefinitionCall,
-                      ranCopyHelper,
-                      error)) {
-                return LoweredSumPickEmitResult::Error;
-              }
+          }
+          const bool freshValue =
+              vectorResultLifecyclePath.empty()
+                  ? shouldDisarmStructCopySourceExpr(*valueExpr)
+                  : ir_lowerer::isFreshBuiltinVectorExpr(*valueExpr, resolveDefinitionCall);
+          if (releasedDropFlagLocal >= 0) {
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(releasedDropFlagLocal)});
+          } else if (!freshValue) {
+            bool ranCopyHelper = false;
+            if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
+                    resultLocal,
+                    srcPtrLocal,
+                    vectorResultLifecyclePath.empty() ? aggregateResultStructPath
+                                                      : vectorResultLifecyclePath,
+                    [&](const std::string &path) -> const Definition * {
+                      auto copyIt = defMap.find(path + "/Copy");
+                      return copyIt == defMap.end() ? nullptr : copyIt->second;
+                    },
+                    resolveStructSlotLayout,
+                    allocTempLocal,
+                    function.instructions,
+                    branchLocals,
+                    emitInlineDefinitionCall,
+                    ranCopyHelper,
+                    error)) {
+              return LoweredSumPickEmitResult::Error;
             }
-          } else if (shouldDisarmStructCopySourceExpr(*valueExpr)) {
+          } else if (vectorResultLifecyclePath.empty()) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
                 aggregateResultStructPath);
-          } else if (valueExpr->kind == Expr::Kind::Name) {
-            // The arm's value is a local (the payload binding, for example): the result takes it over.
-            ir_lowerer::emitReleaseDropFlag(
-                branchLocals, valueExpr->name, [&](IrOpcode op, uint64_t imm) {
-                  function.instructions.push_back({op, imm});
-                });
           }
         } else {
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});

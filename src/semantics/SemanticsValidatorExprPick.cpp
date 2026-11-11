@@ -456,6 +456,19 @@ bool SemanticsValidator::validatePickExpr(
     movedAfter.insert(currentValidationState_.movedBindings.begin(),
                       currentValidationState_.movedBindings.end());
     ReturnKind armKind = inferExprReturnKind(*valueExpr, params, branchLocals);
+    // A field or an element that holds a vector or a struct is an aggregate like the constructor, call or
+    // local of another arm.
+    if (BindingInfo placeBinding;
+        armKind == ReturnKind::Unknown && valueExpr->kind == Expr::Kind::Call &&
+        inferBindingTypeFromInitializer(*valueExpr, params, branchLocals, placeBinding)) {
+      const std::string placeType = normalizeBindingTypeName(placeBinding.typeName);
+      const auto importIt = importAliases_.find(placeType);
+      if (placeType == "vector" ||
+          !resolveStructTypePath(placeType, expr.namespacePrefix, structNames_).empty() ||
+          (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0)) {
+        armKind = ReturnKind::Array;
+      }
+    }
     if (armKind == ReturnKind::Void) {
       if (isStructConstructorValueExpr(*valueExpr)) {
         armKind = ReturnKind::Unknown;

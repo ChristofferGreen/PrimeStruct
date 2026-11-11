@@ -137,14 +137,17 @@
   taken from a place is copied in like a struct field. A `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
-  moving it out (`move(line)`, `return(line)`, the arm's value in a `pick` expression) leaves nothing for the sum to
+  moving it out (`move(line)`, `return(line)`) leaves nothing for the sum to
   destroy, for a fresh subject and for a sum local alike, so the payload is destroyed once, by its new owner. A builtin
   `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it
-  like any named vector. A `pick` expression whose arms yield a `vector<T>` makes a vector of its own, which the binding,
-  argument or assignment it initializes owns: an arm's fresh vector is taken over, so is an owning vector local, and so
-  is the payload binding, whose sum then no longer destroys the payload; any other place is copied. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  like any named vector. A `pick` expression whose arms yield a struct or a `vector<T>` makes a value of its own, which
+  the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once):
+  an arm's fresh value is taken over, and so is a local that ends with the arm, which is a local declared in the arm
+  or the payload binding of a fresh subject; any other place is copied with the type's `Copy` helpers and stays
+  readable: a local or parameter of the enclosing scope, the payload binding of a sum local, parameter or field, a
+  field, an element. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a

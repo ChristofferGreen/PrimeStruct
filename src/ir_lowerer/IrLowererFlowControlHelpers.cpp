@@ -989,6 +989,10 @@ bool isOwnedTemporaryArgumentExpr(
   if (expr.isBraceConstructor) {
     return true;
   }
+  // A `pick` expression builds a result of its own, which owns what its arm yielded (`tryEmitPickExpr`).
+  if (isSimpleCallName(expr, "pick") && expr.args.size() == 1 && !expr.bodyArguments.empty()) {
+    return true;
+  }
   // The builtin vector constructor `vector<T>(...)` has no definition and makes a vector nobody else owns.
   if (std::string collectionName; !expr.isMethodCall &&
                                   getBuiltinCollectionName(expr, collectionName) &&
