@@ -83,6 +83,75 @@
                   const auto emitInstruction = [&](IrOpcode op, uint64_t imm) {
                     function.instructions.push_back({op, imm});
                   };
+                  // A builtin vector local that owns its record (`destPtrLocal` is the local holding the
+                  // record pointer): a fresh vector is taken over, a place is copied with a buffer of its
+                  // own first (so `kept = kept` stays valid), then the vector the local held is destroyed.
+                  if (structPath == ir_lowerer::BuiltinVectorAssignPath) {
+                    const LowerSetupStageState::DropEntry *vectorEntry = nullptr;
+                    for (const auto &candidate : setupStage.dropEntries) {
+                      if (candidate.flagLocal == destDropFlagLocal &&
+                          candidate.builtinVectorElementSlots > 0 &&
+                          candidate.builtinVectorElementCopyPath.has_value()) {
+                        vectorEntry = &candidate;
+                        break;
+                      }
+                    }
+                    if (vectorEntry == nullptr) {
+                      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
+                      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+                      return true;
+                    }
+                    const LowerSetupStageState::DropEntry entry = *vectorEntry;
+                    const int32_t newBaseLocal = nextLocal;
+                    nextLocal += slotCount;
+                    if (!emitStructCopySlots(newBaseLocal, srcPtrLocal, slotCount)) {
+                      return false;
+                    }
+                    const int32_t newPtrLocal = allocTempLocal();
+                    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newPtrLocal));
+                    if (!ir_lowerer::isFreshBuiltinVectorExpr(rhsExpr,
+                                                              [&](const Expr &candidate) {
+                                                                return resolveDefinitionCall(
+                                                                    candidate);
+                                                              }) &&
+                        !ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+                            newPtrLocal,
+                            srcPtrLocal,
+                            *entry.builtinVectorElementCopyPath,
+                            findCopyHelper,
+                            resolveLayout,
+                            allocTempLocal,
+                            function.instructions,
+                            localsIn,
+                            emitInlineDefinitionCall,
+                            error)) {
+                      return false;
+                    }
+                    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destDropFlagLocal));
+                    const size_t skipJump = function.instructions.size();
+                    emitInstruction(IrOpcode::JumpIfZero, 0);
+                    if (!emitBuiltinVectorDrop(entry)) {
+                      return false;
+                    }
+                    function.instructions[skipJump].imm =
+                        static_cast<uint64_t>(function.instructions.size());
+                    // The record the local holds from here on: not the temporary above, which the next
+                    // run of this assignment overwrites before the old vector is destroyed.
+                    const int32_t homeBaseLocal = nextLocal;
+                    nextLocal += slotCount;
+                    const int32_t homePtrLocal = allocTempLocal();
+                    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(homeBaseLocal));
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(homePtrLocal));
+                    if (!emitStructCopyFromPtrs(homePtrLocal, newPtrLocal, slotCount)) {
+                      return false;
+                    }
+                    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(homePtrLocal));
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+                    emitInstruction(IrOpcode::PushI32, 1);
+                    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destDropFlagLocal));
+                    return true;
+                  }
                   // A sum local that owns its payload: the new value is taken over from a temporary or
                   // copied from a place first (so `held = held` stays valid), then the payload the local
                   // held is destroyed. A target without a drop flag (a parameter, a reference) is not known

@@ -168,7 +168,10 @@
   the buffer. A move hands the buffer over without a second owner, and a record that does not own its buffer (a view,
   a disarmed temporary) frees nothing. A struct field initialized
   from a place copies it, and
-  `assign` of an owning value destroys the old value and copies the new one. A `copy` or `move` parameter is
+  `assign` of an owning value destroys the old value and copies the new one. Assigning to a `mut` builtin
+  `vector<T>` local does the same: a fresh vector (a call, a constructor, a `pick` expression) is taken over, a
+  place is copied with a buffer of its own and keeps its elements, and the vector the local held is destroyed
+  (`kept = kept` is valid). A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
   destroys the element, also on a builtin `vector<T>` of structs or vectors held in a local, a field

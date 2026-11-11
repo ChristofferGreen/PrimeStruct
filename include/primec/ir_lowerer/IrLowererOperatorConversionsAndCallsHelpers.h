@@ -40,6 +40,10 @@ using EmitConversionsAndCallsStructCopyFromPtrsFn = std::function<bool(int32_t, 
 // Assigns the struct at `srcPtrLocal` to the one at `destPtrLocal` with ownership: the old value
 // is destroyed and the new one copied (or moved from a temporary). `destDropFlagLocal` is the
 // destination local's drop flag, or -1 when the destination always owns its value.
+// With `BuiltinVectorAssignPath` as the struct path the target is a builtin vector local: `destPtrLocal`
+// is the local that holds the record pointer and the slot count is `BuiltinVectorRecordSlots`.
+inline constexpr const char *BuiltinVectorAssignPath = "<builtin vector record>";
+inline constexpr int32_t BuiltinVectorRecordSlots = 5;
 using EmitConversionsAndCallsOwnedStructAssignFn = std::function<bool(int32_t destPtrLocal,
                                                                       int32_t srcPtrLocal,
                                                                       int32_t slotCount,

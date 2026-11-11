@@ -58,6 +58,9 @@ struct LowerSetupStageState {
     // (structPath names the element struct, empty when elements need no destroy) and its data
     // buffer freed.
     int32_t builtinVectorElementSlots = 0;
+    // Set for a builtin vector local whose element type is known: the path an element copy is found by (empty
+    // for scalars). `assign` to such a local can give it a vector of its own.
+    std::optional<std::string> builtinVectorElementCopyPath = std::nullopt;
     // Set for a sum local: its active variant's payload is destroyed.
     const Definition *sumDef = nullptr;
   };

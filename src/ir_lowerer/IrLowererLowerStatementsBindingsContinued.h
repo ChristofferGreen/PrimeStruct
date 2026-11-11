@@ -589,6 +589,13 @@
             {IrOpcode::StoreLocal, static_cast<uint64_t>(info.dropFlagLocal)});
         LowerSetupStageState::DropEntry entry{info.index, info.dropFlagLocal, elementStructPath};
         entry.builtinVectorElementSlots = std::max<int32_t>(1, info.vectorStructElementSlotCount);
+        if (vectorElementTypeFound) {
+          entry.builtinVectorElementCopyPath = vectorElementStructPath;
+        } else if (info.valueKind != LocalInfo::ValueKind::Unknown && info.structTypeName.empty() &&
+                   info.vectorStructElementSlotCount == 0) {
+          // An inferred binding of a vector of scalars.
+          entry.builtinVectorElementCopyPath = std::string{};
+        }
         setupStage.dropEntries.push_back(std::move(entry));
         fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
       }

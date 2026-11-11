@@ -518,6 +518,27 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         return true;
       }
+      if (it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector &&
+          it->second.dropFlagLocal >= 0 && context.emitOwnedStructAssign) {
+        // A builtin vector local that owns its record: the lowerer destroys what it held and gives it the new
+        // vector (`BuiltinVectorAssignPath` marks the target as the local holding the record pointer).
+        const Expr &rhsExpr = expr.args[1];
+        if (!emitExpr(rhsExpr, localsIn)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        if (!context.emitOwnedStructAssign(it->second.index,
+                                           srcPtrLocal,
+                                           BuiltinVectorRecordSlots,
+                                           BuiltinVectorAssignPath,
+                                           rhsExpr,
+                                           it->second.dropFlagLocal)) {
+          return false;
+        }
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+        return true;
+      }
       if (!emitExpr(expr.args[1], localsIn)) {
         return false;
       }

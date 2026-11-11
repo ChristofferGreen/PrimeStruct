@@ -992,4 +992,123 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("assigning to a mut vector local destroys what it held and copies a place") {
+  // A fresh vector (a call, a constructor) is taken over; a place is copied and keeps its own buffer;
+  // `kept = kept` and an assignment in a loop are valid.
+  program_matrix::ProgramCase program;
+  program.name = "vector_local_assignment";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Named() {
+  [String] text{String{}}
+}
+
+[effects(heap_alloc), return<String>]
+label([i32] id) {
+  [String mut] text{String{}}
+  text.pushByte(convert<u8>(48i32 + id))
+  return(text)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+make_values([i32] first) {
+  [vector<i32> mut] values{vector<i32>{}}
+  values.push(first)
+  values.push(first + 1i32)
+  return(values)
+}
+
+[effects(heap_alloc), return<vector<Named>>]
+make_named([i32] id) {
+  [vector<Named> mut] out{vector<Named>{}}
+  out.push(Named{label(id)})
+  out.push(Named{label(id + 1i32)})
+  return(out)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    [vector<i32> mut] kept{make_values(1i32)}
+    kept = make_values(3i32)
+    print_line(kept[0i32])
+    [vector<i32>] other{make_values(7i32)}
+    kept = other
+    kept.push(20i32)
+    print_line(kept.count())
+    print_line(other.count())
+    kept = kept
+    print_line(kept[2i32])
+    [i32 mut] index{0i32}
+    while(index < 3i32) {
+      kept = make_values(index)
+      index = index + 1i32
+    }
+    print_line(kept[1i32])
+    kept = vector<i32>{}
+    print_line(kept.count())
+    kept.push(9i32)
+    print_line(kept[0i32])
+    [mut] inferred{make_values(1i32)}
+    inferred = other
+    inferred = make_values(5i32)
+    print_line(inferred[0i32])
+    [vector<Named> mut] names{make_named(1i32)}
+    names = make_named(4i32)
+    [vector<Named>] more{make_named(6i32)}
+    names = more
+    names = names
+    print_line(convert<i32>(names[1i32].text.byteAt(0i32)))
+    print_line(convert<i32>(more[0i32].text.byteAt(0i32)))
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n3\n2\n20\n3\n0\n9\n5\n55\n54\n0\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a vector local assigned from another keeps its own elements on every backend") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_local_assignment_values";
+  program.source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<vector<i32>>]
+make_values([i32] first) {
+  [vector<i32> mut] values{vector<i32>{}}
+  values.push(first)
+  values.push(first + 1i32)
+  return(values)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [vector<i32> mut] kept{make_values(1i32)}
+  [vector<i32> mut] other{make_values(7i32)}
+  kept = other
+  other.push(30i32)
+  kept[0i32] = 40i32
+  print_line(kept.count())
+  print_line(other.count())
+  print_line(kept[0i32] + other[0i32])
+  kept = make_values(3i32)
+  print_line(kept[1i32])
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n3\n47\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
