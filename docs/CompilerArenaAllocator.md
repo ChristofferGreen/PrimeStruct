@@ -81,7 +81,7 @@ The original TODO-5233 design, matching the TODO's own `implementation_notes`:
   `thread_local` "current arena" pointer: null outside a scope (falls back
   to the system allocator - the safe default for anything outside an
   intentionally-scoped region, including worker threads spawned via
-  `std::async` for parallel definition validation, which never activate the
+  for parallel definition validation, which never activate the
   arena and so always use the system allocator).
 - Scope boundary: one `ScopedCompileArena` per CLI compile (wrapping
   `runCompilePipelineResult` and everything downstream that consumes its
@@ -96,7 +96,7 @@ The original TODO-5233 design, matching the TODO's own `implementation_notes`:
   determine how to free a pointer from the pointer itself rather than from
   "is an arena currently active on this thread" - this matters because an
   object can legitimately be allocated on one thread and freed on another
-  (e.g. ownership transferred out of a `std::async` closure), and delete
+  (e.g. a worker thread's result handed back to its caller), and delete
   must be correct regardless of which thread's arena state happens to be
   active at that moment.
 - Size-classed free lists (16B..4096B doubling classes) *within* the arena,
@@ -115,6 +115,14 @@ The original TODO-5233 design, matching the TODO's own `implementation_notes`:
   stays valid (arena chunks are never unmapped) but isn't recycled, which
   costs at most some unreclaimed capacity, never a correctness bug from two
   live objects aliasing the same bytes.
+- A thread started from inside a compile scope must be joined before the
+  scope ends (TODO-5944). `std::thread` allocates its start state with
+  `operator new` on the starting thread, so from that thread's arena, and
+  the new thread reads and deletes it while it exits. libc++'s `std::async`
+  detaches its thread, so a definition validation worker could still be
+  exiting after the test case had reset the arena and reused those bytes;
+  ThreadSanitizer showed the races and the gate saw one SIGSEGV. The
+  workers are `std::thread`s joined before `validateDefinitions` returns.
 
 This part of the design was implemented, built cleanly, and passed a quick
 manual smoke test (`primec` compiling the `mini_vec.prime` repro, correct

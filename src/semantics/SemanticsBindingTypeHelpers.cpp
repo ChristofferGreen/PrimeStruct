@@ -24,7 +24,7 @@ namespace {
 // of the exact same type-name strings (e.g. "vector<i32>") thousands of
 // times per compile. They are memoized in the current CompileContext
 // definition validation runs multiple SemanticsValidator
-// instances concurrently via std::async (see
+// instances concurrently on joined worker threads (see
 // SemanticsValidatorPassesDefinitions.cpp), and a worker thread without an
 // installed context uses its own per-thread default context, so no cache is
 // shared between threads and no locking is needed. Every insert runs under a

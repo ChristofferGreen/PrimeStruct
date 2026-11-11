@@ -5,17 +5,20 @@
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
 #include "primec/support/BenchmarkSink.h"
+#include "primec/testing/SemanticsDefinitionWorkerProbes.h"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstdlib>
 #include <functional>
-#include <future>
+#include <exception>
 #include <iterator>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <optional>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -32,6 +35,24 @@
 namespace primec::semantics {
 
 namespace {
+
+std::atomic<std::size_t> liveDefinitionValidationWorkerThreads{0};
+
+// Counts definition validation worker threads from their first statement until
+// their thread_local state is destroyed, the last thing a thread does.
+struct DefinitionValidationWorkerThreadLifetime {
+  DefinitionValidationWorkerThreadLifetime() {
+    liveDefinitionValidationWorkerThreads.fetch_add(1);
+  }
+  ~DefinitionValidationWorkerThreadLifetime() {
+    liveDefinitionValidationWorkerThreads.fetch_sub(1);
+  }
+};
+
+void markDefinitionValidationWorkerThread() {
+  thread_local DefinitionValidationWorkerThreadLifetime lifetime;
+  (void)lifetime;
+}
 
 uint64_t captureCurrentResidentBytes() {
 #if defined(__APPLE__)
@@ -82,6 +103,10 @@ bool isStructDefinition(const Definition &candidate) {
 }
 
 } // namespace
+
+std::size_t liveDefinitionValidationWorkerThreadsForTesting() {
+  return liveDefinitionValidationWorkerThreads.load();
+}
 
 bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
   if (expr != nullptr) {
@@ -669,62 +694,88 @@ bool SemanticsValidator::validateDefinitions() {
     return validateDefinitionsForStableRange(0, declarationCount);
   }
 
-  std::vector<std::future<SemanticDefinitionWorkerResultBundle>> workerTasks;
-  workerTasks.reserve(partitions.size());
-  for (DefinitionPartitionChunk &chunk : partitions) {
-    if (chunk.stableOrderCount == 0) {
-      continue;
+  std::vector<const DefinitionPartitionChunk *> workerChunks;
+  workerChunks.reserve(partitions.size());
+  for (const DefinitionPartitionChunk &chunk : partitions) {
+    if (chunk.stableOrderCount != 0) {
+      workerChunks.push_back(&chunk);
     }
-    workerTasks.push_back(std::async(
-        std::launch::async,
-        [this,
-         collectDiagnostics,
-         partitionKey = chunk.partitionKey,
-         stableOrderOffset = chunk.stableOrderOffset,
-         stableOrderCount = chunk.stableOrderCount]() {
-          SemanticDefinitionWorkerResultBundle result;
-          result.partitionKey = partitionKey;
-          SemanticsValidator worker(program_,
-                                    entryPath_,
-                                    result.error,
-                                    defaultEffects_,
-                                    entryDefaultEffects_,
-                                    collectDiagnostics ? &result.diagnostics : nullptr,
-                                    collectDiagnostics,
-                                    1,
-                                    benchmarkSemanticPhaseCountersEnabled_,
-                                    false,
-                                    false,
-                                    false,
-                                    !benchmarkGraphLocalAutoDependencyScratchPmrEnabled_,
-                                    validationPlan_);
-          result.ok = worker.runDefinitionValidationWorkerChunk(
-              stableOrderOffset,
-              stableOrderCount);
-          result.counters = worker.validationCounters();
-          if (result.ok) {
-            worker.collectDefinitionPublicationFactsForStableRange(
-                stableOrderOffset, stableOrderCount, result.publicationFacts);
-            SymbolInterner publicationStringInterner;
-            appendSemanticPublicationStringOrigins(publicationStringInterner,
-                                                  program_,
-                                                  validationPlan_->definitionPrepass,
-                                                  result.publicationFacts.callableSummaries,
-                                                  result.publicationFacts.onErrorFacts);
-            result.publicationStringSnapshot =
-                publicationStringInterner.snapshotForWorker(partitionKey);
-          }
-          return result;
-        }));
   }
-  if (workerTasks.size() <= 1) {
+  if (workerChunks.size() <= 1) {
     return validateDefinitionsForStableRange(0, declarationCount);
   }
 
-  std::vector<SemanticDefinitionWorkerResultBundle> workerResults;
-  workerResults.reserve(workerTasks.size());
-  for (auto &task : workerTasks) {
-    workerResults.push_back(task.get());
+  // Workers are std::threads joined before this function returns.
+  // libc++'s std::async detaches its thread, so a worker could still be
+  // tearing down its thread state after the result was handed over. That
+  // state (the std::thread start tuple and libc++'s __thread_struct) is
+  // allocated on this thread, from its compile arena when one is active, and
+  // a test binary resets that arena at the end of every TEST_CASE: the next
+  // case reused the bytes while the exiting worker still read them.
+  std::vector<SemanticDefinitionWorkerResultBundle> workerResults(workerChunks.size());
+  std::vector<std::exception_ptr> workerExceptions(workerChunks.size());
+  auto runWorker = [this, collectDiagnostics](const DefinitionPartitionChunk &chunk,
+                                              SemanticDefinitionWorkerResultBundle &result) {
+    markDefinitionValidationWorkerThread();
+    const auto partitionKey = chunk.partitionKey;
+    const std::size_t stableOrderOffset = chunk.stableOrderOffset;
+    const std::size_t stableOrderCount = chunk.stableOrderCount;
+    result.partitionKey = partitionKey;
+    SemanticsValidator worker(program_,
+                              entryPath_,
+                              result.error,
+                              defaultEffects_,
+                              entryDefaultEffects_,
+                              collectDiagnostics ? &result.diagnostics : nullptr,
+                              collectDiagnostics,
+                              1,
+                              benchmarkSemanticPhaseCountersEnabled_,
+                              false,
+                              false,
+                              false,
+                              !benchmarkGraphLocalAutoDependencyScratchPmrEnabled_,
+                              validationPlan_);
+    result.ok = worker.runDefinitionValidationWorkerChunk(stableOrderOffset, stableOrderCount);
+    result.counters = worker.validationCounters();
+    if (result.ok) {
+      worker.collectDefinitionPublicationFactsForStableRange(
+          stableOrderOffset, stableOrderCount, result.publicationFacts);
+      SymbolInterner publicationStringInterner;
+      appendSemanticPublicationStringOrigins(publicationStringInterner,
+                                             program_,
+                                             validationPlan_->definitionPrepass,
+                                             result.publicationFacts.callableSummaries,
+                                             result.publicationFacts.onErrorFacts);
+      result.publicationStringSnapshot = publicationStringInterner.snapshotForWorker(partitionKey);
+    }
+  };
+  {
+    std::vector<std::thread> workers;
+    workers.reserve(workerChunks.size());
+    struct JoinWorkers {
+      std::vector<std::thread> &threads;
+      ~JoinWorkers() {
+        for (std::thread &thread : threads) {
+          if (thread.joinable()) {
+            thread.join();
+          }
+        }
+      }
+    } joinWorkers{workers};
+    for (std::size_t i = 0; i < workerChunks.size(); ++i) {
+      workers.emplace_back([&runWorker, &workerChunks, &workerResults, &workerExceptions, i] {
+        try {
+          runWorker(*workerChunks[i], workerResults[i]);
+        } catch (...) {
+          workerExceptions[i] = std::current_exception();
+        }
+      });
+    }
+  }
+  for (const std::exception_ptr &workerException : workerExceptions) {
+    if (workerException) {
+      std::rethrow_exception(workerException);
+    }
   }
   std::sort(workerResults.begin(),
             workerResults.end(),

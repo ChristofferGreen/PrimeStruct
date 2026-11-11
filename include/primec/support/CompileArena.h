@@ -36,7 +36,7 @@
 //     malloc - UNLESS a SystemHeapScope is also active on that thread (see
 //     below), in which case they still go to the system allocator. Larger
 //     or over-aligned allocations, and allocations on threads that never
-//     enter a scope (e.g. std::async validation workers), always fall
+//     enter a scope (e.g. definition validation worker threads), always fall
 //     through to the ordinary system allocator.
 //   - SystemHeapScope is the general escape hatch TODO-5235 added: while
 //     one is alive on a thread, allocations on that thread are forced to

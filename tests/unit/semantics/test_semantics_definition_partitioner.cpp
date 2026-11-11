@@ -5,6 +5,7 @@
 #include "primec/semantics/SemanticsBenchmark.h"
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
 #include "primec/semantics/SemanticsDefinitionPrepass.h"
+#include "primec/testing/SemanticsDefinitionWorkerProbes.h"
 
 #include <algorithm>
 #include <array>
@@ -623,6 +624,88 @@ main() {
   }
 
   CHECK(firstMessages == secondMessages);
+}
+
+TEST_CASE("n-chunk definition validation joins its worker threads before returning") {
+  // std::async detached the workers, so one could still be tearing
+  // down its thread state after validation returned and the test case reset
+  // the compile arena that state was allocated from.
+  const std::string failingSource = R"(
+[return<void>]
+alpha() {
+  missing_alpha()
+}
+
+[return<void>]
+beta() {
+}
+
+[return<void>]
+gamma() {
+  missing_gamma()
+}
+
+[return<void>]
+main() {
+}
+)";
+  const std::string passingSource = R"(
+[return<i32>]
+leaf_a() {
+  return(1i32)
+}
+
+[return<i32>]
+leaf_b() {
+  return(2i32)
+}
+
+[return<i32>]
+main() {
+  return(plus(leaf_a(), leaf_b()))
+}
+)";
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Semantics semantics;
+  CHECK(primec::semantics::liveDefinitionValidationWorkerThreadsForTesting() == 0);
+  for (const uint32_t workerCount : {2u, 4u}) {
+    CAPTURE(workerCount);
+    primec::Program failingProgram = parseProgram(failingSource);
+    std::string failingError;
+    primec::SemanticDiagnosticInfo failingDiagnostics;
+    CHECK_FALSE(validateWithWorkerCount(semantics,
+                                        failingProgram,
+                                        "/main",
+                                        failingError,
+                                        defaults,
+                                        defaults,
+                                        {},
+                                        &failingDiagnostics,
+                                        true,
+                                        nullptr,
+                                        nullptr,
+                                        workerCount));
+    CHECK(primec::semantics::liveDefinitionValidationWorkerThreadsForTesting() == 0);
+
+    primec::Program passingProgram = parseProgram(passingSource);
+    std::string passingError;
+    primec::SemanticProgram semanticProgram;
+    CHECK(validateWithWorkerCount(semantics,
+                                  passingProgram,
+                                  "/main",
+                                  passingError,
+                                  defaults,
+                                  defaults,
+                                  {},
+                                  nullptr,
+                                  false,
+                                  &semanticProgram,
+                                  nullptr,
+                                  workerCount));
+    CHECK(passingError.empty());
+    CHECK(primec::semantics::liveDefinitionValidationWorkerThreadsForTesting() == 0);
+  }
 }
 
 TEST_CASE("n-chunk semantic product output order stays stable across repeated runs") {

@@ -64,7 +64,7 @@ namespace {
 // that operator delete can always determine how to free it purely from the
 // pointer itself, never from "is an arena currently active on this thread"
 // (which can differ between the thread that allocated and the thread that
-// frees an object, e.g. across a std::async boundary).
+// frees an object, e.g. a worker thread's result handed back to its caller).
 struct BlockHeader {
   void *owner;               // nullptr => plain system allocation; else the owning CompileArena*.
   std::uint32_t classIndex;  // valid iff owner != nullptr.
@@ -306,7 +306,7 @@ void arenaDeallocate(void *ptr) noexcept {
   // block *and* only if that arena is this thread's own arena instance -
   // never a foreign thread's. A block freed on a different thread than the
   // one that allocated it (possible if ownership of an object is
-  // transferred across a std::async boundary) is deliberately leaked
+  // transferred between threads) is deliberately leaked
   // rather than recycled: it remains perfectly valid, never-unmapped memory
   // (chunks are never freed for the life of the process), so leaking it
   // costs at most some unreclaimed capacity in the *originating* arena, but
