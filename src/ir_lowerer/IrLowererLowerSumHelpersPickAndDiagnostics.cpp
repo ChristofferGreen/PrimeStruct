@@ -290,7 +290,7 @@ namespace primec::ir_lowerer {
         LoweredSumPayloadStorageInfo payloadInfo;
         if (resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo) && payloadInfo.isAggregate &&
             ir_lowerer::structNeedsDestroyHelpers(
-                payloadInfo.structPath,
+                payloadInfo.lifecyclePath,
                 [&](const std::string &path) {
                   return ir_lowerer::findStackDestroyHelper(defMap, path);
                 },
@@ -321,7 +321,7 @@ namespace primec::ir_lowerer {
           return ir_lowerer::findStackDestroyHelper(defMap, path);
         };
         if (!ir_lowerer::structNeedsDestroyHelpers(
-                payloadInfo.structPath, findDestroyHelper, resolveStructSlotLayout)) {
+                payloadInfo.lifecyclePath, findDestroyHelper, resolveStructSlotLayout)) {
           continue;
         }
         int32_t tagValue = 0;
@@ -338,7 +338,7 @@ namespace primec::ir_lowerer {
         function.instructions.push_back({IrOpcode::AddI64, 0});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal)});
         if (!ir_lowerer::emitStructDestroyHelpersFromPtr(payloadPtrLocal,
-                                                         payloadInfo.structPath,
+                                                         payloadInfo.lifecyclePath,
                                                          findDestroyHelper,
                                                          resolveStructSlotLayout,
                                                          allocTempLocal,
@@ -496,6 +496,25 @@ namespace primec::ir_lowerer {
         }
         return true;
       }
+      // A `vector<T>` payload binds as a vector local the sum keeps owning, so the arm reads, copies
+      // and returns it like any named vector (docs/spec/value-lifecycle.md).
+      if (std::string elementStructPath; ir_lowerer::isNestedBuiltinVectorElementPath(
+              payloadStorage.lifecyclePath, &elementStructPath)) {
+        const std::string &vectorPath = payloadStorage.lifecyclePath;
+        const size_t elementStart = vectorPath.find('<') + 1;
+        payloadInfoOut.kind = LocalInfo::Kind::Vector;
+        payloadInfoOut.valueKind = elementStructPath.empty()
+                                       ? valueKindFromTypeName(vectorPath.substr(
+                                             elementStart, vectorPath.size() - elementStart - 1))
+                                       : LocalInfo::ValueKind::Unknown;
+        payloadInfoOut.structTypeName = elementStructPath;
+        if (StructSlotLayout elementLayout;
+            !elementStructPath.empty() &&
+            resolveStructSlotLayout(elementStructPath, elementLayout)) {
+          payloadInfoOut.vectorStructElementSlotCount = elementLayout.totalSlots;
+        }
+        return true;
+      }
       payloadInfoOut.kind = LocalInfo::Kind::Value;
       payloadInfoOut.valueKind =
           payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadStorage.valueKind;
@@ -518,11 +537,12 @@ namespace primec::ir_lowerer {
       payloadInfo.isMutable = isMutable;
       // The payload is what the sum owns in this arm, so the binding shares the sum's drop flag: moving the
       // payload out (`move(line)`, `return(line)`, the arm's value) leaves nothing for the sum to destroy.
-      if (!payloadInfo.structTypeName.empty()) {
+      const bool vectorPayload = payloadInfo.kind == LocalInfo::Kind::Vector;
+      if (!payloadInfo.structTypeName.empty() && !vectorPayload) {
         payloadInfo.dropFlagLocal = ownerDropFlagLocal;
       }
       payloadInfo.index = nextLocal++;
-      if (!payloadInfo.structTypeName.empty()) {
+      if (!payloadInfo.structTypeName.empty() || vectorPayload) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
         function.instructions.push_back({IrOpcode::AddI64, 0});

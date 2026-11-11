@@ -25,6 +25,7 @@ struct LoweredSumVariantSelection {
   const Expr *payloadExpr = nullptr;
   LocalInfo::ValueKind payloadKind = LocalInfo::ValueKind::Unknown;
   std::string payloadStructPath;
+  std::string payloadLifecyclePath;
   int32_t payloadSlotCount = 1;
   bool payloadIsAggregate = false;
 };
@@ -32,6 +33,9 @@ struct LoweredSumVariantSelection {
 struct LoweredSumPayloadStorageInfo {
   LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
   std::string structPath;
+  // The path the copy and destroy helpers of the payload are found by: `structPath`, or the
+  // builtin vector element path of a `vector<T>` payload, whose record owns a buffer.
+  std::string lifecyclePath;
   int32_t slotCount = 1;
   bool isAggregate = false;
   // TODO-5248: Pointer<T>/Reference<T> payloads (e.g. Maybe<Pointer<T>>)

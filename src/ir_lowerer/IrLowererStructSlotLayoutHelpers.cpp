@@ -496,6 +496,21 @@ bool resolveStructSlotLayoutFromDefinitionFields(
   return true;
 }
 
+bool resolveVectorPayloadRecordPath(const std::string &typeText, std::string &pathOut) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
+      normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "vector") {
+    return false;
+  }
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return false;
+  }
+  pathOut = specializedCollectionVectorRecordPathForElementType(trimTemplateTypeText(args.front()));
+  return !pathOut.empty();
+}
+
 bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     const std::string &structPath,
     const StructLayoutFieldIndex &fieldIndex,
@@ -529,7 +544,8 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
           continue;
         }
         std::string payloadStructPath;
-        if (!resolveStructTypeName(payloadType, def.namespacePrefix, payloadStructPath)) {
+        if (!resolveStructTypeName(payloadType, def.namespacePrefix, payloadStructPath) &&
+            !resolveVectorPayloadRecordPath(payloadType, payloadStructPath)) {
           maxPayloadSlots = std::max(maxPayloadSlots, 1);
           continue;
         }

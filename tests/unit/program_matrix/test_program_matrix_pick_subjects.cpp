@@ -456,4 +456,155 @@ main() {
   CHECK_MESSAGE(outcome.err.find("unknown method: /Box/thrice") != std::string::npos, outcome.err);
 }
 
+// `get_values(first)` holds `first` and `first + 1`, and is `none` below zero.
+const std::string VectorPayloadDefinitions = R"(
+[effects(heap_alloc), return<Maybe<vector<i32>>>]
+get_values([i32] first) {
+  if(first < 0i32) {
+    return(none<vector<i32>>())
+  }
+  [vector<i32> mut] values{vector<i32>{}}
+  values.push(first)
+  values.push(first + 1i32)
+  return(some<vector<i32>>(values))
+}
+)";
+
+TEST_CASE("a vector payload binding reads its count and elements") {
+  const std::string source = pickSubjectProgram(VectorPayloadDefinitions,
+                                                R"(
+    [Maybe<vector<i32>>] got{get_values(4i32)}
+    pick(got) {
+      none {
+      }
+      some(values) {
+        print_line(vectorCount<i32>(values))
+        print_line(values.count())
+        print_line(values[1i32])
+        print_line(values.at(0i32))
+        [vector<i32>] view{values}
+        print_line(view.count())
+        print_line(view[1i32])
+        [vector<i32> mut] own{values}
+        own.push(9i32)
+        print_line(own.count())
+        print_line(values.count())
+      }
+    }
+    pick(get_values(6i32)) {
+      none {
+      }
+      some(values) {
+        print_line(values[0i32] + values[1i32])
+      }
+    }
+    pick(get_values(-1i32)) {
+      none {
+        print_line(-1i32)
+      }
+      some(values) {
+        print_line(values.count())
+      }
+    })");
+  runPickSubjectProgram(
+      "pick_payload_vector_reads", source, "2\n2\n5\n4\n2\n5\n3\n2\n13\n-1\n0\n0\n");
+}
+
+TEST_CASE("a sum owns its vector payload") {
+  const std::string source = pickSubjectProgram(VectorPayloadDefinitions + R"(
+[struct]
+Point {
+  [i32] x{0i32}
+  [String] name{String{}}
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+unwrap_or_empty([Maybe<vector<i32>>] held) {
+  pick(held) {
+    none {
+    }
+    some(values) {
+      return(values)
+    }
+  }
+  return(vector<i32>{})
+}
+)",
+                                                R"(
+    [vector<i32> mut] source{vector<i32>{}}
+    source.push(4i32)
+    [i32] before{heapLiveBlocks()}
+    if(true) {
+      [Maybe<vector<i32>>] copied{[some] source}
+      print_line(heapLiveBlocks() - before)
+      [Maybe<vector<i32>>] fresh{[some] vector<i32>(1i32, 2i32)}
+      print_line(heapLiveBlocks() - before)
+      [Maybe<vector<i32>>] again{copied}
+      pick(again) {
+        none {
+        }
+        some(values) {
+          print_line(values[0i32])
+        }
+      }
+    }
+    print_line(heapLiveBlocks() - before)
+    print_line(source[0i32])
+    [vector<i32>] first{unwrap_or_empty(get_values(4i32))}
+    print_line(first[1i32])
+    [Maybe<vector<i32>>] kept{get_values(7i32)}
+    [vector<i32>] second{unwrap_or_empty(kept)}
+    print_line(second[1i32])
+    [vector<Point> mut] points{vector<Point>{}}
+    points.push(Point{1i32, label(3i32)})
+    points.push(Point{2i32, label(4i32)})
+    [Maybe<vector<Point>>] held{some<vector<Point>>(points)}
+    pick(held) {
+      none {
+      }
+      some(values) {
+        print_line(values.count())
+        print_line(values[1i32].x)
+        print_line(first_byte(values[1i32].name))
+      }
+    }
+    [vector<vector<i32>> mut] rows{vector<vector<i32>>{}}
+    rows.push(vector<i32>(1i32, 2i32, 3i32))
+    [Maybe<vector<vector<i32>>>] nested{some<vector<vector<i32>>>(rows)}
+    pick(nested) {
+      none {
+      }
+      some(values) {
+        print_line(values[0i32].count())
+      }
+    })");
+  runPickSubjectProgram(
+      "pick_payload_vector_owned", source, "1\n2\n4\n0\n4\n5\n8\n2\n2\n52\n3\n0\n0\n");
+}
+
+TEST_CASE("a stdlib Vector payload binding keeps reading its count") {
+  program_matrix::ProgramCase program;
+  program.name = "pick_payload_stdlib_vector_reads";
+  program.source = R"(
+import /std/maybe/*
+import /std/collections/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Maybe<Vector<i32>>] held{some<Vector<i32>>(vector<i32>(1i32, 2i32))}
+  pick(held) {
+    none {
+    }
+    some(values) {
+      print_line(vectorCount<i32>(values))
+    }
+  }
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

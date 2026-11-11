@@ -384,6 +384,28 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
       LocalBindingScope argScope(*this, activeLocals);
       visitExpr(def, defParams, arg, activeLocals, argScope);
     }
+    if (isPickCall(expr) && !expr.bodyArguments.empty()) {
+      // Each arm sees its own payload binding, as the arm's validation does.
+      std::vector<std::pair<std::string, BindingInfo>> payloadBindings;
+      withPreservedError([&]() {
+        payloadBindings = pickArmPayloadBindings(
+            expr,
+            defParams,
+            activeLocals,
+            expr.namespacePrefix.empty() ? def.namespacePrefix : expr.namespacePrefix);
+        return true;
+      });
+      for (size_t armIndex = 0; armIndex < expr.bodyArguments.size(); ++armIndex) {
+        LocalBindingScope armScope(*this, activeLocals);
+        if (armIndex < payloadBindings.size() && !payloadBindings[armIndex].first.empty()) {
+          insertLocalBinding(activeLocals,
+                             payloadBindings[armIndex].first,
+                             std::move(payloadBindings[armIndex].second));
+        }
+        visitExpr(def, defParams, expr.bodyArguments[armIndex], activeLocals, armScope);
+      }
+      return;
+    }
     if (!expr.bodyArguments.empty()) {
       LocalBindingScope bodyScope(*this, activeLocals);
       visitExprSequence(def, defParams, expr.bodyArguments, activeLocals, bodyScope);

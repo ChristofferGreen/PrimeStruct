@@ -136,7 +136,11 @@
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
   moving it out (`move(line)`, `return(line)`, the arm's value in a `pick` expression) leaves nothing for the sum to
-  destroy, for a fresh subject and for a sum local alike, so the payload is destroyed once, by its new owner. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
+  destroy, for a fresh subject and for a sum local alike, so the payload is destroyed once, by its new owner. A builtin
+  `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
+  its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
+  binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it
+  like any named vector. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
   value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a

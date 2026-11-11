@@ -123,7 +123,6 @@ of sync with them.
 | TODO-5852 | `wait(a, b)` takes `Task<void>` handles | ready | mt-wait-types |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
-| TODO-5857 | A `vector<T>` payload of a sum reads its count and elements in a `pick` arm | ready | pick-payloads |
 | TODO-5858 | `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from | ready | pick-payloads |
 | TODO-5859 | A `pick` expression yields a vector | ready | pick-payloads |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | ready | pick-payloads |
@@ -136,6 +135,9 @@ of sync with them.
 | TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | ready | result-question |
 | TODO-5871 | `serveWorkers` answers more new connections a second than one thread can accept | ready | mt-server |
 | TODO-5872 | A thread reads the bytes of a block another thread allocated as fast as its own | ready | mt-heap |
+| TODO-5873 | A sum temporary passed as an argument is destroyed after the call | ready | pick-payloads |
+| TODO-5874 | Assigning to a `mut` sum local destroys the payload it held | ready | pick-payloads |
+| TODO-5875 | `count()` on a local declared `Vector<T>` lowers | ready | pick-payloads |
 | TODO-5870 | A VM program that uses tasks runs its string code on the fast kernel | ready | vm-tasks |
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
@@ -219,7 +221,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5857, TODO-5858, TODO-5859, TODO-5860, TODO-5866, TODO-5868
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5858, TODO-5859, TODO-5860, TODO-5866, TODO-5868, TODO-5873, TODO-5874, TODO-5875
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -235,7 +237,7 @@ of sync with them.
 
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
-Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type) and TODO-5856 (`pick` on a call result frees an owning payload) are done, and found with the second and ready: TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; ready: TODO-5871 (every server stops near 14,600 new connections a second, which caps the form with 4 workers), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
+Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5848 (`return(wait(t))` of a `String` task result is rejected as a return type mismatch), TODO-5849 (a destructured multi-wait of tasks with different result types loses the later results' types) and TODO-5847 (spawned calls with collection or `copy` parameters or collection results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, is done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` and ready: TODO-5852 (`wait(a, b)` of two `Task<void>`), and in the closures lane TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload) and TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm) are done, and found with them and ready: TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector) and TODO-5860 (moving a payload binding does not poison a later binding of the same name). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; ready: TODO-5871 (every server stops near 14,600 new connections a second, which caps the form with 4 workers), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
 
 ### Task Blocks
 
@@ -858,20 +860,6 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - full release gate green
   - stop_rule: the handle layout of `Mutex` and `Atomic`.
 
-- [ ] TODO-5857: A `vector<T>` payload of a sum reads its count and elements in a `pick` arm
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-10
-  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
-  - parallel_track: pick-payloads
-  - scope: With `get_values` returning a `Maybe<vector<i32>>` that holds two elements, `[Maybe<vector<i32>>] got{get_values(4i32)}` and `pick(got) { none { } some(values) { print_line(vectorCount<i32>(values)) } }` prints 896 (an address) on the VM and `optexe` instead of 2; `[vector<i32>] own{values}` then `own.count()` prints the same number and `own[1i32]` prints 2, the count. A `Maybe<Vector<i32>>` payload reads 2. The payload is destroyed correctly in both spellings. Make the payload binding of a `vector<T>` variant a vector the arm can read.
-  - implementation_notes: The payload is stored as the specialized vector record (`resolveVectorPayloadStructPath`, src/ir_lowerer/IrLowererLowerSumHelpers.cpp) and `makePickPayloadLocalInfo` (src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp) binds it as a struct pointer, while the arm's uses are typed `vector<i32>`.
-  - acceptance:
-    - positive: the program prints 2 on the VM and `optexe`, `values[1i32]` prints the second element, and `[vector<i32>] own{values}` copies the two elements; the heap statistics stay balanced
-    - negative: a `Maybe<Vector<i32>>` payload keeps reading 2
-    - full release gate green
-  - stop_rule: `vector<T>` payload bindings of `pick` arms.
-
 - [ ] TODO-5858: `some<Vector<i32>>(vector<i32>(1i32, 2i32))` frees the vector it copies from
   - owner: ai
   - status: ready
@@ -893,7 +881,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
   - phase: Result and control flow (docs/spec/errors-and-file-io.md)
   - parallel_track: pick-payloads
   - scope: `[vector<i32>] kept{pick(get_values(7i32)) { none { vector<i32>{} } some(values) { values } }}` with `get_values` returning a `Maybe<vector<i32>>` stops lowering with `stale semantic-product pick aggregate result metadata: /std/maybe/Maybe__.../none` on the VM and `optexe`. A `String` or struct result works. Publish the aggregate result of a `pick` whose arms yield a vector and lower it; the yielded payload is taken over, not copied (as for a `String`).
-  - implementation_notes: `tryEmitPickExpr` and `inferPickAggregateResult` in src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp; do TODO-5857 first, since the yielded binding must be a readable vector.
+  - implementation_notes: `tryEmitPickExpr` and `inferPickAggregateResult` in src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp; the yielded payload binding is a vector local the sum owns (`makePickPayloadLocalInfo`).
   - acceptance:
     - positive: the program prints `kept.count()` 2 and its elements on the VM and `optexe`, with the heap statistics balanced
     - negative: arms that yield a vector and an `i32` are still a type error
@@ -1012,6 +1000,48 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - negative: a `?` in an `if` block of a definition without `on_error` is reported at that `?`, naming that definition
     - full release gate green
   - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
+
+- [ ] TODO-5873: A sum temporary passed as an argument is destroyed after the call
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: With `[return<i32>] first_of([Maybe<String>] held)` that picks `held` and returns a byte of the payload, `print_line(first_of(get(8i32)))` (`get` returns a `Maybe<String>` holding a fresh `String`) leaves `stringHeapBytesInUse()` 32 higher on the VM and `optexe`; the same call with a `Maybe<vector<i32>>` leaves `heapLiveBlocks()` one higher. Passing a named sum local is balanced. A sum returned by a call and passed straight to a read-only parameter has no owner: destroy its active payload when the call returns, as for a fresh `vector<T>` passed to a read-only parameter (docs/spec/value-lifecycle.md).
+  - implementation_notes: `emitActiveSumPayloadDestroyFromSumPtr` (src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp) destroys the payload of a sum local and of a fresh `pick` subject; the inlined-call argument setup in src/ir_lowerer/IrLowererLowerInlineCallsBody.h frees a fresh builtin vector argument.
+  - acceptance:
+    - positive: both calls leave the heap statistics unchanged on the VM and `optexe`
+    - negative: a named sum local passed to the same parameter is still usable after the call and destroyed once
+    - full release gate green
+  - stop_rule: sum temporaries passed to read-only parameters.
+
+- [ ] TODO-5874: Assigning to a `mut` sum local destroys the payload it held
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: `[Maybe<String> mut] held{get(4i32)}` followed by `held = get(6i32)` and `held = none<String>()` leaves `stringHeapBytesInUse()` 64 higher at scope end on the VM and `optexe`: neither assignment destroys the payload the local held. The same with a `Maybe<vector<i32>>` leaves two heap blocks. `assign` of an owning struct value destroys the old value first (docs/spec/value-lifecycle.md); do the same for a sum local.
+  - implementation_notes: Sum assignment is lowered in src/ir_lowerer/IrLowererLowerSumHelpersConstructEmit.cpp (`emitExistingSumValueIntoLocal` and the constructor paths write into the local's slots); `emitActiveSumPayloadDestroyFromSumPtr` destroys an active payload.
+  - acceptance:
+    - positive: the block leaves the heap statistics unchanged on the VM and `optexe`, for a `String`, a struct with `Destroy` and a `vector<T>` payload
+    - negative: `held = held` keeps the payload readable
+    - full release gate green
+  - stop_rule: assignment to sum locals.
+
+- [ ] TODO-5875: `count()` on a local declared `Vector<T>` lowers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Result and control flow (docs/spec/errors-and-file-io.md)
+  - parallel_track: pick-payloads
+  - scope: With `import /std/collections/*`, `[Vector<i32>] local{vector<i32>(1i32, 2i32)}` followed by `print_line(local.count())` stops with `VM lowering error: vm backend only supports entry argument indexing`; `vectorCount<i32>(local)` prints 2, and the same binding declared `vector<i32>` reads its count with `local.count()`. The payload binding of a `Maybe<Vector<i32>>` in a `pick` arm fails the same way. Make the method spelling resolve like the helper call.
+  - implementation_notes: The error is the fallback of the entry-argument access path (src/ir_lowerer), reached when the `count` method call has no collection or method target; compare the facts published for the `vector<i32>` spelling with `--dump-stage`.
+  - acceptance:
+    - positive: `local.count()` and `local[1i32]` print 2 on the VM and `optexe` for the `Vector<i32>` local and for a `Maybe<Vector<i32>>` payload binding
+    - negative: `local.missing()` is still `unknown method`
+    - full release gate green
+  - stop_rule: method calls on bindings declared with the stdlib `Vector<T>` spelling.
 
 - [ ] TODO-5871: `serveWorkers` answers more new connections a second than one thread can accept
   - owner: ai

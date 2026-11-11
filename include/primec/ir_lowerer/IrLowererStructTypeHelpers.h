@@ -227,6 +227,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error);
+// The specialized vector record that stores a `vector<T>` sum payload inline. False for any other type text.
+bool resolveVectorPayloadRecordPath(const std::string &typeText, std::string &pathOut);
 bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     const std::string &structPath,
     const StructLayoutFieldIndex &fieldIndex,

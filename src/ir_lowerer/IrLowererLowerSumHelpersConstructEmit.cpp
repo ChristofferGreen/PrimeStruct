@@ -392,7 +392,7 @@ namespace primec::ir_lowerer {
             if (!ir_lowerer::emitStructCopyHelpersFromPtrs(
                     destPtrLocal,
                     srcPtrLocal,
-                    selection.payloadStructPath,
+                    selection.payloadLifecyclePath,
                     [&](const std::string &path) -> const Definition * {
                       auto copyIt = defMap.find(path + "/Copy");
                       return copyIt == defMap.end() ? nullptr : copyIt->second;

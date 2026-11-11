@@ -9,6 +9,7 @@
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructLayoutHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
@@ -284,21 +285,8 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       }
     }
 
-    // A `vector<T>` payload is stored as the specialized vector record, an aggregate whose
-    // copy and destroy helpers are the stdlib vector's own.
     static bool resolveVectorPayloadStructPath(const std::string &typeText, std::string &pathOut) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, argText) ||
-          normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "vector") {
-        return false;
-      }
-      std::vector<std::string> args;
-      if (!splitTemplateArgs(argText, args) || args.size() != 1) {
-        return false;
-      }
-      pathOut = specializedCollectionVectorRecordPathForElementType(trimTemplateTypeText(args.front()));
-      return !pathOut.empty();
+      return resolveVectorPayloadRecordPath(typeText, pathOut);
     }
 
     bool SumHelpersContext::resolveSumPayloadStorageInfo(const Definition &sumDef,
@@ -333,6 +321,13 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       StructSlotLayout payloadLayout;
       if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
         return false;
+      }
+      infoOut.lifecyclePath = payloadStructPath;
+      if (std::string vectorPath;
+          resolveBuiltinVectorElementStructPath(
+              payloadTypeText, sumDef.namespacePrefix, resolveStructTypeName, vectorPath) &&
+          isNestedBuiltinVectorElementPath(vectorPath)) {
+        infoOut.lifecyclePath = std::move(vectorPath);
       }
       infoOut.structPath = std::move(payloadStructPath);
       infoOut.slotCount = payloadLayout.totalSlots;
@@ -373,6 +368,13 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       StructSlotLayout payloadLayout;
       if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
         return false;
+      }
+      infoOut.lifecyclePath = payloadStructPath;
+      if (std::string vectorPath;
+          resolveBuiltinVectorElementStructPath(
+              payloadTypeText, sumDef.namespacePrefix, resolveStructTypeName, vectorPath) &&
+          isNestedBuiltinVectorElementPath(vectorPath)) {
+        infoOut.lifecyclePath = std::move(vectorPath);
       }
       infoOut.structPath = std::move(payloadStructPath);
       infoOut.slotCount = payloadLayout.totalSlots;
@@ -661,6 +663,7 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       selectionOut.variant = variant;
       selectionOut.payloadExpr = variant->hasPayload ? &constructorArgs->front() : nullptr;
       selectionOut.payloadKind = payloadInfo.valueKind;
+      selectionOut.payloadLifecyclePath = payloadInfo.lifecyclePath;
       selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
       selectionOut.payloadSlotCount = payloadInfo.slotCount;
       selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
@@ -696,6 +699,7 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
           selectionOut.payloadExpr =
               variant->hasPayload ? &initializer.args[payloadIndex] : nullptr;
           selectionOut.payloadKind = payloadInfo.valueKind;
+          selectionOut.payloadLifecyclePath = payloadInfo.lifecyclePath;
           selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
           selectionOut.payloadSlotCount = payloadInfo.slotCount;
           selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
@@ -722,6 +726,7 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
         selectionOut.variant = variant;
         selectionOut.payloadExpr = variant->hasPayload ? &initializer.args[1] : nullptr;
         selectionOut.payloadKind = payloadInfo.valueKind;
+        selectionOut.payloadLifecyclePath = payloadInfo.lifecyclePath;
         selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
         selectionOut.payloadSlotCount = payloadInfo.slotCount;
         selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
@@ -892,6 +897,7 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       selectionOut.variant = matchedVariant;
       selectionOut.payloadExpr = &initializer;
       selectionOut.payloadKind = matchedPayloadInfo.valueKind;
+      selectionOut.payloadLifecyclePath = matchedPayloadInfo.lifecyclePath;
       selectionOut.payloadStructPath = std::move(matchedPayloadInfo.structPath);
       selectionOut.payloadSlotCount = matchedPayloadInfo.slotCount;
       selectionOut.payloadIsAggregate = matchedPayloadInfo.isAggregate;
