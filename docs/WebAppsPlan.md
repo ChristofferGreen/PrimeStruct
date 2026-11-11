@@ -182,7 +182,8 @@ What the numbers say:
   The second was where the request bytes lay: the slots are one block that the polling thread allocated, and on
   `optexe` a byte of a block of another thread's heap is checked on a slow, out-of-line path. A worker spent 327 us
   per form against 146 us for `serve`; parsing from a copy in a block the worker owns brought it to 160 us
-  (TODO-5872 is to make the check itself cheap). Keeping one `Response` per worker is part of the same change.
+  (TODO-5872 made the check itself cheap: a byte of another thread's block costs 1.17 times the instructions of
+  one of the worker's own, and the copy stays). Keeping one `Response` per worker is part of the same change.
 - **The poller wakes once per request where it woke three times**: a new connection goes straight to a worker
   (no wait for it to become readable), and a worker that closes a connection does not wake the poller. System time
   per form with 1 worker went from 44 us to 39 us; requests per second did not change measurably.
@@ -190,6 +191,16 @@ What the numbers say:
   ceiling on new connections per second in this setup, not the work per request: a POST of 8 bytes gets 15,450
   requests per second from `serve` and 14,620, 14,718 and 14,656 from 1, 2 and 4 workers, and the form gets
   5570, 10,411, 12,585, 13,167 and 13,457 from 1, 2, 3, 4 and 8 workers, the same with 8, 16 or 32 clients. At
-  13,329 the form is at nine tenths of what any server here answers. Whether the ceiling is the one thread that
-  accepts, the kernel's loopback connection setup or the Python load generator was not measured; that is TODO-5871.
+  13,329 the form is at nine tenths of what any server here answers. **The ceiling is the load generator and the
+  kernel's loopback connection setup, not `serveWorkers`** (TODO-5871, measured 2026-11-11 on the same machine, which
+  was at a load average of 27 to 64 on 11 processors, so only the comparison counts): a reference server in C (one
+  blocking `accept`, one `recv` of the request, a fixed 2-byte response, `close`; no PrimeStruct code) answered
+  10,299, 11,923 and 11,444 requests per second with 1 thread and 11,426 and 11,255 with 4 threads, where
+  `serve` answered 9,372 in the same minutes, so a server that spends 25 to 32 us of CPU per request (against 62 us
+  user and 68 us system for a PrimeStruct worker) meets the same wall, and more accepting threads do not move it.
+  The generator costs about 200 us of CPU per request (71 us user, the rest system time in `connect`, `send` and
+  `recv` of its 16 client processes) against 25 us for the C server. So the form's 2.41x is a measurement of the
+  generator: a 2.5x target needs 13,900 requests per second from 4 workers, which is above what this generator
+  shows for any server, and measuring more needs a generator that costs less per connection (TODO-5937) or
+  connections that stay open (TODO-5805).
 - **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.
