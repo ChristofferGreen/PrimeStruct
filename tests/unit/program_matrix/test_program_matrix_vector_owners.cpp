@@ -268,4 +268,175 @@ read_named([vector<Named>] values) {
                         "3\n2\n3\n2\n2\n2\n55\n3\n51\n49\n2\n");
 }
 
+namespace {
+
+// A sum with a struct, a vector and a scalar payload: `make_item(id)` holds the label `id` (0 to 5), the vector
+// `make_values(id)` (above 5) or the number `id` (negative).
+const std::string SumElementDefinitions = R"(
+import /std/maybe/*
+
+[sum]
+Item {
+  [Named] named
+  [vector<i32>] numbers
+  [i32] plain
+}
+
+[effects(heap_alloc), return<Item>]
+make_item([i32] id) {
+  if(id < 0i32) {
+    return(Item{[plain] id})
+  }
+  if(id > 5i32) {
+    return(Item{[numbers] make_values(id)})
+  }
+  return(Item{[named] Named{label(id)}})
+}
+
+[effects(heap_alloc), return<vector<Item>>]
+make_items([i32] id) {
+  [vector<Item> mut] out{vector<Item>{}}
+  out.push(make_item(id))
+  out.push(make_item(id + 5i32))
+  out.push(make_item(0i32 - 1i32))
+  return(out)
+}
+
+[effects(heap_alloc, io_out)]
+show([Item] item) {
+  pick(item) {
+    named(n) {
+      print_line(first_byte(n.text))
+    }
+    numbers(v) {
+      print_line(v.count())
+    }
+    plain(p) {
+      print_line(p)
+    }
+  }
+}
+
+[effects(heap_alloc), return<Maybe<String>>]
+get([i32] id) {
+  if(id < 0i32) {
+    return(none<String>())
+  }
+  return(some<String>(label(id)))
+}
+)";
+
+} // namespace
+
+TEST_CASE("a vector of sums destroys the payload of each element") {
+  // A temporary and a named sum local are taken over; `pop` and `clear` destroy what they drop.
+  runVectorOwnerProgram("vector_sum_elements_destroyed",
+                        SumElementDefinitions,
+                        R"(
+    [vector<Maybe<String>> mut] all{vector<Maybe<String>>{}}
+    all.push(get(5i32))
+    [Maybe<String>] named{get(6i32)}
+    all.push(named)
+    all.push(get(-1i32))
+    all.push(get(7i32))
+    print_line(all.count())
+    pick(all[1i32]) {
+      none {
+        print_line(0i32)
+      }
+      some(text) {
+        print_line(first_byte(text))
+      }
+    }
+    all.pop()
+    print_line(all.count())
+    [vector<Maybe<String>> mut] cleared{vector<Maybe<String>>{}}
+    cleared.push(get(1i32))
+    cleared.push(get(2i32))
+    cleared.clear()
+    print_line(cleared.count())
+    [vector<Item> mut] items{make_items(1i32)}
+    show(items[0i32])
+    show(items[1i32])
+    show(items[2i32])
+    items.pop()
+    items.pop()
+    print_line(items.count())
+)",
+                        "4\n54\n3\n0\n49\n2\n-1\n1\n");
+}
+
+TEST_CASE("a vector of sums without owning payloads frees only its buffer") {
+  runVectorOwnerProgram("vector_sum_elements_plain",
+                        SumElementDefinitions,
+                        R"(
+    [vector<Maybe<i32>> mut] plain{vector<Maybe<i32>>{}}
+    plain.push(some<i32>(4i32))
+    plain.push(none<i32>())
+    [Maybe<i32>] named{some<i32>(6i32)}
+    plain.push(named)
+    plain.pop()
+    print_line(plain.count())
+    [vector<Maybe<i32>> mut] other{plain}
+    other.clear()
+    print_line(plain.count())
+    pick(plain[0i32]) {
+      none {
+        print_line(0i32)
+      }
+      some(value) {
+        print_line(value)
+      }
+    }
+)",
+                        "2\n2\n4\n");
+}
+
+TEST_CASE("copying a vector of sums gives each element a payload of its own") {
+  runVectorOwnerProgram("vector_sum_elements_copied",
+                        SumElementDefinitions + R"(
+[effects(heap_alloc, io_out)]
+take_items([vector<Item> copy mut] items) {
+  items.push(make_item(2i32))
+  print_line(items.count())
+}
+
+[struct]
+Bag() {
+  [vector<Item>] items{vector<Item>{}}
+}
+)",
+                        R"(
+    [vector<Item> mut] items{make_items(1i32)}
+    items.push(items[0i32])
+    items.push(items[1i32])
+    print_line(items.count())
+    [vector<Item> mut] copied{items}
+    copied.pop()
+    print_line(copied.count())
+    items = make_items(2i32)
+    items = copied
+    take_items(items)
+    take_items(make_items(3i32))
+    print_line(items.count())
+    [Bag mut] bag{Bag{make_items(1i32)}}
+    [Bag] other{bag}
+    bag.items.pop()
+    bag.items.clear()
+    print_line(other.items.count())
+    [vector<vector<Item>> mut] rows{vector<vector<Item>>{}}
+    rows.push(make_items(1i32))
+    rows.push(make_items(4i32))
+    rows[0i32].pop()
+    print_line(rows[0i32].count())
+    [Item] view{items[0i32]}
+    show(view)
+    [Item mut] own{items[1i32]}
+    own = make_item(3i32)
+    show(own)
+    show(items[1i32])
+)",
+                        "5\n4\n5\n4\n4\n3\n2\n49\n51\n2\n");
+}
+
 TEST_SUITE_END();

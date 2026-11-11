@@ -528,6 +528,7 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
                     [](const Transform &transform) { return transform.name == "sum"; });
     if (isSumDefinition) {
       int32_t maxPayloadSlots = 0;
+      std::vector<SumPayloadLayoutInfo> sumPayloads;
       for (const SumVariant &variant : def.sumVariants) {
         if (!variant.hasPayload) {
           continue;
@@ -562,10 +563,21 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
           return false;
         }
         maxPayloadSlots = std::max(maxPayloadSlots, payloadLayout.totalSlots);
+        SumPayloadLayoutInfo payloadInfo;
+        payloadInfo.tagValue = static_cast<int32_t>(variant.variantIndex);
+        payloadInfo.lifecyclePath = payloadStructPath;
+        if (std::string vectorPath;
+            resolveBuiltinVectorElementStructPath(
+                payloadType, def.namespacePrefix, resolveStructTypeName, vectorPath) &&
+            isNestedBuiltinVectorElementPath(vectorPath)) {
+          payloadInfo.lifecyclePath = std::move(vectorPath);
+        }
+        sumPayloads.push_back(std::move(payloadInfo));
       }
       StructSlotLayoutInfo layout;
       layout.structPath = structPath;
       layout.totalSlots = 2 + maxPayloadSlots;
+      layout.sumPayloads = std::move(sumPayloads);
       out = layout;
       layoutCache[structPath] = layout;
       return true;

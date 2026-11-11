@@ -71,10 +71,19 @@ struct StructLayoutFieldInfo {
   bool isStatic = false;
 };
 
+// A variant of a sum whose payload is a struct or a builtin vector: its tag (slot 1 of the sum) and the
+// path the payload (from slot 2) is copied and destroyed through.
+struct SumPayloadLayoutInfo {
+  int32_t tagValue = 0;
+  std::string lifecyclePath;
+};
+
 struct StructSlotLayoutInfo {
   std::string structPath;
   int32_t totalSlots = 0;
   std::vector<StructSlotFieldInfo> fields;
+  // Set for a sum, which has no fields.
+  std::vector<SumPayloadLayoutInfo> sumPayloads;
 };
 
 using ResolveStructFieldSlotFn =

@@ -152,7 +152,10 @@
   `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it
-  like any named vector. A `pick` expression whose arms yield a struct or a `vector<T>` makes a value of its own, which
+  like any named vector. A sum stored as an element of a builtin `vector<T>` (`vector<Maybe<String>>`, a vector of
+  a user `[sum]`) is owned by the vector like a struct element: `push` takes over a fresh sum or a named owner and
+  copies any other place, a copy of the vector gives each element a payload of its own, and `pop`, `clear` and
+  destroying the vector destroy the payload of each element's active variant. A `pick` expression whose arms yield a struct or a `vector<T>` makes a value of its own, which
   the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once);
   `return(pick(...) { ... })` hands it to the caller and `name = pick(...) { ... }` replaces what a `mut` local held:
   an arm's fresh value is taken over, and so is a local that ends with the arm, which is a local declared in the arm

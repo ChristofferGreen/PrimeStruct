@@ -183,7 +183,62 @@ bool structNeedsCopyHelpers(
       return true;
     }
   }
+  // A sum needs what the payload of any of its variants needs.
+  for (const SumPayloadLayoutInfo &payload : layout.sumPayloads) {
+    if (structNeedsCopyHelpers(payload.lifecyclePath,
+                               findCopyHelper,
+                               resolveStructSlotLayout,
+                               depth + 1,
+                               withBuiltinVectors)) {
+      return true;
+    }
+  }
   return false;
+}
+
+// Runs `body(payload)` for the payload of the active variant of the sum at `sumPtrLocal` (tag in
+// slot 1), for the variants `needs(payload)` holds for.
+bool emitForActiveSumPayload(int32_t sumPtrLocal,
+                             const std::vector<SumPayloadLayoutInfo> &payloads,
+                             std::vector<IrInstruction> &instructions,
+                             const std::function<bool(const SumPayloadLayoutInfo &)> &needs,
+                             const std::function<bool(const SumPayloadLayoutInfo &)> &body) {
+  std::vector<size_t> endJumps;
+  for (const SumPayloadLayoutInfo &payload : payloads) {
+    if (!needs(payload)) {
+      continue;
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+    instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+    instructions.push_back({IrOpcode::AddI64, 0});
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(payload.tagValue)});
+    instructions.push_back({IrOpcode::CmpEqI32, 0});
+    const size_t nextVariantJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    if (!body(payload)) {
+      return false;
+    }
+    endJumps.push_back(instructions.size());
+    instructions.push_back({IrOpcode::Jump, 0});
+    instructions[nextVariantJump].imm = static_cast<uint64_t>(instructions.size());
+  }
+  for (size_t jumpIndex : endJumps) {
+    instructions[jumpIndex].imm = static_cast<uint64_t>(instructions.size());
+  }
+  return true;
+}
+
+// Stores the address of the payload (slot 2) of the sum at `sumPtrLocal` in a new local.
+int32_t emitSumPayloadAddress(int32_t sumPtrLocal,
+                              const Int32ProviderFn &allocTempLocal,
+                              std::vector<IrInstruction> &instructions) {
+  const int32_t payloadPtrLocal = allocTempLocal();
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+  instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+  instructions.push_back({IrOpcode::AddI64, 0});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal)});
+  return payloadPtrLocal;
 }
 
 bool emitStructCopyHelpersAtDepth(
@@ -428,6 +483,36 @@ bool emitStructCopyHelpersAtDepth(
       return false;
     }
   }
+  // A sum is a slot copy of its source so far: the payload of its active variant gets its own
+  // resources.
+  if (!emitForActiveSumPayload(
+          destPtrLocal,
+          layout.sumPayloads,
+          instructions,
+          [&](const SumPayloadLayoutInfo &payload) {
+            return structNeedsCopyHelpers(
+                payload.lifecyclePath, findCopyHelper, resolveStructSlotLayout, depth + 1, true);
+          },
+          [&](const SumPayloadLayoutInfo &payload) {
+            const int32_t payloadDestPtrLocal =
+                emitSumPayloadAddress(destPtrLocal, allocTempLocal, instructions);
+            const int32_t payloadSrcPtrLocal =
+                emitSumPayloadAddress(srcPtrLocal, allocTempLocal, instructions);
+            return emitStructCopyHelpersAtDepth(payloadDestPtrLocal,
+                                                payloadSrcPtrLocal,
+                                                payload.lifecyclePath,
+                                                findCopyHelper,
+                                                resolveStructSlotLayout,
+                                                allocTempLocal,
+                                                instructions,
+                                                localsIn,
+                                                emitInlineDefinitionCall,
+                                                ranHelper,
+                                                error,
+                                                depth + 1);
+          })) {
+    return false;
+  }
   if (copyHelper != nullptr) {
     ranHelper = true;
     return emitMoveHelperFromPtrs(destPtrLocal,
@@ -634,7 +719,28 @@ bool emitStructDestroyHelpersAtDepth(
       return false;
     }
   }
-  return true;
+  // A sum destroys the payload of its active variant.
+  return emitForActiveSumPayload(
+      valuePtrLocal,
+      layout.sumPayloads,
+      instructions,
+      [&](const SumPayloadLayoutInfo &payload) {
+        return structNeedsCopyHelpers(
+            payload.lifecyclePath, findDestroyHelper, resolveStructSlotLayout, depth + 1, true);
+      },
+      [&](const SumPayloadLayoutInfo &payload) {
+        return emitStructDestroyHelpersAtDepth(
+            emitSumPayloadAddress(valuePtrLocal, allocTempLocal, instructions),
+            payload.lifecyclePath,
+            findDestroyHelper,
+            resolveStructSlotLayout,
+            allocTempLocal,
+            instructions,
+            localsIn,
+            emitInlineDefinitionCall,
+            error,
+            depth + 1);
+      });
 }
 
 } // namespace
