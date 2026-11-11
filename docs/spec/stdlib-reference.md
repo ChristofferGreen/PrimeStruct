@@ -1050,10 +1050,12 @@ the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both n
 `/std/net`, so these run on `optexe` only.
 
 - **The loop** only accepts and watches: it polls the listener, the open connections and a wake pipe (`/std/net`
-  `wakePipe`). A readable connection leaves the watched set and goes to the workers over a `Channel`. The loop never
+  `wakePipe`). A new connection goes straight to the workers over a `Channel`, and so does a watched connection
+  that becomes readable. A worker that closes a connection does not wake the loop, which takes the slot back on its
+  next round and asks to be woken only while every slot is taken. The loop never
   waits for a worker, so a full set of busy workers does not stop it from accepting or from seeing the stop condition.
-- **A worker** reads what has arrived on the connection. An incomplete request goes back to the loop to be watched
-  again, so a client that stalls in the middle of a request holds its slot and never a worker. A complete request is
+- **A worker** reads what has arrived on the connection. A request that has not arrived yet or is incomplete goes
+  back to the loop to be watched again, so a client that stalls in the middle of a request holds its slot and never a worker. A complete request is
   answered by that worker: it calls the handler, serializes the response, writes it (at most `writeTimeoutMs`) and
   closes. Rejected requests get the same bare status as under `serve` and are drained by the loop.
 - **The handler runs inside a mutex.** The handler moves into a `Mutex` (`/std/sync`), and each request calls it
@@ -1071,7 +1073,8 @@ the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both n
   workers are still starting, and also between the loop's check of `stop()` and its wait.
 - **Errors:** failing to listen or to open the wake pipe is the `ServeError`, returned before any worker starts.
 - **Memory:** the request buffers of all slots are one block of `maxConnections * maxRequestBytes` bytes,
-  allocated when the server starts (`serve` allocates each slot's buffer on first use).
+  allocated when the server starts (`serve` allocates each slot's buffer on first use). Each worker also keeps one
+  block of `maxRequestBytes`, in which it parses a copy of the request, and one `Response`.
 
 ```prime
 import /std/http/*

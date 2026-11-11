@@ -147,19 +147,27 @@ processor).
 `python3 benchmarks/http/run_http_benchmarks.py` (benchmarks/http/README.md), 2026-11-11: an Apple arm64 machine
 with 11 processors (5 performance, 6 efficiency), 16 concurrent clients, 10 s per run, a new connection per
 request, `serve`, 1 worker and 4 workers back to back. The machine was not idle: other work kept the load average
-near 7 during the runs, so the absolute numbers are low and the ratios are the result.
+between 5 and 8 during the runs, so the absolute numbers are low and the ratios are the result.
 
 | Scenario | Load average before | Server | Requests/s | p50 ms | p99 ms | Against `serve` | Target |
 | --- | --- | --- | ---: | ---: | ---: | ---: | --- |
-| List page, 200 items (`todo_web` `GET /`) | 6.97 7.44 16.88 | `serve` | 220 | 72.84 | 77.00 | 1.00x | |
-| | | 1 worker | 204 | 78.67 | 83.09 | 0.93x | 0.9x: met |
-| | | 4 workers | 210 | 74.44 | 107.78 | 0.95x | 1.5x: missed |
-| 32 KB form, small handler (`POST /form`) | 7.26 7.45 16.51 | `serve` | 6200 | 2.52 | 3.73 | 1.00x | |
-| | | 1 worker | 3094 | 5.13 | 5.80 | 0.50x | 0.9x: missed |
-| | | 4 workers | 9916 | 1.53 | 2.31 | 1.60x | 2.5x: missed |
-| About 1 ms of work in the handler (`GET /work`) | 8.45 7.71 16.23 | `serve` | 1013 | 15.69 | 20.77 | 1.00x | |
-| | | 1 worker | 909 | 17.23 | 24.21 | 0.90x | 0.9x: met, barely |
-| | | 4 workers | 989 | 15.57 | 26.64 | 0.98x | about 1x expected |
+| List page, 200 items (`todo_web` `GET /`) | 5.28 9.49 25.23 | `serve` | 249 | 64.34 | 67.30 | 1.00x | |
+| | | 1 worker | 238 | 67.67 | 71.24 | 0.96x | 0.9x: met |
+| | | 4 workers | 237 | 66.34 | 94.98 | 0.95x | 1.5x: missed |
+| 32 KB form, small handler (`POST /form`) | 5.59 9.10 24.45 | `serve` | 5527 | 2.83 | 3.75 | 1.00x | |
+| | | 1 worker | 5660 | 2.76 | 3.38 | 1.02x | 0.9x: met |
+| | | 4 workers | 13329 | 1.11 | 1.89 | 2.41x | 2.5x: missed |
+| About 1 ms of work in the handler (`GET /work`) | 8.44 9.43 24.04 | `serve` | 961 | 16.55 | 20.49 | 1.00x | |
+| | | 1 worker | 964 | 16.51 | 19.12 | 1.00x | 0.9x: met |
+| | | 4 workers | 976 | 15.96 | 24.74 | 1.01x | about 1x expected |
+
+The form row before this state of the code, for comparison (requests per second, against `serve`):
+
+| State | Load average | `serve` | 1 worker | 4 workers |
+| --- | --- | ---: | ---: | ---: |
+| First measurement | 7.26 7.45 16.51 | 6200 | 3094 (0.50x) | 9916 (1.60x) |
+| String heap keeps a free chunk per block size | 32.15 66.34 58.30 | 5598 | 2926 (0.52x) | 11290 (2.02x) |
+| Worker parses in its own block, fewer wakes | 5.59 9.10 24.45 | 5527 | 5660 (1.02x) | 13329 (2.41x) |
 
 What the numbers say:
 
@@ -167,13 +175,21 @@ What the numbers say:
   and the empty page in 0.6 ms: about 21 us per item, all of it writing HTML inside the handler, which holds the
   app's mutex. Receiving, parsing and sending, the part workers share, is about an eighth of the request. The 1.5x
   target needs handlers that only read the state to run side by side (TODO-5804), or a cheaper page.
-- **The form gains 1.6x with 4 workers, not 2.5x, and 1 worker is half of `serve`.** A worker spends about 2.5
-  times the CPU of `serve` on the same request (323 against 130 us of user time for the form, 157 against 37 us
-  for a POST of 8 bytes). The measured cause is the string heap: it keeps one empty chunk and returns any other,
-  and a worker thread, which holds no other strings, empties two or more chunks per request and builds them again,
-  256 KiB each time. With one string per block size kept alive in each worker, as an experiment, the
-  8-byte POST with 1 worker went from 5751 to 12282 requests per second (`serve` 14224) and the form from 2866 to
-  4271 (`serve` 6019). The heap has since been changed to keep one free chunk per block size, with small first
-  chunks (docs/spec/strings-and-views.md, Memory), so the table above is from before that change; what is left is
-  measured in TODO-5869.
+- **One worker is as fast as `serve` on the form; it was half.** Two causes were measured, in user time per
+  request of the server process (`getrusage`, 64,000 requests). The first was the string heap, which rebuilt
+  256 KiB chunks on a worker thread for every request; it now keeps one free chunk per block size
+  (docs/spec/strings-and-views.md, Memory), which raised 4 workers from 1.60x to 2.02x and left 1 worker at half.
+  The second was where the request bytes lay: the slots are one block that the polling thread allocated, and on
+  `optexe` a byte of a block of another thread's heap is checked on a slow, out-of-line path. A worker spent 327 us
+  per form against 146 us for `serve`; parsing from a copy in a block the worker owns brought it to 160 us
+  (TODO-5872 is to make the check itself cheap). Keeping one `Response` per worker is part of the same change.
+- **The poller wakes once per request where it woke three times**: a new connection goes straight to a worker
+  (no wait for it to become readable), and a worker that closes a connection does not wake the poller. System time
+  per form with 1 worker went from 44 us to 39 us; requests per second did not change measurably.
+- **The form reaches 2.41x with 4 workers, not 2.5x** (2.41x to 2.45x over four runs). The measured cause is a
+  ceiling on new connections per second in this setup, not the work per request: a POST of 8 bytes gets 15,450
+  requests per second from `serve` and 14,620, 14,718 and 14,656 from 1, 2 and 4 workers, and the form gets
+  5570, 10,411, 12,585, 13,167 and 13,457 from 1, 2, 3, 4 and 8 workers, the same with 8, 16 or 32 clients. At
+  13,329 the form is at nine tenths of what any server here answers. Whether the ceiling is the one thread that
+  accepts, the kernel's loopback connection setup or the Python load generator was not measured; that is TODO-5871.
 - **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.

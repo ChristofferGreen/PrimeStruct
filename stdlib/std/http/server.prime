@@ -385,7 +385,9 @@ namespace server {
             [SlotJob] job,
             [Atomic<i32>] stopping,
             [SlotBuffers] buffers,
-            [ServerConfig] config) {
+            [ServerConfig] config,
+            [String mut] own,
+            [Response mut] response) {
     [i32] capacity{buffers.capacity}
     [i32] connection{job.socket}
     if(stopping.load() != 0i32) {
@@ -401,10 +403,14 @@ namespace server {
       return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 0i32})
     }
     [i32] total{job.received + convert<i32>(got)}
-    [Request] request{parseRequestBytes(readSliceMake<u8>(slot_bytes(buffers, job.slot, 0i32), total), capacity)}
+    // Parsed from a copy in this worker's own block: a byte of a block another thread allocated (the slots are the
+    // poller's) is checked on a slower path, which made parsing a 32 KB form cost twice what `serve` pays.
+    own.clear()
+    own.appendBytes(slot_bytes(buffers, job.slot, 0i32), total)
+    [Request] request{parseRequestBytes(readSliceMake<u8>(own.data, total), capacity)}
     [i32] outcome{request.outcome()}
     if(outcome == 0i32) {
-      [Response mut] response{Response{}}
+      response.clear()
       [mut] answer{[ref request, ref response]([Reference<Function<void, Request, Reference<Response>>>] handler) {
         handler(request, location(response))
       }}
@@ -423,26 +429,36 @@ namespace server {
     return(SlotDone{[slot] job.slot, [socket] connection, [received] total, [state] 1i32})
   }
 
-  // Hands a finished slot back to the poller and wakes it.
+  // Hands a finished slot back to the poller. A slot whose connection is closed needs no wake: the poller takes it
+  // back on its next round, and only waits for one when every slot is taken (`full`). A connection that is to be
+  // watched again wakes it.
   [effects(net_io, channel, atomic)]
-  return_slot([Channel<SlotDone>] finished, [Atomic<i32>] ready, [i32] wakeWriter, [SlotDone] done) {
+  return_slot([Channel<SlotDone>] finished, [Atomic<i32>] ready, [Atomic<i32>] full, [i32] wakeWriter, [SlotDone] done) {
+    [bool] watched{done.state != 0i32}
     finished.send(done)
     ready.add(1i32)
-    wake(wakeWriter)
+    if(watched || full.load() != 0i32) {
+      wake(wakeWriter)
+    }
   }
 
-  // One worker task: takes readable connections from `jobs` until the channel is closed and empty.
+  // One worker task: takes readable connections from `jobs` until the channel is closed and empty. It keeps one
+  // `Response` and one block of `maxRequestBytes` for the request it is parsing, as `serve` keeps one of each.
   [effects(net_io, heap_alloc, lock, channel, atomic) return<void>]
   work_slots([Mutex<Function<void, Request, Reference<Response>>>] app,
              [Channel<SlotJob>] jobs,
              [Channel<SlotDone>] finished,
              [Atomic<i32>] ready,
+             [Atomic<i32>] full,
              [Atomic<i32>] stopping,
              [SlotBuffers] buffers,
              [i32] wakeWriter,
              [ServerConfig] config) {
     // A stop signal does not interrupt this worker's reads and writes; the poller sees it through `stopSignalFd`.
     blockStopSignals()
+    [String mut] own{String{}}
+    own.reserve(buffers.capacity)
+    [Response mut] response{Response{}}
     [bool mut] open{true}
     while(open) {
       pick(jobs.receive()) {
@@ -450,7 +466,7 @@ namespace server {
           open = false
         }
         some(job) {
-          return_slot(finished, ready, wakeWriter, work_slot(app, job, stopping, buffers, config))
+          return_slot(finished, ready, full, wakeWriter, work_slot(app, job, stopping, buffers, config, own, response))
         }
       }
     }
@@ -505,8 +521,8 @@ namespace server {
     table.deadlines[slot] = monotonicMs() + drain_wait_ms()
   }
 
-  // The poller of `serveWorkersUntil`: accepts, watches the open connections and the wake pipe, hands each readable
-  // connection to the workers (slot state 3: a worker has it, so it is neither watched nor timed out here) and takes
+  // The poller of `serveWorkersUntil`: accepts, watches the open connections and the wake pipe, hands each new and
+  // each readable connection to the workers (slot state 3: a worker has it, so it is neither watched nor timed out here) and takes
   // back the slots they return. It never waits for a worker: both channels hold one entry per slot. When `stop()`
   // is true it stops listening, closes the connections no worker holds and closes `jobs`, which ends the workers
   // once each has finished the request it is answering.
@@ -514,6 +530,7 @@ namespace server {
   poll_slots<Stop>([Channel<SlotJob>] jobs,
                    [Channel<SlotDone>] finished,
                    [Atomic<i32>] ready,
+                   [Atomic<i32>] full,
                    [Atomic<i32>] stopping,
                    [SlotBuffers] buffers,
                    [ServerConfig] config,
@@ -564,7 +581,18 @@ namespace server {
       if(watchStop) {
         watch_socket(interest, stopSignal)
       }
+      // With every slot taken nothing arrives on the listener, so a worker that closes a connection has to wake this
+      // wait. `full` asks for that; a slot handed back before a worker could see it is in `ready` already.
+      if(!room) {
+        full.store(1i32)
+        if(ready.load() > 0i32) {
+          wait = 0i64
+        }
+      }
       wait_ready(interest, wait)
+      if(!room) {
+        full.store(0i32)
+      }
       [i64] after{monotonicMs()}
       if(watchStop) {
         take_ready(interest, stopSignal)
@@ -601,10 +629,13 @@ namespace server {
           while(table.states[free] != 0i32) {
             free = free + 1i32
           }
+          // Straight to a worker: the request of a new connection has usually arrived with it. When it has not,
+          // the worker hands the slot back to be watched until `readTimeoutMs` from now.
           table.sockets[free] = connection
-          table.states[free] = 1i32
+          table.states[free] = 3i32
           table.counts[free] = 0i32
           table.deadlines[free] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+          jobs.send(SlotJob{[slot] free, [socket] connection, [received] 0i32})
         }
       }
     }
@@ -627,6 +658,7 @@ namespace server {
                     [Channel<SlotJob>] jobs,
                     [Channel<SlotDone>] finished,
                     [Atomic<i32>] ready,
+                    [Atomic<i32>] full,
                     [Atomic<i32>] stopping,
                     [SlotBuffers] buffers,
                     [ServerConfig] config,
@@ -636,11 +668,11 @@ namespace server {
                     [i32] remaining,
                     [Stop mut] stop) {
     if(remaining <= 0i32) {
-      poll_slots<Stop>(jobs, finished, ready, stopping, buffers, config, listener, pipe.reader, slots, stop)
+      poll_slots<Stop>(jobs, finished, ready, full, stopping, buffers, config, listener, pipe.reader, slots, stop)
       return()
     }
-    [Task<void>] worker{[spawn] work_slots(app, jobs, finished, ready, stopping, buffers, pipe.writer, config)}
-    run_workers<Stop>(app, jobs, finished, ready, stopping, buffers, config, listener, pipe, slots, remaining - 1i32, stop)
+    [Task<void>] worker{[spawn] work_slots(app, jobs, finished, ready, full, stopping, buffers, pipe.writer, config)}
+    run_workers<Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, remaining - 1i32, stop)
     wait(worker)
   }
 
@@ -691,8 +723,9 @@ namespace server {
     jobs{Channel<SlotJob>{[capacity] slots}}
     finished{Channel<SlotDone>{[capacity] slots}}
     ready{Atomic<i32>{0i32}}
+    full{Atomic<i32>{0i32}}
     stopping{Atomic<i32>{0i32}}
-    run_workers<Stop>(app, jobs, finished, ready, stopping, buffers, config, listener, pipe, slots, workers, stop)
+    run_workers<Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, workers, stop)
     // Every worker has ended. What they handed back since the poller stopped is still open.
     [i32 mut] left{ready.exchange(0i32)}
     while(left > 0i32) {

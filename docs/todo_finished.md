@@ -2229,6 +2229,7 @@ are left unarchived.
 | TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5856 | `pick` on a call result frees an owning payload | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5867 | A string heap that alternates between block sizes keeps its chunks | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 
 <!-- INDEX-END -->
 
