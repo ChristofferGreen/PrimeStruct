@@ -500,7 +500,8 @@
       std::string vectorElementStructPath;
       bool vectorElementTypeFound = false;
       if (info.kind == LocalInfo::Kind::Vector && !info.isSoaVector) {
-        for (const auto &transform : stmt.transforms) {
+        // The declared type, or the one semantics inferred for a binding without one.
+        for (const auto &transform : bindingTypeExprRef.transforms) {
           if (transform.templateArgs.size() == 1 &&
               normalizeCollectionBindingTypeName(transform.name) == "vector") {
             // A struct, a builtin vector ("/vector<E>") or a scalar; another collection has no
@@ -593,9 +594,10 @@
           entry.builtinVectorElementCopyPath = vectorElementStructPath;
         } else if (info.valueKind != LocalInfo::ValueKind::Unknown && info.structTypeName.empty() &&
                    info.vectorStructElementSlotCount == 0) {
-          // An inferred binding of a vector of scalars.
+          // A vector of scalars whose type text names no element.
           entry.builtinVectorElementCopyPath = std::string{};
         }
+        info.vectorElementLifecyclePath = entry.builtinVectorElementCopyPath;
         setupStage.dropEntries.push_back(std::move(entry));
         fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
       }

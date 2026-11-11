@@ -2245,6 +2245,7 @@ are left unarchived.
 | TODO-5879 | A `pick` expression's result owns a value of its own | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5880 | A payload moved out of a sum local leaves the local moved-from | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5883 | Assigning to a `mut` builtin vector local destroys what it held and copies a place | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5884 | Assigning to a `mut` vector parameter or an inferred vector-of-struct local keeps one owner | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 
 <!-- INDEX-END -->
 

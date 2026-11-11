@@ -127,7 +127,7 @@
   other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a
-  copy. A builtin `[vector<T> copy]` parameter gets a buffer of its own holding a copy of each element, except from a
+  copy. A builtin `[vector<T> copy]` parameter (also `copy mut`) gets a buffer of its own holding a copy of each element, except from a
   fresh vector (a constructor or a call returning one) or `move(v)`, which it takes over; the callee frees it when
   its body ends, and a fresh vector passed to a read-only `vector<T>` parameter is freed there too, also when the parameter is declared as the stdlib `Vector<T>` or as a template type bound to it (`some<Vector<i32>>(vector<i32>(1i32))`). The stdlib `Vector`, `RingBuffer` and `SoaColumn` `Copy` helpers allocate their own storage and copy each
   element. A struct's own `Destroy` runs first and its fields are destroyed after it, last declared first. A sum local
@@ -172,7 +172,11 @@
   `assign` of an owning value destroys the old value and copies the new one. Assigning to a `mut` builtin
   `vector<T>` local does the same: a fresh vector (a call, a constructor, a `pick` expression) is taken over, a
   place is copied with a buffer of its own and keeps its elements, and the vector the local held is destroyed
-  (`kept = kept` is valid). A `copy` or `move` parameter is
+  (`kept = kept` is valid); a local whose `vector<T>` type is inferred (`[mut] names{make_names()}`) behaves like
+  a declared one. Assigning to a `[vector<T> mut]` parameter that borrows the caller's vector destroys that vector
+  and writes the new one in its place, so the caller sees the new vector and destroys it. A `[vector<T> move]`
+  parameter and a fresh vector given to any vector parameter belong to the callee, which destroys every element.
+  A `copy` or `move` parameter is
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
   destroys the element, also on a builtin `vector<T>` of structs or vectors held in a local, a field

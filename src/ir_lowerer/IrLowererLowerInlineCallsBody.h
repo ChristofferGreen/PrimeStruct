@@ -585,13 +585,13 @@
       // (docs/spec/value-lifecycle.md, Ownership).
       if (const auto vectorIt = calleeLocals.find(param.name);
           !fileScopeStack.empty() && argExpr != nullptr && vectorIt != calleeLocals.end() &&
-          vectorIt->second.kind == LocalInfo::Kind::Vector && !vectorIt->second.isSoaVector &&
-          !ir_lowerer::parameterHasTransform(param, "move") &&
-          !ir_lowerer::parameterHasTransform(param, "mut")) {
-        const bool copyParam = ir_lowerer::parameterHasTransform(param, "copy");
-        // `move(x)` hands the caller's vector over (its drop flag is released): no copy.
+          vectorIt->second.kind == LocalInfo::Kind::Vector && !vectorIt->second.isSoaVector) {
+        const bool moveParam = ir_lowerer::parameterHasTransform(param, "move");
+        const bool copyParam = !moveParam && ir_lowerer::parameterHasTransform(param, "copy");
+        const bool mutParam = ir_lowerer::parameterHasTransform(param, "mut");
+        // `move(x)` or a `move` parameter hands the caller's vector over (its drop flag is released): no copy.
         const bool freshArg =
-            (copyParam && isSimpleCallName(*argExpr, "move")) ||
+            moveParam || (copyParam && isSimpleCallName(*argExpr, "move")) ||
             ir_lowerer::isFreshBuiltinVectorExpr(
                 *argExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
         std::string elementStructPath;
@@ -613,8 +613,23 @@
               elementStructPath);
           break;
         }
+        // The slots of an inline element: a temporary argument carries no local to take them from.
+        if (StructSlotLayoutInfo elementLayout;
+            elementKnown && !elementStructPath.empty() &&
+            vectorIt->second.vectorStructElementSlotCount == 0 &&
+            resolveStructSlotLayout(elementStructPath, elementLayout)) {
+          vectorIt->second.vectorStructElementSlotCount = elementLayout.totalSlots;
+        }
+        if (elementKnown && mutParam && !copyParam && !freshArg) {
+          // A mutable borrow of the caller's vector: assigning to it replaces the caller's record in
+          // place, and the caller stays the owner.
+          vectorIt->second.vectorElementLifecyclePath = elementStructPath;
+        }
         if (elementKnown && (copyParam || freshArg)) {
           LocalInfo &vectorInfo = vectorIt->second;
+          if (mutParam) {
+            vectorInfo.vectorElementLifecyclePath = elementStructPath;
+          }
           if (!freshArg) {
             constexpr int32_t VectorRecordSlots = 5;
             const int32_t recordBaseLocal = nextLocal;

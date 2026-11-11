@@ -87,21 +87,33 @@
                   // record pointer): a fresh vector is taken over, a place is copied with a buffer of its
                   // own first (so `kept = kept` stays valid), then the vector the local held is destroyed.
                   if (structPath == ir_lowerer::BuiltinVectorAssignPath) {
-                    const LowerSetupStageState::DropEntry *vectorEntry = nullptr;
-                    for (const auto &candidate : setupStage.dropEntries) {
-                      if (candidate.flagLocal == destDropFlagLocal &&
-                          candidate.builtinVectorElementSlots > 0 &&
-                          candidate.builtinVectorElementCopyPath.has_value()) {
-                        vectorEntry = &candidate;
+                    // The target's element type comes from its binding; a vector whose element copy is not
+                    // known is only repointed.
+                    const LocalInfo *targetInfo = nullptr;
+                    for (const auto &[localName, localInfo] : localsIn) {
+                      if (localInfo.index == destPtrLocal &&
+                          localInfo.kind == LocalInfo::Kind::Vector &&
+                          localInfo.vectorElementLifecyclePath.has_value()) {
+                        targetInfo = &localInfo;
                         break;
                       }
                     }
-                    if (vectorEntry == nullptr) {
+                    if (targetInfo == nullptr) {
                       emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal));
                       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
                       return true;
                     }
-                    const LowerSetupStageState::DropEntry entry = *vectorEntry;
+                    LowerSetupStageState::DropEntry entry{
+                        destPtrLocal, destDropFlagLocal, std::string{}};
+                    entry.builtinVectorElementSlots =
+                        std::max<int32_t>(1, targetInfo->vectorStructElementSlotCount);
+                    entry.builtinVectorElementCopyPath = targetInfo->vectorElementLifecyclePath;
+                    if (!entry.builtinVectorElementCopyPath->empty() &&
+                        ir_lowerer::structNeedsDestroyHelpers(*entry.builtinVectorElementCopyPath,
+                                                              findDestroyHelper,
+                                                              resolveLayout)) {
+                      entry.structPath = *entry.builtinVectorElementCopyPath;
+                    }
                     const int32_t newBaseLocal = nextLocal;
                     nextLocal += slotCount;
                     if (!emitStructCopySlots(newBaseLocal, srcPtrLocal, slotCount)) {
@@ -127,6 +139,14 @@
                             emitInlineDefinitionCall,
                             error)) {
                       return false;
+                    }
+                    if (destDropFlagLocal < 0) {
+                      // A mutable borrow (a `mut` parameter given a place): the owner's record is
+                      // replaced where it is, so the owner sees and later destroys the new vector.
+                      if (!emitBuiltinVectorDrop(entry)) {
+                        return false;
+                      }
+                      return emitStructCopyFromPtrs(destPtrLocal, newPtrLocal, slotCount);
                     }
                     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(destDropFlagLocal));
                     const size_t skipJump = function.instructions.size();

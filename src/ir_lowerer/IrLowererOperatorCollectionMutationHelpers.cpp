@@ -519,9 +519,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return true;
       }
       if (it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector &&
-          it->second.dropFlagLocal >= 0 && context.emitOwnedStructAssign) {
-        // A builtin vector local that owns its record: the lowerer destroys what it held and gives it the new
-        // vector (`BuiltinVectorAssignPath` marks the target as the local holding the record pointer).
+          (it->second.dropFlagLocal >= 0 || it->second.vectorElementLifecyclePath.has_value()) &&
+          context.emitOwnedStructAssign) {
+        // A builtin vector local that owns its record, or a mutable borrow of one: the lowerer destroys what it
+        // held and gives it the new vector (`BuiltinVectorAssignPath` marks the target as the local holding the
+        // record pointer).
         const Expr &rhsExpr = expr.args[1];
         if (!emitExpr(rhsExpr, localsIn)) {
           return false;

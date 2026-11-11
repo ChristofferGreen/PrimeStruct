@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -24,6 +25,10 @@ struct LocalInfo {
   int32_t structSlotCount = 0;
   // A vector of structs: slots per inline element (0 for scalar elements).
   int32_t vectorStructElementSlotCount = 0;
+  // A builtin vector the lowerer can assign to: the struct path its elements are copied and destroyed through
+  // (empty for scalars). Unset when the element type is not known or the binding is not an assignable owner or
+  // mutable borrow.
+  std::optional<std::string> vectorElementLifecyclePath;
   bool isFileHandle = false;
   // Set while this owning struct local still owns its value; its scope's cleanup destroys it
   // only then (moves and returns clear it). -1 when the local needs no destroy.
