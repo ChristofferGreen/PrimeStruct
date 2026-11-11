@@ -672,6 +672,18 @@ bool emitNativeFunctions(const IrModule &module,
         callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
         break;
       }
+      case IrOpcode::AtomicLoad:
+      case IrOpcode::AtomicStore:
+      case IrOpcode::AtomicAdd:
+      case IrOpcode::AtomicExchange:
+      case IrOpcode::AtomicCompareExchange:
+        if constexpr (kIsArm64) {
+          emitter.emitAtomic(inst.op, inst.imm);
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       case IrOpcode::TaskSpawn:
       case IrOpcode::TaskWait:
         if constexpr (kIsArm64) {

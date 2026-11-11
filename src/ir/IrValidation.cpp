@@ -762,6 +762,10 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
            ++instructionIndex) {
         const IrOpcode op = function.instructions[instructionIndex].op;
+        // arm64 native runs the atomic opcodes; its mutexes and conditions are not emitted yet.
+        if (isAtomicOpcode(op) && target == IrValidationTarget::Native && nativeEmitsByteMemory()) {
+          continue;
+        }
         if (isAtomicOpcode(op) || isMutexOpcode(op)) {
           return failInstruction(functionIndex,
                                  function.name,

@@ -3704,7 +3704,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=8 closures_callables=10 closures_references=8 closures_fields=13 closures_routers=7 container_copies=21
     control=37 element_copies=8 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=16
-    shared_strings=4 sum_owners=6 tasks=15 text_views=2 vector_owners=18)
+    shared_strings=5 sum_owners=6 tasks=15 text_views=2 vector_owners=18)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

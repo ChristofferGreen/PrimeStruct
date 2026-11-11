@@ -5,7 +5,8 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.shared_strings");
 // `SharedString` owners on several tasks (docs/spec/strings-and-views.md): the owner count is an atomic cell, so a
 // copy made on one task and a destroy on another both count, and the last owner frees the text wherever it runs.
 // The VM runs the programs on the eager default schedule and on seeds 1 and 2, where every atomic operation is a
-// switch point; optexe runs each task on a thread. Each program prints the heap blocks and string heap bytes it
+// switch point; optexe and arm64 native run each task on a thread (native has no heap statistics, so the programs that print
+// them skip it). Each program prints the heap blocks and string heap bytes it
 // left behind (0 and 0). Each matrix case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
 namespace {
@@ -15,6 +16,10 @@ void runSharedStringProgram(program_matrix::ProgramCase program) {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
+  if (program_matrix::nativeSupported()) {
+    configs.push_back({"native-O0", program_matrix::Backend::Native, 0, false});
+    configs.push_back({"native-O2", program_matrix::Backend::Native, 2, false});
+  }
   for (int seed = 1; seed <= 2; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
@@ -76,6 +81,7 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "400000\n1\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
   runSharedStringProgram(program);
 }
 
@@ -149,6 +155,7 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "5\n1\n250\n1\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
   runSharedStringProgram(program);
 }
 
@@ -217,6 +224,7 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "250\n1\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
   runSharedStringProgram(program);
 }
 
@@ -255,6 +263,51 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "0\n32\n0\n32\n2\n111\n11\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runSharedStringProgram(program);
+}
+
+// The same owner count on arm64 native, which has no heap statistics: the answers only.
+TEST_CASE("four tasks copy and destroy one SharedString and count its owners") {
+  program_matrix::ProgramCase program;
+  program.name = "shared_string_four_tasks_answers";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+
+[return<i32>]
+copy_many([SharedString] text, [i32] rounds) {
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(i < rounds) {
+    [SharedString] copy{text}
+    total = total + copy.count()
+    i = i + 1i32
+  }
+  return(total)
+}
+
+[effects(heap_alloc, task), return<i32>]
+copy_on_four_tasks([SharedString] text) {
+  [Task<i32>] a{[spawn] copy_many(text, 5000i32)}
+  [Task<i32>] b{[spawn] copy_many(text, 5000i32)}
+  [Task<i32>] c{[spawn] copy_many(text, 5000i32)}
+  [Task<i32>] d{[spawn] copy_many(text, 5000i32)}
+  return(wait(a) + wait(b) + wait(c) + wait(d))
+}
+
+[effects(heap_alloc, io_out, task), return<int>]
+main() {
+  [String] owner{stringFrom("hello")}
+  [SharedString] kept{sharedFrom(owner.view())}
+  print_line(copy_on_four_tasks(kept))
+  print_line(kept.owners())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "100000\n1\n";
   runSharedStringProgram(program);
 }
 

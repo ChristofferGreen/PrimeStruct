@@ -2276,6 +2276,7 @@ are left unarchived.
 | TODO-5941 | Assigning to a struct local of one scalar kind copies it instead of aliasing the source | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5942 | arm64 native starts a task on a pthread and joins it, its heap behind a lock | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5944 | Parallel definition validation does not crash | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5950 | arm64 native runs the atomic opcodes and `SharedString` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 
 <!-- INDEX-END -->
 

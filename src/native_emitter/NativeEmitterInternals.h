@@ -320,6 +320,7 @@ class Arm64Emitter {
   }
   bool emitTaskSpawn(uint32_t parameterCount, size_t targetFunction, std::string &error);
   void emitTaskWait();
+  void emitAtomic(IrOpcode op, uint64_t width);
   void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
                        std::vector<std::pair<size_t, std::string>> &slotLoads);
   const std::vector<size_t> &heapStateFixups() const {

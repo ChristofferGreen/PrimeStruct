@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.atomics");
 
 // `/std/sync` atomics (docs/spec/stdlib-reference.md, std/sync): tasks share one cell through copies of an `Atomic`.
 // The VM runs them on the eager default schedule and on seeds 1 to 3, where every atomic operation is a switch point;
-// optexe runs each task on a thread. The native and Wasm backends reject a program that uses atomics. Each matrix
+// optexe and arm64 native run each task on a thread. The Wasm backend rejects a program that uses atomics. Each matrix
 // case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
 namespace {
@@ -16,6 +16,10 @@ void runAtomicProgram(program_matrix::ProgramCase program) {
       {"vm-O2", program_matrix::Backend::Vm, 2, false},
       {"optexe-O2", program_matrix::Backend::OptExe, 2, true},
   };
+  if (program_matrix::nativeSupported()) {
+    configs.push_back({"native-O0", program_matrix::Backend::Native, 0, false});
+    configs.push_back({"native-O2", program_matrix::Backend::Native, 2, false});
+  }
   for (int seed = 1; seed <= 3; ++seed) {
     program_matrix::ExecutionConfig config{
         "vm-O2-seed" + std::to_string(seed), program_matrix::Backend::Vm, 2, false};
@@ -235,24 +239,18 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "250\n12500\n0\n1\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
   runAtomicProgram(program);
 }
 
-TEST_CASE("the native and Wasm backends reject a program with atomics by name") {
+TEST_CASE("the Wasm backend rejects a program with atomics by name") {
   const program_matrix::Outcome wasm =
       compileFor("atomic_rejected_wasm", "wasm", SmallAtomicProgram);
   CHECK(wasm.exitCode != 0);
   CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm backend") !=
                     std::string::npos,
                 wasm.err);
-  if (program_matrix::nativeSupported()) {
-    const program_matrix::Outcome native =
-        compileFor("atomic_rejected_native", "native", SmallAtomicProgram);
-    CHECK(native.exitCode != 0);
-    CHECK_MESSAGE(native.err.find("atomic operations are not supported by the native backend") !=
-                      std::string::npos,
-                  native.err);
-  }
 }
 
 TEST_SUITE_END();

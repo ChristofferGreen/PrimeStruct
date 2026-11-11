@@ -130,9 +130,14 @@
   load and a later store of one task can have another task's operation between them, and without a seed it is
   none. `optexe` uses `std::atomic_ref<uint64_t>` on the slot (the compiler's `__atomic_*` builtins where the
   library has no `atomic_ref`); that runtime is pasted into the program only when the module has an atomic opcode,
-  so other programs are unchanged. IR validation accepts the opcodes for the VM, serialized IR and the C++
-  emitters and rejects them for native, Wasm and GLSL: `atomic operations are not supported by the native
-  backend` (`wasm`, `wasm-browser`, `glsl`). The effect mask bit of `atomic` is `1 << 13`.
+  so other programs are unchanged. The arm64 native emitter (TODO-5950) emits LSE instructions on the 8-byte cell:
+  `ldar`, `stlr`, `swpal`, `ldaddal` and `casal`, all sequentially consistent; a 32-bit operation computes in 64 bits
+  on sign-extended operands (an add through a `casal` loop) so the cell stays sign-extended, and the byte-region
+  cell form (the owner count of a `SharedString`) is the same instruction on the aligned address (native has no
+  region table, so an unaligned or dead cell is not checked). IR validation accepts the opcodes for the VM,
+  serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `atomic operations are not
+  supported by the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit
+  of `atomic` is `1 << 13`.
 - **Mutexes (PSIR v36):** `MutexLock` and `MutexUnlock` each pop the address of one heap slot, the lock, and push
   nothing (immediate 0). The slot holds 0 while the lock is free. `MutexLock` takes a free lock, waits for a held
   one, and faults with `mutex locked again by the task that holds it` when the caller holds it; `MutexUnlock`

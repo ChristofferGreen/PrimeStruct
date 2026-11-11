@@ -314,3 +314,103 @@ inline void Arm64Emitter::emitTaskRuntime(std::vector<std::pair<size_t, size_t>>
     }
   }
 }
+
+// ---- Atomics (docs/spec/vm-design.md, Atomics): LSE instructions on the 8-byte cell at the popped address. Every
+// operation is sequentially consistent (load-acquire, store-release and the acquire-release forms are RCsc). A
+// 32-bit operation works on the low 32 bits and keeps the 8-byte cell sign-extended, like every i32 value, so it
+// computes in 64 bits on sign-extended operands (add through a compare-and-swap loop).
+namespace arm64_atomics {
+
+inline uint32_t ldar(uint8_t rt, uint8_t rn) {
+  return 0xC8DFFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
+}
+inline uint32_t stlr(uint8_t rt, uint8_t rn) {
+  return 0xC89FFC00u | (static_cast<uint32_t>(rn) << 5) | rt;
+}
+inline uint32_t casal(uint8_t compare, uint8_t desired, uint8_t address) {
+  return 0xC8E0FC00u | (static_cast<uint32_t>(compare) << 16) |
+         (static_cast<uint32_t>(address) << 5) | desired;
+}
+inline uint32_t swpal(uint8_t value, uint8_t old, uint8_t address) {
+  return 0xF8E08000u | (static_cast<uint32_t>(value) << 16) |
+         (static_cast<uint32_t>(address) << 5) | old;
+}
+inline uint32_t ldaddal(uint8_t delta, uint8_t old, uint8_t address) {
+  return 0xF8E00000u | (static_cast<uint32_t>(delta) << 16) |
+         (static_cast<uint32_t>(address) << 5) | old;
+}
+inline uint32_t sxtw(uint8_t rd, uint8_t rn) {
+  return 0x93407C00u | (static_cast<uint32_t>(rn) << 5) | rd;
+}
+
+} // namespace arm64_atomics
+
+inline void Arm64Emitter::emitAtomic(IrOpcode op, uint64_t width) {
+  using namespace arm64_atomics;
+  const bool narrow = width == 32;
+  flushValueStackCache();
+  switch (op) {
+  case IrOpcode::AtomicLoad:
+    emitPopReg(0);
+    emit(ldar(0, 0));
+    if (narrow) {
+      emit(sxtw(0, 0));
+    }
+    emitPushReg(0);
+    break;
+  case IrOpcode::AtomicStore:
+    emitPopReg(1);
+    emitPopReg(0);
+    if (narrow) {
+      emit(sxtw(1, 1));
+    }
+    emit(stlr(1, 0));
+    break;
+  case IrOpcode::AtomicExchange:
+    emitPopReg(1);
+    emitPopReg(0);
+    if (narrow) {
+      emit(sxtw(1, 1));
+    }
+    emit(swpal(1, 2, 0));
+    emitPushReg(2);
+    break;
+  case IrOpcode::AtomicAdd:
+    emitPopReg(1);
+    emitPopReg(0);
+    if (!narrow) {
+      emit(ldaddal(1, 2, 0));
+      emitPushReg(2);
+      break;
+    } else {
+      const size_t retry = currentWordIndex();
+      emit(ldar(2, 0));
+      emitAddReg(3, 2, 1);
+      emit(sxtw(3, 3));
+      emitMovReg(4, 2);
+      emit(casal(4, 3, 0));
+      emitCompareReg(4, 2);
+      emit(encodeBCond(static_cast<int32_t>(retry) - static_cast<int32_t>(currentWordIndex()),
+                       static_cast<uint8_t>(CondCode::Ne)));
+      emit(sxtw(2, 2));
+      emitPushReg(2);
+    }
+    break;
+  case IrOpcode::AtomicCompareExchange:
+    emitPopReg(2);
+    emitPopReg(1);
+    emitPopReg(0);
+    if (narrow) {
+      emit(sxtw(1, 1));
+      emit(sxtw(2, 2));
+    }
+    emitMovReg(3, 1);
+    emit(casal(1, 2, 0));
+    emitCompareReg(1, 3);
+    emit(0x9A9F17E0u); // CSET x0, EQ
+    emitPushReg(0);
+    break;
+  default:
+    break;
+  }
+}

@@ -124,8 +124,7 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "1500\n1623\n";
-  // The tasks count in an Atomic so the output does not depend on their order; native has no atomics yet.
-  program.skipConfigs = {"native-O0", "native-O2"};
+  // The tasks count in an Atomic so the output does not depend on their order.
   runTaskProgram(program);
 }
 

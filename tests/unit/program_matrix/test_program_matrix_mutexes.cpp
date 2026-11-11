@@ -358,7 +358,7 @@ TEST_CASE("the native and Wasm backends reject a program with a mutex by name") 
     const program_matrix::Outcome native =
         compileFor("mutex_rejected_native", "native", SmallMutexProgram);
     CHECK(native.exitCode != 0);
-    CHECK_MESSAGE(native.err.find("atomic operations are not supported by the native backend") !=
+    CHECK_MESSAGE(native.err.find("mutex operations are not supported by the native backend") !=
                       std::string::npos,
                   native.err);
   }

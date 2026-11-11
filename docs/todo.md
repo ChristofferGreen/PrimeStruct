@@ -129,7 +129,8 @@ of sync with them.
 | TODO-5799 | arm64 native runs spawned tasks on pthreads, its heap behind a lock | ready | mt-native |
 | TODO-5943 | arm64 native tasks: the measured speedup and the heap stress | ready | mt-native |
 | TODO-5800 | arm64 native heaps are per thread, with remote frees | blocked | mt-native |
-| TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | blocked | mt-native |
+| TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | ready | mt-native |
+| TODO-5951 | arm64 native runs `Mutex` and `Channel` (locks, conditions, deadlock fault) | ready | mt-native |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
@@ -265,7 +266,7 @@ of sync with them.
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5738, TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls and struct copies TODO-5739, TODO-5741, TODO-5752; VM address checks TODO-5824
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5799, TODO-5943, TODO-5800, TODO-5801, TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5799, TODO-5943, TODO-5800, TODO-5801, TODO-5951, TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
 ### Execution Queue
 
@@ -987,8 +988,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
 
 - [ ] TODO-5801: arm64 native runs `Atomic`, `Mutex` and `Channel`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5800
+  - status: ready
   - created_at: 2026-11-09
   - phase: Multithreading (docs/MultithreadingPrototype.md, Atomic, Mutex, Channel)
   - parallel_track: mt-native
@@ -998,6 +998,21 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - negative: a nested `locked` on one mutex and a send after close exit 3 with the VM's messages
     - full release gate green on macOS arm64
   - stop_rule: the primitives on arm64 native; x86_64 native stays inline.
+  - notes: split 2026-11-11 into TODO-5950 (done: the atomic opcodes and `SharedString` on native) and TODO-5951 (the lock and condition opcodes with the deadlock fault, `Mutex` and `Channel`).
+
+- [ ] TODO-5951: arm64 native runs `Mutex` and `Channel`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Multithreading (docs/MultithreadingPrototype.md, Mutex, Channel)
+  - parallel_track: mt-native
+  - depends_on: TODO-5950
+  - scope: Emit `MutexLock`, `MutexUnlock`, `ConditionWait` and `ConditionNotify` on arm64 native with the semantics and fault messages of `optexe` (`OptCppMutexRuntime`, `OptCppConditionRuntime`, `OptCppWaitRuntime`): the lock cell holds the holder's thread token, an uncontended lock and unlock are one atomic operation, a contended thread sleeps on a program-wide `pthread_cond_t` behind a `pthread_mutex_t` (both in the data segment, initialized by the entry function of a module that has the opcodes), and the threads that run and the ones that wait are counted so that when every thread waits the program faults with `deadlock: every task is waiting` (exit 3).
+  - acceptance:
+    - positive: the `Mutex` and `Channel` program-matrix tests of TODO-5797 and TODO-5798 run on native with the `optexe` output
+    - negative: a nested `locked` on one mutex, a send after close and a receive nobody sends to exit 3 with the VM's messages
+    - full release gate green on macOS arm64
+  - stop_rule: the lock and condition opcodes on arm64 native; x86_64 native stays inline.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
