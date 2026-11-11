@@ -153,7 +153,8 @@
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it
   like any named vector. A `pick` expression whose arms yield a struct or a `vector<T>` makes a value of its own, which
-  the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once):
+  the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once);
+  `return(pick(...) { ... })` hands it to the caller and `name = pick(...) { ... }` replaces what a `mut` local held:
   an arm's fresh value is taken over, and so is a local that ends with the arm, which is a local declared in the arm
   or the payload binding of a fresh subject; any other place is copied with the type's `Copy` helpers and stays
   readable: a local or parameter of the enclosing scope, the payload binding of a sum local, parameter or field, a

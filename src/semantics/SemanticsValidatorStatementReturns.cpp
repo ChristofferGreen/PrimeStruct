@@ -1085,6 +1085,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                 actualStruct = normalizeCollectionStructPath(actualTypeText);
                 if (!actualReturnBinding.typeTemplateArg.empty()) {
                   if (actualStruct.empty()) {
+                    // A collection named with its element type (`vector<i32>`), as a `pick` expression's arms
+                    // give it.
+                    actualStruct = normalizeCollectionStructPath(actualReturnBinding.typeName);
+                  }
+                  if (actualStruct.empty()) {
                     actualStruct = resolveStructTypePath(actualTypeText,
                                                         namespacePrefix,
                                                         structNames_);

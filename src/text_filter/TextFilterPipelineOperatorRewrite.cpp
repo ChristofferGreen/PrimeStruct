@@ -194,6 +194,8 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
   // Set after a `.name` member that follows a call or an index, so a further `.name` continues the chain
   // (`v[i].field.method()`).
   bool afterMember = false;
+  const bool pickHead = token == "pick";
+  bool tookPickArms = false;
   while (true) {
     size_t scan = pos;
     while (scan < input.size() && std::isspace(static_cast<unsigned char>(input[scan]))) {
@@ -267,6 +269,33 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
       token.append(rewritten);
       token.push_back(closeChar);
       pos = close + 1;
+      // `pick(subject) { arms }`: the arms on the subject's line are part of the operand, so the whole `pick` is
+      // the right side of `name = pick(...) { ... }`.
+      if (pickHead && openChar == '(' && !tookPickArms) {
+        tookPickArms = true;
+        size_t armsStart = pos;
+        while (armsStart < input.size() && (input[armsStart] == ' ' || input[armsStart] == '\t')) {
+          ++armsStart;
+        }
+        if (armsStart < input.size() && input[armsStart] == '{') {
+          const size_t armsClose = findMatchingClose(input, armsStart, '{', '}');
+          if (armsClose == std::string::npos) {
+            error = "unterminated pick arms";
+            return false;
+          }
+          std::string arms;
+          if (!rewriteBinaryOperatorsWithPrecedence(
+                  input.substr(armsStart + 1, armsClose - (armsStart + 1)), arms, error)) {
+            return false;
+          }
+          token.append(input.substr(pos, armsStart - pos));
+          token.push_back('{');
+          token.append(arms);
+          token.push_back('}');
+          pos = armsClose + 1;
+          break;
+        }
+      }
       continue;
     }
     break;

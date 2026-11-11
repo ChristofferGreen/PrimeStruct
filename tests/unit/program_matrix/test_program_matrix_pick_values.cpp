@@ -599,4 +599,95 @@ TEST_CASE("a sum local assigned from a place gets a payload of its own") {
                       "2\n4\n51\n50\n57\n56\n56\n0\n0\n");
 }
 
+namespace {
+
+const std::string ReturnedPickDefinitions = R"(
+[effects(heap_alloc), return<vector<i32>>]
+values_or_empty([i32] first) {
+  return(pick(get_values(first)) { none { vector<i32>{} } some(values) { values } })
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+values_or([i32] first, [vector<i32>] fallback) {
+  return(pick(get_values(first)) {
+    none { fallback }
+    some(values) { values }
+  })
+}
+
+[effects(heap_alloc), return<String>]
+line_or_zero([i32] id) {
+  return(pick(get(id)) { none { label(0i32) } some(line) { line } })
+}
+)";
+
+} // namespace
+
+TEST_CASE("a pick expression is returned as a vector and as a String") {
+  // An arm that yields a parameter of the definition returns a copy of it.
+  runPickValueProgram("pick_value_returned",
+                      pickValueProgram(ReturnedPickDefinitions,
+                                       R"(
+    [vector<i32>] found{values_or_empty(2i32)}
+    print_line(found[1i32])
+    [vector<i32>] empty{values_or_empty(-1i32)}
+    print_line(empty.count())
+    [vector<i32>] fallback{make_values(8i32)}
+    [vector<i32>] copied{values_or(-1i32, fallback)}
+    print_line(copied[0i32] + fallback[1i32])
+    [vector<i32>] picked{values_or(5i32, fallback)}
+    print_line(picked[0i32])
+    print_line(first_byte(line_or_zero(3i32)))
+    print_line(first_byte(line_or_zero(-1i32)))
+)"),
+                      "3\n0\n17\n5\n51\n48\n0\n0\n");
+}
+
+TEST_CASE("a pick expression assigned to a mut local replaces what it held") {
+  // The arms may sit on the assignment's line or on lines of their own; an arm that yields a local of the
+  // enclosing scope assigns a copy of it.
+  runPickValueProgram("pick_value_assigned",
+                      pickValueProgram("",
+                                       R"(
+    [String mut] kept{label(1i32)}
+    kept = pick(get(3i32)) { none { label(0i32) } some(line) { line } }
+    print_line(first_byte(kept))
+    kept = pick(get(-1i32)) {
+      none { label(0i32) }
+      some(line) { line }
+    }
+    print_line(first_byte(kept))
+    [String] spare{label(7i32)}
+    kept = pick(get(-1i32)) { none { spare } some(line) { line } }
+    print_line(first_byte(kept) + first_byte(spare))
+    [vector<i32> mut] items{make_values(1i32)}
+    items = pick(get_values(5i32)) { none { vector<i32>{} } some(values) { values } }
+    print_line(items[0i32])
+    items = pick(get_values(-1i32)) { none { vector<i32>{} } some(values) { values } }
+    print_line(items.count())
+    [vector<i32>] others{make_values(8i32)}
+    items = pick(get_values(-1i32)) { none { others } some(values) { values } }
+    items.push(1i32)
+    print_line(items.count() + others.count())
+    [i32 mut] number{1i32}
+    number = pick(get(4i32)) { none { 0i32 } some(line) { first_byte(line) } } + 1i32
+    print_line(number)
+)"),
+                      "51\n48\n110\n5\n0\n5\n53\n0\n0\n");
+}
+
+TEST_CASE("a returned pick expression with integer arms is not a vector") {
+  const std::string mismatch = rejectedPickValueProgram("pick_value_returned_mismatch",
+                                                        R"(
+[effects(heap_alloc), return<vector<i32>>]
+values_or_empty([i32] first) {
+  return(pick(get_values(first)) { none { 0i32 } some(values) { values.count() } })
+}
+)",
+                                                        R"(
+    print_line(values_or_empty(1i32).count())
+)");
+  CHECK_MESSAGE(mismatch.find("return type mismatch") != std::string::npos, mismatch);
+}
+
 TEST_SUITE_END();
