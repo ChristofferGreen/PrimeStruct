@@ -428,6 +428,10 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (isOwningBorrowedParameter(params, *arg, expr.namespacePrefix)) {
       return failResolvedCallArgumentDiagnostic("borrowed parameter cannot be moved: " + arg->name);
     }
+    if (currentValidationState_.lentPickPayloadBinders.count(arg->name) > 0) {
+      return failResolvedCallArgumentDiagnostic("borrowed pick payload cannot be moved: " +
+                                                arg->name);
+    }
     const BindingInfo *binding = bindingForName(arg->name);
     if (binding == nullptr || !bindingOwnsResources(*binding, expr.namespacePrefix)) {
       continue;

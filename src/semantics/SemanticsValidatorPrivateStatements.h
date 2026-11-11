@@ -115,6 +115,9 @@
       }
     };
     std::unordered_map<std::string, MoveArgumentSite> moveArgumentSites;
+    // Payload bindings of the `pick` arms being validated whose sum somebody else owns (a borrowed
+    // parameter, a field, an element): they cannot be moved out or returned.
+    std::unordered_set<std::string> lentPickPayloadBinders;
     std::unordered_set<std::string> endedReferenceBorrows;
     std::unordered_map<std::string, std::string> compileTimeTypeLocals;
     struct TaskHandleState {

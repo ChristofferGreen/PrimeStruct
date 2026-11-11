@@ -27,6 +27,26 @@ BindingInfo payloadBindingForVariant(const SumVariant &variant, bool isMutable =
   return binding;
 }
 
+// Marks a payload binding as lent by its sum for as long as its arm is validated.
+struct LentPickPayloadScope {
+  LentPickPayloadScope(std::unordered_set<std::string> &bindersIn,
+                       const std::string &nameIn,
+                       bool lent)
+      : binders(bindersIn), name(nameIn), inserted(lent && binders.insert(nameIn).second) {
+  }
+  ~LentPickPayloadScope() {
+    if (inserted) {
+      binders.erase(name);
+    }
+  }
+  LentPickPayloadScope(const LentPickPayloadScope &) = delete;
+  LentPickPayloadScope &operator=(const LentPickPayloadScope &) = delete;
+
+  std::unordered_set<std::string> &binders;
+  std::string name;
+  bool inserted;
+};
+
 std::string joinVariantNames(const std::vector<std::string> &names) {
   std::string out;
   for (const std::string &name : names) {
@@ -390,11 +410,15 @@ bool SemanticsValidator::validatePickExpr(
           "pick payload binder conflicts with existing binding: " +
               arm.binderName);
     }
+    PickPayloadOwner payloadOwner = PickPayloadOwner::Untracked;
     if (arm.hasPayloadBinder) {
-      insertLocalBinding(branchLocals,
-                         arm.binderName,
-                         payloadBindingForVariant(*arm.variant, targetIsMutable));
+      const BindingInfo payloadBinding = payloadBindingForVariant(*arm.variant, targetIsMutable);
+      payloadOwner = pickPayloadOwner(params, locals, target, payloadBinding, expr.namespacePrefix);
+      insertLocalBinding(branchLocals, arm.binderName, payloadBinding);
     }
+    LentPickPayloadScope lentPayloadScope(currentValidationState_.lentPickPayloadBinders,
+                                          arm.binderName,
+                                          payloadOwner == PickPayloadOwner::Lent);
 
     const Expr *valueExpr = nullptr;
     bool sawReturn = false;
@@ -451,6 +475,11 @@ bool SemanticsValidator::validatePickExpr(
                                     arm.variant->name);
     }
     if (arm.hasPayloadBinder) {
+      // Moving the payload out leaves the sum that owned it without a value.
+      if (payloadOwner == PickPayloadOwner::Binding &&
+          currentValidationState_.movedBindings.count(arm.binderName) > 0) {
+        recordMovedBinding(target, target.name);
+      }
       currentValidationState_.movedBindings.erase(arm.binderName);
     }
     movedAfter.insert(currentValidationState_.movedBindings.begin(),
@@ -918,11 +947,16 @@ bool SemanticsValidator::validatePickStatement(
       currentValidationState_.movedBindings.erase(arm.args.front().name);
     }
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+    PickPayloadOwner payloadOwner = PickPayloadOwner::Untracked;
     if (payloadArm) {
-      insertLocalBinding(branchLocals,
-                         arm.args.front().name,
-                         payloadBindingForVariant(*variant, targetIsMutable));
+      const BindingInfo payloadBinding = payloadBindingForVariant(*variant, targetIsMutable);
+      payloadOwner =
+          pickPayloadOwner(params, locals, stmt.args.front(), payloadBinding, namespacePrefix);
+      insertLocalBinding(branchLocals, arm.args.front().name, payloadBinding);
     }
+    LentPickPayloadScope lentPayloadScope(currentValidationState_.lentPickPayloadBinders,
+                                          payloadArm ? arm.args.front().name : std::string(),
+                                          payloadOwner == PickPayloadOwner::Lent);
 
     std::vector<BorrowLivenessRange> livenessRanges;
     livenessRanges.reserve(2);
@@ -956,6 +990,11 @@ bool SemanticsValidator::validatePickStatement(
       expireReferenceBorrowsForRanges(params, branchLocals, livenessRanges);
     }
     if (payloadArm) {
+      // Moving the payload out leaves the sum that owned it without a value.
+      if (payloadOwner == PickPayloadOwner::Binding &&
+          currentValidationState_.movedBindings.count(arm.args.front().name) > 0) {
+        recordMovedBinding(stmt.args.front(), stmt.args.front().name);
+      }
       currentValidationState_.movedBindings.erase(arm.args.front().name);
     }
     const bool endsWithReturn = !bodyExprs.empty() && bodyExprs.back()->kind == Expr::Kind::Call &&

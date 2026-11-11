@@ -274,4 +274,156 @@ TEST_CASE("a pick expression passed as an argument is destroyed after the call")
   runPickValueProgram("pick_value_argument", source, "51\n48\n52\n52\n0\n0\n");
 }
 
+TEST_CASE("a payload moved out of a sum local is destroyed by its new owner") {
+  const std::string source = pickValueProgram(R"(
+[effects(heap_alloc), return<i32>]
+consume([String move] text) {
+  return(first_byte(text))
+}
+)",
+                                              R"(
+    [Maybe<String> mut] held{get(3i32)}
+    pick(held) {
+      none { }
+      some(line) {
+        [String] taken{move(line)}
+        print_line(first_byte(taken))
+      }
+    }
+    [Maybe<String>] sent{get(4i32)}
+    pick(sent) {
+      none { }
+      some(line) { print_line(consume(line)) }
+    }
+    [Maybe<String>] kept{get(5i32)}
+    [String] copy{pick(kept) { none { label(0i32) } some(line) { line } }}
+    pick(kept) { none { print_line(0i32) } some(line) { print_line(first_byte(line) + first_byte(copy)) } }
+)");
+  runPickValueProgram("pick_value_moved_payload", source, "51\n52\n106\n0\n0\n");
+}
+
+namespace {
+
+// The diagnostic for `main`'s `body` after `definitions`, which the compiler must reject.
+std::string rejectedPickValueProgram(const std::string &name,
+                                     const std::string &definitions,
+                                     const std::string &body) {
+  const program_matrix::Outcome outcome =
+      compilePickValueProgram(name, pickValueProgram(definitions, body));
+  CHECK(outcome.exitCode != 0);
+  return outcome.err;
+}
+
+} // namespace
+
+TEST_CASE("a sum local whose payload was moved out is moved-from") {
+  const std::string moved = rejectedPickValueProgram("pick_value_moved_local", "", R"(
+    [Maybe<String>] held{get(3i32)}
+    pick(held) {
+      none { }
+      some(line) {
+        [String] taken{move(line)}
+        print_line(first_byte(taken))
+      }
+    }
+    pick(held) { none { print_line(0i32) } some(line) { print_line(first_byte(line)) } }
+)");
+  CHECK_MESSAGE(moved.find("use-after-move: held") != std::string::npos, moved);
+
+  const std::string sent = rejectedPickValueProgram("pick_value_sent_local",
+                                                    R"(
+[effects(heap_alloc), return<i32>]
+consume([String move] text) {
+  return(first_byte(text))
+}
+)",
+                                                    R"(
+    [Maybe<String>] held{get(3i32)}
+    [i32] byte{pick(held) { none { 0i32 } some(line) { consume(line) } }}
+    pick(held) { none { print_line(byte) } some(line) { print_line(first_byte(line)) } }
+)");
+  CHECK_MESSAGE(sent.find("use-after-move: held") != std::string::npos, sent);
+}
+
+TEST_CASE("the payload of a borrowed sum is not moved or returned") {
+  const std::string returned = rejectedPickValueProgram("pick_value_lent_return",
+                                                        R"(
+[effects(heap_alloc), return<String>]
+unwrap([Maybe<String>] held) {
+  pick(held) {
+    none { }
+    some(line) { return(line) }
+  }
+  return(label(0i32))
+}
+)",
+                                                        R"(
+    [Maybe<String>] held{get(3i32)}
+    print_line(first_byte(unwrap(held)))
+)");
+  CHECK_MESSAGE(returned.find("borrowed pick payload escapes via return: line") !=
+                    std::string::npos,
+                returned);
+
+  const std::string moved = rejectedPickValueProgram("pick_value_lent_move",
+                                                     R"(
+[effects(heap_alloc), return<i32>]
+take([Maybe<String>] held) {
+  pick(held) {
+    none { }
+    some(line) {
+      [String] taken{move(line)}
+      return(first_byte(taken))
+    }
+  }
+  return(0i32)
+}
+)",
+                                                     R"(
+    [Maybe<String>] held{get(3i32)}
+    print_line(take(held))
+)");
+  CHECK_MESSAGE(moved.find("borrowed pick payload cannot be moved: line") != std::string::npos,
+                moved);
+
+  const std::string field = rejectedPickValueProgram("pick_value_lent_field",
+                                                     R"(
+[struct]
+Slot() {
+  [Maybe<String>] held{none<String>()}
+}
+
+[effects(heap_alloc), return<i32>]
+consume([String move] text) {
+  return(first_byte(text))
+}
+)",
+                                                     R"(
+    [Slot] slot{Slot{get(3i32)}}
+    pick(slot.held) {
+      none { }
+      some(line) { print_line(consume(line)) }
+    }
+)");
+  CHECK_MESSAGE(field.find("borrowed pick payload cannot be moved: line") != std::string::npos,
+                field);
+}
+
+TEST_CASE("an imported String passed to a move parameter is moved-from") {
+  // The payload rules rest on this: `String` is an owning type where it is imported, not only in `/std/text`.
+  const std::string moved = rejectedPickValueProgram("pick_value_moved_string",
+                                                     R"(
+[effects(heap_alloc), return<i32>]
+consume([String move] text) {
+  return(first_byte(text))
+}
+)",
+                                                     R"(
+    [String] text{label(3i32)}
+    print_line(consume(text))
+    print_line(first_byte(text))
+)");
+  CHECK_MESSAGE(moved.find("use-after-move: text") != std::string::npos, moved);
+}
+
 TEST_SUITE_END();

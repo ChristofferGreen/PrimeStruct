@@ -497,8 +497,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           "named arguments not supported for builtin calls");
     }
     if (expr.isMethodCall) {
-      return failMutationBorrowDiagnostic(
-          "move does not support method-call syntax");
+      return failMutationBorrowDiagnostic("move does not support method-call syntax");
     }
     if (!expr.templateArgs.empty()) {
       return failMutationBorrowDiagnostic(
@@ -526,6 +525,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (hasActiveBorrowForBinding(target.name)) {
       return failBorrowedBindingDiagnostic(target.name, target.name);
+    }
+    if (currentValidationState_.lentPickPayloadBinders.count(target.name) > 0) {
+      return failMutationBorrowDiagnostic("borrowed pick payload cannot be moved: " + target.name);
     }
     if (movedAtOtherSite(target.name, target)) {
       return failMutationBorrowDiagnostic(useAfterMoveMessage(target.name, params, locals));

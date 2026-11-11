@@ -137,8 +137,12 @@
   taken from a place is copied in like a struct field. A `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
   `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
-  moving it out (`move(line)`, `return(line)`) leaves nothing for the sum to
-  destroy, for a fresh subject and for a sum local alike, so the payload is destroyed once, by its new owner. A builtin
+  moving it out (`move(line)`, a `move` parameter, `return(line)`) leaves nothing for the sum to
+  destroy, so the payload is destroyed once, by its new owner. A fresh subject ends with the `pick`; a sum local or
+  `copy`/`move` parameter whose payload was moved out is moved-from after the arm (`use-after-move` until it is
+  assigned again). The payload of a sum the definition only borrows (a read-only parameter, `this`, a field, an
+  element, a `Reference`) cannot be moved out or returned: `borrowed pick payload cannot be moved`, `borrowed pick
+  payload escapes via return`. A builtin
   `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it

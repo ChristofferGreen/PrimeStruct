@@ -454,6 +454,12 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       return failReturnEscapeDiagnostic("borrowed parameter escapes via return: " +
                                         returnExpr.name);
     }
+    // The payload binding of a `pick` on a sum somebody else owns stands for their storage too.
+    if (!expectedReferenceReturnTarget.has_value() && returnExpr.kind == Expr::Kind::Name &&
+        currentValidationState_.lentPickPayloadBinders.count(returnExpr.name) > 0) {
+      return failReturnEscapeDiagnostic("borrowed pick payload escapes via return: " +
+                                        returnExpr.name);
+    }
     auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
       if (candidate.kind == Expr::Kind::Name) {
         return true;

@@ -307,6 +307,43 @@ bool SemanticsValidator::isOwningBorrowedParameter(const std::vector<ParameterIn
   return bindingOwnsResources(*paramBinding, namespacePrefix);
 }
 
+SemanticsValidator::PickPayloadOwner
+SemanticsValidator::pickPayloadOwner(const std::vector<ParameterInfo> &params,
+                                     const std::unordered_map<std::string, BindingInfo> &locals,
+                                     const Expr &subject,
+                                     const BindingInfo &payloadBinding,
+                                     const std::string &namespacePrefix) {
+  if (currentValidationState_.context.definitionIsUnsafe || payloadBinding.typeName == "vector") {
+    return PickPayloadOwner::Untracked;
+  }
+  if (!bindingOwnsResources(payloadBinding, namespacePrefix)) {
+    return PickPayloadOwner::Untracked;
+  }
+  if (subject.kind == Expr::Kind::Name) {
+    if (subject.name == "this" ||
+        currentValidationState_.lentPickPayloadBinders.count(subject.name) > 0) {
+      return PickPayloadOwner::Lent;
+    }
+    if (const BindingInfo *paramBinding = findParamBinding(params, subject.name)) {
+      return paramBinding->isCopy || paramBinding->isMove ? PickPayloadOwner::Binding
+                                                          : PickPayloadOwner::Lent;
+    }
+    const auto localIt = locals.find(subject.name);
+    if (localIt == locals.end()) {
+      return PickPayloadOwner::Untracked;
+    }
+    return localIt->second.typeName == "Reference" || localIt->second.typeName == "Pointer"
+               ? PickPayloadOwner::Lent
+               : PickPayloadOwner::Binding;
+  }
+  if (subject.kind == Expr::Kind::Call &&
+      (subject.isFieldAccess || isSimpleCallName(subject, "at") ||
+       isSimpleCallName(subject, "at_unsafe") || isSimpleCallName(subject, "dereference"))) {
+    return PickPayloadOwner::Lent;
+  }
+  return PickPayloadOwner::Untracked;
+}
+
 const Expr *SemanticsValidator::containerPlaceRoot(const Expr &place) {
   const Expr *root = &place;
   while (root->kind == Expr::Kind::Call &&
@@ -435,7 +472,13 @@ bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,
                ownsResources(args.front(), typeNamespace, templateArgs);
       }
     }
-    const std::string structPath = resolveStructTypePath(base, typeNamespace, structNames_);
+    std::string structPath = resolveStructTypePath(base, typeNamespace, structNames_);
+    // A name the file imports (`String` of `import /std/text/*`) is a struct too.
+    if (structPath.empty()) {
+      if (const auto importIt = importAliases_.find(base); importIt != importAliases_.end()) {
+        structPath = importIt->second;
+      }
+    }
     if (structPath.empty() || structNames_.count(structPath) == 0 ||
         !visitingStructs.insert(structPath).second) {
       return false;

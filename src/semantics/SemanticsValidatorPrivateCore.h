@@ -303,6 +303,16 @@
   bool isOwningBorrowedParameter(const std::vector<ParameterInfo> &params,
                                  const Expr &expr,
                                  const std::string &namespacePrefix);
+  // Who owns what a `pick` arm's payload binding stands for (docs/spec/value-lifecycle.md): nobody that
+  // semantics tracks (the payload owns nothing, it is a builtin vector the binding only views, the subject is
+  // a fresh value the `pick` owns, or the body is `[unsafe]`), a local or `copy`/`move` parameter that is
+  // moved-from once the payload is moved out, or a place that only lends it.
+  enum class PickPayloadOwner { Untracked, Binding, Lent };
+  PickPayloadOwner pickPayloadOwner(const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals,
+                                    const Expr &subject,
+                                    const BindingInfo &payloadBinding,
+                                    const std::string &namespacePrefix);
   // Records a non-`mut` collection binding initialized from an existing place as a view of (a
   // borrow from) that place's root binding.
   void markContainerViewBinding(const std::vector<ParameterInfo> &params,
