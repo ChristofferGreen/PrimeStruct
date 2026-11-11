@@ -2238,6 +2238,7 @@ are left unarchived.
 | TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5873 | A sum temporary passed as an argument is destroyed after the call | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5874 | Assigning to a `mut` sum local destroys the payload it held | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5875 | `count()` on a local declared `Vector<T>` lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5876 | `return(pick(...))` of a vector and assignment from a `pick` expression | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5877 | A field an arm of a `pick` expression yields is copied | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5879 | A `pick` expression's result owns a value of its own | [2026-11.md](todo_archive/2026-11.md) | - |

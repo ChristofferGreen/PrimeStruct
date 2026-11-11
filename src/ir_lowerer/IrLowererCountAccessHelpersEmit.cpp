@@ -198,10 +198,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         semanticMethodReceiverTypeText(semanticProgram, expr);
     if (!receiverTypeText.empty()) {
       SemanticCountTargetInfo receiverInfo;
-      if (classifySemanticCountTargetTypeText(receiverTypeText,
-                                              receiverInfo) &&
-          !receiverInfo.isString &&
-          !receiverInfo.isCollection) {
+      if (classifySemanticCountTargetTypeText(receiverTypeText, receiverInfo) &&
+          !receiverInfo.isString && !receiverInfo.isCollection &&
+          // A receiver with a resolved `count` method (the stdlib `Vector<T>` struct) is an ordinary
+          // method call.
+          semanticMethodTarget.empty()) {
         error = "native backend only supports entry argument indexing";
         return CountAccessCallEmitResult::Error;
       }

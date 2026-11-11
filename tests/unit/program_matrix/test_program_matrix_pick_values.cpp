@@ -690,4 +690,51 @@ values_or_empty([i32] first) {
   CHECK_MESSAGE(mismatch.find("return type mismatch") != std::string::npos, mismatch);
 }
 
+namespace {
+
+// `Vector<T>` is the stdlib struct; `count()` on it is the stdlib helper, not the builtin vector count.
+const std::string StdlibVectorDefinitions = R"(
+[effects(heap_alloc), return<Maybe<Vector<i32>>>]
+get_stdlib([i32] first) {
+  if(first < 0i32) {
+    return(none<Vector<i32>>())
+  }
+  return(some<Vector<i32>>(vector<i32>(first, 2i32)))
+}
+)";
+
+} // namespace
+
+TEST_CASE("count and an index read a local and a pick payload declared Vector") {
+  runPickValueProgram("pick_value_stdlib_vector_count",
+                      pickValueProgram(StdlibVectorDefinitions,
+                                       R"(
+    [Vector<i32>] local{vector<i32>(1i32, 2i32)}
+    print_line(local.count())
+    print_line(local[1i32])
+    print_line(local.capacity())
+    pick(get_stdlib(5i32)) {
+      none { print_line(0i32) }
+      some(values) {
+        print_line(values.count())
+        print_line(values[1i32])
+      }
+    }
+    [Maybe<Vector<i32>>] held{get_stdlib(6i32)}
+    pick(held) {
+      none { print_line(0i32) }
+      some(values) { print_line(values.count() + values[0i32]) }
+    }
+)"),
+                      "2\n2\n2\n2\n2\n8\n0\n0\n");
+}
+
+TEST_CASE("a method a Vector local does not have is an unknown call target") {
+  const std::string missing = rejectedPickValueProgram("pick_value_stdlib_vector_missing", "", R"(
+    [Vector<i32>] local{vector<i32>(1i32, 2i32)}
+    print_line(local.missing())
+)");
+  CHECK_MESSAGE(missing.find("unknown call target: missing") != std::string::npos, missing);
+}
+
 TEST_SUITE_END();
