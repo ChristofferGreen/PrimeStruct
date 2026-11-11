@@ -191,6 +191,32 @@ of sync with them.
 | TODO-5841 | `[namespace] name { ... }` is a definition | ready | namespace-envelope |
 | TODO-5843 | `namespace name { ... }` is sugar for the `[namespace]` definition | blocked | namespace-envelope |
 | TODO-5842 | `summary("...")` is a checked transform on definitions | blocked | summary-transform |
+| TODO-5896 | `--vm-threads` runs each spawned task on its own OS thread | ready | vm-threads |
+| TODO-5897 | Atomic, Mutex and Channel run on real primitives under `--vm-threads` | blocked | vm-threads |
+| TODO-5898 | Host calls under `--vm-threads` serialize by default and block only their own task | blocked | vm-threads |
+| TODO-5899 | A fault or a cancel stops every thread of a `--vm-threads` run without ending the process | blocked | vm-threads |
+| TODO-5900 | The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer | blocked | vm-threads |
+| TODO-5901 | A threaded VM run records its synchronization order and replays it on the deterministic scheduler | blocked | vm-threads |
+| TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
+| TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
+| TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
+| TODO-5905 | `/std/path` joins, splits and normalizes paths | ready | build-path |
+| TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | ready | file-listing |
+| TODO-5907 | `/std/file` expands glob patterns | blocked | build-glob |
+| TODO-5908 | `--allow-effects` rejects declared effects outside a list in user code | ready | effect-ceiling |
+| TODO-5909 | `--allow-import` rejects imports outside a list of prefixes | ready | import-allowlist |
+| TODO-5910 | `--profile build` sets the defaults of a build script | blocked | build-profile |
+| TODO-5911 | `/std/build` builds a graph value and exports it as JSON | ready | build-graph |
+| TODO-5912 | `primec build --dry-run` prints the graph of `make.prime` | blocked | build-cli |
+| TODO-5913 | `primec build` runs the graph | blocked | build-runner |
+| TODO-5914 | `--emit-deps` writes the files a compile read | ready | build-deps |
+| TODO-5915 | `primec build` skips steps whose inputs did not change | blocked | build-cache |
+| TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
+| TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
+| TODO-5918 | A script can run its graph in stages | blocked | build-stages |
+| TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
+| TODO-5920 | PrimeScroll builds with `make.prime` | blocked | build-dogfood |
+| TODO-5921 | Static libraries link into an executable | deferred | libraries |
 
 ### Ready Now
 
@@ -199,6 +225,9 @@ of sync with them.
 - TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5841 (namespace-envelope): `[namespace] name { ... }` is a definition
+- TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
+- TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
+- TODO-5908 (effect-ceiling): `--allow-effects` rejects declared effects outside a list in user code
 
 ### Immediate Next 10
 
@@ -208,6 +237,9 @@ of sync with them.
 4. TODO-5524
 5. TODO-5728
 6. TODO-5841
+7. TODO-5906
+8. TODO-5911
+9. TODO-5908
 
 ### Priority Lanes
 
@@ -216,6 +248,8 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
+- VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920, TODO-5921
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526, TODO-5868, TODO-5886, TODO-5891, TODO-5892
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -233,6 +267,10 @@ of sync with them.
 Run `ready` leaves in the order listed under Immediate Next 10. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured): TODO-5861 (`SharedString` count inside the text block), then arm64 native: TODO-5799 (pthreads, locked heap), TODO-5800 (per-thread heaps), TODO-5801 (primitives). TODO-5861 and TODO-5799 are ready and independent of each other, and so are TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path), TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are not expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) and TODO-5847 (spawned calls with collection parameters or results run as tasks, which today run inline; TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Deferred: TODO-5804 (read-only handlers under `RwLock`), TODO-5805 (keep-alive), TODO-5806 (sessions), TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value). Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) and ready, in the closures lane: TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call). Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them and ready: TODO-5886 (`push` on a local declared `Vector<T>` resolves), TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once). Found with `serveWorkers`: TODO-5862 (deferred: `serveWorkers` on the VM, which has no `/std/net`), and ready: TODO-5863 (a struct named without its namespace as a `Channel` element), TODO-5864 (a lambda in a generic definition names its type parameters), TODO-5865 (a `Function` local given positionally to a brace constructor is copied) and TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; ready: TODO-5871 (every server stops near 14,600 new connections a second, which caps the form with 4 workers), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and, found with TODO-5867, TODO-5870 (a VM program that uses tasks runs all its code on the step kernel, 11 times the instructions for a string loop); and in the Result and control flow lane TODO-5868 (`serve(app)?` in an `if` block of `main` is rejected).
+
+VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
+
+Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5905 (`/std/path`), TODO-5906 (directory listing and file metadata), TODO-5908 (`--allow-effects`), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); deferred TODO-5921 (static libraries, to be split).
 
 ### Task Blocks
 
@@ -1413,3 +1451,407 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
     - `--dump-stage ir-lowered` is identical with and without the summaries (compared through `stripDumpTimings`)
     - full release gate green
   - stop_rule: the `summary` transform only; no summary on fields or parameters, no outline output, no staleness tracking.
+
+- [ ] TODO-5896: `--vm-threads` runs each spawned task on its own OS thread
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: The VM runs every task on one OS thread under `VmTaskScheduler` (src/runtime/VmExecutionKernel.cpp). Add a threads mode behind `--vm-threads` (`primevm` and `primec --emit=vm`; the default does not change): `TaskSpawn` starts a pthread with an 8 MiB stack as `optexe` does (`OptCppTaskRuntime`, src/backend/IrToOptCppRuntime.h); the VM allocates through `VmHeapArenas` (include/primec/runtime/VmHeapArenas.h), one arena per thread and arena 0 for the main task; handles and `TaskWait` follow docs/spec/vm-design.md, Tasks and Tasks on threads (a table of slots with generations behind one mutex). Every host call takes one global lock, and a print is one write, so lines never mix. A fault or `Trap` on any task flushes and leaves with exit code 3 the way `optexe` does; the embed API does not offer the mode until TODO-5899. A module that holds Atomic, Mutex or Channel opcodes is rejected in this mode with `--vm-threads does not support atomics, mutexes or channels yet` until TODO-5897.
+  - implementation_notes: the step function `stepImpl` already runs one call stack; a task needs its own frames, operand stack and local counts (see `VmTaskScheduler::Task`). The heap functions of src/runtime/VmHeapHelpers.cpp (`vm_detail::storeHeapByte` and the others) take the one `heap_`; how many places assume a single heap was not counted.
+  - acceptance:
+    - a program that spawns four tasks of scalar callees prints the same output as under the default schedule, in a test that runs it 20 times
+    - in this mode a block a task allocates carries a non-zero arena number (address bits 41 to 46); a single-task program's addresses are identical to today's (golden test)
+    - a `String` or vector a task returns is freed by the waiter (a block freed by a thread other than its owner, no fault)
+    - a module with atomic, mutex or channel opcodes gets the diagnostic above; without the flag every existing task test is unchanged
+    - the wall time of a CPU-bound four-task program in this mode and by default is recorded in docs/todo_log.md (measured, not asserted by a test)
+    - docs/spec/vm-design.md, Tasks, describes the mode
+    - full release gate green
+  - stop_rule: spawn, wait, heaps and the one host lock only; no sync primitives, no host-call refinement, no fast kernel, no default change.
+
+- [ ] TODO-5897: Atomic, Mutex and Channel run on real primitives under `--vm-threads`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5896
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: The atomic opcodes of docs/spec/vm-design.md, Atomics, become sequentially consistent atomic operations on the heap slot. The mutex lock and notify opcodes of Mutexes block the thread; waiting threads are parked in a table keyed by the lock's address behind one mutex and condition variable, and `Channel<T>` of `/std/sync` (built on them) works unchanged. When every live thread waits the run faults with `deadlock: every task is waiting` (exit code 3), as `optexe` does since TODO-5846 (`optexe` faults when every task waits). The rejection of TODO-5896 is removed.
+  - acceptance:
+    - the `/std/sync` Atomic, Mutex and Channel tests pass under `--vm-threads`, each run 20 times
+    - a program whose two tasks can finish only if they run at the same time (one spins on an atomic until the other sets it) finishes in this mode
+    - two tasks waiting on each other fault with `deadlock: every task is waiting`
+    - docs/spec/vm-design.md, Atomics, Mutexes and Channels, state the behavior under the flag
+    - full release gate green
+  - stop_rule: the three primitives and the deadlock fault; no host-call, fault or default changes.
+
+- [ ] TODO-5898: Host calls under `--vm-threads` serialize by default and block only their own task
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5896
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: The global host lock of TODO-5896 is refined. A host function the embedder registers as reentrant runs without the lock; a call that blocks (`poll`, `recv`, a test host function that waits) then blocks only the task that made it. A host function registered as main-thread only (the native UI, docs/NativeUiPlan.md) faults with `<name> called off the main thread` when another thread calls it. Registration is a flag on the host function table (src/runtime/VmHost.cpp) and on `Script`'s host binding (include/primec/embed/Script.h).
+  - acceptance:
+    - with a test host function that blocks until another task signals through an atomic, the program finishes in this mode (it deadlocks under the lock) 
+    - a non-reentrant host function is never entered by two threads at once (a test host function that fails on re-entry)
+    - a main-thread-only host function called from a spawned task faults with the diagnostic
+    - full release gate green
+  - stop_rule: the registration flags and the lock; no new host functions.
+
+- [ ] TODO-5899: A fault or a cancel stops every thread of a `--vm-threads` run without ending the process
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5896
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: Replace the `_Exit` path of TODO-5896 with a stop flag that every thread polls at calls and loop back-edges (a relaxed load, only in this mode). A fault or `Trap` on any task sets it, the other threads stop and are joined, and the run ends with exit code 3 after flushing, as on one thread. `Script::run` (include/primec/embed/Script.h) can use the mode, and `RunOptions::cancel` stops a threaded run with `VM error: execution stopped`. A module without task opcodes starts no thread.
+  - acceptance:
+    - a fault in one of three tasks ends the run with exit code 3 and every thread joined; the embed test harness keeps running afterwards in the same process
+    - a task that loops forever stops when the cancel flag is set
+    - a program without tasks behaves and starts exactly as before (startup unchanged, scripts/measure_startup.sh within noise)
+    - full release gate green
+  - stop_rule: stop and cancel only; no change to what a fault reports.
+
+- [ ] TODO-5900: The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5899
+  - depends_on: TODO-5897, TODO-5898
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: Every concurrent conformance program (the ones that run several seeds today) runs under `--vm-threads` 20 times and must print what the eager schedule prints. A script `scripts/tsan_vm_check.sh` builds `primevm` with `-fsanitize=thread` in `build-tsan/` and runs the same corpus; a ThreadSanitizer report fails it. A program whose output depends on the interleaving is made schedule-independent or removed from the corpus; none is accepted as flaky (AGENTS.md, No flaky tests). The script is run by hand and one command at a time, like the other heavy commands.
+  - acceptance:
+    - a ctest entry runs the corpus under `--vm-threads` repeatedly and passes in the release gate
+    - `scripts/tsan_vm_check.sh` passes with no report, and its last result is recorded in docs/todo_log.md
+    - the corpus list is a file checked by a registration test, so a new concurrent test cannot be left out
+    - full release gate green
+  - stop_rule: the corpus runs and the TSAN script; no change to the default schedule.
+
+- [ ] TODO-5901: A threaded VM run records its synchronization order and replays it on the deterministic scheduler
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5897
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: `--vm-record-sync <path>` writes, for a `--vm-threads` run, the order of the synchronization events across tasks (spawn, wait, lock, unlock, notify, every atomic operation, channel operations). `--vm-replay-sync <path>` runs the program on the deterministic scheduler following that order, so a run that was threaded can be repeated, stepped and inspected. Host input and output are not recorded; a program that reads from the outside is replayed only if the host calls return the same bytes.
+  - acceptance:
+    - a program with a mutex and a channel, run 20 times in threads mode with a record each, replays each record to the same stdout
+    - a record from a different program or a changed program is refused with a diagnostic
+    - the log format is versioned and documented in docs/spec/vm-design.md
+    - full release gate green
+  - stop_rule: record and replay of synchronization order; no per-instruction trace, no inspector work.
+
+- [ ] TODO-5902: Each task of a `--vm-threads` run uses the fast kernel
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - depends_on: TODO-5896, TODO-5870
+  - scope: A module with task opcodes runs entirely on the step kernel (the flat loop and the native JIT decline it, TODO-5870: 11 times the instructions for a string loop). In threads mode each task should run on a fast-kernel instance of its own, with its own locals arena; the fast kernel numbers locals across the live frames of one call stack (docs/spec/vm-design.md, Frames and stack), which is the reason it declines today. Needs scoping against src/runtime/VmFastKernel.cpp before it starts; split it then.
+  - acceptance:
+    - the string-loop program of TODO-5870 runs at the instruction count of a program without tasks when spawned
+    - the numbers are recorded in docs/todo_log.md
+    - full release gate green
+  - stop_rule: threads mode only; the default schedule keeps the step kernel unless TODO-5870 changes it.
+  - notes: deferred: scope against the fast kernel's locals arena first.
+
+- [ ] TODO-5903: A debug session runs programs that spawn tasks
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads); docs/VmInspectorPlan.md
+  - parallel_track: vm-debug-tasks
+  - scope: A debug session faults on task opcodes today (docs/spec/vm-design.md, Tasks) and the DAP adapter reports one thread. `VmDebugSession` (src/runtime/VmDebugSession*.cpp) runs `TaskSpawn` and `TaskWait` under the deterministic scheduler (eager, or seeded), `VmDebugAdapter::threads` lists the main task and every live task, `stackTrace` takes a thread id, and a stop stops every task. This is the first prerequisite of the inspector (docs/VmInspectorPlan.md, section 11).
+  - acceptance:
+    - a DAP session on a program with `[spawn]` stops at a breakpoint inside the spawned callee, `threads` lists the main task and that task, and `stackTrace` of each answers
+    - continuing runs to the same exit code and output as without the debugger
+    - a program without tasks gives byte-identical DAP and `--debug-json` output
+    - docs/spec/vm-design.md no longer says a debug session faults on tasks
+    - full release gate green
+  - stop_rule: debug sessions on the deterministic scheduler; no threads mode, no trace or replay of task programs.
+
+- [ ] TODO-5904: The VM runs tasks on threads by default
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5900
+  - created_at: 2026-11-11
+  - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
+  - parallel_track: vm-threads
+  - scope: `primevm` and `primec --emit=vm` run tasks on threads unless `--vm-deterministic` (or `--vm-schedule-seed`, or a debug session) selects the deterministic scheduler. The conformance tests that need a fixed order pass the flag. docs/spec/vm-design.md and the VM Threads section become normative text for the new default.
+  - acceptance:
+    - the full release gate is green with the new default
+    - a program that does not spawn prints and starts exactly as before
+    - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
+  - stop_rule: the default and the flag only.
+
+- [ ] TODO-5905: `/std/path` joins, splits and normalizes paths
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-path
+  - scope: A pure stdlib module `stdlib/std/path/path.prime` with POSIX-separator functions over `String`: `join`, `parent`, `file_name`, `stem`, `extension`, `is_absolute`, `normalize` (textual: resolves `.` and `..`, collapses repeated separators) and `relative_to`. User-facing names and style follow docs/CodeExamples.md. No filesystem access, no host calls, no Windows separators.
+  - acceptance:
+    - compile-run tests on the VM and `--emit=optexe` for each function, including an empty path, a trailing separator, `..` past the root, and an absolute path joined onto a relative one
+    - docs/spec/stdlib-reference.md has a `/std/path` section with a runnable example
+    - full release gate green
+  - stop_rule: textual path functions only.
+
+- [ ] TODO-5906: `/std/file` lists a directory and reports kind, size and modification time
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md); also needed by "Open PrimeStruct Project" (docs/AiWorkflowPlan.md, section 4.1)
+  - parallel_track: file-listing
+  - scope: `/std/file` has no directory listing or file metadata. Add `[host]` functions on the pattern of `ps_os_*` (stdlib/std/os/os.prime, bound in the VM host table src/runtime/VmHost.cpp and in a `*_posix.cpp` linked for `--emit=optexe`) with the `file_read` effect: list a directory's entries sorted bytewise by name, each with kind (file, directory, other), size in bytes and modification time (seconds, `i64`). A missing or unreadable directory returns an error value in the style of stdlib/std/file/errors.prime. Which return shapes the host ABI allows for a list was not checked; one newline-separated `Text` that PrimeStruct splits is the fallback.
+  - acceptance:
+    - a fixture directory lists identically, sorted, on the VM and with `--emit=optexe`
+    - a missing directory returns the error value on both
+    - a program that does not call the new functions starts exactly as before (scripts/measure_startup.sh within noise)
+    - docs/spec/stdlib-reference.md documents the functions with a runnable example
+    - full release gate green
+  - stop_rule: listing and metadata only; no watching, no creating, removing or copying, no recursion (glob is TODO-5907).
+
+- [ ] TODO-5907: `/std/file` expands glob patterns
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5906
+  - depends_on: TODO-5905
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-glob
+  - scope: `glob(base, pattern)` returns the paths under `base` that match, sorted bytewise: `*` (within a segment), `**` (any number of segments), `?`. A name that begins with a dot matches only a pattern segment that begins with a dot. Written in PrimeStruct over the listing of TODO-5906 and the path functions of TODO-5905. The directory listings it read are what a build treats as inputs, so the function also returns them (or a second function does) for TODO-5915.
+  - acceptance:
+    - tests over a fixture tree for `*.prime`, `**/*.prime`, `?`, a dotted file, and no match
+    - results are identical on the VM and with `--emit=optexe`
+    - docs/spec/stdlib-reference.md documents it
+    - full release gate green
+  - stop_rule: the three pattern forms; no bracket expressions, no negation.
+
+- [ ] TODO-5908: `--allow-effects` rejects declared effects outside a list in user code
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 6)
+  - parallel_track: effect-ceiling
+  - scope: A compiler option `--allow-effects <list>`: a definition or execution in user code (not the stdlib, which is trusted) that declares an effect outside the list, or whose default effects fall outside it, is a diagnostic naming the definition, the effect and the allowed list. It works with `--collect-diagnostics`. This is the ceiling a build script runs under, and also lets an embedder cap scripts. Where the effect subset check lives was not found; start from the validation that reports "effect/capability subset failures" (docs/spec/source-pipeline.md) and `Options::defaultEffects` (include/primec/support/Options.h).
+  - acceptance:
+    - with `--allow-effects heap_alloc,file_read`, user code declaring `net_io` is rejected with the diagnostic, and code within the list compiles and runs
+    - a definition without `[effects]` is checked against the default set it receives
+    - stdlib definitions are not checked against the list
+    - without the flag every existing diagnostic and output is unchanged
+    - docs/spec/language-core.md, Effects, documents the option
+    - full release gate green
+  - stop_rule: the option and its check on user code; no per-directory ceilings, no new effects.
+
+- [ ] TODO-5909: `--allow-import` rejects imports outside a list of prefixes
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 6)
+  - parallel_track: import-allowlist
+  - scope: A compiler option `--allow-import <prefix>[,<prefix>...]`: an `import` of a stdlib path outside the listed prefixes (for example `/std/net/*` when only `/std/build`, `/std/path`, `/std/file` and `/std/collections` are listed) is a diagnostic naming the import and the allowed prefixes. Imports of the project's own source files are not affected. The import resolver is src/frontend/ImportResolver.cpp; stdlib parts the compiler includes by itself (the expanded-source ledger calls them auto-included) are not checked, and whether an unlisted stdlib module can be reached that way was not checked.
+  - acceptance:
+    - an `import /std/net/*` is rejected under an allowlist without it and accepted with it
+    - an import of a project file is accepted under any allowlist
+    - without the flag every output is unchanged
+    - docs/spec/source-pipeline.md documents the option
+    - full release gate green
+  - stop_rule: the option and its check on explicit imports; no transitive analysis of what a library imports.
+
+- [ ] TODO-5910: `--profile build` sets the defaults of a build script
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5909
+  - depends_on: TODO-5908
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 6)
+  - parallel_track: build-profile
+  - scope: A named profile in `Options` (include/primec/support/Options.h): `--profile program` is today's behavior and the default; `--profile build` sets default effects to none, the effect ceiling and import allowlist of TODO-5908 and TODO-5909 (`file_read`, `heap_alloc`; `/std/build`, `/std/path`, `/std/file`, `/std/collections`), `-O0`, and the deterministic task schedule. Flags after the profile override its values, as `-O` flags do. The runner picks the profile; a file cannot choose its own.
+  - acceptance:
+    - under `--profile build` a definition without `[effects]` cannot print, an effect outside the ceiling is rejected, and `import /std/net/*` is rejected
+    - a pure program gives the same result under both profiles
+    - `--profile program`, and no flag, leave every existing output byte-identical
+    - docs/spec/integration-and-tooling.md documents the profiles
+    - full release gate green
+  - stop_rule: the two profiles and their defaults; no profile for tests or scripts yet, and no entry wrapper (TODO-5912).
+
+- [ ] TODO-5911: `/std/build` builds a graph value and exports it as JSON
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, sections 3 to 5)
+  - parallel_track: build-graph
+  - scope: Stdlib `/std/build` in PrimeStruct: `Build`, `Compiler` (emit kind, optimization level, import paths, entry, transforms, default effects, link arguments), `Graph`, and nodes for compile steps, a static library target and a link edge. Library and link nodes export but are marked as not yet runnable. `graph.export()` returns deterministic JSON: a version field, nodes sorted by id, ids derived from target names; no hashes (the runner computes them). A plain program (no runner, no loader) builds a graph and prints the export. `b.files` takes an explicit list; pattern expansion follows TODO-5907.
+  - acceptance:
+    - a program builds a graph with two compiler configurations of one program, one executable, one library and a link edge, and prints a JSON export that matches a golden file
+    - building the graph in a different call order gives the same export
+    - the program needs only the `file_read` effect
+    - docs/BuildSystemPlan.md section 5 is replaced with a program that was run
+    - full release gate green
+  - stop_rule: values and export only; no loader for `make.prime`, no running, no glob.
+
+- [ ] TODO-5912: `primec build --dry-run` prints the graph of `make.prime`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5910
+  - depends_on: TODO-5911
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-cli
+  - scope: `primec build [--dry-run] [dir]` finds `make.prime` in `dir` (default: the working directory), runs it on the VM under `--profile build` through a stdlib wrapper entry that constructs `Build`, calls the script's `build`, and hands the returned graph to the runner. With `--dry-run` the runner prints the export. Without it the command reports `running a graph is not supported yet` until TODO-5913. Diagnostics point at positions in `make.prime`. The subcommand is parsed in src/pipeline/CliDriver.cpp.
+  - acceptance:
+    - a fixture `make.prime` prints its graph; the output equals what the same graph prints from a plain program
+    - a script with a type error, a missing `make.prime`, and a script that declares an effect outside the ceiling each fail with a diagnostic that names `make.prime`
+    - `primec` without the `build` subcommand behaves exactly as before
+    - docs/spec/integration-and-tooling.md documents `primec build`
+    - full release gate green
+  - stop_rule: finding, running and printing; no execution of steps.
+
+- [ ] TODO-5913: `primec build` runs the graph
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5912
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-runner
+  - scope: The runner in `primec` executes the compile steps of the graph: each through the in-process compile pipeline (include/primec/pipeline/CompilePipeline.h) with the step's settings, writing under `--out-dir`. Independent steps run in parallel, `--jobs N` (default: the core count) bounds them. A failed step stops its dependents and reports the step name and the compiler's diagnostics; the exit code is non-zero. Library and link nodes are rejected with `static libraries are not supported by this compiler yet`. The embed library stays free of process spawning (scripts/check_embed_no_process.sh): the runner lives in `primec`. Whether to compile in-process or start `primec` per step is decided here and recorded in docs/BuildSystemPlan.md section 11; in-process is the starting point.
+  - acceptance:
+    - a `make.prime` builds a program as `--emit=exe` and one as `--emit=optexe` with a link argument, and both outputs run
+    - two independent steps both produce their outputs with `--jobs 2` (no timing assertion)
+    - a failing step reports its name and diagnostics and stops its dependents
+    - a graph with a library node fails with the diagnostic
+    - full release gate green
+  - stop_rule: compile steps only; no cache (TODO-5915), no command or function steps, no `run` in the script.
+
+- [ ] TODO-5914: `--emit-deps` writes the files a compile read
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 8)
+  - parallel_track: build-deps
+  - scope: `primec` and `primevm` with `--emit-deps <file>` write the sorted list of source files the compile read (the primary input, every import, the stdlib files actually included), one resolved path per line, without changing any output. The expanded-source provenance ledger (docs/spec/source-pipeline.md, step 1) already records these units; the list is its file paths. Only stdlib files that were included appear, so lazy imports keep a small list.
+  - acceptance:
+    - a program with two imports and a stdlib import lists exactly those files, sorted, identically on two runs
+    - a program that imports nothing lists only itself
+    - the program's output and `--dump-stage` output are byte-identical with and without the flag
+    - docs/spec/integration-and-tooling.md documents the flag
+    - full release gate green
+  - stop_rule: the flag and its list; no cache, no make-style dependency file syntax.
+
+- [ ] TODO-5915: `primec build` skips steps whose inputs did not change
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5913
+  - depends_on: TODO-5914
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 8)
+  - parallel_track: build-cache
+  - scope: A compile step's key is its compiler settings, the content hashes of the files `--emit-deps` listed for its last run, and the compiler version. The keys and the lists are kept in `ProjectRoot/.ps/cache/`, which is not committed. A step whose output exists and whose key and file hashes are unchanged is reported as up to date and not run. The hash scheme is named in the cache file. The directory listings a glob read count as inputs of the graph, so adding a file that a pattern matches re-runs the step.
+  - acceptance:
+    - a second run of an unchanged build runs no step
+    - touching an imported file, changing a compiler setting, and deleting the output each re-run exactly the affected step
+    - touching an unrelated file re-runs nothing
+    - a build with the cache deleted gives byte-identical outputs
+    - full release gate green
+  - stop_rule: compile steps with file-hash keys; no interface-hash early cutoff (that comes with libraries, TODO-5921), no shared or remote cache.
+
+- [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5912
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 7)
+  - parallel_track: build-subprojects
+  - scope: `b.subproject("dir")` runs `dir/make.prime` under the same profile with paths relative to `dir`, and merges the graph it returns into the parent under the namespace `dir` (node ids prefixed). A file reached twice is evaluated once; a cycle is a diagnostic naming the files; a missing `make.prime` is a diagnostic. How a subproject loads is decided here and recorded in docs/BuildSystemPlan.md section 11: a separate VM run whose export the runner merges (preferred), or one program that imports every script, which needs one entry name per file.
+  - acceptance:
+    - a fixture with two subfolders prints a merged graph with namespaced node ids in the dry run
+    - a diamond (two subprojects including a third) evaluates the third once
+    - a cycle and a missing `make.prime` each give a diagnostic
+    - relative paths in a subproject's script resolve against its own folder
+    - full release gate green
+  - stop_rule: explicit inclusion and merging; no automatic discovery, no running from a subproject.
+
+- [ ] TODO-5917: Build options: `b.option` and `primec build --option`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5912
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 5)
+  - parallel_track: build-options
+  - scope: `b.option("name", default)` declares a typed option (bool, i32 or String, with a description) and returns its value from `primec build --option name=value`. The options and their values appear in the export and in the cache key (TODO-5915 reads them when it lands). `--list-options` prints the declared options with types, defaults and descriptions. An `--option` the script never declares is a diagnostic.
+  - acceptance:
+    - a script that branches on a bool option gives different dry-run exports for the two values
+    - an unknown `--option`, and a value of the wrong type, are diagnostics
+    - `--list-options` output matches a golden file
+    - full release gate green
+  - stop_rule: three option types; no environment-variable options, no option files.
+
+- [ ] TODO-5918: A script can run its graph in stages
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5913
+  - depends_on: TODO-5908
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 3)
+  - parallel_track: build-stages
+  - scope: `graph.run()` executes the graph at that point and returns when it has finished, so a script can list files a first stage wrote and build a second graph from them. The call needs the effect `build_run` (name open, recorded in docs/BuildSystemPlan.md), which the build profile grants only to the root script. In `--dry-run` the output ends at the first `run` and says the plan is incomplete; the script is not continued.
+  - acceptance:
+    - a fixture whose first stage has a generator step that writes `.prime` files, whose script lists them and compiles them in a second stage, builds with `primec build`
+    - `--dry-run` of that fixture prints the first stage and marks the plan incomplete
+    - `run` called from a subproject script, and without the effect, are diagnostics
+    - full release gate green
+  - stop_rule: `run` and its effect; the stages share one cache (TODO-5915 when landed), no new step kinds.
+
+- [ ] TODO-5919: A build step can be a PrimeStruct function that runs on a VM thread
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5913
+  - depends_on: TODO-5896
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 4)
+  - parallel_track: build-function-steps
+  - scope: `b.step(name, inputs, outputs, function)` adds a step the runner executes in-process by running the function on a VM thread (TODO-5896), in parallel with other steps. The function's own effect declaration is its sandbox, and its file writes are confined to the build output directory by a path check in the host function. The export names the function and the files of its import closure and marks the graph as not self-contained. Large for one change: split it once it starts if the path confinement needs its own leaf.
+  - acceptance:
+    - a generator function step writes a `.prime` file that a compile step then builds
+    - two function steps both produce their outputs (no timing assertion)
+    - a step that writes outside the output directory faults with a diagnostic naming the path
+    - the dry-run export marks the graph as not self-contained
+    - full release gate green
+  - stop_rule: function steps with declared inputs and outputs; no command steps, no network.
+
+- [ ] TODO-5920: PrimeScroll builds with `make.prime`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5913
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 10)
+  - parallel_track: build-dogfood
+  - scope: Add a `make.prime` in examples/apps/text_editor that builds PrimeScroll the way scripts/build_native_app.sh does today (`--emit=optexe` with the UI backend's link arguments, or the `--direct` native form). Needs macOS for the AppKit backend. The script stays until the two produce the same program. The installed app and its install recipe are not touched.
+  - acceptance:
+    - `primec build` in that folder produces an executable that runs as the script's output does
+    - startup of the two executables, measured with scripts/measure_startup.sh, is within noise
+    - the differences, if any, are listed in docs/todo_log.md
+  - stop_rule: building only; the script is not deleted and the install recipe is not changed.
+
+- [ ] TODO-5921: Static libraries link into an executable
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md, section 7)
+  - parallel_track: libraries
+  - scope: A static library is an IR module plus its interface plus its generic definitions, and links into an executable. The graph already has the node kinds (TODO-5911) and the runner rejects them (TODO-5913). The compiler needs: the interface (the outline of docs/AiWorkflowPlan.md section 3, with a hash), emission (`--emit=lib`, with the entry point optional), and linking that merges modules before the optimizer runs, remapping string-table indices, host imports and function names and rejecting collisions. Generic definitions ship as definitions and are instantiated in the consumer, with identical instantiations merged by content hash (docs/LibrarySymbolManifestLazyImports.md). Then the runner gains library and link steps and early cutoff on the interface hash. Whether the IR-module format can hold this was not checked against the loader.
+  - acceptance:
+    - a library built from a folder links into an executable that runs, on the VM and with `--emit=optexe`
+    - a change to a library body that leaves its interface unchanged does not rebuild its dependents
+    - two libraries that both use a third give one copy of it
+    - full release gate green
+  - stop_rule: do not start before it is split into leaves for the interface, emission, linking and the runner steps, each with its own acceptance.
+  - notes: deferred: large; split before starting.

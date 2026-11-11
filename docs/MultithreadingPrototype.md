@@ -523,8 +523,9 @@ leaves (TODO-5770, TODO-5772).
 The source contract above stays as it is: `[spawn] f(...)` gives a `Task<T>`,
 `wait` consumes it, the spawning function declares `effects(task)`, and every
 task is waited before its function returns. What changes is that tasks run in
-parallel on `optexe` and arm64 native, and interleave in a reproducible order on
-the VM. That needs thread-safe heaps, a type-level notion of which values may
+parallel on `optexe` and arm64 native, and on the VM either interleave in a
+reproducible order (the deterministic scheduler) or run in parallel too ([VM
+Threads](#vm-threads)). That needs thread-safe heaps, a type-level notion of which values may
 cross to another thread, and three safe sharing primitives.
 
 ### Runtime Model
@@ -573,6 +574,46 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 - **Deadlock:** when every task is blocked the VM faults with `deadlock: every task is waiting` (exit code 3).
 - A host call that blocks (`poll`, `recv`) blocks every task: on the VM a concurrent program runs correctly but
   not in parallel.
+
+### VM Threads
+
+Classification: **design direction**, decided 2026-11-11. Nothing here is implemented; the leaves are the VM threads
+lane of `docs/todo.md` (TODO-5896 to TODO-5904). The VM scheduler above describes what the VM does today and stays
+true of the default until TODO-5904.
+
+The VM gets a second way to run tasks: each on its own OS thread, in parallel, with the semantics `optexe` already
+has. The deterministic scheduler stays; it is not replaced.
+
+- **Two schedules.** The deterministic scheduler (eager, or seeded with `--vm-schedule-seed`) is the schedule of debug
+  sessions, of race checking and of conformance tests. The threads schedule (`--vm-threads`) is the run schedule.
+  It starts behind the flag; once the concurrent test corpus passes repeated runs and a ThreadSanitizer run
+  (TODO-5900) it becomes the default (TODO-5904), because the flip changes the print order of every concurrent
+  program.
+- **One OS thread per task**, started with an 8 MiB stack as `optexe` does, with a task table of handles and
+  generations behind one mutex. The task opcodes, handle format, ordering rules and fault behavior of docs/spec/
+  vm-design.md (Tasks, Tasks on threads) apply unchanged.
+- **Heaps:** the VM allocates through `VmHeapArenas` (include/primec/runtime/VmHeapArenas.h), one arena per thread,
+  arena 0 for the main task, so a single-task program keeps today's addresses and pays nothing until a second arena is
+  asked for. Blocks freed by another thread go through the owner's remote-free queue, as on `optexe`.
+- **Sharing:** the sendable rules are unchanged. A `Reference` never crosses to another thread, so the only shared
+  mutable state is `Mutex`, `Atomic` and `Channel`. Their opcodes become real atomic operations, and lock and notify
+  block the thread, with waiting threads parked by address. When every thread is waiting the run faults with
+  `deadlock: every task is waiting`, as on `optexe` since TODO-5846.
+- **Host calls** take one global lock at first. A host function registered as reentrant runs without it, and a call
+  that blocks (`poll`, `recv`) then blocks only its own task, which lifts the limit stated for the deterministic
+  scheduler. A host function registered as main-thread only (the native UI) faults when another thread calls it.
+- **Faults and cancel:** a fault or `Trap` on any task sets a stop flag that every thread polls at calls and loop
+  back-edges; the run ends with exit code 3 after flushing, and the process survives, so the embed API
+  (`Script::run`, `RunOptions::cancel`) can use the mode.
+- **Speed:** a VM program that uses tasks runs on the step kernel today (TODO-5870). Threads multiply a slow base, so a
+  fast-kernel instance per task (TODO-5902) is what makes the mode worth having for compute; that leaf is deferred
+  until it is scoped.
+- **Replay:** the language has no shared mutable state outside `Mutex`, `Atomic` and `Channel`, so the recorded order
+  of synchronization events is enough to reproduce a threaded run, apart from host input and output. A threads run
+  records that order and the deterministic scheduler replays it (TODO-5901). This is also what lets the inspector
+  (`docs/VmInspectorPlan.md`) show a threaded run.
+- **Debug sessions** run programs with tasks on the deterministic scheduler, one DAP thread per task, so stopping every
+  thread is trivial (TODO-5903). They fault on task opcodes today.
 
 ### Heaps
 
