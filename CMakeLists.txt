@@ -3293,8 +3293,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "capability_parameterized_slices"
                                  SOURCE_FILE "*test_compile_run_vm_slice_capability.cpp")
     elseif(suite STREQUAL "primestruct.compile.run.vm.maps")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers"
-                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp")
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_1"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 1 LAST 4)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_2"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 5 LAST 9)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_3"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 10 LAST 13)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_4"
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 14 LAST 17)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 300 SHARD_NAME "map_wrapper"
                                  SOURCE_FILE "*test_compile_run_vm_map_wrapper.cpp")
     elseif(suite STREQUAL "primestruct.compile.run.vm.math")
