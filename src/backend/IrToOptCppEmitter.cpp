@@ -645,6 +645,11 @@ private:
         std::string answer;
         if (textName == "__pstext_argument") {
           answer = "ps_text_argument(rt, " + slot(base) + ")";
+        } else if (textName == "__pstext_move" && import.parameters.size() == 3 &&
+                   import.returnKind == IrHostValueKind::Void) {
+          line("ps_text_move(rt, " + slot(base) + ", " + slot(base + 1) + ", " + slot(base + 2) +
+               ");");
+          return true;
         } else if (textName == "__pstext_literal") {
           answer = "ps_text_literal(rt, ps_strings, PsStringCount, " + slot(base) + ")";
           if (import.returnKind == IrHostValueKind::Void) {

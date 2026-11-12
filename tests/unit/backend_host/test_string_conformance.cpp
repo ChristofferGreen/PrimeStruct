@@ -360,6 +360,28 @@ TEST_CASE("a bulk operation past the end of its region stops the program on the 
   CHECK(result.diagnostics.find("invalid text range") != std::string::npos);
 }
 
+// The optimizing C++ emitter calls the bulk move directly (ps_text_move) and keeps its range check.
+TEST_CASE("a bulk move past the end of its region stops the program through optexe") {
+  const std::string source =
+      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+      "  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
+      "  /std/text/moveBytes(a.data, a.data, 1000000i32)\n  return(0i32)\n}\n";
+  const std::string file = scratch("bulk_move_fault.prime");
+  std::ofstream(file, std::ios::binary) << source;
+  const std::string cpp = scratch("bulk_move_fault.cpp");
+  const std::string exe = scratch("bulk_move_fault_optexe");
+  const std::string log = exe + ".log";
+  REQUIRE(run(shellQuote(Primec) + " --emit=optcpp " + shellQuote(file) + " -o " + shellQuote(cpp) +
+              " > " + shellQuote(log) + " 2>&1") == 0);
+  CHECK(readFile(cpp).find("ps_text_move(rt, ") != std::string::npos);
+  REQUIRE_MESSAGE(run(shellQuote(Primec) + " --emit=optexe " + shellQuote(file) + " -o " +
+                      shellQuote(exe) + " > " + shellQuote(log) + " 2>&1") == 0,
+                  readFile(log));
+  const std::string err = exe + ".err";
+  CHECK(run(shellQuote(exe) + " > /dev/null 2> " + shellQuote(err)) != 0);
+  CHECK(readFile(err).find("invalid text range") != std::string::npos);
+}
+
 // ---- StringView: a borrowed view of literals and Strings ---------------------------------------------
 
 namespace {

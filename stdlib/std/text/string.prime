@@ -265,9 +265,17 @@ namespace std {
       this.ownsData = true
     }
 
-    // Capacity for `extra` more bytes: doubling, rounded up to the block size.
+    // Capacity for `extra` more bytes: doubling, rounded up to the block size. The check is a single statement,
+    // so it is inlined into every caller; growTo takes the other cases (growth, a negative or too large count).
     [mut effects(heap_alloc)]
     growFor([i32] extra) {
+      if(extra < 0i32 || extra > this.fieldCapacity - this.fieldLength) {
+        this.growTo(extra)
+      }
+    }
+
+    [mut effects(heap_alloc)]
+    growTo([i32] extra) {
       if(extra < 0i32 || extra > 1073741823i32 - this.fieldLength) {
         panic(extra)
       }

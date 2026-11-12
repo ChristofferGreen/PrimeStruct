@@ -2285,6 +2285,7 @@ are left unarchived.
 | TODO-5950 | arm64 native runs the atomic opcodes and `SharedString` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5951 | arm64 native runs `Mutex` and `Channel` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5952 | arm64 native text blocks and 16 KiB blocks come from the pool | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5953 | `String.append` of a literal does not cost more as a real call on optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 
 <!-- INDEX-END -->
 

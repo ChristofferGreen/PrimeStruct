@@ -361,6 +361,21 @@ inline uint64_t ps_text_call(Rt &rt, const char *name, const uint64_t *args) {
   return result;
 }
 
+// `__pstext_move(destination, source, count)`: the bulk move of String.append and the byte containers, called
+// directly where `ps_text_call` would compare the name against every host function before it (callTextHostFunction
+// answers the same way: one range check, a count of 0 touches nothing, overlapping ranges are fine).
+inline void ps_text_move(Rt &rt, uint64_t destination, uint64_t source, uint64_t count) {
+  if (count == 0) {
+    return;
+  }
+  uint8_t *first = rt.heap.byteSpan(destination, count);
+  const uint8_t *second = rt.heap.byteSpan(source, count);
+  if (first == nullptr || second == nullptr) {
+    ps_fault("invalid text range: " + std::to_string(count) + " bytes at " + std::to_string(destination));
+  }
+  std::memmove(first, second, static_cast<size_t>(count));
+}
+
 // `__pstext_literal`: the address of a module string literal's bytes (a byte region made on first use).
 inline uint64_t ps_text_literal(Rt &rt, const PsString *table, size_t count, uint64_t index) {
   const PsString &literal = ps_string(table, count, index);
