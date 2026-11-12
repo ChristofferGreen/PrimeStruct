@@ -205,7 +205,6 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-5959 | The AST C++ and GLSL emitters are deleted | ready | reuse-dead-emitters |
-| TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | ready | reuse-semantics-diagnostics |
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
@@ -268,7 +267,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5959, TODO-5960, TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5959, TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1604,22 +1603,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green, including the test registration and inventory checks
   - stop_rule: deletion only; no refactoring of the IR emitters or of the classifier copies in other layers (TODO-5961, TODO-5962).
   - notes: Runs alone among code-reuse leaves that touch `src/emitter`, `src/glsl_emitter`, `src/ir/IrPrinterHelpers.cpp` or the CMake source lists. Safe alongside TODO-5960, TODO-5969, TODO-5970.
-
-- [~] TODO-5960: Executions and definitions get the same intra-body call diagnostics from one implementation
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 7)
-  - parallel_track: reuse-semantics-diagnostics
-  - scope: `SemanticsValidator::collectExecutionIntraBodyCallDiagnostics` (src/semantics/SemanticsValidatorExecutionDiagnostics.cpp, 490 lines, called from SemanticsValidatorPassesExecutions.cpp:151) and `collectDefinitionIntraBodyCallDiagnostics` (src/semantics/SemanticsValidatorPassesDiagnostics.cpp:77, 528 lines, called from SemanticsValidatorPassesDefinitions.cpp:514) are 75-90% the same code, with file-local copies of `isBuiltinCollectionHelperName`, `isRootedKeyValueCountShadowPath`, `isFlowEffectDiagnosticMessage` and `isLoopBlockEnvelope`. The intended differences are the parameter setup (`executionParams`), the related-span label (`"execution: "` vs `"definition: "`) and the source position (`exec` vs `def`). They have drifted: the Definition copy's `isBuiltinCollectionHelperName` (line 14) accepts `insert` by string compare plus `isGetHelperName` and `isRefHelperName`, while the Execution copy (line 13) uses `isInsertHelperName` and has neither; the Definition control-flow check (line 116) includes `isPickCall` and the Execution one does not; only the Definition file has `isCanonicalKeyValueAccessHelperPath` (line 54). First write a repro per difference (an execution body that uses `pick`, a `get` helper, a `ref` helper, a canonical key-value access path) and record what each produces today, then decide whether each difference is a bug, and merge the two into one body parameterized by the owner kind (params, locals, related-span label, position).
-  - acceptance:
-    - one implementation serves both callers; the two files' duplicated helpers exist once
-    - a semantics test per difference pins the decided behavior for executions and for definitions, and the decision is noted in docs/todo_log.md under this id
-    - every existing semantics diagnostic test keeps its output except the ones the decision intentionally changes, each named in the commit message
-    - full release gate green
-  - stop_rule: these two collectors only; no other diagnostics refactor (that is TODO-5977).
-  - notes: Touches src/semantics/SemanticsValidatorPrivateCore.h (rebuilds about 125 units). Do not run alongside TODO-5964 (shares `isCanonicalKeyValueAccessHelperPath`) or TODO-5977.
 
 - [ ] TODO-5961: One template-type-text parser serves every compiler layer
   - owner: ai

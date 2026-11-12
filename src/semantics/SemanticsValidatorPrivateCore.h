@@ -76,6 +76,18 @@
                                                  std::vector<SemanticDiagnosticRecord> &out);
   void collectExecutionIntraBodyCallDiagnostics(const Execution &exec,
                                                 std::vector<SemanticDiagnosticRecord> &out);
+  // What differs between an execution and a definition body when collecting
+  // intra-body call diagnostics: the label and position of the related span,
+  // the parameters in scope (none for an execution) and the expressions to scan.
+  struct IntraBodyCallOwner {
+    std::string label;
+    int sourceLine = 0;
+    int sourceColumn = 0;
+    const std::vector<ParameterInfo> &params;
+    std::vector<const Expr *> roots;
+  };
+  void collectIntraBodyCallDiagnostics(const IntraBodyCallOwner &owner,
+                                       std::vector<SemanticDiagnosticRecord> &out);
   bool validateEntry();
   std::optional<std::string> validateUninitializedDefiniteState(
       const std::vector<ParameterInfo> &params,

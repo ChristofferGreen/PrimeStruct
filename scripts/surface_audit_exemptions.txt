@@ -54,7 +54,6 @@ src/semantics/SemanticsValidatorBuildInitializerInference.cpp soa
 src/semantics/SemanticsValidatorBuildInitializerInferenceCalls.cpp soa
 src/semantics/SemanticsValidatorBuildInitializerInferenceSoaHelpers.cpp soa
 src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp soa
-src/semantics/SemanticsValidatorExecutionDiagnostics.cpp soa
 src/semantics/SemanticsValidatorExprArgumentValidation.cpp collection,soa
 src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp soa
 src/semantics/SemanticsValidatorExprCallPhasesA.cpp map

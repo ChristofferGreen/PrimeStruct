@@ -74,17 +74,19 @@ bool isCanonicalKeyValueAccessHelperPath(std::string_view path) {
 
 } // namespace
 
-void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
-    const Definition &def,
-    std::vector<SemanticDiagnosticRecord> &out) {
-  const auto &definitionParams = paramsByDef_[def.fullPath];
-  std::unordered_map<std::string, BindingInfo> definitionLocals;
-  definitionLocals.reserve(definitionParams.size());
-  for (const auto &param : definitionParams) {
-    definitionLocals.emplace(param.name, param.binding);
+// One implementation serves executions and definitions (TODO-5960). The owner
+// supplies what differs: the parameter list (empty for an execution), the
+// related-span label and position, and the expressions to scan.
+void SemanticsValidator::collectIntraBodyCallDiagnostics(
+    const IntraBodyCallOwner &owner, std::vector<SemanticDiagnosticRecord> &out) {
+  const std::vector<ParameterInfo> &ownerParams = owner.params;
+  std::unordered_map<std::string, BindingInfo> ownerLocals;
+  ownerLocals.reserve(ownerParams.size());
+  for (const auto &param : ownerParams) {
+    ownerLocals.emplace(param.name, param.binding);
   }
 
-  auto appendDefinitionRecord = [&](const Expr &expr, std::string message) {
+  auto appendOwnerRecord = [&](const Expr &expr, std::string message) {
     SemanticDiagnosticRecord record;
     record.message = std::move(message);
     if (expr.sourceLine > 0 && expr.sourceColumn > 0) {
@@ -94,13 +96,13 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       record.primarySpan.endColumn = expr.sourceColumn;
       record.hasPrimarySpan = true;
     }
-    if (def.sourceLine > 0 && def.sourceColumn > 0) {
+    if (owner.sourceLine > 0 && owner.sourceColumn > 0) {
       SemanticDiagnosticRelatedSpan related;
-      related.span.line = def.sourceLine;
-      related.span.column = def.sourceColumn;
-      related.span.endLine = def.sourceLine;
-      related.span.endColumn = def.sourceColumn;
-      related.label = "definition: " + def.fullPath;
+      related.span.line = owner.sourceLine;
+      related.span.column = owner.sourceColumn;
+      related.span.endLine = owner.sourceLine;
+      related.span.endColumn = owner.sourceColumn;
+      related.label = owner.label;
       record.relatedSpans.push_back(std::move(related));
     }
     out.push_back(std::move(record));
@@ -180,10 +182,10 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       if (receiver.kind != Expr::Kind::Name || receiver.name != "meta") {
         return false;
       }
-      if (findParamBinding(definitionParams, receiver.name) != nullptr) {
+      if (findParamBinding(ownerParams, receiver.name) != nullptr) {
         return false;
       }
-      return definitionLocals.find(receiver.name) == definitionLocals.end();
+      return ownerLocals.find(receiver.name) == ownerLocals.end();
     };
     if (expr.isMethodCall && !expr.args.empty()) {
       const Expr &receiver = expr.args.front();
@@ -226,13 +228,13 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     const std::string diagnosticResolved = diagnosticCallTargetPath(resolved);
     const BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
     const BuiltinCollectionDispatchResolvers dispatchResolvers =
-        makeBuiltinCollectionDispatchResolvers(definitionParams, definitionLocals, dispatchResolverAdapters);
+        makeBuiltinCollectionDispatchResolvers(ownerParams, ownerLocals, dispatchResolverAdapters);
     auto appendArgumentTypeMismatch = [&](const std::string &paramName,
                                           const std::string &expectedType,
                                           const std::string &actualType) {
-      appendDefinitionRecord(expr,
-                             "argument type mismatch for " + diagnosticResolved + " parameter " + paramName +
-                                 ": expected " + expectedType + " got " + actualType);
+      appendOwnerRecord(expr,
+                        "argument type mismatch for " + diagnosticResolved + " parameter " +
+                            paramName + ": expected " + expectedType + " got " + actualType);
     };
     auto isCompatibleExperimentalVectorReceiver = [&](const Expr &arg,
                                                       const ParameterInfo &param,
@@ -249,18 +251,15 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         return true;
       }
       std::vector<std::string> resolvedVectorArgs;
-      if (resolveCallCollectionTemplateArgs(arg,
-                                            "vector",
-                                            definitionParams,
-                                            definitionLocals,
-                                            resolvedVectorArgs) &&
+      if (resolveCallCollectionTemplateArgs(
+              arg, "vector", ownerParams, ownerLocals, resolvedVectorArgs) &&
           resolvedVectorArgs.size() == 1 &&
           normalizeBindingTypeName(expectedElemType) ==
               normalizeBindingTypeName(resolvedVectorArgs.front())) {
         return true;
       }
       std::string inferredTypeText;
-      if (!inferQueryExprTypeText(arg, definitionParams, definitionLocals, inferredTypeText) ||
+      if (!inferQueryExprTypeText(arg, ownerParams, ownerLocals, inferredTypeText) ||
           inferredTypeText.empty()) {
         return false;
       }
@@ -284,7 +283,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     };
     std::string message;
     if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
-      appendDefinitionRecord(expr, std::move(message));
+      appendOwnerRecord(expr, std::move(message));
       return true;
     }
     if (structNames_.count(resolved) > 0) {
@@ -296,7 +295,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     }
     const auto &calleeParams = paramsIt->second;
     if (!validateNamedArgumentsAgainstParams(calleeParams, expr.argNames, message)) {
-      appendDefinitionRecord(expr, std::move(message));
+      appendOwnerRecord(expr, std::move(message));
       return true;
     }
     std::vector<const Expr *> orderedArgs;
@@ -310,7 +309,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       } else {
         message = std::move(orderError);
       }
-      appendDefinitionRecord(expr, std::move(message));
+      appendOwnerRecord(expr, std::move(message));
       return true;
     }
     std::unordered_set<const Expr *> explicitArgs;
@@ -327,7 +326,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       }
       ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
       if (expectedKind != ReturnKind::Unknown) {
-        ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
+        ReturnKind actualKind = inferExprReturnKind(arg, ownerParams, ownerLocals);
         if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array || actualKind == expectedKind) {
           return;
         }
@@ -344,7 +343,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       if (expectedStructPath.empty()) {
         return;
       }
-      const std::string actualStructPath = inferStructReturnPath(arg, definitionParams, definitionLocals);
+      const std::string actualStructPath = inferStructReturnPath(arg, ownerParams, ownerLocals);
       if (!actualStructPath.empty()) {
         if (actualStructPath != expectedStructPath) {
           if (collection_helpers::isCollectionFamilyRoot(actualStructPath, collection_helpers::CollectionFamily::Vector) &&
@@ -358,7 +357,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         }
         return;
       }
-      ReturnKind actualKind = inferExprReturnKind(arg, definitionParams, definitionLocals);
+      ReturnKind actualKind = inferExprReturnKind(arg, ownerParams, ownerLocals);
       if (actualKind == ReturnKind::Unknown || actualKind == ReturnKind::Array) {
         return;
       }
@@ -373,8 +372,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
                                                   const ParameterInfo &param,
                                                   const std::string &expectedTypeName) {
       std::string actualElementType;
-      if (!resolveArgsPackElementTypeForExpr(arg, definitionParams, definitionLocals, actualElementType)) {
-        appendDefinitionRecord(arg, "spread argument requires args<T> value");
+      if (!resolveArgsPackElementTypeForExpr(arg, ownerParams, ownerLocals, actualElementType)) {
+        appendOwnerRecord(arg, "spread argument requires args<T> value");
         return;
       }
       ReturnKind expectedKind = returnKindForTypeName(expectedTypeName);
@@ -470,7 +469,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
           const std::string effectError = error_;
           error_.clear();
           if (isFlowEffectDiagnosticMessage(effectError)) {
-            appendDefinitionRecord(expr, effectError);
+            appendOwnerRecord(expr, effectError);
           }
           return;
         }
@@ -480,30 +479,28 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
           !isBuiltinCall(expr)) {
         std::string reflectionDiagnostic;
         if (describeReflectionCallDiagnostic(expr, reflectionDiagnostic)) {
-          appendDefinitionRecord(expr, std::move(reflectionDiagnostic));
+          appendOwnerRecord(expr, std::move(reflectionDiagnostic));
           return;
         }
         const std::string resolved = resolveCalleePath(expr);
         if (!hasDefinitionPath(resolved)) {
           if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "count") &&
               expr.args.size() != 1) {
-            appendDefinitionRecord(
-                expr,
-                hasNamedArguments(expr.argNames)
-                    ? "named arguments not supported for builtin calls"
-                    : "argument count mismatch for builtin count");
+            appendOwnerRecord(expr,
+                              hasNamedArguments(expr.argNames)
+                                  ? "named arguments not supported for builtin calls"
+                                  : "argument count mismatch for builtin count");
             return;
           }
           if (isStdNamespacedVectorCompatibilityHelperPath(resolved, "capacity") &&
               expr.args.size() != 1) {
-            appendDefinitionRecord(
-                expr,
-                hasNamedArguments(expr.argNames)
-                    ? "named arguments not supported for builtin calls"
-                    : "argument count mismatch for builtin capacity");
+            appendOwnerRecord(expr,
+                              hasNamedArguments(expr.argNames)
+                                  ? "named arguments not supported for builtin calls"
+                                  : "argument count mismatch for builtin capacity");
             return;
           }
-          appendDefinitionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
+          appendOwnerRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
         } else {
           collectResolvedCallArgumentDiagnostic(expr, resolved);
         }
@@ -512,17 +509,56 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     for (const auto &arg : expr.args) {
       scanExpr(arg);
     }
+    if (isPickCall(expr)) {
+      // A pick arm is a variant name (with an optional payload binder), not a
+      // call: scan only the arm bodies.
+      for (const auto &arm : expr.bodyArguments) {
+        for (const auto &armBody : arm.bodyArguments) {
+          scanExpr(armBody);
+        }
+      }
+      return;
+    }
     for (const auto &arg : expr.bodyArguments) {
       scanExpr(arg);
     }
   };
 
+  for (const Expr *root : owner.roots) {
+    scanExpr(*root);
+  }
+}
+
+void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
+    const Definition &def, std::vector<SemanticDiagnosticRecord> &out) {
+  IntraBodyCallOwner owner{"definition: " + def.fullPath,
+                           def.sourceLine,
+                           def.sourceColumn,
+                           paramsByDef_[def.fullPath],
+                           {}};
+  owner.roots.reserve(def.statements.size() + 1);
   for (const auto &stmt : def.statements) {
-    scanExpr(stmt);
+    owner.roots.push_back(&stmt);
   }
   if (def.returnExpr.has_value()) {
-    scanExpr(*def.returnExpr);
+    owner.roots.push_back(&*def.returnExpr);
   }
+  collectIntraBodyCallDiagnostics(owner, out);
+}
+
+void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
+    const Execution &exec, std::vector<SemanticDiagnosticRecord> &out) {
+  static const std::vector<ParameterInfo> NoParameters;
+  IntraBodyCallOwner owner{
+      "execution: " + exec.fullPath, exec.sourceLine, exec.sourceColumn, NoParameters, {}};
+  owner.roots.reserve(exec.arguments.size() + exec.bodyArguments.size());
+  for (const auto &arg : exec.arguments) {
+    owner.roots.push_back(&arg);
+  }
+  for (const auto &arg : exec.bodyArguments) {
+    owner.roots.push_back(&arg);
+  }
+  collectIntraBodyCallDiagnostics(owner, out);
 }
 
 } // namespace primec::semantics

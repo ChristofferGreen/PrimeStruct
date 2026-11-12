@@ -413,7 +413,6 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorInfer.cpp
   src/semantics/SemanticsValidatorPassesEffects.cpp
   src/semantics/SemanticsValidatorPassesDiagnostics.cpp
-  src/semantics/SemanticsValidatorExecutionDiagnostics.cpp
   src/semantics/SemanticsValidatorPassesDefinitions.cpp
   src/semantics/SemanticsValidatorPassesEffectFree.cpp
   src/semantics/SemanticsValidatorPassesExecutions.cpp
@@ -2239,6 +2238,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_text_views.cpp
     tests/unit/semantics/test_semantics_type_aliases.cpp
     tests/unit/semantics/test_semantics_move.cpp
+    tests/unit/semantics/test_semantics_intra_body_call_diagnostics.cpp
     tests/unit/semantics/test_semantics_never_return.cpp
     tests/unit/semantics/test_semantics_transitive_collection_imports.cpp
     tests/unit/semantics/test_semantics_numeric_software.cpp
@@ -2448,6 +2448,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.move
+    primestruct.semantics.intra_body_call_diagnostics
     primestruct.semantics.never_return
     primestruct.semantics.transitive_collection_imports
     primestruct.semantics.software_numeric
