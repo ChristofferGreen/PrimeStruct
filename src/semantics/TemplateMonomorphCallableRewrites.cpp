@@ -79,6 +79,19 @@ void rewriteCallableFieldCall(Expr &expr,
           receiverPath.clear();
         }
       }
+      // A receiver declared with a type spelled relative to its namespace (`[Route] direct{...}`, a parameter
+      // `[Route] route`, a `Reference<Route>`) names the struct by its short name.
+      const bool borrowed =
+          receiverInfo.typeName == "Reference" || receiverInfo.typeName == "Pointer";
+      const std::string &declaredType =
+          borrowed ? receiverInfo.typeTemplateArg : receiverInfo.typeName;
+      if (receiverPath.empty() || receiverPath.front() != '/') {
+        if (!declaredType.empty() && declaredType.front() != '/' &&
+            (borrowed || receiverInfo.typeTemplateArg.empty())) {
+          receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+              declaredType, namespacePrefix, ctx);
+        }
+      }
     }
   }
   if (receiverPath.empty()) {

@@ -956,6 +956,48 @@ main() {
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_fields");
 
+TEST_CASE(
+    "a callable field of a local struct is called through a local, a parameter and a Reference") {
+  runClosureProgram("callable_field_local_receiver",
+                    R"(
+[return<int>]
+double([i32] x) {
+  return(x * 2i32)
+}
+
+[return<int>]
+triple([i32] x) {
+  return(x * 3i32)
+}
+
+[struct]
+Route() {
+  [i32] code{0i32}
+  [Function<i32, i32> mut] handler{double}
+}
+
+[return<int> effects(heap_alloc)]
+by_value([Route] route, [i32] x) {
+  return(route.handler(x))
+}
+
+[return<int> effects(heap_alloc)]
+by_reference([Reference<Route>] route, [i32] x) {
+  return(route.handler(x))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Route mut] direct{Route{[code] 6i32, [handler] double}}
+  [i32] first{direct.handler(2i32)}
+  direct.handler(5i32)
+  [Route] other{Route{[code] 7i32, [handler] triple}}
+  return(first + by_value(other, 10i32) + by_reference(location(direct), 100i32))
+}
+)",
+                    234);
+}
+
 TEST_CASE("view equality inside a function with a String parameter") {
   runClosureProgram("string_parameter_view_equality", R"(
 import /std/text/*
