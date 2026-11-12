@@ -664,6 +664,41 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a closure moves into a Function at every expected-type site") {
+  runClosureProgram("closure_move_into_function",
+                    R"(
+[return<int>]
+apply([Function<i32, i32>] f, [i32] x) {
+  return(f(x))
+}
+
+[return<Function<i32, i32>> effects(heap_alloc)]
+make([i32] base) {
+  adder{[base]([i32] x) { return(x + base) }}
+  return(move(adder))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] base{3i32}
+  first{[base]([i32] x) { return(x + base) }}
+  second{[base]([i32] x) { return(x * base) }}
+  third{[base]([i32] x) { return(x - base) }}
+  fourth{[base]([i32] x) { return(x + base + base) }}
+  fifth{[base]([i32] x) { return(x + 100i32) }}
+  [Function<i32, i32>] boxed{move(first)}
+  [i32] applied{apply(move(second), 2i32)}
+  [Function<i32, i32> mut] later{move(third)}
+  later = move(fourth)
+  [Function<i32, i32>] made{make(10i32)}
+  [Function<i32, i32>] explicit{Function<i32, i32>{move(fifth)}}
+  // 7 + 6 + 7 + 11 + 101
+  return(boxed(4i32) + applied + later(1i32) + made(1i32) + explicit(1i32))
+}
+)",
+                    132);
+}
+
 // `[ref]` captures and indexed elements. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_references");

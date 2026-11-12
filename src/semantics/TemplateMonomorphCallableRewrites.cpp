@@ -393,6 +393,25 @@ bool isClosureArgument(const Expr &arg,
   if (arg.isSpread || arg.isBinding || arg.isLambda) {
     return false;
   }
+  // `move(closure)`: the closure local moves into the Function's heap block (the box takes it as is).
+  if (arg.kind == Expr::Kind::Call && !arg.isMethodCall && !arg.isFieldAccess &&
+      !arg.isBraceConstructor && arg.name == "move" && arg.templateArgs.empty() &&
+      arg.args.size() == 1 && arg.args.front().kind == Expr::Kind::Name) {
+    const Expr &moved = arg.args.front();
+    const semantics::BindingInfo *binding = nullptr;
+    if (auto localIt = locals.find(moved.name); localIt != locals.end()) {
+      binding = &localIt->second;
+    } else {
+      for (const semantics::ParameterInfo &param : params) {
+        if (param.name == moved.name) {
+          binding = &param.binding;
+          break;
+        }
+      }
+    }
+    return binding != nullptr &&
+           isClosureTypeName(binding->typeName, binding->typeTemplateArg, namespacePrefix, ctx);
+  }
   if (arg.kind == Expr::Kind::Name) {
     const semantics::BindingInfo *binding = nullptr;
     if (auto localIt = locals.find(arg.name); localIt != locals.end()) {

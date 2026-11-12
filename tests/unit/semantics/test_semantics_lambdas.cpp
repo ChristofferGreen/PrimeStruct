@@ -490,6 +490,21 @@ main() {
   CHECK(error.find("use-after-move: plain") != std::string::npos);
 }
 
+TEST_CASE("a closure moved into a Function binding is used after the move") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] seven{7i32}
+  adder{[seven]([i32] x) { return(plus(x, seven)) }}
+  [Function<i32, i32>] boxed{move(adder)}
+  return(boxed(adder(1i32)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("use-after-move: adder") != std::string::npos);
+}
+
 TEST_CASE("a lambda names the type parameters of its definition") {
   const std::string source = R"(
 [return<i32>]

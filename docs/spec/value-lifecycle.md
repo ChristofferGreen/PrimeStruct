@@ -418,7 +418,8 @@ bad_set() {
   handler)`), a brace-constructor field (`Route{[handler] hits}`), a binding with a declared `Function` type, an
   assignment to a `Function` local and the value returned from a definition whose `return<...>` is a `Function`. The
   closure there is a lambda, a local or parameter whose type is a closure or a struct with `call`, or a brace
-  constructor of such a struct (`apply(Tripler{}, 2i32)`). A `Function` value passes as it is.
+  constructor of such a struct (`apply(Tripler{}, 2i32)`), or `move(name)` of such a local, which moves the closure
+  into the block (`apply(move(adder), 1i32)`; `adder` is moved-from afterwards). A `Function` value passes as it is.
 - **Named definitions:** `Function<i32, i32>{/double}` (or `{double}`) holds the free function `/double`: the closure
   pass generates a closure struct without fields, `/double__fnref`, whose `call` forwards its arguments. A bare
   definition name converts the same way at an implicit site (`router.add(1i32, double)`). A definition that is

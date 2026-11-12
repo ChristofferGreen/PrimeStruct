@@ -133,7 +133,6 @@ of sync with them.
 | TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
-| TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
@@ -249,7 +248,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5714, TODO-5715, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5714, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -375,18 +374,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `f(f(x))` on a `Function` parameter returns the right value on native-O0 and native-O2 (matrix case)
     - full release gate green
   - stop_rule: the native recursion check for nested calls of one definition.
-
-- [ ] TODO-5715: `Function<R, A...>{move(closure)}` infers the boxed type
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Closures follow-ups (found by TODO-5669)
-  - parallel_track: closures
-  - scope: `Function<i32, i32>{move(adder)}` with `adder` a closure local fails with `unable to infer implicit template arguments for /__fn_box`: implicit template inference does not see through `move(...)`. A copy (`Function<i32, i32>{adder}`) works. Once it infers, accept `move(name)` at the implicit conversion sites too (`isClosureArgument` in src/semantics/TemplateMonomorphCallableRewrites.cpp).
-  - acceptance:
-    - the explicit and the implicit form with `move(adder)` run on VM and optexe, and `adder` is moved-from afterwards (a negative test for a use after the move)
-    - full release gate green
-  - stop_rule: `move` arguments of `/__fn_box` and the implicit sites.
 
 - [ ] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
   - owner: ai
