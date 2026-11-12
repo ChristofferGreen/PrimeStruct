@@ -106,7 +106,8 @@
     without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import
     a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not
     supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or
-    whitespace-separated paths.
+    whitespace-separated paths. A wildcard import of a module that holds only public templates (`/std/tuple/*`) is
+    valid whether or not the program instantiates one; a path that no module defines is `unknown import path`.
   - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make
     it importable; `[private]` explicitly marks it as non-exported. Private definitions are still callable within the
     same compilation unit; visibility only affects imports.

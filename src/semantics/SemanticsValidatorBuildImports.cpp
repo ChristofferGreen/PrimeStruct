@@ -575,6 +575,16 @@ bool SemanticsValidator::buildImportAliases() {
       if (importError) {
         continue;
       }
+      // A module of templates only has no definition left when nothing instantiated them; importing it is still valid.
+      if (!sawImmediateDefinition) {
+        const auto templateIt = std::lower_bound(program_.templateDefinitionPaths.begin(),
+                                                 program_.templateDefinitionPaths.end(),
+                                                 scopedPrefix);
+        if (templateIt != program_.templateDefinitionPaths.end() &&
+            templateIt->rfind(scopedPrefix, 0) == 0) {
+          sawImmediateDefinition = true;
+        }
+      }
       if (!sawImmediateDefinition && prefix != "/std/math") {
         if (hasCoveringStdlibWildcardImport(importPath)) {
           continue;

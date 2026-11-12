@@ -342,6 +342,20 @@ main() {
                    215);
 }
 
+TEST_CASE("a wildcard import of the tuple module is valid when no tuple is built") {
+  runMethodProgram("struct_methods_unused_tuple_import",
+                   R"(
+import /std/tuple/*
+import /std/maybe/*
+
+[return<int>]
+main() {
+  return(21i32)
+}
+)",
+                   21);
+}
+
 TEST_CASE("an omitted field initializer of a generic struct in a namespace is its type's default") {
   runMethodProgram("struct_methods_namespace_default_field",
                    R"(

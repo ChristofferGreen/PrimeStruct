@@ -32,6 +32,7 @@
 #include "primec/support/CollectionSpellingClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
+#include <algorithm>
 #include <sstream>
 
 #include "primec/support/CompileArena.h"
@@ -431,6 +432,13 @@ bool rewriteMonomorphizedDefinitions(Context &ctx,
       clone.name = std::move(overloadName);
     }
     if (isPathUnderTemplateRoot(clone.fullPath, templateRoots)) {
+      const bool isPublic =
+          std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+            return transform.name == "public";
+          });
+      if (isPublic && !def.templateArgs.empty()) {
+        ctx.droppedTemplatePaths.push_back(def.fullPath);
+      }
       continue;
     }
     // Concrete (non-template) internal stdlib definitions are already in canonical

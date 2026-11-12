@@ -96,6 +96,7 @@ struct Context {
   std::unordered_set<std::string> outputPaths;
   std::vector<Definition> outputDefs;
   std::vector<Execution> outputExecs;
+  std::vector<std::string> droppedTemplatePaths;
   std::string currentDefinitionPath;
   std::unordered_set<std::string> implicitTemplateDefs;
   std::unordered_map<std::string, std::vector<std::string>> implicitTemplateParams;

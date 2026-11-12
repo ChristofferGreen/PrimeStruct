@@ -92,6 +92,8 @@ bool monomorphizeTemplates(Program &program,
 
   program.definitions = std::move(ctx.outputDefs);
   program.executions = std::move(ctx.outputExecs);
+  program.templateDefinitionPaths = std::move(ctx.droppedTemplatePaths);
+  std::sort(program.templateDefinitionPaths.begin(), program.templateDefinitionPaths.end());
   if (explicitTemplateArgFactHitCountOut != nullptr) {
     *explicitTemplateArgFactHitCountOut = ctx.explicitTemplateArgInferenceFactHitsForTesting;
   }

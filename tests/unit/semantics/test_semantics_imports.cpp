@@ -693,6 +693,48 @@ main() {
   CHECK(error.find("unknown import path: /missing/*") != std::string::npos);
 }
 
+TEST_CASE("import accepts a wildcard of a module that holds only templates nothing instantiates") {
+  const std::string source = R"(
+import /util/*
+namespace util {
+  [public return<T>]
+  identity<T>([T] value) {
+    return(value)
+  }
+  [public struct]
+  Box<T>() {
+    [T] value{}
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("import rejects a wildcard of a module that holds only private templates") {
+  const std::string source = R"(
+import /util/*
+namespace util {
+  [private return<T>]
+  identity<T>([T] value) {
+    return(value)
+  }
+}
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown import path: /util/*") != std::string::npos);
+}
+
 TEST_CASE("import rejects missing definition") {
   const std::string source = R"(
 import /util/missing

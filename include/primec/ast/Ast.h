@@ -232,6 +232,9 @@ struct Program {
   std::vector<std::string> imports;
   std::vector<Definition> definitions;
   std::vector<Execution> executions;
+  // Public template definitions that monomorphization dropped for lack of an instantiation. An import of a module
+  // that holds only templates is valid with nothing instantiated, so the import check reads these paths.
+  std::vector<std::string> templateDefinitionPaths;
 };
 
 } // namespace primec
