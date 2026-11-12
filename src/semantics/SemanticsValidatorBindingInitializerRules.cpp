@@ -14,7 +14,7 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
-// The rule that checks a binding's initializer against its declared type (TODO-5982).
+// The rule that checks a binding's initializer against its declared type.
 
 namespace {
 

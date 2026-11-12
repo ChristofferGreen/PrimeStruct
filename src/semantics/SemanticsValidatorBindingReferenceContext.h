@@ -1,6 +1,6 @@
 #pragma once
 
-// What the rules and helpers that validate a `Reference<T>` binding read (TODO-5981): the statement and its scope,
+// What the rules and helpers that validate a `Reference<T>` binding read: the statement and its scope,
 // the outer binding state, and the two things the rules find as they go. Data only; the helpers are members of
 // SemanticsValidator (SemanticsValidatorBindingReferenceResolver.cpp).
 #include "SemanticsValidator.h"

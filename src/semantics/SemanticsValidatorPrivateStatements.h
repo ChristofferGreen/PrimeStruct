@@ -237,7 +237,7 @@
   bool isOutsideEffectFreeStatement(const Expr &stmt, EffectFreeContext &ctx, bool &writesThis);
   bool isOutsideEffectFreeExpr(const Expr &expr, EffectFreeContext &ctx, bool &writesThis);
 
-  // Validation of a binding statement (TODO-5982): ordered rules over a BindingContext, with the lookups they
+  // Validation of a binding statement: ordered rules over a BindingContext, with the lookups they
   // share as members that take it explicitly. Rules: SemanticsValidatorBinding*Rules.cpp; lookups:
   // SemanticsValidatorBindingHelpers.cpp.
   bool failBindingDiagnostic(BindingContext &ctx, std::string message);
@@ -256,7 +256,7 @@
   PhaseStatus recordSoaFieldViewBinding(BindingContext &ctx);
   PhaseStatus recordBinding(BindingContext &ctx);
 
-  // Validation of a `Reference<T>` binding (TODO-5981): ordered rules over a context, with helpers that take it
+  // Validation of a `Reference<T>` binding: ordered rules over a context, with helpers that take it
   // explicitly. Rules: SemanticsValidatorBindingReferenceRules.cpp; helpers: ...ReferenceResolver.cpp.
   friend struct BindingReferenceContext;
   PhaseStatus validateBindingReference(BindingContext &ctx);

@@ -14,7 +14,7 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
-// The first rules of a binding statement (TODO-5982): is it a legal binding here, and what are its type and
+// The first rules of a binding statement: is it a legal binding here, and what are its type and
 // initializer? Each returns Done when it has decided the statement.
 
 PhaseStatus SemanticsValidator::checkBindingForm(BindingContext &ctx) {

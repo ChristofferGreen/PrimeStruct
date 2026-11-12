@@ -14,7 +14,7 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
-// The rule that settles the borrow, pointer and restrict facts of a binding (TODO-5982).
+// The rule that settles the borrow, pointer and restrict facts of a binding.
 
 PhaseStatus SemanticsValidator::resolveBindingStorageRoots(BindingContext &ctx) {
   std::unordered_map<std::string, BindingInfo> &locals = ctx.locals;

@@ -13,7 +13,7 @@ for what it is. Do not cut a long function into numbered phases (`FooPhase1..N`,
 `*PhasesA/B/C.cpp`, `*Continued.h`) that share a state struct of `std::function` members:
 that makes phase N depend on what phases 1 to N-1 filled in and leaves no phase readable
 or testable alone. Express a long validator or rewriter as an ordered list of small named
-rules, each taking only the inputs it uses (TODO-5980; AGENTS.md, Code guidelines).
+rules, each taking only the inputs it uses (AGENTS.md, Code guidelines).
 """
 
 from __future__ import annotations

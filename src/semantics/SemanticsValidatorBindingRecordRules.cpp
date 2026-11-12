@@ -14,7 +14,7 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
-// The last rules of a binding statement and the list that runs them all (TODO-5982).
+// The last rules of a binding statement and the list that runs them all.
 
 PhaseStatus SemanticsValidator::recordSoaFieldViewBinding(BindingContext &ctx) {
   const std::vector<ParameterInfo> &params = ctx.params;

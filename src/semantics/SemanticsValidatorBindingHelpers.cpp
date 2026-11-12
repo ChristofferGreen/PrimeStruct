@@ -14,7 +14,7 @@
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
 
-// What the binding rules look up while they run (TODO-5982): the named binding of a scope, the borrow and
+// What the binding rules look up while they run: the named binding of a scope, the borrow and
 // pointer roots of an expression, and the target-typed sum initializer. They were `std::function` members of
 // the binding-state struct; each takes the binding's context explicitly.
 

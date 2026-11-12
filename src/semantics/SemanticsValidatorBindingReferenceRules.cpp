@@ -5,7 +5,7 @@
 #include "SemanticsValidatorStatementBindingsHelpers.h"
 #include "SemanticsValidatorBindingReferenceContext.h"
 
-// Validation of a `Reference<T>` binding as an ordered list of rules (TODO-5981). A rule returns Done when it has
+// Validation of a `Reference<T>` binding as an ordered list of rules. A rule returns Done when it has
 // decided the binding (accepted or rejected) and Continue to leave it to the next one; the helpers they use are
 // in SemanticsValidatorBindingReferenceResolver.cpp.
 

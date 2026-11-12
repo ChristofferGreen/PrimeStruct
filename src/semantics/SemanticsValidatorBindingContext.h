@@ -1,6 +1,6 @@
 #pragma once
 
-// What the rules that validate a binding statement read and fill in (TODO-5982): the statement and its scope, then
+// What the rules that validate a binding statement read and fill in: the statement and its scope, then
 // the facts the rules settle in order (the parsed binding, its initializer, entry-argument flags). Data only; the
 // lookups the rules share are members of SemanticsValidator (SemanticsValidatorBindingHelpers.cpp).
 #include "SemanticsValidator.h"

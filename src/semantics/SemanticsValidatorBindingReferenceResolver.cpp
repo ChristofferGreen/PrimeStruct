@@ -11,7 +11,7 @@
 #include "SemanticsValidatorBindingReferenceContext.h"
 
 // The helpers of a `Reference<T>` binding: what a borrow targets, which root it borrows from and whether that root
-// conflicts with another borrow (TODO-5981). Each takes the binding's context explicitly; they were lambdas of
+// conflicts with another borrow. Each takes the binding's context explicitly; they were lambdas of
 // `validateBindingPhase5` kept in a state struct of `std::function` members.
 
 namespace primec::semantics {
