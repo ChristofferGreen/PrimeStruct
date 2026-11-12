@@ -1633,9 +1633,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
-- [ ] TODO-5966: Binding validation is ordered rules with explicit inputs, not numbered phases
+- [~] TODO-5966: Binding validation is ordered rules with explicit inputs, not numbered phases
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6)
   - parallel_track: reuse-phase-splits
