@@ -375,7 +375,8 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   empty literal or empty String gives the null pointer and a count of 0.
 - **A `string` where a view is expected:** a string literal, or any `string` value, converts to a `StringView` where
   one is expected, as if written `textOf(value)`: a call or method-call argument for a `[StringView]` parameter
-  (each value of an `[args<StringView>]` parameter too), a brace-constructor argument for a `StringView` field, the
+  (each value of an `[args<StringView>]` parameter too), a brace-constructor argument for a `StringView` field (of a
+  generic struct too, for a field whose type does not name a template parameter), the
   initializer of a `[StringView]` binding, an assignment to a `StringView` local or parameter, and the value returned
   from a definition that returns a `StringView`. Template monomorphization inserts the `textOf` call once it knows the
   declared type, so the program lowers exactly as if the call were written out. Nothing else converts: a `String`

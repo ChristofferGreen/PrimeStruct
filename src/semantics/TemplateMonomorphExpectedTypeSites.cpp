@@ -5,6 +5,7 @@
 #include "TemplateMonomorphTypeResolution.h"
 
 #include <algorithm>
+#include <cctype>
 #include <optional>
 #include <string>
 #include <utility>
@@ -259,11 +260,37 @@ bool rewriteBraceConstructorSite(Expr &expr,
   }
   const std::string path = resolveCalleePath(expr, scope.namespacePrefix, scope.ctx, &scope.locals, &scope.params);
   auto defIt = scope.ctx.sourceDefs.find(path);
-  if (defIt == scope.ctx.sourceDefs.end() || !defIt->second.templateArgs.empty() ||
-      !isStructDefinition(defIt->second) || !declaresTargetBinding(defIt->second.statements, active)) {
+  if (defIt == scope.ctx.sourceDefs.end() || !isStructDefinition(defIt->second) ||
+      !declaresTargetBinding(defIt->second.statements, active)) {
     return true;
   }
   const Definition &structDef = defIt->second;
+  // A generic struct converts at the fields whose declared type does not name one of its template parameters: the
+  // type of such a field is the same in every instance.
+  auto namesTemplateParam = [&](const Transform &type) {
+    std::vector<std::string> texts{type.name};
+    texts.insert(texts.end(), type.templateArgs.begin(), type.templateArgs.end());
+    for (const std::string &text : texts) {
+      size_t pos = 0;
+      while (pos < text.size()) {
+        if (!(std::isalnum(static_cast<unsigned char>(text[pos])) || text[pos] == '_')) {
+          ++pos;
+          continue;
+        }
+        const size_t start = pos;
+        while (pos < text.size() &&
+               (std::isalnum(static_cast<unsigned char>(text[pos])) || text[pos] == '_')) {
+          ++pos;
+        }
+        if (std::find(structDef.templateArgs.begin(),
+                      structDef.templateArgs.end(),
+                      text.substr(start, pos - start)) != structDef.templateArgs.end()) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   std::vector<const Expr *> fields;
   for (const Expr &stmt : structDef.statements) {
     bool isStatic = false;
@@ -288,8 +315,9 @@ bool rewriteBraceConstructorSite(Expr &expr,
       field = fields[positional++];
     }
     const Transform *type = field == nullptr ? nullptr : bindingTypeTransform(*field);
-    if (type != nullptr &&
-        !convertAtSingle(expr.args[i], active, ExpectedType{*type, structDef.namespacePrefix}, scope, error)) {
+    if (type != nullptr && !namesTemplateParam(*type) &&
+        !convertAtSingle(
+            expr.args[i], active, ExpectedType{*type, structDef.namespacePrefix}, scope, error)) {
       return false;
     }
   }

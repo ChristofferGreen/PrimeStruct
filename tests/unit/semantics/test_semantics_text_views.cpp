@@ -151,4 +151,37 @@ main() {
   CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
+TEST_CASE("a string converts at a StringView field of a generic struct only") {
+  const std::string head = R"(
+import /std/text/view/*
+
+[struct]
+Route<T>() {
+  [StringView] method{StringView{}}
+  [T] state{}
+}
+
+[return<int>]
+main() {
+)";
+  std::string error;
+  const std::string accepted = head + R"(
+  [string] name{"GET"}
+  [Route<i32>] byValue{Route<i32>{[method] name, [state] 3i32}}
+  [Route<i32>] byLiteral{Route<i32>{[method] "POST", [state] 4i32}}
+  return(plus(byValue.state, byLiteral.state))
+}
+)";
+  CHECK_MESSAGE(validateProgram(accepted, "/main", error), error);
+  const std::string rejected = head + R"(
+  [Route<i32>] bad{Route<i32>{[method] 5i32, [state] 3i32}}
+  return(bad.state)
+}
+)";
+  CHECK_FALSE(validateProgram(rejected, "/main", error));
+  CHECK_MESSAGE(error.find("parameter method: expected /std/text/view/StringView got i32") !=
+                    std::string::npos,
+                error);
+}
+
 TEST_SUITE_END();

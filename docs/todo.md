@@ -137,7 +137,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
-| TODO-5721 | A string converts to a `StringView` at a field of a generic struct | ready | text-literal-views |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
@@ -252,7 +251,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5714, TODO-5715, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -428,18 +427,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - docs/spec/stdlib-reference.md updated
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
-
-- [ ] TODO-5721: A string converts to a `StringView` at a field of a generic struct
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Language surface for handlers (docs/spec/strings-and-views.md; found by TODO-5704)
-  - parallel_track: text-literal-views
-  - scope: A `string` value or literal converts to a `StringView` at a brace-constructor field of a non-generic struct (TODO-5700), but not of a generic one: `AppRoute<State>{[method] method}` with a `[string] method` fails with `argument type mismatch ... expected /std/text/view/StringView`, so `AppRouter.route` wraps both in `textOf`. Insert the conversion once the instance's field types are known.
-  - acceptance:
-    - a generic struct's StringView field takes a literal and a `string` value without `textOf` on the VM and optexe, and `AppRouter.route` drops its `textOf`
-    - full release gate green
-  - stop_rule: fields of generic struct instances only.
 
 - [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
   - owner: ai

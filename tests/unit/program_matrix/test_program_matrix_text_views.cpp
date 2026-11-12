@@ -127,6 +127,29 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a string converts at a StringView field of a generic struct") {
+  runTextViewProgram("text_view_generic_struct_field",
+                     R"(
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Route<T>() {
+  [StringView] method{StringView{}}
+  [T] state{}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [string] name{"GET"utf8}
+  [Route<i32>] byValue{Route<i32>{[method] name, [state] 3i32}}
+  [Route<i32>] byLiteral{Route<i32>{"POST"utf8, 4i32}}
+  return(byValue.state + byLiteral.state + byValue.method.count() + byLiteral.method.count())
+}
+)",
+                     14);
+}
+
 TEST_CASE("http handlers take literal header names and bodies") {
   runTextViewProgram("text_view_http_literals", R"(
 import /std/http/*
