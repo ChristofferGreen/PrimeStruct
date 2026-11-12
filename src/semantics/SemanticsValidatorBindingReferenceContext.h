@@ -4,7 +4,7 @@
 // the outer binding state, and the two things the rules find as they go. Data only; the helpers are members of
 // SemanticsValidator (SemanticsValidatorBindingReferenceResolver.cpp).
 #include "SemanticsValidator.h"
-#include "SemanticsValidatorStatementBindingsState.h"
+#include "SemanticsValidatorBindingContext.h"
 
 #include <string>
 #include <unordered_map>
@@ -20,7 +20,7 @@ struct BindingReferenceContext {
   std::unordered_map<std::string, BindingInfo> &locals;
   const Expr &stmt;
   const std::string &namespacePrefix;
-  ValidateBindingState &st;
+  BindingContext &st;
   // The initializer of the binding.
   const Expr &init;
   // What the binding borrows from: the argument of `location(...)`/`borrow(...)`, else the initializer.

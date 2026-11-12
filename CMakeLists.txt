@@ -420,12 +420,13 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorPassesStructLayouts.cpp
   src/semantics/SemanticsValidatorPassesUninitialized.cpp
   src/semantics/SemanticsValidatorPasses.cpp
-  src/semantics/SemanticsValidatorStatementBindings.cpp
-  src/semantics/SemanticsValidatorStatementBindingsPhasesA.cpp
-  src/semantics/SemanticsValidatorStatementBindingsPhasesB.cpp
+  src/semantics/SemanticsValidatorBindingHelpers.cpp
+  src/semantics/SemanticsValidatorBindingFormRules.cpp
+  src/semantics/SemanticsValidatorBindingInitializerRules.cpp
+  src/semantics/SemanticsValidatorBindingStorageRules.cpp
   src/semantics/SemanticsValidatorBindingReferenceResolver.cpp
   src/semantics/SemanticsValidatorBindingReferenceRules.cpp
-  src/semantics/SemanticsValidatorStatementBindingsPhasesC.cpp
+  src/semantics/SemanticsValidatorBindingRecordRules.cpp
   src/semantics/SemanticsValidatorStatementBodyArguments.cpp
   src/semantics/SemanticsValidatorStatementBuiltins.cpp
   src/semantics/SemanticsValidatorStatementContainerHelpers.cpp

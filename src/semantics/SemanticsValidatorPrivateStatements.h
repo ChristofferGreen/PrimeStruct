@@ -237,24 +237,29 @@
   bool isOutsideEffectFreeStatement(const Expr &stmt, EffectFreeContext &ctx, bool &writesThis);
   bool isOutsideEffectFreeExpr(const Expr &expr, EffectFreeContext &ctx, bool &writesThis);
 
-  // Phase functions of validateBindingStatement.
-  friend struct ValidateBindingState;
-  PhaseStatus validateBindingPhase1(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase2(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase3(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase4(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase5(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase6(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
-  PhaseStatus validateBindingPhase7(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
+  // Validation of a binding statement (TODO-5982): ordered rules over a BindingContext, with the lookups they
+  // share as members that take it explicitly. Rules: SemanticsValidatorBinding*Rules.cpp; lookups:
+  // SemanticsValidatorBindingHelpers.cpp.
+  bool failBindingDiagnostic(BindingContext &ctx, std::string message);
+  bool isStandaloneSoaFieldViewInitializer(BindingContext &ctx);
+  std::optional<bool> validateAndRecordTargetTypedSumInitializer(BindingContext &ctx);
+  bool isTargetTypedSumInitializerSyntax(BindingContext &ctx);
+  const BindingInfo *resolveNamedBinding(BindingContext &ctx, const std::string &name);
+  bool resolvePointerRoot(BindingContext &ctx, const Expr &expr, std::string &rootOut);
+  bool resolveStorageRootExpr(BindingContext &ctx, const Expr &expr, std::string &rootOut);
+  friend struct BindingContext;
+  bool isEmptyBuiltinBlockInitializer(const Expr &candidate);
+  PhaseStatus checkBindingForm(BindingContext &ctx);
+  PhaseStatus parseBindingTypeAndInitializer(BindingContext &ctx);
+  PhaseStatus validateBindingInitializer(BindingContext &ctx);
+  PhaseStatus resolveBindingStorageRoots(BindingContext &ctx);
+  PhaseStatus recordSoaFieldViewBinding(BindingContext &ctx);
+  PhaseStatus recordBinding(BindingContext &ctx);
 
   // Validation of a `Reference<T>` binding (TODO-5981): ordered rules over a context, with helpers that take it
   // explicitly. Rules: SemanticsValidatorBindingReferenceRules.cpp; helpers: ...ReferenceResolver.cpp.
   friend struct BindingReferenceContext;
-  PhaseStatus validateBindingReference(const std::vector<ParameterInfo> &params,
-                                       std::unordered_map<std::string, BindingInfo> &locals,
-                                       const Expr &stmt,
-                                       const std::string &namespacePrefix,
-                                       ValidateBindingState &st);
+  PhaseStatus validateBindingReference(BindingContext &ctx);
   PhaseStatus classifyReferenceInitializer(BindingReferenceContext &ctx);
   PhaseStatus bindReferenceRoot(BindingReferenceContext &ctx);
   bool resolveDirectBorrowStorageTargetType(BindingReferenceContext &ctx,

@@ -3,7 +3,6 @@
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include "SemanticsValidatorStatementBindingsHelpers.h"
-#include "SemanticsValidatorStatementBindingsState.h"
 #include "SemanticsValidatorBindingReferenceContext.h"
 
 // Validation of a `Reference<T>` binding as an ordered list of rules (TODO-5981). A rule returns Done when it has
@@ -20,11 +19,9 @@ PhaseStatus SemanticsValidator::classifyReferenceInitializer(BindingReferenceCon
   std::unordered_map<std::string, BindingInfo> &locals = ctx.locals;
   const Expr &stmt = ctx.stmt;
   const std::string &namespacePrefix = ctx.namespacePrefix;
-  ValidateBindingState &st = ctx.st;
-  auto &failBindingDiagnostic = st.failBindingDiagnostic;
+  BindingContext &st = ctx.st;
   auto &definitionTemplateArgs = st.definitionTemplateArgs;
   auto &info = st.info;
-  auto &resolvePointerRoot = st.resolvePointerRoot;
   const Expr &init = ctx.init;
   std::string pointerName;
   const bool initIsLocation = init.kind == Expr::Kind::Call &&
@@ -38,12 +35,12 @@ PhaseStatus SemanticsValidator::classifyReferenceInitializer(BindingReferenceCon
                                          init.args.size() == 1 && initIsPointerLike;
   if (!initIsLocation && !initIsDirectBorrowStorage && !initIsPointerLike &&
       !currentValidationState_.context.definitionIsUnsafe) {
-    return ctx.done(st.done(failBindingDiagnostic("Reference bindings require location(...)")));
+    return ctx.done(st.done(failBindingDiagnostic(st, "Reference bindings require location(...)")));
   }
   if (initIsLocation || initIsDirectBorrowStorage ||
       (!currentValidationState_.context.definitionIsUnsafe && initIsPointerLike)) {
     if (!errorTypesMatch(safeTargetType, info.typeTemplateArg, namespacePrefix)) {
-      return ctx.done(st.done(failBindingDiagnostic("Reference binding type mismatch")));
+      return ctx.done(st.done(failBindingDiagnostic(st, "Reference binding type mismatch")));
     }
   }
   if (!initIsLocation && !initIsDirectBorrowStorage && !initIsBorrowedFieldAccess &&
@@ -53,17 +50,18 @@ PhaseStatus SemanticsValidator::classifyReferenceInitializer(BindingReferenceCon
     const bool resolvedStandaloneRoot =
         resolveStandaloneRefRootExpr(ctx, init, substitutions, borrowRoot);
     if (isStandaloneRefCall(ctx, init) && (!resolvedStandaloneRoot || borrowRoot.empty())) {
-      return ctx.done(st.done(failBindingDiagnostic("Reference binding requires borrow root")));
+      return ctx.done(st.done(failBindingDiagnostic(st, "Reference binding requires borrow root")));
     }
     if (resolvedStandaloneRoot && !borrowRoot.empty()) {
       if (hasBorrowConflictForRoot(ctx, borrowRoot, info.isMutable)) {
-        return ctx.done(
-            st.done(failBindingDiagnostic("borrow conflict: " + borrowRoot +
-                                          " (root: " + borrowRoot + ", sink: " + stmt.name + ")")));
+        return ctx.done(st.done(failBindingDiagnostic(st,
+                                                      "borrow conflict: " + borrowRoot +
+                                                          " (root: " + borrowRoot +
+                                                          ", sink: " + stmt.name + ")")));
       }
       if (info.isMutable && !isMutableRootBinding(ctx, borrowRoot)) {
         return ctx.done(st.done(
-            failBindingDiagnostic("Reference binding requires mutable root: " + borrowRoot)));
+            failBindingDiagnostic(st, "Reference binding requires mutable root: " + borrowRoot)));
       }
       info.referenceRoot = std::move(borrowRoot);
     }
@@ -80,13 +78,13 @@ PhaseStatus SemanticsValidator::classifyReferenceInitializer(BindingReferenceCon
     std::string pointerTargetType;
     if (!resolvePointerTargetType(ctx, init, pointerTargetType)) {
       return ctx.done(st.done(
-          failBindingDiagnostic("unsafe Reference bindings require pointer-like initializer")));
+          failBindingDiagnostic(st, "unsafe Reference bindings require pointer-like initializer")));
     }
     if (!errorTypesMatch(pointerTargetType, info.typeTemplateArg, namespacePrefix)) {
-      return ctx.done(st.done(failBindingDiagnostic("unsafe Reference binding type mismatch")));
+      return ctx.done(st.done(failBindingDiagnostic(st, "unsafe Reference binding type mismatch")));
     }
     std::string borrowRoot;
-    if (resolvePointerRoot(init, borrowRoot)) {
+    if (resolvePointerRoot(st, init, borrowRoot)) {
       info.referenceRoot = std::move(borrowRoot);
     }
     info.isUnsafeReference = true;
@@ -106,13 +104,12 @@ PhaseStatus SemanticsValidator::bindReferenceRoot(BindingReferenceContext &ctx) 
   const std::vector<ParameterInfo> &params = ctx.params;
   std::unordered_map<std::string, BindingInfo> &locals = ctx.locals;
   const Expr &stmt = ctx.stmt;
-  ValidateBindingState &st = ctx.st;
-  auto &failBindingDiagnostic = st.failBindingDiagnostic;
+  BindingContext &st = ctx.st;
   auto &info = st.info;
   const Expr &target = *ctx.target;
   std::string borrowRoot;
   if (!resolveBorrowRootExpr(ctx, target, borrowRoot) || borrowRoot.empty()) {
-    return ctx.done(st.done(failBindingDiagnostic("Reference bindings require location(...)")));
+    return ctx.done(st.done(failBindingDiagnostic(st, "Reference bindings require location(...)")));
   }
   bool sawMutableBorrow = false;
   bool sawImmutableBorrow = false;
@@ -139,27 +136,27 @@ PhaseStatus SemanticsValidator::bindReferenceRoot(BindingReferenceContext &ctx) 
   const bool conflict =
       info.isMutable ? (sawMutableBorrow || sawImmutableBorrow) : sawMutableBorrow;
   if (conflict && !currentValidationState_.context.definitionIsUnsafe) {
-    return ctx.done(st.done(failBindingDiagnostic("borrow conflict: " + borrowRoot + " (root: " +
-                                                  borrowRoot + ", sink: " + stmt.name + ")")));
+    return ctx.done(st.done(failBindingDiagnostic(st,
+                                                  "borrow conflict: " + borrowRoot + " (root: " +
+                                                      borrowRoot + ", sink: " + stmt.name + ")")));
   }
   info.referenceRoot = std::move(borrowRoot);
   info.isUnsafeReference = currentValidationState_.context.definitionIsUnsafe;
   return PhaseStatus::Continue;
 }
 
-PhaseStatus
-SemanticsValidator::validateBindingReference(const std::vector<ParameterInfo> &params,
-                                             std::unordered_map<std::string, BindingInfo> &locals,
-                                             const Expr &stmt,
-                                             const std::string &namespacePrefix,
-                                             ValidateBindingState &st) {
-  BindingReferenceContext ctx{params, locals, stmt, namespacePrefix, st, *st.initializer};
+PhaseStatus SemanticsValidator::validateBindingReference(BindingContext &outer) {
+  if (outer.info.typeName != "Reference") {
+    return PhaseStatus::Continue;
+  }
+  BindingReferenceContext ctx{
+      outer.params, outer.locals, outer.stmt, outer.namespacePrefix, outer, *outer.initializer};
   using Rule = PhaseStatus (SemanticsValidator::*)(BindingReferenceContext &);
   static constexpr Rule Rules[] = {&SemanticsValidator::classifyReferenceInitializer,
                                    &SemanticsValidator::bindReferenceRoot};
   for (const Rule rule : Rules) {
     if ((this->*rule)(ctx) == PhaseStatus::Done) {
-      return ctx.result;
+      return PhaseStatus::Done;
     }
   }
   return PhaseStatus::Continue;

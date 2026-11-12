@@ -7,7 +7,7 @@
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
 #include "SemanticsValidatorStatementBindingsHelpers.h"
-#include "SemanticsValidatorStatementBindingsState.h"
+#include "SemanticsValidatorBindingContext.h"
 #include "SemanticsValidatorBindingReferenceContext.h"
 
 // The helpers of a `Reference<T>` binding: what a borrow targets, which root it borrows from and whether that root
@@ -72,10 +72,9 @@ bool SemanticsValidator::resolvePointerTargetType(BindingReferenceContext &ctx,
                                                   std::string &targetOut) {
   const std::vector<ParameterInfo> &params = ctx.params;
   std::unordered_map<std::string, BindingInfo> &locals = ctx.locals;
-  auto &resolveNamedBinding = ctx.st.resolveNamedBinding;
 
   if (expr.kind == Expr::Kind::Name) {
-    const BindingInfo *binding = resolveNamedBinding(expr.name);
+    const BindingInfo *binding = resolveNamedBinding(ctx.st, expr.name);
     if (binding == nullptr) {
       return false;
     }
@@ -94,7 +93,7 @@ bool SemanticsValidator::resolvePointerTargetType(BindingReferenceContext &ctx,
       expr.args.size() == 1) {
     const Expr &target = expr.args.front();
     if (target.kind == Expr::Kind::Name) {
-      const BindingInfo *binding = resolveNamedBinding(target.name);
+      const BindingInfo *binding = resolveNamedBinding(ctx.st, target.name);
       if (binding == nullptr) {
         return false;
       }
@@ -177,7 +176,7 @@ bool SemanticsValidator::resolvePointerTargetType(BindingReferenceContext &ctx,
     std::string elemType;
     const Expr &receiver = expr.args.front();
     if (receiver.kind == Expr::Kind::Name) {
-      const BindingInfo *binding = resolveNamedBinding(receiver.name);
+      const BindingInfo *binding = resolveNamedBinding(ctx.st, receiver.name);
       if (binding == nullptr || !extractExperimentalSoaVectorElementType(*binding, elemType)) {
         return false;
       }
@@ -584,7 +583,6 @@ bool SemanticsValidator::isMutableRootBinding(BindingReferenceContext &ctx,
 bool SemanticsValidator::resolveBorrowRootExpr(BindingReferenceContext &ctx,
                                                const Expr &targetExpr,
                                                std::string &rootOut) {
-  auto &resolvePointerRoot = ctx.st.resolvePointerRoot;
 
   if (targetExpr.kind == Expr::Kind::Name) {
     return resolveBorrowRoot(ctx, targetExpr.name, rootOut);
@@ -592,7 +590,7 @@ bool SemanticsValidator::resolveBorrowRootExpr(BindingReferenceContext &ctx,
   std::string builtinName;
   if (targetExpr.kind == Expr::Kind::Call && getBuiltinPointerName(targetExpr, builtinName) &&
       builtinName == "dereference" && targetExpr.args.size() == 1) {
-    return resolvePointerRoot(targetExpr.args.front(), rootOut);
+    return resolvePointerRoot(ctx.st, targetExpr.args.front(), rootOut);
   }
   if (targetExpr.kind == Expr::Kind::Call && targetExpr.isFieldAccess &&
       targetExpr.args.size() == 1) {

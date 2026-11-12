@@ -35,7 +35,7 @@ struct TypeResolutionGraphNode;
 enum class PhaseStatus { Continue, Done };
 struct ValidateExprCallState;
 
-struct ValidateBindingState;
+struct BindingContext;
 
 struct BindingReferenceContext;
 using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;

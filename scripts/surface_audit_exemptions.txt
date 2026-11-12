@@ -79,7 +79,7 @@ src/semantics/SemanticsValidatorResultHelpers.cpp soa
 src/semantics/SemanticsValidatorSnapshotHelpers.h soa
 src/semantics/SemanticsValidatorSnapshotLocals.cpp collection
 src/semantics/SemanticsValidatorStatement.cpp soa
-src/semantics/SemanticsValidatorStatementBindings.cpp soa
+src/semantics/SemanticsValidatorBindingFormRules.cpp soa
 src/semantics/StdlibCollectionSurfaceHelpers.h collection,soa
 src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp soa
 src/semantics/TemplateMonomorphExpressionRewrite.cpp collection
