@@ -2171,6 +2171,7 @@ are left unarchived.
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5712 | A callable field of a local struct is called | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5720 | A binding from a vector element copies the element's owned fields | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5722 | Web controls take click closures | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5723 | Shared UI event structs for web and native handlers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |

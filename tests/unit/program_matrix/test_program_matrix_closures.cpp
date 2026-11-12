@@ -1532,6 +1532,43 @@ main() {
                      0);
 }
 
+TEST_CASE("location of a field passes straight to a call and to a Function field") {
+  runClosureProgram("closure_location_of_field_argument",
+                    R"(
+[struct]
+Counter() {
+  [mut i32] count{0i32}
+}
+
+[return<void>]
+bump([Reference<Counter>] counter, [i32] by) {
+  counter.count = counter.count + by
+}
+
+[struct]
+Holder() {
+  [Function<void, Reference<Counter>, i32>] handler{bump}
+  [mut Counter] state{Counter{}}
+
+  [return<void> mut effects(heap_alloc)]
+  fire([i32] by) {
+    this.handler(location(this.state), by)
+    bump(location(this.state), by)
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [mut Holder] holder{Holder{}}
+  holder.fire(4i32)
+  holder.fire(1i32)
+  bump(location(holder.state), 100i32)
+  return(holder.state.count)
+}
+)",
+                    110);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");

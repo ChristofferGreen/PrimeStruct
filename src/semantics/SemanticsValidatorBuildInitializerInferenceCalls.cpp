@@ -339,6 +339,16 @@ bool SemanticsValidator::inferBuiltinPointerBinding(const Expr &expr,
     if (getBuiltinPointerName(candidate, builtinName) && builtinName == "location" &&
         candidate.args.size() == 1) {
       const Expr &target = candidate.args.front();
+      if (target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1) {
+        // `location(this.state)`: the pointee is the field's declared type.
+        BindingInfo fieldBinding;
+        if (!resolveStructFieldBinding(
+                params, locals, target.args.front(), target.name, fieldBinding)) {
+          return false;
+        }
+        targetOut = formatBindingType(fieldBinding);
+        return !targetOut.empty();
+      }
       if (target.kind != Expr::Kind::Name) {
         return false;
       }

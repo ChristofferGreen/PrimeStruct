@@ -859,9 +859,7 @@ namespace http {
           if(request.method.equals(method)) {
             [Request mut] routed{request}
             routed.route = pattern
-            // Through a local: `location(this.state)` written in the call's arguments does not lower (TODO-5719).
-            [Reference<State>] state{location(this.state)}
-            this.routes[index].handler(state, routed, response)
+            this.routes[index].handler(location(this.state), routed, response)
             return()
           }
           pathMatched = true
