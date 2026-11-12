@@ -2324,6 +2324,7 @@ are left unarchived.
 | TODO-5980 | The component-split rule is written down for files over the size cap | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5981 | `validateBindingReference` is ordered rules over a resolver, not six phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5982 | `validateBinding` is ordered rules, not seven phases | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5985 | `rewriteExprReference` is ordered rules, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

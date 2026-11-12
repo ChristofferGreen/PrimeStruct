@@ -206,8 +206,9 @@ of sync with them.
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
-| TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | ready | reuse-phase-splits |
+| TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | ready | reuse-phase-splits |
+| TODO-5986 | `rewriteExpr` is ordered rules over a context, not eight phases | ready | reuse-phase-splits |
 | TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
@@ -1620,8 +1621,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [~] TODO-5967: Template monomorph expression rewriting is ordered rules, not numbered phases
   - owner: ai
-  - status: ready
+  - status: blocked
+  - blocked_on: TODO-5986
   - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
+  - split_into: TODO-5985 (the rewriteExprReference rules, done with this split), TODO-5986 (the rewriteExpr phases and the RewriteExprState lambdas; closes this leaf)
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6)
   - parallel_track: reuse-phase-splits
@@ -1805,3 +1808,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the cost the profile names; no unrelated compiler speedups.
   - notes: Found while checking the IR comparison of TODO-5963; the error text is the same before and after that change.
+
+- [ ] TODO-5986: `rewriteExpr` is ordered rules over a context, not eight phases
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 6; closes TODO-5967)
+  - parallel_track: reuse-phase-splits
+  - depends_on: TODO-5985
+  - scope: `rewriteExprPhase1..8` (src/semantics/TemplateMonomorphExpressionRewritePhasesA/B/C/D.cpp and the runner in TemplateMonomorphExpressionRewrite.cpp, 1,140 lines) share `RewriteExprState` (TemplateMonomorphExpressionRewriteState.h) with about 30 `std::function` members that are former lambdas (`resolvePickSumDefinition`, `isCanonicalBuiltinKeyValueHelperPath`, `resolvesBuiltinVectorReceiver`, `inferCollectionReceiverFamily`, ...). Turn them into free functions over an `ExprRewriteContext`, run the eight phases as named rules, delete the state struct and the `*Phases*` files, and keep every file under the 1,200-line cap by extracting components (AGENTS.md). The PhasesA/B pair repeats 36 8-line windows: remove them as the rules are named.
+  - acceptance:
+    - no `rewriteExprPhaseN` function, no `RewriteExprState` and no `*Phases*` file for this rewrite remain
+    - `--dump-stage ast-semantic` and `semantic-product` output of every example is identical before and after
+    - semantics CPU time on a fixed set of examples is not higher (numbers in the commit)
+    - full release gate green
+  - stop_rule: template monomorph expression rewriting only; call validation is TODO-5968.
+  - notes: Do not run alongside TODO-5968.
