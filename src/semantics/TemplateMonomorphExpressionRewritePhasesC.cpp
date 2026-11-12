@@ -37,7 +37,7 @@
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
 #include "TemplateMonomorphExpressionRewriteState.h"
-#include "TemplateMonomorphExpressionRewriteInnerState.h"
+#include "TemplateMonomorphExpressionReferenceRules.h"
 
 namespace primec {
 
@@ -62,30 +62,10 @@ PhaseStatus rewriteExprPhase6([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
   [[maybe_unused]] auto &rewriteVectorTargetValueForResolvedType = st.rewriteVectorTargetValueForResolvedType;
   [[maybe_unused]] auto &allConcrete = st.allConcrete;
   if (!expr.isMethodCall && !expr.isBinding) {
-    RewriteExprInnerState st2;
-    if (rewriteExprReferencePhase1(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase2(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase3(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase4(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase5(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase6(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase7(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (rewriteExprReferencePhase8(expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st, st2) == PhaseStatus::Done) {
-      return st2.result;
+    const PhaseStatus status = rewriteExprReference(
+        expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st);
+    if (status == PhaseStatus::Done) {
+      return status;
     }
   }
   return PhaseStatus::Continue;

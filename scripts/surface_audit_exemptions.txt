@@ -90,8 +90,8 @@ src/semantics/TemplateMonomorphImplicitTemplateInference.cpp collection
 src/support/BuiltinArrayAccessNameClassifier.cpp collection
 src/support/CollectionSpellingClassifier.cpp collection
 src/support/StdlibSurfaceRegistry.cpp collection
-src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp soa
-src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp soa
+src/semantics/TemplateMonomorphReferenceConstructorRules.cpp soa
+src/semantics/TemplateMonomorphReferenceHelperRules.cpp soa
 src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp collection,soa
 src/ir_lowerer/IrLowererSetupTypeMethodCallResolutionFileLocal.h soa
 src/ir_lowerer/IrLowererInlineNativeCallDispatchBody.h collection,soa

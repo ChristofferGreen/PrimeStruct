@@ -245,8 +245,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesA.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesCInnerPhasesB.cpp
+  src/semantics/TemplateMonomorphReferenceConstructorRules.cpp
+  src/semantics/TemplateMonomorphReferenceHelperRules.cpp
   src/semantics/TemplateMonomorphExpressionRewritePhasesD.cpp
   src/semantics/TemplateMonomorphFinalOrchestration.cpp
   src/semantics/CondensationDag.cpp
