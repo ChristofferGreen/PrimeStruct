@@ -113,6 +113,60 @@ bool extractSpecializedSumTemplateArgsFromTypeText(std::string typeText, std::st
   return true;
 }
 
+namespace {
+
+std::string specializationLeafForTypeText(std::string typeText) {
+  typeText = semantics::normalizeBindingTypeName(typeText);
+  const size_t angle = typeText.find('<');
+  if (angle != std::string::npos) {
+    typeText.erase(angle);
+  }
+  const size_t slash = typeText.find_last_of('/');
+  return slash == std::string::npos ? typeText : typeText.substr(slash + 1);
+}
+
+const Definition *specializedStructDefinitionOfParamType(std::string typeText,
+                                                         const std::string &paramBaseType,
+                                                         const Context &ctx) {
+  typeText = semantics::normalizeBindingTypeName(typeText);
+  if (typeText.empty()) {
+    return nullptr;
+  }
+  if (typeText.front() != '/') {
+    typeText.insert(typeText.begin(), '/');
+  }
+  const std::string paramLeaf = specializationLeafForTypeText(paramBaseType);
+  if (paramLeaf.empty() || specializationLeafForTypeText(typeText).rfind(paramLeaf + "__t", 0) != 0) {
+    return nullptr;
+  }
+  const auto defIt = ctx.sourceDefs.find(typeText);
+  if (defIt == ctx.sourceDefs.end() || defIt->second.instanceOfTemplate.empty() ||
+      specializationLeafForTypeText(defIt->second.instanceOfTemplate) != paramLeaf) {
+    return nullptr;
+  }
+  return &defIt->second;
+}
+
+} // namespace
+
+bool isSpecializedStructOfParamType(std::string typeText, std::string paramBaseType, const Context &ctx) {
+  return specializedStructDefinitionOfParamType(std::move(typeText), paramBaseType, ctx) != nullptr;
+}
+
+bool extractSpecializedStructTemplateArgsFromTypeText(std::string typeText,
+                                                      std::string paramBaseType,
+                                                      size_t paramCount,
+                                                      std::vector<std::string> &templateArgsOut,
+                                                      const Context &ctx) {
+  templateArgsOut.clear();
+  const Definition *specialization = specializedStructDefinitionOfParamType(std::move(typeText), paramBaseType, ctx);
+  if (specialization == nullptr || specialization->instanceTemplateArgs.size() != paramCount) {
+    return false;
+  }
+  templateArgsOut = specialization->instanceTemplateArgs;
+  return true;
+}
+
 bool buildTypePackOrderedArguments(const Definition &def,
                                    const std::vector<semantics::ParameterInfo> &callParams,
                                    const std::vector<Expr> *orderedCallArgs,

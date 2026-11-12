@@ -957,7 +957,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
           }
           return value;
         };
-        if (inferenceReceiverFamilyName(argBaseType) !=
+        // An argument that is a specialization of the generic struct the parameter names (`Holder<S>` against a
+        // `Holder<i32>` value, whose type is the specialized path).
+        const bool argIsSpecializedParamStruct =
+            argTemplateArgText.empty() && isSpecializedStructOfParamType(argBaseType, paramBaseType, ctx);
+        if (!argIsSpecializedParamStruct &&
+            inferenceReceiverFamilyName(argBaseType) !=
             inferenceReceiverFamilyName(paramBaseType)) {
           if (isStdlibCollectionHelper) {
             return false;
@@ -974,7 +979,12 @@ bool inferImplicitTemplateArgs(const Definition &def,
               !extractSpecializedSumTemplateArgsFromTypeText(argBaseType,
                                                              paramBaseType,
                                                              inferredParamNames,
-                                                             argTemplateArgs)) {
+                                                             argTemplateArgs) &&
+              !extractSpecializedStructTemplateArgsFromTypeText(argBaseType,
+                                                                paramBaseType,
+                                                                inferredParamNames.size(),
+                                                                argTemplateArgs,
+                                                                ctx)) {
             if (isStdlibCollectionHelper) {
               return false;
             }

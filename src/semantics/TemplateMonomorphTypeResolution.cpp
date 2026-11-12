@@ -670,6 +670,20 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
                               namespacePrefix,
                               scopedImportAliasesForNamespace(namespacePrefix, ctx),
                               ctx.sourceDefs);
+        // A method is written in its struct's namespace but sees the names around the struct: `Holder<i32>` in a
+        // parameter of `/Meter/measure` is the generic struct `/Holder`, not `/Meter/Holder`.
+        for (std::string scope = namespacePrefix;
+             ctx.templateDefs.count(resolvedPath) == 0 && ctx.genericTypeOverloads.count(resolvedPath) == 0 &&
+             !scope.empty();) {
+          const size_t slash = scope.find_last_of('/');
+          scope = slash == std::string::npos || slash == 0 ? std::string{} : scope.substr(0, slash);
+          const std::string outer = resolveNameToPath(
+              transform.name, scope, scopedImportAliasesForNamespace(scope, ctx), ctx.sourceDefs);
+          if (ctx.templateDefs.count(outer) > 0 || ctx.genericTypeOverloads.count(outer) > 0) {
+            resolvedPath = outer;
+            break;
+          }
+        }
         if (!selectGenericTypeOverloadPath(resolvedPath,
                                            transform.templateArgs.size(),
                                            ctx,

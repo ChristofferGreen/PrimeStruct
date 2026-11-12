@@ -1355,10 +1355,9 @@ App() {
   }
 
   // Waits on the events and calls the handlers registered in `handlers` until the app quits (handlers.prime,
-  // `AppHandlers.run`). The low level beside it is `waitEvent`. The parameter is any `Handlers` rather than an
-  // `AppHandlers<State>`: `State` is not inferred through a generic struct parameter yet (TODO-5737).
+  // `AppHandlers.run`). The low level beside it is `waitEvent`.
   [public effects(heap_alloc)]
-  run<Handlers>([Handlers mut] handlers) {
+  run<State>([AppHandlers<State> mut] handlers) {
     handlers.run()
   }
 

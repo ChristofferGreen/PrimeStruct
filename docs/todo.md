@@ -133,7 +133,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
 | TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | ready | generic-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
@@ -240,7 +239,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5737, TODO-5958
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5958
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -378,18 +377,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
-
-- [ ] TODO-5737: Implicit template arguments infer through a generic struct parameter
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
-  - parallel_track: template-inference
-  - scope: `size_of_holder<S>([Holder<S>] holder)` called as `size_of_holder(holder)` with a `Holder<i32>` local fails with `unable to infer implicit template arguments for /size_of_holder`, while a `[T]` parameter infers. `App.run` (stdlib/std/ui/native/native.prime) is therefore `run<Handlers>([Handlers mut] handlers)` and accepts any value with a `run()` method. Infer `S` from the argument's instance type.
-  - acceptance:
-    - a free function and a struct method with a `[Holder<S>]` parameter infer `S` on the VM and optexe; a negative test for an argument that is not a `Holder`; `App.run` takes `[AppHandlers<State> mut]`
-    - full release gate green
-  - stop_rule: inference through one generic struct parameter; no change to explicit template arguments.
 
 - [ ] TODO-5958: A field `[S mut] state{}` of a generic struct in a namespace lowers
   - owner: ai

@@ -245,4 +245,59 @@ main() {
   CHECK_MESSAGE(error.find("ambiguous call to /Box/add") != std::string::npos, error);
 }
 
+TEST_CASE("an argument that is not the generic struct of a parameter infers no template argument") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Holder<S>() {
+  [S mut] state{}
+}
+
+[struct]
+Other() {
+  [i32] n{0i32}
+}
+
+[return<int>]
+size_of_holder<S>([Holder<S>] holder) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [Other] other{Other{}}
+  return(size_of_holder(other))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("unable to infer implicit template arguments for /size_of_holder") != std::string::npos,
+                error);
+}
+
+TEST_CASE("a generic struct parameter infers its template arguments from a specialization") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Holder<S>() {
+  [S mut] state{}
+}
+
+[return<S>]
+state_of<S>([Holder<S>] holder) {
+  return(holder.state)
+}
+
+[return<int>]
+main() {
+  [Holder<i32>] holder{Holder<i32>{}}
+  return(state_of(holder))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_SUITE_END();

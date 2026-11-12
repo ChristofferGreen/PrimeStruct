@@ -280,7 +280,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("local generic maybe snake helpers reject monomorphized pick target") {
+TEST_CASE("local generic maybe snake helpers infer their template argument from a specialization") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
@@ -295,12 +295,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("pick target requires sum value") != std::string::npos);
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
-TEST_CASE("local generic maybe camelCase helpers reject monomorphized pick target") {
+TEST_CASE("local generic maybe camelCase helpers infer their template argument from a specialization") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
@@ -315,9 +313,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("pick target requires sum value") != std::string::npos);
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
 TEST_CASE("stdlib maybe import resolves specialized helper methods") {

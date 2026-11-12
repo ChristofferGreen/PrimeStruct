@@ -34,7 +34,11 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   type parameter) and is inferred per call site; omitted parameter envelopes are treated as `auto`. In bindings, `auto`
   requests local inference from the initializer and must resolve to a concrete envelope; unresolved or conflicting local
   inference is a diagnostic. Return `auto` is constrained by return statements; if all constraints resolve to a concrete
-  envelope the definition becomes monomorphic.
+  envelope the definition becomes monomorphic. A template parameter that a parameter names only through a generic
+  struct (`size_of_holder<S>([Holder<S>] holder)`, in a function or in a struct's method) is inferred from the
+  argument's specialization: `size_of_holder(holder)` with a `Holder<i32>` binds `S` to `i32`, and an argument that is
+  not a specialization of that struct (or a `Reference` or `Pointer` to one) is `unable to infer implicit template
+  arguments`. Explicit template arguments are unchanged.
   - Float literals accept standard decimal forms, including optional fractional digits (e.g., `1.`, `1.0`, `1.f32`,
     `1.e2`).
 - **Envelope:** the canonical AST uses a single envelope form for definitions and executions: `[transform-list]

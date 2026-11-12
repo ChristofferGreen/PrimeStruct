@@ -259,3 +259,85 @@ main() {
 )",
                    62);
 }
+
+TEST_CASE("template arguments are inferred through a generic struct parameter of a function and a method") {
+  runMethodProgram("struct_methods_infer_through_generic_struct", R"(
+namespace lib {
+  [public struct]
+  Pair<A, B>() {
+    [public A] first
+    [public B] second
+  }
+}
+
+[struct]
+Holder<S>() {
+  [S mut] state{}
+}
+
+[struct]
+Meter() {
+  [return<int>]
+  measure<S>([Holder<S>] holder) {
+    return(holder.state + 100i32)
+  }
+}
+
+[return<S>]
+state_of<S>([Holder<S>] holder) {
+  return(holder.state)
+}
+
+[return<A>]
+first_of<A, B>([/lib/Pair<A, B>] pair) {
+  return(pair.first)
+}
+
+[return<B>]
+second_of<A, B>([/lib/Pair<A, B>] pair) {
+  return(pair.second)
+}
+
+[return<int>]
+main() {
+  [Holder<i32> mut] holder{Holder<i32>{}}
+  holder.state = 5i32
+  [/lib/Pair<i32, i32>] pair{/lib/Pair<i32, i32>{[first] 7i32, [second] 9i32}}
+  [Meter] meter{Meter{}}
+  [i32] second{second_of(pair) + state_of(holder)}
+  return(meter.measure(holder) + first_of(pair) + second)
+}
+)",
+                   126);
+}
+
+TEST_CASE("a method parameter naming a generic struct of the root resolves it") {
+  runMethodProgram("struct_methods_generic_struct_parameter", R"(
+[struct]
+Holder<S>() {
+  [S mut] state{}
+}
+
+[return<int>]
+read_state([Holder<i32>] holder) {
+  return(holder.state + 100i32)
+}
+
+[struct]
+Meter() {
+  [return<int>]
+  measure([Holder<i32>] holder) {
+    return(holder.state + read_state(holder))
+  }
+}
+
+[return<int>]
+main() {
+  [Holder<i32> mut] holder{Holder<i32>{}}
+  holder.state = 5i32
+  [Meter] meter{Meter{}}
+  return(read_state(holder) + meter.measure(holder))
+}
+)",
+                   215);
+}

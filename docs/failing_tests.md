@@ -22,9 +22,11 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-11T18:24:26Z`
+- Last updated: `2026-11-12T06:58:58Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
-- Result: no failing CTest cases.
+- Result: `ctest` failed with status `8`.
+- Failing CTest cases:
+  - `733`: `PrimeStruct_primestruct_semantics_maybe_maybe_1_10`
 <!-- compile.sh:failing-tests:end -->
