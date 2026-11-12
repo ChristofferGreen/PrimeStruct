@@ -207,8 +207,8 @@ of sync with them.
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
-| TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
-| TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
+| TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | ready | reuse-phase-splits |
+| TODO-5968 | Expression call validation is ordered rules, not numbered phases | ready | reuse-phase-splits |
 | TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
@@ -1634,10 +1634,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
-- [ ] TODO-5967: Template monomorph expression rewriting is ordered rules, not numbered phases
+- [~] TODO-5967: Template monomorph expression rewriting is ordered rules, not numbered phases
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5966
+  - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6)
   - parallel_track: reuse-phase-splits
@@ -1653,8 +1653,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-5968: Expression call validation is ordered rules, not numbered phases
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5966
+  - status: ready
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6)
   - parallel_track: reuse-phase-splits
