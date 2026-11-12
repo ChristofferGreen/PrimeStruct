@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 SCANNED_SUFFIXES = {".h", ".hpp", ".cpp", ".cc", ".cxx"}
-SCANNED_SUBDIRS = (Path("src/ir_lowerer"), Path("src/emitter"))
+SCANNED_SUBDIRS = (Path("src/ir_lowerer"),)
 
 
 @dataclass(frozen=True)

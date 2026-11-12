@@ -5,13 +5,6 @@
 include/primec/ir/SoaPathHelpers.h soa
 include/primec/ir/StdlibCollectionPaths.h collection,soa
 include/primec/support/CollectionHelperNames.h collection,map,soa,vector
-src/emitter/EmitterBuiltinCallPathHelpers.cpp collection
-src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp soa
-src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp soa
-src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp collection,soa
-src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp soa
-src/emitter/EmitterEmitSetupReturnInferenceCollections.h soa
-src/emitter/EmitterHelpersTypes.cpp soa
 src/ir_lowerer/IrLowererAccessLoadHelpers.cpp collection
 src/ir_lowerer/IrLowererBindingTypeHelpers.cpp soa
 src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp collection,soa

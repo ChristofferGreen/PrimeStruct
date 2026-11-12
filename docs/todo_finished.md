@@ -2313,6 +2313,7 @@ are left unarchived.
 | TODO-5955 | A struct named like a callable field breaks the call of the field | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5957 | A `.view()` call on a vector element is accepted as a `StringView` argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5959 | The AST C++ and GLSL emitters are deleted | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->

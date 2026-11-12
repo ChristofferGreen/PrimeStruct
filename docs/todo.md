@@ -204,7 +204,6 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-5959 | The AST C++ and GLSL emitters are deleted | ready | reuse-dead-emitters |
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
@@ -268,7 +267,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5959, TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1587,23 +1586,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
-
-- [~] TODO-5959: The AST C++ and GLSL emitters are deleted
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 2)
-  - parallel_track: reuse-dead-emitters
-  - scope: `src/emitter` (AST to C++, 116 files, about 14,200 lines) and `src/glsl_emitter` (AST to GLSL, 8 files, about 2,900 lines) are compiled into `PRIMESTRUCT_CODEGEN_SOURCES` (CMakeLists.txt, about lines 607-664) but unreachable: `resolveIrBackendEmitKind` (src/support/EmitKind.cpp:45) maps `cpp`, `exe`, `optcpp`, `optexe`, `glsl`, `spirv` to their `-ir` forms, `src/ir/IrBackends.cpp` instantiates only the IR emitters, and nothing outside the two directories includes `include/primec/backend/Emitter.h` or `include/primec/backend/GlslEmitter.h`. Each carries its own copy of the builtin-name classifiers, type-text parsers and collection spelling predicates (docs/CodeReusePlan.md sections 3-5), and `src/emitter` has 41 `*Step.cpp` files whose IfBlock and BuiltinBlock families are identical after renaming. Delete both directories, their two public headers, `include/primec/testing/EmitterHelpers.h`, and the tests that call emitter internals: the `primec::emitter::` cases in `tests/unit/compile_run/emitters/` (27 files mix them with `primec`-driven cases, which stay), the `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_*` files, and the emitter checks in `tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h`. Update the CMake shard ranges, `tests/TEST_INVENTORY.md` (`scripts/generate_test_inventory.py`), the `docs/source_lock_inventory.md` entry for `test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`, `scripts/include_layer_allowlist.txt` and `scripts/source_file_size_allowlist.txt` if they name these files, and any doc (AGENTS.md, docs/spec) that calls `src/emitter` live.
-  - implementation_notes: Grep for `primec/testing/EmitterHelpers.h`, `primec::emitter::`, `GlslEmitter`, `src/emitter/`, `src/glsl_emitter/` across tests, cmake, scripts and docs. Before deleting, record `--emit=cpp`, `--emit=glsl` and `--emit=optcpp` output for the files in examples/0.Concrete to prove production output does not change. Do not move or refactor any emitter code; it is deleted, not migrated. The archived note in docs/todo_archive/2026-09.md (around line 14209) lists the pinned emitter tests that go with it.
-  - acceptance:
-    - `src/emitter`, `src/glsl_emitter`, `include/primec/backend/Emitter.h`, `include/primec/backend/GlslEmitter.h` and `include/primec/testing/EmitterHelpers.h` are gone, and no file under src, include, tests, cmake or scripts refers to them
-    - `--emit=cpp`, `--emit=glsl` and `--emit=optcpp` output for examples/0.Concrete is byte-identical before and after
-    - the removed source and test line counts and the release build time before and after are recorded in the commit message
-    - full release gate green, including the test registration and inventory checks
-  - stop_rule: deletion only; no refactoring of the IR emitters or of the classifier copies in other layers (TODO-5961, TODO-5962).
-  - notes: Runs alone among code-reuse leaves that touch `src/emitter`, `src/glsl_emitter`, `src/ir/IrPrinterHelpers.cpp` or the CMake source lists. Safe alongside TODO-5960, TODO-5969, TODO-5970.
 
 - [ ] TODO-5961: One template-type-text parser serves every compiler layer
   - owner: ai

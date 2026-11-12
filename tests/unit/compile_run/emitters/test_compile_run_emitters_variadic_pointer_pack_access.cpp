@@ -2,7 +2,6 @@
 #include "../test_compile_run_collection_conformance_helpers.h"
 #include "test_compile_run_emitters_helpers.h"
 
-#include "primec/testing/EmitterHelpers.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 

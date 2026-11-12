@@ -657,7 +657,7 @@ Planned testing-helper migration contract:
   capture layer, serialized-IR transport, and dedicated type-resolution parity fixture header are now gone, so no
   separate testing-only semantic snapshot transport layer remains; the helper migration cleanup is complete and the remaining public
   backend-oriented helpers
-  (`primec/testing/CompilePipelineDumpHelpers.h`, `primec/testing/EmitterHelpers.h`, and
+  (`primec/testing/CompilePipelineDumpHelpers.h` and
   `primec/testing/IrLowererTestHelpers.h`) are now pinned as intentional stable testing APIs rather than temporary
   compatibility wrappers.
 - `primec/testing/SemanticsValidationHelpers.h` and related helpers should migrate in this order:

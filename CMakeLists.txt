@@ -603,64 +603,6 @@ set(PRIMESTRUCT_IR_SOURCES
 
 set(PRIMESTRUCT_CODEGEN_SOURCES
   src/support/ExternalTooling.cpp
-  src/emitter/EmitterEmit.cpp
-  src/emitter/EmitterEmitSetupLifecycleHelperStep.cpp
-  src/emitter/EmitterEmitSetupMathImport.cpp
-  src/emitter/EmitterExpr.cpp
-  src/emitter/EmitterExprControlBuiltinBlockEarlyReturnStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingAutoStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingExplicitStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingFallbackStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingPreludeStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockBindingQualifiersStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockStatementStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockFinalValueStep.cpp
-  src/emitter/EmitterExprControlBoolLiteralStep.cpp
-  src/emitter/EmitterExprControlBuiltinBlockPreludeStep.cpp
-  src/emitter/EmitterExprControlBodyWrapperStep.cpp
-  src/emitter/EmitterExprControlCallPathStep.cpp
-  src/emitter/EmitterExprControlCountRewriteStep.cpp
-  src/emitter/EmitterExprControlFieldAccessStep.cpp
-  src/emitter/EmitterExprControlFloatLiteralStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingAutoStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingExplicitStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingFallbackStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyBindingStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyDispatchStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyHandlersStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyReturnStep.cpp
-  src/emitter/EmitterExprControlIfBranchBodyStatementStep.cpp
-  src/emitter/EmitterExprControlIfBranchEmitStep.cpp
-  src/emitter/EmitterExprControlIfBranchValueStep.cpp
-  src/emitter/EmitterExprControlIfBranchPreludeStep.cpp
-  src/emitter/EmitterExprControlIfBranchWrapperStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingPreludeStep.cpp
-  src/emitter/EmitterExprControlIfBlockBindingQualifiersStep.cpp
-  src/emitter/EmitterExprControlIfBlockStatementStep.cpp
-  src/emitter/EmitterExprControlIfBlockFinalValueStep.cpp
-  src/emitter/EmitterExprControlIfBlockEarlyReturnStep.cpp
-  src/emitter/EmitterExprControlIfTernaryFallbackStep.cpp
-  src/emitter/EmitterExprControlIfTernaryStep.cpp
-  src/emitter/EmitterExprControlIfEnvelopeStep.cpp
-  src/emitter/EmitterExprControlIntegerLiteralStep.cpp
-  src/emitter/EmitterExprControlMethodPathStep.cpp
-  src/emitter/EmitterExprControlStringLiteralStep.cpp
-  src/emitter/EmitterExprControlNameStep.cpp
-  src/emitter/EmitterBuiltinCallPathHelpers.cpp
-  src/emitter/EmitterBuiltinCollectionInferenceHelpers.cpp
-  src/emitter/EmitterBuiltinMethodResolutionHelpers.cpp
-  src/emitter/EmitterBuiltinMethodResolutionMetadataHelpers.cpp
-  src/emitter/EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp
-  src/emitter/EmitterHelpersBuiltins.cpp
-  src/emitter/EmitterHelpersStructTypes.cpp
-  src/emitter/EmitterHelpersTypes.cpp
-  src/glsl_emitter/GlslEmitter.cpp
-  src/glsl_emitter/GlslEmitterExpr.cpp
-  src/glsl_emitter/GlslEmitterExprBuiltins.cpp
-  src/glsl_emitter/GlslEmitterExprMathBuiltins.cpp
-  src/glsl_emitter/GlslEmitterHelpers.cpp
-  src/glsl_emitter/GlslEmitterStatements.cpp
   src/backend/IrToCppEmitter.cpp
   src/backend/IrToOptCppEmitter.cpp
   src/backend/IrToCppHostImports.cpp
@@ -1765,13 +1707,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_statements_calls_step_validates_dependencies.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_inline_call_return_value_step_emits_expected_instructions.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_expr_emit_setup_dispatches_upload_readback_passthrough_step.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_count_rewrite_step_only_rewrites_bare_collection_calls.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_builtin_block_final_value_step_handles_final_statements.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_block_final_value_step_emits_final_returns.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_body_return_step_dispatches_returns.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_control_if_branch_emit_step_composes_value_and_handlers.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp
-    tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_collection_key_value_surface_wrappers.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_semantics_validator_public_contracts.cpp
     tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_ir_lowerer_shared_types_key_value_args_pack_predicates.cpp
@@ -1917,8 +1853,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/emitters/test_compile_run_emitters_lambda_mutator_resolution.cpp
     tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_push_and_count_helpers.cpp
     tests/unit/compile_run/emitters/test_compile_run_emitters_map_access_and_collection_rewrites.cpp
-    tests/unit/compile_run/emitters/test_compile_run_emitters_vector_access_metadata_resolution.cpp
-    tests/unit/compile_run/emitters/test_compile_run_emitters_map_metadata_resolution.cpp
     tests/unit/compile_run/emitters/test_compile_run_emitters_vector_receiver_metadata_resolution.cpp
     tests/unit/compile_run/emitters/test_compile_run_emitters_vector_alias_template_forwarding.cpp
     tests/unit/compile_run/emitters/test_compile_run_emitters_namespaced_vector_map_helper_resolution.cpp

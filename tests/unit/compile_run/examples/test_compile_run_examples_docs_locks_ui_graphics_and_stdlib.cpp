@@ -282,26 +282,11 @@ TEST_CASE("image api docs and stdlib stay source locked") {
 
 TEST_CASE("file readByte docs and helpers stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
-  std::filesystem::path preludePath = std::filesystem::path("..") / "src" / "emitter" / "EmitterEmitPrelude.h";
-  std::filesystem::path resultCallsPath =
-      std::filesystem::path("..") / "src" / "emitter" / "EmitterExprResultCalls.h";
-  std::filesystem::path fileAccessCallsPath =
-      std::filesystem::path("..") / "src" / "emitter" / "EmitterExprFileAccessCalls.h";
   std::filesystem::path lowererPath = std::filesystem::path("..") / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
   std::filesystem::path fileStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "file" / "file.prime";
   std::filesystem::path fileErrorsPath = std::filesystem::path("..") / "stdlib" / "std" / "file" / "errors.prime";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
-  }
-  if (!std::filesystem::exists(preludePath)) {
-    preludePath = std::filesystem::current_path() / "src" / "emitter" / "EmitterEmitPrelude.h";
-  }
-  if (!std::filesystem::exists(resultCallsPath)) {
-    resultCallsPath = std::filesystem::current_path() / "src" / "emitter" / "EmitterExprResultCalls.h";
-  }
-  if (!std::filesystem::exists(fileAccessCallsPath)) {
-    fileAccessCallsPath =
-        std::filesystem::current_path() / "src" / "emitter" / "EmitterExprFileAccessCalls.h";
   }
   if (!std::filesystem::exists(lowererPath)) {
     lowererPath = std::filesystem::current_path() / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
@@ -313,17 +298,11 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
     fileErrorsPath = std::filesystem::current_path() / "stdlib" / "std" / "file" / "errors.prime";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
-  REQUIRE(std::filesystem::exists(preludePath));
-  REQUIRE(std::filesystem::exists(resultCallsPath));
-  REQUIRE(std::filesystem::exists(fileAccessCallsPath));
   REQUIRE(std::filesystem::exists(lowererPath));
   REQUIRE(std::filesystem::exists(fileStdlibPath));
   REQUIRE(std::filesystem::exists(fileErrorsPath));
 
   const std::string primeStructDoc = readPrimeStructSpec(primeStructPath.string());
-  const std::string prelude = readFile(preludePath.string());
-  const std::string resultCalls = readFile(resultCallsPath.string());
-  const std::string fileAccessCalls = readFile(fileAccessCallsPath.string());
   const std::string lowerer = readFile(lowererPath.string());
   const std::string fileStdlib = readFile(fileStdlibPath.string());
   const std::string fileErrors = readFile(fileErrorsPath.string());
@@ -356,74 +335,6 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(fileErrors.find("isEof([FileError] err)") != std::string::npos);
   CHECK(fileErrors.find("return(/std/file/FileError/isEof(err))") != std::string::npos);
 
-  CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
-  CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
-  CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
-  CHECK(prelude.find("struct ps_result_status") != std::string::npos);
-  CHECK(prelude.find("static constexpr uint32_t ps_result_ok_tag = 0u;") !=
-        std::string::npos);
-  CHECK(prelude.find("static constexpr uint32_t ps_result_error_tag = 1u;") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline ps_result_status ps_result_status_ok()") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline ps_result_status ps_result_status_error(uint32_t err)") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline ps_result_status ps_result_status_from_error(uint32_t err)") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline bool ps_result_status_is_error(ps_result_status result)") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline uint32_t ps_result_status_error_payload(ps_result_status result)") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline ps_result_status ps_try_status(ps_result_status result") !=
-        std::string::npos);
-  CHECK(prelude.find("static inline uint32_t ps_try_status") == std::string::npos);
-  CHECK(prelude.find("struct ps_result_value") != std::string::npos);
-  CHECK(prelude.find("uint32_t tag = 0;") != std::string::npos);
-  CHECK(prelude.find("uint32_t error = 0;") != std::string::npos);
-  CHECK(prelude.find("uint32_t ok = 0;") != std::string::npos);
-  CHECK(prelude.find("uint32_t payload = 0;") == std::string::npos);
-  CHECK(prelude.find("result.tag == ps_result_error_tag") !=
-        std::string::npos);
-  CHECK(prelude.find("result.tag != 0u") == std::string::npos);
-  CHECK(prelude.find("return result.ok;") != std::string::npos);
-  CHECK(prelude.find("return result.payload;") == std::string::npos);
-  CHECK(prelude.find("operator uint64_t()") == std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_value(uint64_t raw)") == std::string::npos);
-  CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);
-  CHECK(prelude.find("ps_result_value_ok") != std::string::npos);
-  CHECK(prelude.find("ps_result_value_error") != std::string::npos);
-  CHECK(prelude.find("ps_result_value_is_error") != std::string::npos);
-  CHECK(prelude.find("ps_result_value_error_payload") != std::string::npos);
-  CHECK(prelude.find("ps_result_value_ok_payload") != std::string::npos);
-  CHECK(prelude.find("ps_result_is_error") == std::string::npos);
-  CHECK(prelude.find("ps_result_error_payload") == std::string::npos);
-  CHECK(prelude.find("ps_result_payload") == std::string::npos);
-  CHECK(prelude.find("ps_result_pack") == std::string::npos);
-  CHECK(prelude.find("static inline uint64_t ps_legacy_result_pack") == std::string::npos);
-  CHECK(prelude.find("static inline uint64_t ps_file_open_read") == std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_pack") == std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_error") == std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_payload") == std::string::npos);
-  CHECK(resultCalls.find("static_cast<\" << sourceResultValueCppType << \">(ps_next)") ==
-        std::string::npos);
-  CHECK(resultCalls.find("static_cast<\" + sourceResultValueCppType + \">(0)") ==
-        std::string::npos);
-  CHECK(resultCalls.find("sourceResultValueOkExpr(") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultValueErrorExpr(") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultValueIsErrorExpr(") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultValueErrorPayloadExpr(") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultValueOkPayloadExpr(") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultIsErrorExpr(") == std::string::npos);
-  CHECK(resultCalls.find("sourceResultErrorPayloadExpr(") == std::string::npos);
-  CHECK(resultCalls.find("sourceResultValuePayloadExpr(") == std::string::npos);
-  CHECK(resultCalls.find("sourceResultPackExpr") == std::string::npos);
-  CHECK(resultCalls.find("sourceResultStatusOkExpr()") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultStatusIsErrorExpr(argText)") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultStatusErrorPayloadExpr(guardedResultName)") !=
-        std::string::npos);
-  CHECK(resultCalls.find("sourceResultStatusCppType") == std::string::npos);
-  CHECK(fileAccessCalls.find("ps_result_status_from_error(ps_file_read_byte") !=
-        std::string::npos);
 
   CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);
   CHECK(lowerer.find("read_byte requires mutable integer binding") != std::string::npos);

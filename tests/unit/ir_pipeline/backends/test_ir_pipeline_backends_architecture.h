@@ -324,7 +324,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path scriptPath = cwd / "scripts" / "check_include_layers.py";
   std::filesystem::path allowlistPath = cwd / "scripts" / "include_layer_allowlist.txt";
-  std::filesystem::path emitterTestApiPath = cwd / "include" / "primec" / "testing" / "EmitterHelpers.h";
   std::filesystem::path irLowererTestApiPath = cwd / "include" / "primec" / "testing" / "IrLowererTestHelpers.h";
   std::filesystem::path irLowererCountAccessContractsApiPath =
       cwd / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
@@ -342,8 +341,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
       cwd / "tests" / "unit" / "parser" / "test_parser_basic_parser_helpers.cpp";
   std::filesystem::path textFilterHelperTestPath =
       cwd / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
-  std::filesystem::path compileRunTestPath =
-      cwd / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_bounds.cpp";
   std::filesystem::path irPipelineTestPath = cwd / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
   std::filesystem::path validationHelpersTestPath =
       cwd / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_helpers.h";
@@ -352,7 +349,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   if (!std::filesystem::exists(scriptPath)) {
     scriptPath = cwd.parent_path() / "scripts" / "check_include_layers.py";
     allowlistPath = cwd.parent_path() / "scripts" / "include_layer_allowlist.txt";
-    emitterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "EmitterHelpers.h";
     irLowererTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererTestHelpers.h";
     irLowererCountAccessContractsApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
@@ -369,8 +365,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         cwd.parent_path() / "tests" / "unit" / "parser" / "test_parser_basic_parser_helpers.cpp";
     textFilterHelperTestPath =
         cwd.parent_path() / "tests" / "unit" / "text_filter" / "test_text_filter_helpers.cpp";
-    compileRunTestPath =
-        cwd.parent_path() / "tests" / "unit" / "compile_run" / "vm" / "test_compile_run_vm_bounds.cpp";
     irPipelineTestPath = cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "test_ir_pipeline.cpp";
     validationHelpersTestPath =
         cwd.parent_path() / "tests" / "unit" / "ir_pipeline" / "validation" / "test_ir_pipeline_validation_helpers.h";
@@ -379,7 +373,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   }
   REQUIRE(std::filesystem::exists(scriptPath));
   REQUIRE(std::filesystem::exists(allowlistPath));
-  REQUIRE(std::filesystem::exists(emitterTestApiPath));
   REQUIRE(std::filesystem::exists(irLowererTestApiPath));
   REQUIRE(std::filesystem::exists(irLowererCountAccessContractsApiPath));
   REQUIRE(std::filesystem::exists(irLowererStageContractsApiPath));
@@ -391,7 +384,6 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   REQUIRE(std::filesystem::exists(textFilterTestApiPath));
   REQUIRE(std::filesystem::exists(parserHelperTestPath));
   REQUIRE(std::filesystem::exists(textFilterHelperTestPath));
-  REQUIRE(std::filesystem::exists(compileRunTestPath));
   REQUIRE(std::filesystem::exists(irPipelineTestPath));
   REQUIRE(std::filesystem::exists(validationHelpersTestPath));
   REQUIRE(std::filesystem::exists(countAccessValidationTestPath));
@@ -419,25 +411,15 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(allowlist.find("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp -> src/semantics/SemanticsHelpers.h") ==
         std::string::npos);
   CHECK(allowlist.find("src/ir_lowerer/ -> src/semantics/") == std::string::npos);
-  CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h") ==
         std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorStatementLoopCountStep.h") ==
         std::string::npos);
-  CHECK(allowlist.find("tests/unit/test_compile_run.cpp -> src/emitter/EmitterHelpers.h") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_parser_basic_parser_helpers.h -> src/parser/ParserHelpers.h") ==
         std::string::npos);
   CHECK(allowlist.find("tests/unit/test_text_filter_helpers.cpp -> src/text_filter/TextFilterHelpers.h") ==
         std::string::npos);
-
-  const std::string emitterTestApi = readTextFile(emitterTestApiPath);
-  CHECK(emitterTestApi.find("namespace primec::emitter") != std::string::npos);
-  CHECK(emitterTestApi.find("bool runEmitterEmitSetupMathImport(const Program &program);") != std::string::npos);
-  CHECK(emitterTestApi.find("std::optional<EmitterLifecycleHelperMatch> runEmitterEmitSetupLifecycleHelperMatchStep") !=
-        std::string::npos);
-  CHECK(emitterTestApi.find("EmitterExprControlIfBranchBodyEmitResult") != std::string::npos);
-  CHECK(emitterTestApi.find("EmitterExprControlIfTernaryFallbackStepResult") != std::string::npos);
 
   const std::string irLowererTestApi = readTextFile(irLowererTestApiPath);
   const std::string irLowererCountAccessContractsApi =
@@ -571,16 +553,12 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(textFilterHelperTest.find("#include \"primec/testing/TextFilterHelpers.h\"") != std::string::npos);
   CHECK(textFilterHelperTest.find("#include \"src/text_filter/TextFilterHelpers.h\"") == std::string::npos);
 
-  const std::string compileRunTest = readTextFile(compileRunTestPath);
-  CHECK(compileRunTest.find("#include \"src/emitter/EmitterHelpers.h\"") == std::string::npos);
 
   const std::string irPipelineTest = readTextFile(irPipelineTestPath);
   const std::string validationHelpersTest = readTextFile(validationHelpersTestPath);
   const std::string countAccessValidationTest = readTextFile(countAccessValidationTestPath);
-  CHECK(irPipelineTest.find("#include \"primec/testing/EmitterHelpers.h\"") != std::string::npos);
   CHECK(irPipelineTest.find("#include \"primec/testing/IrLowererTestHelpers.h\"") != std::string::npos);
   CHECK(irPipelineTest.find("#include \"primec/testing/SemanticsValidationHelpers.h\"") != std::string::npos);
-  CHECK(irPipelineTest.find("#include \"src/emitter/") == std::string::npos);
   CHECK(irPipelineTest.find("#include \"src/ir_lowerer/") == std::string::npos);
   CHECK(irPipelineTest.find("#include \"src/semantics/SemanticsValidatorExprCaptureSplitStep.h\"") ==
         std::string::npos);

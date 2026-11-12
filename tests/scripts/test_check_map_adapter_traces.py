@@ -38,9 +38,8 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="ps_map_adapter_clean_") as temp:
         scanned_root = Path(temp)
-        (scanned_root / "src" / "emitter").mkdir(parents=True)
         (scanned_root / "src" / "ir_lowerer").mkdir(parents=True)
-        (scanned_root / "src" / "emitter" / "AllowedStdMap.cpp").write_text(
+        (scanned_root / "src" / "ir_lowerer" / "AllowedStdMap.cpp").write_text(
             "#include <map>\nstd::map<int, int> values;\n",
             encoding="utf-8",
         )

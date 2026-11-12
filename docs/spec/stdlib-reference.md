@@ -243,10 +243,6 @@
       decision: keep the stdlib-sum lowering only until ordinary stdlib helper calls can lower without bespoke
       result-helper branches, and delete packed bridge emission after source and IR-backed paths no longer need packed
       Result values.
-    - **Source C++ emitter:** `src/emitter/EmitterExprResultCalls.h` and `src/emitter/EmitterExprLambda.h` own the
-      source C++ compatibility bridge for helper expression emission and lambda result inference. Retirement decision:
-      keep the bridge quarantined behind those files until the source C++ emitter lowers imported Result sums directly
-      or delegates to ordinary stdlib helper bodies.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned

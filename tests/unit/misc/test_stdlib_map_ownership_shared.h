@@ -46,8 +46,7 @@ inline bool isSourceFile(const std::filesystem::path &path) {
 
 inline std::vector<std::filesystem::path> productionMapTraceFiles() {
   std::vector<std::filesystem::path> files;
-  for (const auto &root :
-       {repoRoot() / "src" / "ir_lowerer", repoRoot() / "src" / "emitter"}) {
+  for (const auto &root : {repoRoot() / "src" / "ir_lowerer"}) {
     for (const auto &entry : std::filesystem::recursive_directory_iterator(root)) {
       if (entry.is_regular_file() && isSourceFile(entry.path())) {
         files.push_back(entry.path());
@@ -183,12 +182,6 @@ struct MapOwnershipSources {
   std::string mapSoaBuiltinsSource;
   std::string lateMapSoaBuiltinsSource;
   std::string countCapacityMapBuiltinSource;
-  std::string emitterCallPathHelpersSource;
-  std::string emitterReturnInferenceCollectionsSource;
-  std::string emitterCollectionTypeHelpersSource;
-  std::string emitterPackedArgsSource;
-  std::string emitterHelpersSource;
-  std::string emitterMethodMetadataSource;
   std::string statementLowererSource;
   std::string operatorCollectionMutationSource;
   std::string lowererCallHelpersSource;
@@ -196,9 +189,6 @@ struct MapOwnershipSources {
   std::string lowerStatementsExprSource;
   std::string lowerStatementsBindingsSource;
   std::string inlineNativeSource;
-  std::string emitterMethodResolutionSource;
-  std::string emitterMethodTypeInferenceSource;
-  std::string emitterHelpersTypesSource;
   std::string nativeTailSource;
   std::string tailDispatchSource;
   std::string lowerEmitExprCollectionSource;
@@ -551,22 +541,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   const std::string countCapacityMapBuiltinSource =
       readText(repoRoot() / "src" / "semantics" /
                "SemanticsValidatorExprCountCapacityBuiltins.cpp");
-  const std::string emitterCallPathHelpersSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterBuiltinCallPathHelpers.cpp");
-  const std::string emitterReturnInferenceCollectionsSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterEmitSetupReturnInferenceCollections.h");
-  const std::string emitterCollectionTypeHelpersSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterExprCollectionTypeHelpers.h");
-  const std::string emitterPackedArgsSource =
-      readText(repoRoot() / "src" / "emitter" / "EmitterExprPackedArgs.h");
-  const std::string emitterHelpersSource =
-      readText(repoRoot() / "src" / "emitter" / "EmitterHelpers.h");
-  const std::string emitterMethodMetadataSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterBuiltinMethodResolutionMetadataHelpers.cpp");
   const std::string statementLowererSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp");
   const std::string operatorCollectionMutationSource =
@@ -584,14 +558,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h");
   const std::string inlineNativeSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp");
-  const std::string emitterMethodResolutionSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterBuiltinMethodResolutionHelpers.cpp");
-  const std::string emitterMethodTypeInferenceSource =
-      readText(repoRoot() / "src" / "emitter" /
-               "EmitterBuiltinMethodResolutionTypeInferenceHelpers.cpp");
-  const std::string emitterHelpersTypesSource =
-      readText(repoRoot() / "src" / "emitter" / "EmitterHelpersTypes.cpp");
   const std::string nativeTailSource =
       readText(repoRoot() / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp");
   const std::string tailDispatchSource =
@@ -724,11 +690,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   REQUIRE(!collectionAccessValidationSource.empty());
   REQUIRE(!collectionAccessSource.empty());
   REQUIRE(!countCapacityMapBuiltinSource.empty());
-  REQUIRE(!emitterCallPathHelpersSource.empty());
-  REQUIRE(!emitterReturnInferenceCollectionsSource.empty());
-  REQUIRE(!emitterCollectionTypeHelpersSource.empty());
-  REQUIRE(!emitterPackedArgsSource.empty());
-  REQUIRE(!emitterMethodMetadataSource.empty());
   REQUIRE(!statementLowererSource.empty());
   REQUIRE(!operatorCollectionMutationSource.empty());
   REQUIRE(!lowererCallHelpersSource.empty());
@@ -736,9 +697,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   REQUIRE(!lowerStatementsExprSource.empty());
   REQUIRE(!lowerStatementsBindingsSource.empty());
   REQUIRE(!inlineNativeSource.empty());
-  REQUIRE(!emitterMethodResolutionSource.empty());
-  REQUIRE(!emitterMethodTypeInferenceSource.empty());
-  REQUIRE(!emitterHelpersTypesSource.empty());
   REQUIRE(!nativeTailSource.empty());
   REQUIRE(!tailDispatchSource.empty());
   REQUIRE(!lowerEmitExprCollectionSource.empty());
@@ -854,12 +812,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   result.mapSoaBuiltinsSource = mapSoaBuiltinsSource;
   result.lateMapSoaBuiltinsSource = lateMapSoaBuiltinsSource;
   result.countCapacityMapBuiltinSource = countCapacityMapBuiltinSource;
-  result.emitterCallPathHelpersSource = emitterCallPathHelpersSource;
-  result.emitterReturnInferenceCollectionsSource = emitterReturnInferenceCollectionsSource;
-  result.emitterCollectionTypeHelpersSource = emitterCollectionTypeHelpersSource;
-  result.emitterPackedArgsSource = emitterPackedArgsSource;
-  result.emitterHelpersSource = emitterHelpersSource;
-  result.emitterMethodMetadataSource = emitterMethodMetadataSource;
   result.statementLowererSource = statementLowererSource;
   result.operatorCollectionMutationSource = operatorCollectionMutationSource;
   result.lowererCallHelpersSource = lowererCallHelpersSource;
@@ -867,9 +819,6 @@ inline MapOwnershipSources loadMapOwnershipSources() {
   result.lowerStatementsExprSource = lowerStatementsExprSource;
   result.lowerStatementsBindingsSource = lowerStatementsBindingsSource;
   result.inlineNativeSource = inlineNativeSource;
-  result.emitterMethodResolutionSource = emitterMethodResolutionSource;
-  result.emitterMethodTypeInferenceSource = emitterMethodTypeInferenceSource;
-  result.emitterHelpersTypesSource = emitterHelpersTypesSource;
   result.nativeTailSource = nativeTailSource;
   result.tailDispatchSource = tailDispatchSource;
   result.lowerEmitExprCollectionSource = lowerEmitExprCollectionSource;

@@ -50,9 +50,6 @@ TRACE_PATTERNS = [
 ALLOWED_MAX_COUNTS: dict[tuple[str, str], int] = {
     ("src/ir/IrPrinterHelpers.cpp", "experimental-map-path"): 4,
     ("src/ir/IrPrinterHelpers.cpp", "map-backing-type-symbol"): 2,
-    ("src/emitter/EmitterBuiltinCallPathHelpers.cpp", "experimental-map-path"): 1,
-    ("src/emitter/EmitterHelpersTypes.cpp", "experimental-map-path"): 4,
-    ("src/emitter/EmitterHelpersTypes.cpp", "map-backing-type-symbol"): 2,
     ("src/ir_lowerer/IrLowererAccessTargetResolution.cpp", "experimental-map-path"): 5,
     ("src/ir_lowerer/IrLowererAccessTargetResolution.cpp", "map-backing-type-symbol"): 1,
     ("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp", "experimental-map-path"): 4,
