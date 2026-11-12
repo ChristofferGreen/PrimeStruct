@@ -541,10 +541,7 @@ namespace web {
           [Reference<Writer>] out{location(page)}
           [Reference<State>] state{location(this.state)}
           this.regions[index].render(out, state)
-          // Not `response.clear()`: `clear` on a reference parameter does not resolve in a generic struct's method
-          // (TODO-5732).
-          response.status = 200i32
-          response.headerLines.clear()
+          response.clear()
           response.html(page.out)
           response.header(fragmentHeader(), id)
           return()

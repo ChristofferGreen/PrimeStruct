@@ -133,7 +133,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5732 | A method call on a reference parameter resolves in a generic struct's method | ready | generic-methods |
 | TODO-5735 | Same-arity overloads of struct methods resolve by argument type | ready | method-overloads |
 | TODO-5736 | `pick` and sum parameters in a generic struct's method lower | ready | generic-methods |
 | TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
@@ -242,7 +241,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5732, TODO-5735, TODO-5736, TODO-5737
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -380,19 +379,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
-
-- [ ] TODO-5732: A method call on a reference parameter resolves in a generic struct's method
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5706)
-  - parallel_track: generic-methods
-  - scope: In a method of a generic struct, `response.clear()` on a `[Reference<Response>] response` parameter (`/std/http`) is rejected with `unknown call target: clear`, while `response.redirect("/")` in the same method and `response.clear()` in a free function both work. Repro: `Holder<T>` with `[mut effects(heap_alloc)] resetIt([Reference<Response>] response) { response.redirect("/") response.clear() }`, instantiated as `Holder<i32>` and called from `main`; the name `clear` likely takes a collection-helper path when the receiver's type is resolved during the template's instantiation. `WebApp.answerFragment` (stdlib/std/web/web.prime) resets the status and header lines by hand instead.
-  - acceptance:
-    - the repro runs on the VM and optexe and `answerFragment` calls `response.clear()`
-    - full release gate green
-  - stop_rule: method resolution on reference parameters in generic struct methods; no new methods.
-  - notes: TODO-5709 hit the same name on a field: `this.closes.clear()` on a `vector<NativeWindowHandler<State>>` field in a method of `AppHandlers<State>` is `unknown call target: clear`, so the single-handler fields keep every registration and use the last.
 
 - [ ] TODO-5735: Same-arity overloads of struct methods resolve by argument type
   - owner: ai

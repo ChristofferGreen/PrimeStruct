@@ -29,6 +29,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.calls_flow.channels
   primestruct.semantics.imports
   primestruct.semantics.lambdas
+  primestruct.semantics.struct_methods
   primestruct.semantics.text_views
   primestruct.semantics.type_aliases
   primestruct.semantics.maybe
@@ -313,6 +314,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 37
   SHARD_PREFIX "lambdas"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.struct_methods"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 3
+  SHARD_PREFIX "struct_methods"
 )
 
 addPrimeStructManagedDoctestSuite(

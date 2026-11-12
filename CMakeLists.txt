@@ -1117,6 +1117,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_pick_values.cpp
     tests/unit/program_matrix/test_program_matrix_results.cpp
     tests/unit/program_matrix/test_program_matrix_shared_strings.cpp
+    tests/unit/program_matrix/test_program_matrix_struct_methods.cpp
     tests/unit/program_matrix/test_program_matrix_sum_owners.cpp
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
     tests/unit/program_matrix/test_program_matrix_tasks.cpp
@@ -2234,6 +2235,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/entry/test_semantics_entry_tags.cpp
     tests/unit/semantics/test_semantics_enum.cpp
     tests/unit/semantics/test_semantics_lambdas.cpp
+    tests/unit/semantics/test_semantics_struct_methods.cpp
     tests/unit/semantics/test_semantics_text_views.cpp
     tests/unit/semantics/test_semantics_type_aliases.cpp
     tests/unit/semantics/test_semantics_move.cpp
@@ -2440,6 +2442,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.enum
     primestruct.semantics.imports
     primestruct.semantics.lambdas
+    primestruct.semantics.struct_methods
     primestruct.semantics.text_views
     primestruct.semantics.type_aliases
     primestruct.semantics.maybe
@@ -3697,6 +3700,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.results
     primestruct.program_matrix.shared_programs
     primestruct.program_matrix.shared_strings
+    primestruct.program_matrix.struct_methods
     primestruct.program_matrix.sum_owners
     primestruct.program_matrix.tasks
     primestruct.program_matrix.text_views
@@ -3708,7 +3712,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
     control=37 element_copies=10 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=16
-    shared_strings=5 sum_owners=6 tasks=15 text_views=4 vector_owners=21)
+    shared_strings=5 struct_methods=1 sum_owners=6 tasks=15 text_views=4 vector_owners=21)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

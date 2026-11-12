@@ -447,9 +447,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     std::string resolvedType = resolveTypePath(typeName, namespacePrefix);
     if (structNames_.count(resolvedType) == 0 && defMap_.count(resolvedType) == 0) {
-      auto importIt = importAliases_.find(typeName);
-      if (importIt != importAliases_.end()) {
-        resolvedType = importIt->second;
+      // A type declared in an enclosing namespace or at the root (a method of a generic struct runs in the
+      // specialization's own namespace), or an imported one.
+      const std::string enclosingType = resolveMethodTargetStructTypePath(typeName, namespacePrefix);
+      if (!enclosingType.empty()) {
+        resolvedType = enclosingType;
       }
     }
     return resolvedType;
@@ -640,6 +642,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         binding.typeName, expr.namespacePrefix, "Collection");
   };
   auto hasVisibleDefinitionPath = [&](const std::string &path) {
+    // `cell.clear()` names no path of its own: the call's namespace plus the method name (`/lib/Holder__t1a2b/clear`)
+    // is a definition only where one exists, whatever imports cover the namespace; the receiver's type finds the
+    // method.
+    if (expr.isMethodCall && expr.name.find('/') == std::string::npos && path == resolveCalleePath(expr)) {
+      return defMap_.count(path) > 0 || paramsByDef_.count(path) > 0;
+    }
     if (hasImportedDefinitionPath(path) ||
         hasDeclaredDefinitionPath(path)) {
       return true;
