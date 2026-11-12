@@ -105,4 +105,39 @@ TEST_CASE("lowerer collection spelling helpers come from the classifier") {
   CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "a/count");
 }
 
+TEST_CASE("lowerer vector record paths and collection helper candidates have one definition") {
+  using namespace primec::ir_lowerer;
+  CHECK(experimentalCollectionTypePath("vector", "Vector") == "/std/collections/vector/Vector");
+  CHECK(experimentalCollectionTypePath("map", "Map") == "/std/collections/experimental_map/Map");
+
+  // Record paths are resolved paths: the backing path and its `__` specializations only.
+  const std::string vectorPath = vectorBackingTypePath();
+  CHECK(isCollectionVectorRecordPath(vectorPath));
+  CHECK(isCollectionVectorRecordPath(vectorPath + "__t1a2b"));
+  CHECK_FALSE(isCollectionVectorRecordPath("Vector"));
+  CHECK_FALSE(isCollectionVectorRecordPath("Vector<i32>"));
+  CHECK_FALSE(isCollectionVectorRecordPath(vectorPath + "Extra"));
+  // Type text may also be bare, so a caller reading unresolved text uses the wider check.
+  CHECK(isCollectionVectorTypeText(vectorPath));
+  CHECK(isCollectionVectorTypeText("Vector<i32>"));
+  CHECK_FALSE(isCollectionVectorTypeText("Other<i32>"));
+
+  // Candidates keep the path as written, then its rooted form with the generated suffix dropped.
+  const auto plain = collectionHelperPathCandidates("array/count");
+  REQUIRE(plain.size() == 2);
+  CHECK(plain[0] == "array/count");
+  CHECK(plain[1] == "/array/count");
+  const auto suffixed = collectionHelperPathCandidates("vector/push__t1a2b");
+  REQUIRE(suffixed.size() == 2);
+  CHECK(suffixed[0] == "vector/push__t1a2b");
+  CHECK(suffixed[1] == "/vector/push");
+  // `/array/<name>` adds the canonical vector helper unless the name is a removed alias or the
+  // registry has no such helper.
+  CHECK(collectionHelperPathCandidates("/array/count").size() == 1);
+  const std::string canonicalInsert = primec::stdlibSurfaceCanonicalHelperPath(
+      primec::StdlibSurfaceId::CollectionsManifestSurface0, "insert");
+  CHECK(collectionHelperPathCandidates("/array/insert").size() ==
+        (canonicalInsert.empty() ? 1u : 2u));
+}
+
 TEST_SUITE_END();

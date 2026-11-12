@@ -20,14 +20,6 @@ bool hasInferredTypedWrappedKeyValue(const LocalInfo &info, LocalInfo::Kind kind
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
-bool isExperimentalCollectionStructPath(const std::string &structTypeName,
-                                        std::string_view collectionName,
-                                        std::string_view typeName) {
-  const std::string basePath = collection_paths::memberPath(
-      collection_paths::typeIdentityFolder(collectionName), typeName);
-  return collection_paths::isTypePathOrSpecialization(structTypeName, basePath);
-}
-
 std::string unrootedSoaCollectionPath(std::string_view folderName) {
   std::string path = soa_paths::collectionPath(folderName);
   if (!path.empty() && path.front() == '/') {
@@ -38,12 +30,6 @@ std::string unrootedSoaCollectionPath(std::string_view folderName) {
 
 std::string soaConversionHelperName() {
   return "to_aos";
-}
-
-bool isCollectionVectorRecordPath(const std::string &structTypeName) {
-  return isExperimentalCollectionStructPath(structTypeName,
-                                            collection_paths::kVectorFolder,
-                                            collection_paths::kVectorTypeName);
 }
 
 bool getArrayVectorAccessClassifierName(const Expr &expr,

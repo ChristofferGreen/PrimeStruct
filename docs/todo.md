@@ -205,7 +205,6 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
-| TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | ready | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | ready | reuse-phase-splits |
@@ -265,7 +264,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5967, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5967, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1604,22 +1603,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: name classification only; collection spelling predicates are TODO-5963 and TODO-5964.
   - notes: Do not run alongside TODO-5961, TODO-5963 or TODO-5966 (shared files).
-
-- [~] TODO-5963: The lowerer reads collection spellings only through CollectionSpellingClassifier
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 5)
-  - parallel_track: reuse-collection-spelling-lowerer
-  - scope: First slice landed (reuse-a, 2026-11-12): `allowsArrayVectorCompatibilitySuffix`, `isRemovedVectorCompatibilityHelper` and `stripGeneratedHelperSuffix` (5 copies) now live in the classifier (`classifierArrayVectorCompatibilitySuffixAllowed`, `classifierStripGeneratedHelperSuffix`, `classifierRemovedVectorCompatibilityHelper`); the file-local `stdCollectionsRoot`, `collectionMemberRoot`, `experimentalCollectionMemberRoot` and `collectionWrapperAlias` copies are gone in favor of IrLowererSetupTypeCollectionHelpers.h; `resolveScopedCallPath` has one definition. Remaining, because the copies accept different sets and need a decision plus a pinning test each: `isCollectionVectorRecordPath` (4 variants: IrLowererCountAccessClassifiers.cpp accepts the `typeIdentityFolder` path `vector/Vector`, InlineNativeCallDispatch.cpp and InlineParamHelpers.cpp accept the backing path and `__` specializations, AccessTargetInternal.h and IndexedAccessEmit.cpp also accept `isExperimentalCollectionTypeName`), `experimentalCollectionTypePath` (IrLowererInlineStructArgHelpers.cpp and IrLowererCountAccessInternal.h return `memberPath(typeIdentityFolder(...))`, i.e. `vector/Vector`, while IrLowererSetupTypeCollectionHelpers.h returns `/std/collections/experimental_vector/Vector`: same name, different paths), `collectionHelperPathCandidates` (IrLowererStructReturnPathHelpers.cpp normalizes fewer prefixes than the IrLowererSetupTypeCollectionHelpers.cpp one), the file-local `stdCollectionsRoot`/`collectionTypePath` in IrLowererOperatorCollectionMutationHelpersFileLocal.h, and the `resolveScopedCallPath` that IrLowererSetupTypeReturnKindHelpersFileLocal.h had (a name containing `/` still gets the namespace prefix). Original scope: src/support/CollectionSpellingClassifier.cpp holds the authoritative removed-name sets, but the lowerer includes it from only 2 files and keeps its own predicates: `allowsArrayVectorCompatibilitySuffix` (src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp:220, a hard-coded copy of the `count`, `capacity`, `at`, `at_unsafe`, `push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap` list), the wrapper at IrLowererSetupTypeCollectionHelpers.cpp:393 with its own suffix stripping, `isCollectionVectorRecordPath` (5 copies), `experimentalCollectionMemberRoot` (5), `resolveScopedCallPath` (6 header- and file-local copies), `stdCollectionsRoot`, `isRemovedVectorCompatibilityHelper`, `experimentalCollectionTypePath`, `collectionHelperPathCandidates`, and `stripGeneratedHelperSuffix` (src/ir_lowerer/IrLowererCountAccessInternal.h:132, IrLowererSetupTypeCollectionHelpers.cpp:18). Replace them with the classifier (extend it where a predicate has no classifier equivalent) and delete the copies. Run `rg -n "^[a-zA-Z].*\b(isCollectionVectorRecordPath|experimentalCollectionMemberRoot|resolveScopedCallPath|stdCollectionsRoot|isRemovedVectorCompatibilityHelper|stripGeneratedHelperSuffix|allowsArrayVectorCompatibilitySuffix)\(" src/ir_lowerer` for the current list.
-  - acceptance:
-    - each listed predicate has no definition left in src/ir_lowerer; the lowerer calls the classifier
-    - where a lowerer copy accepted a different set than the classifier, the commit names it, and a compile-run or lowering test pins the chosen behavior
-    - IR dumps of examples/ and the collection compile-run suites are unchanged
-    - full release gate green
-  - stop_rule: src/ir_lowerer and the classifier only; semantics copies are TODO-5964.
-  - notes: Do not run alongside TODO-5961, TODO-5962 or TODO-5972 (src/ir_lowerer/IrLowererHelpers.cpp and the inline/result helpers).
 
 - [ ] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
   - owner: ai

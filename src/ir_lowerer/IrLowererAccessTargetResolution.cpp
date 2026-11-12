@@ -534,9 +534,8 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isVectorTarget = false;
       return true;
     }
-    if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
-        !localInfo.isSoaVector &&
-        isCollectionVectorRecordPath(localInfo.structTypeName)) {
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Value && !localInfo.isSoaVector &&
+        isCollectionVectorTypeText(localInfo.structTypeName)) {
       info.isArrayOrVectorTarget = true;
       info.isVectorTarget = true;
       info.isSoaVector = false;
@@ -662,7 +661,7 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       return info;
     }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
-        !it->second.isSoaVector && isCollectionVectorRecordPath(it->second.structTypeName)) {
+        !it->second.isSoaVector && isCollectionVectorTypeText(it->second.structTypeName)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = true;

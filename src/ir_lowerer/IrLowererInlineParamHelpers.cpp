@@ -63,12 +63,6 @@ bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
   return soa_paths::isExperimentalColumnarVectorSpecializedTypePath(structPath);
 }
 
-bool isCollectionVectorRecordPath(const std::string &structPath) {
-  const std::string vectorTypePath = vectorBackingTypePath();
-  return structPath == vectorTypePath ||
-         structPath.rfind(vectorTypePath + "__", 0) == 0;
-}
-
 bool isBuiltinVectorStructMatch(const std::string &expectedStruct,
                                 const std::string &argStruct) {
   return isCollectionVectorRecordPath(expectedStruct) &&

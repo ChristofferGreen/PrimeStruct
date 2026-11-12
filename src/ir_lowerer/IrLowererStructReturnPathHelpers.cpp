@@ -253,43 +253,6 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
   return {receiverStruct + "/" + methodName};
 }
 
-std::vector<std::string> collectionHelperPathCandidates(const std::string &path) {
-  std::vector<std::string> candidates;
-  auto appendUnique = [&](const std::string &candidate) {
-    if (candidate.empty()) {
-      return;
-    }
-    for (const auto &existing : candidates) {
-      if (existing == candidate) {
-        return;
-      }
-    }
-    candidates.push_back(candidate);
-  };
-
-  std::string normalizedPath = path;
-  if (!normalizedPath.empty() && normalizedPath.front() != '/') {
-    if (normalizedPath.rfind("array/", 0) == 0 ||
-        normalizedPath.rfind(vectorBuiltinStructNormalizedPath().substr(1) + "/", 0) == 0 ||
-        normalizedPath.rfind(collectionMemberRoot("vector", false), 0) == 0 ||
-        normalizedPath.rfind(keyValueCollectionAliasRoot(false) + "/", 0) == 0 ||
-        normalizedPath.rfind(collectionMemberRoot("map", false), 0) == 0) {
-      normalizedPath.insert(normalizedPath.begin(), '/');
-    }
-  }
-
-  appendUnique(path);
-  appendUnique(normalizedPath);
-  if (collection_helpers::isRootedArrayPath(normalizedPath)) {
-    const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (classifierArrayVectorCompatibilitySuffixAllowed(suffix)) {
-      appendUnique(stdlibSurfaceCanonicalHelperPath(
-          StdlibSurfaceId::CollectionsManifestSurface0, suffix));
-    }
-  }
-  return candidates;
-}
-
 std::string preferCollectionHelperPath(const std::string &path,
                                        const std::unordered_map<std::string, const Definition *> &defMap) {
   std::string preferred = path;

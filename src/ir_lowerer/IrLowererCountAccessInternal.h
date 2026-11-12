@@ -81,12 +81,6 @@ inline std::string rootedCollectionMemberPath(std::string_view collectionName,
   return "/" + collectionMemberPath(collectionName, memberName);
 }
 
-inline std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return collection_paths::memberPath(
-      collection_paths::typeIdentityFolder(collectionName), typeName);
-}
-
 inline bool isExperimentalCollectionStructPath(const std::string &structTypeName,
                                         std::string_view collectionName,
                                         std::string_view typeName) {

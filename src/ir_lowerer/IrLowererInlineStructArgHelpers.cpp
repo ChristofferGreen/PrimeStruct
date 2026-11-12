@@ -1,6 +1,7 @@
 #include "primec/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
 #include <limits>
 #include <string_view>
@@ -10,12 +11,6 @@
 namespace primec::ir_lowerer {
 
 namespace {
-
-std::string experimentalCollectionTypePath(std::string_view collectionName,
-                                           std::string_view typeName) {
-  return collection_paths::memberPath(
-      collection_paths::typeIdentityFolder(collectionName), typeName);
-}
 
 bool isVectorStructPath(const std::string &structPath) {
   const std::string vectorTypePath = experimentalCollectionTypePath("vector", "Vector");

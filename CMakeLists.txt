@@ -3336,7 +3336,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_3"
                                  SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 10 LAST 13)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_4"
-                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 14 LAST 17)
+                                 SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 14 LAST 18)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 300 SHARD_NAME "map_wrapper"
                                  SOURCE_FILE "*test_compile_run_vm_map_wrapper.cpp")
     elseif(suite STREQUAL "primestruct.compile.run.vm.math")

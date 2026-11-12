@@ -31,11 +31,6 @@
             adoptStructInitializerCallee(*initCallee);
           }
         }
-        auto experimentalCollectionTypePath =
-            [&](std::string_view collectionName, std::string_view typeName) {
-              return collection_paths::memberPath(
-                  collection_paths::typeIdentityFolder(collectionName), typeName);
-            };
         auto collectionWrapperAlias =
             [](std::string_view collectionName, std::string_view suffix) {
               return std::string(collectionName) + std::string(suffix);

@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/ast/Ast.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
@@ -123,6 +124,18 @@ inline std::string vectorBackingTypePath(bool leadingSlash = true) {
 inline std::string vectorBackingMemberRoot(bool leadingSlash = true) {
   constexpr const char kVec[] = "vector";
   return experimentalCollectionMemberRoot(kVec, leadingSlash);
+}
+// A resolved struct record path of the collection vector: the backing type path or one of
+// its generated `__` specializations. Bare or `<...>` type text does not match, so a user
+// struct that happens to be named `Vector` is not taken for the builtin.
+inline bool isCollectionVectorRecordPath(std::string_view structPath) {
+  return collection_paths::isTypePathOrSpecialization(structPath, vectorBackingTypePath());
+}
+// The same, and also type text spelled bare or with template arguments, or without the leading
+// slash: for callers that may be looking at an unresolved type name.
+inline bool isCollectionVectorTypeText(std::string_view typeText) {
+  return isCollectionVectorRecordPath(typeText) ||
+         isExperimentalCollectionTypeName(typeText, "vector", "Vector");
 }
 inline std::string vectorBuiltinStructNormalizedPath() {
   constexpr const char kVec[] = "vector";

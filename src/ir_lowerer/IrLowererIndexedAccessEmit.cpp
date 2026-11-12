@@ -10,17 +10,12 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isCollectionVectorRecordPath(const std::string &structPath) {
-  const std::string vectorTypePath = vectorBackingTypePath();
-  return structPath == vectorTypePath ||
-         structPath.rfind(vectorTypePath + "__", 0) == 0 ||
-         isExperimentalCollectionTypeName(structPath, "vector", "Vector");
-}
-
 bool usesCollectionVectorValueStorage(const ArrayVectorAccessTargetInfo &targetInfo) {
   return targetInfo.isVectorTarget &&
-         (targetInfo.structTypeName.empty() || collection_helpers::isCollectionFamilyRoot(targetInfo.structTypeName, collection_helpers::CollectionFamily::Vector) ||
-          isCollectionVectorRecordPath(targetInfo.structTypeName));
+         (targetInfo.structTypeName.empty() ||
+          collection_helpers::isCollectionFamilyRoot(
+              targetInfo.structTypeName, collection_helpers::CollectionFamily::Vector) ||
+          isCollectionVectorTypeText(targetInfo.structTypeName));
 }
 
 } // namespace

@@ -19,13 +19,6 @@ namespace primec::ir_lowerer {
 
 namespace access_target_internal {
 
-inline bool isCollectionVectorRecordPath(const std::string &structTypeName) {
-  const std::string vectorTypePath = vectorBackingTypePath();
-  return structTypeName == vectorTypePath ||
-         structTypeName.rfind(vectorTypePath + "__", 0) == 0 ||
-         isExperimentalCollectionTypeName(structTypeName, "vector", "Vector");
-}
-
 inline std::string inferExperimentalSoaVectorStructPathFromTypeName(
     const std::string &typeName) {
   const size_t first = typeName.find_first_not_of(" \t\r\n");
@@ -165,7 +158,7 @@ inline std::string normalizeAccessCollectionFamily(std::string family) {
 inline bool classifySemanticArrayVectorAccessTypeText(const std::string &typeText,
                                                ArrayVectorAccessTargetInfo &targetInfoOut) {
   std::string normalizedDirectType = trimTemplateTypeText(typeText);
-  if (isCollectionVectorRecordPath(normalizedDirectType)) {
+  if (isCollectionVectorTypeText(normalizedDirectType)) {
     targetInfoOut = {};
     targetInfoOut.isArrayOrVectorTarget = true;
     targetInfoOut.isVectorTarget = true;
@@ -298,10 +291,10 @@ inline bool resolveSemanticArrayVectorAccessTargetInfo(
           inferExperimentalSoaVectorStructPathFromTypeName(elementTypeText);
     } else if (family == "vector" &&
                targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown) {
-      targetInfoOut.structTypeName = elementTypeText.empty() &&
-                                             isCollectionVectorRecordPath(rawFamily)
-                                         ? rawFamily
-                                         : inferExperimentalVectorStructPathFromTypeName(elementTypeText);
+      targetInfoOut.structTypeName =
+          elementTypeText.empty() && isCollectionVectorTypeText(rawFamily)
+              ? rawFamily
+              : inferExperimentalVectorStructPathFromTypeName(elementTypeText);
     }
     if (targetInfoOut.elemKind == LocalInfo::ValueKind::Unknown &&
         targetInfoOut.structTypeName.empty()) {

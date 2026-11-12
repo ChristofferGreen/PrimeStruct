@@ -26,27 +26,13 @@
 namespace primec::ir_lowerer {
 namespace ir_lowerer_operator_collection_mutation_helpers_file_local {
 
-inline std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
-inline std::string collectionTypePath(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + std::string(collectionName);
-}
-
-inline std::string localExperimentalCollectionTypePath(std::string_view collectionName,
-                                                std::string_view typeName) {
-  return stdCollectionsRoot() + "/" + collection_paths::typeIdentityFolder(collectionName) +
-         "/" + std::string(typeName);
-}
-
 inline bool matchesGeneratedSpecializedPath(std::string_view text,
                                      const std::string &basePath) {
   return text.rfind(basePath + "__", 0) == 0;
 }
 
 inline bool isVectorStructPath(const std::string &structPath) {
-  const std::string vectorTypePath = localExperimentalCollectionTypePath("vector", "Vector");
+  const std::string vectorTypePath = vectorBackingTypePath();
   return collection_helpers::isCollectionFamilyRoot(structPath, collection_helpers::CollectionFamily::Vector) || structPath == vectorTypePath ||
          matchesGeneratedSpecializedPath(structPath, vectorTypePath);
 }

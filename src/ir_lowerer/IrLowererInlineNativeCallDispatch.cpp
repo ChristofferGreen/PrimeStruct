@@ -46,12 +46,6 @@ bool isPublicOrCompatibilitySoaToAosCall(const Expr &expr) {
          isCanonicalCollectionHelperCall(expr, "std/collections/soa", "to_aos", 1);
 }
 
-bool isCollectionVectorRecordPath(std::string_view structTypeName) {
-  const std::string vectorTypePath = vectorBackingTypePath();
-  return structTypeName == vectorTypePath ||
-         matchesGeneratedSpecializedPath(structTypeName, vectorTypePath);
-}
-
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);

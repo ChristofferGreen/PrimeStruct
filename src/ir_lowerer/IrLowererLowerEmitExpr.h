@@ -176,19 +176,6 @@
         }
       }
     }
-    const auto stdCollectionsRoot = []() {
-      return std::string("/std/collections");
-    };
-    const auto experimentalCollectionMemberRoot =
-        [&](std::string_view collectionName) {
-          return stdCollectionsRoot() + "/" +
-                 collection_paths::experimentalFolder(collectionName) + "/";
-        };
-    const auto experimentalCollectionTypePath =
-        [&](std::string_view collectionName, std::string_view typeName) {
-          return experimentalCollectionMemberRoot(collectionName) +
-                 std::string(typeName);
-        };
     const auto matchesGeneratedSpecializedType =
         [&](std::string_view path, std::string_view collectionName,
             std::string_view typeName) {

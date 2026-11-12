@@ -297,4 +297,34 @@ main() {
   CHECK(runCommand(runCmd) == 144);
 }
 
+TEST_CASE("lowers qualified vector helpers through the typed specialized vector path") {
+  // Receivers of `/std/collections/vector/Vector__...` resolve their element kind in the emit
+  // dispatch; before the specialized-type match used the experimental_vector folder, the match
+  // never fired and every helper call took the untyped path (1747 instructions, 298 locals).
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
+  /std/collections/vector/push(values, 6i32)
+  [i32] countValue{/std/collections/vector/count(values)}
+  [i32] capacityValue{/std/collections/vector/capacity(values)}
+  [i32] firstValue{/std/collections/vector/at(values, 0i32)}
+  [i32] tailValue{/std/collections/vector/at_unsafe(values, 2i32)}
+  return(plus(plus(countValue, tailValue),
+              plus(firstValue, minus(capacityValue, capacityValue))))
+}
+)";
+  const std::string srcPath = writeTemp("vm_qualified_vector_helpers.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 13);
+  const std::string dumpPath = testScratchPath("vm_qualified_vector_helpers.ir").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main --dump-stage ir-lowered > " +
+                   quoteShellArg(dumpPath)) == 0);
+  const std::string dump = readFile(dumpPath);
+  const size_t marker = dump.find("instructions=");
+  REQUIRE(marker != std::string::npos);
+  CHECK(std::stoul(dump.substr(marker + std::string("instructions=").size())) < 1500);
+}
+
 TEST_SUITE_END();
