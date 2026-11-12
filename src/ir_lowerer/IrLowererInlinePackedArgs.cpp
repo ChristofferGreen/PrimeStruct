@@ -8,52 +8,11 @@
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "IrLowererKeyValueConstructorRewrite.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForInlinePackedArgs() {
-  return keyValueConstructorSurfaceMetadata();
-}
-
-bool isPublishedKeyValueConstructorExpr(const Expr &callExpr) {
-  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
-    return false;
-  }
-  const auto *metadata = keyValueConstructorSurfaceMetadataForInlinePackedArgs();
-  return metadata != nullptr &&
-         isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
-}
-
-std::string extractParameterTypeName(const Expr &paramExpr) {
-  for (const auto &transform : paramExpr.transforms) {
-    if (transform.name == "mut" || transform.name == "public" ||
-        transform.name == "private" || transform.name == "static" ||
-        transform.name == "shared" || transform.name == "placement" ||
-        transform.name == "align" || transform.name == "packed" ||
-        transform.name == "reflection" || transform.name == "effects" ||
-        transform.name == "capabilities") {
-      continue;
-    }
-    if (!transform.arguments.empty()) {
-      continue;
-    }
-    std::string typeName = transform.name;
-    if (!transform.templateArgs.empty()) {
-      typeName += "<";
-      for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-        if (index != 0) {
-          typeName += ", ";
-        }
-        typeName += trimTemplateTypeText(transform.templateArgs[index]);
-      }
-      typeName += ">";
-    }
-    return typeName;
-  }
-  return {};
-}
 
 bool extractArgsPackElementTypeName(const Expr &paramExpr, std::string &typeNameOut) {
   typeNameOut.clear();
@@ -93,63 +52,6 @@ bool namesExplicitExperimentalKeyValueType(const std::string &typeText) {
       keyValueStorageStructRootPath(false);
   return base == experimentalKeyValueType ||
          base.rfind(experimentalKeyValueType + "__", 0) == 0;
-}
-
-bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
-                                             LocalInfo::ValueKind fallbackKeyKind,
-                                             LocalInfo::ValueKind fallbackValueKind,
-                                             const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-                                             Expr &rewrittenExpr) {
-  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
-    return false;
-  }
-  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const auto *keyValueConstructorMetadata =
-      keyValueConstructorSurfaceMetadataForInlinePackedArgs();
-  const bool isResolvedPublishedConstructor =
-      callee != nullptr &&
-      keyValueConstructorMetadata != nullptr &&
-      isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath, keyValueConstructorMetadata->id);
-  if (!isPublishedKeyValueConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
-    return false;
-  }
-  rewrittenExpr = callExpr;
-  // TODO-4760: use the already-resolved concrete overload's own path
-  // (correctly arity-matched via callExpr's still-intact semanticNodeId,
-  // resolved above) rather than the bare, arity-blind canonical family
-  // name. semanticNodeId is zeroed below so this rewritten expr can't be
-  // mistaken for the original call site's own semantic-product fact, but
-  // that means downstream resolution falls back to a plain exact-path
-  // defMap lookup with no overload disambiguation - fine when
-  // rewrittenExpr.name already names one specific concrete definition,
-  // wrong when it names the shared family name every arity/overload
-  // maps to. When multiple args<map<K,V>>(...) pack elements need
-  // different arities (e.g. one 2-arg, one 4-arg pair-count), rewriting
-  // all of them to the same bare name meant whichever concrete
-  // overload's Definition happened to be registered at that shared bare
-  // key won for every element, breaking any sibling needing a different
-  // arity. See docs/ReceiverTargetResolutionConsolidation.md.
-  rewrittenExpr.name = callee != nullptr ? callee->fullPath : canonicalKeyValueConstructorPath();
-  rewrittenExpr.namespacePrefix.clear();
-  rewrittenExpr.isMethodCall = false;
-  rewrittenExpr.semanticNodeId = 0;
-  if (rewrittenExpr.templateArgs.empty() &&
-      fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
-      fallbackValueKind != LocalInfo::ValueKind::Unknown) {
-    rewrittenExpr.templateArgs = {
-        typeNameForValueKind(fallbackKeyKind),
-        typeNameForValueKind(fallbackValueKind),
-    };
-  } else if (rewrittenExpr.templateArgs.empty() && callee != nullptr &&
-             callee->parameters.size() >= 2) {
-    const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
-    const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
-    if (!keyTypeName.empty() && !valueTypeName.empty()) {
-      rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
-    }
-  }
-  return true;
 }
 
 } // namespace
@@ -344,14 +246,13 @@ bool emitInlinePackedCallParameter(
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Value &&
         paramInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown &&
-        paramInfo.structTypeName.empty() &&
-        argExpr.kind == Expr::Kind::Call &&
-        rewritePublishedKeyValueConstructorExpr(
-            argExpr,
-            paramInfo.keyValueKeyKind,
-            paramInfo.keyValueValueKind,
-            resolveDefinitionCall,
-            rewrittenKeyValueArgExpr)) {
+        paramInfo.structTypeName.empty() && argExpr.kind == Expr::Kind::Call &&
+        rewritePublishedKeyValueConstructorExpr(argExpr,
+                                                paramInfo.keyValueKeyKind,
+                                                paramInfo.keyValueValueKind,
+                                                resolveDefinitionCall,
+                                                rewrittenKeyValueArgExpr,
+                                                KeyValueConstructorRewriteOptions{false, true})) {
       emittedArgExpr = &rewrittenKeyValueArgExpr;
     }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Array ||

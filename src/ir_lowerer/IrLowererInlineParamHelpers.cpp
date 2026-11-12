@@ -13,6 +13,7 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "IrLowererKeyValueConstructorRewrite.h"
 
 #include <string_view>
 
@@ -206,91 +207,6 @@ bool emitBuiltinSoaToAosStructBridge(
   emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 3, srcPtrLocal, 3, emitInstruction);
   emitInstruction(IrOpcode::PushI32, 0);
   emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(storageBaseLocal + 4));
-  return true;
-}
-
-bool isPublishedKeyValueConstructorExpr(const Expr &callExpr) {
-  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
-    return false;
-  }
-  std::string collectionName;
-  if (getBuiltinCollectionName(callExpr, collectionName) && collectionName == "map") {
-    return true;
-  }
-  const auto *metadata =
-      keyValueConstructorSurfaceMetadata();
-  return metadata != nullptr &&
-         isPublishedStdlibSurfaceConstructorExpr(callExpr, metadata->id);
-}
-
-std::string extractParameterTypeName(const Expr &paramExpr) {
-  for (const auto &transform : paramExpr.transforms) {
-    if (transform.name == "mut" || transform.name == "public" ||
-        transform.name == "private" || transform.name == "static" ||
-        transform.name == "shared" || transform.name == "placement" ||
-        transform.name == "align" || transform.name == "packed" ||
-        transform.name == "reflection" || transform.name == "effects" ||
-        transform.name == "capabilities") {
-      continue;
-    }
-    if (!transform.arguments.empty()) {
-      continue;
-    }
-    std::string typeName = transform.name;
-    if (!transform.templateArgs.empty()) {
-      typeName += "<";
-      for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-        if (index != 0) {
-          typeName += ", ";
-        }
-        typeName += trimTemplateTypeText(transform.templateArgs[index]);
-      }
-      typeName += ">";
-    }
-    return typeName;
-  }
-  return {};
-}
-
-bool rewritePublishedKeyValueConstructorExpr(const Expr &callExpr,
-                                             LocalInfo::ValueKind fallbackKeyKind,
-                                             LocalInfo::ValueKind fallbackValueKind,
-                                             const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-                                             Expr &rewrittenExpr) {
-  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
-    return false;
-  }
-  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  const auto *keyValueConstructorMetadata =
-      keyValueConstructorSurfaceMetadata();
-  const bool isResolvedPublishedConstructor =
-      callee != nullptr &&
-      keyValueConstructorMetadata != nullptr &&
-      isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
-          callee->fullPath, keyValueConstructorMetadata->id);
-  if (!isPublishedKeyValueConstructorExpr(callExpr) && !isResolvedPublishedConstructor) {
-    return false;
-  }
-  rewrittenExpr = callExpr;
-  rewrittenExpr.name = canonicalKeyValueConstructorPath();
-  rewrittenExpr.namespacePrefix.clear();
-  rewrittenExpr.isMethodCall = false;
-  rewrittenExpr.semanticNodeId = 0;
-  if (rewrittenExpr.templateArgs.empty() &&
-      fallbackKeyKind != LocalInfo::ValueKind::Unknown &&
-      fallbackValueKind != LocalInfo::ValueKind::Unknown) {
-    rewrittenExpr.templateArgs = {
-        typeNameForValueKind(fallbackKeyKind),
-        typeNameForValueKind(fallbackValueKind),
-    };
-  } else if (rewrittenExpr.templateArgs.empty() && callee != nullptr &&
-             callee->parameters.size() >= 2) {
-    const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
-    const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
-    if (!keyTypeName.empty() && !valueTypeName.empty()) {
-      rewrittenExpr.templateArgs = {keyTypeName, valueTypeName};
-    }
-  }
   return true;
 }
 
@@ -1108,14 +1024,13 @@ bool emitInlineDefinitionCallParameters(
     if (paramInfo.kind == LocalInfo::Kind::Value &&
         paramInfo.keyValueKeyKind != LocalInfo::ValueKind::Unknown &&
         paramInfo.keyValueValueKind != LocalInfo::ValueKind::Unknown &&
-        paramInfo.structTypeName.empty() &&
-        orderedArg->kind == Expr::Kind::Call &&
-        rewritePublishedKeyValueConstructorExpr(
-            *orderedArg,
-            paramInfo.keyValueKeyKind,
-            paramInfo.keyValueValueKind,
-            resolveDefinitionCall,
-            rewrittenKeyValueArgExpr)) {
+        paramInfo.structTypeName.empty() && orderedArg->kind == Expr::Kind::Call &&
+        rewritePublishedKeyValueConstructorExpr(*orderedArg,
+                                                paramInfo.keyValueKeyKind,
+                                                paramInfo.keyValueValueKind,
+                                                resolveDefinitionCall,
+                                                rewrittenKeyValueArgExpr,
+                                                KeyValueConstructorRewriteOptions{true, false})) {
       emittedArgExpr = &rewrittenKeyValueArgExpr;
     } else if (shouldRewriteMapReferenceReceiverForParam(paramInfo) &&
                orderedArg->kind == Expr::Kind::Call &&

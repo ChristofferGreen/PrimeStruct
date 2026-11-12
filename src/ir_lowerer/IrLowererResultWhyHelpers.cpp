@@ -9,8 +9,6 @@
 
 namespace primec::ir_lowerer {
 
-namespace {
-
 std::string resolveSemanticQueryResultErrorTypeText(
     const SemanticProductTargetAdapter *semanticProductTargets,
     const SemanticProgramQueryFact &queryFact) {
@@ -39,6 +37,8 @@ bool resultErrorTypesMatch(std::string left, std::string right) {
   }
   return !right.empty() && right.front() != '/' && left == "/" + right;
 }
+
+namespace {
 
 const Expr *resultWhyValueArgument(const Expr &expr, std::string &error) {
   const bool methodCall =

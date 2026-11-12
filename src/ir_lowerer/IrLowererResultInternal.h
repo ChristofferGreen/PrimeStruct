@@ -1,10 +1,20 @@
 #pragma once
 
+#include "primec/frontend/SemanticProduct.h"
 #include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 
 namespace primec::ir_lowerer {
 
 bool usesInlineBufferResultErrorDiscriminator(const ResultExprInfo &resultInfo);
+
+// The query fact's result error type as text, preferring the semantic product's interned
+// string when one is available.
+std::string
+resolveSemanticQueryResultErrorTypeText(const SemanticProductTargetAdapter *semanticProductTargets,
+                                        const SemanticProgramQueryFact &queryFact);
+// Whether two result error type texts name the same type, ignoring a leading slash.
+bool resultErrorTypesMatch(std::string left, std::string right);
 
 bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                  LocalMap &localsIn,

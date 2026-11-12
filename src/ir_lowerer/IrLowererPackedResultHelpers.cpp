@@ -9,6 +9,7 @@
 #include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "IrLowererKeyValueConstructorRewrite.h"
 
 namespace primec::ir_lowerer {
 
@@ -46,35 +47,6 @@ std::string resolveSemanticProductPayloadTypeText(
     }
   }
   return trimTemplateTypeText(text);
-}
-
-std::string resolveSemanticProductQueryErrorTypeText(
-    const SemanticProductTargetAdapter *semanticProductTargets,
-    const SemanticProgramQueryFact &queryFact) {
-  if (semanticProductTargets != nullptr &&
-      semanticProductTargets->semanticProgram != nullptr &&
-      queryFact.resultErrorTypeId != InvalidSymbolId) {
-    std::string resolvedErrorType = std::string(
-        semanticProgramResolveCallTargetString(
-            *semanticProductTargets->semanticProgram,
-            queryFact.resultErrorTypeId));
-    if (!resolvedErrorType.empty()) {
-      return trimTemplateTypeText(resolvedErrorType);
-    }
-  }
-  return trimTemplateTypeText(queryFact.resultErrorType);
-}
-
-bool resultErrorTypesMatch(std::string left, std::string right) {
-  left = trimTemplateTypeText(left);
-  right = trimTemplateTypeText(right);
-  if (left == right) {
-    return true;
-  }
-  if (!left.empty() && left.front() != '/' && "/" + left == right) {
-    return true;
-  }
-  return !right.empty() && right.front() != '/' && left == "/" + right;
 }
 
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataLocal() {
@@ -226,32 +198,6 @@ bool rewritePackedResultKeyValueConstructorExpr(const Expr &callExpr,
   }
 
   if (callee != nullptr && callee->parameters.size() >= 2) {
-    auto extractParameterTypeName = [&](const Expr &paramExpr) {
-      for (const auto &transform : paramExpr.transforms) {
-        if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-            transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-            transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-            transform.name == "effects" || transform.name == "capabilities") {
-          continue;
-        }
-        if (!transform.arguments.empty()) {
-          continue;
-        }
-        std::string typeName = transform.name;
-        if (!transform.templateArgs.empty()) {
-          typeName += "<";
-          for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
-            if (index != 0) {
-              typeName += ", ";
-            }
-            typeName += trimTemplateTypeText(transform.templateArgs[index]);
-          }
-          typeName += ">";
-        }
-        return typeName;
-      }
-      return std::string{};
-    };
     const std::string keyTypeName = extractParameterTypeName(callee->parameters[0]);
     const std::string valueTypeName = extractParameterTypeName(callee->parameters[1]);
     if (!keyTypeName.empty() && !valueTypeName.empty()) {
@@ -804,7 +750,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
         return false;
       }
       if (!queryFact->hasResultType || queryFact->resultTypeHasValue != resultInfo.hasValue ||
-          resolveSemanticProductQueryErrorTypeText(semanticProductTargets, *queryFact) !=
+          resolveSemanticQueryResultErrorTypeText(semanticProductTargets, *queryFact) !=
               trimTemplateTypeText(resultInfo.errorType)) {
         error = "stale semantic-product Result.error source query metadata: " +
                 valueExpr.name;
