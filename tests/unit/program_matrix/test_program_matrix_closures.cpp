@@ -411,11 +411,11 @@ main() {
 }
 
 TEST_CASE("a closure passes straight to a Function parameter") {
-  runClosureProgram("function_implicit_parameter", R"(
+  runClosureProgram("function_implicit_parameter",
+                    R"(
 [return<i32>]
 apply_twice([Function<i32, i32> mut] f, [i32] x) {
-  [i32] once{f(x)}
-  return(f(once))
+  return(f(f(x)))
 }
 
 [return<i32>]

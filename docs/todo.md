@@ -132,7 +132,6 @@ of sync with them.
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5717 | One file imports two modules that export the same name | ready | import-conflicts |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
@@ -248,7 +247,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5714, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -362,18 +361,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - a rule for unannotated callees in docs/spec/language-core.md (Effects), stdlib, examples and tests annotated to match, and the full rule enforced in semantics
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
-
-- [ ] TODO-5714: Native: a `Function` call nested in another call's arguments lowers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Closures follow-ups (found by TODO-5669)
-  - parallel_track: native-backend
-  - scope: `apply_twice([Function<i32, i32> mut] f, [i32] x) { return(f(f(x))) }` fails on `--emit=native` with `native backend does not support recursive calls: /__Function1__t.../call`, with the explicit `Function<i32, i32>{...}` too; the VM and optexe return the right value, and `[i32] once{f(x)} return(f(once))` works on native. The native lowering treats a call of `call` inside the arguments of the same `call` as recursion.
-  - acceptance:
-    - `f(f(x))` on a `Function` parameter returns the right value on native-O0 and native-O2 (matrix case)
-    - full release gate green
-  - stop_rule: the native recursion check for nested calls of one definition.
 
 - [ ] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
   - owner: ai
