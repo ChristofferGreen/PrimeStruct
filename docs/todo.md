@@ -1815,9 +1815,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-5981: `validateBindingReference` is ordered rules over a resolver, not six phases
+- [~] TODO-5981: `validateBindingReference` is ordered rules over a resolver, not six phases
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6; first code slice of TODO-5966)
   - parallel_track: reuse-phase-splits
