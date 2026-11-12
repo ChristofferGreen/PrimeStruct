@@ -514,6 +514,52 @@ main() {
   CHECK(error.find("unknown method: /Route/missing") != std::string::npos);
 }
 
+TEST_CASE("a callable field wins over a struct named in another case") {
+  const std::string source = R"(
+[struct]
+Holder {
+  [Function<i32, i32> mut] step
+}
+
+[struct]
+Step {
+  [i32] size
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Holder mut] holder{Holder{[step] Function<i32, i32>{[]([i32] x) { return(plus(x, 1i32)) }}}}
+  return(holder.step(10i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a method call without a field or method of that name still names the struct path") {
+  const std::string source = R"(
+[struct]
+Holder {
+  [i32] size
+}
+
+[struct]
+Step {
+  [i32] size
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder{[size] 1i32}}
+  return(holder.step(10i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /Holder/step") != std::string::npos);
+}
+
 TEST_CASE("a Function local moved into a brace constructor is used after the move") {
   const std::string source = R"(
 [struct]

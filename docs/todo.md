@@ -105,7 +105,6 @@ of sync with them.
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5954 | The handler `Function` type is spelled with an alias in /std/http and /std/web | deferred | type-aliases |
-| TODO-5955 | A struct named like a callable field breaks the call of the field | deferred | closures-callable-fields |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
@@ -247,7 +246,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5955, TODO-5716, TODO-5732, TODO-5735, TODO-5736, TODO-5737
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -335,18 +334,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - /std/http and /std/web name their handler types through aliases; the router, app and server matrix cases and `examples/apps/todo_web` run unchanged on VM, native and optexe
     - full release gate green
   - stop_rule: the handler types of /std/http and /std/web only.
-
-- [ ] TODO-5955: A struct named like a callable field breaks the call of the field
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-12
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5708)
-  - parallel_track: closures-callable-fields
-  - scope: With a root struct `Step` and a struct field `[Function<i32, i32> mut] step`, `holder.step(10i32)` stops with `unknown method: /Step/call`: the method-call resolver reads `.step(...)` as a call of the struct `Step` (a PascalCase struct with the same spelling) instead of the field. Reproduce with `[struct] Holder() { [Function<i32, i32> mut] step }`, a second `[struct] Step() {}` and `return(holder.step(10i32))` (VM). A field and a struct whose names differ only in the case of the first letter is natural (`handler` and `Handler`), so the field must win.
-  - acceptance:
-    - the field call resolves to the field on the VM, native and optexe; a negative test where no such field exists still names the struct path
-    - full release gate green
-  - stop_rule: resolution of `receiver.name(args)` when `name` is a field and a struct of the same spelling exists.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

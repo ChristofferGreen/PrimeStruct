@@ -446,8 +446,10 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
   if (hasDefinitionFamilyPath(root)) {
     return rewriteCanonicalCollectionConstructorPath(root);
   }
+  // A method call names a method or a callable field of its receiver (`holder.step(1i32)` with a struct `Step`
+  // beside it), never a struct by another case.
   if (const std::string caseInsensitiveRoot =
-          caseInsensitiveRootStructPathForName(expr.name);
+          expr.isMethodCall ? std::string() : caseInsensitiveRootStructPathForName(expr.name);
       !caseInsensitiveRoot.empty() && hasDefinitionFamilyPath(caseInsensitiveRoot)) {
     return rewriteCanonicalCollectionConstructorPath(caseInsensitiveRoot);
   }

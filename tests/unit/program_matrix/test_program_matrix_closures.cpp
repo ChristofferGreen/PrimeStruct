@@ -1068,6 +1068,29 @@ main() {
                     234);
 }
 
+TEST_CASE("a callable field is called when a struct of the same name in another case exists") {
+  runClosureProgram("callable_field_beside_struct",
+                    R"(
+[struct]
+Holder() {
+  [Function<i32, i32> mut] step
+}
+
+[struct]
+Step() {
+  [i32] size{1i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Holder mut] holder{Holder{[step] Function<i32, i32>{[]([i32] x) { return(x + 1i32) }}}}
+  [Step] unused{Step{}}
+  return(holder.step(10i32) + unused.size)
+}
+)",
+                    12);
+}
+
 TEST_CASE("view equality inside a function with a String parameter") {
   runClosureProgram("string_parameter_view_equality", R"(
 import /std/text/*
