@@ -37,7 +37,8 @@ struct ValidateExprCallState;
 
 struct ValidateBindingState;
 
-struct ValidateBindingReferenceState;
+struct BindingReferenceContext;
+using ExprSubstitutions = std::vector<std::pair<std::string, const Expr *>>;
 
 class SemanticsValidator {
 public:

@@ -10,7 +10,7 @@
 #include "primec/support/CollectionHelperNames.h"
 #include "SemanticsValidatorStatementBindingsHelpers.h"
 #include "SemanticsValidatorStatementBindingsState.h"
-#include "SemanticsValidatorStatementBindingsReferenceState.h"
+#include "SemanticsValidatorBindingReferenceContext.h"
 
 namespace primec::semantics {
 using namespace statementBindingsHelpers;
@@ -25,25 +25,9 @@ PhaseStatus SemanticsValidator::validateBindingPhase5([[maybe_unused]] const std
   [[maybe_unused]] auto &resolveNamedBinding = st.resolveNamedBinding;
   [[maybe_unused]] auto &resolvePointerRoot = st.resolvePointerRoot;
   if (info.typeName == "Reference") {
-    ValidateBindingReferenceState st2;
-    if (validateBindingReferencePhase1(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (validateBindingReferencePhase2(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (validateBindingReferencePhase3(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (validateBindingReferencePhase4(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (validateBindingReferencePhase5(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
-    if (validateBindingReferencePhase6(params, locals, stmt, namespacePrefix, handled, st, st2) == PhaseStatus::Done) {
-      return st2.result;
-    }
+    return validateBindingReference(params, locals, stmt, namespacePrefix, st) == PhaseStatus::Done
+               ? PhaseStatus::Done
+               : PhaseStatus::Continue;
   }
   return PhaseStatus::Continue;
 }

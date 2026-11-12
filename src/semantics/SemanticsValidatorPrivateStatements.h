@@ -247,11 +247,44 @@
   PhaseStatus validateBindingPhase6(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
   PhaseStatus validateBindingPhase7(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st);
 
-  // Phase functions of validateBindingPhase5 (TODO-5385).
-  friend struct ValidateBindingReferenceState;
-  PhaseStatus validateBindingReferencePhase1(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
-  PhaseStatus validateBindingReferencePhase2(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
-  PhaseStatus validateBindingReferencePhase3(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
-  PhaseStatus validateBindingReferencePhase4(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
-  PhaseStatus validateBindingReferencePhase5(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
-  PhaseStatus validateBindingReferencePhase6(const std::vector<ParameterInfo> &params, std::unordered_map<std::string, BindingInfo> &locals, const Expr &stmt, const std::string &namespacePrefix, bool &handled, ValidateBindingState &st, ValidateBindingReferenceState &st2);
+  // Validation of a `Reference<T>` binding (TODO-5981): ordered rules over a context, with helpers that take it
+  // explicitly. Rules: SemanticsValidatorBindingReferenceRules.cpp; helpers: ...ReferenceResolver.cpp.
+  friend struct BindingReferenceContext;
+  PhaseStatus validateBindingReference(const std::vector<ParameterInfo> &params,
+                                       std::unordered_map<std::string, BindingInfo> &locals,
+                                       const Expr &stmt,
+                                       const std::string &namespacePrefix,
+                                       ValidateBindingState &st);
+  PhaseStatus classifyReferenceInitializer(BindingReferenceContext &ctx);
+  PhaseStatus bindReferenceRoot(BindingReferenceContext &ctx);
+  bool resolveDirectBorrowStorageTargetType(BindingReferenceContext &ctx,
+                                            const Expr &expr,
+                                            std::string &targetOut);
+  bool
+  resolvePointerTargetType(BindingReferenceContext &ctx, const Expr &expr, std::string &targetOut);
+  bool resolveBorrowRoot(BindingReferenceContext &ctx,
+                         const std::string &targetName,
+                         std::string &rootOut);
+  bool appendCallSubstitutions(BindingReferenceContext &ctx,
+                               const Expr &callExpr,
+                               const ExprSubstitutions &baseSubstitutions,
+                               ExprSubstitutions &extendedSubstitutions,
+                               const Expr *&returnedValueExprOut);
+  bool resolveConcreteCallPath(BindingReferenceContext &ctx,
+                               const Expr &callExpr,
+                               std::string &resolvedPathOut);
+  bool resolveReceiverRootExpr(BindingReferenceContext &ctx,
+                               const Expr &expr,
+                               const ExprSubstitutions &substitutions,
+                               std::string &rootOut);
+  bool resolveStandaloneRefRootExpr(BindingReferenceContext &ctx,
+                                    const Expr &expr,
+                                    const ExprSubstitutions &substitutions,
+                                    std::string &rootOut);
+  bool isStandaloneRefCall(BindingReferenceContext &ctx, const Expr &expr);
+  bool hasBorrowConflictForRoot(BindingReferenceContext &ctx,
+                                const std::string &borrowRoot,
+                                bool requestMutable);
+  bool isMutableRootBinding(BindingReferenceContext &ctx, const std::string &borrowRoot);
+  bool
+  resolveBorrowRootExpr(BindingReferenceContext &ctx, const Expr &targetExpr, std::string &rootOut);

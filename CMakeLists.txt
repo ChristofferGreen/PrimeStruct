@@ -423,8 +423,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorStatementBindings.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesA.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesB.cpp
-  src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesA.cpp
-  src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesB.cpp
+  src/semantics/SemanticsValidatorBindingReferenceResolver.cpp
+  src/semantics/SemanticsValidatorBindingReferenceRules.cpp
   src/semantics/SemanticsValidatorStatementBindingsPhasesC.cpp
   src/semantics/SemanticsValidatorStatementBodyArguments.cpp
   src/semantics/SemanticsValidatorStatementBuiltins.cpp
