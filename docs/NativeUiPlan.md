@@ -336,7 +336,7 @@ only widgets with such handlers.
   `item`, `button` and `setChecked` are overloaded on the control or the command; the per-control `onChange` names and
   `commandItem`/`commandButton` remain as methods by name, for an argument that is a method call (its type is not known
   to overload selection). `run` reads the ABI
-  event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736). The handlers of one type share one vector and
+  event kinds itself instead of `pick`ing an `AppEvent`, which has no pointer or key events. The handlers of one type share one vector and
   `run` calls each vector from one place. The arm64 native backend makes struct methods and closure calls real calls
   (TODO-5740); a target with the scalar ABI (x86_64 native, TODO-5752) inlines them and a `Function` call with every
   closure of its type at each call site, so this keeps an app's handlers compiled once there.

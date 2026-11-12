@@ -133,8 +133,8 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5736 | `pick` and sum parameters in a generic struct's method lower | ready | generic-methods |
 | TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
+| TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | ready | generic-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -240,7 +240,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5736, TODO-5737
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5737, TODO-5958
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -379,18 +379,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
 
-- [ ] TODO-5736: `pick` and sum parameters in a generic struct's method lower
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
-  - parallel_track: generic-methods
-  - scope: In a method of a generic struct, a `pick` stops VM lowering with `block arguments require a definition target: /Holder__t.../pick`, and passing a value of a namespaced sum type to a parameter declared `[AppEvent] event` (in `/std/ui/native`'s `AppHandlers<State>`) stops it with `struct parameter type mismatch: expected AppEvent, got /std/ui/native/AppEvent`. Repro: `[sum] Event { none [i32] number }`, a `Holder<S>` with `[S mut] state` and `[return<i32>] value([Event] event) { [i32 mut] total{0i32} pick(event) { number(n) { total = n } none { total = 1i32 } } return(total) }`, called on a `Holder<i32>` from `main` (the same `pick` in a free function works). `AppHandlers.deliverNext` (stdlib/std/ui/native/handlers.prime) reads the C ABI event kinds itself instead of picking `app.waitEvent()`.
-  - acceptance:
-    - the repro and a namespaced sum parameter run on the VM and optexe; `deliverNext` picks `app.waitEvent()`
-    - full release gate green
-  - stop_rule: `pick` and sum-typed parameters in methods of generic structs.
-
 - [ ] TODO-5737: Implicit template arguments infer through a generic struct parameter
   - owner: ai
   - status: ready
@@ -402,6 +390,18 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - a free function and a struct method with a `[Holder<S>]` parameter infer `S` on the VM and optexe; a negative test for an argument that is not a `Holder`; `App.run` takes `[AppHandlers<State> mut]`
     - full release gate green
   - stop_rule: inference through one generic struct parameter; no change to explicit template arguments.
+
+- [ ] TODO-5958: A field `[S mut] state{}` of a generic struct in a namespace lowers
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5736)
+  - parallel_track: generic-fields
+  - scope: `namespace ns { [public struct] Holder<S>() { [S mut] state{} } }` with `[/ns/Holder<i32>] h{/ns/Holder<i32>{}}` and `return(h.state)` stops VM lowering with `block expression requires a value`: the field's empty initializer `block() {}` reaches the lowerer as a block expression instead of the zero value of `i32`. The same struct at the root, and a non-generic struct in a namespace, lower. Find where an empty initializer of a field becomes its default value (the omitted-initializer expansion) and why the specialization in a namespace is skipped.
+  - acceptance:
+    - the repro returns 0 on the VM, native and optexe, for `i32`, a struct and a `string` argument; a program-matrix case
+    - full release gate green
+  - stop_rule: default initializers of fields of generic structs in namespaces only.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai

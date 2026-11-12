@@ -683,8 +683,9 @@ bool isBareTypeIdentifier(const std::string &name) {
   return true;
 }
 
-// The struct a bare type name reaches through the imports (`StringView` after `import /std/text/view/*`), as its full
-// path, or empty when the name is not a struct or already resolves where it is written.
+// The struct or sum a bare type name reaches through the imports (`StringView` after `import /std/text/view/*`) or the
+// namespaces around it, as its full path, or empty when the name is not a struct or sum or already resolves where it
+// is written.
 std::string importedStructPath(const std::string &name, const std::string &namespacePrefix, Context &ctx) {
   if (!isBareTypeIdentifier(name)) {
     return {};
@@ -700,7 +701,8 @@ std::string importedStructPath(const std::string &name, const std::string &names
       return {};
     }
     const auto found = ctx.sourceDefs.find(path);
-    if (found != ctx.sourceDefs.end() && isStructDefinition(found->second)) {
+    if (found != ctx.sourceDefs.end() &&
+        (isStructDefinition(found->second) || isSumDefinitionForMonomorphRefresh(found->second))) {
       return path;
     }
     const auto owner = ctx.sourceDefs.find(searchPrefix);

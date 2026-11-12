@@ -411,7 +411,7 @@ namespace native {
     // handler refuses, a close request after which no window is open, or, with `afterEvent`, an event after which its
     // handler gives false. Events without a handler are dropped, except a close request, which closes its window. It
     // reads the event kinds of the C ABI as `App.waitEvent` does (a kind it does not know is a request to quit),
-    // without the `AppEvent` sum: a `pick` in a method of a generic struct does not lower yet (TODO-5736).
+    // without the `AppEvent` sum, which has no pointer or key events.
     [mut effects(heap_alloc)]
     run() {
       [Reference<State>] state{location(this.state)}

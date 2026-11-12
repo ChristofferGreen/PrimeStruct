@@ -202,3 +202,60 @@ main() {
 )",
                    39);
 }
+
+TEST_CASE("a sum parameter of a namespace and a pick in a generic struct's method lower") {
+  runMethodProgram("struct_methods_namespaced_sum", R"(
+namespace ui {
+  [public sum]
+  Event {
+    none
+    [i32] number
+    [string] label
+  }
+
+  [public return<i32>]
+  weight([Event] event) {
+    [i32 mut] total{0i32}
+    pick(event) {
+      number(n) { total = n }
+      label(s) { total = 7i32 }
+      none { total = 1i32 }
+    }
+    return(total)
+  }
+
+  [public struct]
+  Handlers<T>() {
+    [mut]
+    handle([Event] event, [Reference<i32> mut] sum) {
+      [i32 mut] add{0i32}
+      pick(event) {
+        number(n) { add = n }
+        label(s) { add = 20i32 }
+        none { add = 1i32 }
+      }
+      sum = sum + add
+    }
+
+    [return<i32>]
+    describe([Event] event) {
+      return(weight(event))
+    }
+  }
+}
+
+[return<int>]
+main() {
+  [/ui/Handlers<i32> mut] handlers{/ui/Handlers<i32>{}}
+  [i32 mut] sum{0i32}
+  [/ui/Event] number{[number] 4i32}
+  [/ui/Event] label{[label] "x"}
+  [/ui/Event] nothing{}
+  handlers.handle(number, location(sum))
+  handlers.handle(label, location(sum))
+  handlers.handle(nothing, location(sum))
+  return(sum * 2i32 + handlers.describe(number) + handlers.describe(label) + /ui/weight(nothing))
+}
+)",
+                   62);
+}
