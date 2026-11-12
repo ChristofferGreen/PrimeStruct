@@ -1629,9 +1629,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
 
-- [ ] TODO-5959: The AST C++ and GLSL emitters are deleted
+- [~] TODO-5959: The AST C++ and GLSL emitters are deleted
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 2)
   - parallel_track: reuse-dead-emitters
