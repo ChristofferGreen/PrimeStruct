@@ -1700,9 +1700,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: expression call validation only; the lowerer fragments are only proposed here.
   - notes: Do not run alongside TODO-5967.
 
-- [ ] TODO-5969: Float math builtins lower through one table-driven emitter
+- [~] TODO-5969: Float math builtins lower through one table-driven emitter
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 9)
   - parallel_track: reuse-math-lowering
