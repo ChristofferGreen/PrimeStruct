@@ -278,6 +278,77 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an indexed element of a stdlib Vector of one-field structs binds as a copy") {
+  // `v[i]`, `at(v, i)` and `v.at(i)` of a `Vector<Noisy>` each copy once (id + 1000) and destroy the copy
+  // once; the element is destroyed with the vector last (1).
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_element_one_field";
+  program.source = R"(
+import /std/collections/*
+import /std/collections/vector/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 1000i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(heap_alloc io_out) return<int>]
+main() {
+  [Vector<Noisy> mut] v{vector<Noisy>()}
+  vectorPush<Noisy>(v, Noisy{1i32})
+  [Noisy] a{v[0i32]}
+  [Noisy] b{at(v, 0i32)}
+  [Noisy] c{v.at(0i32)}
+  print_line(a.id + b.id + c.id)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3003\n1001\n1001\n1001\n1\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an indexed element of a stdlib Vector of a two-field struct binds as a copy") {
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_element_two_fields";
+  program.source = R"(
+import /std/collections/*
+import /std/collections/vector/*
+
+[struct]
+Tagged() {
+  [i32 mut] id{0i32}
+  [bool] flag{false}
+  [public] Copy([Reference<Self>] other) {
+    assign(this.id, other.id + 1000i32)
+    assign(this.flag, other.flag)
+  }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(heap_alloc io_out) return<int>]
+main() {
+  [Vector<Tagged> mut] v{vector<Tagged>()}
+  vectorPush<Tagged>(v, Tagged{2i32, true})
+  vectorPush<Tagged>(v, Tagged{3i32, false})
+  [Tagged] a{v[1i32]}
+  [Tagged] b{at(v, 0i32)}
+  [Tagged] c{v.at(1i32)}
+  if(b.flag && !a.flag && !c.flag) {
+    print_line(a.id + b.id + c.id)
+  }
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3008\n1003\n1002\n1003\n2\n3\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a binding from a Function-holding element clones the closure") {
   // The copy's closure state is its own: 5 + 5 on the copy, 1 on the element, and the copy still
   // runs after the element is removed.

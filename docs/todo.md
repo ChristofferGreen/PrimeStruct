@@ -134,7 +134,6 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
-| TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | ready | collections-access |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
 | TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
@@ -246,7 +245,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -387,18 +386,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
 
-- [ ] TODO-5726: An indexed element of a stdlib `Vector<T>` of structs binds without a fault
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Collections (docs/spec/value-lifecycle.md, Copies; found by TODO-5720)
-  - parallel_track: collections-access
-  - scope: With `[Vector<Noisy> mut] v{vector<Noisy>()}` filled by `vectorPush<Noisy>`, where `Noisy` is a struct (one `i32` field, or an `i32` and a `bool`), `[Noisy] a{v[0i32]}`, `at(v, 0i32)` and `v.at(0i32)` stop with `VM error: unaligned indirect address in IR: 1` (or `: 2`); `vectorAt<Noisy>(v, 0i32)` binds and copies once, and the builtin `vector<Noisy>` spelling works. Present before TODO-5720; likely the builtin element access reads the stdlib Vector record with the builtin record layout.
-  - acceptance:
-    - the three spellings bind, copy once and destroy once on the VM and optexe (matrix case)
-    - full release gate green
-  - stop_rule: indexed reads of stdlib `Vector<T>` struct elements only.
-
 - [ ] TODO-5728: `slice` and `sliceMut` on a vector field of a struct resolve
   - owner: ai
   - status: ready
@@ -421,7 +408,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
   - acceptance:
     - a program pushes Strings to a `vector<String>` field, binds, views and passes each element, directly and through a Reference, on the VM and optexe, each String freed once
     - full release gate green
-  - stop_rule: element access of `vector<String>` fields; other element types are TODO-5726.
+  - stop_rule: element access of `vector<String>` fields; other element types are not part of it.
 
 - [ ] TODO-5731: A `string` field of an element whose closure captures reads without a fault
   - owner: ai

@@ -2181,6 +2181,7 @@ are left unarchived.
 | TODO-5723 | Shared UI event structs for web and native handlers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5724 | Web hover and key handlers through the fragment script | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5725 | Native pointer and key events for control handlers | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5729 | The web example loopback tests run in their own CTest entries | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5734 | Web apps build in seconds, not minutes, on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5739 | Large struct copies lower to a slot loop | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |

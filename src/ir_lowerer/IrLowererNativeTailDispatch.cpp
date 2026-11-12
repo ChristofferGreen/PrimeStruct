@@ -1047,6 +1047,17 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
         return NativeCallTailDispatchResult::NotHandled;
       }
     }
+    // The direct-call spelling of a record-boxed stdlib Vector receiver (`at(v, i)`, `v[i]`) goes to the real
+    // `at` like the method-call form above: the builtin access below loads one slot as the element, which is
+    // not the element of a struct.
+    if (!expr.isMethodCall && arrayVectorTargetInfo.isStructBoxedRecordTarget &&
+        (accessName == "at" || accessName == "at_unsafe") && arrayVectorTargetInfo.isVectorTarget &&
+        !arrayVectorTargetInfo.isSoaVector && !arrayVectorTargetInfo.isKeyValueTarget &&
+        findSemanticProductDirectCallTarget(semanticProgram, expr) ==
+            std::string(accessName == "at" ? collection_helpers::kCanonicalVectorAt
+                                           : collection_helpers::kCanonicalVectorAtUnsafe)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (!emitBuiltinArrayAccess(accessName,
                                 expr.args[0],
                                 expr.args[1],
