@@ -235,6 +235,20 @@ TEST_CASE("an html page with a form and its response are byte for byte through o
                 "html_page case " << failed << " failed (tests/fixtures/http/html_page.prime)");
 }
 
+TEST_CASE("one file builds an html page and a json value through full paths on the VM") {
+  const int failed = runOnVm("html_and_json_writers");
+  CHECK_MESSAGE(failed == 0,
+                "html_and_json_writers case "
+                    << failed << " failed (tests/fixtures/http/html_and_json_writers.prime)");
+}
+
+TEST_CASE("one file builds an html page and a json value through full paths through optexe") {
+  const int failed = runThroughOptexe("html_and_json_writers");
+  CHECK_MESSAGE(failed == 0,
+                "html_and_json_writers case "
+                    << failed << " failed (tests/fixtures/http/html_and_json_writers.prime)");
+}
+
 TEST_CASE("a Router dispatches by method and path on the VM") {
   const int failed = runOnVm("router_dispatch");
   CHECK_MESSAGE(failed == 0, "router_dispatch case " << failed << " failed (tests/fixtures/http/router_dispatch.prime)");

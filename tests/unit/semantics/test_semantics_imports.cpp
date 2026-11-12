@@ -830,6 +830,57 @@ main() {
   CHECK(error.find("import creates name conflict: dup") != std::string::npos);
 }
 
+TEST_CASE("two imports exporting one name are fine when each use is a full path") {
+  const std::string source = R"(
+import /util, /tools
+namespace util {
+  [public return<int>]
+  dup() {
+    return(1i32)
+  }
+}
+namespace tools {
+  [public return<int>]
+  dup() {
+    return(2i32)
+  }
+}
+[return<int>]
+main() {
+  return(plus(/util/dup(), /tools/dup()))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("an unqualified use of a name two imports export names both paths") {
+  const std::string source = R"(
+import /util, /tools
+namespace util {
+  [public return<int>]
+  dup() {
+    return(1i32)
+  }
+}
+namespace tools {
+  [public return<int>]
+  dup() {
+    return(2i32)
+  }
+}
+[return<int>]
+main() {
+  return(dup())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("import creates name conflict: dup is exported by /tools/dup and /util/dup") !=
+        std::string::npos);
+}
+
 TEST_CASE("import resolves execution targets") {
   const std::string source = R"(
 import /util

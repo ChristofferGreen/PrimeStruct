@@ -2173,6 +2173,7 @@ are left unarchived.
 | TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5717 | One file imports two modules that export the same name | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5719 | `location(this.field)` passes directly as a `Function` call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5720 | A binding from a vector element copies the element's owned fields | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5721 | A string converts to a `StringView` at a field of a generic struct | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |

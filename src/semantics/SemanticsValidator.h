@@ -558,6 +558,8 @@ private:
   std::unordered_map<std::string, std::string> directImportAliases_;
   std::unordered_map<std::string, std::string> transitiveImportAliases_;
   std::unordered_map<std::string, std::string> importAliases_;
+  // Bare names that two or more imported modules export, with the sorted exporting paths.
+  std::unordered_map<std::string, std::vector<std::string>> ambiguousImportAliases_;
   bool queryFactSnapshotCacheValid_ = false;
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotCache_;
   bool tryValueSnapshotCacheValid_ = false;

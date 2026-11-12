@@ -47,6 +47,8 @@
   // program order; replaces linear scans over program_.definitions.
   std::vector<const Definition *> definitionsMatchingPathOrSpecialization(const std::string &path) const;
   bool buildImportAliases();
+  bool reportAmbiguousImportUses(
+      const std::function<bool(const std::string &, const Definition *)> &addDiagnostic);
   std::string resolveStructReturnPathForBuild(const std::string &typeName,
                                               const std::string &namespacePrefix) const;
   std::string formatLocalGeneratedStructEscapeDiagnostic(

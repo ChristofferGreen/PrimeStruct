@@ -1,0 +1,22 @@
+// /std/html and /std/json both export `Writer`; one file imports both and names each by its full path.
+// The exit code is the number of the first case that failed, or 0.
+import /std/html/*
+import /std/json/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [/std/html/Writer mut] page{/std/html/Writer{}}
+  page.element("p", "a<b")
+  [/std/json/Writer mut] value{/std/json/Writer{}}
+  value.beginObject()
+  value.endObject()
+  if(!page.out.equalsText("<p>a&lt;b</p>")) {
+    return(1i32)
+  }
+  if(!value.out.equalsText("{}")) {
+    return(2i32)
+  }
+  return(0i32)
+}

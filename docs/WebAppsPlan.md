@@ -9,8 +9,8 @@ Classification: **design direction**. The open work is in `docs/todo.md` (Web ap
 parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an escaping HTML writer with the form
 vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are optexe binaries, on one thread (`serve`) or with worker threads (`serveWorkers`: Concurrency below); containers are out of scope. The server
 waits on all of its open connections at once with `poll`, so an idle connection does not stall the others
-(TODO-5705). One file cannot import both `/std/html` and `/std/json` yet: both export `Writer`
-(TODO-5717). Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
+(TODO-5705). One file may import both `/std/html` and `/std/json`; both export `Writer`, so each is
+named by its full path. Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
 `examples/apps/todo_web/main.prime` is the first app with pages, forms and buttons: an `AppRouter<TodoList>` whose
 POST routes change the list and redirect back (TODO-5704), since moved to a `WebApp<TodoList>` for fragments.
 `/std/ui/events` holds the event values handlers receive, `PointerEvent`, `KeyEvent`, `ChangeEvent` with
@@ -126,7 +126,7 @@ handler that brings the menus, toolbars and session up to date after each event.
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.
-8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5717 (both writers in one file), TODO-5718 (repeated and decoded
+8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5718 (repeated and decoded
    parameters).
 
 ## Concurrency

@@ -1396,6 +1396,21 @@ main() {
 }
 ```
 
-`/std/html` and `/std/json` both name their writer `Writer`. Importing both is an `import creates name conflict: Writer`
-error today, even where the program names one of them by its full path, so one file cannot use both writers yet
-(TODO-5717).
+`/std/html` and `/std/json` both name their writer `Writer`. One file may import both and name each by its full path;
+an unqualified `Writer` is an `import creates name conflict: Writer is exported by /std/html/Writer and
+/std/json/Writer` error (docs/PrimeStruct_SyntaxSpec.md, Imports):
+
+```
+import /std/html/*
+import /std/json/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [/std/html/Writer mut] page{/std/html/Writer{}}
+  [/std/json/Writer mut] value{/std/json/Writer{}}
+  page.element("p", "text")
+  value.beginObject()
+  value.endObject()
+  return(0i32)
+}
+```

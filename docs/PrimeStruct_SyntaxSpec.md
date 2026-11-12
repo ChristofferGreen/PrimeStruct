@@ -294,6 +294,12 @@ with `--import-path` (or `-I`); `--include-path` is not supported.
 - `import /std/math` (without a wildcard or explicit name) is not supported; use `import /std/math/*` or
   `import /std/math/<name>` instead.
 
+Two imports may export the same bare name (`/std/html` and `/std/json` both export `Writer`). That is not an error at
+the import: each is still reachable by its full path (`/std/html/Writer`, `/std/json/Writer`). An unqualified use of
+the shared name is the error, `import creates name conflict: Writer is exported by /std/html/Writer and
+/std/json/Writer; write the full path`. A name that an import shares with a root definition or a builtin stays an
+error at the import. There is no import alias or renaming syntax.
+
 Definitions are private by default; add `[public]` to a definition to make it importable. Private definitions remain
 callable within the same compilation unit; visibility only affects imports.
 

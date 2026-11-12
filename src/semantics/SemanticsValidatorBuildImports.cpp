@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <functional>
 #include <unordered_set>
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -128,10 +129,118 @@ const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::s
 
 } // namespace
 
+namespace {
+
+// True when `text` names `name` as an unqualified identifier: not part of a longer identifier and not the last
+// segment of a slash path.
+bool mentionsUnqualifiedName(const std::string &text, const std::string &name) {
+  size_t pos = 0;
+  while ((pos = text.find(name, pos)) != std::string::npos) {
+    const size_t end = pos + name.size();
+    const bool startOk = pos == 0 || !(std::isalnum(static_cast<unsigned char>(text[pos - 1])) ||
+                                       text[pos - 1] == '_' || text[pos - 1] == '/');
+    const bool endOk = end >= text.size() ||
+                       !(std::isalnum(static_cast<unsigned char>(text[end])) || text[end] == '_');
+    if (startOk && endOk) {
+      return true;
+    }
+    pos = end;
+  }
+  return false;
+}
+
+bool transformsMentionName(const std::vector<Transform> &transforms, const std::string &name) {
+  for (const Transform &transform : transforms) {
+    if (mentionsUnqualifiedName(transform.name, name)) {
+      return true;
+    }
+    for (const std::string &arg : transform.templateArgs) {
+      if (mentionsUnqualifiedName(arg, name)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool exprMentionsName(const Expr &expr, const std::string &name) {
+  if ((expr.kind == Expr::Kind::Name || expr.kind == Expr::Kind::Call) && !expr.isFieldAccess &&
+      !expr.isMethodCall && expr.name == name) {
+    return true;
+  }
+  if (transformsMentionName(expr.transforms, name)) {
+    return true;
+  }
+  for (const std::string &arg : expr.templateArgs) {
+    if (mentionsUnqualifiedName(arg, name)) {
+      return true;
+    }
+  }
+  for (const Expr &arg : expr.args) {
+    if (exprMentionsName(arg, name)) {
+      return true;
+    }
+  }
+  for (const Expr &arg : expr.bodyArguments) {
+    if (exprMentionsName(arg, name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace
+
+bool SemanticsValidator::reportAmbiguousImportUses(
+    const std::function<bool(const std::string &, const Definition *)> &addDiagnostic) {
+  std::vector<std::string> names;
+  for (const auto &entry : ambiguousImportAliases_) {
+    names.push_back(entry.first);
+  }
+  std::sort(names.begin(), names.end());
+  for (const std::string &name : names) {
+    const std::vector<std::string> &paths = ambiguousImportAliases_.at(name);
+    for (const Definition &def : program_.definitions) {
+      // A definition inside one of the exporting modules, or one that defines the name next to itself, resolves
+      // the bare name locally.
+      if (defMap_.count(def.namespacePrefix + "/" + name) > 0 ||
+          std::any_of(paths.begin(), paths.end(), [&](const std::string &path) {
+            return path.compare(0, path.find_last_of('/'), def.namespacePrefix) == 0;
+          })) {
+        continue;
+      }
+      bool mentioned = transformsMentionName(def.transforms, name);
+      for (const Expr &param : def.parameters) {
+        mentioned = mentioned || exprMentionsName(param, name);
+      }
+      for (const Expr &stmt : def.statements) {
+        mentioned = mentioned || exprMentionsName(stmt, name);
+      }
+      if (def.returnExpr.has_value()) {
+        mentioned = mentioned || exprMentionsName(*def.returnExpr, name);
+      }
+      if (!mentioned) {
+        continue;
+      }
+      std::string message = "import creates name conflict: " + name + " is exported by ";
+      for (size_t i = 0; i < paths.size(); ++i) {
+        message += (i == 0 ? "" : (i + 1 == paths.size() ? " and " : ", ")) + paths[i];
+      }
+      message += "; write the full path";
+      if (!addDiagnostic(message, &def)) {
+        return false;
+      }
+      break;
+    }
+  }
+  return true;
+}
+
 bool SemanticsValidator::buildImportAliases() {
   directImportAliases_.clear();
   transitiveImportAliases_.clear();
   importAliases_.clear();
+  ambiguousImportAliases_.clear();
   std::vector<SemanticDiagnosticRecord> importDiagnosticRecords;
   const bool collectImportDiagnostics = shouldCollectStructuredDiagnostics();
   auto failImportDiagnostic = [&](std::string message, const Definition *relatedDef = nullptr) -> bool {
@@ -307,6 +416,33 @@ bool SemanticsValidator::buildImportAliases() {
                stdlibSurfaceMatchesImportAliasPath(*preferred, candidatePath);
       };
 
+  // Two imported modules that export the same bare name are not an
+  // error at the import; the name is dropped from the alias maps and an
+  // unqualified use of it is reported (after the imports are processed).
+  auto markAmbiguous =
+      [&](const std::string &name, const std::string &first, const std::string &second) {
+        auto &paths = ambiguousImportAliases_[name];
+        for (const std::string &candidate : {first, second}) {
+          if (std::find(paths.begin(), paths.end(), candidate) == paths.end()) {
+            paths.push_back(candidate);
+          }
+        }
+        std::sort(paths.begin(), paths.end());
+        directImportAliases_.erase(name);
+        importAliases_.erase(name);
+      };
+  auto noteIfAmbiguous = [&](const std::string &name, const std::string &path) {
+    auto it = ambiguousImportAliases_.find(name);
+    if (it == ambiguousImportAliases_.end()) {
+      return false;
+    }
+    if (std::find(it->second.begin(), it->second.end(), path) == it->second.end()) {
+      it->second.push_back(path);
+      std::sort(it->second.begin(), it->second.end());
+    }
+    return true;
+  };
+
   const auto &importPaths = validationPlan_->imports.directImportPaths;
   for (const auto &importPath : importPaths) {
     if (isDirectCollectionVectorImportPath(importPath)) {
@@ -420,17 +556,17 @@ bool SemanticsValidator::buildImportAliases() {
           importError = true;
           break;
         }
+        if (noteIfAmbiguous(remainder, path)) {
+          continue;
+        }
         auto [it, inserted] = directImportAliases_.emplace(remainder, path);
         if (!inserted && it->second != path) {
           if (isMetadataBackedWildcardAliasDefinition(
                   prefix, remainder, it->second, path)) {
             continue;
           }
-          if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
-            return false;
-          }
-          importError = true;
-          break;
+          markAmbiguous(remainder, it->second, path);
+          continue;
         }
         if (shouldPublishMergedImportAlias(remainder, path)) {
           importAliases_.emplace(remainder, path);
@@ -528,11 +664,12 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
+    if (noteIfAmbiguous(remainder, aliasTargetPath)) {
+      continue;
+    }
     auto [it, inserted] = directImportAliases_.emplace(remainder, aliasTargetPath);
     if (!inserted && it->second != aliasTargetPath) {
-      if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
-        return false;
-      }
+      markAmbiguous(remainder, it->second, aliasTargetPath);
       continue;
     }
     if (shouldPublishMergedImportAlias(remainder, aliasTargetPath)) {
@@ -600,6 +737,9 @@ bool SemanticsValidator::buildImportAliases() {
           if (defMap_.find(rootPath) != defMap_.end()) {
             continue;
           }
+          if (ambiguousImportAliases_.count(remainder) > 0) {
+            continue;
+          }
           transitiveImportAliases_.emplace(remainder, path);
           if (shouldPublishMergedImportAlias(remainder, path)) {
             importAliases_.emplace(remainder, path);
@@ -635,6 +775,9 @@ bool SemanticsValidator::buildImportAliases() {
       if (defMap_.find(rootPath) != defMap_.end()) {
         return;
       }
+      if (ambiguousImportAliases_.count(remainder) > 0) {
+        return;
+      }
       transitiveImportAliases_.emplace(remainder, aliasTargetPath);
       if (shouldPublishMergedImportAlias(remainder, aliasTargetPath)) {
         importAliases_.emplace(remainder, aliasTargetPath);
@@ -643,6 +786,10 @@ bool SemanticsValidator::buildImportAliases() {
     for (const auto &importPath : validationPlan_->imports.transitiveImportPaths) {
       registerTransitiveImportAlias(importPath);
     }
+  }
+
+  if (!ambiguousImportAliases_.empty() && !reportAmbiguousImportUses(addImportDiagnostic)) {
+    return false;
   }
 
   if (!finalizeCollectedStructuredDiagnostics(importDiagnosticRecords)) {
