@@ -222,6 +222,7 @@ of sync with them.
 | TODO-5975 | IR opcode categories come from the opcode table | ready | reuse-opcode-table |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
+| TODO-5978 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 
 ### Ready Now
 
@@ -1860,3 +1861,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written after the survey: the lambdas that only set a message and a span use one builder, and diagnostic text of the semantics tests is unchanged
   - stop_rule: survey first; do not refactor before the table exists.
   - notes: deferred: needs the survey. Do not run alongside TODO-5960.
+
+- [ ] TODO-5978: `--collect-diagnostics` reports no false intra-body call diagnostics
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Semantics diagnostics (found while doing TODO-5960)
+  - parallel_track: collect-diagnostics-false-positives
+  - scope: The intra-body call collector (`collectIntraBodyCallDiagnostics`, src/semantics/SemanticsValidatorPassesDiagnostics.cpp) reports errors that the real validator does not. Checked with `primec` on minimal programs. (a) A valid program with `[Maybe] m{[some] 3i32}` (or `return(Maybe{})`) in a definition compiles and runs under plain `primec`/`primevm` (exit code is the program result) but `primec --emit-diagnostics --collect-diagnostics` exits 2 with `unknown named argument: some` or `argument count mismatch`, so tooling that collects diagnostics sees errors in valid code. (b) With `import /std/collections/*` and one real error elsewhere in the program, the collected list also holds `unknown call target: init`, `drop`, `borrow` inside stdlib definitions (`vectorInitSlot__t...`, `vectorBorrowSlot__t...`, `vectorMovePrefixToBuffer__t...`); plain `primec` stops at the first real error and does not show them, and a valid program with the import collects nothing, so (b) is noise only in collect mode. (c) `/soa/get` and `/soa/ref` give different results per owner: in a definition body the call is rewritten to `/std/collections/soa_vector/*` before collection, in an execution argument it is not, so the execution reports `unknown call target: /soa/get`.
+  - acceptance:
+    - a minimal valid program using sum construction (`[Maybe] m{[some] 3i32}`, `Maybe{}`) collects no diagnostics, with a semantics test
+    - a program that imports /std/collections and has one real error collects only that error, with a test
+    - an execution argument `/soa/get(...)` and the same call in a definition body collect the same message, with a test
+    - full release gate green
+  - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
+  - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
