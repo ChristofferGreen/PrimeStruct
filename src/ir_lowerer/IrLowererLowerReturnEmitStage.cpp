@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 #include "primec/ir/SoaPathHelpers.h"
 #include "primec/support/CollectionHelperNames.h"

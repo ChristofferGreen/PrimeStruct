@@ -10,20 +10,11 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-std::string resolveScopedCallPath(const Expr &expr) {
-  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
-    return expr.name;
-  }
-  if (expr.namespacePrefix == "/") {
-    return "/" + expr.name;
-  }
-  return expr.namespacePrefix + "/" + expr.name;
-}
 
 bool isBareOrInternalSoaHelperCall(const Expr &expr, const char *helperName) {
   if (isSimpleCallName(expr, helperName)) {

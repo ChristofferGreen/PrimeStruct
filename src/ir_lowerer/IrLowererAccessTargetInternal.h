@@ -26,16 +26,6 @@ inline bool isCollectionVectorRecordPath(const std::string &structTypeName) {
          isExperimentalCollectionTypeName(structTypeName, "vector", "Vector");
 }
 
-inline std::string resolveScopedCallPath(const Expr &expr) {
-  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
-    return expr.name;
-  }
-  if (expr.namespacePrefix == "/") {
-    return "/" + expr.name;
-  }
-  return expr.namespacePrefix + "/" + expr.name;
-}
-
 inline std::string inferExperimentalSoaVectorStructPathFromTypeName(
     const std::string &typeName) {
   const size_t first = typeName.find_first_not_of(" \t\r\n");

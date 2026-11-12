@@ -3,6 +3,7 @@
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 namespace primec::ir_lowerer {
 
@@ -127,7 +128,7 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (collection_helpers::isRootedArrayPath(path)) {
       const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-      if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+      if (classifierArrayVectorCompatibilitySuffixAllowed(suffix)) {
         const std::string stdlibAlias =
             stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
         defIt = defMap.find(stdlibAlias);

@@ -232,4 +232,20 @@ CompatSpellingDecision classifyCollectionHelperSpelling(
   return decision;
 }
 
+std::string classifierStripGeneratedHelperSuffix(std::string path) {
+  const size_t leafStart = path.find_last_of('/');
+  const size_t generatedSuffix =
+      path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (generatedSuffix != std::string::npos) {
+    path.erase(generatedSuffix);
+  }
+  return path;
+}
+
+bool classifierArrayVectorCompatibilitySuffixAllowed(std::string_view suffix) {
+  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
+         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
+         suffix != "remove_at" && suffix != "remove_swap";
+}
+
 } // namespace primec

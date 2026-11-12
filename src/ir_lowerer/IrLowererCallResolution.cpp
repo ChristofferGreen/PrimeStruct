@@ -15,14 +15,6 @@ namespace {
 
 std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr);
 
-std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
-}
-
 std::string experimentalCollectionMemberPath(std::string_view collectionName,
                                              std::string_view memberName) {
   return experimentalCollectionMemberRoot(collectionName) + std::string(memberName);

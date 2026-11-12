@@ -8,16 +8,11 @@
 #include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
+#include "primec/support/CollectionSpellingClassifier.h"
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-         suffix != "remove_at" && suffix != "remove_swap";
-}
 
 bool isCollectionVectorConstructorPath(std::string path) {
   if (!path.empty() && path.front() != '/') {
@@ -223,7 +218,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
   if (collection_helpers::isCollectionFamilyRoot(receiverStruct, collection_helpers::CollectionFamily::Vector)) {
     std::vector<std::string> candidates = {
         stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName)};
-    if (allowsArrayVectorCompatibilitySuffix(methodName)) {
+    if (classifierArrayVectorCompatibilitySuffixAllowed(methodName)) {
       candidates.push_back(collection_helpers::kRootedArrayPrefix + methodName);
     }
     return candidates;
@@ -232,7 +227,7 @@ std::vector<std::string> collectionMethodPathCandidates(const std::string &recei
     std::vector<std::string> candidates = {
         collection_helpers::kRootedArrayPrefix + methodName,
     };
-    if (allowsArrayVectorCompatibilitySuffix(methodName)) {
+    if (classifierArrayVectorCompatibilitySuffixAllowed(methodName)) {
       candidates.push_back(
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, methodName));
     }
@@ -287,7 +282,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   appendUnique(normalizedPath);
   if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+    if (classifierArrayVectorCompatibilitySuffixAllowed(suffix)) {
       appendUnique(stdlibSurfaceCanonicalHelperPath(
           StdlibSurfaceId::CollectionsManifestSurface0, suffix));
     }
@@ -300,7 +295,7 @@ std::string preferCollectionHelperPath(const std::string &path,
   std::string preferred = path;
   if (collection_helpers::isRootedArrayPath(preferred) && defMap.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+    if (classifierArrayVectorCompatibilitySuffixAllowed(suffix)) {
       const std::string stdlibAlias =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
       if (defMap.count(stdlibAlias) > 0) {

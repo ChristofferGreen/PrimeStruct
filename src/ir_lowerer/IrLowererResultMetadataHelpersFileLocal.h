@@ -20,19 +20,6 @@ namespace primec::ir_lowerer {
 
 namespace ir_lowerer_result_metadata_helpers_file_local {
 
-inline std::string resolveScopedCallPath(const Expr &expr) {
-  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
-    return expr.name;
-  }
-  if (expr.namespacePrefix == "/") {
-    return "/" + expr.name;
-  }
-  if (!expr.namespacePrefix.empty() && expr.namespacePrefix.back() == '/') {
-    return expr.namespacePrefix + expr.name;
-  }
-  return expr.namespacePrefix + "/" + expr.name;
-}
-
 inline const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadataForResultMetadata() {
   return keyValueConstructorSurfaceMetadata();
 }

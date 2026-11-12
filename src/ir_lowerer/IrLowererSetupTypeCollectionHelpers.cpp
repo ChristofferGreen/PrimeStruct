@@ -15,14 +15,6 @@ std::string normalizeCollectionHelperPath(const std::string &path);
 
 namespace {
 
-std::string stripGeneratedHelperSuffix(std::string helperName) {
-  const size_t generatedSuffix = helperName.find("__");
-  if (generatedSuffix != std::string::npos) {
-    helperName.erase(generatedSuffix);
-  }
-  return helperName;
-}
-
 bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
                                 std::string_view spelling) {
   return std::any_of(
@@ -217,12 +209,6 @@ const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata() {
              : findCollectionConstructorSurfaceMetadataForHelper(*helperMetadata);
 }
 
-bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
-  return suffix != "count" && suffix != "capacity" && suffix != "at" && suffix != "at_unsafe" &&
-         suffix != "push" && suffix != "pop" && suffix != "reserve" && suffix != "clear" &&
-         suffix != "remove_at" && suffix != "remove_swap";
-}
-
 std::string preferredFileErrorHelperTarget(
     std::string_view helperName,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -390,16 +376,6 @@ std::string preferredGfxErrorHelperTarget(
   return "";
 }
 
-bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
-  // Removed-name membership delegates to the single authoritative set in
-  // primec/support/CollectionSpellingClassifier.h (decision D2); this site keeps
-  // its generated-suffix stripping locally. It was the other
-  // registry-membership variant; the D2 agreement unit test pins that the
-  // registry manifest surface covers the same names.
-  return classifierRemovedVectorCompatibilityHelper(
-      stripGeneratedHelperSuffix(helperName));
-}
-
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
@@ -422,19 +398,19 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   const std::string experimentalVectorPrefix =
       experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
-    if (isRemovedVectorCompatibilityHelper(helperNameOut)) {
+    helperNameOut = classifierStripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
+    if (classifierRemovedVectorCompatibilityHelper(helperNameOut)) {
       return false;
     }
     return true;
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
+    helperNameOut = classifierStripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(
-        normalized.substr(stdSoaVectorPrefix.size()));
+    helperNameOut =
+        classifierStripGeneratedHelperSuffix(normalized.substr(stdSoaVectorPrefix.size()));
     if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
     } else if (helperNameOut == "soaVectorCountRef") {
@@ -445,8 +421,8 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
            collection_helpers::isRefHelperName(helperNameOut);
   }
   if (normalized.rfind(experimentalSoaVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(
-        normalized.substr(experimentalSoaVectorPrefix.size()));
+    helperNameOut =
+        classifierStripGeneratedHelperSuffix(normalized.substr(experimentalSoaVectorPrefix.size()));
     if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
       return true;
@@ -458,8 +434,8 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     return false;
   }
   if (normalized.rfind(internalSoaVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(
-        normalized.substr(internalSoaVectorPrefix.size()));
+    helperNameOut =
+        classifierStripGeneratedHelperSuffix(normalized.substr(internalSoaVectorPrefix.size()));
     if (helperNameOut == "soaVectorCount") {
       helperNameOut = "count";
       return true;
@@ -486,6 +462,19 @@ bool resolveBorrowedKeyValueHelperAliasName(const Expr &expr, std::string &helpe
   (void)expr;
   helperNameOut.clear();
   return false;
+}
+
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  if (expr.namespacePrefix.back() == '/') {
+    return expr.namespacePrefix + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
 }
 
 std::string stdCollectionsRoot(bool leadingSlash) {
@@ -676,10 +665,12 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   const std::string experimentalVectorPrefix =
       experimentalCollectionMemberRoot("vector", false);
   if (normalized.rfind(arrayPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
+    return classifierRemovedVectorCompatibilityHelper(
+        classifierStripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size())));
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size())));
+    return classifierRemovedVectorCompatibilityHelper(
+        classifierStripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size())));
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string helperName;
@@ -861,7 +852,7 @@ bool resolvePublishedStdlibSurfaceMemberToken(std::string_view memberToken,
     return false;
   }
   const std::string normalizedToken =
-      stripGeneratedHelperSuffix(std::string(memberToken));
+      classifierStripGeneratedHelperSuffix(std::string(memberToken));
   const std::string_view memberName =
       resolveStdlibSurfaceMemberName(*metadata, normalizedToken);
   if (memberName.empty()) {
@@ -1109,7 +1100,7 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   appendUnique(normalizedPath);
   if (collection_helpers::isRootedArrayPath(normalizedPath)) {
     const std::string suffix = normalizedPath.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (allowsArrayVectorCompatibilitySuffix(suffix)) {
+    if (classifierArrayVectorCompatibilitySuffixAllowed(suffix)) {
       const std::string vectorCandidate =
           stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::CollectionsManifestSurface0, suffix);
       if (!vectorCandidate.empty()) {

@@ -25,6 +25,7 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 namespace primec::ir_lowerer {
 using count_access_detail::isDereferencedCollectionCountTarget;
@@ -51,16 +52,6 @@ inline std::string_view resolveSemanticProductText(const SemanticProgram &semant
     }
   }
   return fallback;
-}
-
-inline std::string resolveScopedCallPath(const Expr &expr) {
-  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
-    return expr.name;
-  }
-  if (expr.namespacePrefix == "/") {
-    return "/" + expr.name;
-  }
-  return expr.namespacePrefix + "/" + expr.name;
 }
 
 inline bool getArrayVectorAccessClassifierName(const Expr &expr,
@@ -108,10 +99,6 @@ inline std::string experimentalVectorWrapperAlias(std::string_view suffix) {
   return std::string("vector") + std::string(suffix);
 }
 
-inline std::string stdCollectionsRoot() {
-  return "/std/collections";
-}
-
 inline std::string canonicalCollectionMemberPrefix(std::string_view collectionName) {
   return stdCollectionsRoot().substr(1) + "/" +
          std::string(collectionName) + "/";
@@ -129,21 +116,11 @@ inline bool hasCanonicalCollectionMemberPrefix(std::string_view text,
          text.substr(1).rfind(prefix, 0) == 0;
 }
 
-inline std::string stripGeneratedHelperSuffix(std::string path) {
-  const size_t leafStart = path.find_last_of('/');
-  const size_t generatedSuffix =
-      path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
-  if (generatedSuffix != std::string::npos) {
-    path.erase(generatedSuffix);
-  }
-  return path;
-}
-
 inline std::string normalizeUnrootedHelperPath(std::string path) {
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  return stripGeneratedHelperSuffix(std::move(path));
+  return classifierStripGeneratedHelperSuffix(std::move(path));
 }
 
 inline std::string resolveCallLeafName(const Expr &expr) {

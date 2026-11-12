@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string_view>
 
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/support/BuiltinArrayAccessNameClassifier.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -54,23 +55,6 @@ bool resolvesKeyValueHelperSurfacePath(std::string_view path) {
 }
 
 namespace {
-std::string stdCollectionsRoot() {
-  return "std/collections";
-}
-
-std::string collectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + std::string(collectionName) + "/";
-}
-
-std::string experimentalCollectionMemberRoot(std::string_view collectionName) {
-  return stdCollectionsRoot() + "/" + collection_paths::experimentalFolder(collectionName) + "/";
-}
-
-std::string collectionWrapperAlias(std::string_view collectionName,
-                                   std::string_view suffix) {
-  return std::string(collectionName) + std::string(suffix);
-}
-
 std::string keyValueConstructorAliasToken() {
   const auto *metadata =
       keyValueConstructorSurfaceMetadata();
@@ -189,8 +173,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
     }
     return alias;
   }
-  const std::string experimentalVectorPrefix =
-      experimentalCollectionMemberRoot("vector");
+  const std::string experimentalVectorPrefix = experimentalCollectionMemberRoot("vector", false);
   if (name.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string alias = name.substr(experimentalVectorPrefix.size());
     const size_t slash = alias.find_last_of('/');
@@ -458,12 +441,18 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return normalizeInternalSoaStorageBuiltinAlias(name);
   };
   return primec::classifyBuiltinArrayAccessNameForIrLowerer(
-      scopedName, rawName, stdCollectionsRoot() + "/", collectionMemberRoot("vector"),
-      experimentalCollectionMemberRoot("vector"),
+      scopedName,
+      rawName,
+      stdCollectionsRoot(false) + "/",
+      collectionMemberRoot("vector", false),
+      experimentalCollectionMemberRoot("vector", false),
       collection_paths::modulePrefixBare(collection_paths::kVectorFolder),
       collection_paths::modulePrefixBare(collection_paths::kInternalSoaStorageFolder),
-      unrootedStdlibVectorHelperPath("at"), unrootedStdlibVectorHelperPath("at_unsafe"),
-      irLowererKeyValueLookup, resolveInternalSoaStorageFallbackAlias, out);
+      unrootedStdlibVectorHelperPath("at"),
+      unrootedStdlibVectorHelperPath("at_unsafe"),
+      irLowererKeyValueLookup,
+      resolveInternalSoaStorageFallbackAlias,
+      out);
 }
 
 bool getBuiltinPointerName(const Expr &expr, std::string &out) {
@@ -509,8 +498,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (!rawName.empty() && rawName[0] == '/') {
     rawName.erase(rawName.begin());
   }
-  if (scopedName.rfind(collectionMemberRoot("vector"), 0) == 0) {
-    std::string alias = scopedName.substr(collectionMemberRoot("vector").size());
+  if (scopedName.rfind(collectionMemberRoot("vector", false), 0) == 0) {
+    std::string alias = scopedName.substr(collectionMemberRoot("vector", false).size());
     const size_t generatedSuffix = alias.find("__");
     if (generatedSuffix != std::string::npos) {
       alias.erase(generatedSuffix);
@@ -568,7 +557,7 @@ bool getExperimentalVectorConstructorElementTypeAliasFromPath(
   if (!path.empty() && path.front() == '/') {
     path.erase(path.begin());
   }
-  const std::string prefix = experimentalCollectionMemberRoot("vector");
+  const std::string prefix = experimentalCollectionMemberRoot("vector", false);
   if (path.rfind(prefix, 0) != 0) {
     return false;
   }

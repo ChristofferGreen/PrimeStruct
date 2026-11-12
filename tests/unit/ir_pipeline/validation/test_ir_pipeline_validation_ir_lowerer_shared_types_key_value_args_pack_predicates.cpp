@@ -1,4 +1,6 @@
 #include "test_ir_pipeline_validation_helpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 // TODO-5291 (see docs/todo_finished.md): these two test cases are this
 // codebase's direct, millisecond-fast unit-level regression net for the
@@ -75,6 +77,32 @@ TEST_CASE("isSingleSlotPointerStyleKeyValueStorage distinguishes pointer-style s
   // Zero (or negative, defensively) slots is neither convention.
   CHECK_FALSE(isSingleSlotPointerStyleKeyValueStorage(0));
   CHECK_FALSE(isSingleSlotPointerStyleKeyValueStorage(-1));
+}
+
+TEST_CASE("lowerer collection spelling helpers come from the classifier") {
+  // Only the leaf is stripped, so a `__` in a namespace segment survives.
+  CHECK(primec::classifierStripGeneratedHelperSuffix("count__t1a2b") == "count");
+  CHECK(primec::classifierStripGeneratedHelperSuffix("/std/collections/vector/push__ov3") ==
+        "/std/collections/vector/push");
+  CHECK(primec::classifierStripGeneratedHelperSuffix("/ns__x/count") == "/ns__x/count");
+  CHECK(primec::classifierStripGeneratedHelperSuffix("count") == "count");
+
+  CHECK_FALSE(primec::classifierArrayVectorCompatibilitySuffixAllowed("count"));
+  CHECK_FALSE(primec::classifierArrayVectorCompatibilitySuffixAllowed("remove_swap"));
+  CHECK(primec::classifierArrayVectorCompatibilitySuffixAllowed("insert"));
+
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "count";
+  CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "count");
+  call.namespacePrefix = "/";
+  CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "/count");
+  call.namespacePrefix = "/ns";
+  CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "/ns/count");
+  call.namespacePrefix = "/ns/";
+  CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "/ns/count");
+  call.name = "a/count";
+  CHECK(primec::ir_lowerer::resolveScopedCallPath(call) == "a/count");
 }
 
 TEST_SUITE_END();

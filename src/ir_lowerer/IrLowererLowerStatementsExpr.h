@@ -249,8 +249,8 @@
                 helperName == primec::collection_helpers::kAtUnsafeRef;
               }
               auto isAccessHelperPath = [&](std::string path) {
-                path = statementsExprHelpers.stripGeneratedHelperSuffix(
-                  normalizeCollectionHelperPath(std::move(path)));
+                path = classifierStripGeneratedHelperSuffix(
+                    normalizeCollectionHelperPath(std::move(path)));
                 return statementsExprHelpers.isKeyValueHelperMemberPath(path, "at") ||
                 statementsExprHelpers.isKeyValueHelperMemberPath(path, "at_unsafe") ||
                 path == "at" || path == "at_unsafe" ||

@@ -14,6 +14,7 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 namespace primec::ir_lowerer {
 
@@ -151,19 +152,8 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
         }
 
 
-        std::string StatementsExprContext::stripGeneratedHelperSuffix(std::string helperPath) {
-          const size_t leafStart = helperPath.find_last_of('/');
-          const size_t generatedSuffix =
-              helperPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
-          if (generatedSuffix != std::string::npos) {
-            helperPath.erase(generatedSuffix);
-          }
-          return helperPath;
-        }
-
-
         std::string StatementsExprContext::extractHelperTail(std::string helperPath) {
-          helperPath = stripGeneratedHelperSuffix(std::move(helperPath));
+          helperPath = classifierStripGeneratedHelperSuffix(std::move(helperPath));
           const size_t slash = helperPath.find_last_of('/');
           if (slash != std::string::npos) {
             helperPath = helperPath.substr(slash + 1);
@@ -597,7 +587,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
 
         bool StatementsExprContext::isSamePathSoaHelperPath(const std::string &path) {
-          const std::string normalizedPath = stripGeneratedHelperSuffix(path);
+          const std::string normalizedPath = classifierStripGeneratedHelperSuffix(path);
           return collection_helpers::isRootedSoaPath(normalizedPath) ||
                  normalizedPath == "/to_aos" ||
                  normalizedPath == "/to_aos_ref";
@@ -605,7 +595,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
 
         bool StatementsExprContext::isSoaWrapperHelperFamilyPath(const std::string &path) {
-          const std::string normalizedPath = stripGeneratedHelperSuffix(path);
+          const std::string normalizedPath = classifierStripGeneratedHelperSuffix(path);
           return normalizedPath.rfind(collection_helpers::kCanonicalSoaPrefix, 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorFolder, "soaVector"), 0) == 0 ||
                  normalizedPath.rfind(collection_paths::memberPath(collection_paths::kExperimentalSoaVectorConversionsFolder, "soaVector"), 0) == 0;
@@ -632,7 +622,7 @@ std::string StatementsExprContext::experimentalCollectionMemberPath(
 
         const Definition * StatementsExprContext::findDirectSoaWrapperDefinition(const Expr &callExpr,
                                                  const std::string &rawPath, const LocalMap &localsIn) {
-          const std::string normalizedRawPath = stripGeneratedHelperSuffix(rawPath);
+          const std::string normalizedRawPath = classifierStripGeneratedHelperSuffix(rawPath);
           if (const Definition *directSoaWrapper =
                   findDirectHelperDefinition(rawPath)) {
             return directSoaWrapper;

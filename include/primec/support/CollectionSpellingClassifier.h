@@ -86,4 +86,12 @@ bool classifierRetiredSoaReceiverMethodHelper(std::string_view helperName);
 // canonicalization (decision D1).
 bool classifierPublicSoaSurfaceHelperName(std::string_view helperName);
 
+// Drops the generated specialization/overload suffix (`__t...`, `__ov...`)
+// from the leaf of a helper path or bare helper name. Only the leaf is
+// considered, so a `__` in a namespace segment is left alone.
+std::string classifierStripGeneratedHelperSuffix(std::string path);
+// False for the vector helper names that the `/array/<name>` compatibility
+// spelling no longer forwards to the canonical vector helper.
+bool classifierArrayVectorCompatibilitySuffixAllowed(std::string_view suffix);
+
 } // namespace primec

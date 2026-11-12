@@ -33,7 +33,6 @@ public:
   const Definition * findDirectHelperDefinition(const std::string &rawPath);
   bool isExplicitExperimentalVectorConstructorHelper(const std::string &path);
   const Definition * resolveDirectHelperDefinition(const Expr &targetExpr);
-  std::string stripGeneratedHelperSuffix(std::string helperPath);
   std::string extractHelperTail(std::string helperPath);
   const StdlibSurfaceMetadata * keyValueHelperMetadata();
   const StdlibSurfaceMetadata * keyValueConstructorMetadata();

@@ -14,7 +14,6 @@ struct SemanticProgram;
 
 namespace primec::ir_lowerer {
 
-bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix);
 
 std::string preferredFileErrorHelperTarget(
     std::string_view helperName,
@@ -30,7 +29,6 @@ std::string preferredGfxErrorHelperTarget(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::string &resolvedTypePath = "");
 
-bool isRemovedVectorCompatibilityHelper(const std::string &helperName);
 const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata();
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadata();
 const StdlibSurfaceMetadata *keyValueConstructorSurfaceMetadata();
@@ -38,6 +36,9 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);
 bool resolveBorrowedKeyValueHelperAliasName(const Expr &expr, std::string &helperNameOut);
 
+// The rooted path a call expression names: its own name when that is already a path
+// or has no namespace, else the namespace prefix joined to the name.
+std::string resolveScopedCallPath(const Expr &expr);
 std::string stdCollectionsRoot(bool leadingSlash = true);
 std::string collectionTypePath(std::string_view collectionName,
                                bool leadingSlash = true);

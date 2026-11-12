@@ -90,16 +90,6 @@ std::string resolveSpecializedExperimentalVectorStructPath(
   return specializedCollectionVectorRecordPathForElementType(normalizedArg);
 }
 
-std::string resolveScopedCallPath(const Expr &expr) {
-  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
-    return expr.name;
-  }
-  if (expr.namespacePrefix == "/") {
-    return "/" + expr.name;
-  }
-  return expr.namespacePrefix + "/" + expr.name;
-}
-
 const Expr *findForwardedReturnValueExpr(const Definition &definition) {
   if (definition.returnExpr.has_value()) {
     return &*definition.returnExpr;

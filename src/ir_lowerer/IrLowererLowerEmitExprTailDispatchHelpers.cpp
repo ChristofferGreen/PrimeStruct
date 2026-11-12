@@ -8,6 +8,7 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/CollectionHelperNames.h"
+#include "primec/support/CollectionSpellingClassifier.h"
 
 namespace primec::ir_lowerer {
 
@@ -293,13 +294,6 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
                        resolvedPath, *keyValueSurfaceId, helperName) &&
                    (collection_helpers::isInsertHelperName(helperName));
           };
-          auto stripGeneratedHelperSuffix = [](std::string helperName) {
-            const size_t generatedSuffix = helperName.find("__");
-            if (generatedSuffix != std::string::npos) {
-              helperName.erase(generatedSuffix);
-            }
-            return helperName;
-          };
           auto isDirectBareKeyValueInsertHelperStem = [&](const Expr &candidate) {
             if (candidate.isMethodCall || candidate.name.empty()) {
               return false;
@@ -312,7 +306,7 @@ bool TailDispatchContext::rewriteBuiltinKeyValueInsertBuiltinExpr(const Expr &ca
             if (helperName.find('/') != std::string::npos) {
               return false;
             }
-            helperName = stripGeneratedHelperSuffix(std::move(helperName));
+            helperName = classifierStripGeneratedHelperSuffix(std::move(helperName));
             return collection_helpers::isInsertHelperName(helperName) ||
                    helperName == "Insert" || helperName == "InsertRef";
           };

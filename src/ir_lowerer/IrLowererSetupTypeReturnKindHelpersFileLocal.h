@@ -19,20 +19,6 @@ namespace primec::ir_lowerer {
 
 namespace ir_lowerer_setup_type_return_kind_helpers_file_local {
 
-inline std::string resolveScopedCallPath(const Expr &expr) {
-  if (!expr.name.empty() && expr.name.front() == '/') {
-    return expr.name;
-  }
-  if (!expr.namespacePrefix.empty()) {
-    std::string scoped = expr.namespacePrefix;
-    if (!scoped.empty() && scoped.front() != '/') {
-      scoped.insert(scoped.begin(), '/');
-    }
-    return scoped + "/" + expr.name;
-  }
-  return expr.name;
-}
-
 inline bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
   const std::string scopedCallPath = resolveScopedCallPath(callExpr);
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
