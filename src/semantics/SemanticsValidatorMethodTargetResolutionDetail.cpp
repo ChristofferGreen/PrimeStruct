@@ -17,20 +17,8 @@ namespace method_target_detail {
 // primec/support/CollectionSpellingClassifier.h (decision D2). This site was one
 // of the two registry-membership variants; the D2 agreement unit test
 // pins that the registry manifest surfaces cover the same names.
-bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return classifierRemovedVectorCompatibilityHelper(helperName);
-}
-
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return classifierRemovedKeyValueCompatibilityHelper(helperName);
-}
-
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
-  if (metadata == nullptr) {
-    return {};
-  }
-  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 std::string canonicalKeyValueHelperNamespaceLocal() {
@@ -44,21 +32,6 @@ std::string canonicalKeyValueHelperNamespaceLocal() {
     namespacePath.erase(namespacePath.begin());
   }
   return namespacePath;
-}
-
-bool resolveCanonicalKeyValueHelperNameFromSpelling(
-    std::string path,
-    std::string &helperNameOut) {
-  helperNameOut.clear();
-  if (!path.empty() && path.front() != '/') {
-    path.insert(path.begin(), '/');
-  }
-  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
-  if (metadata == nullptr) {
-    return false;
-  }
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, metadata->id, helperNameOut);
 }
 
 bool isKeyValueHelperImportAliasNamespaceForMethodTargets(

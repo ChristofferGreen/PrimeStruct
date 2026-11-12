@@ -11,10 +11,6 @@ namespace primec::semantics {
 
 namespace {
 
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  return metadataBackedCanonicalKeyValueHelperPath(helperName);
-}
-
 bool isCanonicalKeyValueHelperResolvedPath(const std::string &path,
                                            std::string_view helperName) {
   const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
@@ -79,14 +75,13 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
   auto hasBareKeyValueContainsDefinition = [&]() {
-    return hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
-           hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal("contains")) ||
+    return hasImportedDefinitionPath(metadataBackedCanonicalKeyValueHelperPath("contains")) ||
+           hasDeclaredDefinitionPath(metadataBackedCanonicalKeyValueHelperPath("contains")) ||
            hasImportedDefinitionPath(
-               canonicalKeyValueHelperPathLocal(collection_helpers::kContainsRef)) ||
+               metadataBackedCanonicalKeyValueHelperPath(collection_helpers::kContainsRef)) ||
            hasDeclaredDefinitionPath(
-               canonicalKeyValueHelperPathLocal(collection_helpers::kContainsRef)) ||
-           hasImportedDefinitionPath("/contains") ||
-           hasDeclaredDefinitionPath("/contains");
+               metadataBackedCanonicalKeyValueHelperPath(collection_helpers::kContainsRef)) ||
+           hasImportedDefinitionPath("/contains") || hasDeclaredDefinitionPath("/contains");
   };
   if (splitSoaFieldViewHelperPath(resolved)) {
     handledOut = true;
@@ -360,7 +355,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     handledOut = true;
     if (!hasBareKeyValueContainsDefinition()) {
       return failKeyValueSoaBuiltinDiagnostic(
-          "unknown call target: " + canonicalKeyValueHelperPathLocal("contains"));
+          "unknown call target: " + metadataBackedCanonicalKeyValueHelperPath("contains"));
     }
     return validateContainsBuiltin("contains");
   }

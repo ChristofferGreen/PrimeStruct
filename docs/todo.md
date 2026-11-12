@@ -206,7 +206,6 @@ of sync with them.
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
-| TODO-5964 | Semantics has one copy of each key-value and collection path predicate | ready | reuse-collection-spelling-semantics |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | ready | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
@@ -266,7 +265,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1619,22 +1618,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: src/ir_lowerer and the classifier only; semantics copies are TODO-5964.
   - notes: Do not run alongside TODO-5961, TODO-5962 or TODO-5972 (src/ir_lowerer/IrLowererHelpers.cpp and the inline/result helpers).
-
-- [~] TODO-5964: Semantics has one copy of each key-value and collection path predicate
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 5)
-  - parallel_track: reuse-collection-spelling-semantics
-  - depends_on: TODO-5960
-  - scope: `isSpecializedExperimentalKeyValueBackingPath` is defined in 8 semantics files (SemanticsValidatorBuildInitializerInferenceCalls.cpp, SemanticsValidatorBuildInitializerInferenceHelpers.h, SemanticsValidatorExprReceiverPaths.cpp, SemanticsValidatorInferCollectionCompatibilityHelpers.h, SemanticsValidatorInferStructReturn.cpp, SemanticsValidatorResultHelpers.cpp, SemanticsValidatorStatement.cpp, SemanticsValidatorStatementReturnsHelpers.h) with 5 distinct bodies (groups of 3, 2, 1, 1, 1). Also `canonicalKeyValueHelperPathLocal` (7 copies), `resolveCanonicalKeyValueHelperNameFromSpelling` (6), `isCanonicalKeyValueAccessHelperName` (5), `stripGeneratedHelperSuffix` (src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp:15, src/semantics/SemanticsValidatorBuildTransforms.cpp:32), `isRemovedVectorCompatibilityHelper` in TemplateMonomorphCollectionCompatibilityPaths.cpp, `keyValueConstructorSurfaceMetadataLocal` and `keyValueHelperSurfaceMetadataLocal`, and the wrapper in src/semantics/SemanticsBuiltinPathHelpersShared.h:27. Compare the variants, choose one behavior per predicate, put it in CollectionSpellingClassifier (or one semantics helper unit when it needs validator state), and delete the rest.
-  - acceptance:
-    - each listed predicate has one definition; the 5 variants of `isSpecializedExperimentalKeyValueBackingPath` are reconciled, and each behavior change is named in the commit with a semantics test pinning it
-    - semantics test suites and semantic-product dumps of examples/ are unchanged except for the named changes
-    - full release gate green
-  - stop_rule: semantics predicates only; lowerer copies are TODO-5963.
-  - notes: Do not run alongside TODO-5960 or TODO-5966.
 
 - [ ] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
   - owner: ai

@@ -365,9 +365,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     const std::string normalizedPrefix = normalizedPrefixPath(expr.namespacePrefix);
     // Removed-name membership delegates to the single authoritative sets
     // in primec/support/CollectionSpellingClassifier.h (decision D2).
-    auto isRemovedVectorCompatibilityHelper = [](std::string_view helperName) {
-      return classifierRemovedVectorCompatibilityHelper(helperName);
-    };
     auto isRemovedKeyValueCompatibilityHelper = [](std::string_view helperName) {
       return classifierRemovedKeyValueCompatibilityHelper(helperName);
     };
@@ -415,7 +412,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       prefix = prefix.substr(0, slash);
     }
     if (isCanonicalVectorCompatibilityNamespace(normalizedPrefix) &&
-        isRemovedVectorCompatibilityHelper(expr.name)) {
+        classifierRemovedVectorCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
     if (isKeyValueHelperNamespacePrefix(normalizedPrefix) &&

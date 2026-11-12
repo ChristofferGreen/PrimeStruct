@@ -458,7 +458,7 @@ std::string SemanticsValidator::explicitRemovedCollectionMethodPathForCallNamesp
     }
     return rootedKeyValueHelperAliasPathForMethodTargets(helperName);
   }
-  if (!isRemovedVectorCompatibilityHelper(helperName)) {
+  if (!classifierRemovedVectorCompatibilityHelper(helperName)) {
     return "";
   }
   if (isStdNamespacedVectorHelper) {

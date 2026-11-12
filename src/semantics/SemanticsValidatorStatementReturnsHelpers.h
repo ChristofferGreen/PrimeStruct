@@ -40,15 +40,6 @@ inline std::string collectionTypePathLocal(std::string_view collectionName,
   return path;
 }
 
-inline bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
-}
-
 inline std::string keyValueCollectionMarkerPathLocal() {
   const StdlibSurfaceMetadata *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata != nullptr) {

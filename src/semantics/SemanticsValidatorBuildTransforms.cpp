@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "StdlibCollectionSurfaceHelpers.h"
 
 namespace primec::semantics {
 namespace {
@@ -27,18 +28,6 @@ bool isUnsupportedSumPayloadEnvelope(const Transform &transform) {
 
 bool isLowerCamelIdentifier(const std::string &name) {
   return !name.empty() && name.front() >= 'a' && name.front() <= 'z';
-}
-
-std::string stripGeneratedHelperSuffix(std::string name) {
-  const size_t overloadSuffix = name.find("__ov");
-  if (overloadSuffix != std::string::npos) {
-    name.erase(overloadSuffix);
-  }
-  const size_t specializationSuffix = name.find("__t");
-  if (specializationSuffix != std::string::npos) {
-    name.erase(specializationSuffix);
-  }
-  return name;
 }
 
 std::string generatedUnitVariantName(const Expr &stmt, const Definition &def) {

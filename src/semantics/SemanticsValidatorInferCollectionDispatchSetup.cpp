@@ -6,11 +6,6 @@ namespace primec::semantics {
 
 namespace {
 
-bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return collection_helpers::isAtHelperName(helperName) ||
-         collection_helpers::isAtUnsafeHelperName(helperName);
-}
-
 const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
   return keyValueHelperSurfaceMetadataLocal();
 }

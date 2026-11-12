@@ -8,11 +8,6 @@
 
 namespace primec::semantics {
 namespace {
-bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  return isQualifiedExperimentalKeyValueBackingTypeName(
-      normalizeBindingTypeName(std::move(typeName)));
-}
-
 bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
                                                     std::string &elemTypeOut) {
   elemTypeOut.clear();

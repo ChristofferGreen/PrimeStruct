@@ -13,13 +13,5 @@
 namespace primec::semantics {
 
 namespace buildInitializerHelpers {
-inline bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isQualifiedExperimentalKeyValueBackingTypeName(typeName) &&
-         typeName.find("__") != std::string::npos;
-}
 } // namespace buildInitializerHelpers
 }  // namespace primec::semantics

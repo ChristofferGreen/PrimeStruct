@@ -109,6 +109,19 @@ enum class RemovedCollectionHelperFamily {
   return true;
 }
 
+// Resolves a rooted or bare spelling of a key-value helper to its member name
+// through the published surface (TODO-5964: the one copy).
+[[maybe_unused]] bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
+                                                                     std::string &helperNameOut) {
+  helperNameOut.clear();
+  if (!path.empty() && path.front() != '/') {
+    path.insert(path.begin(), '/');
+  }
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
+  return metadata != nullptr &&
+         resolvePublishedCollectionHelperResolvedPath(path, metadata->id, helperNameOut);
+}
+
 [[maybe_unused]] inline bool isVectorCompatibilityHelperName(
     std::string_view helperName) {
   if (helperName == "vector") {

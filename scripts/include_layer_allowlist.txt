@@ -11,3 +11,4 @@ tests/unit/ir_pipeline/test_ir_pipeline_recursion_analysis.cpp -> src/ir_lowerer
 # type-name classification helpers.
 tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp -> src/semantics/SemanticsHelpers.h
 tests/unit/semantics/test_semantics_trait_wrapper_helpers.cpp -> src/semantics/StdlibCollectionSurfaceHelpers.h
+tests/unit/semantics/test_semantics_collection_path_predicates.cpp -> src/semantics/StdlibCollectionSurfaceHelpers.h

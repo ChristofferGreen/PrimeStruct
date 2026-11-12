@@ -26,10 +26,6 @@ using semantics::splitTopLevelTemplateArgs;
 using semantics::stripUnrootedCanonicalVectorCompatibilityPrefix;
 using semantics::trimLeadingSlash;
 
-bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
-  return classifierRemovedVectorCompatibilityHelper(helperName);
-}
-
 bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
   return classifierRemovedBorrowedSoaCompatibilityHelper(helperName);
 }
@@ -94,7 +90,8 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
                    rawMethodName, helperNameString, false)) {
       helperName = helperNameString;
     }
-    return !helperName.empty() && isRemovedVectorCompatibilityHelper(std::string(helperName));
+    return !helperName.empty() &&
+           classifierRemovedVectorCompatibilityHelper(std::string(helperName));
   }
 
   if (receiverTypeName != "map") {
@@ -117,7 +114,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   std::string preferred = path;
   if (collection_helpers::isRootedArrayPath(preferred) && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (!isRemovedVectorCompatibilityHelper(suffix)) {
+    if (!classifierRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibAlias =
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (defs.count(stdlibAlias) > 0) {
@@ -133,7 +130,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   // code for the same reason as in preferVectorStdlibHelperPath above.
   if (collection_helpers::isRootedArrayPath(path)) {
     const std::string suffix = path.substr(std::string(collection_helpers::kRootedArrayPrefix).size());
-    if (!isRemovedVectorCompatibilityHelper(suffix)) {
+    if (!classifierRemovedVectorCompatibilityHelper(suffix)) {
       const std::string stdlibPath =
           canonicalVectorCompatibilityHelperPathOrFallback(suffix);
       if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {

@@ -6,14 +6,6 @@
 namespace primec::semantics {
 
 namespace {
-bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
-}
 } // namespace
 
 std::string SemanticsValidator::inferStructReturnPath(

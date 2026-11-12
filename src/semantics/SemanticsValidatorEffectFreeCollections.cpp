@@ -8,23 +8,8 @@
 namespace primec::semantics {
 namespace {
 
-const StdlibSurfaceMetadata *
-keyValueHelperSurfaceMetadataForEffectFreeCollections() {
-  return keyValueHelperSurfaceMetadataLocal();
-}
-
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      keyValueHelperSurfaceMetadataForEffectFreeCollections();
-  if (metadata == nullptr) {
-    return "";
-  }
-  return canonicalCollectionHelperPath(metadata->id, helperName);
-}
-
 std::string unrootedCanonicalKeyValueHelperPrefixLocal() {
-  const StdlibSurfaceMetadata *metadata =
-      keyValueHelperSurfaceMetadataForEffectFreeCollections();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }

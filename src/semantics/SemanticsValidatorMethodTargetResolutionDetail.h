@@ -15,12 +15,8 @@
 namespace primec::semantics {
 namespace method_target_detail {
 
-bool isRemovedVectorCompatibilityHelper(std::string_view helperName);
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName);
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName);
 std::string canonicalKeyValueHelperNamespaceLocal();
-bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
-                                                     std::string &helperNameOut);
 bool isKeyValueHelperImportAliasNamespaceForMethodTargets(
     std::string_view namespacePrefix);
 std::string rootedKeyValueHelperAliasPathForMethodTargets(

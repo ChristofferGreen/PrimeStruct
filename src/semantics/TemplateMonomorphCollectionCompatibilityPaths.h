@@ -13,7 +13,6 @@ struct Context;
 // Removed/retired name membership delegates to the single authoritative
 // sets in primec/support/CollectionSpellingClassifier.h (decision D2 in
 // docs/CompatPathResolutionConsolidation.md).
-bool isRemovedVectorCompatibilityHelper(const std::string &helperName);
 
 bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName);
 

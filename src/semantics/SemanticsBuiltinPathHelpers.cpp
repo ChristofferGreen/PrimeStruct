@@ -420,7 +420,7 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
         helperName = std::string_view(rawMethodName).substr(stdVectorRoot.size());
       }
     }
-    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
+    return !helperName.empty() && classifierRemovedVectorCompatibilityHelper(helperName);
   }
 
   if (!collection_helpers::isCollectionFamilyRoot(receiverPath, collection_helpers::CollectionFamily::Map)) {

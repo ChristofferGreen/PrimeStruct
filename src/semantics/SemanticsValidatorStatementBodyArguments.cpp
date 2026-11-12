@@ -15,10 +15,6 @@ namespace {
 
 // Removed-name membership delegates to the single authoritative sets in
 // primec/support/CollectionSpellingClassifier.h (decision D2).
-bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return classifierRemovedVectorCompatibilityHelper(helperName);
-}
-
 bool isRemovedKeyValueCompatibilityHelper(std::string_view helperName) {
   return classifierRemovedKeyValueCompatibilityHelper(helperName);
 }
@@ -109,7 +105,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       helper = helperSuffix(path, canonicalVectorPrefix);
     }
     if (!helper.empty()) {
-      return isRemovedVectorCompatibilityHelper(helper);
+      return classifierRemovedVectorCompatibilityHelper(helper);
     }
 
     return isRemovedKeyValueCompatibilityHelperPath(path);

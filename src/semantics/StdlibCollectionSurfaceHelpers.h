@@ -459,3 +459,57 @@ inline std::string metadataBackedExperimentalVectorConstructorCompatibilityPath(
       metadata->id, memberName, metadata->compatibilitySpellings,
       experimentalCollectionConstructorRootLocal("vector"));
 }
+
+// --- One copy of the key-value and collection path predicates (TODO-5964) ---
+
+namespace primec::semantics {
+std::string normalizeBindingTypeName(const std::string &name);
+} // namespace primec::semantics
+
+// True for a specialized backing type of the experimental key-value map
+// (the generated `__t` form of the experimental map); the bare `Map` is a user spelling.
+inline bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
+  typeName = primec::semantics::normalizeBindingTypeName(typeName);
+  if (!typeName.empty() && typeName.front() == '/') {
+    typeName.erase(typeName.begin());
+  }
+  return isQualifiedExperimentalKeyValueBackingTypeName(typeName) &&
+         typeName.find("__") != std::string::npos;
+}
+
+// `<canonical key-value helper root>/<helperName>`; empty without metadata.
+inline std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
+  const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
+  if (metadata == nullptr) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/" + std::string(helperName);
+}
+
+// `at` / `at_unsafe` (and their `_ref` spellings): the access helpers.
+inline bool isCanonicalKeyValueAccessHelperName(std::string_view helperName) {
+  return primec::collection_helpers::isAtHelperName(helperName) ||
+         primec::collection_helpers::isAtUnsafeHelperName(helperName);
+}
+
+// The access helpers plus `tryAt`.
+inline bool isCanonicalKeyValueAccessOrTryAtHelperName(std::string_view helperName) {
+  return primec::collection_helpers::isTryAtHelperName(helperName) ||
+         isCanonicalKeyValueAccessHelperName(helperName);
+}
+
+// Strips the generated overload (`__ov`) or specialization (`__t`) suffix from
+// the leaf of a path, whichever comes first; parent components keep theirs.
+inline std::string stripGeneratedHelperSuffix(std::string path) {
+  const size_t leafStart = path.find_last_of('/');
+  const size_t searchStart = leafStart == std::string::npos ? 0 : leafStart + 1;
+  size_t cut = path.find("__t", searchStart);
+  const size_t overloadSuffix = path.find("__ov", searchStart);
+  if (overloadSuffix != std::string::npos && (cut == std::string::npos || overloadSuffix < cut)) {
+    cut = overloadSuffix;
+  }
+  if (cut != std::string::npos) {
+    path.erase(cut);
+  }
+  return path;
+}

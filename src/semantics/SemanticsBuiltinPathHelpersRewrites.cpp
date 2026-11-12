@@ -45,7 +45,7 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   }
   if (rawPath.rfind("array/", 0) == 0) {
     helperName = std::string_view(rawPath).substr(std::string_view("array/").size());
-    return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);
+    return !helperName.empty() && classifierRemovedVectorCompatibilityHelper(helperName);
   }
   std::string rootMapAliasHelperName;
   if (resolveRootMapAliasHelperMemberNameLocal(rawPath,

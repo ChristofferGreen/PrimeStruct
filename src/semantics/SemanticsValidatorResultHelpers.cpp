@@ -84,15 +84,6 @@ std::string canonicalKeyValueIdentity(const std::string &typeText) {
   return out.str();
 }
 
-bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
-}
-
 bool isMapTryAtResultHelperCall(std::string_view resolvedPath,
                                 const Expr &expr) {
   if (isSimpleCallName(expr, "tryAt") ||

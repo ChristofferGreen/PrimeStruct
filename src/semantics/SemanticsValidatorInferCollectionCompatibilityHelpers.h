@@ -88,21 +88,9 @@ inline bool hasExplicitDefinitionFamilyPath(
   return false;
 }
 
-inline const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return ::keyValueHelperSurfaceMetadataLocal();
-}
-
 inline std::string canonicalKeyValueHelperRootPathLocal() {
   const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata == nullptr ? std::string{} : std::string(metadata->canonicalPath);
-}
-
-inline std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
-  if (metadata == nullptr) {
-    return {};
-  }
-  return canonicalCollectionHelperPath(metadata->id, helperName);
 }
 
 inline bool resolvePublishedKeyValueHelperMemberTokenLocal(
@@ -139,15 +127,6 @@ inline bool isCanonicalMapCollectionTypeRootLocal(std::string_view typeName) {
   const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   return metadata != nullptr &&
          trimLeadingSlash(typeName) == trimLeadingSlash(metadata->canonicalPath);
-}
-
-inline bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isExperimentalCollectionBackingTypeName("map", "Map", typeName) &&
-         typeName.find("__") != std::string::npos;
 }
 
 } // namespace collectionCompatibilityHelpers

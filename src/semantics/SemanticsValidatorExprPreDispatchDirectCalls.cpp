@@ -60,23 +60,10 @@ bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
          resolvedHelperName == helperName;
 }
 
-const StdlibSurfaceMetadata *preDispatchKeyValueHelperSurfaceMetadata() {
-  return keyValueHelperSurfaceMetadataLocal();
-}
-
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata = preDispatchKeyValueHelperSurfaceMetadata();
-  if (metadata == nullptr) {
-    return {};
-  }
-  return canonicalCollectionHelperPath(metadata->id, helperName);
-}
-
 bool resolvePreDispatchKeyValueHelperResolvedPath(std::string_view path,
                                                   std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata =
-      preDispatchKeyValueHelperSurfaceMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -94,10 +81,9 @@ std::string stripGeneratedKeyValueHelperSuffix(std::string path) {
   return path;
 }
 
-bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
-                                                    std::string &helperNameOut) {
+bool resolveKeyValueHelperNameWithGeneratedSuffix(std::string path, std::string &helperNameOut) {
   helperNameOut.clear();
-  if (preDispatchKeyValueHelperSurfaceMetadata() == nullptr) {
+  if (keyValueHelperSurfaceMetadataLocal() == nullptr) {
     return false;
   }
   if (!path.empty() && path.front() != '/') {
@@ -113,8 +99,7 @@ bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
 bool resolvePreDispatchKeyValueHelperMemberToken(std::string_view memberToken,
                                                  std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata =
-      preDispatchKeyValueHelperSurfaceMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return false;
   }
@@ -151,7 +136,7 @@ bool isSourceSpelledCanonicalKeyValueAccessCall(const Expr &expr) {
   const std::string &sourceName =
       expr.sourceName.empty() ? expr.name : expr.sourceName;
   std::string helperName;
-  return resolveCanonicalKeyValueHelperNameFromSpelling(sourceName, helperName);
+  return resolveKeyValueHelperNameWithGeneratedSuffix(sourceName, helperName);
 }
 
 bool isRootMapConstructorExpr(const Expr &candidate) {
@@ -228,8 +213,7 @@ std::vector<std::string> explicitMapConstructorTemplateArgs(const Expr &candidat
 }
 
 std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
-  const StdlibSurfaceMetadata *metadata =
-      preDispatchKeyValueHelperSurfaceMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -261,8 +245,7 @@ std::string removedKeyValueCompatibilityHelperFromPath(std::string path) {
 }
 
 std::string rootedKeyValueAliasHelperPath(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      preDispatchKeyValueHelperSurfaceMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return {};
   }
@@ -717,10 +700,9 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
 
   std::string resolvedCanonicalKeyValueHelperName;
   if (!expr.isMethodCall &&
-      resolveCanonicalKeyValueHelperNameFromSpelling(
-          resolvedOut, resolvedCanonicalKeyValueHelperName) &&
-      isCanonicalMapBuiltinPreDispatchHelperName(
-          resolvedCanonicalKeyValueHelperName) &&
+      resolveKeyValueHelperNameWithGeneratedSuffix(resolvedOut,
+                                                   resolvedCanonicalKeyValueHelperName) &&
+      isCanonicalMapBuiltinPreDispatchHelperName(resolvedCanonicalKeyValueHelperName) &&
       !hasDeclaredDefinitionPath(resolvedOut)) {
     const size_t receiverIndex =
         this->keyValueHelperReceiverIndex(expr, dispatchBootstrap.dispatchResolvers);

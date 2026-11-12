@@ -15,11 +15,6 @@ bool isValueSurfaceAccessHelperName(const std::string &helperName) {
   return helperName == "at" || helperName == "at_unsafe";
 }
 
-bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return collection_helpers::isAtHelperName(helperName) ||
-         collection_helpers::isAtUnsafeHelperName(helperName);
-}
-
 bool isSoaAccessHelperName(const std::string &helperName) {
   return collection_helpers::isGetHelperName(helperName) ||
          collection_helpers::isRefHelperName(helperName);
@@ -31,22 +26,8 @@ bool isSoaReceiverStructPath(const std::string &structPath) {
          structPath.rfind(collection_paths::specializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName), 0) == 0;
 }
 
-const StdlibSurfaceMetadata *collectionAccessKeyValueHelperMetadata() {
-  return keyValueHelperSurfaceMetadataLocal();
-}
-
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      collectionAccessKeyValueHelperMetadata();
-  if (metadata == nullptr) {
-    return {};
-  }
-  return canonicalCollectionHelperPath(metadata->id, helperName);
-}
-
 std::string canonicalKeyValueHelperNamespaceLocal() {
-  const StdlibSurfaceMetadata *metadata =
-      collectionAccessKeyValueHelperMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
@@ -57,12 +38,10 @@ std::string canonicalKeyValueHelperNamespaceLocal() {
   return namespacePath;
 }
 
-bool resolveCanonicalKeyValueHelperNameFromSpelling(
-    std::string path,
-    std::string &helperNameOut) {
+bool resolveKeyValueHelperNameFromBareOrCanonicalSpelling(std::string path,
+                                                          std::string &helperNameOut) {
   helperNameOut.clear();
-  const StdlibSurfaceMetadata *metadata =
-      collectionAccessKeyValueHelperMetadata();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr || path.empty()) {
     return false;
   }
@@ -96,20 +75,20 @@ std::string canonicalStdlibKeyValueAccessPathForHelper(
 
 bool isCanonicalKeyValueContainsResolvedPath(const std::string &path) {
   std::string helperName;
-  return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
+  return resolveKeyValueHelperNameFromBareOrCanonicalSpelling(path, helperName) &&
          (collection_helpers::isContainsHelperName(helperName));
 }
 
 bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
   std::string helperName;
-  return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
+  return resolveKeyValueHelperNameFromBareOrCanonicalSpelling(path, helperName) &&
          isCanonicalKeyValueAccessHelperName(helperName);
 }
 
 std::string canonicalStdlibKeyValueContainsPathForResolvedMethod(
     const std::string &methodResolved) {
   std::string helperName;
-  if (resolveCanonicalKeyValueHelperNameFromSpelling(methodResolved, helperName) &&
+  if (resolveKeyValueHelperNameFromBareOrCanonicalSpelling(methodResolved, helperName) &&
       (collection_helpers::isContainsHelperName(helperName))) {
     return canonicalKeyValueHelperPathLocal(helperName);
   }
@@ -178,8 +157,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
         const std::string resolvedPath = resolveCalleePath(candidate);
         std::string resolvedKeyValueHelperName;
-        if (resolveCanonicalKeyValueHelperNameFromSpelling(
-                resolvedPath, resolvedKeyValueHelperName) &&
+        if (resolveKeyValueHelperNameFromBareOrCanonicalSpelling(resolvedPath,
+                                                                 resolvedKeyValueHelperName) &&
             (resolvedKeyValueHelperName == collection_helpers::kAtRef ||
              resolvedKeyValueHelperName == collection_helpers::kAtUnsafeRef)) {
           helperNameOut = resolvedKeyValueHelperName;
@@ -189,8 +168,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (!normalizedName.empty() && normalizedName.front() == '/') {
           normalizedName.erase(normalizedName.begin());
         }
-        if (resolveCanonicalKeyValueHelperNameFromSpelling(
-                normalizedName, resolvedKeyValueHelperName) &&
+        if (resolveKeyValueHelperNameFromBareOrCanonicalSpelling(normalizedName,
+                                                                 resolvedKeyValueHelperName) &&
             isCanonicalKeyValueAccessHelperName(resolvedKeyValueHelperName)) {
           helperNameOut = resolvedKeyValueHelperName;
           return true;
@@ -264,7 +243,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
   };
   std::string explicitCanonicalKeyValueAccessHelperName;
   const bool explicitCanonicalKeyValueAccessCall =
-      resolveCanonicalKeyValueHelperNameFromSpelling(
+      resolveKeyValueHelperNameFromBareOrCanonicalSpelling(
           explicitCallPath(expr), explicitCanonicalKeyValueAccessHelperName) &&
       isCanonicalKeyValueAccessHelperName(explicitCanonicalKeyValueAccessHelperName);
 
@@ -855,8 +834,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       std::string canonicalKeyValueMethodHelperName;
       const bool resolvedCanonicalKeyValueHelper =
-          resolveCanonicalKeyValueHelperNameFromSpelling(
-              methodResolved, canonicalKeyValueMethodHelperName);
+          resolveKeyValueHelperNameFromBareOrCanonicalSpelling(methodResolved,
+                                                               canonicalKeyValueMethodHelperName);
       if (expr.name == "contains" &&
           resolvedCanonicalKeyValueHelper &&
           (collection_helpers::isContainsHelperName(canonicalKeyValueMethodHelperName)) &&

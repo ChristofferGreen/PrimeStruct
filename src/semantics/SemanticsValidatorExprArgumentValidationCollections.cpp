@@ -12,45 +12,13 @@ namespace primec::semantics {
 
 namespace {
 
-std::string stripGeneratedHelperSuffix(std::string path) {
-  const size_t leafStart = path.find_last_of('/');
-  const size_t searchStart = leafStart == std::string::npos ? 0 : leafStart + 1;
-  if (const size_t templateSuffix = path.find("__t", searchStart);
-      templateSuffix != std::string::npos) {
-    path.erase(templateSuffix);
-  } else if (const size_t overloadSuffix = path.find("__ov", searchStart);
-             overloadSuffix != std::string::npos) {
-    path.erase(overloadSuffix);
-  }
-  return path;
-}
-
-const StdlibSurfaceMetadata *
-keyValueHelperSurfaceMetadataForArgumentValidation() {
-  return keyValueHelperSurfaceMetadataLocal();
-}
-
 std::string canonicalKeyValueHelperPathForArgumentValidation(
     std::string_view helperName) {
-  const StdlibSurfaceMetadata *metadata =
-      keyValueHelperSurfaceMetadataForArgumentValidation();
+  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
     return "";
   }
   return canonicalCollectionHelperPath(metadata->id, helperName);
-}
-
-bool resolveCanonicalKeyValueHelperNameFromSpelling(std::string path,
-                                                    std::string &helperNameOut) {
-  helperNameOut.clear();
-  if (!path.empty() && path.front() != '/') {
-    path.insert(path.begin(), '/');
-  }
-  const StdlibSurfaceMetadata *metadata =
-      keyValueHelperSurfaceMetadataForArgumentValidation();
-  return metadata != nullptr &&
-         resolvePublishedCollectionHelperResolvedPath(
-             path, metadata->id, helperNameOut);
 }
 
 bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {

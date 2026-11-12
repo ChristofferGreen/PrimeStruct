@@ -47,14 +47,6 @@ std::string initValueTypeMismatchDiagnostic(const std::string &expectedTypePath,
   return "init value type mismatch";
 }
 
-bool isSpecializedExperimentalKeyValueBackingPath(std::string typeName) {
-  typeName = normalizeBindingTypeName(typeName);
-  if (!typeName.empty() && typeName.front() == '/') {
-    typeName.erase(typeName.begin());
-  }
-  return isQualifiedExperimentalKeyValueBackingTypeName(typeName);
-}
-
 std::string mapCollectionAliasTokenForStatementValidation() {
   const auto *metadata = keyValueConstructorSurfaceMetadataLocal();
   if (metadata == nullptr) {

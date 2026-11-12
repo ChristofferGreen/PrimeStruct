@@ -504,7 +504,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           : std::string_view{};
   const bool isExplicitRootedVectorMethod =
       !explicitRootedVectorHelperName.empty() &&
-      isRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName);
+      classifierRemovedVectorCompatibilityHelper(explicitRootedVectorHelperName);
   if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver) {
     if (hasReceiverCompatibleExplicitVectorHelperPath(
             explicitVectorHelperPath, receiver, params, locals)) {

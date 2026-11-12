@@ -10,16 +10,6 @@
 namespace primec::semantics {
 namespace {
 
-bool isCanonicalKeyValueAccessHelperName(const std::string &helperName) {
-  return collection_helpers::isTryAtHelperName(helperName) ||
-         collection_helpers::isAtHelperName(helperName) ||
-         collection_helpers::isAtUnsafeHelperName(helperName);
-}
-
-std::string canonicalKeyValueHelperPathLocal(std::string_view helperName) {
-  return metadataBackedCanonicalKeyValueHelperPath(helperName);
-}
-
 std::string canonicalKeyValueHelperNamespaceLocal() {
   const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
   if (metadata == nullptr) {
@@ -30,21 +20,6 @@ std::string canonicalKeyValueHelperNamespaceLocal() {
     namespacePath.erase(namespacePath.begin());
   }
   return namespacePath;
-}
-
-bool resolveCanonicalKeyValueHelperNameFromSpelling(
-    std::string path,
-    std::string &helperNameOut) {
-  helperNameOut.clear();
-  if (!path.empty() && path.front() != '/') {
-    path.insert(path.begin(), '/');
-  }
-  const StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
-  if (metadata == nullptr) {
-    return false;
-  }
-  return resolvePublishedCollectionHelperResolvedPath(
-      path, metadata->id, helperNameOut);
 }
 
 std::string rootedKeyValueHelperAliasPathLocal(std::string_view helperName) {
@@ -72,7 +47,7 @@ std::string rootedKeyValueHelperAliasPathLocal(std::string_view helperName) {
 bool isCanonicalKeyValueAccessResolvedPath(const std::string &path) {
   std::string helperName;
   return resolveCanonicalKeyValueHelperNameFromSpelling(path, helperName) &&
-         isCanonicalKeyValueAccessHelperName(helperName);
+         isCanonicalKeyValueAccessOrTryAtHelperName(helperName);
 }
 
 bool isSourceSpelledCanonicalKeyValueAccessCall(const Expr &expr) {
@@ -114,9 +89,8 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
     normalizedName.erase(normalizedName.begin());
   }
   std::string resolvedKeyValueHelperName;
-  if (resolveCanonicalKeyValueHelperNameFromSpelling(
-          normalizedName, resolvedKeyValueHelperName) &&
-      isCanonicalKeyValueAccessHelperName(resolvedKeyValueHelperName)) {
+  if (resolveCanonicalKeyValueHelperNameFromSpelling(normalizedName, resolvedKeyValueHelperName) &&
+      isCanonicalKeyValueAccessOrTryAtHelperName(resolvedKeyValueHelperName)) {
     helperOut = resolvedKeyValueHelperName;
     return true;
   }
@@ -125,12 +99,12 @@ bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
     namespacePrefix.erase(namespacePrefix.begin());
   }
   if (namespacePrefix == canonicalKeyValueHelperNamespaceLocal() &&
-      isCanonicalKeyValueAccessHelperName(candidate.name)) {
+      isCanonicalKeyValueAccessOrTryAtHelperName(candidate.name)) {
     helperOut = candidate.name;
     return true;
   }
   if (candidate.name.find('/') == std::string::npos &&
-      isCanonicalKeyValueAccessHelperName(candidate.name)) {
+      isCanonicalKeyValueAccessOrTryAtHelperName(candidate.name)) {
     helperOut = candidate.name;
     return true;
   }
@@ -422,7 +396,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
           isCanonicalKeyValueAccessResolvedPath(resolved)) {
         std::string diagnosticTarget = resolved;
         if (diagnosticTarget.empty()) {
-          diagnosticTarget = canonicalKeyValueHelperPathLocal(builtinName);
+          diagnosticTarget = metadataBackedCanonicalKeyValueHelperPath(builtinName);
         }
         return failCollectionAccessDiagnostic("unknown call target: " +
                                               diagnosticTarget);
@@ -471,8 +445,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         (resolvesNonRootExperimentalKeyValueTarget(expr.args.front()) ||
          resolvesNonRootExperimentalKeyValueTarget(expr.args[1]))) {
       handledOut = true;
-      return failCollectionAccessDiagnostic(
-          "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
+      return failCollectionAccessDiagnostic("unknown call target: " +
+                                            metadataBackedCanonicalKeyValueHelperPath(builtinName));
     }
     auto isExperimentalKeyValueTypeReceiver = [&](const Expr &candidate) {
       if (isRootKeyValueAliasExpr(candidate)) {
@@ -486,8 +460,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         (isExperimentalKeyValueTypeReceiver(expr.args.front()) ||
          isExperimentalKeyValueTypeReceiver(expr.args[1]))) {
       handledOut = true;
-      return failCollectionAccessDiagnostic(
-          "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
+      return failCollectionAccessDiagnostic("unknown call target: " +
+                                            metadataBackedCanonicalKeyValueHelperPath(builtinName));
     }
     size_t indexArgIndex = 1;
     std::string elemType;
@@ -691,10 +665,10 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
         !(context.isIndexedArgsPackKeyValueReceiverTarget != nullptr &&
           context.isIndexedArgsPackKeyValueReceiverTarget(expr.args.front())) &&
         !hasDeclaredDefinitionPath(rootedKeyValueHelperAliasPathLocal(builtinName)) &&
-        !hasImportedDefinitionPath(canonicalKeyValueHelperPathLocal(builtinName)) &&
-        !hasDeclaredDefinitionPath(canonicalKeyValueHelperPathLocal(builtinName))) {
-      return failCollectionAccessDiagnostic(
-          "unknown call target: " + canonicalKeyValueHelperPathLocal(builtinName));
+        !hasImportedDefinitionPath(metadataBackedCanonicalKeyValueHelperPath(builtinName)) &&
+        !hasDeclaredDefinitionPath(metadataBackedCanonicalKeyValueHelperPath(builtinName))) {
+      return failCollectionAccessDiagnostic("unknown call target: " +
+                                            metadataBackedCanonicalKeyValueHelperPath(builtinName));
     }
     if (!isKeyValue && !isExperimentalKeyValue) {
       if (!isIntegerExpr(expr.args[indexArgIndex])) {

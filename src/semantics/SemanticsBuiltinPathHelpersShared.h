@@ -24,10 +24,6 @@ namespace builtinPathHelpers {
 
 // Removed-name membership delegates to the single authoritative sets in
 // primec/support/CollectionSpellingClassifier.h (decision D2).
-inline bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return classifierRemovedVectorCompatibilityHelper(helperName);
-}
-
 inline bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
   return classifierRemovedBorrowedSoaCompatibilityHelper(helperName);
 }
@@ -152,10 +148,6 @@ inline std::string pathWithoutLeadingSlash(std::string path) {
     path.erase(path.begin());
   }
   return path;
-}
-
-inline const primec::StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataLocal() {
-  return ::keyValueHelperSurfaceMetadataLocal();
 }
 
 inline bool stripStdlibSurfaceRootedMemberNameLocal(std::string_view rawPath,
