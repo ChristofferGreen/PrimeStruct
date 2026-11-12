@@ -3282,13 +3282,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
       # TODO-5838: one 35-case entry took 2.7 s alone and 10 s in a loaded gate (30 s timeout).
-      # Cases 1 to 18 took 18 s in a loaded gate (30 s timeout): shards of six.
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_1_6"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 1 LAST 6)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_7_12"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 7 LAST 12)
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_13_18"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 13 LAST 18)
+      # Cases 1 to 18 took 18 s in a loaded gate (30 s timeout) and two shards of six timed out in the TODO-5981 gate
+      # rerun (load average over 100): shards of three.
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_1_3"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 1 LAST 3)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_4_6"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 4 LAST 6)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_7_9"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 7 LAST 9)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_10_12"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 10 LAST 12)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_13_15"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 13 LAST 15)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_16_18"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 16 LAST 18)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_19_35"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 19 LAST 35)
     elseif(suite STREQUAL "primestruct.compile.run.vm.cursor")
