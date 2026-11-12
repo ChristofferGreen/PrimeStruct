@@ -210,7 +210,6 @@ of sync with them.
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
-| TODO-5981 | `validateBindingReference` is ordered rules over a resolver, not six phases | ready | reuse-phase-splits |
 | TODO-5982 | `validateBinding` is ordered rules, not seven phases | blocked | reuse-phase-splits |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
@@ -1814,23 +1813,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-5981: `validateBindingReference` is ordered rules over a resolver, not six phases
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 6; first code slice of TODO-5966)
-  - parallel_track: reuse-phase-splits
-  - scope: `validateBindingReferencePhase1..6` (src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesA.cpp 511 lines, ...PhasesB.cpp 304 lines) share `ValidateBindingReferenceState` (SemanticsValidatorStatementBindingsReferenceState.h), whose 13 `std::function` members are former lambdas: `resolveDirectBorrowStorageTargetType`, `resolvePointerTargetType`, `resolveBorrowRoot`, `findSubstitutedExpr`, `removeSubstitutionAt`, `appendCallSubstitutions`, `resolveConcreteCallPath`, `resolveReceiverRootExpr`, `resolveStandaloneRefRootExpr`, `isStandaloneRefCall`, `hasBorrowConflictForRoot`, `isMutableRootBinding`, `resolveBorrowRootExpr`. Move them into one `SemanticsValidator::BindingReferenceResolver` (a nested class defined in a new src/semantics/SemanticsValidatorBindingReferenceResolver.cpp, constructed from params, locals, `info` and the named-binding lookup) with plain member functions, express the six phases as ordered named rules (`rejectUnboundReferenceInitializer`, `requireBorrowOfStorage`, `checkBorrowConflicts`, ... named for what each checks) run by one function, and delete the state struct and the `*ReferencePhases*` files. The `validateBinding` side (`ValidateBindingState`, phases 1-7) is TODO-5982.
-  - acceptance:
-    - no `validateBindingReferencePhaseN` function, no `ValidateBindingReferenceState` and no `std::function` for these 13 helpers remain; no file is named `*ReferencePhases*`
-    - every semantics test keeps its result and diagnostic text, and the semantic-product dumps of examples/ are unchanged (wrap both sides in `stripDumpTimings`)
-    - semantics wall time on the benchmark suite (`./scripts/benchmark.sh --build-dir build-release`) is not slower; before and after numbers are in the commit message
-    - the new files follow the component-split rule in AGENTS.md (TODO-5980)
-    - full release gate green
-  - stop_rule: the reference-binding rules only; the outer `validateBinding` phases are TODO-5982.
-  - notes: Do not run alongside TODO-5962, TODO-5964 follow-ups or TODO-5982.
 
 - [ ] TODO-5982: `validateBinding` is ordered rules, not seven phases
   - owner: ai

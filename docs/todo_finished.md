@@ -2320,6 +2320,7 @@ are left unarchived.
 | TODO-5964 | Semantics has one copy of each key-value and collection path predicate | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5969 | Float math builtins lower through one table-driven emitter | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5980 | The component-split rule is written down for files over the size cap | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5981 | `validateBindingReference` is ordered rules over a resolver, not six phases | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
