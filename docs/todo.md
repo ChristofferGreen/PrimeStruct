@@ -1680,9 +1680,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this file and its header only.
   - notes: Do not run alongside TODO-5970 if both edit include/primec/frontend/SemanticProduct.h.
 
-- [ ] TODO-5972: Lowerer helpers copied per translation unit exist once
+- [~] TODO-5972: Lowerer helpers copied per translation unit exist once
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 11)
   - parallel_track: reuse-lowerer-helpers
