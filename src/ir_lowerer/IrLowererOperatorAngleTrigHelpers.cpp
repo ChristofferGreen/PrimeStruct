@@ -1,133 +1,80 @@
 #include "IrLowererOperatorAngleTrigHelpers.h"
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
-
-#include <cstring>
+#include "IrLowererMathEmitter.h"
 
 namespace primec::ir_lowerer {
 
-OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    bool hasMathImport,
-    const ExprLocalsPredicateFn &emitExpr,
-    const InferClampMinMaxTrigExprKindWithLocalsFn &inferExprKind,
-    const Int32ProviderFn &allocTempLocal,
-    std::vector<IrInstruction> &instructions,
-    std::string &error) {
+OperatorClampMinMaxTrigEmitResult
+emitAngleTrigOperatorExpr(const Expr &expr,
+                          const LocalMap &localsIn,
+                          bool hasMathImport,
+                          const ExprLocalsPredicateFn &emitExpr,
+                          const InferClampMinMaxTrigExprKindWithLocalsFn &inferExprKind,
+                          const Int32ProviderFn &allocTempLocal,
+                          std::vector<IrInstruction> &instructions,
+                          std::string &error) {
+  MathEmitter fe(instructions);
   std::string angleName;
   if (getBuiltinAngleName(expr, angleName, hasMathImport)) {
-    if (expr.args.size() != 1) {
-      error = angleName + " requires exactly one argument";
+    LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
+    if (!checkUnaryFloatArgument(expr, angleName, inferExprKind, localsIn, argKind, error)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-    if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
-      error = angleName + " requires float argument";
-      return OperatorClampMinMaxTrigEmitResult::Error;
-    }
+    fe.useFloatKind(argKind);
     if (!emitExpr(expr.args.front(), localsIn)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    auto pushFloatConst = [&](double value) {
-      if (argKind == LocalInfo::ValueKind::Float64) {
-        uint64_t bits = 0;
-        std::memcpy(&bits, &value, sizeof(bits));
-        instructions.push_back({IrOpcode::PushF64, bits});
-        return;
-      }
-      float f32 = static_cast<float>(value);
-      uint32_t bits = 0;
-      std::memcpy(&bits, &f32, sizeof(bits));
-      instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-    };
+    fe.useFloatKind(argKind);
     if (angleName == "radians") {
-      pushFloatConst(0.017453292519943295); // pi / 180
+      fe.push(0.017453292519943295);
     } else {
-      pushFloatConst(57.29577951308232); // 180 / pi
+      fe.push(57.29577951308232);
     }
-    instructions.push_back(
-        {argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::MulF64 : IrOpcode::MulF32, 0});
+    fe.mul();
     return OperatorClampMinMaxTrigEmitResult::Handled;
   }
 
   std::string trigName;
   if (getBuiltinTrigName(expr, trigName, hasMathImport)) {
-    if (expr.args.size() != 1) {
-      error = trigName + " requires exactly one argument";
+    LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
+    if (!checkUnaryFloatArgument(expr, trigName, inferExprKind, localsIn, argKind, error)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-    if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
-      error = trigName + " requires float argument";
-      return OperatorClampMinMaxTrigEmitResult::Error;
-    }
-    IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
-    IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
-    IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
-    IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
-
-    auto pushFloatConst = [&](double value) {
-      if (argKind == LocalInfo::ValueKind::Float64) {
-        uint64_t bits = 0;
-        std::memcpy(&bits, &value, sizeof(bits));
-        instructions.push_back({IrOpcode::PushF64, bits});
-        return;
-      }
-      float f32 = static_cast<float>(value);
-      uint32_t bits = 0;
-      std::memcpy(&bits, &f32, sizeof(bits));
-      instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-    };
-
+    fe.useFloatKind(argKind);
     auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftLocal)});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightLocal)});
-      instructions.push_back({mulOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+      fe.load(leftLocal).load(rightLocal).mul().store(outLocal);
     };
     auto emitSquare = [&](int32_t valueLocal, int32_t outLocal) {
       emitMulLocal(valueLocal, valueLocal, outLocal);
     };
 
     auto emitFloatTruncToLocal = [&](int32_t valueLocal, int32_t outLocal) {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+      fe.load(valueLocal);
       if (argKind == LocalInfo::ValueKind::Float32) {
-        instructions.push_back({IrOpcode::ConvertF32ToI32, 0});
-        instructions.push_back({IrOpcode::ConvertI32ToF32, 0});
+        fe.op(IrOpcode::ConvertF32ToI32).op(IrOpcode::ConvertI32ToF32);
       } else {
-        instructions.push_back({IrOpcode::ConvertF64ToI64, 0});
-        instructions.push_back({IrOpcode::ConvertI64ToF64, 0});
+        fe.op(IrOpcode::ConvertF64ToI64).op(IrOpcode::ConvertI64ToF64);
       }
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+      fe.store(outLocal);
     };
 
     auto emitFloorToLocal = [&](int32_t valueLocal, int32_t outLocal) {
       emitFloatTruncToLocal(valueLocal, outLocal);
-      IrOpcode cmpOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpGtF64 : IrOpcode::CmpGtF32;
-      IrOpcode subFloatOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-      instructions.push_back({cmpOp, 0});
-      size_t useValue = instructions.size();
-      instructions.push_back({IrOpcode::JumpIfZero, 0});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
-      pushFloatConst(1.0);
-      instructions.push_back({subFloatOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
-      size_t jumpEnd = instructions.size();
-      instructions.push_back({IrOpcode::Jump, 0});
-      size_t useValueIndex = instructions.size();
-      instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
-      size_t endIndex = instructions.size();
-      instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+      fe.useFloatKind(argKind);
+      fe.load(outLocal).load(valueLocal).cmpGt();
+      size_t useValue = fe.jumpIfZero();
+      fe.load(outLocal).push(1.0).sub().store(outLocal);
+      size_t jumpEnd = fe.jump();
+      fe.patch(useValue);
+      fe.patch(jumpEnd);
     };
 
     int32_t tempX = allocTempLocal();
     if (!emitExpr(expr.args.front(), localsIn)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+    fe.store(tempX);
 
     constexpr double kPi = 3.14159265358979323846;
     constexpr double kTau = 6.28318530717958647692;
@@ -135,76 +82,39 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
     int32_t tempScale = allocTempLocal();
     int32_t tempFloor = allocTempLocal();
     int32_t tempMul = allocTempLocal();
-    IrOpcode cmpGtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpGtF64 : IrOpcode::CmpGtF32;
-    IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
-
+    fe.useFloatKind(argKind);
     // Range-reduce x into [-pi, pi] to keep the series stable.
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(kTau);
-    instructions.push_back({divOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempScale)});
+    fe.load(tempX).push(kTau).div().store(tempScale);
     emitFloorToLocal(tempScale, tempFloor);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempFloor)});
-    pushFloatConst(kTau);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempMul)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempMul)});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+    fe.load(tempFloor).push(kTau).mul().store(tempMul).load(tempX).load(tempMul).sub().store(tempX);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(kPi);
-    instructions.push_back({cmpGtOp, 0});
-    size_t skipWrap = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(kTau);
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-    size_t jumpWrapEnd = instructions.size();
-    instructions.push_back({IrOpcode::Jump, 0});
-    size_t skipWrapIndex = instructions.size();
-    instructions[skipWrap].imm = static_cast<int32_t>(skipWrapIndex);
-    size_t wrapEndIndex = instructions.size();
-    instructions[jumpWrapEnd].imm = static_cast<int32_t>(wrapEndIndex);
+    fe.load(tempX).push(kPi).cmpGt();
+    size_t skipWrap = fe.jumpIfZero();
+    fe.load(tempX).push(kTau).sub().store(tempX);
+    size_t jumpWrapEnd = fe.jump();
+    fe.patch(skipWrap);
+    fe.patch(jumpWrapEnd);
 
     int32_t tempSinSign = allocTempLocal();
     int32_t tempCosSign = allocTempLocal();
-    pushFloatConst(1.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSinSign)});
-    pushFloatConst(1.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
+    fe.push(1.0).store(tempSinSign).push(1.0).store(tempCosSign);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(kHalfPi);
-    instructions.push_back({cmpGtOp, 0});
-    size_t skipUpper = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
-    pushFloatConst(kPi);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(-1.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
-    size_t skipUpperIndex = instructions.size();
-    instructions[skipUpper].imm = static_cast<int32_t>(skipUpperIndex);
+    fe.load(tempX).push(kHalfPi).cmpGt();
+    size_t skipUpper = fe.jumpIfZero();
+    fe.push(kPi).load(tempX).sub().store(tempX).push(-1.0).store(tempCosSign);
+    fe.patch(skipUpper);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(-kHalfPi);
-    instructions.push_back({cmpLtOp, 0});
-    size_t skipLower = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(kPi);
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(-1.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCosSign)});
-    pushFloatConst(-1.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSinSign)});
-    size_t skipLowerIndex = instructions.size();
-    instructions[skipLower].imm = static_cast<int32_t>(skipLowerIndex);
+    fe.load(tempX).push(-kHalfPi).cmpLt();
+    size_t skipLower = fe.jumpIfZero();
+    fe.load(tempX)
+        .push(kPi)
+        .add()
+        .store(tempX)
+        .push(-1.0)
+        .store(tempCosSign)
+        .push(-1.0)
+        .store(tempSinSign);
+    fe.patch(skipLower);
 
     int32_t tempX2 = allocTempLocal();
     int32_t tempX3 = allocTempLocal();
@@ -216,22 +126,22 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
     emitMulLocal(tempX5, tempX2, tempX7);
 
     int32_t tempSin = allocTempLocal();
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
-    pushFloatConst(0.16666666666666666);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
-    pushFloatConst(0.008333333333333333);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
-    pushFloatConst(0.0001984126984126984);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSinSign)});
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSin)});
+    fe.load(tempX)
+        .load(tempX3)
+        .push(0.16666666666666666)
+        .mul()
+        .sub()
+        .load(tempX5)
+        .push(0.008333333333333333)
+        .mul()
+        .add()
+        .load(tempX7)
+        .push(0.0001984126984126984)
+        .mul()
+        .sub()
+        .load(tempSinSign)
+        .mul()
+        .store(tempSin);
 
     int32_t tempX4 = allocTempLocal();
     int32_t tempX6 = allocTempLocal();
@@ -239,35 +149,33 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
     emitMulLocal(tempX4, tempX2, tempX6);
 
     int32_t tempCos = allocTempLocal();
-    pushFloatConst(1.0);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX2)});
-    pushFloatConst(0.5);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX4)});
-    pushFloatConst(0.041666666666666664);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX6)});
-    pushFloatConst(0.001388888888888889);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCosSign)});
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempCos)});
+    fe.push(1.0)
+        .load(tempX2)
+        .push(0.5)
+        .mul()
+        .sub()
+        .load(tempX4)
+        .push(0.041666666666666664)
+        .mul()
+        .add()
+        .load(tempX6)
+        .push(0.001388888888888889)
+        .mul()
+        .sub()
+        .load(tempCosSign)
+        .mul()
+        .store(tempCos);
 
     if (trigName == "sin") {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSin)});
+      fe.load(tempSin);
       return OperatorClampMinMaxTrigEmitResult::Handled;
     }
     if (trigName == "cos") {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCos)});
+      fe.load(tempCos);
       return OperatorClampMinMaxTrigEmitResult::Handled;
     }
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSin)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempCos)});
-    instructions.push_back({divOp, 0});
+    fe.load(tempSin).load(tempCos).div();
     return OperatorClampMinMaxTrigEmitResult::Handled;
   }
 
@@ -284,27 +192,7 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
       error = trig2Name + " requires float arguments of the same type";
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-
-    IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
-    IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
-    IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
-    IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
-    IrOpcode cmpEqOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpEqF64 : IrOpcode::CmpEqF32;
-    IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
-
-    auto pushFloatConst = [&](double value) {
-      if (argKind == LocalInfo::ValueKind::Float64) {
-        uint64_t bits = 0;
-        std::memcpy(&bits, &value, sizeof(bits));
-        instructions.push_back({IrOpcode::PushF64, bits});
-        return;
-      }
-      float f32 = static_cast<float>(value);
-      uint32_t bits = 0;
-      std::memcpy(&bits, &f32, sizeof(bits));
-      instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-    };
-
+    fe.useFloatKind(argKind);
     int32_t tempY = allocTempLocal();
     int32_t tempX = allocTempLocal();
     int32_t tempZ = allocTempLocal();
@@ -316,118 +204,69 @@ OperatorClampMinMaxTrigEmitResult emitAngleTrigOperatorExpr(
     if (!emitExpr(expr.args[0], localsIn)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempY)});
+    fe.store(tempY);
     if (!emitExpr(expr.args[1], localsIn)) {
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+    fe.store(tempX);
 
     // Handle x == 0 axis cases.
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(0.0);
-    instructions.push_back({cmpEqOp, 0});
-    size_t jumpIfNotZeroX = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.load(tempX).push(0.0).cmpEq();
+    size_t jumpIfNotZeroX = fe.jumpIfZero();
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
-    pushFloatConst(0.0);
-    instructions.push_back({cmpEqOp, 0});
-    size_t jumpIfNotZeroY = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.load(tempY).push(0.0).cmpEq();
+    size_t jumpIfNotZeroY = fe.jumpIfZero();
 
-    pushFloatConst(0.0);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-    size_t jumpAxisEndZero = instructions.size();
-    instructions.push_back({IrOpcode::Jump, 0});
+    fe.push(0.0).store(tempOut);
+    size_t jumpAxisEndZero = fe.jump();
 
-    size_t nonZeroYIndex = instructions.size();
-    instructions[jumpIfNotZeroY].imm = static_cast<int32_t>(nonZeroYIndex);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
-    pushFloatConst(0.0);
-    instructions.push_back({cmpLtOp, 0});
-    size_t jumpIfPosY = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.patch(jumpIfNotZeroY);
+    fe.load(tempY).push(0.0).cmpLt();
+    size_t jumpIfPosY = fe.jumpIfZero();
 
-    pushFloatConst(-1.5707963267948966);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-    size_t jumpAxisEndNeg = instructions.size();
-    instructions.push_back({IrOpcode::Jump, 0});
+    fe.push(-1.5707963267948966).store(tempOut);
+    size_t jumpAxisEndNeg = fe.jump();
 
-    size_t posYIndex = instructions.size();
-    instructions[jumpIfPosY].imm = static_cast<int32_t>(posYIndex);
-    pushFloatConst(1.5707963267948966);
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-    size_t jumpAxisEndPos = instructions.size();
-    instructions.push_back({IrOpcode::Jump, 0});
+    fe.patch(jumpIfPosY);
+    fe.push(1.5707963267948966).store(tempOut);
+    size_t jumpAxisEndPos = fe.jump();
 
-    size_t notZeroXIndex = instructions.size();
-    instructions[jumpIfNotZeroX].imm = static_cast<int32_t>(notZeroXIndex);
+    fe.patch(jumpIfNotZeroX);
 
     // atan2(y, x) ≈ atan(y/x) with quadrant adjustment.
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    instructions.push_back({divOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempZ)});
+    fe.load(tempY).load(tempX).div().store(tempZ);
 
     auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftLocal)});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightLocal)});
-      instructions.push_back({mulOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+      fe.load(leftLocal).load(rightLocal).mul().store(outLocal);
     };
 
     emitMulLocal(tempZ, tempZ, tempZ2);
     emitMulLocal(tempZ2, tempZ, tempZ3);
     emitMulLocal(tempZ3, tempZ2, tempZ5);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ3)});
-    pushFloatConst(3.0);
-    instructions.push_back({divOp, 0});
-    instructions.push_back({subOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempZ5)});
-    pushFloatConst(5.0);
-    instructions.push_back({divOp, 0});
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+    fe.load(tempZ).load(tempZ3).push(3.0).div().sub().load(tempZ5).push(5.0).div().add().store(
+        tempOut);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    pushFloatConst(0.0);
-    instructions.push_back({cmpLtOp, 0});
-    size_t jumpIfNotNegX = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.load(tempX).push(0.0).cmpLt();
+    size_t jumpIfNotNegX = fe.jumpIfZero();
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempY)});
-    pushFloatConst(0.0);
-    instructions.push_back({cmpLtOp, 0});
-    size_t jumpIfPosYAdj = instructions.size();
-    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.load(tempY).push(0.0).cmpLt();
+    size_t jumpIfPosYAdj = fe.jumpIfZero();
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-    pushFloatConst(-3.14159265358979323846);
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-    size_t jumpAdjustEnd = instructions.size();
-    instructions.push_back({IrOpcode::Jump, 0});
+    fe.load(tempOut).push(-3.14159265358979323846).add().store(tempOut);
+    size_t jumpAdjustEnd = fe.jump();
 
-    size_t posYAdjIndex = instructions.size();
-    instructions[jumpIfPosYAdj].imm = static_cast<int32_t>(posYAdjIndex);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-    pushFloatConst(3.14159265358979323846);
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-    size_t adjustEndIndex = instructions.size();
-    instructions[jumpAdjustEnd].imm = static_cast<int32_t>(adjustEndIndex);
+    fe.patch(jumpIfPosYAdj);
+    fe.load(tempOut).push(3.14159265358979323846).add().store(tempOut);
+    fe.patch(jumpAdjustEnd);
 
-    size_t notNegXIndex = instructions.size();
-    instructions[jumpIfNotNegX].imm = static_cast<int32_t>(notNegXIndex);
+    fe.patch(jumpIfNotNegX);
 
-    size_t endIndex = instructions.size();
-    instructions[jumpAxisEndZero].imm = static_cast<int32_t>(endIndex);
-    instructions[jumpAxisEndNeg].imm = static_cast<int32_t>(endIndex);
-    instructions[jumpAxisEndPos].imm = static_cast<int32_t>(endIndex);
+    fe.patch(jumpAxisEndZero);
+    fe.patch(jumpAxisEndNeg);
+    fe.patch(jumpAxisEndPos);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
+    fe.load(tempOut);
     return OperatorClampMinMaxTrigEmitResult::Handled;
   }
 

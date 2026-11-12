@@ -1,487 +1,309 @@
 #include "primec/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.h"
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
-
-#include <cstring>
+#include "IrLowererMathEmitter.h"
 
 namespace primec::ir_lowerer {
 
-OperatorSaturateRoundingRootsEmitResult emitSaturateRoundingRootsOperatorExpr(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    bool hasMathImport,
-    const ExprLocalsPredicateFn &emitExpr,
-    const ExprLocalsValueKindFn &inferExprKind,
-    const Int32ProviderFn &allocTempLocal,
-    std::vector<IrInstruction> &instructions,
-    std::string &error) {
-        std::string saturateName;
-        if (getBuiltinSaturateName(expr, saturateName, hasMathImport)) {
-          if (expr.args.size() != 1) {
-            error = saturateName + " requires exactly one argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
-              argKind == LocalInfo::ValueKind::String) {
-            error = saturateName + " requires numeric argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          int32_t tempValue = allocTempLocal();
-          int32_t tempOut = allocTempLocal();
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+OperatorSaturateRoundingRootsEmitResult
+emitSaturateRoundingRootsOperatorExpr(const Expr &expr,
+                                      const LocalMap &localsIn,
+                                      bool hasMathImport,
+                                      const ExprLocalsPredicateFn &emitExpr,
+                                      const ExprLocalsValueKindFn &inferExprKind,
+                                      const Int32ProviderFn &allocTempLocal,
+                                      std::vector<IrInstruction> &instructions,
+                                      std::string &error) {
+  MathEmitter fe(instructions);
+  std::string saturateName;
+  if (getBuiltinSaturateName(expr, saturateName, hasMathImport)) {
+    if (expr.args.size() != 1) {
+      error = saturateName + " requires exactly one argument";
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+    if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
+        argKind == LocalInfo::ValueKind::String) {
+      error = saturateName + " requires numeric argument";
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    int32_t tempValue = allocTempLocal();
+    int32_t tempOut = allocTempLocal();
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.store(tempValue);
 
-          auto pushFloatConst = [&](double value) {
-            if (argKind == LocalInfo::ValueKind::Float64) {
-              uint64_t bits = 0;
-              std::memcpy(&bits, &value, sizeof(bits));
-              instructions.push_back({IrOpcode::PushF64, bits});
-              return;
-            }
-            float f32 = static_cast<float>(value);
-            uint32_t bits = 0;
-            std::memcpy(&bits, &f32, sizeof(bits));
-            instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-          };
-          auto pushConst = [&](double value) {
-            if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
-              pushFloatConst(value);
-              return;
-            }
-            if (argKind == LocalInfo::ValueKind::Int32) {
-              instructions.push_back(
-                  {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
-            } else {
-              instructions.push_back(
-                  {IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
-            }
-          };
+    fe.useFloatKind(argKind);
+    auto pushConst = [&](double value) {
+      if (argKind == LocalInfo::ValueKind::Float32 || argKind == LocalInfo::ValueKind::Float64) {
+        fe.push(value);
+        return;
+      }
+      if (argKind == LocalInfo::ValueKind::Int32) {
+        instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(value))});
+      } else {
+        instructions.push_back(
+            {IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(value))});
+      }
+    };
 
-          if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            pushConst(1);
-            instructions.push_back({IrOpcode::CmpGtU64, 0});
-            size_t useValue = instructions.size();
-            instructions.push_back({IrOpcode::JumpIfZero, 0});
-            pushConst(1);
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-            size_t jumpToEnd = instructions.size();
-            instructions.push_back({IrOpcode::Jump, 0});
-            size_t useValueIndex = instructions.size();
-            instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-            size_t endIndex = instructions.size();
-            instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
+    if ((argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
+      fe.load(tempValue);
+      pushConst(1);
+      fe.op(IrOpcode::CmpGtU64);
+      size_t useValue = fe.jumpIfZero();
+      pushConst(1);
+      fe.store(tempOut);
+      size_t jumpToEnd = fe.jump();
+      fe.patch(useValue);
+      fe.load(tempValue).store(tempOut);
+      fe.patch(jumpToEnd);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
 
-          IrOpcode cmpLt = IrOpcode::CmpLtI32;
-          IrOpcode cmpGt = IrOpcode::CmpGtI32;
-          if (argKind == LocalInfo::ValueKind::Int64) {
-            cmpLt = IrOpcode::CmpLtI64;
-            cmpGt = IrOpcode::CmpGtI64;
-          } else if (argKind == LocalInfo::ValueKind::Float64) {
-            cmpLt = IrOpcode::CmpLtF64;
-            cmpGt = IrOpcode::CmpGtF64;
-          } else if (argKind == LocalInfo::ValueKind::Float32) {
-            cmpLt = IrOpcode::CmpLtF32;
-            cmpGt = IrOpcode::CmpGtF32;
-          }
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          pushConst(0);
-          instructions.push_back({cmpLt, 0});
-          size_t checkMax = instructions.size();
-          instructions.push_back({IrOpcode::JumpIfZero, 0});
-          pushConst(0);
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-          size_t jumpToEnd = instructions.size();
-          instructions.push_back({IrOpcode::Jump, 0});
-          size_t checkMaxIndex = instructions.size();
-          instructions[checkMax].imm = static_cast<int32_t>(checkMaxIndex);
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          pushConst(1);
-          instructions.push_back({cmpGt, 0});
-          size_t useValue = instructions.size();
-          instructions.push_back({IrOpcode::JumpIfZero, 0});
-          pushConst(1);
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-          size_t jumpToEnd2 = instructions.size();
-          instructions.push_back({IrOpcode::Jump, 0});
-          size_t useValueIndex = instructions.size();
-          instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-          size_t endIndex = instructions.size();
-          instructions[jumpToEnd].imm = static_cast<int32_t>(endIndex);
-          instructions[jumpToEnd2].imm = static_cast<int32_t>(endIndex);
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-          return OperatorSaturateRoundingRootsEmitResult::Handled;
+    IrOpcode cmpLt = IrOpcode::CmpLtI32;
+    IrOpcode cmpGt = IrOpcode::CmpGtI32;
+    if (argKind == LocalInfo::ValueKind::Int64) {
+      cmpLt = IrOpcode::CmpLtI64;
+      cmpGt = IrOpcode::CmpGtI64;
+    } else if (argKind == LocalInfo::ValueKind::Float64) {
+      cmpLt = IrOpcode::CmpLtF64;
+      cmpGt = IrOpcode::CmpGtF64;
+    } else if (argKind == LocalInfo::ValueKind::Float32) {
+      cmpLt = IrOpcode::CmpLtF32;
+      cmpGt = IrOpcode::CmpGtF32;
+    }
+    fe.load(tempValue);
+    pushConst(0);
+    fe.op(cmpLt);
+    size_t checkMax = fe.jumpIfZero();
+    pushConst(0);
+    fe.store(tempOut);
+    size_t jumpToEnd = fe.jump();
+    fe.patch(checkMax);
+    fe.load(tempValue);
+    pushConst(1);
+    fe.op(cmpGt);
+    size_t useValue = fe.jumpIfZero();
+    pushConst(1);
+    fe.store(tempOut);
+    size_t jumpToEnd2 = fe.jump();
+    fe.patch(useValue);
+    fe.load(tempValue).store(tempOut);
+    fe.patch(jumpToEnd);
+    fe.patch(jumpToEnd2);
+    fe.load(tempOut);
+    return OperatorSaturateRoundingRootsEmitResult::Handled;
+  }
+  std::string predicateName;
+  if (getBuiltinMathPredicateName(expr, predicateName, hasMathImport)) {
+    LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
+    if (!checkUnaryFloatArgument(expr, predicateName, inferExprKind, localsIn, argKind, error)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.useFloatKind(argKind);
+    int32_t tempValue = allocTempLocal();
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.store(tempValue);
+
+    fe.useFloatKind(argKind);
+
+    if (predicateName == "is_nan") {
+      fe.load(tempValue).load(tempValue);
+      fe.cmpNe();
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+
+    if (predicateName == "is_finite") {
+      fe.load(tempValue).load(tempValue).sub().push(0.0);
+      fe.cmpEq();
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+
+    fe.load(tempValue).load(tempValue);
+    fe.cmpEq();
+    fe.load(tempValue).load(tempValue).sub().push(0.0);
+    fe.cmpNe();
+    fe.op(IrOpcode::MulI32);
+    return OperatorSaturateRoundingRootsEmitResult::Handled;
+  }
+  std::string roundingName;
+  if (getBuiltinRoundingName(expr, roundingName, hasMathImport)) {
+    if (expr.args.size() != 1) {
+      error = roundingName + " requires exactly one argument";
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
+    if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
+        argKind == LocalInfo::ValueKind::String) {
+      error = roundingName + " requires numeric argument";
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    int32_t tempValue = allocTempLocal();
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.store(tempValue);
+
+    fe.useFloatKind(argKind);
+    auto emitFloatTrunc = [&](int32_t valueLocal, int32_t outLocal) {
+      fe.load(valueLocal);
+      if (argKind == LocalInfo::ValueKind::Float32) {
+        fe.op(IrOpcode::ConvertF32ToI32).op(IrOpcode::ConvertI32ToF32);
+      } else {
+        fe.op(IrOpcode::ConvertF64ToI64).op(IrOpcode::ConvertI64ToF64);
+      }
+      fe.store(outLocal);
+    };
+    auto emitFloorOrCeil = [&](int32_t valueLocal, int32_t outLocal, bool isCeil) {
+      emitFloatTrunc(valueLocal, outLocal);
+      IrOpcode cmpOp = isCeil ? fe.ops.cmpLt : fe.ops.cmpGt;
+      IrOpcode addSubOp = isCeil ? fe.ops.add : fe.ops.sub;
+      fe.load(outLocal).load(valueLocal).op(cmpOp);
+      size_t useValue = fe.jumpIfZero();
+      fe.load(outLocal).push(1.0).op(addSubOp).store(outLocal);
+      size_t jumpEnd = fe.jump();
+      fe.patch(useValue);
+      fe.patch(jumpEnd);
+    };
+
+    if (argKind == LocalInfo::ValueKind::Int32 || argKind == LocalInfo::ValueKind::Int64 ||
+        (argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
+      if (roundingName == "fract") {
+        if (argKind == LocalInfo::ValueKind::Int32) {
+          fe.op(IrOpcode::PushI32);
+        } else {
+          fe.op(IrOpcode::PushI64);
         }
-        std::string predicateName;
-        if (getBuiltinMathPredicateName(expr, predicateName, hasMathImport)) {
-          if (expr.args.size() != 1) {
-            error = predicateName + " requires exactly one argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-          if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
-            error = predicateName + " requires float argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          int32_t tempValue = allocTempLocal();
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+        return OperatorSaturateRoundingRootsEmitResult::Handled;
+      }
+      fe.load(tempValue);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
 
-          auto pushFloatZero = [&]() {
-            if (argKind == LocalInfo::ValueKind::Float64) {
-              uint64_t bits = 0;
-              double value = 0.0;
-              std::memcpy(&bits, &value, sizeof(bits));
-              instructions.push_back({IrOpcode::PushF64, bits});
-              return;
-            }
-            uint32_t bits = 0;
-            float value = 0.0f;
-            std::memcpy(&bits, &value, sizeof(bits));
-            instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-          };
+    if (roundingName == "trunc") {
+      int32_t tempOut = allocTempLocal();
+      emitFloatTrunc(tempValue, tempOut);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
 
-          IrOpcode cmpEq = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpEqF64 : IrOpcode::CmpEqF32;
-          IrOpcode cmpNe = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpNeF64 : IrOpcode::CmpNeF32;
-          IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
+    int32_t tempOut = allocTempLocal();
+    if (roundingName == "floor") {
+      emitFloorOrCeil(tempValue, tempOut, false);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+    if (roundingName == "ceil") {
+      emitFloorOrCeil(tempValue, tempOut, true);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+    if (roundingName == "fract") {
+      emitFloorOrCeil(tempValue, tempOut, false);
+      fe.load(tempValue).load(tempOut).sub();
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+    if (roundingName == "round") {
+      int32_t tempAdjusted = allocTempLocal();
+      fe.load(tempValue).push(0.0).cmpLt();
+      size_t jumpNonNegative = fe.jumpIfZero();
 
-          if (predicateName == "is_nan") {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({cmpNe, 0});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
+      fe.load(tempValue).push(0.5).sub().store(tempAdjusted);
+      emitFloorOrCeil(tempAdjusted, tempOut, true);
+      size_t jumpEnd = fe.jump();
 
-          if (predicateName == "is_finite") {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({subOp, 0});
-            pushFloatZero();
-            instructions.push_back({cmpEq, 0});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
+      fe.patch(jumpNonNegative);
+      fe.load(tempValue).push(0.5).add().store(tempAdjusted);
+      emitFloorOrCeil(tempAdjusted, tempOut, false);
 
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({cmpEq, 0});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({subOp, 0});
-          pushFloatZero();
-          instructions.push_back({cmpNe, 0});
-          instructions.push_back({IrOpcode::MulI32, 0});
-          return OperatorSaturateRoundingRootsEmitResult::Handled;
-        }
-        std::string roundingName;
-        if (getBuiltinRoundingName(expr, roundingName, hasMathImport)) {
-          if (expr.args.size() != 1) {
-            error = roundingName + " requires exactly one argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-          if (argKind == LocalInfo::ValueKind::Unknown || argKind == LocalInfo::ValueKind::Bool ||
-              argKind == LocalInfo::ValueKind::String) {
-            error = roundingName + " requires numeric argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          int32_t tempValue = allocTempLocal();
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+      fe.patch(jumpEnd);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
+    error = roundingName + " requires numeric argument";
+    return OperatorSaturateRoundingRootsEmitResult::Error;
+  }
+  std::string rootName;
+  if (getBuiltinRootName(expr, rootName, hasMathImport)) {
+    LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
+    if (!checkUnaryFloatArgument(expr, rootName, inferExprKind, localsIn, argKind, error)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.useFloatKind(argKind);
+    int32_t tempValue = allocTempLocal();
+    int32_t tempOut = allocTempLocal();
+    int32_t tempIter = allocTempLocal();
+    int32_t tempX = allocTempLocal();
 
-          auto pushFloatConst = [&](double value) {
-            if (argKind == LocalInfo::ValueKind::Float64) {
-              uint64_t bits = 0;
-              std::memcpy(&bits, &value, sizeof(bits));
-              instructions.push_back({IrOpcode::PushF64, bits});
-              return;
-            }
-            float f32 = static_cast<float>(value);
-            uint32_t bits = 0;
-            std::memcpy(&bits, &f32, sizeof(bits));
-            instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-          };
-          auto emitFloatTrunc = [&](int32_t valueLocal, int32_t outLocal) {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-            if (argKind == LocalInfo::ValueKind::Float32) {
-              instructions.push_back({IrOpcode::ConvertF32ToI32, 0});
-              instructions.push_back({IrOpcode::ConvertI32ToF32, 0});
-            } else {
-              instructions.push_back({IrOpcode::ConvertF64ToI64, 0});
-              instructions.push_back({IrOpcode::ConvertI64ToF64, 0});
-            }
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
-          };
-          auto emitFloorOrCeil = [&](int32_t valueLocal, int32_t outLocal, bool isCeil) {
-            emitFloatTrunc(valueLocal, outLocal);
-            IrOpcode cmpOp = isCeil ? (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::CmpLtF64
-                                                                               : IrOpcode::CmpLtF32)
-                                   : (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::CmpGtF64
-                                                                               : IrOpcode::CmpGtF32);
-            IrOpcode addSubOp = isCeil ? (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::AddF64
-                                                                                   : IrOpcode::AddF32)
-                                       : (argKind == LocalInfo::ValueKind::Float64 ? IrOpcode::SubF64
-                                                                                   : IrOpcode::SubF32);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
-            instructions.push_back({cmpOp, 0});
-            size_t useValue = instructions.size();
-            instructions.push_back({IrOpcode::JumpIfZero, 0});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(outLocal)});
-            pushFloatConst(1.0);
-            instructions.push_back({addSubOp, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
-            size_t jumpEnd = instructions.size();
-            instructions.push_back({IrOpcode::Jump, 0});
-            size_t useValueIndex = instructions.size();
-            instructions[useValue].imm = static_cast<int32_t>(useValueIndex);
-            size_t endIndex = instructions.size();
-            instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
-          };
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return OperatorSaturateRoundingRootsEmitResult::Error;
+    }
+    fe.store(tempValue);
 
-          if (argKind == LocalInfo::ValueKind::Int32 || argKind == LocalInfo::ValueKind::Int64 ||
-              (argKind == LocalInfo::ValueKind::UInt64 || argKind == LocalInfo::ValueKind::UInt8)) {
-            if (roundingName == "fract") {
-              if (argKind == LocalInfo::ValueKind::Int32) {
-                instructions.push_back({IrOpcode::PushI32, 0});
-              } else {
-                instructions.push_back({IrOpcode::PushI64, 0});
-              }
-              return OperatorSaturateRoundingRootsEmitResult::Handled;
-            }
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
+    fe.useFloatKind(argKind);
 
-          const bool isF32 = (argKind == LocalInfo::ValueKind::Float32);
-          const IrOpcode addOp = isF32 ? IrOpcode::AddF32 : IrOpcode::AddF64;
-          const IrOpcode subOp = isF32 ? IrOpcode::SubF32 : IrOpcode::SubF64;
-          const IrOpcode cmpLtOp = isF32 ? IrOpcode::CmpLtF32 : IrOpcode::CmpLtF64;
+    fe.load(tempValue).push(0.0).cmpEq();
+    size_t jumpIfNotZero = fe.jumpIfZero();
+    fe.push(0.0).store(tempOut);
+    size_t jumpToEndZero = fe.jump();
 
-          if (roundingName == "trunc") {
-            int32_t tempOut = allocTempLocal();
-            emitFloatTrunc(tempValue, tempOut);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
+    fe.patch(jumpIfNotZero);
 
-          int32_t tempOut = allocTempLocal();
-          if (roundingName == "floor") {
-            emitFloorOrCeil(tempValue, tempOut, false);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
-          if (roundingName == "ceil") {
-            emitFloorOrCeil(tempValue, tempOut, true);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
-          if (roundingName == "fract") {
-            emitFloorOrCeil(tempValue, tempOut, false);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            instructions.push_back({subOp, 0});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
-          if (roundingName == "round") {
-            int32_t tempAdjusted = allocTempLocal();
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            pushFloatConst(0.0);
-            instructions.push_back({cmpLtOp, 0});
-            size_t jumpNonNegative = instructions.size();
-            instructions.push_back({IrOpcode::JumpIfZero, 0});
+    if (rootName == "sqrt") {
+      fe.load(tempValue).push(0.0).cmpLt();
+      size_t jumpIfNonNegative = fe.jumpIfZero();
+      fe.push(0.0).push(0.0).div().store(tempOut);
+      size_t jumpToEndNegative = fe.jump();
 
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            pushFloatConst(0.5);
-            instructions.push_back({subOp, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAdjusted)});
-            emitFloorOrCeil(tempAdjusted, tempOut, true);
-            size_t jumpEnd = instructions.size();
-            instructions.push_back({IrOpcode::Jump, 0});
+      fe.patch(jumpIfNonNegative);
 
-            size_t nonNegativeIndex = instructions.size();
-            instructions[jumpNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            pushFloatConst(0.5);
-            instructions.push_back({addOp, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAdjusted)});
-            emitFloorOrCeil(tempAdjusted, tempOut, false);
+      fe.load(tempValue).store(tempX).op(IrOpcode::PushI32).store(tempIter);
 
-            size_t endIndex = instructions.size();
-            instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
-          error = roundingName + " requires numeric argument";
-          return OperatorSaturateRoundingRootsEmitResult::Error;
-        }
-        std::string rootName;
-        if (getBuiltinRootName(expr, rootName, hasMathImport)) {
-          if (expr.args.size() != 1) {
-            error = rootName + " requires exactly one argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-          if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
-            error = rootName + " requires float argument";
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          int32_t tempValue = allocTempLocal();
-          int32_t tempOut = allocTempLocal();
-          int32_t tempIter = allocTempLocal();
-          int32_t tempX = allocTempLocal();
+      const int32_t iterations = (argKind == LocalInfo::ValueKind::Float64) ? 8 : 6;
+      const size_t loopStart = fe.here();
+      fe.load(tempIter).pushI32(static_cast<uint64_t>(iterations)).op(IrOpcode::CmpLtI32);
+      size_t jumpEndLoop = fe.jumpIfZero();
 
-          if (!emitExpr(expr.args.front(), localsIn)) {
-            return OperatorSaturateRoundingRootsEmitResult::Error;
-          }
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempValue)});
+      fe.load(tempX).load(tempValue).load(tempX).div().add().push(0.5).mul().store(tempX);
 
-          auto pushFloatConst = [&](double value) {
-            if (argKind == LocalInfo::ValueKind::Float64) {
-              uint64_t bits = 0;
-              std::memcpy(&bits, &value, sizeof(bits));
-              instructions.push_back({IrOpcode::PushF64, bits});
-              return;
-            }
-            float f32 = static_cast<float>(value);
-            uint32_t bits = 0;
-            std::memcpy(&bits, &f32, sizeof(bits));
-            instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-          };
+      fe.load(tempIter).pushI32(1).op(IrOpcode::AddI32).store(tempIter).jumpTo(loopStart);
 
-          IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
-          IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
-          IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
-          IrOpcode cmpEqOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpEqF64 : IrOpcode::CmpEqF32;
-          IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
+      fe.patch(jumpEndLoop);
+      fe.load(tempX).store(tempOut);
 
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          pushFloatConst(0.0);
-          instructions.push_back({cmpEqOp, 0});
-          size_t jumpIfNotZero = instructions.size();
-          instructions.push_back({IrOpcode::JumpIfZero, 0});
-          pushFloatConst(0.0);
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-          size_t jumpToEndZero = instructions.size();
-          instructions.push_back({IrOpcode::Jump, 0});
+      fe.patch(jumpToEndZero);
+      fe.patch(jumpToEndNegative);
+      fe.load(tempOut);
+      return OperatorSaturateRoundingRootsEmitResult::Handled;
+    }
 
-          size_t nonZeroIndex = instructions.size();
-          instructions[jumpIfNotZero].imm = static_cast<int32_t>(nonZeroIndex);
+    fe.load(tempValue).store(tempX).op(IrOpcode::PushI32).store(tempIter);
 
-          if (rootName == "sqrt") {
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            pushFloatConst(0.0);
-            instructions.push_back({cmpLtOp, 0});
-            size_t jumpIfNonNegative = instructions.size();
-            instructions.push_back({IrOpcode::JumpIfZero, 0});
-            pushFloatConst(0.0);
-            pushFloatConst(0.0);
-            instructions.push_back({divOp, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-            size_t jumpToEndNegative = instructions.size();
-            instructions.push_back({IrOpcode::Jump, 0});
+    const int32_t iterations = (argKind == LocalInfo::ValueKind::Float64) ? 10 : 8;
+    const size_t loopStart = fe.here();
+    fe.load(tempIter).pushI32(static_cast<uint64_t>(iterations)).op(IrOpcode::CmpLtI32);
+    size_t jumpEndLoop = fe.jumpIfZero();
 
-            size_t nonNegativeIndex = instructions.size();
-            instructions[jumpIfNonNegative].imm = static_cast<int32_t>(nonNegativeIndex);
+    fe.load(tempX).load(tempX).mul().store(tempOut);
 
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-            instructions.push_back({IrOpcode::PushI32, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempIter)});
+    fe.load(tempX).push(2.0).mul().load(tempValue).load(tempOut).div().add().push(3.0).div().store(
+        tempX);
 
-            const int32_t iterations = (argKind == LocalInfo::ValueKind::Float64) ? 8 : 6;
-            const size_t loopStart = instructions.size();
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempIter)});
-            instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(iterations)});
-            instructions.push_back({IrOpcode::CmpLtI32, 0});
-            size_t jumpEndLoop = instructions.size();
-            instructions.push_back({IrOpcode::JumpIfZero, 0});
+    fe.load(tempIter).pushI32(1).op(IrOpcode::AddI32).store(tempIter).jumpTo(loopStart);
 
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-            instructions.push_back({divOp, 0});
-            instructions.push_back({addOp, 0});
-            pushFloatConst(0.5);
-            instructions.push_back({mulOp, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+    fe.patch(jumpEndLoop);
+    fe.load(tempX).store(tempOut);
 
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempIter)});
-            instructions.push_back({IrOpcode::PushI32, 1});
-            instructions.push_back({IrOpcode::AddI32, 0});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempIter)});
-            instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
-
-            size_t loopEndIndex = instructions.size();
-            instructions[jumpEndLoop].imm = static_cast<int32_t>(loopEndIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-            instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-
-            size_t endIndex = instructions.size();
-            instructions[jumpToEndZero].imm = static_cast<int32_t>(endIndex);
-            instructions[jumpToEndNegative].imm = static_cast<int32_t>(endIndex);
-            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-            return OperatorSaturateRoundingRootsEmitResult::Handled;
-          }
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-          instructions.push_back({IrOpcode::PushI32, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempIter)});
-
-          const int32_t iterations = (argKind == LocalInfo::ValueKind::Float64) ? 10 : 8;
-          const size_t loopStart = instructions.size();
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempIter)});
-          instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(iterations)});
-          instructions.push_back({IrOpcode::CmpLtI32, 0});
-          size_t jumpEndLoop = instructions.size();
-          instructions.push_back({IrOpcode::JumpIfZero, 0});
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-          instructions.push_back({mulOp, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-          pushFloatConst(2.0);
-          instructions.push_back({mulOp, 0});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempValue)});
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-          instructions.push_back({divOp, 0});
-          instructions.push_back({addOp, 0});
-          pushFloatConst(3.0);
-          instructions.push_back({divOp, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
-
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempIter)});
-          instructions.push_back({IrOpcode::PushI32, 1});
-          instructions.push_back({IrOpcode::AddI32, 0});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempIter)});
-          instructions.push_back({IrOpcode::Jump, static_cast<uint64_t>(loopStart)});
-
-          size_t loopEndIndex = instructions.size();
-          instructions[jumpEndLoop].imm = static_cast<int32_t>(loopEndIndex);
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
-
-          size_t endIndex = instructions.size();
-          instructions[jumpToEndZero].imm = static_cast<int32_t>(endIndex);
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-          return OperatorSaturateRoundingRootsEmitResult::Handled;
-        }
+    fe.patch(jumpToEndZero);
+    fe.load(tempOut);
+    return OperatorSaturateRoundingRootsEmitResult::Handled;
+  }
   return OperatorSaturateRoundingRootsEmitResult::NotHandled;
 }
 

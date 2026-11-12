@@ -2,63 +2,36 @@
 #include "IrLowererOperatorExpLogHyperbolicHelpers.h"
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
-
-#include <cstring>
+#include "IrLowererMathEmitter.h"
 
 namespace primec::ir_lowerer {
 
-OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
-    const Expr &expr,
-    const LocalMap &localsIn,
-    bool hasMathImport,
-    const ExprLocalsPredicateFn &emitExpr,
-    const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
-    const Int32ProviderFn &allocTempLocal,
-    std::vector<IrInstruction> &instructions,
-    std::string &error) {
+OperatorArcHyperbolicEmitResult
+emitArcHyperbolicOperatorExpr(const Expr &expr,
+                              const LocalMap &localsIn,
+                              bool hasMathImport,
+                              const ExprLocalsPredicateFn &emitExpr,
+                              const InferArcHyperbolicExprKindWithLocalsFn &inferExprKind,
+                              const Int32ProviderFn &allocTempLocal,
+                              std::vector<IrInstruction> &instructions,
+                              std::string &error) {
+  MathEmitter fe(instructions);
   std::string arcName;
   if (getBuiltinArcTrigName(expr, arcName, hasMathImport)) {
-    if (expr.args.size() != 1) {
-      error = arcName + " requires exactly one argument";
+    LocalInfo::ValueKind argKind = LocalInfo::ValueKind::Unknown;
+    if (!checkUnaryFloatArgument(expr, arcName, inferExprKind, localsIn, argKind, error)) {
       return OperatorArcHyperbolicEmitResult::Error;
     }
-    LocalInfo::ValueKind argKind = inferExprKind(expr.args.front(), localsIn);
-    if (argKind != LocalInfo::ValueKind::Float32 && argKind != LocalInfo::ValueKind::Float64) {
-      error = arcName + " requires float argument";
-      return OperatorArcHyperbolicEmitResult::Error;
-    }
-    IrOpcode addOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32;
-    IrOpcode subOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::SubF64 : IrOpcode::SubF32;
-    IrOpcode mulOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::MulF64 : IrOpcode::MulF32;
-    IrOpcode divOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::DivF64 : IrOpcode::DivF32;
-    IrOpcode negOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::NegF64 : IrOpcode::NegF32;
-    IrOpcode cmpLtOp = (argKind == LocalInfo::ValueKind::Float64) ? IrOpcode::CmpLtF64 : IrOpcode::CmpLtF32;
-
-    auto pushFloatConst = [&](double value) {
-      if (argKind == LocalInfo::ValueKind::Float64) {
-        uint64_t bits = 0;
-        std::memcpy(&bits, &value, sizeof(bits));
-        instructions.push_back({IrOpcode::PushF64, bits});
-        return;
-      }
-      float f32 = static_cast<float>(value);
-      uint32_t bits = 0;
-      std::memcpy(&bits, &f32, sizeof(bits));
-      instructions.push_back({IrOpcode::PushF32, static_cast<uint64_t>(bits)});
-    };
-
+    fe.useFloatKind(argKind);
     auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftLocal)});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightLocal)});
-      instructions.push_back({mulOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+      fe.load(leftLocal).load(rightLocal).mul().store(outLocal);
     };
 
     int32_t tempX = allocTempLocal();
     if (!emitExpr(expr.args.front(), localsIn)) {
       return OperatorArcHyperbolicEmitResult::Error;
     }
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempX)});
+    fe.store(tempX);
 
     if (arcName == "atan") {
       auto emitAtanSeriesForLocal = [&](int32_t inputLocal, int32_t outLocal) {
@@ -71,20 +44,20 @@ OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
         emitMulLocal(tempX3, tempX2, tempX5);
         emitMulLocal(tempX5, tempX2, tempX7);
 
-        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(inputLocal)});
-        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
-        pushFloatConst(0.3333333333333333);
-        instructions.push_back({mulOp, 0});
-        instructions.push_back({subOp, 0});
-        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
-        pushFloatConst(0.2);
-        instructions.push_back({mulOp, 0});
-        instructions.push_back({addOp, 0});
-        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
-        pushFloatConst(0.14285714285714285);
-        instructions.push_back({mulOp, 0});
-        instructions.push_back({subOp, 0});
-        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(outLocal)});
+        fe.load(inputLocal)
+            .load(tempX3)
+            .push(0.3333333333333333)
+            .mul()
+            .sub()
+            .load(tempX5)
+            .push(0.2)
+            .mul()
+            .add()
+            .load(tempX7)
+            .push(0.14285714285714285)
+            .mul()
+            .sub()
+            .store(outLocal);
       };
 
       int32_t tempAbs = allocTempLocal();
@@ -92,56 +65,29 @@ OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
       int32_t tempInv = allocTempLocal();
       int32_t tempOut = allocTempLocal();
 
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-      pushFloatConst(0.0);
-      instructions.push_back({cmpLtOp, 0});
-      size_t jumpIfNotNeg = instructions.size();
-      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      fe.load(tempX).push(0.0).cmpLt();
+      size_t jumpIfNotNeg = fe.jumpIfZero();
 
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-      instructions.push_back({negOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
-      pushFloatConst(-1.0);
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSign)});
-      size_t jumpAfterSign = instructions.size();
-      instructions.push_back({IrOpcode::Jump, 0});
+      fe.load(tempX).neg().store(tempAbs).push(-1.0).store(tempSign);
+      size_t jumpAfterSign = fe.jump();
 
-      size_t nonNegIndex = instructions.size();
-      instructions[jumpIfNotNeg].imm = static_cast<int32_t>(nonNegIndex);
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAbs)});
-      pushFloatConst(1.0);
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempSign)});
-      size_t afterSignIndex = instructions.size();
-      instructions[jumpAfterSign].imm = static_cast<int32_t>(afterSignIndex);
+      fe.patch(jumpIfNotNeg);
+      fe.load(tempX).store(tempAbs).push(1.0).store(tempSign);
+      fe.patch(jumpAfterSign);
 
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
-      pushFloatConst(1.0);
-      instructions.push_back({cmpLtOp, 0});
-      size_t jumpIfNotSmall = instructions.size();
-      instructions.push_back({IrOpcode::JumpIfZero, 0});
+      fe.load(tempAbs).push(1.0).cmpLt();
+      size_t jumpIfNotSmall = fe.jumpIfZero();
 
       emitAtanSeriesForLocal(tempAbs, tempOut);
-      size_t jumpAfterAtan = instructions.size();
-      instructions.push_back({IrOpcode::Jump, 0});
+      size_t jumpAfterAtan = fe.jump();
 
-      size_t notSmallIndex = instructions.size();
-      instructions[jumpIfNotSmall].imm = static_cast<int32_t>(notSmallIndex);
-      pushFloatConst(1.0);
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAbs)});
-      instructions.push_back({divOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempInv)});
+      fe.patch(jumpIfNotSmall);
+      fe.push(1.0).load(tempAbs).div().store(tempInv);
       emitAtanSeriesForLocal(tempInv, tempOut);
-      pushFloatConst(1.5707963267948966);
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-      instructions.push_back({subOp, 0});
-      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempOut)});
+      fe.push(1.5707963267948966).load(tempOut).sub().store(tempOut);
 
-      size_t afterAtanIndex = instructions.size();
-      instructions[jumpAfterAtan].imm = static_cast<int32_t>(afterAtanIndex);
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempOut)});
-      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempSign)});
-      instructions.push_back({mulOp, 0});
+      fe.patch(jumpAfterAtan);
+      fe.load(tempOut).load(tempSign).mul();
       return OperatorArcHyperbolicEmitResult::Handled;
     }
 
@@ -154,53 +100,70 @@ OperatorArcHyperbolicEmitResult emitArcHyperbolicOperatorExpr(
     emitMulLocal(tempX3, tempX2, tempX5);
     emitMulLocal(tempX5, tempX2, tempX7);
 
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX3)});
-    pushFloatConst(0.16666666666666666);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX5)});
-    pushFloatConst(0.075);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({addOp, 0});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempX7)});
-    pushFloatConst(0.044642857142857144);
-    instructions.push_back({mulOp, 0});
-    instructions.push_back({addOp, 0});
+    fe.load(tempX)
+        .load(tempX3)
+        .push(0.16666666666666666)
+        .mul()
+        .add()
+        .load(tempX5)
+        .push(0.075)
+        .mul()
+        .add()
+        .load(tempX7)
+        .push(0.044642857142857144)
+        .mul()
+        .add();
 
     if (arcName == "asin") {
       return OperatorArcHyperbolicEmitResult::Handled;
     }
 
     int32_t tempAsin = allocTempLocal();
-    instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(tempAsin)});
-    pushFloatConst(1.5707963267948966);
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(tempAsin)});
-    instructions.push_back({subOp, 0});
+    fe.store(tempAsin).push(1.5707963267948966).load(tempAsin).sub();
     return OperatorArcHyperbolicEmitResult::Handled;
   }
 
-  if (OperatorArcHyperbolicEmitResult result =
-          emitExpOperatorExpr(expr, localsIn, hasMathImport, emitExpr, inferExprKind, allocTempLocal, instructions,
-                              error);
+  if (OperatorArcHyperbolicEmitResult result = emitExpOperatorExpr(expr,
+                                                                   localsIn,
+                                                                   hasMathImport,
+                                                                   emitExpr,
+                                                                   inferExprKind,
+                                                                   allocTempLocal,
+                                                                   instructions,
+                                                                   error);
       result != OperatorArcHyperbolicEmitResult::NotHandled) {
     return result;
   }
-  if (OperatorArcHyperbolicEmitResult result =
-          emitLogOperatorExpr(expr, localsIn, hasMathImport, emitExpr, inferExprKind, allocTempLocal, instructions,
-                              error);
+  if (OperatorArcHyperbolicEmitResult result = emitLogOperatorExpr(expr,
+                                                                   localsIn,
+                                                                   hasMathImport,
+                                                                   emitExpr,
+                                                                   inferExprKind,
+                                                                   allocTempLocal,
+                                                                   instructions,
+                                                                   error);
       result != OperatorArcHyperbolicEmitResult::NotHandled) {
     return result;
   }
-  if (OperatorArcHyperbolicEmitResult result =
-          emitHyperbolicOperatorExpr(expr, localsIn, hasMathImport, emitExpr, inferExprKind, allocTempLocal,
-                                     instructions, error);
+  if (OperatorArcHyperbolicEmitResult result = emitHyperbolicOperatorExpr(expr,
+                                                                          localsIn,
+                                                                          hasMathImport,
+                                                                          emitExpr,
+                                                                          inferExprKind,
+                                                                          allocTempLocal,
+                                                                          instructions,
+                                                                          error);
       result != OperatorArcHyperbolicEmitResult::NotHandled) {
     return result;
   }
-  if (OperatorArcHyperbolicEmitResult result =
-          emitArcHyperbolicBuiltinExpr(expr, localsIn, hasMathImport, emitExpr, inferExprKind, allocTempLocal,
-                                       instructions, error);
+  if (OperatorArcHyperbolicEmitResult result = emitArcHyperbolicBuiltinExpr(expr,
+                                                                            localsIn,
+                                                                            hasMathImport,
+                                                                            emitExpr,
+                                                                            inferExprKind,
+                                                                            allocTempLocal,
+                                                                            instructions,
+                                                                            error);
       result != OperatorArcHyperbolicEmitResult::NotHandled) {
     return result;
   }

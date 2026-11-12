@@ -210,7 +210,6 @@ of sync with them.
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | ready | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
-| TODO-5969 | Float math builtins lower through one table-driven emitter | ready | reuse-math-lowering |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
@@ -265,7 +264,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1683,21 +1682,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: expression call validation only; the lowerer fragments are only proposed here.
   - notes: Do not run alongside TODO-5967.
-
-- [~] TODO-5969: Float math builtins lower through one table-driven emitter
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 9)
-  - parallel_track: reuse-math-lowering
-  - scope: src/ir_lowerer/IrLowererOperator{AngleTrig,ArcHyperbolic,ClampMinMaxTrig,ExpLogHyperbolic,PowAbsSign,SaturateRoundingRoots}Helpers.cpp (437, 210, 503, 701, 526, 488 lines; 2,865 total; 65-80% identifier-normalized duplication) hand-emit IR sequences (for example the Taylor-series loop for `exp` in IrLowererOperatorExpLogHyperbolicHelpers.cpp). They repeat the "requires exactly one argument" and "requires float argument" checks (22 and 14 times), F32/F64 opcode selection such as `(argKind == Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32` (about 50 times), a `pushFloatConst` lambda (about 16 definitions) and temp-local store/load boilerplate. Add a float opcode set chosen once by kind (add, sub, mul, div, compare, convert, push-constant), shared argument checks, `emitLoadLocal`/`emitStoreLocal` helpers, and table-driven unary float ops (series and constants as data), and rewrite the six files on top of them.
-  - acceptance:
-    - IR output (`--dump-stage ir`) for every math builtin on f32 and f64 is byte-identical before and after, checked by a test or a recorded diff over the math examples and the math compile-run suites
-    - the six files shrink by at least a third in total; the counts are in the commit message
-    - full release gate green, including the VM math compile-run shard (`scripts/rerun_backend_shard.sh vm-math`)
-  - stop_rule: these six files and their new helper unit only.
-  - notes: Safe alongside TODO-5959, TODO-5960, TODO-5965, TODO-5970.
 
 - [ ] TODO-5970: Publication fact snapshots run one templated merge per fact kind
   - owner: ai

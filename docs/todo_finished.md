@@ -2318,6 +2318,7 @@ are left unarchived.
 | TODO-5959 | The AST C++ and GLSL emitters are deleted | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5964 | Semantics has one copy of each key-value and collection path predicate | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5969 | Float math builtins lower through one table-driven emitter | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
