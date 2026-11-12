@@ -345,10 +345,14 @@ bool emitNativeFunctions(const IrModule &module,
             error = "native backend encountered an invalid host import";
             return false;
           }
-          switch (nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)) {
+          const IrHostImport &hostImport = module.hostImports[static_cast<size_t>(inst.imm)];
+          const NativeTextHost textHost = nativeTextHost(hostImport.name);
+          switch (textHost) {
           case NativeTextHost::Alloc:
           case NativeTextHost::TryAlloc:
-            emitter.emitTextAlloc();
+          case NativeTextHost::Stat:
+          case NativeTextHost::SetLimit:
+            emitter.emitTextHeapHost(textHost);
             break;
           case NativeTextHost::Free:
             emitter.emitTextFree();
@@ -382,17 +386,17 @@ bool emitNativeFunctions(const IrModule &module,
             break;
           case NativeTextHost::NotText: {
             // Any other host function is a C function the image imports by name.
-            const IrHostImport &import = module.hostImports[static_cast<size_t>(inst.imm)];
             size_t slot = 0;
-            while (slot < hostImports.symbols.size() && hostImports.symbols[slot] != import.name) {
+            while (slot < hostImports.symbols.size() &&
+                   hostImports.symbols[slot] != hostImport.name) {
               ++slot;
             }
             if (slot == hostImports.symbols.size()) {
-              hostImports.symbols.push_back(import.name);
+              hostImports.symbols.push_back(hostImport.name);
             }
             typename EmitterT::HostCallSite site;
-            site.parameters = &import.parameters;
-            site.returnKind = import.returnKind;
+            site.parameters = &hostImport.parameters;
+            site.returnKind = hostImport.returnKind;
             site.stringTableDelta = stringTableOffsetDelta;
             site.stringTableFixups = &stringTableFixups;
             size_t slotFixup = 0;
@@ -404,8 +408,7 @@ bool emitNativeFunctions(const IrModule &module,
             break;
           }
           default:
-            error = "unsupported host function for native backend: " +
-                    module.hostImports[static_cast<size_t>(inst.imm)].name;
+            error = "unsupported host function for native backend: " + hostImport.name;
             return false;
           }
           break;

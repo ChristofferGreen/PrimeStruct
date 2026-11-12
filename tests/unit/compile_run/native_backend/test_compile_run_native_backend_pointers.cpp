@@ -292,6 +292,135 @@ main() {
   CHECK(readFile(outPath) == "47\n111\n3\n10239\n70000\n");
 }
 
+TEST_CASE("native string heap statistics count live text blocks as the VM does") {
+  // Blocks handed out, their bytes, and the large ones (above 64 KiB) by themselves; the chunk count is the pool's,
+  // so it is only bounded. A block that is freed gives its bytes back.
+  const std::string source = R"(
+import /std/text/*
+
+[return<i32> effects(heap_alloc)]
+touch_big() {
+  [String mut] big{String{}}
+  big.reserve(70000i32)
+  return(big.capacity())
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [String mut] a{String{}}
+  a.reserve(40i32)
+  [String mut] b{String{}}
+  b.reserve(100i32)
+  [String mut] big{String{}}
+  big.reserve(70000i32)
+  print_line(stringHeapBytesInUse())
+  print_line(stringHeapAllocations())
+  print_line(stringHeapLargeBlocks())
+  print_line(stringHeapLargeBytes())
+  print_line(stringHeapChunks() > 0i32 && stringHeapChunks() <= 3i32)
+  print_line(touch_big())
+  print_line(stringHeapAllocations())
+  print_line(stringHeapLargeBlocks())
+  print_line(stringHeapLargeBytes())
+  print_line(stringArenaDepth())
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_heap_stats.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_string_heap_stats_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_string_heap_stats_out.txt").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "70161\n3\n1\n70001\n1\n70000\n4\n1\n70001\n0\n");
+}
+
+TEST_CASE("native string memory limit refuses a block over it and a freed block makes room") {
+  const std::string source = R"(
+import /std/text/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  setStringMemoryLimit(102000u64)
+  [String mut] first{String{}}
+  print_line(first.tryReserve(60000i32))
+  [String mut] second{String{}}
+  print_line(second.tryReserve(60000i32))
+  print_line(second.capacity())
+  [String mut] third{String{}}
+  print_line(third.tryReserve(20000i32))
+  setStringMemoryLimit(0u64)
+  print_line(second.tryReserve(60000i32))
+  print_line(second.capacity())
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_string_limit_try.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_native_string_limit_try_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_string_limit_try_out.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "1\n0\n0\n1\n1\n65535\n");
+
+  // reserve, which has no way to report it, stops the program with the VM's message and exit code 3.
+  const std::string faulting = R"(
+import /std/text/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  setStringMemoryLimit(102000u64)
+  [String mut] first{String{}}
+  first.reserve(60000i32)
+  [String mut] second{String{}}
+  second.reserve(60000i32)
+  print_line("unreachable")
+  return(0i32)
+}
+)";
+  const std::string faultPath = writeTemp("compile_native_string_limit_fault.prime", faulting);
+  const std::string faultExe =
+      (testScratchPath("") / "primec_native_string_limit_fault_exe").string();
+  const std::string faultOut =
+      (testScratchPath("") / "primec_native_string_limit_fault_out.txt").string();
+  const std::string faultErr =
+      (testScratchPath("") / "primec_native_string_limit_fault_err.txt").string();
+  CHECK(runCommand("./primec --emit=native " + faultPath + " -o " + faultExe + " --entry /main") ==
+        0);
+  CHECK(runCommand(faultExe + " > " + faultOut + " 2> " + faultErr) == 3);
+  CHECK(readFile(faultOut).empty());
+  CHECK(readFile(faultErr).find("string memory limit exceeded") != std::string::npos);
+}
+
+TEST_CASE("native string heap statistics the pool cannot answer stop the program") {
+  // The free-byte statistic is the VM's per-chunk figure; the native pool has no such count, so it says so.
+  const std::string source = R"(
+import /std/text/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  print_line(stringHeapBytesFree())
+  return(0i32)
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_string_heap_unsupported_stat.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_string_heap_unsupported_stat_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_string_heap_unsupported_stat_err.txt").string();
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main") == 0);
+  CHECK(runCommand(exePath + " > /dev/null 2> " + errPath) == 3);
+  CHECK(readFile(errPath).find("string heap statistic is not available on the native backend") !=
+        std::string::npos);
+}
+
 TEST_CASE("native heap realloc keeps the leading slots across pooled and mapped blocks") {
   // 1 slot (pooled) grows to 3000 (a mapping of its own) and shrinks back to 2 (pooled): the leading values
   // move with the block, and slots past the old size start zeroed.

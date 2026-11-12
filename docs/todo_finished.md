@@ -2055,6 +2055,7 @@ are left unarchived.
 | TODO-5583 | Native backend calls `[host]` functions | [undated.md](todo_archive/undated.md) | - |
 | TODO-5584 | Native PrimeScroll links the AppKit backend as a dylib | [undated.md](todo_archive/undated.md) | - |
 | TODO-5585 | The text editor builds and runs on the native backend | [undated.md](todo_archive/undated.md) | - |
+| TODO-5586 | Native String heap: pooled blocks, statistics and limit | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5587 | Native String heap: entry arguments | [undated.md](todo_archive/undated.md) | - |
 | TODO-5588 | Markdown to HTML converter for the preview | [undated.md](todo_archive/undated.md) | - |
 | TODO-5589 | Markdown preview: window preview ABI, headless backend and editor menu | [undated.md](todo_archive/undated.md) | - |

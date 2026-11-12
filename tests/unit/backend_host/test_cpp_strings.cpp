@@ -156,15 +156,19 @@ TEST_CASE("String text, growth, editing and comparison agree with the VM") {
 }
 
 TEST_CASE("the string heap reuses blocks and reports the same figures") {
-  matches("string_heap",
-          "  [i32 mut] checksum{0i32}\n"
-          "  for([i32 mut] i{0i32}, i < 2000i32, i++) {\n"
-          "    [String] s{/std/text/stringFrom(\"a name long enough to take a block\")}\n"
-          "    checksum = checksum + s.count()\n"
-          "  }\n"
-          "  [bool] steady{/std/text/stringHeapChunks() <= 2 && /std/text/stringHeapBytesInUse() == 0u64}\n"
-          "  return(if(steady, then() { checksum - checksum / 251i32 * 251i32 }, else() { 99i32 }))",
-          (2000 * 34) % 251);
+  matches(
+      "string_heap",
+      "  [i32 mut] checksum{0i32}\n"
+      "  for([i32 mut] i{0i32}, i < 2000i32, i++) {\n"
+      "    [String] s{/std/text/stringFrom(\"a name long enough to take a block\")}\n"
+      "    checksum = checksum + s.count()\n"
+      "  }\n"
+      "  [bool] steady{/std/text/stringHeapChunks() <= 2 && /std/text/stringHeapBytesInUse() == "
+      "0u64}\n"
+      "  return(if(steady, then() { checksum - checksum / 251i32 * 251i32 }, else() { 99i32 }))",
+      (2000 * 34) % 251,
+      "",
+      true);
 }
 
 TEST_CASE("slices over vectors agree with the VM") {

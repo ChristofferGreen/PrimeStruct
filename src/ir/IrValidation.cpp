@@ -260,7 +260,7 @@ bool validateFunction(const IrModule &module,
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
-                               "string heap statistics and limits are not available on the native backend yet (docs/todo.md, TODO-5586)",
+                               "string arenas are not available on the native backend yet",
                                error);
       }
       if (!nativeHost && target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&

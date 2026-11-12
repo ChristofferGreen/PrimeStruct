@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/ir/IrNativeTextHost.h"
 #include "NativeEmitterRegAlloc.h"
 
 #if defined(__APPLE__)
@@ -348,7 +349,15 @@ class Arm64Emitter {
     if (!usesHeapRuntime() && !sync_) {
       return 0;
     }
+    if (textStats_) {
+      return HeapStateBytes + 192 + 48;
+    }
     return HeapStateBytes + ((threaded_ || sync_) ? 48 : 0) + (sync_ ? 144 : 0);
+  }
+  // A module that asks for the string heap's statistics or limit: text blocks count themselves in the data segment
+  // (set before any code is emitted).
+  void setTextStats(bool textStats) {
+    textStats_ = textStats;
   }
   void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
                        std::vector<std::pair<size_t, std::string>> &slotLoads);
@@ -370,8 +379,12 @@ class Arm64Emitter {
   void emitTextArgument(uint32_t argcLocalIndex, uint32_t argvLocalIndex);
   // The string heap functions (`__pstext_*`, primec/ir/IrNativeTextHost.h): a text block is a byte
   // region sized by the VM's size classes, with its capacity in the block header.
-  void emitTextAlloc();
-  void emitTextFree() { emitHeapFree(); }
+  void emitTextAlloc(bool faultOnLimit = false);
+  void emitTextFree();
+  void emitTextCounters(bool setLimit);
+  // The allocation and counter functions of the string heap: alloc, try-alloc, statistic and limit.
+  void emitTextHeapHost(NativeTextHost kind);
+  void emitFaultMessage(std::string_view message);
   void emitTextCapacity();
   void emitTextUsable();
   void emitTextLength();
@@ -715,7 +728,7 @@ class Arm64Emitter {
   void emitMulReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitUdivReg(uint8_t rd, uint8_t rn, uint8_t rm);
   void emitHeapPoolClass();
-  void emitHeapStateAddress();
+  void emitHeapStateAddress(uint8_t reg = 9);
   void emitHeapLockAddress();
   void emitSyncAddress();
   void emitHeapResolveState();
@@ -836,6 +849,7 @@ class Arm64Emitter {
   std::vector<TaskSpawnCall> taskSpawnCalls_;
   std::vector<size_t> taskWaitCalls_;
   bool threaded_ = false;
+  bool textStats_ = false;
   // Per-thread allocator states: the BL sites of the state lookup, of the remote-free drain and of the entry's
   // init, and the entries of the routines.
   std::vector<size_t> heapCurStateCalls_;
@@ -859,11 +873,11 @@ class Arm64Emitter {
   bool registerAllocationFarBranches_ = false;
 };
 
+#include "NativeEmitterInternalsArm64Encodings.h"
 #include "NativeEmitterInternalsArm64Arithmetic.h"
 #include "NativeEmitterInternalsArm64Core.h"
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
-#include "NativeEmitterInternalsArm64Encodings.h"
 #include "NativeEmitterInternalsArm64Heap.h"
 #include "NativeEmitterInternalsArm64Tasks.h"
 #include "NativeEmitterInternalsArm64Sync.h"

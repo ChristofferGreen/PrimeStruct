@@ -218,6 +218,8 @@ Every operation keeps the text valid UTF-8.
 - **Observability:** `stringMemory()` returns `StringMemoryStats { chunks, bytesInUse, bytesFree, largeBlocks,
   largeBytes }`. `setStringMemoryLimit(bytes)` caps the heap; an allocation past the cap is the runtime fault
   `string memory limit exceeded`, and `String.tryReserve(n)` returns `Result<void, TextError>` instead of faulting.
+  The arm64 native backend counts the bytes of live text blocks against the cap (the VM counts its chunk regions) and
+  answers the statistics of bytes in use, blocks handed out, large blocks and chunks; the others stop the program.
 - **Threads:** each thread has its own string heap; a `String` freed on another thread returns its block to the heap
   it came from.
 - **Arenas:** `[StringArena] arena{beginStringArena()}` opens a string arena that ends when `arena` goes out of scope.

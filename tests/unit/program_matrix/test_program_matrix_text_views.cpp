@@ -3,8 +3,8 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.text_views");
 
 // A `string` converts to a StringView where one is expected (docs/spec/strings-and-views.md, Current surface of the
-// text view). StringView runs on the VM and the optimized C++ emitters; the native backends have no text heap yet
-// (TODO-5586), so these programs run on the VM configs and optexe, the backend web servers are built with.
+// text view). StringView runs on the VM and the optimized C++ emitters, so these programs run on the VM configs and
+// optexe, the backend web servers are built with.
 
 namespace {
 

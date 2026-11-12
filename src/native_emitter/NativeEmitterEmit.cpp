@@ -213,6 +213,13 @@ bool buildNativeImage(const IrModule &module,
       }
     }
   }
+  // A module that reads the string heap's statistics or sets its limit makes the text blocks count themselves.
+  for (const IrHostImport &import : module.hostImports) {
+    const NativeTextHost kind = nativeTextHost(import.name);
+    if (kind == NativeTextHost::Stat || kind == NativeTextHost::SetLimit) {
+      emitter.setTextStats(true);
+    }
+  }
 #endif
   bool registerAllocation = options.registerAllocation;
   if (const char *forced = std::getenv("PRIMESTRUCT_NATIVE_REGALLOC"); forced != nullptr) {

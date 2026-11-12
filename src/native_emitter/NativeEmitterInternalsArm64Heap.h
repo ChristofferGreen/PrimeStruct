@@ -117,11 +117,12 @@ inline void Arm64Emitter::emitHeapPoolClass() {
   patchWord(jumpDone, encodeB(static_cast<int32_t>(currentWordIndex() - jumpDone)));
 }
 
-// x9 = the address of the allocator state (patched once the data segment's address is known).
-inline void Arm64Emitter::emitHeapStateAddress() {
+// `reg` (x9 by default) = the address of the data segment's allocator state (patched once the data segment's address
+// is known).
+inline void Arm64Emitter::emitHeapStateAddress(uint8_t reg) {
   heapStateFixups_.push_back(currentWordIndex());
-  emit(encodeAdrp(9, 0));
-  emitAddRegImm(9, 9, 0);
+  emit(encodeAdrp(reg, 0));
+  emitAddRegImm(reg, reg, 0);
 }
 
 inline void Arm64Emitter::emitHeapRuntime() {
@@ -262,6 +263,13 @@ inline void Arm64Emitter::emitHeapRuntime() {
     emitMovImm64(8, HeapPoolChunkBytes);
     emitAddReg(8, 7, 8);
     emit(encodeStrRegBase(8, 9, 8));
+  }
+  if (textStats_) {
+    // One more pool chunk mapped (x1, x3 and x4 are free here; x9 stays the allocator state).
+    emitHeapStateAddress(1);
+    emitAddRegImm(1, 1, static_cast<uint16_t>(arm64_text::ChunksOffset));
+    emitMovImm64(3, 1);
+    emit(arm64_atomics::ldaddal(3, 4, 1));
   }
   emitMovReg(2, 10);
   emitMovReg(5, 11);

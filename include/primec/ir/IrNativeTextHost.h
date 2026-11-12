@@ -5,8 +5,8 @@
 namespace primec {
 
 // The string heap functions (`__pstext_*`, see primec/runtime/VmTextHeap.h) the arm64 native backend
-// answers itself with emitted code. A text block is a byte region of its own sized by the VM's size
-// classes; the pooled heap, statistics, limit and entry arguments are not there yet (docs/todo.md).
+// answers itself with emitted code. A text block comes from the pooled heap, sized by the VM's size classes, with
+// its size in the block header; the statistics and the limit count live text blocks in the data segment.
 enum class NativeTextHost {
   NotText,  // not a `__pstext_*` function
   Alloc,    // __pstext_alloc(size) -> Pointer<u8>
@@ -21,6 +21,8 @@ enum class NativeTextHost {
   Compare, // __pstext_compare(Pointer<u8> a, Pointer<u8> b, u64 count) -> i32: -1, 0 or 1
   Find,    // __pstext_find(Pointer<u8> address, u64 count, u64 value) -> i32: the index or -1
   Literal, // __pstext_literal(string) -> Pointer<u8>: the address of a string literal's bytes in the image
+  Stat,        // __pstext_stat(u64 which) -> u64: a counter of the text blocks (0, 1 and 3 to 7)
+  SetLimit,    // __pstext_set_limit(u64 bytes): the most bytes of live text blocks (0 for no limit)
   Unsupported, // a `__pstext_*` function the native backend does not answer yet
 };
 
@@ -67,6 +69,12 @@ inline NativeTextHost nativeTextHost(std::string_view importName) {
   }
   if (leaf == "__pstext_literal") {
     return NativeTextHost::Literal;
+  }
+  if (leaf == "__pstext_stat") {
+    return NativeTextHost::Stat;
+  }
+  if (leaf == "__pstext_set_limit") {
+    return NativeTextHost::SetLimit;
   }
   return NativeTextHost::Unsupported;
 }

@@ -127,7 +127,7 @@ of sync with them.
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
-| TODO-5586 | Native String heap: pooled blocks, statistics and limit | deferred | native-backend-strings |
+| TODO-5956 | Native string arenas and the remaining string heap statistics | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
@@ -232,7 +232,7 @@ of sync with them.
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5586
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - AI workflow (docs/AiWorkflowPlan.md): TODO-5841, TODO-5843, TODO-5842
@@ -839,17 +839,17 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
   - stop_rule: measurement only.
   - notes: needs a person at the Mac; the guard counts images, not milliseconds.
 
-- [ ] TODO-5586: Native String heap: pooled blocks, statistics and limit
+- [ ] TODO-5956: Native string arenas and the remaining string heap statistics
   - owner: ai
   - status: deferred
-  - created_at: 2026-10-23
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md)
+  - created_at: 2026-11-12
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md; follows TODO-5586)
   - parallel_track: native-backend-strings
-  - scope: The arm64 native String heap gives every text block its own mapping (a page or more each, a syscall per allocation and free). Pool small blocks in 256 KiB chunks per size class as the VM's `VmTextHeap` does, with state in the writable data segment of TODO-5582, and answer `__pstext_stat` and `__pstext_set_limit` ("string memory limit exceeded"); freed blocks are zeroed and a double free faults.
+  - scope: The arm64 native backend answers `__pstext_stat` for chunks, bytes in use, large blocks and bytes, and blocks handed out, and `__pstext_set_limit` over the bytes of live text blocks, but `stringHeapBytesFree()` and `heapLiveBlocks()` (statistics 2 and 8) stop the program with "string heap statistic is not available on the native backend", and `StringArena` (`__pstext_arena_begin` and `_end`) is rejected at validation ("string arenas are not available on the native backend yet"). The limit counts live text-block bytes where the VM counts the bytes of its chunk regions, so a program that sits close to a limit can differ. Count the slot heap's live blocks and the free blocks' bytes in the pool, and give arenas a bump region in the data segment's state.
   - acceptance:
-    - the string_heap program of tests/unit/backend_host/test_cpp_strings.cpp (reuse and figures) also runs through `--emit=native` with the VM's exit codes; a 100000-String loop uses no more than a few MB; full release gate green
-  - stop_rule: the native String heap's allocator and its statistics.
-  - notes: deferred to keep Ready Now at eight. PrimeScroll ships from the native build, so every String it makes takes a mapping of its own; the writable data segment this needs exists (`MachOData::stateBytes`), and since TODO-5750 slot blocks are pooled there (src/native_emitter/NativeEmitterInternalsArm64Heap.h: chunks shared by all size classes, free lists in the data segment), which text blocks could share. After TODO-5749 the text blocks are most of what native PrimeScroll on handlers still holds above its loop version (untagged dirty memory 0.41 MB in 11 regions against 0.28 MB in 5, of a 0.2 MB footprint gap).
+    - `stringMemory()`, `heapLiveBlocks()` and a `StringArena` program (`tests/unit/runtime/test_vm_heap_arenas.cpp` programs) run through `--emit=native` with the VM's output
+    - full release gate green
+  - stop_rule: the native string heap's arenas and the two statistics only.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

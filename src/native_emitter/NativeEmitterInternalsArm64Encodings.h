@@ -60,6 +60,23 @@ inline uint32_t cbnzW(uint8_t rt, int32_t imm19) { // CBNZ Wt
 
 } // namespace arm64_tasks
 
+namespace arm64_text {
+
+// The string heap's counters in the data segment's state, after the allocator state and the lock and wait state of a
+// threaded or synchronized module: the memory limit (0 for none), the bytes of live text blocks, the blocks handed
+// out, the live blocks above the VM's large threshold and their bytes, and the pool chunks mapped.
+constexpr uint64_t StatOffset = HeapStateBytes + 192;
+constexpr uint64_t LimitOffset = StatOffset;
+constexpr uint64_t HeldOffset = StatOffset + 8;
+constexpr uint64_t AllocationsOffset = StatOffset + 16;
+constexpr uint64_t LargeBlocksOffset = StatOffset + 24;
+constexpr uint64_t LargeBytesOffset = StatOffset + 32;
+constexpr uint64_t ChunksOffset = StatOffset + 40;
+constexpr uint64_t StatBytes = 48;
+constexpr uint64_t LargeThreshold = 64 * 1024;
+
+} // namespace arm64_text
+
 namespace arm64_theap {
 
 constexpr uint64_t RemoteHeadOffset = HeapStateBytes;     // in every allocator state
