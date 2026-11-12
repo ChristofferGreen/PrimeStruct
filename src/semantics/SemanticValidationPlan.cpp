@@ -20,6 +20,15 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
   static const std::vector<SemanticValidationPassManifestEntry> Manifest =
       primec::systemHeapValue([]() -> std::vector<SemanticValidationPassManifestEntry> {
       return {
+      {"type-aliases",
+       SemanticValidationPassId::TypeAliases,
+       SemanticValidationPassKind::CoreCanonicalization,
+       SemanticValidationPassOwnership::AstSyntax,
+       SemanticValidationPassOwnership::SemanticCanonicalAst,
+       SemanticValidationPassAction::MutatesAst,
+       false,
+       "replace each use of an [alias<Type>] definition with its target type, before the transform pass "
+       "reads `alias<Type>` as a return type"},
       {"semantic-transform-rules",
        SemanticValidationPassId::SemanticTransformRules,
        SemanticValidationPassKind::CoreCanonicalization,

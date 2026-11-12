@@ -2167,6 +2167,7 @@ are left unarchived.
 | TODO-5705 | An idle connection does not stall the server | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5706 | Fragment-swapping buttons without user JavaScript | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5707 | `Function` types accept `mut` parameters | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5708 | Type aliases | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5709 | Native controls take handler closures and `App.run` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5710 | PrimeScroll dispatches through handlers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5711 | Retire the `/std/ui` layout and command-list prototype | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |

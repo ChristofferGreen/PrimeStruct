@@ -56,6 +56,7 @@ struct SemanticValidationPlan {
 };
 
 enum class SemanticValidationPassId {
+  TypeAliases,
   SemanticTransformRules,
   ExperimentalGfxConstructors,
   ReflectionGeneratedHelpers,

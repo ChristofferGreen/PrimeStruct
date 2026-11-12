@@ -127,7 +127,7 @@ handler that brings the menus, toolbars and session up to date after each event.
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.
-8. Later: TODO-5708 (type aliases), TODO-5718 (repeated and decoded
+8. Later: TODO-5954 (handler aliases in the stdlib), TODO-5718 (repeated and decoded
    parameters).
 
 ## Concurrency

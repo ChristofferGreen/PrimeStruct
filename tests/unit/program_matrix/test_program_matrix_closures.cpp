@@ -1964,4 +1964,64 @@ main() {
                     161);
 }
 
+TEST_CASE("type aliases name a handler Function, a generic struct and an alias of an alias") {
+  // docs/spec/type-system.md, Type Aliases: the pass replaces each alias with its target, so every backend sees the
+  // spelled-out types.
+  runClosureProgram("type_aliases_handler_and_generic_struct",
+                    R"(
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Box<T>() {
+  [T] value{}
+}
+
+[alias<Function<void, Request, Reference<Response>>>]
+Handler() {}
+
+[alias<Box<i32>>]
+IntBox() {}
+
+[alias<IntBox>]
+Cell() {}
+
+[alias<Function<void, Reference<i32>>>]
+Bump() {}
+
+[alias<Box<T>>]
+Wrapped<T>() {}
+
+[struct]
+Entry() {
+  [Handler mut] handler
+}
+
+[return<Handler> effects(heap_alloc)]
+make_handler() {
+  return([]([Request] request, [Response mut] response) { response.text("hi", "text/plain") })
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] raw{stringFrom("GET /hello HTTP/1.1\r\nHost: example\r\n\r\n")}
+  [Request] request{parseRequest(raw.view(), 1024i32)}
+  [Entry mut] entry{Entry{[handler] make_handler()}}
+  [Response mut] response{Response{}}
+  entry.handler(request, location(response))
+  [Cell] cell{Cell{[value] 7i32}}
+  [IntBox] other{IntBox{[value] 3i32}}
+  [Wrapped<i32>] wrapped{Wrapped<i32>{[value] 5i32}}
+  [Bump mut] bump{[]([i32 mut] value) { value = value + 5i32 }}
+  [i32 mut] total{1i32}
+  bump(total)
+  // 200 / 10 + 2 (body "hi") + 7 + 3 + 5 + 6
+  return(response.status / 10i32 + response.body.count() + cell.value + other.value + wrapped.value + total)
+}
+)",
+                    43);
+}
+
 TEST_SUITE_END();

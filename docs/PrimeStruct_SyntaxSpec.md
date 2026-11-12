@@ -225,6 +225,7 @@ Use `--emit=ir` to write serialized PSIR bytecode to the output path after seman
 
 Type aliases:
 - No implicit width aliases; use explicit `i32`, `i64`, `u64`, `f32`, `f64`.
+- A named alias for any type is declared with `[alias<Type>] Name() {}` (docs/spec/type-system.md, Type Aliases).
 - Software numeric envelopes `integer`, `decimal`, and `complex` are supported in the language spec:
   - `integer` is arbitrary-precision signed integer with exact arithmetic (no overflow/wrapping).
   - `decimal` is arbitrary-precision floating with fixed 256-bit precision and deterministic round-to-nearest-even

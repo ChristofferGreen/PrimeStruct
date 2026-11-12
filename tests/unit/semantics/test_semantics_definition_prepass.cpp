@@ -83,6 +83,7 @@ const primec::semantics::SemanticValidationPassManifestEntry *findManifestPass(
 TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
   using PassId = primec::semantics::SemanticValidationPassId;
   const std::vector<std::string> expectedNames = {
+      "type-aliases",
       "semantic-transform-rules",
       "experimental-gfx-constructors",
       "reflection-generated-helpers",
@@ -117,6 +118,7 @@ TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
   CHECK(manifestPassNames() == expectedNames);
   CHECK(manifestPassIds() ==
         std::vector<PassId>{
+            PassId::TypeAliases,
             PassId::SemanticTransformRules,
             PassId::ExperimentalGfxConstructors,
             PassId::ReflectionGeneratedHelpers,

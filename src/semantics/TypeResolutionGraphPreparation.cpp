@@ -6,6 +6,7 @@
 #include "SemanticsValidateFunctionValues.h"
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
+#include "SemanticsValidateTypeAliases.h"
 #include "SemanticsValidateTransforms.h"
 
 namespace primec::semantics {
@@ -27,6 +28,9 @@ bool prepareProgramForTypeResolutionAnalysis(Program &program,
   }
   if (implicitTemplateArgFactHitCountOut != nullptr) {
     *implicitTemplateArgFactHitCountOut = 0;
+  }
+  if (!rewriteTypeAliases(program, error)) {
+    return false;
   }
   if (!applySemanticTransforms(program, semanticTransforms, error)) {
     return false;

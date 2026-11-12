@@ -31,6 +31,66 @@
   stdlib-owned scene descriptor structs imported from `/std/scene/*`.
 - **Template applications:** `Name<T1, T2, ...>`.
 
+### Type Aliases
+A definition carrying `[alias<Target>]` names the type `Target`, so a long type is spelled out once:
+
+```prime
+[public alias<Function<void, Request, Reference<Response>>>]
+Handler() {}
+```
+
+- **Declaration:** `[alias<Type>] Name() {}` at the root or inside a namespace; the definition has no parameters and no
+  body. `public` makes the alias visible through an import (`import /lib/*` or `import /lib/Handler`), as for any
+  definition; without it the alias is private to its namespace and the namespaces inside it. The target is any type
+  text, including `Function`, `Reference`, `Pointer` and generic struct instances.
+- **Use:** `Name` is replaced by its target wherever a type is written: a binding (`[Handler mut] handler`), a
+  parameter, a field, a `return<Name>`, a template argument (`vector<Name>()`, `Reference<Name>`) and a brace
+  constructor (`Name{...}` builds the target type). The name is looked up like a struct name: the enclosing
+  namespaces first, then the root, then the imports. An alias is the same type as its target, not a new one: a value
+  of the target type passes where the alias is expected and back, and diagnostics name the target.
+- **Aliases of aliases** resolve to the final target. A cycle is an error naming it:
+  `type alias cycle: /A -> /B -> /A`.
+- **Generic aliases:** `[alias<Box<T>>] Wrapped<T>() {}` takes template arguments at its use: `Wrapped<i32>` is
+  `Box<i32>`. The argument count must match (`type alias /Wrapped takes 1 template argument, 0 given`), and a
+  non-generic alias takes none.
+- **Lowering:** the `type-aliases` pass is the first semantic pass (before the transform pass, lambda closures and
+  template monomorphization), so no later pass sees an alias. The alias definition stays as an empty struct, so an import of its
+  path finds a definition; its name is not a usable type afterwards.
+
+```prime
+import /std/collections/*
+
+[struct]
+Box<T>() {
+  [T] value{}
+}
+
+[alias<Box<i32>>]
+IntBox() {}
+
+[alias<Function<i32, i32>>]
+Step() {}
+
+[alias<Box<T>>]
+Wrapped<T>() {}
+
+[struct]
+Holder() {
+  [Step mut] step
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [IntBox] cell{IntBox{[value] 7i32}}
+  [Wrapped<i32>] wrapped{Wrapped<i32>{[value] 5i32}}
+  [Holder mut] holder{Holder{[step] []([i32] x) { return(x + 1i32) }}}
+  return(cell.value + wrapped.value + holder.step(10i32))
+}
+```
+
+This runs on the VM, native and `optexe` and exits with 23. The semantic AST (`--dump-stage ast-semantic`) is the one
+of the same program with `Box<i32>`, `Box<i32>` and `Function<i32, i32>` written out: the alias adds nothing to the IR.
+
 ### Core Type Set (portable)
 - `bool`, `i32`, `i64`, `u64`, `u8`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.

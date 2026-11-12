@@ -15,6 +15,7 @@
 #include "SemanticsValidateExperimentalGfxConstructors.h"
 #include "SemanticsValidateLambdaClosures.h"
 #include "SemanticsValidateFunctionValues.h"
+#include "SemanticsValidateTypeAliases.h"
 #include "SemanticsValidateExperimentalSoaFieldViewRewrites.h"
 #include "SemanticsValidateExperimentalSoaMethodRewrites.h"
 #include "SemanticsValidateKeyValueRewrites.h"
@@ -375,6 +376,8 @@ bool runSemanticValidationManifestPass(
     case PassId::SemanticTransformRules:
       return semantics::applySemanticTransforms(
           state.program, state.semanticTransforms, state.error);
+    case PassId::TypeAliases:
+      return semantics::rewriteTypeAliases(state.program, state.error);
     case PassId::ExperimentalGfxConstructors:
       return semantics::rewriteExperimentalGfxConstructors(state.program, state.error);
     case PassId::ReflectionGeneratedHelpers:

@@ -30,6 +30,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.imports
   primestruct.semantics.lambdas
   primestruct.semantics.text_views
+  primestruct.semantics.type_aliases
   primestruct.semantics.maybe
   primestruct.semantics.type_resolution_graph
   primestruct.semantics.move
@@ -319,6 +320,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 6
   SHARD_PREFIX "text_views"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.type_aliases"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 5
+  SHARD_PREFIX "type_aliases"
 )
 
 addPrimeStructManagedDoctestSuite(
