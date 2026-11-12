@@ -186,3 +186,77 @@ main() {
 )",
                      25);
 }
+
+namespace {
+
+const std::string ElementViewDefinitions = R"(
+import /std/text/*
+import /std/text/view/*
+import /std/collections/*
+
+[struct]
+Greeter() {
+  [vector<String> mut] lines{vector<String>{}}
+}
+
+[return<String> effects(heap_alloc)]
+make_line([i32] size) {
+  [String mut] out{String{}}
+  [i32 mut] i{0i32}
+  while(i < size) {
+    out.append("x")
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<i32>]
+view_size([StringView] text) {
+  return(text.count())
+}
+)";
+
+} // namespace
+
+TEST_CASE("a view of a vector element passes where a StringView is expected") {
+  runTextViewProgram("text_view_element_argument",
+                     ElementViewDefinitions + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<String> mut] lines{vector<String>{}}
+  lines.push(make_line(2i32))
+  lines.push(make_line(5i32))
+  [Greeter mut] greeter{Greeter{}}
+  greeter.lines.push(make_line(7i32))
+  greeter.lines.push(make_line(9i32))
+  return(view_size(lines[1i32].view()) + view_size(greeter.lines[1i32].view()) * 10i32)
+}
+)",
+                     95);
+}
+
+TEST_CASE("a method call on a vector element of the wrong type still mismatches a StringView") {
+  const std::filesystem::path dir =
+      primec::testing::testScratchPath("program_matrix/text_view_element_mismatch/x").parent_path();
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path sourcePath = dir / "text_view_element_mismatch.prime";
+  {
+    std::ofstream file(sourcePath, std::ios::binary);
+    file << ElementViewDefinitions << R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<String> mut] lines{vector<String>{}}
+  lines.push(make_line(2i32))
+  return(view_size(lines[0i32].count()))
+}
+)";
+  }
+  const program_matrix::Outcome outcome = program_matrix::runCaptured(
+      "./primec --emit=ir " + program_matrix::quote(sourcePath.string()) + " -o " +
+          program_matrix::quote((dir / "text_view_element_mismatch.psir").string()),
+      dir / "text_view_element_mismatch.ir");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("argument type mismatch for /view_size parameter text: expected "
+                                 "/std/text/view/StringView got") != std::string::npos,
+                outcome.err);
+}

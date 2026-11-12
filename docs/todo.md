@@ -115,7 +115,6 @@ of sync with them.
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5957 | A `.view()` call on a vector element is accepted as a `StringView` argument | ready | collections-access |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
@@ -265,7 +264,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -624,18 +623,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - negative: `push` on a `[Vector<i32>]` local without `mut` is rejected
     - full release gate green
   - stop_rule: mutating method calls on bindings declared with the stdlib `Vector<T>` spelling.
-
-- [ ] TODO-5957: A `.view()` call on a vector element is accepted as a `StringView` argument
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-12
-  - phase: Collections (docs/spec/value-lifecycle.md; found by TODO-5730)
-  - parallel_track: collections-access
-  - scope: `view_first(lines[1i32].view())` with `[vector<String> mut] lines` (a local, and a `vector<String>` field alike) and `[StringView] text` as the parameter is rejected by semantics with `argument type mismatch for /view_first parameter text: expected /std/text/view/StringView got array`, while `[StringView] v{lines[1i32].view()}` and `lines[1i32].view().count()` work: the argument check infers the struct path of a method call on an indexed element as empty and falls back to its return kind. `page.element("p", greeter.lines[i].view())` in /std/web hits it. Repro: the program of TODO-5730 with `print_line(view_first(greeter.lines[1i32].view()))`.
-  - acceptance:
-    - the call compiles and runs on the VM and optexe for a local `vector<String>` and for a field, and a wrong argument type still names both types
-    - full release gate green
-  - stop_rule: struct-path inference of a method call whose receiver is an element access, in argument validation.
 
 - [ ] TODO-5893: An unused `import /std/tuple/*` is not an unknown import path
   - owner: ai

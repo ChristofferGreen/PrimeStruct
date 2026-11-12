@@ -119,6 +119,30 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     }
     return resolveInferStructTypePath(binding->typeTemplateArg, receiver.namespacePrefix);
   };
+  // An indexed element (`items[i].name`, `items[i].view()`): the vector helpers do not forward a struct return path,
+  // but the query type of the element is its struct.
+  // A method call takes the fallback for the index sugar `items[i]` only: a helper call spelled out by its path
+  // keeps the diagnostics of its own path.
+  auto inferIndexedElementStruct = [&](const Expr &receiverCall,
+                                       bool indexSugarOnly) -> std::string {
+    if (receiverCall.kind != Expr::Kind::Call || receiverCall.isBinding) {
+      return "";
+    }
+    if (indexSugarOnly && (receiverCall.isMethodCall || receiverCall.isFieldAccess ||
+                           (receiverCall.name != "at" && receiverCall.name != "at_unsafe") ||
+                           receiverCall.args.size() != 2)) {
+      return "";
+    }
+    std::string elementType;
+    if (!inferQueryExprTypeText(receiverCall, params, locals, elementType) || elementType.empty()) {
+      return "";
+    }
+    const std::string scope =
+        !receiverCall.namespacePrefix.empty() || currentDefinitionContext_ == nullptr
+            ? receiverCall.namespacePrefix
+            : currentDefinitionContext_->fullPath;
+    return resolveInferStructTypePath(elementType, scope);
+  };
   if (expr.kind == Expr::Kind::Call) {
     if (!expr.isMethodCall &&
         (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
@@ -327,17 +351,8 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       if (receiverStruct.empty()) {
         receiverStruct = inferReferenceReceiverStruct(expr.args.front());
       }
-      if (receiverStruct.empty() && expr.args.front().kind == Expr::Kind::Call && !expr.args.front().isBinding) {
-        // An indexed element (`items[i].name`): the vector helpers do not forward a struct return path, but the
-        // query type of the element is its struct.
-        std::string elementType;
-        if (inferQueryExprTypeText(expr.args.front(), params, locals, elementType) && !elementType.empty()) {
-          const Expr &receiverCall = expr.args.front();
-          const std::string scope = !receiverCall.namespacePrefix.empty() || currentDefinitionContext_ == nullptr
-                                        ? receiverCall.namespacePrefix
-                                        : currentDefinitionContext_->fullPath;
-          receiverStruct = resolveInferStructTypePath(elementType, scope);
-        }
+      if (receiverStruct.empty()) {
+        receiverStruct = inferIndexedElementStruct(expr.args.front(), false);
       }
       if (receiverStruct.empty()) {
         return "";
@@ -377,6 +392,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       std::string receiverStruct = inferStructReturnPath(expr.args.front(), params, locals);
       if (receiverStruct.empty()) {
         receiverStruct = inferReferenceReceiverStruct(expr.args.front());
+      }
+      if (receiverStruct.empty()) {
+        receiverStruct = inferIndexedElementStruct(expr.args.front(), true);
       }
       if (receiverStruct.empty()) {
         return "";
