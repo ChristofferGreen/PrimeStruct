@@ -483,8 +483,10 @@ state and the handlers, each registered once at setup, and `app.run(handlers)` w
 handlers until the app quits. A handler is a `Function<void, Reference<State>, Event>`, with `Event` a
 `/std/ui/events` struct (`import /std/ui/events/*`), the type a `/std/web` control takes too:
 
-- `command(handler) -> Command` (a `PointerEvent` handler) and `Menu.commandItem(title, shortcut, command)`,
-  `Toolbar.commandButton(title, symbol, command)`, `Menu.setCommandChecked(command, checked)`: a menu item and a
+- `command(handler) -> Command` (a `PointerEvent` handler) and `Menu.item(title, shortcut, command)`,
+  `Toolbar.button(title, symbol, command)`, `Menu.setChecked(command, checked)` (overloads of the methods that take a
+  command id; `commandItem`, `commandButton` and `setCommandChecked` are the same by name, for an argument that is a
+  method call, whose type the overloads cannot select on): a menu item and a
   toolbar button with the same `Command` call the same closure. The event is a click of the primary button with no
   position (`clickCount` 1): a command carries no pointer details. Ids start at `first_command_id()` (1000000), in
   the order of registration. `Menu.followPreviewCommand(command)`, `Window.selectToolbarCommand(command)` and
@@ -494,9 +496,9 @@ handlers until the app quits. A handler is a `Function<void, Reference<State>, E
   controls that take consecutive ids take the range: `Toolbar.commandSegments(titles, range)` (one segment per
   command) and `Menu.addRecentFileCommands(range) -> i32` (at most one recent file per command; the offset is the
   index `App.recentPath` takes).
-- `onClick(button, handler)` (`PointerEvent`, as above); `onCheckBoxChange(checkBox, handler)`,
-  `onPopupChange(popup, handler)`, `onListChange(itemList, handler)` (`ChangeEvent`: `checked`, or `index`, the
-  first selected row of a list or -1). For a control made after setup (a window built on first use),
+- `onClick(button, handler)` (`PointerEvent`, as above); `onChange(checkBox, handler)`, `onChange(popup, handler)`,
+  `onChange(itemList, handler)` (overloaded on the control; `onCheckBoxChange`, `onPopupChange` and `onListChange` are
+  the same by name; `ChangeEvent`: `checked`, or `index`, the first selected row of a list or -1). For a control made after setup (a window built on first use),
   `onClickOf(find, handler)`, `onCheckBoxChangeOf`, `onPopupChangeOf` and `onListChangeOf(find, handler)` take a
   `find` closure (`Function<u64, Reference<State>>`) that gives the control's handle from the state when a control
   changes, 0 while there is none.

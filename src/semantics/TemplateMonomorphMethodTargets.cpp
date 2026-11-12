@@ -48,7 +48,8 @@ using namespace methodTargetHelpers;
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
                                      const Context &ctx,
-                                     std::string &pathOut) {
+                                     std::string &pathOut,
+                                     const std::vector<semantics::ParameterInfo> *params) {
   pathOut.clear();
   if (!expr.isMethodCall || expr.args.empty() || expr.name.empty()) {
     return false;
@@ -753,12 +754,12 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (samePathMethodTarget != rootedHelperTarget &&
         !hasDefinitionFamilyPath(samePathMethodTarget) &&
         hasDefinitionFamilyPath(rootedHelperTarget)) {
-      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx);
+      pathOut = selectHelperOverloadPath(expr, rootedHelperTarget, ctx, &locals, params);
       return true;
     }
   }
   pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
-  pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
+  pathOut = selectHelperOverloadPath(expr, pathOut, ctx, &locals, params);
   return true;
 }
 

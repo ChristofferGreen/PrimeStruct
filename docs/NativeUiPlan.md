@@ -332,9 +332,10 @@ only widgets with such handlers.
   uses one of the two. PrimeScroll moved to handlers (TODO-5710, below).
 - **As built, and why so.** The table and the state live in a generic struct, not in `App`, `Button` or `Menu`: those
   are `u64` handles with nowhere to keep closures, and there is no global state, so registration goes through the one
-  object that knows `State`; this is the shape of `WebApp<State>` (`state` field, controls registered on it). The
-  per-control `onChange` names and `commandItem`/`commandButton` are separate methods, not overloads of `onChange`,
-  `item` and `button`: same-arity overloads of struct methods do not resolve yet (TODO-5735). `run` reads the ABI
+  object that knows `State`; this is the shape of `WebApp<State>` (`state` field, controls registered on it). `onChange`,
+  `item`, `button` and `setChecked` are overloaded on the control or the command; the per-control `onChange` names and
+  `commandItem`/`commandButton` remain as methods by name, for an argument that is a method call (its type is not known
+  to overload selection). `run` reads the ABI
   event kinds itself instead of `pick`ing an `AppEvent` (TODO-5736). The handlers of one type share one vector and
   `run` calls each vector from one place. The arm64 native backend makes struct methods and closure calls real calls
   (TODO-5740); a target with the scalar ABI (x86_64 native, TODO-5752) inlines them and a `Function` call with every

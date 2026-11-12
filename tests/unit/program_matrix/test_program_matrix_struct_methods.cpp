@@ -90,3 +90,115 @@ main() {
 )",
                    90);
 }
+
+TEST_CASE("same-arity struct method overloads resolve by a literal, a local, a parameter and a call") {
+  runMethodProgram("struct_methods_overload_arguments", R"(
+[struct]
+Tag() {
+  [i32] n{0i32}
+}
+
+[struct]
+Other() {
+  [i32] n{0i32}
+}
+
+[struct]
+Box() {
+  [return<int>]
+  add([string] label, [Tag] tag) {
+    return(1i32)
+  }
+
+  [return<int>]
+  add([string] label, [i32] count) {
+    return(2i32)
+  }
+
+  [return<int>]
+  add([string] label, [Other] other) {
+    return(4i32)
+  }
+}
+
+[return<Tag>]
+make_tag() {
+  return(Tag{})
+}
+
+[return<int>]
+add_tag([Box] box, [Tag] tag) {
+  return(box.add("a", tag))
+}
+
+[return<int>]
+main() {
+  [Box] box{Box{}}
+  [Tag] tag{Tag{}}
+  [Other] other{Other{}}
+  return(box.add("a", 3i32) + box.add("a", tag) * 3i32 + box.add("a", other) * 9i32 + add_tag(box, tag) * 27i32 +
+         box.add("a", make_tag()) * 81i32)
+}
+)",
+                   149);
+}
+
+TEST_CASE("same-arity overloads of a generic struct's methods resolve by argument type") {
+  runMethodProgram("struct_methods_generic_overloads", R"(
+[struct]
+Tag() {
+  [i32] n{0i32}
+}
+
+[struct]
+Other() {
+  [i32] n{0i32}
+}
+
+[struct]
+Counter() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Holder<T>() {
+  [T mut] total{}
+  [i32 mut] calls{0i32}
+
+  [mut]
+  on([Tag] tag, [i32] weight) {
+    this.calls = this.calls + weight
+  }
+
+  [mut]
+  on([Other] other, [i32] weight) {
+    this.calls = this.calls + weight * 10i32
+  }
+
+  [mut]
+  run([Tag] tag, [Function<void, Reference<T>> move] handler) {
+    handler(location(this.total))
+    this.calls = this.calls + 1i32
+  }
+
+  [mut]
+  run([Other] other, [Function<void, Reference<T>> move] handler) {
+    handler(location(this.total))
+    this.calls = this.calls + 10i32
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Holder<Counter> mut] holder{Holder<Counter>{}}
+  [Tag] tag{Tag{}}
+  [Other] other{Other{}}
+  holder.on(tag, 1i32)
+  holder.on(other, 2i32)
+  holder.run(tag, []([Reference<Counter>] counter) { counter.n = counter.n + 2i32 })
+  holder.run(other, []([Reference<Counter>] counter) { counter.n = counter.n + 5i32 })
+  return(holder.calls + holder.total.n)
+}
+)",
+                   39);
+}

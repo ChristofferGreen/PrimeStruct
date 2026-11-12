@@ -228,7 +228,14 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     candidate is a compile-time `no viable overload for ...` diagnostic; incomparable viable candidates are a
     compile-time `ambiguous call to ...` diagnostic. Same-path same-arity definitions with the same parameter-type
     signature are still duplicates (unless disambiguated by `require<...>` constraints, which keep their existing
-    behavior). Minimal examples:
+    behavior).
+    The argument types known at the call are a literal's, a local's or a parameter's, and a call's when its callee is
+    one non-templated definition: a struct constructor is that struct, a function the type of its `return<T>`; any
+    other argument (a method call, a call of an overloaded or `auto` callee, a lambda) keeps every candidate viable at
+    its position. A struct method is selected the same way in a struct and in a generic struct, where each
+    specialization has the overload families of its template; a type spelled by path and by bare name of the same leaf
+    matches.
+    Minimal examples:
     ```text
     [return<i32>] /helper/value<T>([T] value) { return(1i32) }
     [return<i32>] /helper/value<A, B>([A] first, [B] second) { return(2i32) }

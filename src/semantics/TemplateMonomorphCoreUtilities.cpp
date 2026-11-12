@@ -457,6 +457,88 @@ std::string formatRequirementOverloadPredicateSummary(
 }
 
 
+// The leaf of a type spelling without its template arguments: `/lib/Box<i32>` is `Box`.
+std::string overloadTypeLeafName(const std::string &typeText) {
+  std::string base = typeText;
+  const size_t angle = base.find('<');
+  if (angle != std::string::npos) {
+    base.erase(angle);
+  }
+  const size_t slash = base.find_last_of('/');
+  return slash == std::string::npos ? base : base.substr(slash + 1);
+}
+
+
+// Whether an argument of type `actual` fits a parameter declared `expected`. The same spelling does; so does a path
+// and a bare name of the same leaf (`/lib/Tag` and `Tag`), since a parameter and a local may name a struct of a
+// namespace differently.
+bool overloadTypeTextsMatch(const std::string &expected, const std::string &actual) {
+  if (expected == actual) {
+    return true;
+  }
+  const bool expectedPath = expected.find('/') != std::string::npos;
+  const bool actualPath = actual.find('/') != std::string::npos;
+  if (!expectedPath && !actualPath) {
+    return false;
+  }
+  const size_t expectedAngle = expected.find('<');
+  const size_t actualAngle = actual.find('<');
+  const std::string expectedArgs = expectedAngle == std::string::npos ? "" : expected.substr(expectedAngle);
+  const std::string actualArgs = actualAngle == std::string::npos ? "" : actual.substr(actualAngle);
+  return expectedArgs == actualArgs && overloadTypeLeafName(expected) == overloadTypeLeafName(actual);
+}
+
+
+// The type of a call argument whose callee is one definition: a struct constructor is that struct, a function the
+// type it declares with `return<T>`. Anything else (an overloaded or templated callee, an inferred return type, a
+// method call) has no type here and keeps every overload viable.
+std::optional<std::string> callArgumentTypeTextForOverloadSelection(const Expr &arg, const Context &ctx) {
+  if (arg.kind != Expr::Kind::Call || arg.isBinding || arg.isMethodCall || arg.name.empty()) {
+    return std::nullopt;
+  }
+  std::vector<std::string> candidates;
+  if (arg.name.front() == '/') {
+    candidates.push_back(arg.name);
+  } else {
+    if (!arg.namespacePrefix.empty()) {
+      candidates.push_back(arg.namespacePrefix + "/" + arg.name);
+    }
+    candidates.push_back("/" + arg.name);
+    auto aliasIt = ctx.importAliases.find(arg.name);
+    if (aliasIt != ctx.importAliases.end()) {
+      candidates.push_back(aliasIt->second);
+    }
+  }
+  for (const std::string &path : candidates) {
+    if (ctx.helperOverloads.count(path) > 0) {
+      return std::nullopt;
+    }
+    auto defIt = ctx.sourceDefs.find(path);
+    if (defIt == ctx.sourceDefs.end()) {
+      continue;
+    }
+    const Definition &callee = defIt->second;
+    if (!callee.templateArgs.empty()) {
+      return std::nullopt;
+    }
+    if (isStructDefinition(callee)) {
+      return path;
+    }
+    for (const auto &transform : callee.transforms) {
+      if (transform.name == "return" && transform.templateArgs.size() == 1) {
+        const std::string &typeText = transform.templateArgs.front();
+        if (typeText.empty() || typeText == "auto" || typeText == "void") {
+          return std::nullopt;
+        }
+        return typeText;
+      }
+    }
+    return std::nullopt;
+  }
+  return std::nullopt;
+}
+
+
 RequirementOverloadViability evaluateRequirementOverloadViability(
     const Definition &def,
     const Expr &expr,
@@ -472,14 +554,20 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
   requirementContext.templateArgs = def.templateArgs;
   requirementContext.importAliases = ctx.importAliases;
 
+  // A struct method has no `this` parameter yet, and a call of it spells the receiver as the first argument.
+  const std::size_t argOffset =
+      expr.isMethodCall && expr.args.size() == def.parameters.size() + 1 ? 1 : 0;
   std::vector<std::pair<std::string, std::string>> inferredTemplateParamTypes;
   for (std::size_t i = 0; i < def.parameters.size(); ++i) {
     semantics::ParameterInfo param;
     param.name = def.parameters[i].name;
     extractExplicitBindingType(def.parameters[i], param.binding);
-    if (i < expr.args.size()) {
-      const std::optional<std::string> argType =
-          requirementOverloadArgumentTypeText(expr.args[i], locals, params);
+    if (i + argOffset < expr.args.size()) {
+      const Expr &argExpr = expr.args[i + argOffset];
+      std::optional<std::string> argType = requirementOverloadArgumentTypeText(argExpr, locals, params);
+      if (!argType.has_value()) {
+        argType = callArgumentTypeTextForOverloadSelection(argExpr, ctx);
+      }
       if (argType.has_value() &&
           std::find(def.templateArgs.begin(),
                     def.templateArgs.end(),
@@ -517,7 +605,7 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
           // coarse here - user struct types all map to
           // semantics::ReturnKind::Unknown, so string vs PathKey style overloads
           // would never be distinguished by it.
-          if (expectedType != actualType) {
+          if (!overloadTypeTextsMatch(expectedType, actualType)) {
             result.viable = false;
             result.decisive = true;
             result.diagnostics.push_back(

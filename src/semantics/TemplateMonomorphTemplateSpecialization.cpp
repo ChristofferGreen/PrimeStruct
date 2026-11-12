@@ -297,6 +297,36 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
     ctx.sourceDefsFamilyPathIndexValid = false;
   }
 
+  // The overloaded methods of the generic struct (same name, different parameters) were cloned under their internal
+  // names; the specialization gets the same families under its own path, so a call selects among them as it does in
+  // a struct that is not generic.
+  const std::string methodPrefix = basePath + "/";
+  std::vector<std::string> overloadedMethodPaths;
+  for (const auto &[publicPath, entries] : ctx.helperOverloads) {
+    (void)entries;
+    if (publicPath.rfind(methodPrefix, 0) == 0) {
+      overloadedMethodPaths.push_back(publicPath);
+    }
+  }
+  std::sort(overloadedMethodPaths.begin(), overloadedMethodPaths.end());
+  for (const std::string &publicPath : overloadedMethodPaths) {
+    const std::string specializedPublicPath = specializedBasePath + publicPath.substr(basePath.size());
+    if (ctx.helperOverloads.count(specializedPublicPath) > 0) {
+      continue;
+    }
+    std::vector<HelperOverloadEntry> specializedEntries = ctx.helperOverloads.at(publicPath);
+    for (HelperOverloadEntry &entry : specializedEntries) {
+      if (entry.internalPath.rfind(methodPrefix, 0) != 0 || entry.sourceKey.rfind(methodPrefix, 0) != 0) {
+        continue;
+      }
+      entry.internalPath = specializedBasePath + entry.internalPath.substr(basePath.size());
+      entry.sourceKey = specializedBasePath + entry.sourceKey.substr(basePath.size());
+      ctx.helperOverloadInternalToPublic.emplace(entry.internalPath, specializedPublicPath);
+      ctx.helperOverloadDefinitionIdentity.emplace(entry.sourceKey, entry.internalPath);
+    }
+    ctx.helperOverloads.emplace(specializedPublicPath, std::move(specializedEntries));
+  }
+
   return true;
 }
 

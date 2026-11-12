@@ -68,7 +68,7 @@ PhaseStatus rewriteExprPhase7([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     unwrapDereferencedBorrowedVectorReceiver(expr, params, locals, allowMathBare, ctx);
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
-    if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+    if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath, &params)) {
       if (!ctx.requirementOverloadSelectionError.empty()) {
         error = ctx.requirementOverloadSelectionError;
         ctx.requirementOverloadSelectionError.clear();

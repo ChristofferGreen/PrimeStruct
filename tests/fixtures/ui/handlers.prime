@@ -60,21 +60,21 @@ main() {
     report.note(described("save", saves))
   }}
   [Command] saveCommand{handlers.command(save)}
-  file.commandItem("Save", "cmd+s", saveCommand)
-  file.setCommandChecked(saveCommand, true)
+  file.item("Save", "cmd+s", saveCommand)
+  file.setChecked(saveCommand, true)
   file.addToBar()
-  bar.commandButton("Save", "square.and.arrow.down", saveCommand)
+  bar.button("Save", "square.and.arrow.down", saveCommand)
   window.setToolbar(bar)
   handlers.onClick(go, []([Reference<Report>] report, [PointerEvent] event) {
     report.note(described("go", event.clickCount))
   })
-  handlers.onCheckBoxChange(wrap, []([Reference<Report>] report, [ChangeEvent] event) {
+  handlers.onChange(wrap, []([Reference<Report>] report, [ChangeEvent] event) {
     report.note(described("wrap", if(event.checked, then() { 1i32 }, else() { 0i32 })))
   })
-  handlers.onPopupChange(size, []([Reference<Report>] report, [ChangeEvent] event) {
+  handlers.onChange(size, []([Reference<Report>] report, [ChangeEvent] event) {
     report.note(described("size", event.index))
   })
-  handlers.onListChange(files, []([Reference<Report>] report, [ChangeEvent] event) {
+  handlers.onChange(files, []([Reference<Report>] report, [ChangeEvent] event) {
     report.note(described("file", event.index))
   })
   handlers.onTextChange([]([Reference<Report>] report, [Window] changed) {

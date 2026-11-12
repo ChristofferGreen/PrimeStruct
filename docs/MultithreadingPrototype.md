@@ -1059,7 +1059,7 @@ entry points check the thread at run time.
 4. **Handlers serialized in the first server.** Recommended: accept that page rendering runs one request at a time
    until TODO-5804, since it keeps every existing app correct with no change.
 5. **How a handler says it only reads.** Recommended: by its state parameter, `[State] state` (a read-only borrow)
-   against `[Reference<State>] state`, which needs overloads by `Function` type (TODO-5735); the alternative is a
+   against `[Reference<State>] state`, which needs overloads by `Function` type (same-arity struct method overloads resolve by argument type since TODO-5735; a lambda's type is not known there); the alternative is a
    separately named registration such as `app.view(pattern, handler)`.
 6. **VM default schedule.** Recommended: eager (today's order) by default, seeds on request; the alternative is a
    fixed seed by default, which changes the output order of existing programs that print from tasks.

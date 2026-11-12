@@ -184,23 +184,38 @@ namespace native {
       this.clickWidgets.push(button.handle)
     }
 
-    // The change handlers have a name per control rather than one `onChange` overloaded on the control: same-arity
-    // overloads of a generic struct's methods do not resolve yet (TODO-5735).
+    // `onChange` is overloaded on the control; `onCheckBoxChange`, `onPopupChange` and `onListChange` are the same
+    // registrations by name.
 
     // Registers the handler of the user's click on `box`; the event's `checked` is the box's new state.
     [mut effects(heap_alloc)]
-    onCheckBoxChange([CheckBox] box, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+    onChange([CheckBox] box, [Function<void, Reference<State>, ChangeEvent> move] handler) {
       [i32] index{this.addChange(box.handle, 1i32, handler)}
     }
 
     // Registers the handler of the user's choice in `popup`; the event's `index` is the chosen item.
     [mut effects(heap_alloc)]
-    onPopupChange([Popup] popup, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+    onChange([Popup] popup, [Function<void, Reference<State>, ChangeEvent> move] handler) {
       [i32] index{this.addChange(popup.handle, 2i32, handler)}
     }
 
     // Registers the handler of the user's change of the selection of `list`; the event's `index` is the first
     // selected row, or -1 when none is.
+    [mut effects(heap_alloc)]
+    onChange([ItemList] list, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      [i32] index{this.addChange(list.handle, 3i32, handler)}
+    }
+
+    [mut effects(heap_alloc)]
+    onCheckBoxChange([CheckBox] box, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      [i32] index{this.addChange(box.handle, 1i32, handler)}
+    }
+
+    [mut effects(heap_alloc)]
+    onPopupChange([Popup] popup, [Function<void, Reference<State>, ChangeEvent> move] handler) {
+      [i32] index{this.addChange(popup.handle, 2i32, handler)}
+    }
+
     [mut effects(heap_alloc)]
     onListChange([ItemList] list, [Function<void, Reference<State>, ChangeEvent> move] handler) {
       [i32] index{this.addChange(list.handle, 3i32, handler)}
@@ -253,7 +268,7 @@ namespace native {
     }
 
     // The pointer and key handlers take any control or text view as a `Widget` (`button.widget()`, `text.widget()`),
-    // not one method per control: same-arity overloads of a generic struct's methods do not resolve yet (TODO-5735).
+    // not one method per control.
     // Registering one asks the platform for that event of the widget (`ps_ui_widget_watch`); widgets without such
     // handlers are not watched, so the platform tracks nothing for them. A later handler for the same event of a
     // widget replaces an earlier one. The events have a position from the widget's top left corner (a text view's

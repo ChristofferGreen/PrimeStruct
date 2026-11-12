@@ -20,7 +20,8 @@ namespace primec {
 bool resolveMethodCallTemplateTarget(const Expr &expr,
                                      const LocalTypeMap &locals,
                                      const Context &ctx,
-                                     std::string &pathOut);
+                                     std::string &pathOut,
+                                     const std::vector<semantics::ParameterInfo> *params = nullptr);
 
 std::string resolveNameToPath(const std::string &name,
                               const std::string &namespacePrefix,

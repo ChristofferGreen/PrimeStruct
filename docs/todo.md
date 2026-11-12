@@ -133,7 +133,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5735 | Same-arity overloads of struct methods resolve by argument type | ready | method-overloads |
 | TODO-5736 | `pick` and sum parameters in a generic struct's method lower | ready | generic-methods |
 | TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
@@ -241,7 +240,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5735, TODO-5736, TODO-5737
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -379,19 +378,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
-
-- [ ] TODO-5735: Same-arity overloads of struct methods resolve by argument type
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5709)
-  - parallel_track: method-overloads
-  - scope: docs/spec/language-core.md (Helper overloading) lets struct methods overload by parameter type, but a same-arity family declared in a struct body does not resolve. `evaluateRequirementOverloadViability` (src/semantics/TemplateMonomorphCoreUtilities.cpp) pairs the method's parameters, which have no implicit `this` yet, with the call's arguments, which start with the receiver, so `box.add("a", 3i32)` beside `add([string], [Tag])` is `no viable overload`; the struct-method path of `resolveMethodCallTemplateTarget` (src/semantics/TemplateMonomorphMethodTargets.cpp) passes no locals to `selectHelperOverloadPath`, so a struct-typed local is `unknown` and both candidates stay viable (`ambiguous`); a call argument is `unknown` too (as in TODO-5716), so `Menu.item([string], [string], [Command])` beside `item(..., [i32])` breaks the editor's `item(title, shortcut, command_save())`; and in a generic struct, `holder.on(tag, lambda)` with `on([Tag], [Function<...>])` beside `on([Other], [Function<...>])` is `unknown method: /Holder__t.../on`, and the lambda does not convert to the `Function` parameter. Skipping one argument when `expr.isMethodCall` and the call has one argument more than the method has parameters, and passing `&locals` at that `selectHelperOverloadPath`, resolved the non-generic local case in a trial. `/std/ui/native` uses separate names until then: `Menu.commandItem`, `Toolbar.commandButton`, `Menu.setCommandChecked`, `AppHandlers.onCheckBoxChange`, `onPopupChange`, `onListChange`.
-  - acceptance:
-    - same-arity struct method overloads resolve by a literal, a local, a parameter and a call with a declared return type, in a struct and in a generic struct, including a `Function` parameter given a lambda, on the VM and optexe; a no-viable and an ambiguous negative test
-    - `Menu.item`, `Toolbar.button` and `AppHandlers.onChange` take a `Command` or a control as overloads, and the editor builds unchanged
-    - full release gate green
-  - stop_rule: overload selection of struct methods; no change to free-function overloads or to the specificity rule.
 
 - [ ] TODO-5736: `pick` and sum parameters in a generic struct's method lower
   - owner: ai
@@ -704,8 +690,7 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
-  - depends_on: TODO-5735
-  - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type, TODO-5735; or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first.
+  - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type (struct methods resolve them since TODO-5735); or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first.
   - acceptance:
     - the CPU-bound GET handler of benchmarks/http (`GET /work`; 0.98x measured 2026-11-11, docs/WebAppsPlan.md, Measured) at least 2.5x `serve` with 4 workers, and todo_web's list page with 200 items (0.95x measured) at least 1.5x; a read-only handler that writes its state is a compile error
   - stop_rule: read-only handlers and `RwLock`.

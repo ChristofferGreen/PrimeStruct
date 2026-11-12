@@ -137,4 +137,112 @@ main() {
   CHECK_MESSAGE(error.find("clear") != std::string::npos, error);
 }
 
+TEST_CASE("same-arity struct method overloads resolve by a literal, a local, a parameter and a call") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Tag() {
+  [i32] n{0i32}
+}
+
+[struct]
+Box() {
+  [return<int>]
+  add([string] label, [Tag] tag) {
+    return(1i32)
+  }
+
+  [return<int>]
+  add([string] label, [i32] count) {
+    return(2i32)
+  }
+}
+
+[struct]
+Holder<T>() {
+  [T mut] total{}
+
+  [mut]
+  on([Tag] tag, [i32] weight) {
+  }
+
+  [mut]
+  on([Box] box, [i32] weight) {
+  }
+}
+
+[return<Tag>]
+make_tag() {
+  return(Tag{})
+}
+
+[return<int>]
+add_tag([Box] box, [Tag] tag) {
+  return(box.add("a", tag))
+}
+
+[return<int>]
+main() {
+  [Box] box{Box{}}
+  [Tag] tag{Tag{}}
+  [Holder<i32> mut] holder{Holder<i32>{}}
+  holder.on(tag, 1i32)
+  holder.on(box, 2i32)
+  return(box.add("a", 3i32) + box.add("a", tag) + box.add("a", make_tag()) + add_tag(box, tag))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a struct method call that fits no overload, or more than one, is rejected") {
+  const std::string common = R"(
+import /std/collections/*
+
+[struct]
+Tag() {
+  [i32] n{0i32}
+}
+
+[struct]
+Box() {
+  [return<int>]
+  add([string] label, [Tag] tag) {
+    return(1i32)
+  }
+
+  [return<int>]
+  add([string] label, [i32] count) {
+    return(2i32)
+  }
+}
+
+[return<auto>]
+unknown_type() {
+  return(3i32)
+}
+)";
+  std::string error;
+  const std::string noViable = common + R"(
+[return<int>]
+main() {
+  [Box] box{Box{}}
+  return(box.add("a", 2.5f32))
+}
+)";
+  CHECK_FALSE(validateProgram(noViable, "/main", error));
+  CHECK_MESSAGE(error.find("no viable overload for /Box/add") != std::string::npos, error);
+  CHECK_MESSAGE(error.find("expected Tag got f32") != std::string::npos, error);
+  const std::string ambiguous = common + R"(
+[return<int>]
+main() {
+  [Box] box{Box{}}
+  return(box.add("a", unknown_type()))
+}
+)";
+  CHECK_FALSE(validateProgram(ambiguous, "/main", error));
+  CHECK_MESSAGE(error.find("ambiguous call to /Box/add") != std::string::npos, error);
+}
+
 TEST_SUITE_END();

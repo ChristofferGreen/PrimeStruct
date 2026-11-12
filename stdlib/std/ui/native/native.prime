@@ -830,8 +830,14 @@ Toolbar() {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, commandId))
   }
 
-  // A button that calls the handler of `command` (`AppHandlers.command`). Not an overload of `button`: a same-arity
-  // overload does not resolve when an argument is a call (TODO-5735).
+  // A button that calls the handler of `command` (`AppHandlers.command`).
+  [public return<bool>]
+  button([string] title, [string] symbol, [Command] command) {
+    return(ps_ui_toolbar_add_button(this.handle, title, symbol, command.id))
+  }
+
+  // `button` of a command, for an argument that is a method call such as `commands.at(1i32)`: the overloads of
+  // `button` are chosen by the type of the argument, and a method call has no type known there.
   [public return<bool>]
   commandButton([string] title, [string] symbol, [Command] command) {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, command.id))
@@ -870,8 +876,14 @@ Menu() {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, commandId))
   }
 
-  // An item that calls the handler of `command` (`AppHandlers.command`) when it is chosen. Not an overload of `item`:
-  // a same-arity overload does not resolve when an argument is a call (TODO-5735).
+  // An item that calls the handler of `command` (`AppHandlers.command`) when it is chosen.
+  [public return<bool>]
+  item([string] title, [string] shortcut, [Command] command) {
+    return(ps_ui_menu_add_item(this.handle, title, shortcut, command.id))
+  }
+
+  // `item` of a command, for an argument that is a method call such as `commands.at(1i32)`: the overloads of `item`
+  // are chosen by the type of the argument, and a method call has no type known there.
   [public return<bool>]
   commandItem([string] title, [string] shortcut, [Command] command) {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, command.id))
@@ -881,6 +893,12 @@ Menu() {
   [public return<bool>]
   setChecked([i32] commandId, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, commandId, checked))
+  }
+
+  // Puts or removes the check mark on the items of `command`.
+  [public return<bool>]
+  setChecked([Command] command, [bool] checked) {
+    return(ps_ui_menu_set_checked(this.handle, command.id, checked))
   }
 
   [public return<bool>]
