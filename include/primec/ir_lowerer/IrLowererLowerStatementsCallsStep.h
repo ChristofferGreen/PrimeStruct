@@ -58,6 +58,9 @@ struct LowerStatementsCallsStepInput {
       resolveDroppedVectorElementStructPath;
   // Destroys the value of `structPath` at the address in the given local.
   std::function<bool(int32_t, const std::string &, const LocalMap &)> emitStructDestroyFromPtr;
+  // The element type text a specialization of the stdlib vector struct was made for (`String`), spelled as at its
+  // first use; empty when `structPath` is no such specialization.
+  std::function<std::string(const std::string &)> resolveVectorRecordElementTypeText;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

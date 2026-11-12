@@ -559,6 +559,16 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                 },
             .resolveDroppedVectorElementStructPath = resolveDroppedVectorElementStructPath,
             .emitStructDestroyFromPtr = emitStructDestroyFromPtr,
+            .resolveVectorRecordElementTypeText =
+                [&](const std::string &structPath) -> std::string {
+                  const auto recordIt = defMap.find(structPath);
+                  if (recordIt == defMap.end() || recordIt->second == nullptr ||
+                      recordIt->second->instanceOfTemplate != ir_lowerer::vectorBackingTypePath() ||
+                      recordIt->second->instanceTemplateArgs.size() != 1) {
+                    return {};
+                  }
+                  return recordIt->second->instanceTemplateArgs.front();
+                },
             .instructions = &function.instructions,
         },
         stmt,

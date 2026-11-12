@@ -929,4 +929,29 @@ TEST_CASE("the mutating methods change a local declared Vector<T>") {
                         "3\n4\n9\n0\n");
 }
 
+TEST_CASE("a Vector of Strings destroys the strings that pop, clear, remove_at and remove_swap remove") {
+  // The stdlib vector struct has no element size of its own: `pop` and `clear` take it from the specialization, so
+  // the removed strings are freed and the heap statistics end where they began. Elements are read through the
+  // stdlib `at` helper.
+  runVectorOwnerProgram("vector_string_removals",
+                        "",
+                        R"(
+    [Vector<String> mut] names{vector<String>{}}
+    names.push(label(1i32))
+    names.push(label(2i32))
+    names.push(label(3i32))
+    names.push(label(4i32))
+    names.pop()
+    print_line(names.count())
+    names.remove_at(0i32)
+    print_line(first_byte(/std/collections/vector/at<String>(names, 0i32)))
+    names.remove_swap(0i32)
+    print_line(first_byte(/std/collections/vector/at<String>(names, 0i32)))
+    names.clear()
+    print_line(names.count())
+    names.push(label(5i32))
+)",
+                        "3\n50\n51\n0\n");
+}
+
 TEST_SUITE_END();

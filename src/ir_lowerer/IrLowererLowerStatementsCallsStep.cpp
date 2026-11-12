@@ -274,15 +274,26 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     }
     // A vector of structs or of vectors destroys the elements it drops (their Destroy helpers
     // run, their Strings and inner buffers are freed; docs/spec/value-lifecycle.md, Ownership).
-    const int32_t elementSlots = std::max<int32_t>(1, targetInfo.elemSlotCount);
+    // A local of the stdlib vector struct carries no element size: its element type is the one the struct was
+    // specialized for.
+    std::string recordElementText;
+    if (targetInfo.elementTypeText.empty() && targetInfo.elemSlotCount <= 0 &&
+        !targetInfo.structTypeName.empty() && input.resolveVectorRecordElementTypeText) {
+      recordElementText = input.resolveVectorRecordElementTypeText(targetInfo.structTypeName);
+    }
+    const int32_t elementSlots = std::max<int32_t>(
+        1,
+        recordElementText.empty() ? targetInfo.elemSlotCount
+                                  : vectorElementSlotCountFromTypeText(recordElementText, stmt.namespacePrefix));
     std::string droppedElementStructPath;
     if (elementSlots > 1) {
       if (!input.resolveDroppedVectorElementStructPath || !input.emitStructDestroyFromPtr) {
         return VectorMutationStatementEmitResult::NotMatched;
       }
-      const std::string &elementText = !targetInfo.elementTypeText.empty()
-                                           ? targetInfo.elementTypeText
-                                           : targetInfo.structTypeName;
+      const std::string &elementText = !recordElementText.empty()
+                                           ? recordElementText
+                                           : (!targetInfo.elementTypeText.empty() ? targetInfo.elementTypeText
+                                                                                  : targetInfo.structTypeName);
       if (elementText.empty() || !input.resolveDroppedVectorElementStructPath(
                                      elementText, stmt.namespacePrefix, droppedElementStructPath)) {
         errorOut = "native backend cannot resolve vector element type for " + helperName;

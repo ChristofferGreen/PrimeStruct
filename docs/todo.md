@@ -126,7 +126,7 @@ of sync with them.
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
 | TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | deferred | result-question |
 | TODO-5940 | The HTTP load generator costs less CPU per connection than the servers it measures | ready | mt-server |
-| TODO-5978 | A `Vector<String>` destroys the strings it removes and reads an element after a removal | ready | pick-payloads |
+| TODO-5978 | An element of a `Vector<String>` is read by `at` and `[]` | ready | pick-payloads |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
@@ -606,17 +606,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
 
-- [ ] TODO-5978: A `Vector<String>` destroys the strings it removes and reads an element after a removal
+- [ ] TODO-5978: An element of a `Vector<String>` is read by `at` and `[]`
   - owner: ai
   - status: ready
   - created_at: 2026-11-12
   - phase: Result and control flow (docs/spec/errors-and-file-io.md; found by TODO-5886)
   - parallel_track: pick-payloads
-  - scope: With `import /std/text/*` and `import /std/collections/*`, a `[Vector<String> mut] names{vector<String>{}}` that takes three pushes of fresh `String`s and then `/std/collections/vector/pop(names)` and `/std/collections/vector/clear(names)` (the method forms `names.pop()` and `names.clear()` behave the same) ends the block with `stringHeapBytesInUse()` 96 bytes above where it began, though `heapLiveBlocks()` is balanced: the removed strings are not destroyed. `/std/collections/vector/remove_at(names, 0i32)` followed by `names[0i32]` stops the VM with `VM error: unaligned indirect address in IR: 4`, and `names[1i32]` after a `pop` the same with `1`. The same calls on a `Vector<i32>` are right. Find where the stdlib `Vector<T>` helpers (stdlib/std/collections/vector.prime) discard and move non-trivial elements compared with the builtin `vector<String>`, which balances.
+  - scope: Done 2026-11-12: `pop` and `clear` on a local declared `Vector<String>` destroy the strings they drop, so `push`, `pop`, `clear`, `remove_at` and `remove_swap` leave `stringHeapBytesInUse()` where it began on the VM (vector_owners case "a Vector of Strings destroys the strings ..."). Root cause: the canonical vector statement emitter (`tryEmitCanonicalVectorMutationStatement`) sized the dropped element from the receiver's element facts, which a specialization of the stdlib vector struct (`Vector__t...`) does not carry, so it assumed one scalar slot and destroyed nothing; it now reads the element type from the specialization's `instanceTemplateArgs`. Open: the method and index forms `names.at(i)` and `names[i]` of such a local read the element as the builtin vector access does, one slot of the element, and stop the VM with `VM error: unaligned indirect address in IR: N` (before any removal as well; `/std/collections/vector/at<String>(names, i)` and `vectorAtUnsafe` read the right string). `at` is not instantiated for the local, and the `isStructBoxedRecordTarget` rule that defers a record receiver to the stdlib `at` is not set when the target comes from semantic facts (setting it alone did not help, the helper has no instance to defer to). Make `at`, `at_unsafe` and `[]` on a local of the stdlib vector struct with a multi-slot element (a `String`, a struct) take the stdlib helper (monomorph rewrite as for `remove_at`), keeping the builtin access for scalar elements.
   - acceptance:
-    - `push`, `pop`, `clear`, `remove_at` and `remove_swap` on a `Vector<String>` leave the string heap where it began, and the element read after a removal is the right string, on the VM and `optexe`; a vector_owners program-matrix case
+    - `names[i]` and `names.at(i)` of a `Vector<String>` read the right string after pushes, `pop`, `remove_at` and `remove_swap`, on the VM and `optexe`, with balanced heap statistics; a vector_owners program-matrix case (extend "a Vector of Strings destroys ...", which reads through the explicit helper)
+    - `optexe` is checked for the removal case too
     - full release gate green
-  - stop_rule: removal and element reads of the stdlib `Vector<T>` with owning elements only.
+  - stop_rule: element reads of the stdlib `Vector<T>` with multi-slot elements only.
 
 - [ ] TODO-5940: The HTTP load generator costs less CPU per connection than the servers it measures
   - owner: ai
