@@ -318,7 +318,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.text_views"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 6
+  TOTAL_CASES 7
   SHARD_PREFIX "text_views"
 )
 

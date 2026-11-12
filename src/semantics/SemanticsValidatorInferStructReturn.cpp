@@ -165,6 +165,44 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     return "";
   }
 
+  // `block() { [String] e{...} e }`: the struct the block yields, read with the block's own bindings in scope.
+  if (expr.kind == Expr::Kind::Call && isBlockCall(expr) && expr.hasBodyArguments &&
+      !expr.isMethodCall && expr.args.empty() && expr.templateArgs.empty() &&
+      !hasNamedArguments(expr.argNames) && !expr.bodyArguments.empty() &&
+      defMap_.find(resolveCalleePath(expr)) == defMap_.end()) {
+    std::unordered_map<std::string, BindingInfo> blockLocals = locals;
+    const Expr *valueExpr = nullptr;
+    for (const Expr &bodyExpr : expr.bodyArguments) {
+      if (bodyExpr.isBinding) {
+        BindingInfo info;
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(bodyExpr,
+                              bodyExpr.namespacePrefix,
+                              structNames_,
+                              importAliases_,
+                              info,
+                              restrictType,
+                              error_,
+                              &sumNames_)) {
+          return "";
+        }
+        if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
+          (void)inferBindingTypeFromInitializer(
+              bodyExpr.args.front(), params, blockLocals, info, &bodyExpr);
+        }
+        insertLocalBinding(blockLocals, bodyExpr.name, std::move(info));
+        continue;
+      }
+      if (isReturnCall(bodyExpr)) {
+        valueExpr = bodyExpr.args.size() == 1 ? &bodyExpr.args.front() : nullptr;
+        break;
+      }
+      valueExpr = &bodyExpr;
+    }
+    return valueExpr == nullptr ? std::string{}
+                                : inferStructReturnPathImpl(*valueExpr, params, blockLocals);
+  }
+
   if (expr.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
       if (std::string collectionPath =

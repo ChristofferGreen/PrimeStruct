@@ -1005,6 +1005,21 @@ bool shouldDisarmStructCopySourceExpr(const Expr &expr) {
       !expr.bodyArguments.front().isBinding) {
     return shouldDisarmStructCopySourceExpr(expr.bodyArguments.front());
   }
+  // `block() { [String] e{...} e }` hands over the local the block declared; a value that is a local of an outer
+  // scope, a field or an element is a place the outer scope keeps owning, which a copy duplicates.
+  if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() > 1 &&
+      !expr.bodyArguments.back().isBinding) {
+    const Expr &value = expr.bodyArguments.back();
+    if (value.kind != Expr::Kind::Name) {
+      return shouldDisarmStructCopySourceExpr(value);
+    }
+    for (size_t i = 0; i + 1 < expr.bodyArguments.size(); ++i) {
+      if (expr.bodyArguments[i].isBinding && expr.bodyArguments[i].name == value.name) {
+        return true;
+      }
+    }
+    return false;
+  }
   if (isSimpleCallName(expr, "dereference") || isSimpleCallName(expr, "location")) {
     return false;
   }
@@ -1055,6 +1070,17 @@ bool isOwnedTemporaryArgumentExpr(
   // `block() { /closure_make(captures) }` (docs/spec/value-lifecycle.md, Lambdas).
   if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() == 1) {
     return isOwnedTemporaryArgumentExpr(expr.bodyArguments.front(), resolveDefinitionCall);
+  }
+  // `block() { [String] e{...} e }` yields `e`, which the block hands over: nobody else owns it.
+  if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() > 1) {
+    const Expr &value = expr.bodyArguments.back();
+    if (value.kind == Expr::Kind::Name) {
+      for (size_t i = 0; i + 1 < expr.bodyArguments.size(); ++i) {
+        if (expr.bodyArguments[i].isBinding && expr.bodyArguments[i].name == value.name) {
+          return true;
+        }
+      }
+    }
   }
   if (!shouldDisarmStructCopySourceExpr(expr) || isSimpleCallName(expr, "move") ||
       isSimpleCallName(expr, "borrow") || isSimpleCallName(expr, "at") ||

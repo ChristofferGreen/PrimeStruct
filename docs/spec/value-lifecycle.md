@@ -103,6 +103,11 @@
   lives to the end of the statement that reads it and is destroyed there, after a returned element is copied
   out, and each time a loop condition or the right side of `and`/`or` has run. A read-only `vector<T>` binding
   from such a place is a copy, not a view.
+- **Block expressions:** `block() { ... value }` yields its last expression. When that is a `String`, struct or
+  vector local the block declared (`[String] text{block() { [String] e{label()} e }}`), the block hands the local
+  over: the binding or argument outside owns it, the block's scope does not destroy it, and a call argument of that
+  shape is destroyed after the call like any temporary. A value that is a local of an outer scope, a field or an
+  element is a place that stays owned there, so the binding outside gets a copy of it.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
   fields that have one. A user `Copy` helper runs after that field-wise copy, so `this` already owns copies of its

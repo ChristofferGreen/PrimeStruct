@@ -882,4 +882,28 @@ moved_local() {
                         "3\n9\n8\n1\n654\n5\n8\n");
 }
 
+TEST_CASE("a block expression whose value is a local of the block hands it over once") {
+  // The binding or argument outside takes the block's local over; a value that is a local of an outer scope is
+  // copied and leaves that local usable. The heap statistics end where they began.
+  runVectorOwnerProgram("block_value_handover",
+                        RowReaderDefinitions,
+                        R"(
+    [String] outer{label(4i32)}
+    [String] same{block() { [i32] n{1i32} outer }}
+    print_line(first_byte(same))
+    print_line(first_byte(outer))
+    [String] text{block() { [String] e{label(3i32)} return(e) }}
+    print_line(first_byte(text))
+    [Row] row{block() { [Row] r{Row{9i32, label(2i32)}} r }}
+    print_line(row_code(row))
+    print_line(first_byte(block() { [String] e{label(1i32)} e }))
+    [String] fromRows{block() { [String] e{label(3i32)} e }}
+    print_line(first_byte(fromRows))
+    print_line(first_byte(block() { [vector<Row>] v{make_rows(4i32)} [String] e{v[1i32].text} e }))
+    [Row] copy{block() { [vector<Row>] v{make_rows(6i32)} [Row] e{v[1i32]} e }}
+    print_line(row_code(copy))
+)",
+                        "52\n52\n51\n950\n49\n51\n53\n755\n");
+}
+
 TEST_SUITE_END();

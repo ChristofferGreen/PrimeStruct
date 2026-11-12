@@ -184,4 +184,38 @@ main() {
                 error);
 }
 
+TEST_CASE("a block expression that yields a struct local is an argument of that struct type") {
+  const std::string head = R"(
+import /std/text/*
+
+[struct]
+Other() {
+  [i32] size{0i32}
+}
+
+[return<i32>]
+first_byte([String] text) {
+  return(convert<i32>(text.byteAt(0i32)))
+}
+
+[return<int>]
+main() {
+)";
+  std::string error;
+  const std::string accepted = head + R"(
+  return(first_byte(block() { [String] e{String{}} e }))
+}
+)";
+  CHECK_MESSAGE(validateProgram(accepted, "/main", error), error);
+  const std::string rejected = head + R"(
+  return(first_byte(block() { [Other] o{Other{}} o }))
+}
+)";
+  CHECK_FALSE(validateProgram(rejected, "/main", error));
+  CHECK_MESSAGE(
+      error.find("argument type mismatch for /first_byte parameter text: expected /std/text/String "
+                 "got /Other") != std::string::npos,
+      error);
+}
+
 TEST_SUITE_END();

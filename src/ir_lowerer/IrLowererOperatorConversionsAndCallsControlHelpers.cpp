@@ -1,5 +1,6 @@
 #include "primec/ir_lowerer/IrLowererOperatorConversionsAndCallsHelpers.h"
 #include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
+#include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -46,6 +47,19 @@ bool emitConversionsAndCallsControlExprTail(
       return false;
     }
     LocalMap blockLocals = localsIn;
+    // A value that is a local the block declared leaves with the value: the binding outside takes it over, so the
+    // scope must not destroy it too. A local of an outer scope stays owned there.
+    const auto emitBlockValue = [&](const Expr &valueExpr) {
+      if (!emitExpr(valueExpr, blockLocals)) {
+        return false;
+      }
+      if (valueExpr.kind == Expr::Kind::Name && localsIn.find(valueExpr.name) == localsIn.end()) {
+        emitReleaseDropFlag(blockLocals, valueExpr.name, [&](IrOpcode op, uint64_t imm) {
+          instructions.push_back({op, imm});
+        });
+      }
+      return true;
+    };
     for (size_t i = 0; i < expr.bodyArguments.size(); ++i) {
       const Expr &bodyStmt = expr.bodyArguments[i];
       const bool isLast = (i + 1 == expr.bodyArguments.size());
@@ -64,10 +78,10 @@ bool emitConversionsAndCallsControlExprTail(
           error = "return requires a value in block expression";
           return false;
         }
-        return emitExpr(bodyStmt.args.front(), blockLocals);
+        return emitBlockValue(bodyStmt.args.front());
       }
       if (isLast) {
-        return emitExpr(bodyStmt, blockLocals);
+        return emitBlockValue(bodyStmt);
       }
       if (!emitStatement(bodyStmt, blockLocals)) {
         return false;
