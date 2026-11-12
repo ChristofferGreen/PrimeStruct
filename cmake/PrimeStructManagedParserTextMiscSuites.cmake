@@ -78,7 +78,7 @@ addPrimeStructManagedDoctestSuite("primestruct.parser.errors.named_args"
   TARGET PrimeStruct_parser_tests
   TIMEOUT 300
   LABEL "parallel-safe"
-  TOTAL_CASES 9
+  TOTAL_CASES 11
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.parser.errors.transforms"

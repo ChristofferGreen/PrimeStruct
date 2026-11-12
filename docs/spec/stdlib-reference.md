@@ -541,8 +541,8 @@ main() {
 }
 ```
 
-The closure is bound to a local before it is passed, because a lambda whose capture list starts with `mut` does not
-parse as a call argument yet (TODO-5713); a lambda with `[]` or plain captures can be written in the call.
+The closure is bound to a local before it is passed so the handler has a name; a lambda with any capture list, `mut`
+captures included, can also be written in the call.
 
 ### Operating system (`/std/os`)
 

@@ -452,8 +452,8 @@ bad_set() {
   a closure produced by an arbitrary call (bind it to a local or construct the `Function` explicitly). A parameter of a
   method of a generic struct does convert, since its type is known once the struct is instantiated
   (`AppRouter<Counter>.get`, docs/spec/stdlib-reference.md). A lambda whose
-  capture list starts with `mut` cannot yet be written directly as a call argument (the parser reads `[mut ...]` as
-  an argument label); bind it to a local first.
+  capture list starts with `mut` is written directly as a call argument: `[name]` is an argument label only when a
+  value follows, so a lambda written `[mut calls{0i32}]` and then its parameters is read as a capture list.
 
 Example (runs on the VM, native and `optexe`):
 

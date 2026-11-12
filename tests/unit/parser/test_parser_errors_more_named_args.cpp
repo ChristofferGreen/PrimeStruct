@@ -140,4 +140,40 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("a lambda whose capture list starts with mut parses as a call argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(apply([mut calls{0i32}, bias]([i32] x) { return(x) }, [a] 2i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  REQUIRE(parser.parse(program, error));
+  const auto &call = program.definitions[0].statements[0].args[0];
+  REQUIRE(call.args.size() == 2);
+  CHECK(call.args[0].isLambda);
+  REQUIRE_FALSE(call.args[0].lambdaCaptures.empty());
+  CHECK_FALSE(call.argNames[0].has_value());
+  REQUIRE(call.argNames[1].has_value());
+  CHECK(*call.argNames[1] == "a");
+}
+
+TEST_CASE("a keyword label still fails to parse") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(apply([mut] 1i32))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
+}
+
 TEST_SUITE_END();

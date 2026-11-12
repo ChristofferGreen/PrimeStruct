@@ -135,7 +135,6 @@ of sync with them.
 | TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5712 | A callable field of a local struct is called | ready | closures-field-calls |
-| TODO-5713 | A lambda whose capture list starts with `mut` parses as a call argument | ready | closures-parse |
 | TODO-5714 | Native: a `Function` call nested in another call's arguments lowers | ready | native-backend |
 | TODO-5715 | `Function<R, A...>{move(closure)}` infers the boxed type | ready | closures |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
@@ -255,7 +254,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5713, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -405,18 +404,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - `direct.handler(2i32)` on a local, a parameter and a `Reference` to the struct calls the field on VM, native and optexe (matrix case in test_program_matrix_closures.cpp)
     - full release gate green
   - stop_rule: receiver resolution for callable fields; no change to method lookup.
-
-- [ ] TODO-5713: A lambda whose capture list starts with `mut` parses as a call argument
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Closures follow-ups (found by TODO-5669)
-  - parallel_track: closures-parse
-  - scope: `router.add(3i32, [mut calls{0i32}]([i32] x) { ... })` fails with `Parse error: reserved keyword cannot be used as identifier: mut`: in argument position `[` starts an argument label. `[base](...)` and `[seed{5i32}](...)` parse, and the same lambda parses inside braces (`Function<i32, i32>{[mut calls{0i32}](...) {...}}`) and as a binding initializer. Since TODO-5669 a lambda passes straight to a `Function` parameter, so this is the remaining reason to bind a stateful handler first (examples/apps/http_hello `/greet`). Disambiguate a label from a capture list when `[` is followed by a parameter list and a body.
-  - acceptance:
-    - a `mut`-capture lambda and a `[mut x, y]` lambda as call arguments parse and run on VM and optexe; labeled arguments still parse; a parser test for each
-    - full release gate green
-  - stop_rule: argument-position lambda parsing only.
 
 - [ ] TODO-5714: Native: a `Function` call nested in another call's arguments lowers
   - owner: ai

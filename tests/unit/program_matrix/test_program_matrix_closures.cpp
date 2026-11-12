@@ -181,6 +181,27 @@ main() {
 }
 
 // Callable structs, generic functions and `Function` values and parameters. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
+TEST_CASE("a lambda whose capture list starts with mut is a call argument") {
+  runClosureProgram("closure_mut_capture_argument",
+                    R"(
+[return<int>]
+apply([Function<i32, i32>] f, [i32] x) {
+  return(f(x))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{apply([mut calls{0i32}]([i32] v) {
+    calls = calls + 1i32
+    return(v + calls)
+  }, 5i32)}
+  [i32] second{apply([mut calls{10i32}, bias{1i32}]([i32] v) { return(v + calls + bias) }, 5i32)}
+  return(first + second)
+}
+)",
+                    22);
+}
+
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_callables");
 

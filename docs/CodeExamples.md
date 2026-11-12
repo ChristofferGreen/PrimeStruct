@@ -1116,8 +1116,8 @@ Why this is good:
   `Function<void, Reference<State>, PointerEvent>` shape a native button takes.
 - The button is registered once, at setup, so `said` survives between requests; the page route only writes the
   `Control` it captured, so it cannot write a button that has no handler.
-- The closure is bound to a local before it is passed: a lambda whose capture list starts with `mut` does not parse
-  as a call argument yet (TODO-5713).
+- The closure is bound to a local before it is passed so the handler has a name; a lambda whose capture list starts
+  with `mut` also parses directly as a call argument.
 
 A row of buttons that each act on one record, such as the Done button of each todo above, stays a form that posts to
 a route with the record's id: a control is one button with one handler.

@@ -108,14 +108,9 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
         if (name.kind == TokenKind::End) {
           return false;
         }
-        if (name.text.find('/') != std::string::npos) {
-          return fail("named argument must be a simple identifier");
-        }
-        std::string nameError;
-        if (!validateIdentifierText(name.text, nameError)) {
-          return fail(nameError);
-        }
         skipComments();
+        // The name is checked only once `[name]` is followed by a value: `[mut calls{0i32}](...)` is a lambda
+        // whose capture list starts with a keyword, not a label.
         if (matchRaw(TokenKind::RBracket)) {
           expectRaw(TokenKind::RBracket, "expected ']' after argument label");
           size_t nextIndex = pos_;
@@ -123,6 +118,13 @@ bool Parser::parseCallArgumentList(std::vector<Expr> &out,
             ++nextIndex;
           }
           if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+            if (name.text.find('/') != std::string::npos) {
+              return fail("named argument must be a simple identifier");
+            }
+            std::string nameError;
+            if (!validateIdentifierText(name.text, nameError)) {
+              return fail(nameError);
+            }
             argName = name.text;
           } else {
             pos_ = savedPos;
