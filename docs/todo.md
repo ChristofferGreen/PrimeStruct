@@ -1606,9 +1606,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: name classification only; collection spelling predicates are TODO-5963 and TODO-5964.
   - notes: Do not run alongside TODO-5961, TODO-5963 or TODO-5966 (shared files).
 
-- [ ] TODO-5963: The lowerer reads collection spellings only through CollectionSpellingClassifier
+- [~] TODO-5963: The lowerer reads collection spellings only through CollectionSpellingClassifier
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 5)
   - parallel_track: reuse-collection-spelling-lowerer
