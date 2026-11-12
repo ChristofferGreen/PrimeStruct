@@ -51,6 +51,15 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     }
   }
 
+  // A `block() {}` written in a namespace is still the empty builtin block unless that namespace defines its own
+  // `block`.
+  std::unordered_set<std::string> userBlockPaths;
+  for (const auto &def : program.definitions) {
+    if (def.name == "block") {
+      userBlockPaths.insert(def.fullPath);
+    }
+  }
+
   std::unordered_set<std::string> publicDefinitions;
   publicDefinitions.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
@@ -140,7 +149,9 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
         return false;
       }
       return initializer.kind == Expr::Kind::Call && !initializer.isBinding &&
-             initializer.name == "block" && initializer.namespacePrefix.empty();
+             initializer.name == "block" &&
+             (initializer.namespacePrefix.empty() ||
+              userBlockPaths.count(initializer.namespacePrefix + "/block") == 0);
     };
     const bool omittedInitializer = expr.args.empty() ||
                                     (expr.args.size() == 1 && isEmptyBuiltinBlockInitializer(expr.args.front()));

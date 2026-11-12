@@ -2310,6 +2310,7 @@ are left unarchived.
 | TODO-5953 | `String.append` of a literal does not cost more as a real call on optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5954 | The handler `Function` type is spelled with an alias in /std/http and /std/web | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5955 | A struct named like a callable field breaks the call of the field | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 
 <!-- INDEX-END -->
 

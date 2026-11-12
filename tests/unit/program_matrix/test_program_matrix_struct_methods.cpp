@@ -341,3 +341,31 @@ main() {
 )",
                    215);
 }
+
+TEST_CASE("an omitted field initializer of a generic struct in a namespace is its type's default") {
+  runMethodProgram("struct_methods_namespace_default_field",
+                   R"(
+import /std/text/*
+
+[struct]
+Cell() {
+  [i32] n{5i32}
+}
+
+namespace ns {
+  [public struct]
+  Holder<S>() {
+    [S mut] state{}
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [/ns/Holder<i32>] a{/ns/Holder<i32>{}}
+  [/ns/Holder<Cell>] b{/ns/Holder<Cell>{}}
+  [/ns/Holder<String>] c{/ns/Holder<String>{}}
+  return(a.state + b.state.n + c.state.count() + 40i32)
+}
+)",
+                   45);
+}

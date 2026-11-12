@@ -143,7 +143,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | ready | generic-fields |
 | TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
@@ -268,7 +267,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5716, TODO-5958
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5959, TODO-5960, TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
@@ -397,18 +396,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `slice` and `sliceMut` on a vector field of a local struct and of a `mut` struct parameter read and write the field's storage on the VM and optexe, with a positive and a negative (out of range) case
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
-
-- [ ] TODO-5958: A field `[S mut] state{}` of a generic struct in a namespace lowers
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-12
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5736)
-  - parallel_track: generic-fields
-  - scope: `namespace ns { [public struct] Holder<S>() { [S mut] state{} } }` with `[/ns/Holder<i32>] h{/ns/Holder<i32>{}}` and `return(h.state)` stops VM lowering with `block expression requires a value`: the field's empty initializer `block() {}` reaches the lowerer as a block expression instead of the zero value of `i32`. The same struct at the root, and a non-generic struct in a namespace, lower. Find where an empty initializer of a field becomes its default value (the omitted-initializer expansion) and why the specialization in a namespace is skipped.
-  - acceptance:
-    - the repro returns 0 on the VM, native and optexe, for `i32`, a struct and a `string` argument; a program-matrix case
-    - full release gate green
-  - stop_rule: default initializers of fields of generic structs in namespaces only.
 
 - [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai
