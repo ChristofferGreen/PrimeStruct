@@ -644,6 +644,21 @@ namespace server {
     close(listener)
     stopping.store(1i32)
     jobs.close()
+    // A connection accepted before the stop but not yet taken by a worker (all of them busy) is held by no worker:
+    // close it now rather than when a worker comes back to it. `receive` returns none once the closed channel is empty.
+    [bool mut] pending{true}
+    while(pending) {
+      pick(jobs.receive()) {
+        none {
+          pending = false
+        }
+        some(job) {
+          close(job.socket)
+          table.sockets[job.slot] = -1i32
+          table.states[job.slot] = 0i32
+        }
+      }
+    }
     slot = 0i32
     while(slot < slots) {
       if(table.states[slot] == 1i32 || table.states[slot] == 2i32) {
