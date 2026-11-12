@@ -1809,9 +1809,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the cost the profile names; no unrelated compiler speedups.
   - notes: Found while checking the IR comparison of TODO-5963; the error text is the same before and after that change.
 
-- [ ] TODO-5986: `rewriteExpr` is ordered rules over a context, not eight phases
+- [~] TODO-5986: `rewriteExpr` is ordered rules over a context, not eight phases
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6; closes TODO-5967)
   - parallel_track: reuse-phase-splits
