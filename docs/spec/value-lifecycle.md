@@ -111,7 +111,10 @@
   dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, and `[Todo mut] t{todos[i]}` gives `t` its own
   `String` and `Function` fields, so changing or destroying either leaves the other intact. The builtin `vector<T>`
   spelling copies the same way: `[vector<i32> mut] b{a}`, a field built from a vector binding (`KeepV{[seen] start}`),
-  a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own. A builtin
+  a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own, and so does
+  a definition that returns a place (`return(holder.values)`, `return(holders[1i32].values)`, `return(nested[0i32])`
+  in a definition declared `return<vector<T>>`): the caller gets a vector of its own and the place keeps its, while
+  `return(values)` of a local hands the local over without a copy. A builtin
   `vector<vector<T>>` stores each inner vector inline: `a.push(v)` takes over a fresh vector, `move(v)` or an owning
   binding and copies any other place (a view, field or element), `a[i]` is the inner vector (a read-only view when
   bound without `mut`, a copy of its own when bound with `mut`: `[vector<i32> mut] row{a[0i32]}`, likewise a field

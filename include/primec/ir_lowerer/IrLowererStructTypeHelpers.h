@@ -126,6 +126,8 @@ bool resolveBuiltinVectorElementStructPath(const std::string &elementText,
                                            const std::string &namespacePrefix,
                                            const ResolveStructTypeNameFn &resolveStructTypeName,
                                            std::string &elementStructPathOut);
+// The element type text `T` of a definition declared `return<vector<T>>`; empty for any other return type.
+std::string declaredBuiltinVectorReturnElementText(const Definition &definition);
 
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
     const std::unordered_set<std::string> &structNames,

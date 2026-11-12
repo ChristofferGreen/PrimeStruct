@@ -152,6 +152,19 @@ std::string templateSpecializationSuffixForStructType(const std::string &templat
   return out.str();
 }
 
+std::string declaredBuiltinVectorReturnElementText(const Definition &definition) {
+  for (const auto &transform : definition.transforms) {
+    std::string base;
+    std::string arg;
+    if (transform.name == "return" && transform.templateArgs.size() == 1 &&
+        splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg) &&
+        isBuiltinCollectionTypeName(trimTemplateTypeText(base), "vector")) {
+      return arg;
+    }
+  }
+  return {};
+}
+
 StructTypeResolutionAdapters makeStructTypeResolutionAdapters(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {

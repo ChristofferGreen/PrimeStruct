@@ -817,6 +817,83 @@
     const Expr *emittedReturnStmt = &stmt;
     LocalMap rewrittenReturnLocals;
     const LocalMap *emittedReturnLocals = &localsIn;
+    // `return(holder.values)` or `return(holders[i].values)` of a builtin vector that a place owns hands the caller a
+    // vector of its own: the elements are copied into a new buffer, like a `mut` binding of the same place, and the
+    // place keeps its vector (docs/spec/value-lifecycle.md, Copies). `return(local)` moves the local instead.
+    if (isReturnCall(stmt) && stmt.args.size() == 1 && !fileScopeStack.empty() &&
+        stmt.args.front().kind == Expr::Kind::Call && !stmt.args.front().isBinding &&
+        (stmt.args.front().isFieldAccess ||
+         ir_lowerer::isElementAccessCopySourceExpr(stmt.args.front())) &&
+        !isTemporaryStructCopySource(stmt.args.front(), localsIn)) {
+      const std::string &returnDefinitionPath =
+          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+      const auto returnDefIt = defMap.find(returnDefinitionPath);
+      const std::string returnedElementText =
+          returnDefIt != defMap.end() && returnDefIt->second != nullptr
+              ? ir_lowerer::declaredBuiltinVectorReturnElementText(*returnDefIt->second)
+              : std::string{};
+      std::string returnedElementStructPath;
+      if (!returnedElementText.empty() &&
+          ir_lowerer::resolveBuiltinVectorElementStructPath(
+              returnedElementText,
+              returnDefIt->second->namespacePrefix,
+              [&](const std::string &typeName,
+                  const std::string &namespacePrefix,
+                  std::string &pathOut) {
+                return resolveStructTypeName(typeName, namespacePrefix, pathOut);
+              },
+              returnedElementStructPath)) {
+        constexpr int32_t VectorRecordSlots = 5;
+        const int32_t sourceRecordLocal = allocTempLocal();
+        if (!emitExpr(stmt.args.front(), localsIn)) {
+          return false;
+        }
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(sourceRecordLocal)});
+        const int32_t recordBaseLocal = nextLocal;
+        nextLocal += VectorRecordSlots;
+        if (!emitStructCopySlots(recordBaseLocal, sourceRecordLocal, VectorRecordSlots)) {
+          return false;
+        }
+        const int32_t recordPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::AddressOfLocal, static_cast<uint64_t>(recordBaseLocal)});
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(recordPtrLocal)});
+        if (!ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+                recordPtrLocal,
+                sourceRecordLocal,
+                returnedElementStructPath,
+                [&](const std::string &path) -> const Definition * {
+                  auto copyIt = defMap.find(path + "/Copy");
+                  return copyIt == defMap.end() ? nullptr : copyIt->second;
+                },
+                [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(path, layoutOut);
+                },
+                [&]() { return allocTempLocal(); },
+                function.instructions,
+                localsIn,
+                emitInlineDefinitionCall,
+                error)) {
+          return false;
+        }
+        rewrittenReturnLocals = localsIn;
+        LocalInfo copiedVectorInfo;
+        copiedVectorInfo.kind = LocalInfo::Kind::Vector;
+        copiedVectorInfo.index = recordPtrLocal;
+        const std::string copiedVectorName =
+            "__native_return_vector_" + std::to_string(recordPtrLocal);
+        rewrittenReturnLocals.emplace(copiedVectorName, copiedVectorInfo);
+        rewrittenReturnStmt = stmt;
+        Expr copiedVectorExpr;
+        copiedVectorExpr.kind = Expr::Kind::Name;
+        copiedVectorExpr.name = copiedVectorName;
+        rewrittenReturnStmt.args.front() = std::move(copiedVectorExpr);
+        emittedReturnStmt = &rewrittenReturnStmt;
+        emittedReturnLocals = &rewrittenReturnLocals;
+      }
+    }
     // Stdlib Result sums are returned as sum storage pointers and never packed.
     const bool returnsStdlibResultSum = [&]() {
       const Definition *returnSumDef = extractDeclaredSumReturnDefinition();

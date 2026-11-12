@@ -816,4 +816,70 @@ view_length([Greeter] greeter, [i32] index) {
                         "50\n51\n1\n50\n1\n3\n");
 }
 
+TEST_CASE("returning a vector field or a vector element hands the caller a copy and returning a "
+          "local moves it") {
+  // The place keeps its own vector; the returned one is a buffer of its own, for an `i32` element and for a struct
+  // element with a `String` field, and the heap statistics end where they began.
+  runVectorOwnerProgram("vector_return_places",
+                        RowReaderDefinitions + R"(
+[struct]
+RowHolder() {
+  [vector<Row> mut] rows{vector<Row>{}}
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+field_values() {
+  [Holder] holder{make_holders()[1i32]}
+  return(holder.values)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+element_values() {
+  [vector<Holder> mut] holders{make_holders()}
+  return(holders[1i32].values)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+nested_element() {
+  [vector<vector<i32>> mut] nested{make_nested()}
+  return(nested[0i32])
+}
+
+[effects(heap_alloc), return<vector<Row>>]
+field_rows() {
+  [RowHolder mut] holder{RowHolder{}}
+  holder.rows = make_rows(5i32)
+  return(holder.rows)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+temporary_element_values() {
+  return(make_holders()[0i32].values)
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+moved_local() {
+  [vector<i32> mut] local{make_values(7i32)}
+  return(local)
+}
+)",
+                        R"(
+    [vector<i32> mut] a{field_values()}
+    print_line(a.count())
+    a.push(9i32)
+    print_line(a[3i32])
+    [vector<i32>] b{element_values()}
+    print_line(b[2i32])
+    [vector<i32>] c{nested_element()}
+    print_line(c.count())
+    [vector<Row>] d{field_rows()}
+    print_line(row_code(d[1i32]))
+    [vector<i32>] e{temporary_element_values()}
+    print_line(e[1i32])
+    [vector<i32>] f{moved_local()}
+    print_line(f[1i32])
+)",
+                        "3\n9\n8\n1\n654\n5\n8\n");
+}
+
 TEST_SUITE_END();
