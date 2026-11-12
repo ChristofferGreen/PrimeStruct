@@ -2182,6 +2182,7 @@ are left unarchived.
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5742 | `==` on generated-`Equal` structs and enums resolves in lambda bodies | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5743 | A runtime error in a native real call ends the program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
+| TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5747 | The native backend leaves out functions that nothing calls | [2026-11.md](todo_archive/2026-11.md) | 2026-11-08 |
 | TODO-5748 | Methods with a `Function` parameter become real calls on the VM and optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5749 | PrimeScroll on handlers uses no more memory than its loop did | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |

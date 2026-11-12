@@ -115,6 +115,9 @@ or a semicolon if you intended to index.
   contribute to layout. Non-lifecycle helpers lower into the struct method namespace (`/<Struct>/name`) and can be
   called via method sugar or as plain namespace functions. Un-tagged definitions may still be instantiated as structs;
   they simply skip the extra validation/metadata until another transform demands it.
+  An un-tagged definition with no parameters, no `return<T>` transform and a body of only bindings is such a struct
+  (its fields are the bindings), so a nested `[mut] touch() { [i32] x{1i32} }` is a struct named `touch`, not a
+  method; the `mut` diagnostic names that reading. Add a statement or a `return<T>` transform to make it a method.
 - **Placement policy:** where a value lives (stack/heap/buffer) is decided by allocation helpers plus capabilities, not
   by struct tags. Envelopes may express requirements (e.g., `pod`, `handle`, `gpu_lane`), but placement is a call-site
   decision gated by capabilities. The `stack`/`heap`/`buffer` transforms remain reserved and rejected in v1.

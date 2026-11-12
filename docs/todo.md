@@ -107,7 +107,6 @@ of sync with them.
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
 | TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
-| TODO-5746 | A parameterless `mut` method whose body is only bindings is a method | ready | diagnostics |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
@@ -253,7 +252,7 @@ of sync with them.
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Language gaps found by native UI: TODO-5544, TODO-5745, TODO-5746
+- Language gaps found by native UI: TODO-5544, TODO-5745
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5712, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
@@ -368,18 +367,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - the three shapes parse and run on the VM, with a parser test each
     - full release gate green
   - stop_rule: the parser's labeled-value and assignment paths only.
-
-- [ ] TODO-5746: A parameterless `mut` method whose body is only bindings is a method
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Language gaps found by native UI (TODO-5710)
-  - parallel_track: diagnostics
-  - scope: A nested definition with no parameters and a body of bindings only is taken as a field-only struct, so `[mut] touch() { [i32] x{1i32} [i32] y{x} }` inside a struct fails with "mut transform is only supported on struct helpers: /Box/touch", which names neither the cause nor the fix. Either a definition with a method transform (`mut`, `return<T>`, `effects`) is never field-only, or the diagnostic says the body was read as a struct's fields (docs/spec/transforms.md).
-  - acceptance:
-    - the case of tests/unit compiles as a method, or fails with a diagnostic that names the field-only reading; spec text matches
-    - full release gate green
-  - stop_rule: the field-only rule and its diagnostic.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

@@ -319,6 +319,53 @@ main() {
   CHECK(error.find("mut transform is only supported on struct helpers") != std::string::npos);
 }
 
+TEST_CASE("a mut method whose body is only bindings names the field-only reading") {
+  const std::string source = R"(
+[struct]
+Box() {
+  [i32] v{0i32}
+  [mut] touch() {
+    [i32] x{1i32}
+    [i32] y{x}
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mut transform is only supported on struct helpers: /Box/touch") !=
+        std::string::npos);
+  CHECK(error.find("a body of only bindings is read as the fields of a struct") !=
+        std::string::npos);
+}
+
+TEST_CASE("a mut method with a statement after its bindings is a method") {
+  const std::string source = R"(
+[struct]
+Box() {
+  [i32] v{0i32}
+  [mut] touch() {
+    [i32] x{1i32}
+    assign(this.v, x)
+  }
+}
+
+[return<int>]
+main() {
+  [Box mut] box{Box{}}
+  box.touch()
+  return(box.v)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("lifecycle helpers reject duplicate mut") {
   const std::string source = R"(
 [struct]

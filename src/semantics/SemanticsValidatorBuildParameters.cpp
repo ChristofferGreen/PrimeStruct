@@ -470,8 +470,22 @@ bool SemanticsValidator::buildParameters() {
       }
     }
     if (sawMut && !isStructHelper) {
+      // A definition without parameters whose body is only bindings is a struct's field list, so a nested
+      // `[mut] touch() { [i32] x{1i32} }` is read as a struct named `touch`, not as a method.
+      bool bodyIsOnlyBindings = !def.statements.empty() && def.parameters.empty() &&
+                                !def.hasReturnStatement && !def.returnExpr.has_value();
+      for (const Expr &stmt : def.statements) {
+        bodyIsOnlyBindings = bodyIsOnlyBindings && stmt.isBinding;
+      }
+      for (const Transform &transform : def.transforms) {
+        bodyIsOnlyBindings = bodyIsOnlyBindings && transform.name != "return";
+      }
       return failBuildParameterDefinitionDiagnostic(
-          "mut transform is only supported on struct helpers: " + def.fullPath);
+          "mut transform is only supported on struct helpers: " + def.fullPath +
+          (bodyIsOnlyBindings ? " (a body of only bindings is read as the fields of a struct; add "
+                                "a statement or a return<T> "
+                                "transform to make it a method)"
+                              : ""));
     }
     if (sawMut && isStaticHelper) {
       return failBuildParameterDefinitionDiagnostic(
