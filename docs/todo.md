@@ -210,6 +210,7 @@ of sync with them.
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | ready | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | ready | reuse-phase-splits |
 | TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
+| TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
@@ -1806,3 +1807,17 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `--bench-dir`, `--report-json` and `--baseline-json` given as relative paths also work
     - the same run with an absolute `--build-dir` gives the same report layout
   - stop_rule: path handling in the script only; no benchmark changes.
+
+- [ ] TODO-5984: The http web apps lower in seconds, not minutes
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Performance
+  - parallel_track: web-app-lowering-time
+  - scope: `primec --dump-stage ir-lowered` on examples/apps/hello_button/main.prime takes about 15 s of CPU (5 s for web_app, about the same for text_editor and todo_web) in a release build, measured 2026-11-12 with `/usr/bin/time -p`; under the gate's load a single example passes 60 s of wall time (rc=124). The four examples then end in an expected error for the native target (`native backend does not support recursive calls: /std/http/server/run_workers__t...` or `host calls are only supported by the vm target`), so the time is spent before the result is known. Profile the run (semantic validation of the /std/http and /std/ui imports versus monomorphization versus lowering), find the dominant cost and remove it.
+  - acceptance:
+    - the profile and the dominant cost are recorded in docs/todo_log.md under this id
+    - `--dump-stage ir-lowered` on the four examples takes at most a third of the recorded CPU time, with output unchanged
+    - full release gate green
+  - stop_rule: the cost the profile names; no unrelated compiler speedups.
+  - notes: Found while checking the IR comparison of TODO-5963; the error text is the same before and after that change.
