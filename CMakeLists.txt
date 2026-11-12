@@ -3282,19 +3282,44 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SOURCE_FILE "*test_compile_run_vm_collections_*.cpp" FIRST 332 LAST 352)
     elseif(suite STREQUAL "primestruct.compile.run.vm.bounds")
       # TODO-5838: one 35-case entry took 2.7 s alone and 10 s in a loaded gate (30 s timeout).
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_1_18"
-                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 1 LAST 18)
+      # Cases 1 to 18 took 18 s in a loaded gate (30 s timeout): shards of six.
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_1_6"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 1 LAST 6)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_7_12"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 7 LAST 12)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_13_18"
+                                 SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 13 LAST 18)
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "bounds_and_safety_19_35"
                                  SOURCE_FILE "*test_compile_run_vm_bounds.cpp" FIRST 19 LAST 35)
     elseif(suite STREQUAL "primestruct.compile.run.vm.cursor")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "forward_traversal"
-                                 SOURCE_FILE "*test_compile_run_vm_cursor.cpp")
+      # 14 cases, 21 s in a loaded gate and past the 60 s timeout in a heavier one: two shards.
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "forward_traversal_1_3"
+                                 SOURCE_FILE "*test_compile_run_vm_cursor.cpp" FIRST 1 LAST 3)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "forward_traversal_4_7"
+                                 SOURCE_FILE "*test_compile_run_vm_cursor.cpp" FIRST 4 LAST 7)
+      addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "forward_traversal_8_14"
+                                 SOURCE_FILE "*test_compile_run_vm_cursor.cpp" FIRST 8 LAST 14)
     elseif(suite STREQUAL "primestruct.compile.run.vm.reference_capability")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "capability_parameterized_references"
-                                 SOURCE_FILE "*test_compile_run_vm_reference_capability.cpp")
+      # 10 cases, 41 s in a loaded gate (30 s timeout): shards of two.
+      foreach(firstCase RANGE 1 9 2)
+        math(EXPR lastCase "${firstCase} + 1")
+        addPrimeStructDoctestSuite("${suite}" TIMEOUT 30
+                                   SHARD_NAME "capability_parameterized_references_${firstCase}_${lastCase}"
+                                   SOURCE_FILE "*test_compile_run_vm_reference_capability.cpp"
+                                   FIRST ${firstCase} LAST ${lastCase})
+      endforeach()
     elseif(suite STREQUAL "primestruct.compile.run.vm.slice_capability")
-      addPrimeStructDoctestSuite("${suite}" TIMEOUT 30 SHARD_NAME "capability_parameterized_slices"
-                                 SOURCE_FILE "*test_compile_run_vm_slice_capability.cpp")
+      # 11 cases, 31 s in a loaded gate (30 s timeout): shards of three.
+      foreach(firstCase RANGE 1 10 3)
+        math(EXPR lastCase "${firstCase} + 2")
+        if(lastCase GREATER 11)
+          set(lastCase 11)
+        endif()
+        addPrimeStructDoctestSuite("${suite}" TIMEOUT 30
+                                   SHARD_NAME "capability_parameterized_slices_${firstCase}_${lastCase}"
+                                   SOURCE_FILE "*test_compile_run_vm_slice_capability.cpp"
+                                   FIRST ${firstCase} LAST ${lastCase})
+      endforeach()
     elseif(suite STREQUAL "primestruct.compile.run.vm.maps")
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 60 SHARD_NAME "map_helpers_1"
                                  SOURCE_FILE "*test_compile_run_vm_maps.cpp" FIRST 1 LAST 4)
@@ -3651,7 +3676,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.vector_owners
   )
   # Every program runs through each execution config (several compiles per case), so a whole suite took 60 to 110 s
-  # in loaded gates (load 40 to 140). Each suite is shards of three cases (primestructAddDoctestShards); the number
+  # in loaded gates (load 40 to 140). Each suite is shards of one case (primestructAddDoctestShards); the number
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
@@ -3670,12 +3695,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     if(suiteCases STREQUAL "")
       message(FATAL_ERROR "program matrix suite ${suite} has no case count in PrimeStructProgramMatrixCaseCounts")
     endif()
-    # A shared_strings case runs four configs of a program that compiles the text stdlib (most of a second per
-    # config) and builds one optexe binary, about 5 s alone, so each case is a shard of its own.
-    set(suiteShardCases 3)
-    if(suiteShort STREQUAL "shared_strings")
-      set(suiteShardCases 1)
-    endif()
+    # Every case is a shard of its own: a case runs each program through several configs and builds optexe
+    # binaries, so it takes 5 to 25 s alone, and a loaded gate (load 40 to 140) stretched shards of three cases
+    # to 70 to 154 s and, for closures_routers and container_copies, past the 300 s limit.
+    set(suiteShardCases 1)
     primestructAddDoctestShards("${testName}" PrimeStruct_program_matrix_tests ${suiteCases} ${suiteShardCases} 300
                                 "--test-suite=${suite}")
   endforeach()

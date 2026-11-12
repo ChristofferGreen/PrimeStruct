@@ -355,13 +355,15 @@ addPrimeStructManagedDoctestSuite(
 
 # TODO-5838: one 23-case entry took 2.4 s alone and timed out (30 s) at
 # load 65; the later cases validate through the stdlib import pipeline.
+# Shards of three: a shard of five took 18 s in one loaded gate and passed
+# 30 s in the next.
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.move"
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 30
   LABEL "parallel-safe"
   TOTAL_CASES 23
-  CASES_PER_SHARD 6
+  CASES_PER_SHARD 3
 )
 
 addPrimeStructManagedDoctestSuite(
