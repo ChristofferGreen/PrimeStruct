@@ -1918,4 +1918,50 @@ main() {
                     25);
 }
 
+TEST_CASE("route handlers declare their Response and state parameters mut") {
+  // A `mut` parameter reaches the closure through the `Function`'s `Reference<T>` parameter: a handler may be
+  // written `[Response mut] response` or `[Counter mut] counter` as well as `[Reference<Response>]`.
+  runClosureProgram("route_handlers_mut_parameters",
+                    R"(
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+[struct]
+Counter() {
+  [i32 mut] clicks{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] raw{stringFrom("GET /hello HTTP/1.1\r\nHost: example\r\n\r\n")}
+  [Request] request{parseRequest(raw.view(), 1024i32)}
+  [Router mut] router{Router{}}
+  router.get("/hello", []([Request] request, [Response mut] response) {
+    response.text("hello", "text/plain")
+    response.header("X-Host", request.header("Host"))
+  })
+  [Response mut] first{Response{}}
+  router.call(request, location(first))
+
+  [String] clickRaw{stringFrom("POST /click HTTP/1.1\r\nHost: example\r\n\r\n")}
+  [Request] click{parseRequest(clickRaw.view(), 1024i32)}
+  [AppRouter<Counter> mut] app{AppRouter<Counter>{[state] Counter{}}}
+  app.post("/click", []([Counter mut] counter, [Request] request, [Response mut] response) {
+    counter.clicks = counter.clicks + 1i32
+    response.redirect("/")
+  })
+  [Response mut] second{Response{}}
+  app.call(click, location(second))
+
+  [Function<void, Reference<i32>> mut] bump{[]([i32 mut] value) { value = value + 5i32 }}
+  [i32 mut] total{1i32}
+  bump(total)
+  // 200 / 10 + 5 (body), 1 click * 100 + 303 / 10, and the bumped total 6
+  return(first.status / 10i32 + first.body.count() + app.state.clicks * 100i32 + second.status / 10i32 + total)
+}
+)",
+                    161);
+}
+
 TEST_SUITE_END();

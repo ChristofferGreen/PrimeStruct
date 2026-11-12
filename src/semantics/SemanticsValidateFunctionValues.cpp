@@ -264,8 +264,25 @@ struct FunctionValueRewriter {
       const Expr &param = closureCall->parameters[first + i];
       const std::string declared = plainTypeText(bindingTypeText(param));
       const std::string given = plainTypeText(bindingTypeText(functionCall->parameters[i]));
-      if (certainlyMismatched(declared, given)) {
+      // The Function passes a `Reference<T>` where the closure takes a `T` (a `[T mut]` or by-value parameter).
+      std::string referent = given;
+      if (given.rfind("Reference<", 0) == 0 && given.back() == '>') {
+        referent = given.substr(10, given.size() - 11);
+      }
+      if (certainlyMismatched(declared, referent)) {
         error = prefix + "its parameter " + param.name + " is " + declared + ", the Function passes " + given;
+        return false;
+      }
+      // A `mut` parameter changes the caller's value, so the Function passes it as a `Reference<T>`: the
+      // generated `call` could not give a by-value parameter to the closure as a mutable place.
+      bool isMut = false;
+      for (const Transform &transform : param.transforms) {
+        isMut = isMut || transform.name == "mut";
+      }
+      if (isMut && given.rfind("Reference<", 0) != 0 && declared.rfind("Reference<", 0) != 0 &&
+          declared.rfind("Pointer<", 0) != 0) {
+        error = prefix + "its parameter " + param.name +
+                " is mut, spell the Function's parameter Reference<" + given + ">";
         return false;
       }
     }

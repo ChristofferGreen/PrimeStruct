@@ -801,6 +801,9 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   })
   ```
 
+  A handler may declare the state and the response `mut` instead of `Reference<...>`: `[Counter mut] counter` and
+  `[Response mut] response` bind to the same places (docs/spec/value-lifecycle.md, Function values).
+
   A lambda or a named definition converts to the handler `Function` at `get`, `post` and the others, as for
   `Router`: the implicit conversion happens at a method of a generic struct instance, whose parameter types are known
   once the struct is instantiated. `examples/apps/todo_web/main.prime` is a whole app on it.

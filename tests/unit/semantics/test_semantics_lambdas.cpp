@@ -288,6 +288,50 @@ main() {
                 error);
 }
 
+TEST_CASE("a mut closure parameter needs a Reference parameter in the Function type") {
+  const std::string source = R"(
+[struct]
+Response() {
+  [i32 mut] status{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<void, Response> mut] handler{[]([Response mut] response) { assign(response.status, 7i32) }}
+  [Response mut] response{Response{}}
+  handler(response)
+  return(response.status)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(
+      error.find(
+          "Function<void, Response> cannot hold /main__lambda0 in /main: its parameter response is "
+          "mut, spell the Function's parameter Reference<Response>") != std::string::npos,
+      error);
+}
+
+TEST_CASE("a mut closure parameter converts to a Function with a Reference parameter") {
+  const std::string source = R"(
+[struct]
+Response() {
+  [i32 mut] status{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<void, Reference<Response>> mut] handler{[]([Response mut] response) { assign(response.status, 7i32) }}
+  [Function<void, Reference<i32>> mut] bump{[]([i32 mut] value) { assign(value, plus(value, 1i32)) }}
+  [Response mut] response{Response{}}
+  handler(response)
+  return(response.status)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_CASE("a named definition with the wrong arity cannot become a Function") {
   const std::string source = R"(
 [return<i32>]

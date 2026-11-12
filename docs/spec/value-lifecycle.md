@@ -429,6 +429,16 @@ bad_set() {
   the `Function`'s argument types: `Function<i32, i32> cannot hold /main__lambda0 in /main: its parameter text is
   string, the Function passes i32` or `... cannot hold /add in /main: it takes 2 arguments, the Function passes 1`.
   An explicit `return<T>` on `call` (a named definition, a hand-written struct) is checked against `R` the same way.
+- **Mutable parameters:** a `Function` type has no `mut` marker of its own: a parameter the closure changes is
+  spelled `Reference<T>` in the type, and the closure declares it `[T mut]` or `[Reference<T>]`. The `Function`
+  passes the caller's place (`f(resp)` lends `resp`), so `Function<void, Request, Reference<Response>>` holds
+  `[]([Request] request, [Response mut] response) { response.text("hi", "text/plain") }` and
+  `Function<void, Reference<i32>>` holds `[]([i32 mut] value) { value = value + 5i32 }`. A closure whose
+  parameter is `mut` cannot be held by a `Function` that passes the type by value; the conversion names the
+  fix: `Function<void, Response> cannot hold /main__lambda0 in /main: its parameter response is mut, spell the
+  Function's parameter Reference<Response>`. `/std/http` `Router` and `AppRouter<State>` handlers (`Function<void,
+  Request, Reference<Response>>`, `Function<void, Reference<State>, Request, Reference<Response>>`) take
+  `[Response mut]` and `[State mut]` parameters this way (docs/spec/stdlib-reference.md).
 - **Calling** `f(x)` dispatches to the stored closure; `call` is `mut` (the closure may change its state), so hold
   the `Function` in a `mut` binding, field or parameter.
 - **Copy** clones the stored closure into a new block (the copy has its own state), also where a `Function` local is

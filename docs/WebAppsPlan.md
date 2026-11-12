@@ -72,7 +72,8 @@ handlers see only the keys it does not keep.
 ## Target shape
 
 `AppRouter<State>` (TODO-5704) gives this shape today, spelled `[Reference<Counter>] counter` and
-`[Reference<Response>] response`; the spelling below needs TODO-5707 (`mut` parameters in `Function` types). A lambda
+`[Reference<Response>] response`; a handler may equally declare `[Counter mut] counter` and `[Response mut] response`
+(TODO-5707, done: the `Function` type spells a mutable parameter `Reference<T>`). A lambda
 or a named handler already passes where a `Function` is expected (TODO-5669, done), and a string literal where a
 `StringView` is expected (TODO-5700, done).
 
@@ -126,7 +127,7 @@ handler that brings the menus, toolbars and session up to date after each event.
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
    keep-alive TODO-5805, sessions TODO-5806.
-8. Later: TODO-5707, TODO-5708 (type aliases), TODO-5718 (repeated and decoded
+8. Later: TODO-5708 (type aliases), TODO-5718 (repeated and decoded
    parameters).
 
 ## Concurrency
