@@ -1646,9 +1646,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: deletion only; no refactoring of the IR emitters or of the classifier copies in other layers (TODO-5961, TODO-5962).
   - notes: Runs alone among code-reuse leaves that touch `src/emitter`, `src/glsl_emitter`, `src/ir/IrPrinterHelpers.cpp` or the CMake source lists. Safe alongside TODO-5960, TODO-5969, TODO-5970.
 
-- [ ] TODO-5960: Executions and definitions get the same intra-body call diagnostics from one implementation
+- [~] TODO-5960: Executions and definitions get the same intra-body call diagnostics from one implementation
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 7)
   - parallel_track: reuse-semantics-diagnostics
