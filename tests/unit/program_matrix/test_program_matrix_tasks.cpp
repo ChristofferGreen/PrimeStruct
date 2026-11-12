@@ -638,7 +638,6 @@ widen([i32] value) {
   return(result)
 }
 
-// Destructuring is a statement of the definition's own body (not of a nested block, TODO-5894).
 [return<void> effects(task, io_out, heap_alloc)]
 round() {
   [String mut] who{String{}}
@@ -677,6 +676,133 @@ main() {
   // The native backend has no heap statistics.
   program.skipConfigs = {"native-O0", "native-O2"};
   runTaskProgram(program);
+}
+
+TEST_CASE("tuple destructuring and a destructured multi-wait work inside nested blocks") {
+  program_matrix::ProgramCase program;
+  program.name = "task_destructuring_nested_blocks";
+  program.source = R"(
+import /std/text/*
+import /std/tuple/*
+
+[struct]
+Reply() {
+  [String] body{String{}}
+  [i32] code{0i32}
+}
+
+[return<String> effects(heap_alloc)]
+greet([String] name) {
+  [String mut] out{String{}}
+  out.append("hello ")
+  out.appendString(name)
+  return(out)
+}
+
+[return<Reply> effects(heap_alloc)]
+make_reply([String] text, [i32] code) {
+  [String mut] body{String{}}
+  body.append("body of ")
+  body.appendString(text)
+  return(Reply{body, code})
+}
+
+[return<i64>]
+widen([i32] value) {
+  [i64 mut] result{0i64}
+  result = convert<i64>(value) * 1000i64
+  return(result)
+}
+
+// The destructuring statements are in the block of an `if`, in the body of a loop and in a lambda.
+[return<void> effects(task, io_out, heap_alloc)]
+round([i32] mode) {
+  [String mut] who{String{}}
+  who.append("world, a name long enough to live on the string heap")
+  [auto] pair{make_tuple(widen(2i32), make_reply(who, 5i32))}
+  if(mode > 0i32) {
+    [wide made] pair
+    print_line(wide)
+    print_line(made.code)
+    [Task<String>] x{[spawn] greet(who)};
+    [Task<Reply>] y{[spawn] make_reply(who, 7i32)};
+    [a b] wait(x, y)
+    print_line(a.count())
+    print_line(b.code)
+  } else {
+    print_line(0i32)
+  }
+  [i32 mut] i{0i32}
+  while(i < 2i32) {
+    [Task<i64>] w{[spawn] widen(3i32)};
+    [Task<String>] x2{[spawn] greet(who)};
+    [n line] wait(w, x2)
+    print_line(n)
+    print_line(line.count())
+    i = i + 1i32
+  }
+  [auto] show{[]() {
+    [auto] inner{make_tuple(widen(4i32), 9i32)}
+    [big small] inner
+    print_line(big)
+    print_line(small)
+  }}
+  show()
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  round(1i32)
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2000\n5\n58\n7\n3000\n58\n3000\n58\n4000\n9\n0\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
+TEST_CASE("a name bound twice by a destructuring inside a block is a duplicate binding") {
+  const std::filesystem::path dir =
+      primec::testing::testScratchPath("program_matrix/task_destructuring_duplicate/x")
+          .parent_path();
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path sourcePath = dir / "task_destructuring_duplicate.prime";
+  {
+    std::ofstream file(sourcePath, std::ios::binary);
+    file << R"(
+import /std/tuple/*
+
+[return<tuple<i32, bool>>]
+make_pair() {
+  return(tuple<i32, bool>{7i32, true})
+}
+
+[return<int>]
+main() {
+  [tuple<i32, bool>] pair{make_pair()}
+  if(true) {
+    [n n] pair
+    return(n)
+  } else {
+  }
+  return(0i32)
+}
+)";
+  }
+  const program_matrix::Outcome outcome = program_matrix::runCaptured(
+      "./primec --emit=ir " + program_matrix::quote(sourcePath.string()) + " -o " +
+          program_matrix::quote((dir / "task_destructuring_duplicate.psir").string()),
+      dir / "task_destructuring_duplicate.ir");
+  CHECK(outcome.exitCode != 0);
+  CHECK_MESSAGE(outcome.err.find("duplicate tuple destructuring binding name: n") !=
+                    std::string::npos,
+                outcome.err);
 }
 
 TEST_CASE("struct results of tasks are waited together and in a loop") {

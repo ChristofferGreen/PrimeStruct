@@ -492,6 +492,34 @@ bool trySplitWaitDestructuringStatement(const Expr &stmt,
   return true;
 }
 
+bool expandDestructuringStatementAt(std::vector<Expr> &statements,
+                                    size_t index,
+                                    const std::vector<semantics::ParameterInfo> &params,
+                                    const LocalTypeMap &locals,
+                                    const std::string &namespacePrefix,
+                                    Context &ctx,
+                                    std::string &error,
+                                    bool &expandedOut) {
+  expandedOut = false;
+  std::vector<Expr> replacement;
+  if (trySplitWaitDestructuringStatement(
+          statements[index], namespacePrefix, ctx, ctx.waitDestructuringOrdinal, replacement)) {
+    ++ctx.waitDestructuringOrdinal;
+  } else if (!tryExpandTupleDestructuringStatement(
+                 statements[index], params, locals, namespacePrefix, ctx, error, replacement)) {
+    return false;
+  }
+  if (replacement.empty()) {
+    return true;
+  }
+  statements.erase(statements.begin() + static_cast<std::ptrdiff_t>(index));
+  statements.insert(statements.begin() + static_cast<std::ptrdiff_t>(index),
+                    std::make_move_iterator(replacement.begin()),
+                    std::make_move_iterator(replacement.end()));
+  expandedOut = true;
+  return true;
+}
+
 bool hasTypePackExpansionTransform(const Expr &expr) {
   for (const Transform &transform : expr.transforms) {
     if (transform.isPackExpansion) {
@@ -779,11 +807,13 @@ bool rewriteDefinition(Definition &def,
                        std::string &error) {
   const std::string previousDefinitionPath = ctx.currentDefinitionPath;
   const Definition *previousRewriteDefinition = ctx.currentRewriteDefinition;
+  const size_t previousWaitDestructuringOrdinal = ctx.waitDestructuringOrdinal;
   ctx.currentDefinitionPath = def.fullPath;
   ctx.currentRewriteDefinition = &def;
   auto restoreDefinitionPath = [&]() {
     ctx.currentDefinitionPath = previousDefinitionPath;
     ctx.currentRewriteDefinition = previousRewriteDefinition;
+    ctx.waitDestructuringOrdinal = previousWaitDestructuringOrdinal;
   };
   if (!rejectUnsupportedTypePackStatementExpansions(def, error) ||
       !expandTypePackHelperBindings(def, error)) {
@@ -829,38 +859,22 @@ bool rewriteDefinition(Definition &def,
       locals.emplace("this", std::move(thisBinding));
     }
   }
-  size_t waitDestructuringOrdinal = 0;
+  ctx.waitDestructuringOrdinal = 0;
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
     auto &stmt = def.statements[stmtIndex];
-    std::vector<Expr> waitDestructuringSplit;
-    if (!isStructDefinition(def) &&
-        trySplitWaitDestructuringStatement(
-            stmt, def.namespacePrefix, ctx, waitDestructuringOrdinal, waitDestructuringSplit)) {
-      ++waitDestructuringOrdinal;
-      def.statements.erase(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex));
-      def.statements.insert(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex),
-                            std::make_move_iterator(waitDestructuringSplit.begin()),
-                            std::make_move_iterator(waitDestructuringSplit.end()));
-      --stmtIndex;
-      continue;
-    }
-    std::vector<Expr> tupleDestructuringExpansion;
-    if (!isStructDefinition(def) &&
-        !tryExpandTupleDestructuringStatement(stmt,
-                                              params,
-                                              locals,
-                                              def.namespacePrefix,
-                                              ctx,
-                                              error,
-                                              tupleDestructuringExpansion)) {
+    bool expandedDestructuring = false;
+    if (!isStructDefinition(def) && !expandDestructuringStatementAt(def.statements,
+                                                                    stmtIndex,
+                                                                    params,
+                                                                    locals,
+                                                                    def.namespacePrefix,
+                                                                    ctx,
+                                                                    error,
+                                                                    expandedDestructuring)) {
       restoreDefinitionPath();
       return false;
     }
-    if (!tupleDestructuringExpansion.empty()) {
-      def.statements.erase(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex));
-      def.statements.insert(def.statements.begin() + static_cast<std::ptrdiff_t>(stmtIndex),
-                            std::make_move_iterator(tupleDestructuringExpansion.begin()),
-                            std::make_move_iterator(tupleDestructuringExpansion.end()));
+    if (expandedDestructuring) {
       --stmtIndex;
       continue;
     }

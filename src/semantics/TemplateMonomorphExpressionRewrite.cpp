@@ -825,7 +825,23 @@ PhaseStatus rewriteExprPhase1([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         }
       }
     }
-    for (auto &bodyArg : expr.bodyArguments) {
+    for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
+      bool expandedDestructuring = false;
+      if (!expandDestructuringStatementAt(expr.bodyArguments,
+                                          bodyIndex,
+                                          params,
+                                          lambdaLocals,
+                                          namespacePrefix,
+                                          ctx,
+                                          error,
+                                          expandedDestructuring)) {
+        return st.done(false);
+      }
+      if (expandedDestructuring) {
+        --bodyIndex;
+        continue;
+      }
+      auto &bodyArg = expr.bodyArguments[bodyIndex];
       if (!rewriteExpr(bodyArg, lambdaMapping, lambdaAllowed, namespacePrefix, ctx, error, lambdaLocals, params,
                        allowMathBare)) {
         return st.done(false);

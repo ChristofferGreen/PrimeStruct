@@ -434,7 +434,23 @@ PhaseStatus rewriteExprPhase8([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
     }
   }
   LocalTypeMap bodyLocals = locals;
-  for (auto &arg : expr.bodyArguments) {
+  for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size(); ++bodyIndex) {
+    bool expandedDestructuring = false;
+    if (!expandDestructuringStatementAt(expr.bodyArguments,
+                                        bodyIndex,
+                                        params,
+                                        bodyLocals,
+                                        namespacePrefix,
+                                        ctx,
+                                        error,
+                                        expandedDestructuring)) {
+      return st.done(false);
+    }
+    if (expandedDestructuring) {
+      --bodyIndex;
+      continue;
+    }
+    auto &arg = expr.bodyArguments[bodyIndex];
     if (!rewriteExpr(arg, mapping, allowedParams, namespacePrefix, ctx, error, bodyLocals, params, allowMathBare)) {
       return st.done(false);
     }

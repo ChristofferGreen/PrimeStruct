@@ -97,6 +97,8 @@ struct Context {
   std::vector<Definition> outputDefs;
   std::vector<Execution> outputExecs;
   std::vector<std::string> droppedTemplatePaths;
+  // Names the hidden result tuples of the destructured multi-waits of the definition being rewritten.
+  size_t waitDestructuringOrdinal = 0;
   std::string currentDefinitionPath;
   std::unordered_set<std::string> implicitTemplateDefs;
   std::unordered_map<std::string, std::vector<std::string>> implicitTemplateParams;

@@ -84,6 +84,18 @@ bool trySplitWaitDestructuringStatement(const Expr &stmt,
                                         size_t ordinal,
                                         std::vector<Expr> &splitOut);
 
+// Expands the tuple destructuring `[a b] pair` or the destructured multi-wait `[a b] wait(x, y)` that is the statement
+// at `index` of `statements` (the statements of a definition's body, of a block, of a loop or of a lambda) into the
+// bindings it stands for. `expandedOut` tells whether the statement was replaced; the replacement starts at `index`.
+bool expandDestructuringStatementAt(std::vector<Expr> &statements,
+                                    size_t index,
+                                    const std::vector<semantics::ParameterInfo> &params,
+                                    const LocalTypeMap &locals,
+                                    const std::string &namespacePrefix,
+                                    Context &ctx,
+                                    std::string &error,
+                                    bool &expandedOut);
+
 bool hasTypePackExpansionTransform(const Expr &expr);
 
 std::string generatedPackFieldName(const std::string &sourceName,
