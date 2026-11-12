@@ -102,7 +102,7 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.basics"
   TARGET PrimeStruct_text_filter_tests
   TIMEOUT 300
   LABEL "parallel-safe"
-  TOTAL_CASES 17
+  TOTAL_CASES 19
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.rewrites"

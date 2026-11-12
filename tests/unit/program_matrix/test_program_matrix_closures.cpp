@@ -202,6 +202,41 @@ main() {
                     22);
 }
 
+TEST_CASE("a labeled call value and a lambda in an assignment parse") {
+  runClosureProgram("closure_labeled_call_values",
+                    R"(
+[return<int>]
+five() {
+  return(5i32)
+}
+
+[return<int>]
+apply([Function<i32, i32>] f, [i32] x) {
+  return(f(x))
+}
+
+[struct]
+Pair() {
+  [i32] a{0i32}
+  [i32] b{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Pair] sum{Pair{[a] five() + 1i32, [b] 2i32}}
+  [mut Pair] later{Pair{[a] 1i32, [b] 2i32}}
+  later = Pair{[a] five(), [b] 3i32}
+  [mut i32] applied{0i32}
+  applied = apply([]([i32] x) {
+    [i32] y{x + 1i32}
+    return(y * 2i32)
+  }, 4i32)
+  return(sum.a + sum.b + later.a + later.b + applied)
+}
+)",
+                    26);
+}
+
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_callables");
 

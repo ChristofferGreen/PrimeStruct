@@ -41,7 +41,12 @@ bool parseIdentifier(const std::string &input, size_t &pos, std::string &out);
 bool scanTransformList(const std::string &input, size_t start, TransformListScan &out);
 bool scanLambdaEnvelope(const std::string &input, size_t listStart, size_t &listEnd, size_t &envelopeEnd);
 bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envelopeEnd, std::string &nameOut);
-size_t findNextTransformListStart(const std::string &input, size_t start);
+// `lambdasJoinCalls`: a lambda inside call parentheses is part of the call's
+// text instead of an envelope of its own (only valid where the lambda body
+// takes the same filters as the surrounding text).
+size_t
+findNextTransformListStart(const std::string &input, size_t start, bool lambdasJoinCalls = false);
+bool isCallParenAt(const std::string &input, size_t openIndex);
 bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error);
 
 } // namespace primec

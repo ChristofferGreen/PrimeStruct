@@ -28,7 +28,10 @@ void advanceDefinitionScan(const std::string &input,
                            std::vector<DefinitionBlock> &stack,
                            int targetBodyDepth);
 
-size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetBodyDepth);
+size_t findNextEnvelopeStart(const std::string &input,
+                             size_t start,
+                             int targetBodyDepth,
+                             bool lambdasJoinCalls = false);
 
 std::string buildNamespacePrefix(const std::string &basePrefix, const std::vector<NamespaceBlock> &stack);
 std::string buildDefinitionPrefix(const std::string &basePrefix, const std::vector<DefinitionBlock> &stack);

@@ -228,4 +228,37 @@ main() {
   CHECK(output.find("value+3i32") != std::string::npos);
 }
 
+TEST_CASE("pipeline rewrites operators around a labeled call value") {
+  const std::string source = R"(
+main() {
+  [Pair] p{Pair{[a] five() + 1i32, [b] 2i32}}
+  later = Win{[handle] h()}
+  return(p.a)
+}
+)";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("[a] plus(five(), 1i32)") != std::string::npos);
+  CHECK(output.find("assign(later, Win{[handle] h()})") != std::string::npos);
+}
+
+TEST_CASE("pipeline keeps a lambda in call arguments inside the assignment") {
+  const std::string source = R"(
+main() {
+  a = apply([]([i32] x) { [i32] y{x + 1i32}
+ return(y) }, 4i32)
+}
+)";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("assign(a, apply(") != std::string::npos);
+  CHECK(output.find("[i32] y{plus(x, 1i32)}") != std::string::npos);
+}
+
 TEST_SUITE_END();

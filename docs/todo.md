@@ -106,7 +106,6 @@ of sync with them.
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5707 | `Function` types accept `mut` parameters | deferred | closures-mut-params |
 | TODO-5708 | Type aliases | deferred | type-aliases |
-| TODO-5745 | A labeled value that is a call parses in every position | ready | parser-labeled-values |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
@@ -251,7 +250,7 @@ of sync with them.
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Language gaps found by native UI: TODO-5544, TODO-5745
+- Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5714, TODO-5715, TODO-5719, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5726, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5707, TODO-5708, TODO-5716, TODO-5717, TODO-5721, TODO-5732, TODO-5735, TODO-5736, TODO-5737
@@ -354,19 +353,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - an alias of a `Function` type and of a generic struct is used in parameters, fields and construction; a negative test for a cycle; spec text with a runnable example
     - full release gate green
   - stop_rule: alias declarations and their resolution only.
-
-- [ ] TODO-5745: A labeled value that is a call parses in every position
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-08
-  - phase: Language gaps found by native UI (TODO-5710)
-  - parallel_track: parser-labeled-values
-  - scope: Three shapes fail to parse although their parts parse alone. A labeled brace argument whose value is a call followed by an operator: `Pair{[a] five() + 1i32}` fails with "invalid character: '+'" (`Pair{[a] 4i32 + x}` parses). An assignment whose right side is a brace construction with a call as a labeled value: `window = Win{[handle] h()}` fails with "unexpected token in expression" at `=` (`[Win] w{Win{[handle] h()}}` and `p = Pair{[a] 2i32}` parse). An assignment whose right side passes a lambda whose body starts with a binding: `a = apply([]([i32] x) { [i32] y{x} ... })` fails the same way (a call statement or a binding initializer with that lambda parses). handlers.prime and the editor bind a local first.
-  - acceptance:
-    - the three shapes parse and run on the VM, with a parser test each
-    - full release gate green
-  - stop_rule: the parser's labeled-value and assignment paths only.
-  - findings: Measured 2026-11-12. None of the three is a parser bug: all three are the text filter. `applyPerEnvelopeFilterPass` (src/text_filter/TextFilterPipelineEnvelope.cpp) cuts the text into chunks around every envelope and rewrites operators per chunk, so an expression that contains an envelope never reaches `rewriteBinaryOperatorsWithPrecedence` whole. (1) `[a] five() + 1i32`: `scanEnvelopeAfterList` reads the label `[a]` plus `five()` as an execution envelope (`[transforms] name(args)`), so ` + 1i32}` is a chunk with no left operand and stays infix (`[a] x + 1i32`, `[a] a.b() + 1i32` and `[a] 1i32 + five()` are not envelopes and rewrite; `--dump-stage pre_ast` shows the difference). (2) `w = Win{[handle] h()}`: the same envelope splits the right side of the assignment from `w =`. (3) `a = apply([]([i32] x) { [i32] y{x} ... })`: a lambda is an envelope (`scanLambdaEnvelope`), so even `c = apply2([]([i32] x) { return(x) })` stays `c = ...` unrewritten (`a = 4i32` and `a = apply2(x)` become `assign`); a lambda in a call statement or a binding initializer needs no operator across the cut, which is why only the assignment and operator cases fail. The fix is in `findNextTransformListStart`/`findNextEnvelopeStart`: do not start an envelope for an argument label (`[ident]` directly in the braces of a `Type{...}` construction or the parentheses of a call, followed by a value and no `{` body) or for a lambda that sits inside the parentheses of a call. Not done in this pass: the change moves chunk boundaries for every program, needs its own pre_ast comparison over the stdlib and examples, and the gate budget of the pass was spent.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

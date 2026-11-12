@@ -307,8 +307,85 @@ bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envel
   return true;
 }
 
-size_t findNextTransformListStart(const std::string &input, size_t start) {
+// A `(` opens call parentheses when it follows a name or a template list
+// directly and its group is not a definition's parameter list or a control
+// body header (`name(...) {`).
+bool isCallParenAt(const std::string &input, size_t openIndex) {
+  if (openIndex == 0) {
+    return false;
+  }
+  const char prev = input[openIndex - 1];
+  if (!isIdentifierBody(prev) && prev != '>') {
+    return false;
+  }
+  size_t close = findMatchingCloseWithComments(input, openIndex, '(', ')');
+  if (close == std::string::npos) {
+    return false;
+  }
+  size_t after = close + 1;
+  skipWhitespaceAndComments(input, after);
+  return after >= input.size() || input[after] != '{';
+}
+
+// A `{` opens the braces of a value construction (`Type{...}`,
+// `Type<T>{...}`) when it follows a type name directly; `else {` and
+// `namespace name {` open blocks.
+static bool isConstructionBraceAt(const std::string &input, size_t openIndex) {
+  if (openIndex == 0) {
+    return false;
+  }
+  const char prev = input[openIndex - 1];
+  if (prev == '>') {
+    return true;
+  }
+  if (!isIdentifierBody(prev)) {
+    return false;
+  }
+  size_t wordStart = openIndex;
+  while (wordStart > 0 && isIdentifierBody(input[wordStart - 1])) {
+    --wordStart;
+  }
+  if (input.compare(wordStart, openIndex - wordStart, "else") == 0) {
+    return false;
+  }
+  size_t before = wordStart;
+  while (before > 0 && std::isspace(static_cast<unsigned char>(input[before - 1]))) {
+    --before;
+  }
+  return !(before >= 9 && before < wordStart && input.compare(before - 9, 9, "namespace") == 0);
+}
+
+// `[name]` with a single plain identifier that is not a text or semantic transform (`[operators] add(...)` is a
+// transform list on an execution): the label of an argument.
+static bool isArgumentLabelList(const std::string &input, size_t listStart, size_t listEnd) {
+  size_t pos = listStart + 1;
+  while (pos < listEnd && std::isspace(static_cast<unsigned char>(input[pos]))) {
+    ++pos;
+  }
+  if (pos >= listEnd || !isIdentifierStart(input[pos])) {
+    return false;
+  }
+  const size_t nameStart = pos;
+  while (pos < listEnd && isIdentifierBody(input[pos])) {
+    ++pos;
+  }
+  const std::string name = input.substr(nameStart, pos - nameStart);
+  while (pos < listEnd && std::isspace(static_cast<unsigned char>(input[pos]))) {
+    ++pos;
+  }
+  return pos == listEnd && !primec::isTextTransformName(name) &&
+         !primec::isSemanticTransformName(name);
+}
+
+size_t findNextTransformListStart(const std::string &input, size_t start, bool lambdasJoinCalls) {
   size_t pos = start;
+  // The `(` and `{` open since `start`. The scan starts in statement
+  // position, so an empty stack is a statement context.
+  struct Frame {
+    char open;
+    size_t index;
+  };
+  std::vector<Frame> frames;
   while (pos < input.size()) {
     char c = input[pos];
     if (c == '"' || c == '\'') {
@@ -344,12 +421,35 @@ size_t findNextTransformListStart(const std::string &input, size_t start) {
         continue;
       }
     }
+    if (c == '(' || c == '{') {
+      frames.push_back({c, pos});
+      ++pos;
+      continue;
+    }
+    if (c == ')' || c == '}') {
+      if (!frames.empty()) {
+        frames.pop_back();
+      }
+      ++pos;
+      continue;
+    }
     if (c == '[' && isTransformListBoundary(input, pos)) {
       size_t listEnd = std::string::npos;
       size_t lambdaEnd = std::string::npos;
+      const bool inCallParens =
+          !frames.empty() && frames.back().open == '(' && isCallParenAt(input, frames.back().index);
       if (scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
-        pos = listEnd + 1;
+        pos = inCallParens && lambdasJoinCalls ? lambdaEnd + 1 : listEnd + 1;
         continue;
+      }
+      if (!frames.empty() &&
+          (inCallParens ||
+           (frames.back().open == '{' && isConstructionBraceAt(input, frames.back().index)))) {
+        const size_t labelEnd = findMatchingCloseWithComments(input, pos, '[', ']');
+        if (labelEnd != std::string::npos && isArgumentLabelList(input, pos, labelEnd)) {
+          pos = labelEnd + 1;
+          continue;
+        }
       }
       return pos;
     }

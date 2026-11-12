@@ -20,7 +20,9 @@
   `ColorGrade(...)` are ordinary executions and do not construct values. Use `ColorGrade{[hue_shift] 0.1f32 [exposure]
   0.95f32}` or a context-typed binding initializer such as `[ColorGrade] grade{[hue_shift] 0.1f32 [exposure] 0.95f32}`.
   Labeled entries map to fields, and every field must have either an explicit entry or an envelope-provided default
-  before validation. A single unlabeled entry in a binding's braces is the initializer value itself, not a field entry:
+  before validation. A labeled value is any expression, a call included, with or without an operator after it:
+  `Pair{[a] five() + 1i32}`, `w = Win{[handle] h()}`. The text filter leaves an argument label in the braces of a
+  construction or the parentheses of a call to the parser, so the surrounding operators rewrite as one expression. A single unlabeled entry in a binding's braces is the initializer value itself, not a field entry:
   `[Lib] copy{other}` copies a `Lib`, and a scalar there (`[Lib] lib{5i32}`, also for a struct or `static` field) is a
   semantic error (`binding initializer type mismatch` / `struct field initializer type mismatch`); write
   `[Lib] lib{[value] 5i32}` or `[Lib] lib{Lib{5i32}}`.

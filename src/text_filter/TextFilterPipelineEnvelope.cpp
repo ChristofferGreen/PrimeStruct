@@ -88,11 +88,16 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
   size_t scanPos = 0;
   bool suppress = suppressLeadingOverride;
   const int targetBodyDepth = suppressLeadingOverride ? 1 : 0;
+  // A lambda body takes the base filters; where those are the active ones the
+  // lambda needs no chunk of its own, so a lambda in a call's arguments stays
+  // in the call's text and operators can rewrite around it.
+  const bool lambdasJoinCalls = envelope_internal::filtersEqual(activeFilters, baseFilters);
   std::vector<envelope_internal::NamespaceBlock> namespaceStack;
   std::vector<envelope_internal::DefinitionBlock> definitionStack;
   while (scanPos < input.size()) {
-    size_t listStart = findNextTransformListStart(input, scanPos);
-    size_t envelopeStart = envelope_internal::findNextEnvelopeStart(input, scanPos, targetBodyDepth);
+    size_t listStart = findNextTransformListStart(input, scanPos, lambdasJoinCalls);
+    size_t envelopeStart =
+        envelope_internal::findNextEnvelopeStart(input, scanPos, targetBodyDepth, lambdasJoinCalls);
     size_t nextStart = std::string::npos;
     bool isTransformList = false;
     if (listStart != std::string::npos &&

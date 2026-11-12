@@ -422,10 +422,14 @@ void advanceDefinitionScan(const std::string &input,
   }
 }
 
-size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetBodyDepth) {
+size_t findNextEnvelopeStart(const std::string &input,
+                             size_t start,
+                             int targetBodyDepth,
+                             bool lambdasJoinCalls) {
   size_t pos = start;
   int parenDepth = 0;
   int bodyDepth = 0;
+  std::vector<size_t> parenStack;
   std::vector<NamespaceBlock> namespaceStack;
   while (pos < input.size()) {
     char c = input[pos];
@@ -466,7 +470,10 @@ size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetB
       if (bodyDepth == targetBodyDepth) {
         size_t listEnd = std::string::npos;
         size_t lambdaEnd = std::string::npos;
-        if (scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
+        // A lambda inside call parentheses is part of the call's text.
+        const bool inCallParens =
+            lambdasJoinCalls && !parenStack.empty() && isCallParenAt(input, parenStack.back());
+        if (!inCallParens && scanLambdaEnvelope(input, pos, listEnd, lambdaEnd)) {
           return pos;
         }
       }
@@ -491,12 +498,14 @@ size_t findNextEnvelopeStart(const std::string &input, size_t start, int targetB
     }
     if (c == '(') {
       ++parenDepth;
+      parenStack.push_back(pos);
       ++pos;
       continue;
     }
     if (c == ')') {
       if (parenDepth > 0) {
         --parenDepth;
+        parenStack.pop_back();
       }
       ++pos;
       continue;
