@@ -208,7 +208,7 @@ of sync with them.
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
-| TODO-5964 | Semantics has one copy of each key-value and collection path predicate | blocked | reuse-collection-spelling-semantics |
+| TODO-5964 | Semantics has one copy of each key-value and collection path predicate | ready | reuse-collection-spelling-semantics |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | ready | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
@@ -1656,10 +1656,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: src/ir_lowerer and the classifier only; semantics copies are TODO-5964.
   - notes: Do not run alongside TODO-5961, TODO-5962 or TODO-5972 (src/ir_lowerer/IrLowererHelpers.cpp and the inline/result helpers).
 
-- [ ] TODO-5964: Semantics has one copy of each key-value and collection path predicate
+- [~] TODO-5964: Semantics has one copy of each key-value and collection path predicate
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5960
+  - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 5)
   - parallel_track: reuse-collection-spelling-semantics
