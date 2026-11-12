@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 
@@ -110,11 +111,15 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
   if (!inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText)) {
     return true;
   }
+  // The builtin `vector<T>` and a specialization of the stdlib vector struct change alike.
   std::string receiverBase;
   std::string receiverArg;
-  if (!splitTemplateTypeName(
-          normalizeBindingTypeName(receiverTypeText), receiverBase, receiverArg) ||
-      normalizeBindingTypeName(receiverBase) != "vector") {
+  const bool receiverIsStdlibVector =
+      isLegacyExperimentalVectorCompatibilityTypePath(receiverTypeText);
+  if (!receiverIsStdlibVector &&
+      (!splitTemplateTypeName(
+           normalizeBindingTypeName(receiverTypeText), receiverBase, receiverArg) ||
+       normalizeBindingTypeName(receiverBase) != "vector")) {
     return true;
   }
   // A user definition of that name (a same-path soa or rooted vector `push` helper) is an

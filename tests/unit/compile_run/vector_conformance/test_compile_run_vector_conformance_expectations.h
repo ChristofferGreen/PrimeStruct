@@ -479,22 +479,8 @@ inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emit
 }
 
 inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorDiscardOwnershipConformanceSource(),
-        "vector_discard_canonical_ownership_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
-  if (emitMode == "exe" || emitMode == "native") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorDiscardOwnershipConformanceSource(),
-        "vector_discard_canonical_ownership_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
+  // The method forms `pop` and `clear` on a local of the stdlib vector struct take the stdlib helpers, so every emit
+  // mode compiles and runs this source.
   expectVectorConformanceProgramRuns(
       makeCanonicalVectorDiscardOwnershipConformanceSource(),
       "vector_discard_canonical_ownership_" + emitMode,

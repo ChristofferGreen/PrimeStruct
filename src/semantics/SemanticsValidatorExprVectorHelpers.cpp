@@ -832,7 +832,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if ((isBarePublishedVectorMutator || isMethodPublishedVectorMutator) &&
       !expr.args.empty()) {
     const size_t receiverIndex = stdlibWrapperVectorSugarReceiverIndex();
-    if (receiverIndex < expr.args.size() &&
+    // A method on a local of the stdlib vector struct takes the stdlib helper of the same name when that helper is
+    // visible; the bare call form stays rejected.
+    const bool methodTakesVisibleStdlibHelper =
+        isMethodPublishedVectorMutator &&
+        hasVisibleDefinitionPath(canonicalVectorCompatibilityHelperPathOrFallback(vectorHelper));
+    if (receiverIndex < expr.args.size() && !methodTakesVisibleStdlibHelper &&
         classifyReceiverFamily(expr.args[receiverIndex]) ==
             legacyExperimentalVectorCompatibilityFamilyName()) {
       return failVectorHelperDiagnostic(

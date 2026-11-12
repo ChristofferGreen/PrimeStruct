@@ -232,7 +232,7 @@ addPrimeStructManagedDoctestSuite(
   # cross-test-case pollution is fixed) is the better long-term fix for
   # this blanket override applying to hundreds of otherwise-fast shards.
   TIMEOUT 300
-  TOTAL_CASES 1218
+  TOTAL_CASES 1221
   SHARD_PREFIX "calls_flow_collections"
 )
 

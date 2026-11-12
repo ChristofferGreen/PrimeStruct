@@ -338,6 +338,13 @@ bool SemanticsValidator::resolveMethodTargetGenericFallback(
     }
     return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
   }
+  // `push`, `pop`, `reserve`, `clear`, `remove_at` and `remove_swap` on a local of the stdlib vector struct take the
+  // stdlib helper of that name, which is declared on a mutable parameter of that struct.
+  if (isPublishedVectorMutatorHelperName(normalizedMethodName) &&
+      isLegacyExperimentalVectorCompatibilityTypePath(resolvedType) &&
+      hasDeclaredDefinitionPath(canonicalVectorHelperTarget(normalizedMethodName))) {
+    return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
+  }
   if (collection_helpers::isCollectionFamilyRoot(normalizedCollectionTypePath, collection_helpers::CollectionFamily::Vector) &&
       normalizedMethodName != "count" &&
       normalizedMethodName != "capacity" &&

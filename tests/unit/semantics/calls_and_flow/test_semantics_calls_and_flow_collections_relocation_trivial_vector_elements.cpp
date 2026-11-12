@@ -155,7 +155,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector pop method requires visible canonical helper") {
+TEST_CASE("pop method on a Vector local takes the visible canonical helper") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/vector/*
@@ -184,8 +184,61 @@ main() {
 }
 )";
   std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("mutating methods validate on a mutable Vector local") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values.push(4i32)
+  values.reserve(16i32)
+  values.pop()
+  values.remove_at(0i32)
+  values.remove_swap(0i32)
+  values.clear()
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("mutating methods reject a Vector local that is not mutable") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  values.push(4i32)
+  return(values.count())
+}
+)";
+  std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: pop") != std::string::npos);
+  CHECK(error.find("push changes values, which is not mutable") != std::string::npos);
+}
+
+TEST_CASE("bare push of a Vector local keeps the canonical unknown target") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vector<i32>(1i32)}
+  push(values, 4i32)
+  return(values.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("canonical vector indexed removal helpers validate") {

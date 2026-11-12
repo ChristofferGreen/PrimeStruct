@@ -482,8 +482,14 @@ PhaseStatus rewriteExprPhase4([[maybe_unused]] Expr &expr, [[maybe_unused]] cons
         semantics::isPublishedVectorMutatorHelperName(helperName);
     const bool isMethodPublishedVectorMutatorSugar =
         expr.isMethodCall && semantics::isPublishedVectorMutatorHelperName(helperName);
-    if ((isBarePublishedVectorMutatorSugar ||
-         isMethodPublishedVectorMutatorSugar) &&
+    // A method on a local of the stdlib vector struct takes the stdlib helper of the same name when it is visible; the
+    // bare call form stays rejected.
+    const std::string canonicalMutatorHelperPath =
+        semantics::canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+    const bool methodTakesVisibleStdlibMutator =
+        isMethodPublishedVectorMutatorSugar && ctx.sourceDefs.count(canonicalMutatorHelperPath) > 0;
+    if ((isBarePublishedVectorMutatorSugar || isMethodPublishedVectorMutatorSugar) &&
+        !methodTakesVisibleStdlibMutator &&
         resolvesCollectionVectorValueReceiver(
             receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
       error = "unknown call target: " +

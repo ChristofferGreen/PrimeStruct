@@ -906,4 +906,27 @@ TEST_CASE("a block expression whose value is a local of the block hands it over 
                         "52\n52\n51\n950\n49\n51\n53\n755\n");
 }
 
+TEST_CASE("the mutating methods change a local declared Vector<T>") {
+  // `push`, `reserve`, `pop`, `remove_at`, `remove_swap` and `clear` take the stdlib helper of that name, which is
+  // declared on a `Vector<T> mut`. The heap statistics end where they began.
+  runVectorOwnerProgram("vector_struct_mutating_methods",
+                        "",
+                        R"(
+    [Vector<i32> mut] grown{vector<i32>(3i32)}
+    grown.push(4i32)
+    grown.push(5i32)
+    grown.reserve(16i32)
+    print_line(grown.count())
+    grown.pop()
+    grown.remove_at(0i32)
+    print_line(grown[0i32])
+    grown.push(9i32)
+    grown.remove_swap(0i32)
+    print_line(grown[0i32])
+    grown.clear()
+    print_line(grown.count())
+)",
+                        "3\n4\n9\n0\n");
+}
+
 TEST_SUITE_END();

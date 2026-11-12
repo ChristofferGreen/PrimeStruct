@@ -93,7 +93,10 @@
     backing discard path for ownership-sensitive element types on explicit
     experimental `Vector<T>` bindings, and canonical
     `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
-    those same explicit experimental `Vector<T>` bindings. Explicit canonical read/access calls to
+    those same explicit experimental `Vector<T>` bindings. On a local declared `Vector<T>`, the method forms `push`,
+    `pop`, `reserve`, `clear`, `remove_at` and `remove_swap` resolve to those helpers, and the receiver must be
+    declared `mut` (`push changes values, which is not mutable` otherwise); the bare call form `push(values, x)`
+    stays an unknown call target. Explicit canonical read/access calls to
     `/std/collections/vector/count`, `capacity`, `at`, and `at_unsafe` now fall through to visible `.prime` helper
     definitions instead of count/access classifier raw vector emitters; rooted
     `/vector/*` helper spellings are rejected unless an explicit same-path user
