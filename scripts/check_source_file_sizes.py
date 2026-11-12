@@ -6,6 +6,14 @@ scripts/source_file_size_allowlist.txt (`<path> <max lines> <reason>` per line).
 An allowlisted file may not grow past its recorded limit, and an entry whose
 file is back under MAX_LINES (or gone) is stale and must be removed, so the
 list only shrinks.
+
+How to get a file under the cap: extract a component, never a phase. Move a coherent
+piece (a class, or free functions with explicit inputs) into its own `.h/.cpp` unit named
+for what it is. Do not cut a long function into numbered phases (`FooPhase1..N`,
+`*PhasesA/B/C.cpp`, `*Continued.h`) that share a state struct of `std::function` members:
+that makes phase N depend on what phases 1 to N-1 filled in and leaves no phase readable
+or testable alone. Express a long validator or rewriter as an ordered list of small named
+rules, each taking only the inputs it uses (TODO-5980; AGENTS.md, Code guidelines).
 """
 
 from __future__ import annotations

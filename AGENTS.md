@@ -256,6 +256,16 @@ build and layout solidify.
   every unit that includes it (~125); `PRIMESTRUCT_SEMANTICS_PCH` (default ON) precompiles it
   for those units. Prefer adding new reusable logic as explicit `.h/.cpp` units with clear
   interfaces instead of adding new member-declaration or include-only fragments.
+- **File-size cap and how to meet it:** `scripts/check_source_file_sizes.py` caps `.cpp`/`.h`
+  files under `src/` and `include/` at 1,200 lines. A file over the cap gets a *component* extracted:
+  a named class, or a set of free functions with explicit inputs, in its own `.h/.cpp` unit that can be
+  read and tested alone. Never split a long function into numbered phases (`FooPhase1..N`,
+  `*PhasesA/B/C.cpp`, `*Continued.h`): phases pass a shared state struct of `std::function` members
+  (former lambdas) and re-bind it line by line, so phase N depends on what phases 1 to N-1 filled in and
+  none can be read or tested alone. Express a long validator or rewriter as an ordered list of small
+  named rules (one function per rule, named for what it checks or rewrites, each taking only the inputs
+  it uses) run by one short function, and put rules that belong together in one file named for the
+  component. TODO-5966/5981/5982 apply this to binding validation; TODO-5967 and TODO-5968 reuse it.
 - **CMake subsystem layout:** place new build sources in the narrowest library that fits:
   `primec_support_lib` (shared utilities), `primec_frontend_lib` (import/parser/semantics/text
   filtering), `primec_ir_lib` (IR preparation/lowering/validation tooling),
