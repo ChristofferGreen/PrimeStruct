@@ -348,6 +348,18 @@
               candidate.args.front().kind != Expr::Kind::Call) {
             return false;
           }
+          // `holder.items[i]`: a field of a builtin vector is a place, not a wrapper call that returns one.
+          if (candidate.args.front().isFieldAccess) {
+            const auto fieldInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                candidate.args.front(),
+                localsIn,
+                {},
+                semanticProgram,
+                &callResolutionAdapters.semanticProductTargets.semanticIndex);
+            if (fieldInfo.isVectorTarget && !fieldInfo.isSoaVector && !fieldInfo.isArgsPackTarget) {
+              return false;
+            }
+          }
           std::string helperName;
           if (resolveKeyValueHelperAliasName(candidate, helperName)) {
             return helperName == "at" || helperName == "at_unsafe" ||

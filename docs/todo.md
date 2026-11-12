@@ -105,6 +105,7 @@ of sync with them.
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5954 | The handler `Function` type is spelled with an alias in /std/http and /std/web | deferred | type-aliases |
+| TODO-5957 | A `.view()` call on a vector element is accepted as a `StringView` argument | ready | collections-access |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5837 | VM debug sessions step programs that spawn tasks | deferred | vm-debugger |
@@ -134,10 +135,7 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | ready | collections-access |
-| TODO-5730 | Elements of a `vector<String>` struct field read without a fault | ready | collections-access |
-| TODO-5731 | A `string` field of an element whose closure captures reads without a fault | ready | closures |
 | TODO-5732 | A method call on a reference parameter resolves in a generic struct's method | ready | generic-methods |
-| TODO-5733 | An `i32` field of a later element of a vector of handler structs reads without a fault | ready | closures |
 | TODO-5735 | Same-arity overloads of struct methods resolve by argument type | ready | method-overloads |
 | TODO-5736 | `pick` and sum parameters in a generic struct's method lower | ready | generic-methods |
 | TODO-5737 | Implicit template arguments infer through a generic struct parameter | ready | template-inference |
@@ -244,7 +242,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5730, TODO-5731, TODO-5733
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5732, TODO-5735, TODO-5736, TODO-5737
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -385,30 +383,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - full release gate green
   - stop_rule: method resolution of the slice calls on struct fields only.
 
-- [ ] TODO-5730: Elements of a `vector<String>` struct field read without a fault
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Collections (docs/spec/value-lifecycle.md; found by TODO-5723)
-  - parallel_track: collections-access
-  - scope: A struct with a builtin `[vector<String> mut] lines` field can `push` and `count`, but binding an element (`[String] line{greeter.lines[0i32]}`) stops with `VM error: unaligned indirect address in IR: 4` on the VM and in optexe's build, and `greeter.lines[0i32].view()` fails to lower (`struct parameter type mismatch`); passing the element to a `[String]` parameter faults the same way, through a `Reference<Greeter>` too, and `page.element("p", greeter.lines[i].view())` is rejected (`expected StringView got array`). A local `vector<String>` works, as does a `vector<Todo>` field whose struct holds a String. The hello_button example of TODO-5722 keeps its lines in one `String` instead. Repro: `[Greeter mut] g{Greeter{}}`, `g.lines.push(stringFrom("x"))`, `[String] back{g.lines[0i32]}`.
-  - acceptance:
-    - a program pushes Strings to a `vector<String>` field, binds, views and passes each element, directly and through a Reference, on the VM and optexe, each String freed once
-    - full release gate green
-  - stop_rule: element access of `vector<String>` fields; other element types are not part of it.
-
-- [ ] TODO-5731: A `string` field of an element whose closure captures reads without a fault
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found by TODO-5722)
-  - parallel_track: closures
-  - scope: In `/std/web` `WebApp<State>.callControl`, a `[string] id{this.clicks[index].id}` read of a `string` field of an element of `vector<ClickHandler<State>>`, whose `Function<void, Reference<State>, PointerEvent>` field holds a closure with a capture (`[mut calls{0i32}]` or `[calls{0i32}]`), stops the VM with `invalid indirect address in IR: 9223372036854775856` before the handler runs; with a non-capturing lambda or a named handler it works, and with a `StringView` id field it works. A smaller non-namespaced repro (a generic Holder with a `string` id and the same Function) did not fault, so the trigger also needs something of the web layer: the element struct in another namespace, the second vector field of `AppRoute<State>`s, or the `Request` path through `call`. Repro: make `ClickHandler.id` a `string` again in stdlib/std/web/web.prime and run tests/fixtures/http/web_controls.prime on the VM.
-  - acceptance:
-    - `ClickHandler.id` is a `string` and web_controls passes on the VM and optexe; a reduced program reading a `string` field beside a capturing `Function` field runs on the VM and optexe
-    - full release gate green
-  - stop_rule: the faulting field read; no `/std/web` API change.
-
 - [ ] TODO-5732: A method call on a reference parameter resolves in a generic struct's method
   - owner: ai
   - status: ready
@@ -421,18 +395,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - full release gate green
   - stop_rule: method resolution on reference parameters in generic struct methods; no new methods.
   - notes: TODO-5709 hit the same name on a field: `this.closes.clear()` on a `vector<NativeWindowHandler<State>>` field in a method of `AppHandlers<State>` is `unknown call target: clear`, so the single-handler fields keep every registration and use the last.
-
-- [ ] TODO-5733: An `i32` field of a later element of a vector of handler structs reads without a fault
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-07
-  - phase: Closures (docs/spec/value-lifecycle.md, Lambdas; found by TODO-5724)
-  - parallel_track: closures
-  - scope: In `/std/web`, with `PointerHandler<State>` holding `[StringView] id`, `[i32] kind` and a `Function<void, Reference<State>, PointerEvent>` (in either field order), `[i32] kind{this.pointers[index].kind}` in a `WebApp<State>` method stops the VM with `invalid heap free address in IR` once `index` is 1 (the third `onMouseUp` after `onMouseOver` and `onMouseDown`), with named handlers as with closures; `this.pointers[index].id` reads fine at every index. A non-namespaced generic `App<State>` with the same element struct (id, kind, Function) did not fault, so the trigger also needs something of the web layer, as for TODO-5731. `WebApp` keeps the kinds in parallel `vector<i32>` fields (`pointerKinds`, `keyKinds`) instead. Repro: put `kind` back into `PointerHandler` in stdlib/std/web/web.prime, read it in `pointerIndex`, and run tests/fixtures/http/web_events.prime on the VM.
-  - acceptance:
-    - `PointerHandler` and `KeyHandler` carry their kind and web_events passes on the VM and optexe; a reduced program reading an `i32` field beside a `Function` field of the second element runs on the VM and optexe
-    - full release gate green
-  - stop_rule: the faulting element field read; no `/std/web` API change.
 
 - [ ] TODO-5735: Same-arity overloads of struct methods resolve by argument type
   - owner: ai
@@ -726,6 +688,18 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - negative: a block expression whose value is a local of an outer scope leaves that local usable
     - full release gate green
   - stop_rule: the value of a `block() { ... }` expression that is a `String`, struct or vector local of the block.
+
+- [ ] TODO-5957: A `.view()` call on a vector element is accepted as a `StringView` argument
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Collections (docs/spec/value-lifecycle.md; found by TODO-5730)
+  - parallel_track: collections-access
+  - scope: `view_first(lines[1i32].view())` with `[vector<String> mut] lines` (a local, and a `vector<String>` field alike) and `[StringView] text` as the parameter is rejected by semantics with `argument type mismatch for /view_first parameter text: expected /std/text/view/StringView got array`, while `[StringView] v{lines[1i32].view()}` and `lines[1i32].view().count()` work: the argument check infers the struct path of a method call on an indexed element as empty and falls back to its return kind. `page.element("p", greeter.lines[i].view())` in /std/web hits it. Repro: the program of TODO-5730 with `print_line(view_first(greeter.lines[1i32].view()))`.
+  - acceptance:
+    - the call compiles and runs on the VM and optexe for a local `vector<String>` and for a field, and a wrong argument type still names both types
+    - full release gate green
+  - stop_rule: struct-path inference of a method call whose receiver is an element access, in argument validation.
 
 - [ ] TODO-5893: An unused `import /std/tuple/*` is not an unknown import path
   - owner: ai

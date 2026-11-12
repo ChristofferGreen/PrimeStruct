@@ -1,6 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
 
 #include "primec/ir/SoaPathHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
@@ -239,6 +240,33 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
 #include "IrLowererLowerReturnInfo.h"
 
+  // `items[i]` of a builtin vector written inside a `/std/` namespace resolves to the stdlib vector `at` helper
+  // (or `at_unsafe`, with a generated suffix); the lowerer emits it as the element's own address, so it is a place
+  // that the vector keeps owning, not a temporary a read destroys.
+  auto isBuiltinVectorElementHelperCall =
+      [&](const Expr &callExpr, const Definition &callee, const LocalMap &locals) {
+        if (callExpr.args.size() != 2) {
+          return false;
+        }
+        std::string path = callee.fullPath;
+        const size_t generated = path.find("__t");
+        if (generated != std::string::npos) {
+          path.resize(generated);
+        }
+        if (path != primec::collection_helpers::kCanonicalVectorAt &&
+            path != primec::collection_helpers::kCanonicalVectorAtUnsafe) {
+          return false;
+        }
+        const auto receiverInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
+            callExpr.args.front(),
+            locals,
+            {},
+            semanticProgram,
+            &callResolutionAdapters.semanticProductTargets.semanticIndex);
+        return receiverInfo.isVectorTarget && !receiverInfo.isSoaVector &&
+               !receiverInfo.isArgsPackTarget;
+      };
+
   // The struct path of the owning value a call produces when nobody binds it (a discarded
   // statement result, a field-access receiver): a definition returning a struct by value (not a
   // reference, pointer or constructor) that needs destroying.
@@ -249,7 +277,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     }
     const Definition *callee = callExpr.isMethodCall ? resolveMethodCallDefinition(callExpr, locals)
                                                      : resolveDefinitionCall(callExpr);
-    if (callee == nullptr || ir_lowerer::isStructDefinition(*callee)) {
+    if (callee == nullptr || ir_lowerer::isStructDefinition(*callee) ||
+        isBuiltinVectorElementHelperCall(callExpr, *callee, locals)) {
       return std::string{};
     }
     ReturnInfo info;

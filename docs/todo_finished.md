@@ -2186,6 +2186,9 @@ are left unarchived.
 | TODO-5725 | Native pointer and key events for control handlers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5729 | The web example loopback tests run in their own CTest entries | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
+| TODO-5730 | Elements of a `vector<String>` struct field read without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5731 | A `string` field of an element whose closure captures reads without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5733 | An `i32` field of a later element of a vector of handler structs reads without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5734 | Web apps build in seconds, not minutes, on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5739 | Large struct copies lower to a slot loop | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5740 | Native and the Linux JIT number local addresses across frames | [2026-11.md](todo_archive/2026-11.md) | - |

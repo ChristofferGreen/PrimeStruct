@@ -87,27 +87,27 @@ namespace web {
     return(route)
   }
 
-  // The click handler of the control `id`. The id is a view here, not a `string` as in `Control`: reading a `string`
-  // field of an element whose `Function` holds a capturing closure faults on the VM (TODO-5731).
+  // The click handler of the control `id`.
   [public struct]
   ClickHandler<State>() {
-    [public LiteralText] id{LiteralText{}}
+    [public string] id{""}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
   }
 
-  // The handler of a hover, press or release of the control `id`; which event it is lies in `WebApp.pointerKinds`
-  // at the same index. Ids are views for the reason given at `ClickHandler`. The kind is not a field here: reading an
-  // `i32` field of an element after the first faults on the VM (TODO-5733).
+  // The handler of a hover, press or release of the control `id`; `kind` is the event bit (`Control.mouseOverEvent`
+  // and the others).
   [public struct]
   PointerHandler<State>() {
     [public LiteralText] id{LiteralText{}}
+    [public i32] kind{0i32}
     [public Function<void, Reference<State>, PointerEvent> mut] handler
   }
 
-  // The handler of a key down or up of the control `id`; its event lies in `WebApp.keyKinds` at the same index.
+  // The handler of a key down or up of the control `id`; `kind` is the event bit (`Control.keyDownEvent` or `keyUpEvent`).
   [public struct]
   KeyHandler<State>() {
     [public LiteralText] id{LiteralText{}}
+    [public i32] kind{0i32}
     [public Function<void, Reference<State>, KeyEvent> mut] handler
   }
 
@@ -265,10 +265,7 @@ namespace web {
     [public vector<ClickHandler<State>> mut] clicks{vector<ClickHandler<State>>()}
     [public vector<RegionRenderer<State>> mut] regions{vector<RegionRenderer<State>>()}
     [public vector<PointerHandler<State>> mut] pointers{vector<PointerHandler<State>>()}
-    // The event bit (`Control.mouseOverEvent` and the others) of each of `pointers`.
-    [public vector<i32> mut] pointerKinds{vector<i32>()}
     [public vector<KeyHandler<State>> mut] keys{vector<KeyHandler<State>>()}
-    [public vector<i32> mut] keyKinds{vector<i32>()}
 
     // Registers a button: its id, its label and the handler a click on it calls. Returns the control, which a page
     // writes. Each id is registered once: a second `button` with the same id prints "duplicate control id: <id>" and
@@ -277,14 +274,14 @@ namespace web {
     button([string] id, [string] title, [Function<void, Reference<State>, PointerEvent> move] handler) {
       [StringView] idView{textOf(id)}
       for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
-        [StringView] existing{this.clicks[index].id.view()}
+        [StringView] existing{textOf(this.clicks[index].id)}
         if(existing.equals(idView)) {
           print_error("duplicate control id: ")
           print_line_error(id)
           panic(1i32)
         }
       }
-      this.clicks.push(ClickHandler<State>{[id] literalTextOf(id), [handler] handler})
+      this.clicks.push(ClickHandler<State>{[id] id, [handler] handler})
       return(Control{[id] id, [title] title})
     }
 
@@ -349,16 +346,14 @@ namespace web {
                       [Function<void, Reference<State>, PointerEvent> move] handler) {
       this.checkNewHandler(control.id, bit)
       control.events = control.events + bit
-      this.pointers.push(PointerHandler<State>{[id] literalTextOf(control.id), [handler] handler})
-      this.pointerKinds.push(bit)
+      this.pointers.push(PointerHandler<State>{[id] literalTextOf(control.id), [kind] bit, [handler] handler})
     }
 
     [mut effects(heap_alloc, io_err)]
     addKeyHandler([Control mut] control, [i32] bit, [Function<void, Reference<State>, KeyEvent> move] handler) {
       this.checkNewHandler(control.id, bit)
       control.events = control.events + bit
-      this.keys.push(KeyHandler<State>{[id] literalTextOf(control.id), [handler] handler})
-      this.keyKinds.push(bit)
+      this.keys.push(KeyHandler<State>{[id] literalTextOf(control.id), [kind] bit, [handler] handler})
     }
 
     // Stops the program when `control` is not one of this app's or already has a handler for event `bit`.
@@ -498,7 +493,7 @@ namespace web {
     [return<i32>]
     clickIndex([StringView] id) {
       for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
-        [StringView] existing{this.clicks[index].id.view()}
+        [StringView] existing{textOf(this.clicks[index].id)}
         if(existing.equals(id)) {
           return(index)
         }
@@ -510,7 +505,7 @@ namespace web {
     pointerIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.pointers.count(); ++index) {
         [StringView] existing{this.pointers[index].id.view()}
-        [i32] kind{this.pointerKinds[index]}
+        [i32] kind{this.pointers[index].kind}
         if(existing.equals(id) && kind == bit) {
           return(index)
         }
@@ -522,7 +517,7 @@ namespace web {
     keyIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.keys.count(); ++index) {
         [StringView] existing{this.keys[index].id.view()}
-        [i32] kind{this.keyKinds[index]}
+        [i32] kind{this.keys[index].kind}
         if(existing.equals(id) && kind == bit) {
           return(index)
         }

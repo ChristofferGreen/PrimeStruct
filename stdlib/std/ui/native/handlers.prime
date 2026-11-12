@@ -96,7 +96,7 @@ namespace native {
   // The handlers of one type sit in one vector and `run` calls each vector from one place: a target without real calls
   // for struct methods (x86_64 native, TODO-5752) inlines a `Function` call with every closure of its type at each call
   // site, so an app's handlers are compiled once there. The keys (widgets, kinds, command ids) are vectors of their
-  // own: reading a `u64` or `i32` field of an element after the first faults on the VM (TODO-5733).
+  // own, parallel to the handlers.
   [public struct]
   AppHandlers<State>() {
     // The state that every handler reads and changes; it comes to each handler as its first argument.

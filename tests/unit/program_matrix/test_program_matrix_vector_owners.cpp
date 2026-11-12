@@ -780,4 +780,40 @@ TEST_CASE("assigning move(other) to a vector local takes the other vector over")
                         "5\n2\n54\n108\n54\n50\n");
 }
 
+TEST_CASE("the elements of a vector<String> field are bound, viewed and passed") {
+  runVectorOwnerProgram("vector_string_field",
+                        R"(
+import /std/text/view/*
+
+[struct]
+Greeter() {
+  [vector<String> mut] lines{vector<String>{}}
+}
+
+[return<i32>]
+first_of([Reference<Greeter>] greeter, [i32] index) {
+  return(first_byte(greeter.lines[index]))
+}
+
+[effects(heap_alloc), return<i32>]
+view_length([Greeter] greeter, [i32] index) {
+  return(greeter.lines[index].view().count())
+}
+)",
+                        R"(
+    [Greeter mut] greeter{Greeter{}}
+    greeter.lines.push(label(1i32))
+    greeter.lines.push(label(2i32))
+    greeter.lines.push(label(3i32))
+    [String] second{greeter.lines[1i32]}
+    print_line(first_byte(second))
+    print_line(first_byte(greeter.lines[2i32]))
+    print_line(greeter.lines[0i32].view().count())
+    print_line(first_of(location(greeter), 1i32))
+    print_line(view_length(greeter, 2i32))
+    print_line(greeter.lines.count())
+)",
+                        "50\n51\n1\n50\n1\n3\n");
+}
+
 TEST_SUITE_END();

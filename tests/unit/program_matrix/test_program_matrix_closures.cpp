@@ -1091,6 +1091,82 @@ main() {
                     12);
 }
 
+TEST_CASE("handler structs in a stdlib namespace keep their elements") {
+  // The reads of `this.items[index]` in a `/std/` namespace resolve to the stdlib vector helper; the element stays
+  // owned by the vector, so its capturing closures survive the reads.
+  runClosureProgram("namespaced_handler_fields",
+                    R"(
+import /std/collections/*
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace probe {
+  [public struct]
+  Handler<State>() {
+    [public string] id{""}
+    [public i32] kind{0i32}
+    [public Function<void, Reference<State>, i32> mut] handler
+  }
+
+  [public struct]
+  App<State>() {
+    [public vector<Handler<State>> mut] items{vector<Handler<State>>()}
+    [public State mut] state
+
+    [mut effects(heap_alloc)]
+    add([string] id, [i32] kind, [Function<void, Reference<State>, i32> move] handler) {
+      this.items.push(Handler<State>{[id] id, [kind] kind, [handler] handler})
+    }
+
+    [return<i32>]
+    kindOf([StringView] id) {
+      for([i32 mut] index{0i32}; index < this.items.count(); ++index) {
+        [StringView] existing{textOf(this.items[index].id)}
+        [i32] kind{this.items[index].kind}
+        if(existing.equals(id)) {
+          return(kind)
+        }
+      }
+      return(-1i32)
+    }
+
+    [mut effects(heap_alloc)]
+    call([i32] index, [i32] value) {
+      [Reference<State>] current{location(this.state)}
+      this.items[index].handler(current, value)
+    }
+  }
+}
+}
+
+[struct]
+Pad() {
+  [i32 mut] total{0i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [/std/probe/App<Pad> mut] app{/std/probe/App<Pad>{[state] Pad{}}}
+  [i32] bonus{100i32}
+  app.add("a", 1i32, [mut calls{0i32}]([Reference<Pad>] pad, [i32] value) {
+    calls = calls + 1i32
+    pad.total = pad.total + value + calls
+  })
+  app.add("b", 20i32, [bonus]([Reference<Pad>] pad, [i32] value) { pad.total = pad.total + value + bonus })
+  app.add("c", 30i32, [mut calls{0i32}]([Reference<Pad>] pad, [i32] value) {
+    calls = calls + 1i32
+    pad.total = pad.total + calls
+  })
+  app.call(1i32, 5i32)
+  app.call(0i32, 7i32)
+  app.call(2i32, 0i32)
+  return(app.kindOf(textOf("b")) + app.kindOf(textOf("c")) + app.state.total)
+}
+)",
+                    164);
+}
+
 TEST_CASE("view equality inside a function with a String parameter") {
   runClosureProgram("string_parameter_view_equality", R"(
 import /std/text/*

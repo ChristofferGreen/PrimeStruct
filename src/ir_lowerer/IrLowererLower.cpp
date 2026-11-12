@@ -234,6 +234,16 @@ bool IrLowerer::lower(const Program &program,
         if (text.empty()) {
           return int32_t{0};
         }
+        // A name or generic instance the way a binding resolves it (imports, namespaces, `Holder<T>`).
+        {
+          std::string resolvedPath;
+          ir_lowerer::StructSlotLayoutInfo layout;
+          if (setupTypeAndStructTypeAdapters.structTypeResolutionAdapters.resolveStructTypeName(
+                  text, scope, resolvedPath) &&
+              resolveStructSlotLayout(resolvedPath, layout) && layout.totalSlots > 0) {
+            return layout.totalSlots;
+          }
+        }
         // A full path as written; else the bare name in the innermost enclosing namespace that defines it.
         std::vector<std::string> candidates;
         if (text.front() == '/') {
