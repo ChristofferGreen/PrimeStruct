@@ -66,6 +66,16 @@ This file is the live open-work queue for PrimeStruct.
     not blocked - fix the status instead of leaving it stale), or `deferred`
     (deprioritized, needs further scoping, or of confirmed-low value, with
     no single external blocker). Only `ready` leaves belong in `Ready Now`.
+18. Claim a leaf before working on it, because several workers share this
+    queue. Fetch origin/master, pick a `ready` leaf with no `claimed_by`
+    line, change its `- [ ]` to `- [~]`, add
+    `claimed_by: <worker-name> (<branch or worktree>), <YYYY-MM-DD>` under
+    `status`, and commit and push that change alone ("Claim TODO-NNNN")
+    before writing code. If the push is rejected, fetch and rebase; if the
+    leaf now names another worker, drop your claim and pick another leaf.
+    Never start a leaf claimed by another worker. To abandon a leaf, remove
+    the line, set `- [ ]` again and push. Finishing moves the block out as
+    in rule 15.
 
 ## Task Template
 
@@ -74,6 +84,7 @@ This file is the live open-work queue for PrimeStruct.
   - owner: ai|human
   - status: ready|blocked|deferred
   - blocked_on: TODO-XXXX (required when status: blocked; omit otherwise)
+  - claimed_by: worker-name (branch or worktree), YYYY-MM-DD (only while `[~]`; see rule 18)
   - created_at: YYYY-MM-DD
   - phase: Group/Phase name (optional)
   - parallel_track: short-track-name (required when listed in Ready Now)
@@ -196,6 +207,25 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
+| TODO-5959 | The AST C++ and GLSL emitters are deleted | ready | reuse-dead-emitters |
+| TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | ready | reuse-semantics-diagnostics |
+| TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
+| TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
+| TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
+| TODO-5964 | Semantics has one copy of each key-value and collection path predicate | blocked | reuse-collection-spelling-semantics |
+| TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
+| TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | ready | reuse-phase-splits |
+| TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
+| TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
+| TODO-5969 | Float math builtins lower through one table-driven emitter | ready | reuse-math-lowering |
+| TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
+| TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
+| TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
+| TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
+| TODO-5974 | Shared string, hash, JSON and C-literal helpers replace their copies | ready | reuse-support-utils |
+| TODO-5975 | IR opcode categories come from the opcode table | ready | reuse-opcode-table |
+| TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
+| TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 
 ### Ready Now
 
@@ -241,6 +271,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716, TODO-5958
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5959, TODO-5960, TODO-5961, TODO-5962, TODO-5963, TODO-5964, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5969, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -251,6 +282,8 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5905 (`/std/path`), TODO-5906 (directory listing and file metadata), TODO-5908 (`--allow-effects`), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+
+Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
 
@@ -1595,3 +1628,291 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
+
+- [ ] TODO-5959: The AST C++ and GLSL emitters are deleted
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 2)
+  - parallel_track: reuse-dead-emitters
+  - scope: `src/emitter` (AST to C++, 116 files, about 14,200 lines) and `src/glsl_emitter` (AST to GLSL, 8 files, about 2,900 lines) are compiled into `PRIMESTRUCT_CODEGEN_SOURCES` (CMakeLists.txt, about lines 607-664) but unreachable: `resolveIrBackendEmitKind` (src/support/EmitKind.cpp:45) maps `cpp`, `exe`, `optcpp`, `optexe`, `glsl`, `spirv` to their `-ir` forms, `src/ir/IrBackends.cpp` instantiates only the IR emitters, and nothing outside the two directories includes `include/primec/backend/Emitter.h` or `include/primec/backend/GlslEmitter.h`. Each carries its own copy of the builtin-name classifiers, type-text parsers and collection spelling predicates (docs/CodeReusePlan.md sections 3-5), and `src/emitter` has 41 `*Step.cpp` files whose IfBlock and BuiltinBlock families are identical after renaming. Delete both directories, their two public headers, `include/primec/testing/EmitterHelpers.h`, and the tests that call emitter internals: the `primec::emitter::` cases in `tests/unit/compile_run/emitters/` (27 files mix them with `primec`-driven cases, which stay), the `tests/unit/ir_pipeline/validation/test_ir_pipeline_validation_emitter_*` files, and the emitter checks in `tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_architecture.h`. Update the CMake shard ranges, `tests/TEST_INVENTORY.md` (`scripts/generate_test_inventory.py`), the `docs/source_lock_inventory.md` entry for `test_ir_pipeline_validation_emitter_expr_source_delegation_stays_stable.cpp`, `scripts/include_layer_allowlist.txt` and `scripts/source_file_size_allowlist.txt` if they name these files, and any doc (AGENTS.md, docs/spec) that calls `src/emitter` live.
+  - implementation_notes: Grep for `primec/testing/EmitterHelpers.h`, `primec::emitter::`, `GlslEmitter`, `src/emitter/`, `src/glsl_emitter/` across tests, cmake, scripts and docs. Before deleting, record `--emit=cpp`, `--emit=glsl` and `--emit=optcpp` output for the files in examples/0.Concrete to prove production output does not change. Do not move or refactor any emitter code; it is deleted, not migrated. The archived note in docs/todo_archive/2026-09.md (around line 14209) lists the pinned emitter tests that go with it.
+  - acceptance:
+    - `src/emitter`, `src/glsl_emitter`, `include/primec/backend/Emitter.h`, `include/primec/backend/GlslEmitter.h` and `include/primec/testing/EmitterHelpers.h` are gone, and no file under src, include, tests, cmake or scripts refers to them
+    - `--emit=cpp`, `--emit=glsl` and `--emit=optcpp` output for examples/0.Concrete is byte-identical before and after
+    - the removed source and test line counts and the release build time before and after are recorded in the commit message
+    - full release gate green, including the test registration and inventory checks
+  - stop_rule: deletion only; no refactoring of the IR emitters or of the classifier copies in other layers (TODO-5961, TODO-5962).
+  - notes: Runs alone among code-reuse leaves that touch `src/emitter`, `src/glsl_emitter`, `src/ir/IrPrinterHelpers.cpp` or the CMake source lists. Safe alongside TODO-5960, TODO-5969, TODO-5970.
+
+- [ ] TODO-5960: Executions and definitions get the same intra-body call diagnostics from one implementation
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 7)
+  - parallel_track: reuse-semantics-diagnostics
+  - scope: `SemanticsValidator::collectExecutionIntraBodyCallDiagnostics` (src/semantics/SemanticsValidatorExecutionDiagnostics.cpp, 490 lines, called from SemanticsValidatorPassesExecutions.cpp:151) and `collectDefinitionIntraBodyCallDiagnostics` (src/semantics/SemanticsValidatorPassesDiagnostics.cpp:77, 528 lines, called from SemanticsValidatorPassesDefinitions.cpp:514) are 75-90% the same code, with file-local copies of `isBuiltinCollectionHelperName`, `isRootedKeyValueCountShadowPath`, `isFlowEffectDiagnosticMessage` and `isLoopBlockEnvelope`. The intended differences are the parameter setup (`executionParams`), the related-span label (`"execution: "` vs `"definition: "`) and the source position (`exec` vs `def`). They have drifted: the Definition copy's `isBuiltinCollectionHelperName` (line 14) accepts `insert` by string compare plus `isGetHelperName` and `isRefHelperName`, while the Execution copy (line 13) uses `isInsertHelperName` and has neither; the Definition control-flow check (line 116) includes `isPickCall` and the Execution one does not; only the Definition file has `isCanonicalKeyValueAccessHelperPath` (line 54). First write a repro per difference (an execution body that uses `pick`, a `get` helper, a `ref` helper, a canonical key-value access path) and record what each produces today, then decide whether each difference is a bug, and merge the two into one body parameterized by the owner kind (params, locals, related-span label, position).
+  - acceptance:
+    - one implementation serves both callers; the two files' duplicated helpers exist once
+    - a semantics test per difference pins the decided behavior for executions and for definitions, and the decision is noted in docs/todo_log.md under this id
+    - every existing semantics diagnostic test keeps its output except the ones the decision intentionally changes, each named in the commit message
+    - full release gate green
+  - stop_rule: these two collectors only; no other diagnostics refactor (that is TODO-5977).
+  - notes: Touches src/semantics/SemanticsValidatorPrivateCore.h (rebuilds about 125 units). Do not run alongside TODO-5964 (shares `isCanonicalKeyValueAccessHelperPath`) or TODO-5977.
+
+- [ ] TODO-5961: One template-type-text parser serves every compiler layer
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5959
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 3)
+  - parallel_track: reuse-type-text
+  - depends_on: TODO-5959
+  - scope: Types travel as strings and every layer has its own parser. `splitTemplateTypeName` is defined in src/semantics/SemanticsBindingTypeHelpers.cpp:605 (over `splitTemplateTypeNameUncached` at :567, cached in `typeNameCaches()`), src/ir_lowerer/IrLowererHelpers.cpp:550 and src/ir/IrPrinterHelpers.cpp:21 (plus the emitter copy deleted by TODO-5959); `splitTopLevelTemplateArgs` in SemanticsBindingTypeHelpers.cpp:587, src/semantics/SemanticPublicationBuildersSupport.cpp:249 and IrPrinterHelpers.cpp:51; `trimTemplateTypeText` in src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp:13; `returnKindForTypeName` in SemanticsBindingTypeHelpers.cpp:673 and IrPrinterHelpers.cpp:413, with the lowerer variant `valueKindFromTypeName` (src/ir_lowerer/IrLowererSetupTypeHelpers.cpp:28). Call sites: `splitTemplateTypeName` 341 in semantics, 163 in the lowerer, 4 in the IR printer; `splitTopLevelTemplateArgs` 220 in semantics. The copies diverge: the semantics `splitTemplateTypeName` takes the first `<` and a final `>` with no depth matching and sets `base = text` on failure, so `A<B>C<D>` splits as base `A`, argument `B>C<D`; the lowerer and IR printer copies match by depth and reject it; the lowerer copy writes `base` only on success. Create one `TypeText` unit (include/primec/support/TypeText.h, src/support/TypeText.cpp in primec_support_lib) with the depth-matching algorithm, one failure convention and the semantics cache, and route all layers to it. Keep the existing function names as thin forwarding declarations only where removing them would touch hundreds of call sites in one commit; say which in the commit.
+  - implementation_notes: The cache in SemanticsBindingTypeHelpers.cpp allocates under `primec::SystemHeapScope` (TODO-5235 comment); keep that. Check with `--dump-stage` on examples/ that semantic product and IR dumps do not change (wrap both sides in `stripDumpTimings`).
+  - acceptance:
+    - one definition each of `splitTemplateTypeName`, `splitTopLevelTemplateArgs` and `trimTemplateTypeText` in src/support; the per-layer copies are deleted
+    - a support unit test covers nesting, `A<B>C<D>`, empty text, whitespace and trailing text, and a semantics diagnostic test shows a type spelled `A<B>C<D>` is rejected with a readable message
+    - IR and semantic-product dumps of examples/ are unchanged
+    - full release gate green
+  - stop_rule: the text parsers only; no structured type object (TODO-5976) and no builtin-name work (TODO-5962).
+  - notes: Do not run alongside TODO-5962 or TODO-5963 (all three touch src/ir_lowerer/IrLowererHelpers.cpp).
+
+- [ ] TODO-5962: Builtin math and control-flow call names are classified once, with one rule
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5961
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 4)
+  - parallel_track: reuse-builtin-names
+  - depends_on: TODO-5959, TODO-5961
+  - scope: `parseMathName` exists in src/semantics/SemanticsBuiltinPathHelpersShared.h:44, src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp:206 and src/ir_lowerer/IrLowererSetupMathHelpers.cpp:16 (different signature, `hasMathImport` flag); `getBuiltinMinMaxName`, `getBuiltinAbsSignName`, `getBuiltinSaturateName`, `getBuiltinConvertName`, `getBuiltinClampName` exist in semantics (SemanticsBuiltinPathHelpers.cpp:329-350, SemanticsBuiltinPathHelpersRewrites.cpp:176), the lowerer (IrLowererBuiltinNameHelpers.cpp:261-342, table-driven via `classifyMathName`) and the IR printer (src/ir/IrPrinterHelpers.cpp:220-292); `isSimpleCallName` in src/semantics/SemanticsCallPathHelpers.cpp:123, src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesA.cpp:459, src/ir_lowerer/IrLowererHelpers.cpp:296 and :589, IrPrinterHelpers.cpp:165; `isReturnCall` in SemanticsCallPathHelpers.cpp:160, IrLowererHelpers.cpp:413, IrPrinterHelpers.cpp:151 and src/ast/AstPrinter.cpp:17; `isIfCall`, `isLoopCall`, `isWhileCall`, `isForCall`, `isRepeatCall` three times each; `trimLeadingSlash` in SemanticsCallPathHelpers.cpp:15, three times in src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h (:366, :422, :435) and src/ir_lowerer/IrLowererCallHelpers.cpp:46. The rules differ: semantics reads `expr.name`, skips SoA-alias normalization and rejects any `/` path other than `std/math/...`; the lowerer normalizes the SoA alias and turns `/foo/bar/min` into `min`; the IR printer rejects any name containing `/`, so `/std/math/min` is not recognized there. Put one classifier in primec_support_lib (or extend include/primec/ast/AstCallPathHelpers.h, which already has `normalizedCallName`) with one normalizer and a small policy parameter (bare names allowed or not, import-gated or not); only "which name string to read from the Expr" stays per layer.
+  - implementation_notes: The lowerer's last-segment rule is the outlier; check what depends on it before dropping it. A probe on 2026-11-12 (`/mylib/min` returning `a + b`, `/mylib/abs` returning `a + 100`, `main` returning `/mylib/min(3, 4) + /mylib/abs(1)`) exits 108 on vm and native today; keep it as a program-matrix or compile-run case.
+  - acceptance:
+    - one definition of each listed classifier; the lowerer, semantics, IR printer and AST printer copies are deleted
+    - a table test runs the same spellings (bare, `/min`, `/std/math/min`, `/foo/bar/min`, SoA aliases) through the classifier with each policy and pins the results
+    - the `/mylib/min` probe returns 108 on vm, native and optexe
+    - full release gate green
+  - stop_rule: name classification only; collection spelling predicates are TODO-5963 and TODO-5964.
+  - notes: Do not run alongside TODO-5961, TODO-5963 or TODO-5966 (shared files).
+
+- [ ] TODO-5963: The lowerer reads collection spellings only through CollectionSpellingClassifier
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 5)
+  - parallel_track: reuse-collection-spelling-lowerer
+  - scope: src/support/CollectionSpellingClassifier.cpp holds the authoritative removed-name sets, but the lowerer includes it from only 2 files and keeps its own predicates: `allowsArrayVectorCompatibilitySuffix` (src/ir_lowerer/IrLowererSetupTypeCollectionHelpers.cpp:220, a hard-coded copy of the `count`, `capacity`, `at`, `at_unsafe`, `push`, `pop`, `reserve`, `clear`, `remove_at`, `remove_swap` list), the wrapper at IrLowererSetupTypeCollectionHelpers.cpp:393 with its own suffix stripping, `isCollectionVectorRecordPath` (5 copies), `experimentalCollectionMemberRoot` (5), `resolveScopedCallPath` (6 header- and file-local copies), `stdCollectionsRoot`, `isRemovedVectorCompatibilityHelper`, `experimentalCollectionTypePath`, `collectionHelperPathCandidates`, and `stripGeneratedHelperSuffix` (src/ir_lowerer/IrLowererCountAccessInternal.h:132, IrLowererSetupTypeCollectionHelpers.cpp:18). Replace them with the classifier (extend it where a predicate has no classifier equivalent) and delete the copies. Run `rg -n "^[a-zA-Z].*\b(isCollectionVectorRecordPath|experimentalCollectionMemberRoot|resolveScopedCallPath|stdCollectionsRoot|isRemovedVectorCompatibilityHelper|stripGeneratedHelperSuffix|allowsArrayVectorCompatibilitySuffix)\(" src/ir_lowerer` for the current list.
+  - acceptance:
+    - each listed predicate has no definition left in src/ir_lowerer; the lowerer calls the classifier
+    - where a lowerer copy accepted a different set than the classifier, the commit names it, and a compile-run or lowering test pins the chosen behavior
+    - IR dumps of examples/ and the collection compile-run suites are unchanged
+    - full release gate green
+  - stop_rule: src/ir_lowerer and the classifier only; semantics copies are TODO-5964.
+  - notes: Do not run alongside TODO-5961, TODO-5962 or TODO-5972 (src/ir_lowerer/IrLowererHelpers.cpp and the inline/result helpers).
+
+- [ ] TODO-5964: Semantics has one copy of each key-value and collection path predicate
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5960
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 5)
+  - parallel_track: reuse-collection-spelling-semantics
+  - depends_on: TODO-5960
+  - scope: `isSpecializedExperimentalKeyValueBackingPath` is defined in 8 semantics files (SemanticsValidatorBuildInitializerInferenceCalls.cpp, SemanticsValidatorBuildInitializerInferenceHelpers.h, SemanticsValidatorExprReceiverPaths.cpp, SemanticsValidatorInferCollectionCompatibilityHelpers.h, SemanticsValidatorInferStructReturn.cpp, SemanticsValidatorResultHelpers.cpp, SemanticsValidatorStatement.cpp, SemanticsValidatorStatementReturnsHelpers.h) with 5 distinct bodies (groups of 3, 2, 1, 1, 1). Also `canonicalKeyValueHelperPathLocal` (7 copies), `resolveCanonicalKeyValueHelperNameFromSpelling` (6), `isCanonicalKeyValueAccessHelperName` (5), `stripGeneratedHelperSuffix` (src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp:15, src/semantics/SemanticsValidatorBuildTransforms.cpp:32), `isRemovedVectorCompatibilityHelper` in TemplateMonomorphCollectionCompatibilityPaths.cpp, `keyValueConstructorSurfaceMetadataLocal` and `keyValueHelperSurfaceMetadataLocal`, and the wrapper in src/semantics/SemanticsBuiltinPathHelpersShared.h:27. Compare the variants, choose one behavior per predicate, put it in CollectionSpellingClassifier (or one semantics helper unit when it needs validator state), and delete the rest.
+  - acceptance:
+    - each listed predicate has one definition; the 5 variants of `isSpecializedExperimentalKeyValueBackingPath` are reconciled, and each behavior change is named in the commit with a semantics test pinning it
+    - semantics test suites and semantic-product dumps of examples/ are unchanged except for the named changes
+    - full release gate green
+  - stop_rule: semantics predicates only; lowerer copies are TODO-5963.
+  - notes: Do not run alongside TODO-5960 or TODO-5966.
+
+- [ ] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 8)
+  - parallel_track: reuse-ast-builders
+  - scope: src/semantics/SemanticsValidateReflectionGeneratedHelpers{,CloneDebug,Compare,Serialization,State,Validate}.cpp each re-define anonymous-namespace AST builders: `appendPublicVisibility` (5 copies), `makeFieldAccessExpr` (5, 2-3 distinct bodies), `makeTypeBinding` (5, 2-3 distinct bodies), and `makeI32LiteralExpr`, `makeU64LiteralExpr`, `makeBinaryCallExpr`, `makeNameExpr`, `makeStringLiteralExpr`, `makeReturnStatementExpr` (2-4 each). `makeI32LiteralExpr` (4 copies) and `makeNameExpr` (about 3) also exist elsewhere in semantics. Add one builder unit (include/primec/ast/AstBuilders.h with a .cpp, or a semantics-local unit if a builder needs validator state), reconcile the forked variants, and use it in all reflection files and the other copies.
+  - acceptance:
+    - each builder has one definition; the reflection files contain no local builder copies
+    - `--dump-stage` output (semantic product and AST after semantics) of the reflection examples and tests is unchanged, compared through `stripDumpTimings`
+    - full release gate green
+  - stop_rule: AST builders only.
+  - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
+
+- [ ] TODO-5966: Binding validation is ordered rules with explicit inputs, not numbered phases
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 6)
+  - parallel_track: reuse-phase-splits
+  - scope: To meet the 1,200-line cap (scripts/check_source_file_sizes.py), binding validation was cut into `validateBinding` phases 1-7 and `validateBindingReference` phases 1-6 across src/semantics/SemanticsValidatorStatementBindingsPhasesA/B/C.cpp and SemanticsValidatorStatementBindingsPhasesBReferencePhasesA/B.cpp. Each phase takes about 10 parameters and returns `PhaseStatus`, shared state lives in SemanticsValidatorStatementBindingsReferenceState.h (about 15 `std::function` members, former lambdas of "validateBindingPhase5"), each phase re-binds it with `[[maybe_unused]] auto &x = st.x;` lines, and each file repeats a 30-40 line include block. Turn the named lambdas into free functions or small classes with explicit inputs, express validation as an ordered list of small named rules, split files along those rules, and delete the state struct. Also write the splitting rule down: in AGENTS.md (Code guidelines) and the docstring of scripts/check_source_file_sizes.py, a file over the cap gets a component extracted, never a numbered phase split.
+  - acceptance:
+    - no `validateBindingPhaseN` / `validateBindingReferencePhaseN` functions and no `std::function` members in the bindings state remain; no file is named `*Phases*` for binding validation
+    - every semantics test keeps its result and diagnostic text
+    - semantics wall time on the benchmark suite (`./scripts/benchmark.sh --build-dir build-release`) is not slower; the before and after numbers are in the commit message
+    - AGENTS.md and check_source_file_sizes.py state the component-split rule
+    - full release gate green
+  - stop_rule: binding validation only; template monomorph rewrites are TODO-5967 and call validation TODO-5968.
+  - notes: The pattern this leaf sets is reused by TODO-5967 and TODO-5968. Do not run alongside TODO-5962 or TODO-5964.
+
+- [ ] TODO-5967: Template monomorph expression rewriting is ordered rules, not numbered phases
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5966
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 6)
+  - parallel_track: reuse-phase-splits
+  - depends_on: TODO-5966
+  - scope: src/semantics/TemplateMonomorphExpressionRewritePhasesA/B/C/D.cpp, TemplateMonomorphExpressionRewritePhasesCInnerPhasesA/B.cpp and TemplateMonomorphExpressionRewriteInnerState.h hold 16 `rewriteExpr` phases and 16 `rewriteExprReference` phases with the same shape as TODO-5966 (state struct of former lambdas, `[[maybe_unused]]` re-binding, repeated include blocks; the PhasesA/B pair shares 36 duplicated 8-line windows). Apply the TODO-5966 pattern.
+  - acceptance:
+    - no numbered `rewriteExpr*Phase` functions or `*Phases*` files remain for this rewrite
+    - monomorphization output (`--dump-stage` after templates) of examples/ and every semantics and compile-run test is unchanged
+    - semantics wall time on the benchmark suite is not slower (numbers in the commit)
+    - full release gate green
+  - stop_rule: template monomorph expression rewriting only.
+  - notes: Do not run alongside TODO-5968.
+
+- [ ] TODO-5968: Expression call validation is ordered rules, not numbered phases
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5966
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 6)
+  - parallel_track: reuse-phase-splits
+  - depends_on: TODO-5966
+  - scope: src/semantics/SemanticsValidatorExprCallPhasesA/B.cpp hold `validateExprCall` phases 1-8 with the same shape as TODO-5966. Apply the TODO-5966 pattern. Also list the lowerer's size-driven fragments (IrLowererLowerStatementsBindingsContinued.h, IrLowererLowerStatementsExprContinued.h, IrLowererLowerEmitExprContinued.h, IrLowererLowerEmitExprTailDispatch*.h) in docs/todo_log.md under this id with a proposed component split each, for a follow-up leaf.
+  - acceptance:
+    - no `validateExprCall` phase functions or `*Phases*` files remain for call validation
+    - every semantics test keeps its result and diagnostic text; benchmark semantics time not slower (numbers in the commit)
+    - the lowerer fragment proposal is recorded in docs/todo_log.md
+    - full release gate green
+  - stop_rule: expression call validation only; the lowerer fragments are only proposed here.
+  - notes: Do not run alongside TODO-5967.
+
+- [ ] TODO-5969: Float math builtins lower through one table-driven emitter
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 9)
+  - parallel_track: reuse-math-lowering
+  - scope: src/ir_lowerer/IrLowererOperator{AngleTrig,ArcHyperbolic,ClampMinMaxTrig,ExpLogHyperbolic,PowAbsSign,SaturateRoundingRoots}Helpers.cpp (437, 210, 503, 701, 526, 488 lines; 2,865 total; 65-80% identifier-normalized duplication) hand-emit IR sequences (for example the Taylor-series loop for `exp` in IrLowererOperatorExpLogHyperbolicHelpers.cpp). They repeat the "requires exactly one argument" and "requires float argument" checks (22 and 14 times), F32/F64 opcode selection such as `(argKind == Float64) ? IrOpcode::AddF64 : IrOpcode::AddF32` (about 50 times), a `pushFloatConst` lambda (about 16 definitions) and temp-local store/load boilerplate. Add a float opcode set chosen once by kind (add, sub, mul, div, compare, convert, push-constant), shared argument checks, `emitLoadLocal`/`emitStoreLocal` helpers, and table-driven unary float ops (series and constants as data), and rewrite the six files on top of them.
+  - acceptance:
+    - IR output (`--dump-stage ir`) for every math builtin on f32 and f64 is byte-identical before and after, checked by a test or a recorded diff over the math examples and the math compile-run suites
+    - the six files shrink by at least a third in total; the counts are in the commit message
+    - full release gate green, including the VM math compile-run shard (`scripts/rerun_backend_shard.sh vm-math`)
+  - stop_rule: these six files and their new helper unit only.
+  - notes: Safe alongside TODO-5959, TODO-5960, TODO-5965, TODO-5970.
+
+- [ ] TODO-5970: Publication fact snapshots run one templated merge per fact kind
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 10)
+  - parallel_track: reuse-semantic-facts
+  - scope: `SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds` (src/semantics/SemanticsValidatorSnapshotsPublicationFacts.cpp:140 to about 510) repeats, once per fact kind (direct call, method call, bridge, callable summary, binding, return, query, try, on-error and more, about 12), the sequence: key lambda, `pruneReplacedEntriesBySnapshotKey`, `appendMissingEntriesBySnapshotKey`, `stable_sort` with a hand-written comparator, `rebindSemanticNodeIdsBySnapshotKey`. src/semantics/SemanticsValidatorSnapshotsFacts.cpp has about 12 `*FactSnapshotForSemanticProduct` functions that build, key and sort a vector each, and src/semantics/SemanticsValidatorSnapshotLocals.cpp is the query/call/try variant. Add a per-fact-kind traits struct (key function, ordering tuple, node-id fields) and one template for each sequence.
+  - acceptance:
+    - the merge sequence and the snapshot builder exist once each as templates; per-kind code is a traits definition
+    - semantic-product dumps of examples/ and the multi-worker semantics tests are byte-identical (compared through `stripDumpTimings`)
+    - semantics publication time on the benchmark suite is not slower (numbers in the commit)
+    - full release gate green
+  - stop_rule: these three files and the traits unit only; frontend lookups are TODO-5971.
+  - notes: Safe alongside TODO-5959, TODO-5969, TODO-5965.
+
+- [ ] TODO-5971: Semantic product lookups are one template over index and fact members
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 10)
+  - parallel_track: reuse-semantic-facts
+  - scope: src/frontend/SemanticProductLookups.cpp (730 lines, 82% identifier-normalized self-duplication) has about 20 `semanticProgramLookupPublished*By*` functions of one shape (guard on id 0 or `InvalidSymbolId`, find in an index map, `lookupPublishedSemanticEntryByIndex`), about 14 `semanticProgram*Fact*` accessors and about 12 `*View` functions. Replace them with a template over (index-map member, fact-vector member), keeping the public names in include/primec as thin wrappers where callers need them.
+  - acceptance:
+    - SemanticProductLookups.cpp shrinks to about a quarter of its size (counts in the commit)
+    - every caller compiles unchanged or with a mechanical rename; the lowerer and semantics tests pass unchanged
+    - full release gate green
+  - stop_rule: this file and its header only.
+  - notes: Do not run alongside TODO-5970 if both edit include/primec/frontend/SemanticProduct.h.
+
+- [ ] TODO-5972: Lowerer helpers copied per translation unit exist once
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 11)
+  - parallel_track: reuse-lowerer-helpers
+  - scope: (1) src/ir_lowerer/IrLowererLowerInferenceBaseKindInternal.h (940 lines, included by IrLowererLowerInferenceBaseKindHelpers.cpp) and IrLowererLowerInferenceDispatchSetupFileLocal.h (569 lines, included by IrLowererLowerInferenceDispatchSetup.cpp) hold the same inline helpers renamed `BaseSetup*` / `DispatchSetup*` (for example `isBaseSetupFileErrorTypeText` / `isDispatchSetupFileErrorTypeText`, `inferBaseSetupSemanticFileHandleMethodKind` / `inferDispatchSetupSemanticFileHandleMethodKind`); they drift (Dispatch says "KeyValue" where Base says "Map"; only Dispatch has `inferDispatchSetupNameValueKindFromTypeText`). Merge them into one helper unit with a .cpp. (2) `resultErrorTypesMatch` is identical in IrLowererPackedResultHelpers.cpp:68 and IrLowererResultWhyHelpers.cpp:31 (the files share 73 duplicated 8-line windows); keep one. (3) IrLowererInlineParamHelpers.cpp and IrLowererInlinePackedArgs.cpp both define `isPublishedKeyValueConstructorExpr`, `extractParameterTypeName` (identical) and `rewritePublishedKeyValueConstructorExpr` (about 23 differing diff lines), and `rewritePackedResultKeyValueConstructorExpr` in IrLowererPackedResultHelpers.cpp is a third near-copy; keep one of each. (4) The four `emitInlineDefinitionCallParameters` overloads in IrLowererInlineParamHelpers.cpp forward 20+ positional `std::function` parameters to each other (one inserts `{}` for an argument around line 457); replace them with one function taking a context struct.
+  - acceptance:
+    - the two inference headers are one unit; each listed function has one definition; one `emitInlineDefinitionCallParameters` with a context struct
+    - IR dumps of examples/ and all lowering and compile-run tests are unchanged
+    - full release gate green
+  - stop_rule: the listed helpers only; no inference-logic changes.
+  - notes: Do not run alongside TODO-5963 or TODO-5961.
+
+- [ ] TODO-5973: SoA rewrite passes share one context and one walker
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 11)
+  - parallel_track: reuse-soa-rewrites
+  - scope: src/semantics/SemanticsValidateExperimentalSoaFieldViewRewrites{,CarrierRewrites,HelperRewrites}.cpp and SemanticsValidateBuiltinSoaRewrites{,AccessCountRewrites,MutatorRewrites}.cpp each have a recursive expression walker and a statement walker threaded with the same 8-9 arguments (`bindings`, `allBindings`, `soaCollectionReturnDefinitions`, `specializedSoaVectorElementTypes`, `structFieldNames`, `structPaths`, `visibleSoaFieldHelpers`, the namespace) and repeat the receiver-resolution preamble (`tryReceiverBinding`). The FieldView and HelperRewrites walkers differ in about 120 of 200 lines after renaming. SemanticsValidateBuiltinSoaRewritesAccessCountRewrites.cpp is the most duplicated file in src (67% exact, 75% identifier-normalized). Add a `SoaRewriteContext`, one expression/statement visitor with a per-pass callback, one shared receiver resolver, and a table (name, arity, replacement path) for the access/count rewrites. Before starting, check whether the experimental SoA field-view surface is scheduled for removal; if it is, delete instead of refactoring and say so in the commit.
+  - acceptance:
+    - one walker and one context serve all six files; the access/count rewrites are table rows
+    - SoA semantics, compile-run and program-matrix tests keep their results; AST dumps after semantics of the SoA examples are unchanged
+    - full release gate green
+  - stop_rule: the six SoA rewrite files and their shared unit only.
+  - notes: Safe alongside the lowerer and backend leaves.
+
+- [ ] TODO-5974: Shared string, hash, JSON and C-literal helpers replace their copies
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 13)
+  - parallel_track: reuse-support-utils
+  - scope: Copies to replace with units in primec_support_lib (for example include/primec/support/{Ascii,Hash,Json,CStringLiteral}.h): `jsonEscape` (src/bin/primevm_main.cpp:29, src/runtime/VmDebugAdapter.cpp:11, src/runtime/VmDebugDapProtocol.cpp:311, src/support/Diagnostics.cpp:9); `fnv1a64` (src/frontend/StdlibSymbolManifest.cpp:42, src/semantics/SemanticsValidatorResultHelpers.cpp:43, src/semantics/TemplateMonomorphSetupUtilities.cpp:13, src/support/TempPaths.cpp:32); `isAsciiDigit` / `isAsciiAlpha` (src/frontend/Lexer.cpp:46-50, src/frontend/ImportResolverHelpers.cpp:30-34, src/parser/ParserHelpers.cpp:17-21, src/semantics/SemanticsHelpersValidation.cpp:10-14); `isHexDigitChar` (Lexer.cpp:42, ParserHelpers.cpp:191, src/text_filter/TextFilterHelpers.cpp:38); `trim`/`trimAscii`/`trimWhitespace` copies; parser `isIgnorableToken` (5 files) and `isArgumentLabelValueStart` (3); wasm `appendI32MemArg` (src/wasm_emitter/WasmEmitter.cpp:91, WasmEmitterIo.cpp:46, WasmEmitterWasiHelpers.cpp:41). The C string-literal escapers differ: `escapeCppStringLiteral` (src/backend/IrToCppEmitter.cpp:19, `cpp-ir`/`exe-ir`) escapes only `\\`, `"`, `\n`, `\r`, `\t` and copies NUL, `?` and bytes of 0x7F and above raw; `quote` (src/backend/IrToOptCppEmitter.cpp:43) writes everything outside 0x20-0x7E and `?` as octal escapes; `quote` (src/ir/IrModulePrinter.cpp:21) is a third variant. Use the `optcpp` rule for both C++ emitters; keep the IR printer's text format if it is a documented dump format.
+  - acceptance:
+    - each listed helper has one definition
+    - a compile-run case prints a string literal containing NUL, `??=`, a tab, a quote and bytes 0x80-0xFF on `exe` and `optexe` and both print the same bytes
+    - IR printer output is unchanged (or the change is documented as a dump-format change)
+    - full release gate green
+  - stop_rule: the listed helpers only.
+  - notes: Touches frontend, parser, runtime, backend and wasm; do not run alongside TODO-5959 if it is still editing CMake source lists.
+
+- [ ] TODO-5975: IR opcode categories come from the opcode table
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 14)
+  - parallel_track: reuse-opcode-table
+  - scope: include/primec/ir/IrOpcodeTable.h has a name and validator flags per opcode but no category (pure, memory, control, I/O, constant push, return) or result kind, so passes keep their own whitelists: `isReturnOpcode` (src/ir/IrCfg.cpp:9, src/ir/IrInliner.cpp:12, src/runtime/VmFastKernelPrepare.cpp:12), `isConstantPush` (src/ir/optimizer/IrPassCfgSimplify.cpp:9, src/ir/optimizer/IrPassConstFold.cpp:17, src/runtime/VmFastKernelPrepare.cpp:82), `arithmeticKind` (VmFastKernelPrepare.cpp:53), `pureOpcodeUnderflowMessage` (src/runtime/VmKernelBoundary.cpp:31), the latency switch in src/ir/IrVirtualRegisterScheduler.cpp, and the whitelist switches in src/native_emitter/NativeEmitterPromotion.h:54 and NativeJitOpcodes.h:23. Add category and result-kind columns to the table and replace those whitelists with table reads. Per-target emit switches stay.
+  - acceptance:
+    - the listed predicates read the table; their local switches are deleted
+    - a test fails when an opcode lacks a category, so a new opcode cannot be missed by any of these passes
+    - VM, native JIT, optcpp and constant-folding tests pass unchanged; VM benchmark numbers not slower (in the commit)
+    - full release gate green
+  - stop_rule: classification whitelists only; per-target emit switches stay.
+  - notes: Safe alongside the semantics leaves.
+
+- [ ] TODO-5976: The semantic product publishes parsed types, and the lowerer stops re-parsing type text
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 3)
+  - parallel_track: reuse-type-model
+  - depends_on: TODO-5961
+  - scope: The semantic product carries about 45 `*TypeText*` strings (include/primec/frontend/SemanticProduct.h) and the lowerer re-splits them (163 `splitTemplateTypeName` calls; IrLowererLowerInference* about 5,400 lines and IrLowererSetupType* about 5,700 lines). docs/spec/semantics-lowering-boundary.md says lowering should consume the product without re-derivation; the remaining fallbacks are marked at src/ir_lowerer/IrLowererLowerInferenceBaseKindHelpers.cpp:446 and IrLowererLowerStatementsCallsStage.cpp:314. include/primec/support/CanonicalReceiverType.h is the only structured type today. Publish a parsed, interned type reference (base, arguments, element family, resolved receiver) next to the text fields and move lowerer call sites onto it. Deferred: needs scoping into leaves (which fields first, how the reference is interned, memory cost) after TODO-5961 lands.
+  - acceptance:
+    - to be written when scoped: the lowerer's `splitTemplateTypeName` call count falls to a stated target, and lowering time on the benchmark suite does not rise
+  - stop_rule: do not start before it is split into leaves.
+  - notes: deferred: needs scoping.
+
+- [ ] TODO-5977: Semantics diagnostics go through one builder
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-12
+  - phase: Code reuse (docs/CodeReusePlan.md, section 15)
+  - parallel_track: reuse-diagnostic-builder
+  - scope: `failExprDiagnostic` is a member (src/semantics/SemanticsValidatorPrivateCore.h:399, used from 63 files), but 81 local `auto fail*Diagnostic = [&]` lambdas also exist (`failExprRootDiagnostic` x9, `failStatementDiagnostic` x4, two each of `failPassesEffects*`, `failNamedArgument*`, `failInferDefinition*`, `failContainerHelper*`), each choosing its own span, label and related-span logic. First list them with what each does differently (a table in docs/todo_log.md under this id); then decide whether a builder is worth it. Deferred: not checked whether the lambdas differ in behavior.
+  - acceptance:
+    - to be written after the survey: the lambdas that only set a message and a span use one builder, and diagnostic text of the semantics tests is unchanged
+  - stop_rule: survey first; do not refactor before the table exists.
+  - notes: deferred: needs the survey. Do not run alongside TODO-5960.
