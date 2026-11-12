@@ -378,27 +378,27 @@ namespace web {
     [mut effects(heap_alloc)]
     route([string] method,
           [string] pattern,
-          [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+          [StateRequestHandler<State> move] handler) {
       this.routes.push(AppRoute<State>{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
-    get([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    get([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("GET", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    post([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    post([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("POST", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    put([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    put([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("PUT", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    delete([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    delete([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("DELETE", pattern, handler)
     }
 

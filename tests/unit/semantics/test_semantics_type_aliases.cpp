@@ -199,4 +199,44 @@ main() {
   CHECK_MESSAGE(error.find("type alias /Bad has no parameters and no body") != std::string::npos, error);
 }
 
+TEST_CASE("the handler aliases of /std/http name the route handler types beside a template parameter and a field") {
+  const std::string source = R"(
+import /std/http/*
+
+[struct]
+Counter() {
+  [i32 mut] hits{0i32}
+}
+
+[struct]
+Server() {
+  [RequestHandler mut] handler
+}
+
+[return<int> effects(heap_alloc)]
+call_with<Handler>([Handler mut] handler, [Request] request, [Reference<Response>] response) {
+  handler(request, response)
+  return(response.status)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Router mut] router{Router{}}
+  router.get("/", []([Request] request, [Reference<Response>] response) { response.status = 200i32 })
+  [AppRouter<Counter> mut] app{AppRouter<Counter>{[state] Counter{}}}
+  [StateRequestHandler<Counter> mut] counted{[]([Reference<Counter> mut] counter, [Request] request,
+                                               [Reference<Response>] response) { counter.hits = counter.hits + 1i32 }}
+  app.get("/count", move(counted))
+  [Server mut] server{Server{[handler] []([Request] request, [Reference<Response>] response) {
+    response.status = 204i32
+  }}}
+  [Response mut] response{Response{}}
+  [Request] request{Request{}}
+  return(call_with(server.handler, request, response))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_SUITE_END();

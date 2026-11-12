@@ -744,7 +744,7 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   204 and 304 get neither a `Content-Length` nor a body. `statusResponse(code)` is the bare answer to a rejected
   request.
 - `Router` is a handler that dispatches to other handlers. Each route is a method, a pattern and a
-  `Function<void, Request, Reference<Response>>`. A pattern is a prefix ending in `*`, which matches any path that
+  `RequestHandler`, the alias of `Function<void, Request, Reference<Response>>` that `/std/http` declares. A pattern is a prefix ending in `*`, which matches any path that
   starts with the text before the `*` (its other bytes, `:` included, are literal), or else a path whose segments
   (between `/`s) must match the request path's segments one for one: a `:name` segment matches any one non-empty
   segment, every other segment only itself. So `/todos/:id` matches `/todos/7` but not `/todos`, `/todos/` or
@@ -778,7 +778,7 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
 - `AppRouter<State>` is a `Router` that also holds the app's state and passes it to every handler, so routes can
   share and change it. Its `state` field is a `State`, set at construction (`AppRouter<TodoList>{[state]
   TodoList{}}`) and readable afterwards (`app.state`). Each route's handler is a
-  `Function<void, Reference<State>, Request, Reference<Response>>`: the state comes first, as a reference to the
+  `StateRequestHandler<State>`, the alias of `Function<void, Reference<State>, Request, Reference<Response>>`: the state comes first, as a reference to the
   router's own field. Routes are added and matched exactly as for `Router` (`get`, `post`, `put`, `delete`, `route`,
   the same patterns, 404 and 405, `pathParam`), and `AppRouter` has the same `call(request, response)`, so it is
   passed to `serve` or middleware as it is: `serve(withRequestLog(app), config)`.

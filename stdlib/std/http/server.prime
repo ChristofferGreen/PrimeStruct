@@ -381,7 +381,7 @@ namespace server {
   // handler inside the app's mutex and answers. Only the handler call holds the mutex; reading, parsing, serializing
   // and sending run beside the other workers.
   [effects(net_io, heap_alloc, lock, atomic) return<SlotDone>]
-  work_slot([Mutex<Function<void, Request, Reference<Response>>>] app,
+  work_slot([Mutex<RequestHandler>] app,
             [SlotJob] job,
             [Atomic<i32>] stopping,
             [SlotBuffers] buffers,
@@ -413,7 +413,7 @@ namespace server {
     [i32] outcome{request.outcome()}
     if(outcome == 0i32) {
       response.clear()
-      [mut] answer{[ref request, ref response]([Reference<Function<void, Request, Reference<Response>>>] handler) {
+      [mut] answer{[ref request, ref response]([Reference<RequestHandler>] handler) {
         handler(request, location(response))
       }}
       app.locked(answer)
@@ -447,7 +447,7 @@ namespace server {
   // One worker task: takes readable connections from `jobs` until the channel is closed and empty. It keeps one
   // `Response` and one block of `maxRequestBytes` for the request it is parsing, as `serve` keeps one of each.
   [effects(net_io, heap_alloc, lock, channel, atomic) return<void>]
-  work_slots([Mutex<Function<void, Request, Reference<Response>>>] app,
+  work_slots([Mutex<RequestHandler>] app,
              [Channel<SlotJob>] jobs,
              [Channel<SlotDone>] finished,
              [Atomic<i32>] ready,
@@ -656,7 +656,7 @@ namespace server {
   // Starts `remaining` more workers and then runs the poller on this task; each level waits for the worker it
   // started, so every worker has ended when the first call returns.
   [effects(net_io, heap_alloc, task, lock, channel, atomic)]
-  run_workers<Stop>([Mutex<Function<void, Request, Reference<Response>>>] app,
+  run_workers<Stop>([Mutex<RequestHandler>] app,
                     [Channel<SlotJob>] jobs,
                     [Channel<SlotDone>] finished,
                     [Atomic<i32>] ready,
@@ -718,10 +718,10 @@ namespace server {
     [String mut] store{slot_store(slots * capacity)}
     [SlotBuffers] buffers{slot_buffers(store, capacity)}
     // Workers are not generic: the handler is called as a `Function`, which also requires it to be sendable.
-    [Function<void, Request, Reference<Response>> mut] erased{[mut inner{handler}]([Request] request, [Reference<Response>] response) {
+    [RequestHandler mut] erased{[mut inner{handler}]([Request] request, [Reference<Response>] response) {
       inner(request, response)
     }}
-    app{Mutex<Function<void, Request, Reference<Response>>>{move(erased)}}
+    app{Mutex<RequestHandler>{move(erased)}}
     jobs{Channel<SlotJob>{[capacity] slots}}
     finished{Channel<SlotDone>{[capacity] slots}}
     ready{Atomic<i32>{0i32}}

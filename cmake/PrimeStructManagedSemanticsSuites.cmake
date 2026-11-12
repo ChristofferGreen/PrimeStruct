@@ -333,7 +333,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.type_aliases"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 5
+  TOTAL_CASES 6
   SHARD_PREFIX "type_aliases"
 )
 

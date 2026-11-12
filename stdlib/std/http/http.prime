@@ -660,12 +660,17 @@ namespace http {
   }
 
 
+  // The type of a route's handler: it fills the response for the request. A name for the `Function` type that a
+  // `Router` and an `AppRouter` take (`[RequestHandler move] handler`); a lambda passes where it is expected.
+  [public alias<Function<void, Request, Reference<Response>>>]
+  RequestHandler() {}
+
   // One route of a Router: a method, a pattern and the handler it calls.
   [public struct]
   Route() {
     [public LiteralText] method{LiteralText{}}
     [public LiteralText] pattern{LiteralText{}}
-    [public Function<void, Request, Reference<Response>> mut] handler
+    [public RequestHandler mut] handler
   }
 
   // Whether `path` matches `pattern`: for a pattern ending in "*", any path that starts with the text before the "*";
@@ -756,27 +761,27 @@ namespace http {
     // Adds a route for `method` (such as "GET") and `pattern`: a path whose `:name` segments match any one segment
     // (read them with `request.pathParam(name)`), or a literal prefix ending in "*".
     [mut effects(heap_alloc)]
-    route([string] method, [string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+    route([string] method, [string] pattern, [RequestHandler move] handler) {
       this.routes.push(Route{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
-    get([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+    get([string] pattern, [RequestHandler move] handler) {
       this.route("GET", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    post([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+    post([string] pattern, [RequestHandler move] handler) {
       this.route("POST", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    put([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+    put([string] pattern, [RequestHandler move] handler) {
       this.route("PUT", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    delete([string] pattern, [Function<void, Request, Reference<Response>> move] handler) {
+    delete([string] pattern, [RequestHandler move] handler) {
       this.route("DELETE", pattern, handler)
     }
 
@@ -803,12 +808,17 @@ namespace http {
     }
   }
 
+  // The type of a route's handler when the app has state: `RequestHandler` that also takes the state first
+  // (`[StateRequestHandler<State> move] handler`).
+  [public alias<Function<void, Reference<State>, Request, Reference<Response>>>]
+  StateRequestHandler<State>() {}
+
   // One route of an AppRouter: a Route whose handler also takes the app's state.
   [public struct]
   AppRoute<State>() {
     [public LiteralText] method{LiteralText{}}
     [public LiteralText] pattern{LiteralText{}}
-    [public Function<void, Reference<State>, Request, Reference<Response>> mut] handler
+    [public StateRequestHandler<State> mut] handler
   }
 
   // A Router that holds the app's state and passes it to each handler as a `Reference<State>` first argument. A
@@ -823,27 +833,27 @@ namespace http {
     [mut effects(heap_alloc)]
     route([string] method,
           [string] pattern,
-          [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+          [StateRequestHandler<State> move] handler) {
       this.routes.push(AppRoute<State>{[method] literalTextOf(method), [pattern] literalTextOf(pattern), [handler] handler})
     }
 
     [mut effects(heap_alloc)]
-    get([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    get([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("GET", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    post([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    post([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("POST", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    put([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    put([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("PUT", pattern, handler)
     }
 
     [mut effects(heap_alloc)]
-    delete([string] pattern, [Function<void, Reference<State>, Request, Reference<Response>> move] handler) {
+    delete([string] pattern, [StateRequestHandler<State> move] handler) {
       this.route("DELETE", pattern, handler)
     }
 

@@ -104,7 +104,6 @@ of sync with them.
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
-| TODO-5954 | The handler `Function` type is spelled with an alias in /std/http and /std/web | deferred | type-aliases |
 | TODO-5957 | A `.view()` call on a vector element is accepted as a `StringView` argument | ready | collections-access |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
@@ -239,7 +238,7 @@ of sync with them.
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727, TODO-5728, TODO-5957
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5954, TODO-5716, TODO-5958
+- Language surface for handlers (docs/WebAppsPlan.md): TODO-5716, TODO-5958
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5893, TODO-5894, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
 
@@ -315,18 +314,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: ready and indepe
     - a Wasm runtime check of the matrix program exits 3 where wasmtime is available
     - full release gate green
   - stop_rule: runtime errors in real calls on Wasm and GLSL only.
-
-- [ ] TODO-5954: The handler `Function` type is spelled with an alias in /std/http and /std/web
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-12
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; follows TODO-5708)
-  - parallel_track: type-aliases
-  - scope: Type aliases (TODO-5708) exist, but `Function<void, Request, Reference<Response>>` is still spelled out at every route and seven times in /std/http, and `Function<void, Reference<State>, Request, Reference<Response>>` in /std/web. Declare `[public alias<...>] Handler() {}` (and a state handler alias) in /std/http and /std/web and use it in the parameters and fields, then re-check that user code naming `Handler` and a lower-case `handler` field still resolves (TODO-5955).
-  - acceptance:
-    - /std/http and /std/web name their handler types through aliases; the router, app and server matrix cases and `examples/apps/todo_web` run unchanged on VM, native and optexe
-    - full release gate green
-  - stop_rule: the handler types of /std/http and /std/web only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
