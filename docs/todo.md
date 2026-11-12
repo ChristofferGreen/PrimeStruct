@@ -207,10 +207,8 @@ of sync with them.
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | ready | reuse-collection-spelling-lowerer |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
-| TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
-| TODO-5982 | `validateBinding` is ordered rules, not seven phases | ready | reuse-phase-splits |
 | TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
@@ -266,7 +264,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5966, TODO-5967, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5963, TODO-5965, TODO-5967, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1636,25 +1634,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
-- [~] TODO-5966: Binding validation is ordered rules with explicit inputs, not numbered phases
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5981
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
-  - split_into: TODO-5980 (the rule, done with this split), TODO-5981 (validateBindingReference as rules), TODO-5982 (validateBinding as rules; closes this leaf)
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 6)
-  - parallel_track: reuse-phase-splits
-  - scope: To meet the 1,200-line cap (scripts/check_source_file_sizes.py), binding validation was cut into `validateBinding` phases 1-7 and `validateBindingReference` phases 1-6 across src/semantics/SemanticsValidatorStatementBindingsPhasesA/B/C.cpp and SemanticsValidatorStatementBindingsPhasesBReferencePhasesA/B.cpp. Each phase takes about 10 parameters and returns `PhaseStatus`, shared state lives in SemanticsValidatorStatementBindingsReferenceState.h (about 15 `std::function` members, former lambdas of "validateBindingPhase5"), each phase re-binds it with `[[maybe_unused]] auto &x = st.x;` lines, and each file repeats a 30-40 line include block. Turn the named lambdas into free functions or small classes with explicit inputs, express validation as an ordered list of small named rules, split files along those rules, and delete the state struct. Also write the splitting rule down: in AGENTS.md (Code guidelines) and the docstring of scripts/check_source_file_sizes.py, a file over the cap gets a component extracted, never a numbered phase split.
-  - acceptance:
-    - no `validateBindingPhaseN` / `validateBindingReferencePhaseN` functions and no `std::function` members in the bindings state remain; no file is named `*Phases*` for binding validation
-    - every semantics test keeps its result and diagnostic text
-    - semantics wall time on the benchmark suite (`./scripts/benchmark.sh --build-dir build-release`) is not slower; the before and after numbers are in the commit message
-    - AGENTS.md and check_source_file_sizes.py state the component-split rule
-    - full release gate green
-  - stop_rule: binding validation only; template monomorph rewrites are TODO-5967 and call validation TODO-5968.
-  - notes: The pattern this leaf sets is reused by TODO-5967 and TODO-5968. Do not run alongside TODO-5962 or TODO-5964.
-
 - [ ] TODO-5967: Template monomorph expression rewriting is ordered rules, not numbered phases
   - owner: ai
   - status: blocked
@@ -1815,23 +1794,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-5982: `validateBinding` is ordered rules, not seven phases
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 6; closes TODO-5966)
-  - parallel_track: reuse-phase-splits
-  - depends_on: TODO-5981
-  - scope: `validateBindingPhase1..7` (src/semantics/SemanticsValidatorStatementBindingsPhasesA.cpp, ...PhasesB.cpp, ...PhasesC.cpp and SemanticsValidatorStatementBindings.cpp) share `ValidateBindingState` (SemanticsValidatorStatementBindingsState.h) with 5 `std::function` members (`failBindingDiagnostic`, `isStandaloneSoaFieldViewInitializer`, `validateAndRecordTargetTypedSumInitializer`, `isTargetTypedSumInitializerSyntax`, `resolveNamedBinding`, `resolvePointerRoot`). Replace them with member functions of a `BindingValidationContext` (params, locals, statement, namespace prefix, parsed `info`, initializer), run the seven phases as ordered named rules, delete the state struct and the `*Phases*` files, and keep every file under the 1,200-line cap by extracting components (TODO-5980).
-  - acceptance:
-    - no `validateBindingPhaseN` function and no `ValidateBindingState` remain; no file is named `*Phases*` for binding validation
-    - every semantics test keeps its result and diagnostic text; semantic-product dumps of examples/ are unchanged
-    - semantics wall time on the benchmark suite is not slower, with before and after numbers in the commit message
-    - full release gate green
-  - stop_rule: binding validation only; TODO-5967 and TODO-5968 are separate.
-  - notes: Do not run alongside TODO-5981, TODO-5962 or TODO-5964 follow-ups.
 
 - [ ] TODO-5983: `scripts/benchmark.sh` works with the relative `--build-dir` its docs give
   - owner: ai
