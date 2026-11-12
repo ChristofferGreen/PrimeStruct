@@ -210,7 +210,7 @@ of sync with them.
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
-| TODO-5982 | `validateBinding` is ordered rules, not seven phases | blocked | reuse-phase-splits |
+| TODO-5982 | `validateBinding` is ordered rules, not seven phases | ready | reuse-phase-splits |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
@@ -1814,10 +1814,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-5982: `validateBinding` is ordered rules, not seven phases
+- [~] TODO-5982: `validateBinding` is ordered rules, not seven phases
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5981
+  - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-12
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 6; closes TODO-5966)
   - parallel_track: reuse-phase-splits
