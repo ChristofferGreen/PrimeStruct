@@ -211,6 +211,7 @@ of sync with them.
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | blocked | reuse-phase-splits |
 | TODO-5982 | `validateBinding` is ordered rules, not seven phases | ready | reuse-phase-splits |
+| TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
@@ -1830,3 +1831,16 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: binding validation only; TODO-5967 and TODO-5968 are separate.
   - notes: Do not run alongside TODO-5981, TODO-5962 or TODO-5964 follow-ups.
+
+- [ ] TODO-5983: `scripts/benchmark.sh` works with the relative `--build-dir` its docs give
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-12
+  - phase: Tooling
+  - parallel_track: benchmark-script
+  - scope: `./scripts/benchmark.sh --build-dir build-release` (the form in AGENTS.md) fails in its compile_speed step: `BENCH_DIR` becomes the relative `build-release/benchmarks`, the script then runs the Python compile-speed block inside `cd "$BENCH_DIR"` (scripts/benchmark.sh line 322) and the relative paths it passes (`$COMPILE_C_SRC`, `$COMPILE_C_EXE`, `$REPORT_JSON`, ...) no longer resolve, so clang reports `no such file or directory: 'build-release/benchmarks/compile_speed.c'` and the script exits 1 before writing a report. An absolute `--build-dir` avoids it (the script already resolves `PRIMEVM_BIN` that way at line 68). The cause is a relative path used after a `cd`; make `BUILD_DIR`, `BENCH_DIR` and `REPORT_JSON` absolute right after argument parsing.
+  - acceptance:
+    - `./scripts/benchmark.sh --build-dir build-release` runs to the end from the repository root and writes its report
+    - `--bench-dir`, `--report-json` and `--baseline-json` given as relative paths also work
+    - the same run with an absolute `--build-dir` gives the same report layout
+  - stop_rule: path handling in the script only; no benchmark changes.
