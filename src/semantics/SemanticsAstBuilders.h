@@ -15,7 +15,7 @@ namespace primec::semantics {
 void appendPublicVisibility(Definition &helper);
 void appendPublicVisibility(Expr &binding);
 
-// A binding named `bindingName` of `typeName` (`Vector<i32>` becomes transform `Vector` with template argument
+// A binding named `bindingName` of `typeName` (`Box<i32>` becomes transform `Box` with template argument
 // `i32`), optionally `mut`.
 Expr makeTypeBinding(const std::string &bindingName,
                      const std::string &typeName,
@@ -32,7 +32,7 @@ Expr makeStringLiteralExpr(const std::string &value);
 Expr makeReturnStatementExpr(Expr valueExpr);
 // A positional two-argument call, such as `equal(left, right)` or `and(left, right)`.
 Expr makeBinaryCallExpr(const std::string &name, Expr left, Expr right);
-// `Type{}`; a template spelling such as `Vector<i32>` splits into name and template arguments.
+// `Type{}`; a template spelling such as `Box<i32>` splits into name and template arguments.
 Expr makeBraceConstructorCall(const std::string &typeName);
 // `receiver.field`.
 Expr makeFieldAccessExpr(const std::string &receiverName, const std::string &fieldName);
