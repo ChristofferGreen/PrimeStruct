@@ -149,4 +149,99 @@ TEST_CASE("a user definition of a canonical key-value access path is not reporte
   CHECK_FALSE(hasMessageContaining(recordsForDefinition(preamble, call), "unknown call target"));
 }
 
+// TODO-5979: the collector agrees with the validator about calls that are not plain calls.
+
+TEST_CASE("sum construction collects no diagnostics") {
+  const std::string source = std::string(R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+use_default() {
+  [Maybe] empty{}
+  return(1i32)
+}
+
+[return<i32>]
+use_variant() {
+  [Maybe] value{[some] 3i32}
+  return(2i32)
+}
+
+[return<Maybe>]
+make_default() {
+  return(Maybe{})
+}
+)") + SinkPreamble;
+  CHECK(collectRecords(source).empty());
+}
+
+TEST_CASE("a bad sum construction is collected with the validator message") {
+  const std::string source = std::string(R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+use_bad() {
+  [Maybe] value{[other] 3i32}
+  return(1i32)
+}
+)") + SinkPreamble;
+  const auto records = collectRecords(source);
+  REQUIRE(records.size() == 1);
+  CHECK(records.front().message.find("other") != std::string::npos);
+  CHECK(records.front().label == "definition: /use_bad");
+}
+
+TEST_CASE("stdlib definitions are not reported for uninitialized-storage builtins") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<i32>]
+bad() {
+  return(missing_fn(1i32))
+}
+
+[return<i32> effects(heap_alloc)]
+main() {
+  [Vector<i32> mut] v{Vector<i32>{}}
+  v.push(3i32)
+  v.push(4i32)
+  [i32] c{v.count()}
+  return(plus(c, bad()))
+}
+)";
+  const auto records = collectRecords(source);
+  CHECK(hasMessageContaining(records, "unknown call target: missing_fn"));
+  CHECK_FALSE(hasMessageContaining(records, "unknown call target: init"));
+  CHECK_FALSE(hasMessageContaining(records, "unknown call target: drop"));
+  CHECK_FALSE(hasMessageContaining(records, "unknown call target: borrow"));
+}
+
+TEST_CASE("a legacy soa read helper is the same for executions and definitions") {
+  const std::string preamble = std::string(R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+)") + SinkPreamble;
+  const std::string receiver = "/std/collections/soa/single<Particle>(Particle{9i32})";
+  for (const std::string helper : {"/soa/get", "/soa/ref"}) {
+    const auto execution = recordsForExecution(preamble, helper + "(" + receiver + ", 0i32).x");
+    const auto definition = collectRecords(
+        preamble + "\n[effects(heap_alloc), return<void>]\ncaller() {\n  [soa<Particle>] values{" +
+        receiver + "}\n  sink(" + helper + "(values, 0i32).x)\n}\n");
+    CHECK_FALSE(hasMessageContaining(execution, "unknown call target: " + helper));
+    CHECK_FALSE(hasMessageContaining(definition, "unknown call target: " + helper));
+  }
+}
+
 TEST_SUITE_END();

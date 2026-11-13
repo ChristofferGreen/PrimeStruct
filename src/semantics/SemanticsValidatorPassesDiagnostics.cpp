@@ -162,7 +162,22 @@ void SemanticsValidator::collectIntraBodyCallDiagnostics(
         isVisibleCanonicalKeyValueAccessBuiltin;
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
     const bool isDirectFileErrorBuiltin = resolved == "/file_error/why";
-    return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
+    // The validator treats these as builtins before any definition lookup (the uninitialized-storage
+    // branch of the call-form rules), so a stdlib definition that uses them is not an unknown call.
+    const bool isUninitializedStorageBuiltin =
+        isSimpleCallName(expr, "uninitialized") || isSimpleCallName(expr, "init") ||
+        isSimpleCallName(expr, "drop") || isSimpleCallName(expr, "borrow");
+    // `/soa/get(values, i)` and the other legacy SoA read/ref spellings are resolved by the validator's own SoA
+    // receiver rules. Definition bodies are rewritten to the canonical helper before collection, an execution
+    // argument is not, so the collector leaves the call to the validator that runs next instead of calling the
+    // un-rewritten spelling an unknown target.
+    std::string soaHelperName;
+    const bool isSoaSurfaceReadHelper =
+        !expr.isMethodCall && !hasDefinitionPath(resolved) &&
+        splitSoaSurfaceHelperPath(expr.name, &soaHelperName, nullptr) &&
+        isSoaReadRefHelperName(soaHelperName);
+    return getBuiltinOperatorName(expr, builtinName) ||
+           getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
            getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinMinMaxName(expr, builtinName, allowMathBareName(expr.name)) ||
@@ -170,10 +185,12 @@ void SemanticsValidator::collectIntraBodyCallDiagnostics(
            getBuiltinSaturateName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinMathName(expr, builtinName, allowMathBareName(expr.name)) ||
            getBuiltinGpuName(expr, builtinName) || getBuiltinConvertName(expr, builtinName) ||
-           getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
+           getBuiltinArrayAccessName(expr, builtinName) ||
+           getBuiltinPointerName(expr, builtinName) ||
            (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
-           getBuiltinMemoryName(expr, builtinName) ||
-           isCollectionBuiltin || isCollectionHelperBuiltin || isDirectFileErrorBuiltin;
+           getBuiltinMemoryName(expr, builtinName) || isCollectionBuiltin ||
+           isCollectionHelperBuiltin || isDirectFileErrorBuiltin || isUninitializedStorageBuiltin ||
+           isSoaSurfaceReadHelper;
   };
 
   auto describeReflectionCallDiagnostic = [&](const Expr &expr, std::string &messageOut) -> bool {
@@ -281,6 +298,20 @@ void SemanticsValidator::collectIntraBodyCallDiagnostics(
               isCollectionVectorBase) &&
              normalizeBindingTypeName(expectedElemType) == normalizeBindingTypeName(inferredArgs.front());
     };
+    // A call that names a sum type is a sum construction (`Maybe{}`, `Maybe{[some] 3i32}`): its arguments are
+    // variant tags, not parameters, so the validator's own sum-constructor rule decides it.
+    bool handledSumConstructor = false;
+    if (!validateExplicitSumConstructorExpr(
+            ownerParams, ownerLocals, expr, handledSumConstructor)) {
+      std::string sumError = std::move(error_);
+      error_.clear();
+      clearStructuredDiagnosticContext();
+      appendOwnerRecord(expr, std::move(sumError));
+      return true;
+    }
+    if (handledSumConstructor) {
+      return false;
+    }
     std::string message;
     if (!validateNamedArguments(expr.args, expr.argNames, diagnosticResolved, message)) {
       appendOwnerRecord(expr, std::move(message));

@@ -391,7 +391,7 @@ addPrimeStructManagedDoctestSuite(
   TARGET PrimeStruct_semantics_tests
   TIMEOUT 30
   LABEL "parallel-safe"
-  TOTAL_CASES 5
+  TOTAL_CASES 9
 )
 
 addPrimeStructManagedDoctestSuite(
