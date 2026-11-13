@@ -206,7 +206,7 @@ of sync with them.
 | TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
-| TODO-5968 | Expression call validation is ordered rules, not numbered phases | ready | reuse-phase-splits |
+| TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
@@ -262,7 +262,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5968, TODO-5970, TODO-5971, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1616,23 +1616,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
-- [~] TODO-5968: Expression call validation is ordered rules, not numbered phases
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 6)
-  - parallel_track: reuse-phase-splits
-  - depends_on: TODO-5966
-  - scope: src/semantics/SemanticsValidatorExprCallPhasesA/B.cpp hold `validateExprCall` phases 1-8 with the same shape as TODO-5966. Apply the TODO-5966 pattern. Also list the lowerer's size-driven fragments (IrLowererLowerStatementsBindingsContinued.h, IrLowererLowerStatementsExprContinued.h, IrLowererLowerEmitExprContinued.h, IrLowererLowerEmitExprTailDispatch*.h) in docs/todo_log.md under this id with a proposed component split each, for a follow-up leaf.
-  - acceptance:
-    - no `validateExprCall` phase functions or `*Phases*` files remain for call validation
-    - every semantics test keeps its result and diagnostic text; benchmark semantics time not slower (numbers in the commit)
-    - the lowerer fragment proposal is recorded in docs/todo_log.md
-    - full release gate green
-  - stop_rule: expression call validation only; the lowerer fragments are only proposed here.
-  - notes: Do not run alongside TODO-5967.
-
 - [ ] TODO-5970: Publication fact snapshots run one templated merge per fact kind
   - owner: ai
   - status: ready
@@ -1773,3 +1756,15 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the cost the profile names; no unrelated compiler speedups.
   - notes: Found while checking the IR comparison of TODO-5963; the error text is the same before and after that change.
+
+- [ ] TODO-5987: The lowerer's include-only fragments become components
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-13
+  - phase: Code reuse (docs/CodeReusePlan.md, section 6; proposed by TODO-5968)
+  - parallel_track: lowerer-fragments
+  - scope: Five src/ir_lowerer headers are not headers: they are bodies of one function, `#include`d in the middle of it to stay under the 1,200-line cap (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp:467, :473 and :482 include the first three; IrLowererLowerEmitExprContinued.h:497 includes the tail dispatch). Proposed split, one leaf each (they share one function, so they cannot run in parallel): (1) `IrLowererLowerStatementsBindingsContinued.h`, 1,195 lines: the binding-statement lowering from the callee struct surface (`declaredStructSurface`/`calleeStructSurface`) through brace constructors to the initializer kinds; extract (a) struct-surface resolution of a binding's initializer callee and (b) one lowering function per initializer kind (brace constructor, call, literal, reference) taking an explicit binding context. (2) `IrLowererLowerStatementsExprContinued.h`, 885 lines: expression-statement lowering; extract the key-value helper paths (`statementsExprHelpers.resolveSameFamilyKeyValueHelperMemberName`, `keyValueHelperMetadata`, the count helper) as a key-value statement component and the gfx `Buffer.allocate` handling as its own function. (3) `IrLowererLowerEmitExprContinued.h` (497 lines) with `IrLowererLowerEmitExprTailDispatch.h` (1,000 lines) and `...TailDispatchHelpers.{h,cpp}` (71 lines): the tail of `emitExpr`; turn the tail dispatch into an ordered list of rules named by call family (pick/match, native calls, collection helpers, constructors), each taking a plain-data emit context, as TODO-5966, TODO-5967 and TODO-5968 did for semantics. Each leaf is done when its fragment is gone, `check_include_layers.py` and the lowerer tests pass, and IR dumps of examples/ are identical.
+  - acceptance:
+    - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
+  - stop_rule: this leaf only files the split; no lowerer code changes.
+  - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.

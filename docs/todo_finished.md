@@ -2321,6 +2321,7 @@ are left unarchived.
 | TODO-5964 | Semantics has one copy of each key-value and collection path predicate | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5968 | Expression call validation is ordered rules, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5969 | Float math builtins lower through one table-driven emitter | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5980 | The component-split rule is written down for files over the size cap | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
