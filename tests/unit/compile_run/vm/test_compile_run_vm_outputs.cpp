@@ -1379,7 +1379,9 @@ main() {
   const std::string compileCmd = "./primec --emit=cpp-ir " + srcPath + " -o " + outPath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  CHECK(output.find("std::cout << ps_string_table[0];") != std::string::npos);
+  CHECK(output.find("std::cout.write(ps_string_table[0], "
+                    "static_cast<std::streamsize>(ps_string_table_lengths[0]));") !=
+        std::string::npos);
   CHECK(output.find("static constexpr std::size_t ps_string_table_count = 2u;") != std::string::npos);
 }
 

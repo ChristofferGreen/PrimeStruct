@@ -21,9 +21,13 @@ TEST_CASE("ir to cpp emitter writes print and argv opcodes") {
   REQUIRE(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
   CHECK(cpp.find("std::cout << static_cast<int32_t>(stack[--sp]);") != std::string::npos);
-  CHECK(cpp.find("std::cout << ps_string_table[0];") != std::string::npos);
+  CHECK(cpp.find("std::cout.write(ps_string_table[0], "
+                 "static_cast<std::streamsize>(ps_string_table_lengths[0]));") !=
+        std::string::npos);
   CHECK(cpp.find("if (stringIndex >= ps_string_table_count)") != std::string::npos);
-  CHECK(cpp.find("std::cout << ps_string_table[stringIndex];") != std::string::npos);
+  CHECK(cpp.find("std::cout.write(ps_string_table[stringIndex], "
+                 "static_cast<std::streamsize>(ps_string_table_lengths[stringIndex]));") !=
+        std::string::npos);
   CHECK(cpp.find("stack[sp++] = static_cast<uint64_t>(argc);") != std::string::npos);
   CHECK(cpp.find("argv[indexValue]") != std::string::npos);
   CHECK(cpp.find("std::cerr << argv[indexValue];") != std::string::npos);
