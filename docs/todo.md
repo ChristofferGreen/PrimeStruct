@@ -203,8 +203,6 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
-| TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | ready | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
@@ -258,7 +256,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5965, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1562,26 +1560,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
 
-- [~] TODO-5962: Builtin math and control-flow call names are classified once, with one rule
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5990
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - split_into: TODO-5988 (the math-name rule, done with this split), TODO-5989 (single-segment names, `trimLeadingSlash` and scalar types, done), TODO-5990 (`isSimpleCallName` and the control-flow predicates; closes this leaf)
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 4)
-  - parallel_track: reuse-builtin-names
-  - depends_on: TODO-5959, TODO-5961
-  - scope: `parseMathName` exists in src/semantics/SemanticsBuiltinPathHelpersShared.h:44, src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp:206 and src/ir_lowerer/IrLowererSetupMathHelpers.cpp:16 (different signature, `hasMathImport` flag); `getBuiltinMinMaxName`, `getBuiltinAbsSignName`, `getBuiltinSaturateName`, `getBuiltinConvertName`, `getBuiltinClampName` exist in semantics (SemanticsBuiltinPathHelpers.cpp:329-350, SemanticsBuiltinPathHelpersRewrites.cpp:176), the lowerer (IrLowererBuiltinNameHelpers.cpp:261-342, table-driven via `classifyMathName`) and the IR printer (src/ir/IrPrinterHelpers.cpp:220-292); `isSimpleCallName` in src/semantics/SemanticsCallPathHelpers.cpp:123, src/semantics/SemanticsValidatorStatementBindingsPhasesBReferencePhasesA.cpp:459, src/ir_lowerer/IrLowererHelpers.cpp:296 and :589, IrPrinterHelpers.cpp:165; `isReturnCall` in SemanticsCallPathHelpers.cpp:160, IrLowererHelpers.cpp:413, IrPrinterHelpers.cpp:151 and src/ast/AstPrinter.cpp:17; `isIfCall`, `isLoopCall`, `isWhileCall`, `isForCall`, `isRepeatCall` three times each; `trimLeadingSlash` in SemanticsCallPathHelpers.cpp:15, three times in src/semantics/SemanticsValidatorInferCollectionCompatibilityInternal.h (:366, :422, :435) and src/ir_lowerer/IrLowererCallHelpers.cpp:46. The rules differ: semantics reads `expr.name`, skips SoA-alias normalization and rejects any `/` path other than `std/math/...`; the lowerer normalizes the SoA alias and turns `/foo/bar/min` into `min`; the IR printer rejects any name containing `/`, so `/std/math/min` is not recognized there. Put one classifier in primec_support_lib (or extend include/primec/ast/AstCallPathHelpers.h, which already has `normalizedCallName`) with one normalizer and a small policy parameter (bare names allowed or not, import-gated or not); only "which name string to read from the Expr" stays per layer.
-  - implementation_notes: The lowerer's last-segment rule is the outlier; check what depends on it before dropping it. A probe on 2026-11-12 (`/mylib/min` returning `a + b`, `/mylib/abs` returning `a + 100`, `main` returning `/mylib/min(3, 4) + /mylib/abs(1)`) exits 108 on vm and native today; keep it as a program-matrix or compile-run case.
-  - acceptance:
-    - one definition of each listed classifier; the lowerer, semantics, IR printer and AST printer copies are deleted
-    - a table test runs the same spellings (bare, `/min`, `/std/math/min`, `/foo/bar/min`, SoA aliases) through the classifier with each policy and pins the results
-    - the `/mylib/min` probe returns 108 on vm, native and optexe
-    - full release gate green
-  - stop_rule: name classification only; collection spelling predicates are TODO-5963 and TODO-5964.
-  - notes: Do not run alongside TODO-5961, TODO-5963 or TODO-5966 (shared files).
-
 - [ ] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
   - owner: ai
   - status: ready
@@ -1690,18 +1668,3 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
-
-- [~] TODO-5990: `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - created_at: 2026-11-13
-  - phase: Code reuse (docs/CodeReusePlan.md, section 4; left over from TODO-5989)
-  - parallel_track: reuse-builtin-names
-  - scope: `isSimpleCallName` has three definitions that are three rules, not one: the semantics one (src/semantics/SemanticsCallPathHelpers.cpp:123) strips `std/gpu/`, reads vector and key-value helper member spellings and template specialization suffixes; the lowerer one (src/ir_lowerer/IrLowererHelpers.cpp:296) reads the namespace-prefixed name, normalizes internal SoA storage aliases and accepts scoped builtin tails; the IR printer and AST printer ones are the strict single-segment test (already `primec::isSingleSegmentName`). `isIfCall`, `isLoopCall`, `isWhileCall`, `isForCall`, `isRepeatCall`, `isMatchCall` and `isReturnCall` in semantics and the lowerer are one-line wrappers over their layer's rule. A single definition needs the member-resolver and SoA-alias spellings in support, which is the collection spelling work of TODO-5963 and TODO-5964; do it after those, as a policy-parameterized classifier (strict, semantic-member, lowered-scoped) with a table test of every spelling.
-  - acceptance:
-    - one `isSimpleCallName` rule with explicit policies and one definition of each control-flow predicate
-    - a table test runs bare, rooted, namespaced, member and SoA-alias spellings through each policy
-    - ast-semantic, semantic-product, ir and ir-lowered dumps of examples/ are unchanged
-    - full release gate green
-  - stop_rule: call-name classification only.

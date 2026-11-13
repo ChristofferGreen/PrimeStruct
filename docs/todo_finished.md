@@ -2318,6 +2318,7 @@ are left unarchived.
 | TODO-5959 | The AST C++ and GLSL emitters are deleted | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5961 | One template-type-text parser serves every compiler layer | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5964 | Semantics has one copy of each key-value and collection path predicate | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2336,6 +2337,7 @@ are left unarchived.
 | TODO-5986 | `rewriteExpr` is ordered rules over a context, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5988 | Builtin math names are classified by one rule in support | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5989 | Control-flow call names, simple-call-name tests and return kinds are classified once | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
