@@ -206,7 +206,6 @@ of sync with them.
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
-| TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
@@ -256,7 +255,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5965, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5965, TODO-5973; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1574,21 +1573,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
-
-- [~] TODO-5971: Semantic product lookups are one template over index and fact members
-  - owner: ai
-  - status: in_progress
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 10)
-  - parallel_track: reuse-semantic-facts
-  - scope: src/frontend/SemanticProductLookups.cpp (730 lines, 82% identifier-normalized self-duplication) has about 20 `semanticProgramLookupPublished*By*` functions of one shape (guard on id 0 or `InvalidSymbolId`, find in an index map, `lookupPublishedSemanticEntryByIndex`), about 14 `semanticProgram*Fact*` accessors and about 12 `*View` functions. Replace them with a template over (index-map member, fact-vector member), keeping the public names in include/primec as thin wrappers where callers need them.
-  - acceptance:
-    - SemanticProductLookups.cpp shrinks to about a quarter of its size (counts in the commit)
-    - every caller compiles unchanged or with a mechanical rename; the lowerer and semantics tests pass unchanged
-    - full release gate green
-  - stop_rule: this file and its header only.
-  - notes: Do not run alongside TODO-5970 if both edit include/primec/frontend/SemanticProduct.h.
 
 - [ ] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
