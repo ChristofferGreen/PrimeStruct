@@ -204,7 +204,7 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
-| TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | deferred | reuse-builtin-names |
+| TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | ready | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
@@ -1707,9 +1707,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-5990: `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies
+- [~] TODO-5990: `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-13
   - phase: Code reuse (docs/CodeReusePlan.md, section 4; left over from TODO-5989)
   - parallel_track: reuse-builtin-names
