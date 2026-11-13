@@ -49,6 +49,20 @@ while [[ $# -gt 0 ]]; do
   esac
  done
 
+# The script changes directory while it runs, so every path the caller gave relative to the
+# caller's directory becomes absolute here, before anything else uses it.
+absolute_path() {
+  case "$1" in
+    "") printf '%s' "" ;;
+    /*) printf '%s' "$1" ;;
+    *) printf '%s/%s' "$PWD" "${1#./}" ;;
+  esac
+}
+BUILD_DIR="$(absolute_path "$BUILD_DIR")"
+BENCH_DIR="$(absolute_path "$BENCH_DIR")"
+REPORT_JSON="$(absolute_path "$REPORT_JSON")"
+BASELINE_JSON="$(absolute_path "$BASELINE_JSON")"
+
 if [[ -z "$BENCH_DIR" ]]; then
   BENCH_DIR="$BUILD_DIR/benchmarks"
 fi
