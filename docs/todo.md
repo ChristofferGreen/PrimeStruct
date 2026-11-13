@@ -1574,9 +1574,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
-- [ ] TODO-5973: SoA rewrite passes share one context and one walker
+- [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 11)
   - parallel_track: reuse-soa-rewrites
