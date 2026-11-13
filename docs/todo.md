@@ -212,7 +212,6 @@ of sync with them.
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
-| TODO-5974 | Shared string, hash, JSON and C-literal helpers replace their copies | ready | reuse-support-utils |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
@@ -261,7 +260,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973, TODO-5974; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1641,22 +1640,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the six SoA rewrite files and their shared unit only.
   - notes: Safe alongside the lowerer and backend leaves.
-
-- [~] TODO-5974: Shared string, hash, JSON and C-literal helpers replace their copies
-  - owner: ai
-  - status: in_progress
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 13)
-  - parallel_track: reuse-support-utils
-  - scope: Landed (reuse-a, 2026-11-13): one `jsonEscape` (primec/support/Json.h), `isAsciiAlpha`/`isAsciiDigit`/`isHexDigitChar` (primec/support/Ascii.h; the Lexer, ImportResolverHelpers, ParserHelpers and TextFilterHelpers copies), `appendI32MemArg` (WasmEmitterInternal.h), the parser token classes (primec/frontend/TokenClasses.h: `isIgnorableToken` is comment-only, `isIgnorableOrSeparatorToken` also skips comma and semicolon, the two variants the five copies really were; `isArgumentLabelValueStart`), `fnv1a64` in StdlibSymbolManifest.cpp and TempPaths.cpp, and the C string literal escapers (primec/support/CStringLiteral.h; the exe emitter printed a NUL-containing literal cut at the NUL, fixed and pinned by a compile-run case; the IR printer keeps its documented dump format). Finding: the fnv1a64 copies use two offset bases. The compiler's generated names and the stdlib manifest use 1469598103934665603 (the standard basis 14695981039346656037 with its last digit missing; Hash.h `nameHash`), TempPaths, TestScratch.h and a few semantics sites use the standard one (`fnv1a64`); the basis cannot change without renaming every generated `__t<hash>` name and regenerating the manifests. Remaining: the semantics copies (`fnv1a64` in SemanticsValidatorResultHelpers.cpp and TemplateMonomorphSetupUtilities.cpp, `isAsciiAlpha`/`isAsciiDigit` in SemanticsHelpersValidation.cpp, plus the file-local `fnv1a64` lambdas and copies in src/semantics, src/ir_lowerer and src/frontend/CompileTimeEvaluationFileLocal.h, all on the legacy basis: switch them to `nameHash` in one commit after TODO-5961 lands), the `trim`/`trimAscii`/`trimWhitespace` copies (decide the whitespace set per copy first), and `fnv1a64` in include/primec/testing/TestScratch.h. IrPrinterHelpers.cpp holds none of the listed helpers. Original scope: Copies to replace with units in primec_support_lib (for example include/primec/support/{Ascii,Hash,Json,CStringLiteral}.h): `jsonEscape` (src/bin/primevm_main.cpp:29, src/runtime/VmDebugAdapter.cpp:11, src/runtime/VmDebugDapProtocol.cpp:311, src/support/Diagnostics.cpp:9); `fnv1a64` (src/frontend/StdlibSymbolManifest.cpp:42, src/semantics/SemanticsValidatorResultHelpers.cpp:43, src/semantics/TemplateMonomorphSetupUtilities.cpp:13, src/support/TempPaths.cpp:32); `isAsciiDigit` / `isAsciiAlpha` (src/frontend/Lexer.cpp:46-50, src/frontend/ImportResolverHelpers.cpp:30-34, src/parser/ParserHelpers.cpp:17-21, src/semantics/SemanticsHelpersValidation.cpp:10-14); `isHexDigitChar` (Lexer.cpp:42, ParserHelpers.cpp:191, src/text_filter/TextFilterHelpers.cpp:38); `trim`/`trimAscii`/`trimWhitespace` copies; parser `isIgnorableToken` (5 files) and `isArgumentLabelValueStart` (3); wasm `appendI32MemArg` (src/wasm_emitter/WasmEmitter.cpp:91, WasmEmitterIo.cpp:46, WasmEmitterWasiHelpers.cpp:41). The C string-literal escapers differ: `escapeCppStringLiteral` (src/backend/IrToCppEmitter.cpp:19, `cpp-ir`/`exe-ir`) escapes only `\\`, `"`, `\n`, `\r`, `\t` and copies NUL, `?` and bytes of 0x7F and above raw; `quote` (src/backend/IrToOptCppEmitter.cpp:43) writes everything outside 0x20-0x7E and `?` as octal escapes; `quote` (src/ir/IrModulePrinter.cpp:21) is a third variant. Use the `optcpp` rule for both C++ emitters; keep the IR printer's text format if it is a documented dump format.
-  - acceptance:
-    - each listed helper has one definition
-    - a compile-run case prints a string literal containing NUL, `??=`, a tab, a quote and bytes 0x80-0xFF on `exe` and `optexe` and both print the same bytes
-    - IR printer output is unchanged (or the change is documented as a dump-format change)
-    - full release gate green
-  - stop_rule: the listed helpers only.
-  - notes: Touches frontend, parser, runtime, backend and wasm; do not run alongside TODO-5959 if it is still editing CMake source lists.
 
 - [ ] TODO-5976: The semantic product publishes parsed types, and the lowerer stops re-parsing type text
   - owner: ai
