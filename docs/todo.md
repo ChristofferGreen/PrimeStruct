@@ -203,7 +203,7 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-5961 | One template-type-text parser serves every compiler layer | blocked | reuse-type-text |
+| TODO-5961 | One template-type-text parser serves every compiler layer | ready | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
@@ -1566,10 +1566,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
 
-- [ ] TODO-5961: One template-type-text parser serves every compiler layer
+- [~] TODO-5961: One template-type-text parser serves every compiler layer
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5959
+  - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 3)
   - parallel_track: reuse-type-text
