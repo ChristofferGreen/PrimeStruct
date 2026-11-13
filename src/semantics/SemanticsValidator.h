@@ -33,7 +33,7 @@ struct TypeResolutionGraphNode;
 
 // Result of a phase function of a split giant validation function.
 enum class PhaseStatus { Continue, Done };
-struct ValidateExprCallState;
+struct ExprCallContext;
 
 struct BindingContext;
 

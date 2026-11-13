@@ -999,12 +999,17 @@
                                                 size_t &methodReceiverIndex);
 
   // Phase functions of validateExpr.
-  friend struct ValidateExprCallState;
-  PhaseStatus validateExprCallPhase1(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase2(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase3(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase4(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase5(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase6(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase7(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
-  PhaseStatus validateExprCallPhase8(const std::vector<ParameterInfo> &params, const std::unordered_map<std::string, BindingInfo> &locals, const Expr &expr, ValidateExprCallState &st);
+  // Validation of a call expression: ordered rules over an ExprCallContext.
+  friend struct ExprCallContext;
+  std::optional<std::string> pendingFieldViewNameFromRewrittenHelper(ExprCallContext &cc);
+  bool matchesResolvedFamilyPath(ExprCallContext &cc,
+                                 std::string_view candidate,
+                                 std::string_view familyPath);
+  PhaseStatus checkCallFormAndTasks(ExprCallContext &cc);
+  PhaseStatus checkNamedArgumentsAndControlFlow(ExprCallContext &cc);
+  PhaseStatus rewriteVectorAndFieldAccessCalls(ExprCallContext &cc);
+  PhaseStatus resolveVectorHelperCalls(ExprCallContext &cc);
+  PhaseStatus resolveCollectionMethodTargets(ExprCallContext &cc);
+  PhaseStatus resolveCollectionTargets(ExprCallContext &cc);
+  PhaseStatus resolveCallee(ExprCallContext &cc);
+  PhaseStatus validateResolvedCall(ExprCallContext &cc);

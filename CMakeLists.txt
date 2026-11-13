@@ -384,8 +384,10 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp
   src/semantics/SemanticsValidatorExprCallResolution.cpp
   src/semantics/SemanticsValidatorExpr.cpp
-  src/semantics/SemanticsValidatorExprCallPhasesA.cpp
-  src/semantics/SemanticsValidatorExprCallPhasesB.cpp
+  src/semantics/SemanticsValidatorExprCallFormRules.cpp
+  src/semantics/SemanticsValidatorExprCallVectorRules.cpp
+  src/semantics/SemanticsValidatorExprCallTargetRules.cpp
+  src/semantics/SemanticsValidatorExprCallResolveRules.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibility.cpp
   src/semantics/SemanticsValidatorInferCollectionCompatibilityDirects.cpp
   src/semantics/SemanticsValidatorInferCollectionCallResolution.cpp

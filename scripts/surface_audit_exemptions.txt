@@ -49,8 +49,6 @@ src/semantics/SemanticsValidatorBuildInitializerInferenceSoaHelpers.cpp soa
 src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp soa
 src/semantics/SemanticsValidatorExprArgumentValidation.cpp collection,soa
 src/semantics/SemanticsValidatorExprArgumentValidationCollections.cpp soa
-src/semantics/SemanticsValidatorExprCallPhasesA.cpp map
-src/semantics/SemanticsValidatorExprCallPhasesB.cpp soa
 src/semantics/SemanticsValidatorExprCallResolution.cpp soa
 src/semantics/SemanticsValidatorExprCollectionAccess.cpp soa
 src/semantics/SemanticsValidatorExprCollectionCountCapacity.cpp collection,soa
@@ -98,3 +96,4 @@ src/support/StdlibSurfaceScan.cpp collection
 src/support/StdlibSurfaceTables.h collection
 src/semantics/TemplateMonomorphRewriteHelperPaths.cpp soa,vector
 src/semantics/TemplateMonomorphRewriteReceiverResolution.cpp soa
+src/semantics/SemanticsValidatorExprCallResolveRules.cpp soa
