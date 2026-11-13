@@ -203,7 +203,6 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -255,7 +254,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5965, TODO-5973; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1558,21 +1557,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
-
-- [~] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 8)
-  - parallel_track: reuse-ast-builders
-  - scope: src/semantics/SemanticsValidateReflectionGeneratedHelpers{,CloneDebug,Compare,Serialization,State,Validate}.cpp each re-define anonymous-namespace AST builders: `appendPublicVisibility` (5 copies), `makeFieldAccessExpr` (5, 2-3 distinct bodies), `makeTypeBinding` (5, 2-3 distinct bodies), and `makeI32LiteralExpr`, `makeU64LiteralExpr`, `makeBinaryCallExpr`, `makeNameExpr`, `makeStringLiteralExpr`, `makeReturnStatementExpr` (2-4 each). `makeI32LiteralExpr` (4 copies) and `makeNameExpr` (about 3) also exist elsewhere in semantics. Add one builder unit (include/primec/ast/AstBuilders.h with a .cpp, or a semantics-local unit if a builder needs validator state), reconcile the forked variants, and use it in all reflection files and the other copies.
-  - acceptance:
-    - each builder has one definition; the reflection files contain no local builder copies
-    - `--dump-stage` output (semantic product and AST after semantics) of the reflection examples and tests is unchanged, compared through `stripDumpTimings`
-    - full release gate green
-  - stop_rule: AST builders only.
-  - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
