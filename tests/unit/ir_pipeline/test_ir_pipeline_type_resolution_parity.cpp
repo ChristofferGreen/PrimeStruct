@@ -565,7 +565,7 @@ main() {
 }
 )",
           false,
-          "unknown call target: drop",
+          "unknown call target: /std/collections/mapPair",
       },
       {
           "infer_map_value_return_kind",
@@ -591,7 +591,7 @@ main() {
 }
 )",
           false,
-          "unknown call target: drop",
+          "unknown call target: /std/collections/mapPair",
       },
       {
           "shared_collection_receiver_classifiers",
