@@ -1560,9 +1560,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
 
-- [ ] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
+- [~] TODO-5965: Reflection-generated helpers build AST nodes through one builder set
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 8)
   - parallel_track: reuse-ast-builders
