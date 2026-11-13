@@ -97,3 +97,4 @@ src/support/StdlibSurfaceTables.h collection
 src/semantics/TemplateMonomorphRewriteHelperPaths.cpp soa,vector
 src/semantics/TemplateMonomorphRewriteReceiverResolution.cpp soa
 src/semantics/SemanticsValidatorExprCallResolveRules.cpp soa
+src/semantics/SemanticsValidatorExprCallVectorRules.cpp map
