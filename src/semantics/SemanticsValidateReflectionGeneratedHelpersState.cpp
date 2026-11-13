@@ -1,5 +1,6 @@
 #include "SemanticsValidateReflectionGeneratedHelpersState.h"
 
+#include "SemanticsAstBuilders.h"
 #include "SemanticsHelpers.h"
 
 #include <optional>
@@ -9,96 +10,6 @@
 
 namespace primec::semantics {
 namespace {
-
-void appendPublicVisibility(Definition &helper) {
-  Transform visibilityTransform;
-  visibilityTransform.name = "public";
-  helper.transforms.push_back(std::move(visibilityTransform));
-}
-
-Expr makeTypeBinding(const std::string &bindingName,
-                     const std::string &typeName,
-                     const std::string &namespacePrefix,
-                     bool isMutable = false) {
-  Expr binding;
-  binding.isBinding = true;
-  binding.name = bindingName;
-  binding.namespacePrefix = namespacePrefix;
-  Transform typeTransform;
-  std::string typeBase;
-  std::string typeArgText;
-  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {
-    std::vector<std::string> typeArgs;
-    typeTransform.name = typeBase;
-    if (splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
-      typeTransform.templateArgs = std::move(typeArgs);
-    } else {
-      typeTransform.templateArgs.push_back(typeArgText);
-    }
-  } else {
-    typeTransform.name = typeName;
-  }
-  binding.transforms.push_back(std::move(typeTransform));
-  if (isMutable) {
-    Transform mutTransform;
-    mutTransform.name = "mut";
-    binding.transforms.push_back(std::move(mutTransform));
-  }
-  return binding;
-}
-
-Expr makeFieldAccessExpr(const std::string &receiverName, const std::string &fieldName) {
-  Expr fieldAccess;
-  fieldAccess.kind = Expr::Kind::Call;
-  fieldAccess.isFieldAccess = true;
-  fieldAccess.name = fieldName;
-  Expr receiverExpr;
-  receiverExpr.kind = Expr::Kind::Name;
-  receiverExpr.name = receiverName;
-  fieldAccess.args.push_back(std::move(receiverExpr));
-  fieldAccess.argNames.push_back(std::nullopt);
-  return fieldAccess;
-}
-
-Expr makeFieldComparisonExpr(const std::string &comparisonName,
-                             const std::string &leftReceiverName,
-                             const std::string &rightReceiverName,
-                             const std::string &fieldName) {
-  Expr compare;
-  compare.kind = Expr::Kind::Call;
-  compare.name = comparisonName;
-  compare.args.push_back(makeFieldAccessExpr(leftReceiverName, fieldName));
-  compare.argNames.push_back(std::nullopt);
-  compare.args.push_back(makeFieldAccessExpr(rightReceiverName, fieldName));
-  compare.argNames.push_back(std::nullopt);
-  return compare;
-}
-
-Expr makeBinaryBoolExpr(const std::string &operatorName, Expr left, Expr right) {
-  Expr call;
-  call.kind = Expr::Kind::Call;
-  call.name = operatorName;
-  call.args.push_back(std::move(left));
-  call.argNames.push_back(std::nullopt);
-  call.args.push_back(std::move(right));
-  call.argNames.push_back(std::nullopt);
-  return call;
-}
-
-Expr makeBoolLiteralExpr(bool value) {
-  Expr expr;
-  expr.kind = Expr::Kind::BoolLiteral;
-  expr.boolValue = value;
-  return expr;
-}
-
-Expr makeBraceConstructorCall(const std::string &typeName) {
-  Expr call;
-  call.kind = Expr::Kind::Call;
-  call.isBraceConstructor = true;
-  call.name = typeName;
-  return call;
-}
 
 } // namespace
 
@@ -244,7 +155,7 @@ bool emitReflectionIsDefaultHelper(ReflectionGeneratedHelperContext &context) {
     Expr combined = makeFieldComparisonExpr("equal", "value", "defaultValue", context.fieldNames.front());
     for (size_t index = 1; index < context.fieldNames.size(); ++index) {
       Expr compare = makeFieldComparisonExpr("equal", "value", "defaultValue", context.fieldNames[index]);
-      combined = makeBinaryBoolExpr("and", std::move(combined), std::move(compare));
+      combined = makeBinaryCallExpr("and", std::move(combined), std::move(compare));
     }
     helper.returnExpr = std::move(combined);
   }

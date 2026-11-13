@@ -288,6 +288,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateTypeAliases.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructorsContext.cpp
   src/semantics/SemanticsValidateOmittedStructInitializers.cpp
+  src/semantics/SemanticsAstBuilders.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCloneDebug.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpersCompare.cpp
   src/semantics/SemanticsValidateReflectionGeneratedHelpers.cpp

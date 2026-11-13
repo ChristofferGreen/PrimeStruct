@@ -1,5 +1,6 @@
 #include "SemanticsValidateReflectionGeneratedHelpersCloneDebug.h"
 
+#include "SemanticsAstBuilders.h"
 #include "SemanticsHelpers.h"
 
 #include <optional>
@@ -9,77 +10,6 @@
 
 namespace primec::semantics {
 namespace {
-
-void appendPublicVisibility(Definition &helper) {
-  Transform visibilityTransform;
-  visibilityTransform.name = "public";
-  helper.transforms.push_back(std::move(visibilityTransform));
-}
-
-Expr makeTypeBinding(const std::string &bindingName,
-                     const std::string &typeName,
-                     const std::string &namespacePrefix,
-                     bool isMutable = false) {
-  Expr binding;
-  binding.isBinding = true;
-  binding.name = bindingName;
-  binding.namespacePrefix = namespacePrefix;
-  Transform typeTransform;
-  std::string typeBase;
-  std::string typeArgText;
-  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {
-    std::vector<std::string> typeArgs;
-    typeTransform.name = typeBase;
-    if (splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
-      typeTransform.templateArgs = std::move(typeArgs);
-    } else {
-      typeTransform.templateArgs.push_back(typeArgText);
-    }
-  } else {
-    typeTransform.name = typeName;
-  }
-  binding.transforms.push_back(std::move(typeTransform));
-  if (isMutable) {
-    Transform mutTransform;
-    mutTransform.name = "mut";
-    binding.transforms.push_back(std::move(mutTransform));
-  }
-  return binding;
-}
-
-Expr makeNameExpr(const std::string &name) {
-  Expr expr;
-  expr.kind = Expr::Kind::Name;
-  expr.name = name;
-  return expr;
-}
-
-Expr makeFieldAccessExpr(const std::string &receiverName, const std::string &fieldName) {
-  Expr fieldAccess;
-  fieldAccess.kind = Expr::Kind::Call;
-  fieldAccess.isFieldAccess = true;
-  fieldAccess.name = fieldName;
-  fieldAccess.args.push_back(makeNameExpr(receiverName));
-  fieldAccess.argNames.push_back(std::nullopt);
-  return fieldAccess;
-}
-
-Expr makeStringLiteralExpr(const std::string &value) {
-  Expr expr;
-  expr.kind = Expr::Kind::StringLiteral;
-  std::string encoded;
-  encoded.reserve(value.size() + 8);
-  encoded.push_back('"');
-  for (const char ch : value) {
-    if (ch == '"' || ch == '\\') {
-      encoded.push_back('\\');
-    }
-    encoded.push_back(ch);
-  }
-  encoded += "\"utf8";
-  expr.stringValue = std::move(encoded);
-  return expr;
-}
 
 Expr makeCallExpr(const std::string &name, Expr arg) {
   Expr call;

@@ -1,5 +1,6 @@
 #include "SemanticsValidateReflectionGeneratedHelpersValidate.h"
 
+#include "SemanticsAstBuilders.h"
 #include "SemanticsHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 
@@ -22,132 +23,6 @@ std::string formatTemplateArgs(const std::vector<std::string> &args) {
   return out;
 }
 
-std::string escapeStringLiteral(const std::string &text) {
-  std::string escaped;
-  escaped.reserve(text.size() + 8);
-  escaped.push_back('"');
-  for (char c : text) {
-    if (c == '"' || c == '\\') {
-      escaped.push_back('\\');
-    }
-    escaped.push_back(c);
-  }
-  escaped += "\"utf8";
-  return escaped;
-}
-
-void appendPublicVisibility(Definition &helper) {
-  Transform visibilityTransform;
-  visibilityTransform.name = "public";
-  helper.transforms.push_back(std::move(visibilityTransform));
-}
-
-void appendPublicVisibility(Expr &binding) {
-  Transform visibilityTransform;
-  visibilityTransform.name = "public";
-  binding.transforms.push_back(std::move(visibilityTransform));
-}
-
-Expr makeTypeBinding(const std::string &bindingName,
-                     const std::string &typeName,
-                     const std::string &namespacePrefix,
-                     bool isMutable = false) {
-  Expr binding;
-  binding.isBinding = true;
-  binding.name = bindingName;
-  binding.namespacePrefix = namespacePrefix;
-  Transform typeTransform;
-  std::string typeBase;
-  std::string typeArgText;
-  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {
-    typeTransform.name = typeBase;
-    std::vector<std::string> typeArgs;
-    if (splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
-      typeTransform.templateArgs = std::move(typeArgs);
-    } else {
-      typeTransform.templateArgs.push_back(typeArgText);
-    }
-  } else {
-    typeTransform.name = typeName;
-  }
-  binding.transforms.push_back(std::move(typeTransform));
-  if (isMutable) {
-    Transform mutTransform;
-    mutTransform.name = "mut";
-    binding.transforms.push_back(std::move(mutTransform));
-  }
-  return binding;
-}
-
-Expr makeNameExpr(const std::string &name) {
-  Expr expr;
-  expr.kind = Expr::Kind::Name;
-  expr.name = name;
-  return expr;
-}
-
-Expr makeBoolLiteralExpr(bool value) {
-  Expr expr;
-  expr.kind = Expr::Kind::BoolLiteral;
-  expr.boolValue = value;
-  return expr;
-}
-
-Expr makeI32LiteralExpr(uint64_t value) {
-  Expr expr;
-  expr.kind = Expr::Kind::Literal;
-  expr.literalValue = value;
-  expr.intWidth = 32;
-  expr.isUnsigned = false;
-  return expr;
-}
-
-Expr makeStringLiteralExpr(const std::string &value) {
-  Expr expr;
-  expr.kind = Expr::Kind::StringLiteral;
-  expr.stringValue = escapeStringLiteral(value);
-  return expr;
-}
-
-Expr makeReturnStatementExpr(Expr valueExpr) {
-  Expr returnCall;
-  returnCall.kind = Expr::Kind::Call;
-  returnCall.name = "return";
-  returnCall.args.push_back(std::move(valueExpr));
-  returnCall.argNames.push_back(std::nullopt);
-  return returnCall;
-}
-
-Expr makeConstructorCall(const std::string &typeName) {
-  Expr call;
-  call.kind = Expr::Kind::Call;
-  call.isBraceConstructor = true;
-  std::string typeBase;
-  std::string typeArgText;
-  if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {
-    call.name = typeBase;
-    std::vector<std::string> typeArgs;
-    if (splitTopLevelTemplateArgs(typeArgText, typeArgs)) {
-      call.templateArgs = std::move(typeArgs);
-    } else {
-      call.templateArgs.push_back(typeArgText);
-    }
-  } else {
-    call.name = typeName;
-  }
-  return call;
-}
-
-Expr makeFieldAccessExpr(const std::string &receiverName, const std::string &fieldName) {
-  Expr fieldAccess;
-  fieldAccess.kind = Expr::Kind::Call;
-  fieldAccess.isFieldAccess = true;
-  fieldAccess.name = fieldName;
-  fieldAccess.args.push_back(makeNameExpr(receiverName));
-  fieldAccess.argNames.push_back(std::nullopt);
-  return fieldAccess;
-}
-
 Expr makeHelperCallExpr(const std::string &name, std::vector<std::string> templateArgs, std::vector<Expr> args) {
   Expr call;
   call.kind = Expr::Kind::Call;
@@ -156,28 +31,6 @@ Expr makeHelperCallExpr(const std::string &name, std::vector<std::string> templa
   call.args = std::move(args);
   call.argNames.resize(call.args.size(), std::nullopt);
   return call;
-}
-
-Expr makeEnvelopeExpr(const std::string &name, std::vector<Expr> bodyArguments) {
-  Expr envelope;
-  envelope.kind = Expr::Kind::Call;
-  envelope.name = name;
-  envelope.hasBodyArguments = true;
-  envelope.bodyArguments = std::move(bodyArguments);
-  return envelope;
-}
-
-Expr makeIfStatementExpr(Expr conditionExpr, Expr thenEnvelopeExpr, Expr elseEnvelopeExpr) {
-  Expr ifCall;
-  ifCall.kind = Expr::Kind::Call;
-  ifCall.name = "if";
-  ifCall.args.push_back(std::move(conditionExpr));
-  ifCall.argNames.push_back(std::nullopt);
-  ifCall.args.push_back(std::move(thenEnvelopeExpr));
-  ifCall.argNames.push_back(std::nullopt);
-  ifCall.args.push_back(std::move(elseEnvelopeExpr));
-  ifCall.argNames.push_back(std::nullopt);
-  return ifCall;
 }
 
 Expr makeEqualExpr(Expr leftExpr, Expr rightExpr) {
@@ -189,20 +42,6 @@ Expr makeEqualExpr(Expr leftExpr, Expr rightExpr) {
   equalCall.args.push_back(std::move(rightExpr));
   equalCall.argNames.push_back(std::nullopt);
   return equalCall;
-}
-
-Expr makeOkResultExpr() {
-  Expr okResultTypeExpr;
-  okResultTypeExpr.kind = Expr::Kind::Name;
-  okResultTypeExpr.name = "Result";
-
-  Expr okResultCall;
-  okResultCall.kind = Expr::Kind::Call;
-  okResultCall.isMethodCall = true;
-  okResultCall.name = "ok";
-  okResultCall.args.push_back(std::move(okResultTypeExpr));
-  okResultCall.argNames.push_back(std::nullopt);
-  return okResultCall;
 }
 
 } // namespace
@@ -519,7 +358,7 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
     // A one-field chunk is a `SoaColumn<T>{}` like the wider chunks' `SoaColumnsN<...>{}` (the same empty column
     // `soaColumnNew<T>()` returns): a generated `soaColumnNew<T>()` call was not instantiated when nothing else used
     // it, and a one-field storage failed to lower.
-    chunkBinding.args.push_back(makeConstructorCall(chunkTypeNames[chunkIndex]));
+    chunkBinding.args.push_back(makeBraceConstructorCall(chunkTypeNames[chunkIndex]));
     chunkBinding.argNames.push_back(std::nullopt);
     storageStruct.statements.push_back(std::move(chunkBinding));
   }
@@ -549,7 +388,7 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   };
 
   Definition storageNewHelper = makeHelper("SoaSchemaStorageNew", storageNewHelperPath, storageStructPath, false);
-  storageNewHelper.returnExpr = makeConstructorCall(storageStructPath);
+  storageNewHelper.returnExpr = makeBraceConstructorCall(storageStructPath);
   storageNewHelper.hasReturnStatement = true;
   context.rewrittenDefinitions.push_back(std::move(storageNewHelper));
   context.definitionPaths.insert(storageNewHelperPath);
