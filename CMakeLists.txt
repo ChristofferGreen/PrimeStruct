@@ -282,6 +282,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateBuiltinSoaRewrites.cpp
   src/semantics/SemanticsValidateBuiltinSoaRewritesAccessCountRewrites.cpp
   src/semantics/SemanticsValidateBuiltinSoaRewritesMutatorRewrites.cpp
+  src/semantics/SemanticsValidateSoaRewriteSupport.cpp
   src/semantics/SemanticsValidateCompileTimeIf.cpp
   src/semantics/SemanticsValidateExperimentalSoaFieldViewRewrites.cpp
   src/semantics/SemanticsValidateExperimentalSoaFieldViewRewritesHelperRewrites.cpp

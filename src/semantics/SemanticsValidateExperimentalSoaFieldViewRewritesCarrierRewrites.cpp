@@ -2,6 +2,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateBuiltinSoaMetadata.h"
+#include "SemanticsValidateSoaRewriteSupport.h"
 #include "SemanticsValidateExperimentalSoaMethodRewrites.h"
 #include "SemanticsValidateSoaBindingExtraction.h"
 
@@ -18,55 +19,6 @@
 #include "primec/support/CollectionHelperNames.h"
 
 namespace primec {
-
-void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-    Expr &expr,
-    const std::unordered_map<std::string, std::string> &fieldViewBindings,
-    const std::unordered_map<std::string, std::vector<std::string>> &structFieldNames,
-    const std::unordered_set<std::string> &structPaths,
-    const std::string &definitionNamespace);
-
-void rewriteExperimentalSoaFieldViewCarrierIndexStatements(
-    std::vector<Expr> &statements,
-    std::unordered_map<std::string, std::string> fieldViewBindings,
-    const std::unordered_map<std::string, std::vector<std::string>> &structFieldNames,
-    const std::unordered_set<std::string> &structPaths,
-    const std::string &definitionNamespace) {
-  for (Expr &stmt : statements) {
-    rewriteExperimentalSoaFieldViewCarrierIndexExpr(
-        stmt, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
-    if (!stmt.bodyArguments.empty()) {
-      auto bodyBindings = fieldViewBindings;
-      rewriteExperimentalSoaFieldViewCarrierIndexStatements(
-          stmt.bodyArguments, bodyBindings, structFieldNames, structPaths, definitionNamespace);
-    }
-    if (stmt.isBinding) {
-      if (auto parsed = extractParsedBindingInfo(stmt, &structPaths); parsed.has_value()) {
-        std::string elemType;
-        if (extractSoaFieldViewElementTypeFromBinding(*parsed, elemType)) {
-          fieldViewBindings[stmt.name] = elemType;
-        }
-      }
-      if (stmt.args.size() == 1 && fieldViewBindings.count(stmt.name) == 0) {
-        const Expr &initializer = stmt.args.front();
-        if (initializer.kind == Expr::Kind::Call && !initializer.isBinding) {
-          std::string initPath = initializer.name;
-          if (!initPath.empty() && initPath.front() != '/') {
-            initPath.insert(initPath.begin(), '/');
-          }
-          if (semantics::isExperimentalSoaFieldViewHelperPath(initPath)) {
-            if (initializer.templateArgs.size() >= 2) {
-              fieldViewBindings[stmt.name] =
-                  qualifySoaFieldViewTypeText(initializer.templateArgs[1],
-                                              definitionNamespace,
-                                              structPaths);
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
     Expr &expr,
@@ -161,6 +113,8 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
   expr = std::move(readCall);
 }
 
+using FieldViewBindings = std::unordered_map<std::string, std::string>;
+
 bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string &error) {
   error.clear();
   std::unordered_set<std::string> structPaths;
@@ -197,13 +151,37 @@ bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string
         }
       }
     }
-    std::string definitionNamespace;
-    const size_t slash = def.fullPath.find_last_of('/');
-    if (slash != std::string::npos && slash > 0) {
-      definitionNamespace = def.fullPath.substr(0, slash);
-    }
-    rewriteExperimentalSoaFieldViewCarrierIndexStatements(
-        def.statements, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
+    const std::string definitionNamespace = soaDefinitionNamespace(def.fullPath);
+    rewriteSoaStatements(
+        def.statements,
+        fieldViewBindings,
+        [&](Expr &expr, const FieldViewBindings &visible) {
+          rewriteExperimentalSoaFieldViewCarrierIndexExpr(
+              expr, visible, structFieldNames, structPaths, definitionNamespace);
+        },
+        [&](const Expr &stmt, FieldViewBindings &tracked) {
+          if (auto parsed = extractParsedBindingInfo(stmt, &structPaths); parsed.has_value()) {
+            std::string elemType;
+            if (extractSoaFieldViewElementTypeFromBinding(*parsed, elemType)) {
+              tracked[stmt.name] = elemType;
+            }
+          }
+          if (stmt.args.size() == 1 && tracked.count(stmt.name) == 0) {
+            const Expr &initializer = stmt.args.front();
+            if (initializer.kind == Expr::Kind::Call && !initializer.isBinding) {
+              std::string initPath = initializer.name;
+              if (!initPath.empty() && initPath.front() != '/') {
+                initPath.insert(initPath.begin(), '/');
+              }
+              if (semantics::isExperimentalSoaFieldViewHelperPath(initPath)) {
+                if (initializer.templateArgs.size() >= 2) {
+                  tracked[stmt.name] = qualifySoaFieldViewTypeText(
+                      initializer.templateArgs[1], definitionNamespace, structPaths);
+                }
+              }
+            }
+          }
+        });
     if (def.returnExpr.has_value()) {
       rewriteExperimentalSoaFieldViewCarrierIndexExpr(
           *def.returnExpr, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
@@ -211,11 +189,7 @@ bool rewriteExperimentalSoaFieldViewCarrierIndexes(Program &program, std::string
   }
   for (auto &exec : program.executions) {
     std::unordered_map<std::string, std::string> fieldViewBindings;
-    std::string definitionNamespace;
-    const size_t slash = exec.fullPath.find_last_of('/');
-    if (slash != std::string::npos && slash > 0) {
-      definitionNamespace = exec.fullPath.substr(0, slash);
-    }
+    const std::string definitionNamespace = soaDefinitionNamespace(exec.fullPath);
     for (Expr &arg : exec.arguments) {
       rewriteExperimentalSoaFieldViewCarrierIndexExpr(
           arg, fieldViewBindings, structFieldNames, structPaths, definitionNamespace);
