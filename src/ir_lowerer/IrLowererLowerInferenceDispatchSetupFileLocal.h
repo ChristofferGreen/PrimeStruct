@@ -21,47 +21,6 @@ namespace primec::ir_lowerer {
 namespace ir_lowerer_lower_inference_dispatch_setup_file_local {
 
 
-inline bool inferDispatchSetupResultValueKindFromValueTypeText(const std::string &valueTypeText,
-                                                        LocalInfo::ValueKind &kindOut) {
-  const std::string trimmedValueType = trimTemplateTypeText(valueTypeText);
-  if (trimmedValueType.empty()) {
-    return false;
-  }
-  kindOut = valueKindFromTypeName(trimmedValueType);
-  if (kindOut == LocalInfo::ValueKind::Unknown) {
-    kindOut = LocalInfo::ValueKind::Int64;
-  }
-  return true;
-}
-
-inline bool inferDispatchSetupResultValueKindFromResultTypeText(const std::string &typeText,
-                                                         LocalInfo::ValueKind &kindOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  bool resultHasValue = false;
-  LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
-  std::string resultErrorType;
-  const std::string trimmedType = trimTemplateTypeText(typeText);
-  if (!parseResultTypeName(trimmedType, resultHasValue, resultValueKind, resultErrorType)) {
-    return false;
-  }
-  if (!resultHasValue) {
-    kindOut = LocalInfo::ValueKind::Int32;
-    return true;
-  }
-  if (resultValueKind != LocalInfo::ValueKind::Unknown) {
-    kindOut = resultValueKind;
-    return true;
-  }
-  std::string base;
-  std::string argText;
-  std::vector<std::string> resultArgs;
-  if (!splitTemplateTypeName(trimmedType, base, argText) ||
-      !splitTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
-    return false;
-  }
-  return inferDispatchSetupResultValueKindFromValueTypeText(resultArgs.front(), kindOut);
-}
-
 inline LocalInfo::ValueKind inferDispatchSetupNameValueKindFromTypeText(
     const std::string &typeText) {
   std::string normalizedType = trimTemplateTypeText(typeText);
@@ -112,17 +71,6 @@ inline bool hasSemanticProductDispatchResultMethodFactContext(const Expr &expr,
 }
 
 
-inline bool isDispatchSetupFileHandleMethodName(const std::string &methodName) {
-  return methodName == "write" || methodName == "write_line" ||
-         methodName == "write_byte" || methodName == "write_bytes" ||
-         methodName == "flush" || methodName == "close";
-}
-
-
-inline bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
-                                                  const SemanticProgram *semanticProgram,
-                                                  const SemanticProductIndex *semanticIndex,
-                                                  std::string &typeTextOut);
 
 inline const StdlibSurfaceMetadata *keyValueHelperSurfaceMetadataForDispatchSetup() {
   return keyValueHelperSurfaceMetadata();
@@ -199,7 +147,7 @@ inline bool inferDispatchSetupSemanticKeyValueReceiverKind(const Expr &receiver,
     return true;
   }
   std::string receiverType;
-  if (!resolveDispatchSetupSemanticReceiverTypeText(
+  if (!resolveInferenceSemanticReceiverTypeText(
           receiver, semanticProgram, semanticIndex, receiverType)) {
     return false;
   }
@@ -211,70 +159,6 @@ inline bool inferDispatchSetupSemanticKeyValueReceiverKind(const Expr &receiver,
   }
   kindOut = containsResult ? LocalInfo::ValueKind::Bool : valueKind;
   return true;
-}
-
-inline bool inferDispatchSetupSemanticFileHandleCallKind(const Expr &expr,
-                                                  const SemanticProgram *semanticProgram,
-                                                  const SemanticProductIndex *semanticIndex,
-                                                  LocalInfo::ValueKind &kindOut,
-                                                  bool &hasSemanticCallOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticCallOut = false;
-  if (!isFileHandleCall(expr) || semanticProgram == nullptr ||
-      semanticIndex == nullptr || expr.semanticNodeId == 0) {
-    return false;
-  }
-  const auto *queryFact =
-      findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
-  if (queryFact == nullptr) {
-    return false;
-  }
-  hasSemanticCallOut = true;
-  std::string callType = resolveInferenceSemanticFactTypeText(
-      *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
-  if (callType.empty()) {
-    callType = resolveInferenceSemanticFactTypeText(
-        *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
-  }
-  if (!isInferenceFileHandleTypeText(callType)) {
-    return false;
-  }
-  kindOut = LocalInfo::ValueKind::Int64;
-  return true;
-}
-
-inline bool resolveDispatchSetupSemanticReceiverTypeText(const Expr &receiver,
-                                                  const SemanticProgram *semanticProgram,
-                                                  const SemanticProductIndex *semanticIndex,
-                                                  std::string &typeTextOut) {
-  typeTextOut.clear();
-  if (semanticProgram == nullptr || semanticIndex == nullptr ||
-      receiver.semanticNodeId == 0) {
-    return false;
-  }
-  if (const auto *queryFact =
-          findSemanticProductQueryFactBySemanticId(*semanticIndex, receiver)) {
-    typeTextOut = resolveInferenceSemanticFactTypeText(
-        *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
-    if (typeTextOut.empty()) {
-      typeTextOut = resolveInferenceSemanticFactTypeText(
-          *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
-    }
-    return true;
-  }
-  if (const auto *bindingFact =
-          findSemanticProductBindingFact(*semanticIndex, receiver)) {
-    typeTextOut = resolveInferenceSemanticFactTypeText(
-        *semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId);
-    return true;
-  }
-  if (const auto *localAutoFact =
-          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, receiver)) {
-    typeTextOut = resolveInferenceSemanticFactTypeText(
-        *semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId);
-    return true;
-  }
-  return false;
 }
 
 
@@ -302,183 +186,11 @@ inline bool inferDispatchSetupSemanticNameKind(const Expr &expr,
     return false;
   }
   std::string typeText;
-  if (!resolveDispatchSetupSemanticReceiverTypeText(
-          expr, semanticProgram, semanticIndex, typeText)) {
+  if (!resolveInferenceSemanticReceiverTypeText(expr, semanticProgram, semanticIndex, typeText)) {
     return false;
   }
   kindOut = inferDispatchSetupNameValueKindFromTypeText(typeText);
   return true;
-}
-
-inline bool inferDispatchSetupSemanticFileErrorWhyKind(const Expr &receiver,
-                                                const SemanticProgram *semanticProgram,
-                                                const SemanticProductIndex *semanticIndex,
-                                                LocalInfo::ValueKind &kindOut,
-                                                bool &hasSemanticReceiverOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticReceiverOut = false;
-  std::string receiverType;
-  if (!resolveDispatchSetupSemanticReceiverTypeText(
-          receiver, semanticProgram, semanticIndex, receiverType)) {
-    return false;
-  }
-  hasSemanticReceiverOut = true;
-  if (!isInferenceFileErrorTypeText(receiverType)) {
-    return false;
-  }
-  kindOut = LocalInfo::ValueKind::String;
-  return true;
-}
-
-inline bool inferDispatchSetupSemanticDereferencedFileErrorWhyKind(
-    const Expr &receiver,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    LocalInfo::ValueKind &kindOut,
-    bool &hasSemanticTargetOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticTargetOut = false;
-  if (!isSimpleCallName(receiver, "dereference") || receiver.args.size() != 1) {
-    return false;
-  }
-
-  bool hasSemanticTarget = false;
-  if (inferDispatchSetupSemanticFileErrorWhyKind(receiver.args.front(),
-                                                semanticProgram,
-                                                semanticIndex,
-                                                kindOut,
-                                                hasSemanticTarget)) {
-    hasSemanticTargetOut = true;
-    return true;
-  }
-  hasSemanticTargetOut = hasSemanticTarget;
-  return false;
-}
-
-inline bool inferDispatchSetupSemanticFileHandleMethodKind(const Expr &receiver,
-                                                    const std::string &methodName,
-                                                    const SemanticProgram *semanticProgram,
-                                                    const SemanticProductIndex *semanticIndex,
-                                                    LocalInfo::ValueKind &kindOut,
-                                                    bool &hasSemanticReceiverOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticReceiverOut = false;
-  if (!isDispatchSetupFileHandleMethodName(methodName)) {
-    return false;
-  }
-  std::string receiverType;
-  if (!resolveDispatchSetupSemanticReceiverTypeText(
-          receiver, semanticProgram, semanticIndex, receiverType)) {
-    return false;
-  }
-  hasSemanticReceiverOut = true;
-  if (!isInferenceFileHandleTypeText(receiverType)) {
-    return false;
-  }
-  kindOut = LocalInfo::ValueKind::Int32;
-  return true;
-}
-
-inline bool inferDispatchSetupSemanticDereferencedFileHandleMethodKind(
-    const Expr &receiver,
-    const std::string &methodName,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    LocalInfo::ValueKind &kindOut,
-    bool &hasSemanticTargetOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticTargetOut = false;
-  if (!isSimpleCallName(receiver, "dereference") || receiver.args.size() != 1) {
-    return false;
-  }
-
-  bool hasSemanticTarget = false;
-  if (inferDispatchSetupSemanticFileHandleMethodKind(receiver.args.front(),
-                                                    methodName,
-                                                    semanticProgram,
-                                                    semanticIndex,
-                                                    kindOut,
-                                                    hasSemanticTarget)) {
-    hasSemanticTargetOut = true;
-    return true;
-  }
-  hasSemanticTargetOut = hasSemanticTarget;
-  return false;
-}
-
-inline bool inferDispatchSetupSemanticTryOperandResultKind(const Expr &operand,
-                                                    const SemanticProgram *semanticProgram,
-                                                    const SemanticProductIndex *semanticIndex,
-                                                    LocalInfo::ValueKind &kindOut,
-                                                    bool &hasSemanticOperandOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticOperandOut = false;
-  if (semanticProgram == nullptr || semanticIndex == nullptr || operand.semanticNodeId == 0) {
-    return false;
-  }
-  if (const auto *queryFact =
-          findSemanticProductQueryFactBySemanticId(*semanticIndex, operand)) {
-    hasSemanticOperandOut = true;
-    if (queryFact->hasResultType) {
-      if (!queryFact->resultTypeHasValue) {
-        kindOut = LocalInfo::ValueKind::Int32;
-        return true;
-      }
-      return inferDispatchSetupResultValueKindFromValueTypeText(
-          resolveInferenceSemanticFactTypeText(
-              *semanticProgram, queryFact->resultValueType, queryFact->resultValueTypeId),
-          kindOut);
-    }
-    std::string queryType = resolveInferenceSemanticFactTypeText(
-        *semanticProgram, queryFact->queryTypeText, queryFact->queryTypeTextId);
-    if (queryType.empty()) {
-      queryType = resolveInferenceSemanticFactTypeText(
-          *semanticProgram, queryFact->bindingTypeText, queryFact->bindingTypeTextId);
-    }
-    return inferDispatchSetupResultValueKindFromResultTypeText(queryType, kindOut);
-  }
-  if (const auto *bindingFact =
-          findSemanticProductBindingFact(*semanticIndex, operand)) {
-    hasSemanticOperandOut = true;
-    return inferDispatchSetupResultValueKindFromResultTypeText(
-        resolveInferenceSemanticFactTypeText(
-            *semanticProgram, bindingFact->bindingTypeText, bindingFact->bindingTypeTextId),
-        kindOut);
-  }
-  if (const auto *localAutoFact =
-          findSemanticProductLocalAutoFactBySemanticId(*semanticIndex, operand)) {
-    hasSemanticOperandOut = true;
-    return inferDispatchSetupResultValueKindFromResultTypeText(
-        resolveInferenceSemanticFactTypeText(
-            *semanticProgram, localAutoFact->bindingTypeText, localAutoFact->bindingTypeTextId),
-        kindOut);
-  }
-  return false;
-}
-
-inline bool inferDispatchSetupSemanticDereferencedTryOperandResultKind(
-    const Expr &operand,
-    const SemanticProgram *semanticProgram,
-    const SemanticProductIndex *semanticIndex,
-    LocalInfo::ValueKind &kindOut,
-    bool &hasSemanticTargetOut) {
-  kindOut = LocalInfo::ValueKind::Unknown;
-  hasSemanticTargetOut = false;
-  if (!isSimpleCallName(operand, "dereference") || operand.args.size() != 1) {
-    return false;
-  }
-
-  bool hasSemanticTarget = false;
-  if (inferDispatchSetupSemanticTryOperandResultKind(operand.args.front(),
-                                                    semanticProgram,
-                                                    semanticIndex,
-                                                    kindOut,
-                                                    hasSemanticTarget)) {
-    hasSemanticTargetOut = true;
-    return true;
-  }
-  hasSemanticTargetOut = hasSemanticTarget;
-  return false;
 }
 
 } // namespace ir_lowerer_lower_inference_dispatch_setup_file_local

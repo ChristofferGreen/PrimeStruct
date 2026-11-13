@@ -409,23 +409,16 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (!expr.args.empty() && expr.name == "why") {
       const Expr &receiver = expr.args.front();
       bool hasSemanticReceiver = false;
-      if (inferBaseSetupSemanticFileErrorWhyKind(receiver,
-                                                semanticProgram,
-                                                semanticIndex,
-                                                kindOut,
-                                                hasSemanticReceiver)) {
+      if (inferInferenceSemanticFileErrorWhyKind(
+              receiver, semanticProgram, semanticIndex, kindOut, hasSemanticReceiver)) {
         return true;
       }
       if (hasSemanticReceiver) {
         return true;
       }
       bool hasSemanticDereferenceTarget = false;
-      if (inferBaseSetupSemanticDereferencedFileErrorWhyKind(
-              receiver,
-              semanticProgram,
-              semanticIndex,
-              kindOut,
-              hasSemanticDereferenceTarget)) {
+      if (inferInferenceSemanticDereferencedFileErrorWhyKind(
+              receiver, semanticProgram, semanticIndex, kindOut, hasSemanticDereferenceTarget)) {
         return true;
       }
       if (hasSemanticDereferenceTarget) {
@@ -484,25 +477,24 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (!expr.args.empty()) {
       const Expr &receiver = expr.args.front();
       bool hasSemanticFileHandleReceiver = false;
-      if (inferBaseSetupSemanticFileHandleMethodKind(receiver,
-                                                    expr.name,
-                                                    semanticProgram,
-                                                    semanticIndex,
-                                                    kindOut,
-                                                    hasSemanticFileHandleReceiver)) {
+      if (inferInferenceSemanticFileHandleMethodKind(receiver,
+                                                     expr.name,
+                                                     semanticProgram,
+                                                     semanticIndex,
+                                                     kindOut,
+                                                     hasSemanticFileHandleReceiver)) {
         return true;
       }
       if (hasSemanticFileHandleReceiver) {
         return true;
       }
       bool hasSemanticFileHandleTarget = false;
-      if (inferBaseSetupSemanticDereferencedFileHandleMethodKind(
-              receiver,
-              expr.name,
-              semanticProgram,
-              semanticIndex,
-              kindOut,
-              hasSemanticFileHandleTarget)) {
+      if (inferInferenceSemanticDereferencedFileHandleMethodKind(receiver,
+                                                                 expr.name,
+                                                                 semanticProgram,
+                                                                 semanticIndex,
+                                                                 kindOut,
+                                                                 hasSemanticFileHandleTarget)) {
         return true;
       }
       if (hasSemanticFileHandleTarget) {
@@ -513,7 +505,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       const Expr &receiver = expr.args.front();
       auto it = localsIn.find(receiver.name);
       if (it != localsIn.end() && it->second.isFileHandle) {
-        if (isBaseSetupFileHandleMethodName(expr.name)) {
+        if (isInferenceFileHandleMethodName(expr.name)) {
           kindOut = LocalInfo::ValueKind::Int32;
           return true;
         }
@@ -548,7 +540,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     return false;
   }
   bool hasSemanticFileHandleCall = false;
-  if (inferBaseSetupSemanticFileHandleCallKind(
+  if (inferInferenceSemanticFileHandleCallKind(
           expr, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleCall)) {
     return true;
   }
@@ -563,7 +555,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     const Expr &arg = expr.args.front();
     if (arg.kind == Expr::Kind::Call) {
       bool hasSemanticFileHandleArg = false;
-      if (inferBaseSetupSemanticFileHandleCallKind(
+      if (inferInferenceSemanticFileHandleCallKind(
               arg, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleArg)) {
         return true;
       }
@@ -572,7 +564,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     bool hasSemanticResultOperand = false;
-    if (inferBaseSetupSemanticTryOperandResultKind(
+    if (inferInferenceSemanticTryOperandResultKind(
             arg, semanticProgram, semanticIndex, kindOut, hasSemanticResultOperand)) {
       return true;
     }
@@ -580,12 +572,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       return true;
     }
     bool hasSemanticDereferencedResultOperand = false;
-    if (inferBaseSetupSemanticDereferencedTryOperandResultKind(
-            arg,
-            semanticProgram,
-            semanticIndex,
-            kindOut,
-            hasSemanticDereferencedResultOperand)) {
+    if (inferInferenceSemanticDereferencedTryOperandResultKind(
+            arg, semanticProgram, semanticIndex, kindOut, hasSemanticDereferencedResultOperand)) {
       return true;
     }
     if (hasSemanticDereferencedResultOperand) {
@@ -593,12 +581,12 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     }
     if (arg.kind == Expr::Kind::Call && arg.isMethodCall && !arg.args.empty()) {
       bool hasSemanticFileHandleReceiver = false;
-      if (inferBaseSetupSemanticFileHandleMethodKind(arg.args.front(),
-                                                    arg.name,
-                                                    semanticProgram,
-                                                    semanticIndex,
-                                                    kindOut,
-                                                    hasSemanticFileHandleReceiver)) {
+      if (inferInferenceSemanticFileHandleMethodKind(arg.args.front(),
+                                                     arg.name,
+                                                     semanticProgram,
+                                                     semanticIndex,
+                                                     kindOut,
+                                                     hasSemanticFileHandleReceiver)) {
         return true;
       }
       if (hasSemanticFileHandleReceiver) {
@@ -695,7 +683,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     }
     if (arg.kind == Expr::Kind::Call) {
       bool hasSemanticFileHandleArg = false;
-      if (inferBaseSetupSemanticFileHandleCallKind(
+      if (inferInferenceSemanticFileHandleCallKind(
               arg, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleArg)) {
         return true;
       }

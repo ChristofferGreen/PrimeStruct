@@ -185,29 +185,23 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       }
       const Expr &resultExpr = tryExpr.args.front();
       bool hasSemanticFileHandleCall = false;
-      if (inferDispatchSetupSemanticFileHandleCallKind(resultExpr,
-                                                       semanticProgram,
-                                                       semanticIndex,
-                                                       kindOut,
-                                                       hasSemanticFileHandleCall)) {
+      if (inferInferenceSemanticFileHandleCallKind(
+              resultExpr, semanticProgram, semanticIndex, kindOut, hasSemanticFileHandleCall)) {
         return true;
       }
       if (hasSemanticFileHandleCall) {
         return true;
       }
       bool hasSemanticResultOperand = false;
-      if (inferDispatchSetupSemanticTryOperandResultKind(resultExpr,
-                                                        semanticProgram,
-                                                        semanticIndex,
-                                                        kindOut,
-                                                        hasSemanticResultOperand)) {
+      if (inferInferenceSemanticTryOperandResultKind(
+              resultExpr, semanticProgram, semanticIndex, kindOut, hasSemanticResultOperand)) {
         return true;
       }
       if (hasSemanticResultOperand) {
         return true;
       }
       bool hasSemanticDereferencedResultOperand = false;
-      if (inferDispatchSetupSemanticDereferencedTryOperandResultKind(
+      if (inferInferenceSemanticDereferencedTryOperandResultKind(
               resultExpr,
               semanticProgram,
               semanticIndex,
@@ -409,41 +403,39 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       if (resultExpr.isMethodCall && !resultExpr.args.empty()) {
         const Expr &receiverExpr = resultExpr.args.front();
         bool hasSemanticFileHandleReceiver = false;
-        if (inferDispatchSetupSemanticFileHandleMethodKind(receiverExpr,
-                                                          resultExpr.name,
-                                                          semanticProgram,
-                                                          semanticIndex,
-                                                          kindOut,
-                                                          hasSemanticFileHandleReceiver)) {
+        if (inferInferenceSemanticFileHandleMethodKind(receiverExpr,
+                                                       resultExpr.name,
+                                                       semanticProgram,
+                                                       semanticIndex,
+                                                       kindOut,
+                                                       hasSemanticFileHandleReceiver)) {
           return true;
         }
         bool hasSemanticFileHandleTarget = false;
-        if (inferDispatchSetupSemanticDereferencedFileHandleMethodKind(
-                receiverExpr,
-                resultExpr.name,
-                semanticProgram,
-                semanticIndex,
-                kindOut,
-                hasSemanticFileHandleTarget)) {
+        if (inferInferenceSemanticDereferencedFileHandleMethodKind(receiverExpr,
+                                                                   resultExpr.name,
+                                                                   semanticProgram,
+                                                                   semanticIndex,
+                                                                   kindOut,
+                                                                   hasSemanticFileHandleTarget)) {
           return true;
         }
         bool hasSemanticFileErrorReceiver = false;
         if (resultExpr.name == "why" &&
-            inferDispatchSetupSemanticFileErrorWhyKind(receiverExpr,
-                                                       semanticProgram,
-                                                       semanticIndex,
-                                                       kindOut,
-                                                       hasSemanticFileErrorReceiver)) {
+            inferInferenceSemanticFileErrorWhyKind(receiverExpr,
+                                                   semanticProgram,
+                                                   semanticIndex,
+                                                   kindOut,
+                                                   hasSemanticFileErrorReceiver)) {
           return true;
         }
         bool hasSemanticFileErrorTarget = false;
         if (resultExpr.name == "why" &&
-            inferDispatchSetupSemanticDereferencedFileErrorWhyKind(
-                receiverExpr,
-                semanticProgram,
-                semanticIndex,
-                kindOut,
-                hasSemanticFileErrorTarget)) {
+            inferInferenceSemanticDereferencedFileErrorWhyKind(receiverExpr,
+                                                               semanticProgram,
+                                                               semanticIndex,
+                                                               kindOut,
+                                                               hasSemanticFileErrorTarget)) {
           return true;
         }
         if (hasSemanticFileHandleReceiver || hasSemanticFileHandleTarget ||
@@ -574,15 +566,11 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                     LocalInfo::ValueKind::Unknown;
                 LocalInfo::ValueKind semanticKeyValueValueKind =
                     LocalInfo::ValueKind::Unknown;
-                if (resolveDispatchSetupSemanticReceiverTypeText(
-                        receiverExpr,
-                        semanticProgram,
-                        semanticIndex,
-                        semanticReceiverTypeText) &&
-                    inferDispatchSetupKeyValueKindsFromTypeText(
-                        semanticReceiverTypeText,
-                        semanticKeyValueKeyKind,
-                        semanticKeyValueValueKind)) {
+                if (resolveInferenceSemanticReceiverTypeText(
+                        receiverExpr, semanticProgram, semanticIndex, semanticReceiverTypeText) &&
+                    inferDispatchSetupKeyValueKindsFromTypeText(semanticReceiverTypeText,
+                                                                semanticKeyValueKeyKind,
+                                                                semanticKeyValueValueKind)) {
                   receiverKeyValueValueKindOut = semanticKeyValueValueKind;
                   return receiverKeyValueValueKindOut !=
                          LocalInfo::ValueKind::Unknown;
@@ -660,7 +648,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         }
 
         std::string semanticExprTypeText;
-        if (resolveDispatchSetupSemanticReceiverTypeText(
+        if (resolveInferenceSemanticReceiverTypeText(
                 expr, semanticProgram, semanticIndex, semanticExprTypeText)) {
           const LocalInfo::ValueKind semanticExprKind =
               valueKindFromTypeName(semanticExprTypeText);
@@ -688,20 +676,19 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (expr.isMethodCall && !expr.args.empty() && expr.name == "why") {
           bool hasSemanticFileErrorReceiver = false;
           LocalInfo::ValueKind semanticFileErrorWhyKind = LocalInfo::ValueKind::Unknown;
-          if (inferDispatchSetupSemanticFileErrorWhyKind(expr.args.front(),
-                                                        semanticProgram,
-                                                        semanticIndex,
-                                                        semanticFileErrorWhyKind,
-                                                        hasSemanticFileErrorReceiver)) {
+          if (inferInferenceSemanticFileErrorWhyKind(expr.args.front(),
+                                                     semanticProgram,
+                                                     semanticIndex,
+                                                     semanticFileErrorWhyKind,
+                                                     hasSemanticFileErrorReceiver)) {
             return semanticFileErrorWhyKind;
           }
           bool hasSemanticFileErrorTarget = false;
-          if (inferDispatchSetupSemanticDereferencedFileErrorWhyKind(
-                  expr.args.front(),
-                  semanticProgram,
-                  semanticIndex,
-                  semanticFileErrorWhyKind,
-                  hasSemanticFileErrorTarget)) {
+          if (inferInferenceSemanticDereferencedFileErrorWhyKind(expr.args.front(),
+                                                                 semanticProgram,
+                                                                 semanticIndex,
+                                                                 semanticFileErrorWhyKind,
+                                                                 hasSemanticFileErrorTarget)) {
             return semanticFileErrorWhyKind;
           }
           if (hasSemanticFileErrorReceiver) {
