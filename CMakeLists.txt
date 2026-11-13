@@ -242,12 +242,13 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TemplateMonomorphCallableRewrites.cpp
   src/semantics/TemplateMonomorphExpectedTypeSites.cpp
   src/semantics/TemplateMonomorphTextViewConversions.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp
+  src/semantics/TemplateMonomorphRewriteReceiverResolution.cpp
+  src/semantics/TemplateMonomorphRewriteHelperPaths.cpp
+  src/semantics/TemplateMonomorphRewriteConstructorValues.cpp
+  src/semantics/TemplateMonomorphRewriteNameRules.cpp
+  src/semantics/TemplateMonomorphRewriteCallRules.cpp
   src/semantics/TemplateMonomorphReferenceConstructorRules.cpp
   src/semantics/TemplateMonomorphReferenceHelperRules.cpp
-  src/semantics/TemplateMonomorphExpressionRewritePhasesD.cpp
   src/semantics/TemplateMonomorphFinalOrchestration.cpp
   src/semantics/CondensationDag.cpp
   src/semantics/StronglyConnectedComponents.cpp

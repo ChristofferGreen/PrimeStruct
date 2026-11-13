@@ -36,7 +36,7 @@
 #include <sstream>
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphExpressionRewriteState.h"
+#include "TemplateMonomorphExpressionRewriteContext.h"
 
 // Bare collection helper calls on a borrowed vector (`Reference<vector<T>>`) route to the borrowed-vector helpers.
 namespace primec {

@@ -36,7 +36,7 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphExpressionRewriteState.h"
+#include "TemplateMonomorphExpressionRewriteContext.h"
 #include "SemanticsValidateLambdaClosures.h"
 #include "TemplateMonomorphExpressionReferenceRules.h"
 
@@ -49,10 +49,6 @@ std::string preferredConcreteSamePathSoaHelperPath(ExprReferenceContext &rc,
                                                    const std::string &path) {
   Expr &expr = rc.expr;
   Context &ctx = rc.ctx;
-  auto &collectionHelperReceiverExpr = rc.st.collectionHelperReceiverExpr;
-  auto &resolvesExperimentalSoaVectorReceiver = rc.st.resolvesExperimentalSoaVectorReceiver;
-  auto &resolvesBorrowedExperimentalSoaVectorReceiver =
-      rc.st.resolvesBorrowedExperimentalSoaVectorReceiver;
 
   auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
     const size_t specializationSuffix = canonicalPath.find("__");
@@ -94,16 +90,16 @@ std::string preferredConcreteSamePathSoaHelperPath(ExprReferenceContext &rc,
       ctx.templateDefs.count(samePath) > 0) {
     return std::string{};
   }
-  const Expr *receiverExpr = collectionHelperReceiverExpr(expr);
-  if (!resolvesExperimentalSoaVectorReceiver(receiverExpr) &&
-      !resolvesBorrowedExperimentalSoaVectorReceiver(receiverExpr)) {
+  const Expr *receiverExpr = collectionHelperReceiverExpr(rc.st, expr);
+  if (!resolvesExperimentalSoaVectorReceiver(rc.st, receiverExpr) &&
+      !resolvesBorrowedExperimentalSoaVectorReceiver(rc.st, receiverExpr)) {
     return std::string{};
   }
   return samePath;
 }
 
 PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;
   const std::unordered_set<std::string> &allowedParams = rc.allowedParams;
@@ -115,12 +111,6 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
   auto &resolvedPath = rc.resolvedPath;
   auto &borrowedCanonicalKeyValueUnknownTarget = rc.borrowedCanonicalKeyValueUnknownTarget;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &collectionHelperReceiverExpr = rc.st.collectionHelperReceiverExpr;
-  auto &resolvesBorrowedExperimentalSoaVectorReceiver =
-      rc.st.resolvesBorrowedExperimentalSoaVectorReceiver;
-  auto &inferCollectionReceiverFamily = rc.st.inferCollectionReceiverFamily;
-  auto &preferredBorrowedSoaWrapperPath = rc.st.preferredBorrowedSoaWrapperPath;
-  auto &preferCanonicalStdlibCollectionHelperPath = rc.st.preferCanonicalStdlibCollectionHelperPath;
   auto &allConcrete = rc.st.allConcrete;
   if (!expr.isMethodCall) {
     unwrapDereferencedBorrowedVectorReceiver(expr, params, locals, allowMathBare, ctx);
@@ -130,7 +120,7 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
     resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
   }
   const std::string preferredCollectionHelperPath =
-      preferCanonicalStdlibCollectionHelperPath(resolvedPath);
+      preferCanonicalStdlibCollectionHelperPath(rc.st, resolvedPath);
   if (!error.empty()) {
     return rc.done(st.done(false));
   }
@@ -188,12 +178,13 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
   if (!expr.isMethodCall && expr.name.find('/') == std::string::npos &&
       semantics::isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
       !isTemplateMonomorphSoaReceiverType(
-          inferCollectionReceiverFamily(collectionHelperReceiverExpr(expr)))) {
+          inferCollectionReceiverFamily(rc.st, collectionHelperReceiverExpr(rc.st, expr)))) {
     return rc.done(st.done(true));
   }
-  const std::string preferredBorrowedSoaPath = preferredBorrowedSoaWrapperPath(resolvedPath);
+  const std::string preferredBorrowedSoaPath = preferredBorrowedSoaWrapperPath(rc.st, resolvedPath);
   if (!preferredBorrowedSoaPath.empty() &&
-      resolvesBorrowedExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr)) &&
+      resolvesBorrowedExperimentalSoaVectorReceiver(rc.st,
+                                                    collectionHelperReceiverExpr(rc.st, expr)) &&
       (ctx.sourceDefs.count(preferredBorrowedSoaPath) > 0 ||
        ctx.helperOverloads.count(preferredBorrowedSoaPath) > 0 ||
        ctx.templateDefs.count(preferredBorrowedSoaPath) > 0)) {
@@ -202,7 +193,7 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
     expr.namespacePrefix.clear();
   }
   const bool resolvesBorrowedExperimentalKeyValueReceiver =
-      resolvesExperimentalKeyValueBorrowedReceiver(collectionHelperReceiverExpr(expr),
+      resolvesExperimentalKeyValueBorrowedReceiver(collectionHelperReceiverExpr(rc.st, expr),
                                                    params,
                                                    locals,
                                                    allowMathBare,
@@ -229,7 +220,7 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
 }
 
 PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;
   const std::unordered_set<std::string> &allowedParams = rc.allowedParams;
@@ -241,20 +232,8 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
   auto &inferredCanonicalKeyValueReceiverTemplateArgs =
       rc.inferredCanonicalKeyValueReceiverTemplateArgs;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &collectionHelperReceiverExpr = rc.st.collectionHelperReceiverExpr;
-  auto &mutableCollectionHelperReceiverExpr = rc.st.mutableCollectionHelperReceiverExpr;
-  auto &resolveExperimentalSoaVectorReceiverTemplateArgs =
-      rc.st.resolveExperimentalSoaVectorReceiverTemplateArgs;
-  auto &resolvesExperimentalSoaVectorReceiver = rc.st.resolvesExperimentalSoaVectorReceiver;
-  auto &resolvesBorrowedExperimentalSoaVectorReceiver =
-      rc.st.resolvesBorrowedExperimentalSoaVectorReceiver;
-  auto &resolvesConcreteExperimentalSoaVectorReceiver =
-      rc.st.resolvesConcreteExperimentalSoaVectorReceiver;
-  auto &isCanonicalSoaBorrowedWrapperHelper = rc.st.isCanonicalSoaBorrowedWrapperHelper;
-  auto &rewriteNestedExperimentalVectorConstructorValue =
-      rc.st.rewriteNestedExperimentalVectorConstructorValue;
   auto &allConcrete = rc.st.allConcrete;
-  const Expr *experimentalVectorReceiverExpr = collectionHelperReceiverExpr(expr);
+  const Expr *experimentalVectorReceiverExpr = collectionHelperReceiverExpr(rc.st, expr);
   const bool canRewriteNamedExperimentalVectorTemporary =
       experimentalVectorReceiverExpr == nullptr ||
       experimentalVectorReceiverExpr->kind != Expr::Kind::Call ||
@@ -271,18 +250,19 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
     expr.namespacePrefix.clear();
     if (expr.templateArgs.empty()) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveCollectionVectorValueReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
-                                                           params,
-                                                           locals,
-                                                           allowMathBare,
-                                                           namespacePrefix,
-                                                           ctx,
-                                                           receiverTemplateArgs)) {
+      if (resolveCollectionVectorValueReceiverTemplateArgs(
+              collectionHelperReceiverExpr(rc.st, expr),
+              params,
+              locals,
+              allowMathBare,
+              namespacePrefix,
+              ctx,
+              receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
-    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
-      if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
+    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(rc.st, expr)) {
+      if (!rewriteNestedExperimentalVectorConstructorValue(rc.st, *receiverExpr)) {
         return rc.done(st.done(false));
       }
     }
@@ -291,9 +271,10 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
       experimentalSoaVectorHelperPathForCanonicalHelper(resolvedPath);
   const bool shouldRewriteCanonicalSoaHelperToExperimental =
       ctx.sourceDefs.count(resolvedPath) == 0 && ctx.helperOverloads.count(resolvedPath) == 0 &&
-      !isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
+      !isCanonicalSoaBorrowedWrapperHelper(rc.st, resolvedPath) &&
       hasVisibleStdCollectionsImportForPath(ctx, resolvedPath) &&
-      resolvesConcreteExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr));
+      resolvesConcreteExperimentalSoaVectorReceiver(rc.st,
+                                                    collectionHelperReceiverExpr(rc.st, expr));
   if (shouldRewriteCanonicalSoaHelperToExperimental && !experimentalSoaVectorPath.empty() &&
       ctx.sourceDefs.count(experimentalSoaVectorPath) > 0) {
     resolvedPath = experimentalSoaVectorPath;
@@ -301,8 +282,8 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
     expr.namespacePrefix.clear();
     if (expr.templateArgs.empty()) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
-                                                           receiverTemplateArgs)) {
+      if (resolveExperimentalSoaVectorReceiverTemplateArgs(
+              rc.st, collectionHelperReceiverExpr(rc.st, expr), receiverTemplateArgs)) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
@@ -310,7 +291,7 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
   rc.inferredCanonicalKeyValueReceiverTemplateArgs = false;
   if (expr.templateArgs.empty() &&
       resolvedPath.rfind(experimentalCollectionConstructorRootLocal("map"), 0) == 0 &&
-      resolvesExperimentalKeyValueReceiver(collectionHelperReceiverExpr(expr),
+      resolvesExperimentalKeyValueReceiver(collectionHelperReceiverExpr(rc.st, expr),
                                            params,
                                            locals,
                                            allowMathBare,
@@ -319,7 +300,7 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
                                            namespacePrefix,
                                            ctx)) {
     std::vector<std::string> receiverTemplateArgs;
-    if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
+    if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(rc.st, expr),
                                                         params,
                                                         locals,
                                                         allowMathBare,
@@ -332,7 +313,7 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
   if (expr.templateArgs.empty() && isTemplateMonomorphCanonicalKeyValueHelperPath(resolvedPath) &&
       hasVisibleStdCollectionsImportForPath(ctx, resolvedPath)) {
     std::vector<std::string> receiverTemplateArgs;
-    if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
+    if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(rc.st, expr),
                                                         params,
                                                         locals,
                                                         allowMathBare,
@@ -346,14 +327,14 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
   }
   if (expr.templateArgs.empty() &&
       resolvedPath.rfind(semantics::legacyExperimentalVectorCompatibilityPrefix(), 0) == 0 &&
-      resolvesCollectionVectorValueReceiver(collectionHelperReceiverExpr(expr),
+      resolvesCollectionVectorValueReceiver(collectionHelperReceiverExpr(rc.st, expr),
                                             params,
                                             locals,
                                             allowMathBare,
                                             namespacePrefix,
                                             ctx)) {
     std::vector<std::string> receiverTemplateArgs;
-    if (resolveCollectionVectorValueReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
+    if (resolveCollectionVectorValueReceiverTemplateArgs(collectionHelperReceiverExpr(rc.st, expr),
                                                          params,
                                                          locals,
                                                          allowMathBare,
@@ -364,18 +345,19 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
     }
   }
   if (expr.templateArgs.empty() && isExperimentalSoaVectorPublicHelperPath(resolvedPath) &&
-      resolvesExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
+      resolvesExperimentalSoaVectorReceiver(rc.st, collectionHelperReceiverExpr(rc.st, expr))) {
     std::vector<std::string> receiverTemplateArgs;
-    if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
-                                                         receiverTemplateArgs)) {
+    if (resolveExperimentalSoaVectorReceiverTemplateArgs(
+            rc.st, collectionHelperReceiverExpr(rc.st, expr), receiverTemplateArgs)) {
       expr.templateArgs = std::move(receiverTemplateArgs);
     }
   }
-  if (expr.templateArgs.empty() && isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
-      resolvesBorrowedExperimentalSoaVectorReceiver(collectionHelperReceiverExpr(expr))) {
+  if (expr.templateArgs.empty() && isCanonicalSoaBorrowedWrapperHelper(rc.st, resolvedPath) &&
+      resolvesBorrowedExperimentalSoaVectorReceiver(rc.st,
+                                                    collectionHelperReceiverExpr(rc.st, expr))) {
     std::vector<std::string> receiverTemplateArgs;
-    if (resolveExperimentalSoaVectorReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
-                                                         receiverTemplateArgs)) {
+    if (resolveExperimentalSoaVectorReceiverTemplateArgs(
+            rc.st, collectionHelperReceiverExpr(rc.st, expr), receiverTemplateArgs)) {
       expr.templateArgs = std::move(receiverTemplateArgs);
       allConcrete = true;
     }
@@ -392,7 +374,7 @@ PhaseStatus rewriteExperimentalVectorTemporary(ExprReferenceContext &rc) {
 }
 
 PhaseStatus resolveCanonicalHelperTarget(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const std::string &namespacePrefix = rc.namespacePrefix;
   Context &ctx = rc.ctx;
@@ -405,12 +387,11 @@ PhaseStatus resolveCanonicalHelperTarget(ExprReferenceContext &rc) {
   auto &isKnownDef = rc.isKnownDef;
   auto &allowMathBare = rc.st.allowMathBare;
   auto &hadExplicitTemplateArgsOnEntry = rc.st.hadExplicitTemplateArgsOnEntry;
-  auto &isCanonicalSoaBorrowedWrapperHelper = rc.st.isCanonicalSoaBorrowedWrapperHelper;
   if (isExperimentalSoaVectorPublicHelperPath(resolvedPath) &&
       resolvedPath.find("__t") != std::string::npos) {
     expr.templateArgs.clear();
   }
-  if (isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
+  if (isCanonicalSoaBorrowedWrapperHelper(rc.st, resolvedPath) &&
       resolvedPath.find("__t") != std::string::npos) {
     expr.templateArgs.clear();
   }
@@ -474,7 +455,7 @@ PhaseStatus resolveCanonicalHelperTarget(ExprReferenceContext &rc) {
 }
 
 PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;
   const std::unordered_set<std::string> &allowedParams = rc.allowedParams;
@@ -486,15 +467,6 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
   auto &resolvedPath = rc.resolvedPath;
   auto &isKnownDef = rc.isKnownDef;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &isSyntheticSamePathSoaHelperTemplateCarryPath =
-      rc.st.isSyntheticSamePathSoaHelperTemplateCarryPath;
-  auto &collectionHelperReceiverExpr = rc.st.collectionHelperReceiverExpr;
-  auto &resolvesBorrowedExperimentalSoaVectorReceiver =
-      rc.st.resolvesBorrowedExperimentalSoaVectorReceiver;
-  auto &inferCollectionReceiverFamily = rc.st.inferCollectionReceiverFamily;
-  auto &preferredBorrowedSoaWrapperPath = rc.st.preferredBorrowedSoaWrapperPath;
-  auto &shouldDeferStdlibCollectionHelperTemplateRewrite =
-      rc.st.shouldDeferStdlibCollectionHelperTemplateRewrite;
   auto &allConcrete = rc.st.allConcrete;
   if (const std::string samePathHelper = preferredConcreteSamePathSoaHelperPath(rc, resolvedPath);
       !samePathHelper.empty()) {
@@ -507,10 +479,11 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
     expr.name = resolvedPath;
     expr.namespacePrefix.clear();
   }
-  const Expr *resolvedReceiverExpr = collectionHelperReceiverExpr(expr);
-  const std::string resolvedReceiverFamily = inferCollectionReceiverFamily(resolvedReceiverExpr);
+  const Expr *resolvedReceiverExpr = collectionHelperReceiverExpr(rc.st, expr);
+  const std::string resolvedReceiverFamily =
+      inferCollectionReceiverFamily(rc.st, resolvedReceiverExpr);
   const bool isSyntheticSamePathSoaHelperTemplateCarry =
-      isSyntheticSamePathSoaHelperTemplateCarryPath(resolvedPath) &&
+      isSyntheticSamePathSoaHelperTemplateCarryPath(rc.st, resolvedPath) &&
       ctx.templateDefs.count(resolvedPath) == 0 && !expr.templateArgs.empty() &&
       resolvedReceiverExpr != nullptr &&
       ((resolvedReceiverExpr->kind == Expr::Kind::Call && !resolvedReceiverExpr->isBinding) ||
@@ -518,9 +491,10 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
   if (isSyntheticSamePathSoaHelperTemplateCarry) {
     expr.templateArgs.clear();
   }
-  const std::string latePreferredBorrowedSoaPath = preferredBorrowedSoaWrapperPath(resolvedPath);
+  const std::string latePreferredBorrowedSoaPath =
+      preferredBorrowedSoaWrapperPath(rc.st, resolvedPath);
   if (expr.templateArgs.empty() && !latePreferredBorrowedSoaPath.empty() &&
-      resolvesBorrowedExperimentalSoaVectorReceiver(resolvedReceiverExpr) &&
+      resolvesBorrowedExperimentalSoaVectorReceiver(rc.st, resolvedReceiverExpr) &&
       (ctx.sourceDefs.count(latePreferredBorrowedSoaPath) > 0 ||
        ctx.helperOverloads.count(latePreferredBorrowedSoaPath) > 0 ||
        ctx.templateDefs.count(latePreferredBorrowedSoaPath) > 0)) {
@@ -601,7 +575,7 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
       if (defIt != ctx.sourceDefs.end() &&
           definitionAllowsEmptyTypePackSpecialization(defIt->second)) {
         allConcrete = true;
-      } else if (shouldDeferStdlibCollectionHelperTemplateRewrite(resolvedPath)) {
+      } else if (shouldDeferStdlibCollectionHelperTemplateRewrite(rc.st, resolvedPath)) {
         return rc.done(st.done(true));
       } else {
         error = "template arguments required for " + helperOverloadDisplayPath(resolvedPath, ctx);
@@ -624,10 +598,10 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
       expr.templateArgDetails.clear();
     }
   } else if (isKnownDef && !expr.templateArgs.empty()) {
-    const Expr *templateCarryReceiverExpr = collectionHelperReceiverExpr(expr);
+    const Expr *templateCarryReceiverExpr = collectionHelperReceiverExpr(rc.st, expr);
     const std::string templateCarryReceiverFamily =
-        inferCollectionReceiverFamily(templateCarryReceiverExpr);
-    if (isSyntheticSamePathSoaHelperTemplateCarryPath(resolvedPath) &&
+        inferCollectionReceiverFamily(rc.st, templateCarryReceiverExpr);
+    if (isSyntheticSamePathSoaHelperTemplateCarryPath(rc.st, resolvedPath) &&
         ctx.templateDefs.count(resolvedPath) == 0 && templateCarryReceiverExpr != nullptr &&
         ((templateCarryReceiverExpr->kind == Expr::Kind::Call &&
           !templateCarryReceiverExpr->isBinding) ||
@@ -705,7 +679,7 @@ PhaseStatus rewriteExprReference(Expr &expr,
                                  std::string &error,
                                  const LocalTypeMap &locals,
                                  const std::vector<semantics::ParameterInfo> &params,
-                                 RewriteExprState &st) {
+                                 ExprRewriteContext &st) {
   ExprReferenceContext rc{
       expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, st};
   // Ordered rules: each either decides the expression (Done) or leaves it to the next.

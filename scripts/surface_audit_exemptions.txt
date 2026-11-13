@@ -83,9 +83,6 @@ src/semantics/SemanticsValidatorBindingFormRules.cpp soa
 src/semantics/StdlibCollectionSurfaceHelpers.h collection,soa
 src/semantics/TemplateMonomorphCollectionCompatibilityPaths.cpp soa
 src/semantics/TemplateMonomorphExpressionRewrite.cpp collection
-src/semantics/TemplateMonomorphExpressionRewritePhasesA.cpp soa
-src/semantics/TemplateMonomorphExpressionRewritePhasesB.cpp map,soa,vector
-src/semantics/TemplateMonomorphExpressionRewritePhasesC.cpp soa
 src/semantics/TemplateMonomorphImplicitTemplateInference.cpp collection
 src/support/BuiltinArrayAccessNameClassifier.cpp collection
 src/support/CollectionSpellingClassifier.cpp collection
@@ -99,3 +96,5 @@ src/ir_lowerer/IrLowererLowerStatementsExprContinued.h collection
 src/ir_lowerer/IrLowererAccessLoadHelpersFileLocal.h collection
 src/support/StdlibSurfaceScan.cpp collection
 src/support/StdlibSurfaceTables.h collection
+src/semantics/TemplateMonomorphRewriteHelperPaths.cpp soa,vector
+src/semantics/TemplateMonomorphRewriteReceiverResolution.cpp soa

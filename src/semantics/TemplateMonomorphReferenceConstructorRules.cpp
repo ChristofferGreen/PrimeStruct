@@ -36,7 +36,7 @@
 
 #include "primec/support/CompileArena.h"
 #include "primec/support/CollectionHelperNames.h"
-#include "TemplateMonomorphExpressionRewriteState.h"
+#include "TemplateMonomorphExpressionRewriteContext.h"
 #include "SemanticsValidateLambdaClosures.h"
 #include "TemplateMonomorphExpressionReferenceRules.h"
 
@@ -47,7 +47,7 @@ namespace primec {
 // in the order of rewriteExprReference (TemplateMonomorphReferenceHelperRules.cpp).
 
 PhaseStatus prerewriteReceiverConstructors(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;
   const std::unordered_set<std::string> &allowedParams = rc.allowedParams;
@@ -59,17 +59,12 @@ PhaseStatus prerewriteReceiverConstructors(ExprReferenceContext &rc) {
   auto &resolvedPath = rc.resolvedPath;
   auto &usesKeyValueEntryConstructorArgs = rc.usesKeyValueEntryConstructorArgs;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &mutableCollectionHelperReceiverExpr = rc.st.mutableCollectionHelperReceiverExpr;
-  auto &rewriteNestedExperimentalKeyValueConstructorValue =
-      rc.st.rewriteNestedExperimentalKeyValueConstructorValue;
-  auto &rewriteNestedExperimentalVectorConstructorValue =
-      rc.st.rewriteNestedExperimentalVectorConstructorValue;
-  if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
+  if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(rc.st, expr)) {
     if (!isRootMapConstructorReceiverExpr(receiverExpr) &&
-        !rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
+        !rewriteNestedExperimentalKeyValueConstructorValue(rc.st, *receiverExpr)) {
       return rc.done(st.done(false));
     }
-    if (!rewriteNestedExperimentalVectorConstructorValue(*receiverExpr)) {
+    if (!rewriteNestedExperimentalVectorConstructorValue(rc.st, *receiverExpr)) {
       return rc.done(st.done(false));
     }
     const auto callLeafIsPlausibleCollectionHelper = [](const Expr &callExpr) {
@@ -196,7 +191,7 @@ PhaseStatus prerewriteReceiverConstructors(ExprReferenceContext &rc) {
 }
 
 PhaseStatus rewriteKeyValuePairConstructor(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const std::string &namespacePrefix = rc.namespacePrefix;
   Context &ctx = rc.ctx;
@@ -371,7 +366,7 @@ PhaseStatus rewriteKeyValuePairConstructor(ExprReferenceContext &rc) {
 }
 
 PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;
   const std::unordered_set<std::string> &allowedParams = rc.allowedParams;
@@ -384,10 +379,6 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
   auto &borrowedCanonicalKeyValueUnknownTarget = rc.borrowedCanonicalKeyValueUnknownTarget;
   auto &removedKeyValueCompatibilityPath = rc.removedKeyValueCompatibilityPath;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &collectionHelperReceiverExpr = rc.st.collectionHelperReceiverExpr;
-  auto &mutableCollectionHelperReceiverExpr = rc.st.mutableCollectionHelperReceiverExpr;
-  auto &rewriteNestedExperimentalKeyValueConstructorValue =
-      rc.st.rewriteNestedExperimentalKeyValueConstructorValue;
   auto removedKeyValueCompatibilityHelperFromPath = [](std::string_view path) -> std::string {
     const primec::StdlibSurfaceMetadata *metadata = keyValueHelperSurfaceMetadataLocal();
     if (metadata == nullptr) {
@@ -445,7 +436,7 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
   }
   const std::string experimentalKeyValuePath =
       experimentalKeyValueHelperPathForCanonicalHelper(resolvedPath);
-  const Expr *experimentalKeyValueReceiverExpr = collectionHelperReceiverExpr(expr);
+  const Expr *experimentalKeyValueReceiverExpr = collectionHelperReceiverExpr(rc.st, expr);
   const bool receiverIsPublishedKeyValueConstructor =
       isPublishedMapConstructorReceiverExpr(experimentalKeyValueReceiverExpr, namespacePrefix, ctx);
   const bool rejectsWrapperReturnedKeyValueAccess =
@@ -481,8 +472,8 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
-    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
-      if (!rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
+    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(rc.st, expr)) {
+      if (!rewriteNestedExperimentalKeyValueConstructorValue(rc.st, *receiverExpr)) {
         return rc.done(st.done(false));
       }
     }
@@ -491,7 +482,7 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
       experimentalKeyValueHelperPathForWrapperHelper(resolvedPath);
   if (!experimentalWrapperKeyValuePath.empty() &&
       ctx.sourceDefs.count(experimentalWrapperKeyValuePath) > 0 &&
-      resolvesExperimentalKeyValueReceiver(collectionHelperReceiverExpr(expr),
+      resolvesExperimentalKeyValueReceiver(collectionHelperReceiverExpr(rc.st, expr),
                                            params,
                                            locals,
                                            allowMathBare,
@@ -504,7 +495,7 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
     expr.namespacePrefix.clear();
     if (expr.templateArgs.empty()) {
       std::vector<std::string> receiverTemplateArgs;
-      if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(expr),
+      if (resolveExperimentalKeyValueReceiverTemplateArgs(collectionHelperReceiverExpr(rc.st, expr),
                                                           params,
                                                           locals,
                                                           allowMathBare,
@@ -514,8 +505,8 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
         expr.templateArgs = std::move(receiverTemplateArgs);
       }
     }
-    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(expr)) {
-      if (!rewriteNestedExperimentalKeyValueConstructorValue(*receiverExpr)) {
+    if (Expr *receiverExpr = mutableCollectionHelperReceiverExpr(rc.st, expr)) {
+      if (!rewriteNestedExperimentalKeyValueConstructorValue(rc.st, *receiverExpr)) {
         return rc.done(st.done(false));
       }
     }
@@ -524,15 +515,13 @@ PhaseStatus rewriteKeyValueEntryConstructor(ExprReferenceContext &rc) {
 }
 
 PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
-  RewriteExprState &st = rc.st;
+  ExprRewriteContext &st = rc.st;
   Expr &expr = rc.expr;
   const std::string &namespacePrefix = rc.namespacePrefix;
   Context &ctx = rc.ctx;
   const LocalTypeMap &locals = rc.locals;
   const std::vector<semantics::ParameterInfo> &params = rc.params;
   auto &allowMathBare = rc.st.allowMathBare;
-  auto &rewriteKeyValueTargetValueForResolvedType = rc.st.rewriteKeyValueTargetValueForResolvedType;
-  auto &rewriteVectorTargetValueForResolvedType = rc.st.rewriteVectorTargetValueForResolvedType;
   const std::string finalDirectCallResolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
   expr.resolvedCallPath = finalDirectCallResolvedPath;
   auto defIt = ctx.sourceDefs.find(finalDirectCallResolvedPath);
@@ -544,7 +533,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
             allowMathBare,
             ctx,
             [&](const std::string &typeText, Expr &argExpr) {
-              return rewriteVectorTargetValueForResolvedType(typeText, argExpr);
+              return rewriteVectorTargetValueForResolvedType(rc.st, typeText, argExpr);
             })) {
       return rc.done(st.done(false));
     }
@@ -555,7 +544,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
             allowMathBare,
             ctx,
             [&](const std::string &typeText, Expr &argExpr) {
-              return rewriteKeyValueTargetValueForResolvedType(typeText, argExpr);
+              return rewriteKeyValueTargetValueForResolvedType(rc.st, typeText, argExpr);
             })) {
       return rc.done(st.done(false));
     }
@@ -568,7 +557,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
                                        ctx,
                                        [&](const std::string &targetTypeText, Expr &valueExpr) {
                                          return rewriteVectorTargetValueForResolvedType(
-                                             targetTypeText, valueExpr);
+                                             rc.st, targetTypeText, valueExpr);
                                        });
   rewriteExperimentalInitTargetValue(expr,
                                      params,
@@ -578,7 +567,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
                                      ctx,
                                      [&](const std::string &targetTypeText, Expr &valueExpr) {
                                        return rewriteVectorTargetValueForResolvedType(
-                                           targetTypeText, valueExpr);
+                                           rc.st, targetTypeText, valueExpr);
                                      });
   rewriteExperimentalAssignTargetValue(expr,
                                        params,
@@ -588,7 +577,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
                                        ctx,
                                        [&](const std::string &targetTypeText, Expr &valueExpr) {
                                          return rewriteKeyValueTargetValueForResolvedType(
-                                             targetTypeText, valueExpr);
+                                             rc.st, targetTypeText, valueExpr);
                                        });
   rewriteExperimentalInitTargetValue(expr,
                                      params,
@@ -598,7 +587,7 @@ PhaseStatus rewriteConstructorArgsForTarget(ExprReferenceContext &rc) {
                                      ctx,
                                      [&](const std::string &targetTypeText, Expr &valueExpr) {
                                        return rewriteKeyValueTargetValueForResolvedType(
-                                           targetTypeText, valueExpr);
+                                           rc.st, targetTypeText, valueExpr);
                                      });
   return PhaseStatus::Continue;
 }

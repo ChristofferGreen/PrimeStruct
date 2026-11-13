@@ -2,7 +2,7 @@
 
 // What the rules that rewrite a plain call expression read and fill in (the `rewriteExpr` reference rules): the
 // expression and its scope, the outer rewrite state, and the facts the rules settle in order. Data only.
-#include "TemplateMonomorphExpressionRewriteState.h"
+#include "TemplateMonomorphExpressionRewriteContext.h"
 
 #include <string>
 #include <vector>
@@ -18,7 +18,7 @@ struct ExprReferenceContext {
   std::string &error;
   const LocalTypeMap &locals;
   const std::vector<semantics::ParameterInfo> &params;
-  RewriteExprState &st;
+  ExprRewriteContext &st;
   // The outcome once a rule has returned Done.
   PhaseStatus result{};
   PhaseStatus done(PhaseStatus value) {
@@ -43,7 +43,7 @@ PhaseStatus rewriteExprReference(Expr &expr,
                                  std::string &error,
                                  const LocalTypeMap &locals,
                                  const std::vector<semantics::ParameterInfo> &params,
-                                 RewriteExprState &st);
+                                 ExprRewriteContext &st);
 
 PhaseStatus prerewriteReceiverConstructors(ExprReferenceContext &rc);
 PhaseStatus rewriteKeyValuePairConstructor(ExprReferenceContext &rc);
