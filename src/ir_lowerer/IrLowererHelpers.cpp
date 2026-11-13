@@ -1,3 +1,4 @@
+#include "primec/support/CallNames.h"
 #include "primec/support/CompileContext.h"
 #include "primec/support/Hash.h"
 #include "primec/support/CompileArena.h"
@@ -198,86 +199,64 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
   return specializedPath.str();
 }
 
-static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  const std::string targetName = nameToMatch == nullptr ? std::string() : std::string(nameToMatch);
-  auto isInternalSoaStorageBareBuiltin = [](const std::string &name) {
-    return name == "assign" || name == "if" || name == "while" || name == "take" ||
-           name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
-           name == "decrement" || name == "return" || name == "then" || name == "else" ||
-           name == "do" || name == "block" || name == "loop" || name == "for" || name == "repeat" ||
-           name == "try" || name == "pick" || name == "wait" || name == "location" ||
-           name == "dereference" || collection_helpers::isCountHelperName(name) ||
-           name == "capacity" || collection_helpers::isToAosHelperName(name) || name == "push" ||
-           name == "reserve" || name == "move" || name == "negate" || name == "plus" ||
-           name == "minus" || name == "multiply" || name == "divide" || name == "greater_than" ||
-           name == "less_than" || name == "equal" || name == "not_equal" ||
-           name == "greater_equal" || name == "less_equal" || name == "and" || name == "or" ||
-           name == "not" || collection_helpers::isGetHelperName(name) ||
-           collection_helpers::isRefHelperName(name);
-  };
-  auto matchScopedBuiltinTail = [&](const std::string &candidate) {
-    std::string alias = candidate;
-    const size_t slash = alias.find_last_of('/');
-    if (slash != std::string::npos) {
-      alias = alias.substr(slash + 1);
-    }
-    if (alias.find('/') == std::string::npos &&
-        isInternalSoaStorageBareBuiltin(alias)) {
-      return alias == targetName;
-    }
-    return false;
-  };
-  std::string name = expr.name;
-  if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
-    std::string scopedPrefix = expr.namespacePrefix;
-    if (!scopedPrefix.empty() && scopedPrefix.front() != '/') {
-      scopedPrefix.insert(scopedPrefix.begin(), '/');
-    }
-    if (!scopedPrefix.empty()) {
-      name = scopedPrefix + "/" + name;
-    }
-  }
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/gpu/", 0) == 0) {
-    name.erase(0, 8);
-  }
-  const std::string vectorCollectionPrefix =
-      std::string("std/collections/") + "vector" + "/";
+static bool isInternalSoaStorageBareBuiltin(const std::string &name) {
+  return name == "assign" || name == "if" || name == "while" || name == "take" ||
+         name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
+         name == "decrement" || name == "return" || name == "then" || name == "else" ||
+         name == "do" || name == "block" || name == "loop" || name == "for" || name == "repeat" ||
+         name == "try" || name == "pick" || name == "wait" || name == "location" ||
+         name == "dereference" || collection_helpers::isCountHelperName(name) ||
+         name == "capacity" || collection_helpers::isToAosHelperName(name) || name == "push" ||
+         name == "reserve" || name == "move" || name == "negate" || name == "plus" ||
+         name == "minus" || name == "multiply" || name == "divide" || name == "greater_than" ||
+         name == "less_than" || name == "equal" || name == "not_equal" || name == "greater_equal" ||
+         name == "less_equal" || name == "and" || name == "or" || name == "not" ||
+         collection_helpers::isGetHelperName(name) || collection_helpers::isRefHelperName(name);
+}
+
+// Lowerer policy row: namespace-joined names, vector collection aliases, internal SoA storage aliases and scoped
+// builtin tails decide their own match.
+static bool
+decideLowererScopedBuiltin(const std::string &name, std::string_view target, bool &matches) {
+  const std::string vectorCollectionPrefix = std::string("std/collections/") + "vector" + "/";
   if (name.rfind(vectorCollectionPrefix, 0) == 0) {
-    std::string alias = name.substr(vectorCollectionPrefix.size());
+    const std::string alias = name.substr(vectorCollectionPrefix.size());
     if (alias.find('/') == std::string::npos &&
         (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
          alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap")) {
-      return alias == targetName;
+      matches = alias == target;
+      return true;
     }
   }
-  auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
-    return candidate.rfind(std::string("vector") + "/", 0) == 0 ||
-           candidate.rfind("array/", 0) == 0 ||
-           resolvesKeyValueHelperSurfacePath(candidate);
-  };
-  const std::string internalSoaAlias =
-      normalizeInternalSoaStorageBuiltinAlias(name);
+  const std::string internalSoaAlias = normalizeInternalSoaStorageBuiltinAlias(name);
   if (internalSoaAlias.find('/') == std::string::npos &&
       isInternalSoaStorageBareBuiltin(internalSoaAlias)) {
-    return internalSoaAlias == targetName;
-  }
-  if (name.find('/') != std::string::npos && matchScopedBuiltinTail(name)) {
-    if (isRemovedScopedCollectionAlias(name)) {
-      return false;
-    }
+    matches = internalSoaAlias == target;
     return true;
   }
-  if (name.find('/') != std::string::npos) {
+  if (name.find('/') == std::string::npos) {
     return false;
   }
-  return name == targetName;
+  const size_t slash = name.find_last_of('/');
+  const std::string tail = name.substr(slash + 1);
+  if (isInternalSoaStorageBareBuiltin(tail) && tail == target) {
+    const bool removedScopedCollectionAlias = name.rfind(std::string("vector") + "/", 0) == 0 ||
+                                              name.rfind("array/", 0) == 0 ||
+                                              resolvesKeyValueHelperSurfacePath(name);
+    matches = !removedScopedCollectionAlias;
+    return true;
+  }
+  return false;
+}
+
+static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
+  static const SimpleCallPolicy policy{true, true, false, decideLowererScopedBuiltin};
+  return matchSimpleCallName(expr.name,
+                             expr.namespacePrefix,
+                             nameToMatch == nullptr ? std::string_view()
+                                                    : std::string_view(nameToMatch),
+                             policy);
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
@@ -398,35 +377,35 @@ bool isFileHandleCall(const Expr &expr) {
 }
 
 bool isReturnCall(const Expr &expr) {
-  return isSimpleCallName(expr, "return");
+  return isSimpleCallName(expr, call_names::Return.data());
 }
 
 bool isIfCall(const Expr &expr) {
-  return isSimpleCallName(expr, "if");
+  return isSimpleCallName(expr, call_names::If.data());
 }
 
 bool isMatchCall(const Expr &expr) {
-  return isSimpleCallName(expr, "match");
+  return isSimpleCallName(expr, call_names::Match.data());
 }
 
 bool isLoopCall(const Expr &expr) {
-  return isSimpleCallName(expr, "loop");
+  return isSimpleCallName(expr, call_names::Loop.data());
 }
 
 bool isWhileCall(const Expr &expr) {
-  return isSimpleCallName(expr, "while");
+  return isSimpleCallName(expr, call_names::While.data());
 }
 
 bool isForCall(const Expr &expr) {
-  return isSimpleCallName(expr, "for");
+  return isSimpleCallName(expr, call_names::For.data());
 }
 
 bool isRepeatCall(const Expr &expr) {
-  return isSimpleCallName(expr, "repeat");
+  return isSimpleCallName(expr, call_names::Repeat.data());
 }
 
 bool isBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "block");
+  return isSimpleCallName(expr, call_names::Block.data());
 }
 
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {

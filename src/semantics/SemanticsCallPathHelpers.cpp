@@ -13,14 +13,6 @@ namespace primec::semantics {
 
 namespace {
 
-std::string stripTemplateSpecializationSuffix(std::string value) {
-  const size_t suffix = value.find("__t");
-  if (suffix != std::string::npos) {
-    value.erase(suffix);
-  }
-  return value;
-}
-
 bool resolveCanonicalVectorHelperMemberName(std::string_view path,
                                             std::string &memberNameOut) {
   memberNameOut.clear();
@@ -84,31 +76,25 @@ bool isAssignCall(const Expr &expr) {
   return name == "assign";
 }
 
+// Semantics policy row: collection helper member spellings decide their own match.
+static bool
+decideSemanticsCollectionMember(const std::string &name, std::string_view target, bool &matches) {
+  std::string member;
+  if (resolveCanonicalVectorHelperMemberName(name, member) ||
+      resolveKeyValueHelperMemberName(name, member)) {
+    matches = member == target;
+    return true;
+  }
+  return false;
+}
+
 static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  const std::string targetName = nameToMatch == nullptr ? std::string() : std::string(nameToMatch);
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/gpu/", 0) == 0) {
-    name.erase(0, 8);
-  }
-  std::string vectorHelperName;
-  if (resolveCanonicalVectorHelperMemberName(name, vectorHelperName)) {
-    return vectorHelperName == targetName;
-  }
-  std::string keyValueHelperName;
-  if (resolveKeyValueHelperMemberName(name, keyValueHelperName)) {
-    return keyValueHelperName == targetName;
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  name = stripTemplateSpecializationSuffix(name);
-  return name == targetName;
+  static const SimpleCallPolicy policy{false, true, true, decideSemanticsCollectionMember};
+  return matchSimpleCallName(expr.name,
+                             {},
+                             nameToMatch == nullptr ? std::string_view()
+                                                    : std::string_view(nameToMatch),
+                             policy);
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
@@ -135,41 +121,41 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
 }
 
 bool isIfCall(const Expr &expr) {
-  return isSimpleCallName(expr, "if");
+  return isSimpleCallName(expr, call_names::If.data());
 }
 
 bool isMatchCall(const Expr &expr) {
-  return isSimpleCallName(expr, "match");
+  return isSimpleCallName(expr, call_names::Match.data());
 }
 
 bool isPickCall(const Expr &expr) {
   return !expr.isMethodCall && !expr.isFieldAccess &&
-         isSimpleCallName(expr, "pick") &&
+         isSimpleCallName(expr, call_names::Pick.data()) &&
          (expr.hasBodyArguments || !expr.bodyArguments.empty());
 }
 
 bool isReturnCall(const Expr &expr) {
-  return isSimpleCallName(expr, "return");
+  return isSimpleCallName(expr, call_names::Return.data());
 }
 
 bool isLoopCall(const Expr &expr) {
-  return isSimpleCallName(expr, "loop");
+  return isSimpleCallName(expr, call_names::Loop.data());
 }
 
 bool isWhileCall(const Expr &expr) {
-  return isSimpleCallName(expr, "while");
+  return isSimpleCallName(expr, call_names::While.data());
 }
 
 bool isForCall(const Expr &expr) {
-  return isSimpleCallName(expr, "for");
+  return isSimpleCallName(expr, call_names::For.data());
 }
 
 bool isRepeatCall(const Expr &expr) {
-  return isSimpleCallName(expr, "repeat");
+  return isSimpleCallName(expr, call_names::Repeat.data());
 }
 
 bool isBlockCall(const Expr &expr) {
-  return isSimpleCallName(expr, "block");
+  return isSimpleCallName(expr, call_names::Block.data());
 }
 
 bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error) {

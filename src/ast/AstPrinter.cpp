@@ -19,7 +19,7 @@ bool isReturnCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  return isSingleSegmentName(expr.name, "return");
+  return isSingleSegmentName(expr.name, call_names::Return);
 }
 
 void printExpr(std::ostringstream &out, const Expr &expr) {

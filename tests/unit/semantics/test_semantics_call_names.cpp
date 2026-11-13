@@ -1,6 +1,9 @@
 #include "third_party/doctest.h"
 
+#include "primec/ast/Ast.h"
+#include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/support/CallNames.h"
+#include "primec/testing/SemanticsValidationHelpers.h"
 
 #include <string>
 
@@ -57,6 +60,58 @@ TEST_CASE("scalar type spellings map to one kind each") {
     CAPTURE(name);
     CHECK(primec::scalarTypeKindForName(name) == ScalarTypeKind::None);
   }
+}
+
+namespace {
+
+primec::Expr callNamed(const std::string &name, const std::string &namespacePrefix = {}) {
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = name;
+  expr.namespacePrefix = namespacePrefix;
+  return expr;
+}
+
+} // namespace
+
+TEST_CASE("the strict policy reads one single-segment name") {
+  const primec::SimpleCallPolicy strict;
+  CHECK(primec::matchSimpleCallName("if", {}, "if", strict));
+  CHECK(primec::matchSimpleCallName("/if", {}, "if", strict));
+  CHECK_FALSE(primec::matchSimpleCallName("/std/gpu/if", {}, "if", strict));
+  CHECK_FALSE(primec::matchSimpleCallName("/a/if", {}, "if", strict));
+  CHECK_FALSE(primec::matchSimpleCallName("if__t1f", {}, "if", strict));
+  CHECK_FALSE(primec::matchSimpleCallName("if", "ns", "ns/if", strict));
+  CHECK_FALSE(primec::matchSimpleCallName("while", {}, "if", strict));
+}
+
+TEST_CASE("the semantics policy strips gpu, member and template spellings") {
+  using primec::semantics::isSimpleCallName;
+  CHECK(isSimpleCallName(callNamed("if"), "if"));
+  CHECK(isSimpleCallName(callNamed("/if"), "if"));
+  CHECK(isSimpleCallName(callNamed("/std/gpu/if"), "if"));
+  CHECK(isSimpleCallName(callNamed("if__t1f"), "if"));
+  CHECK_FALSE(isSimpleCallName(callNamed("/a/if"), "if"));
+  CHECK(isSimpleCallName(callNamed("if", "ns"), "if"));
+  CHECK(isSimpleCallName(callNamed("/std/collections/vector/count"), "count"));
+  CHECK_FALSE(isSimpleCallName(callNamed("/std/collections/vector/count"), "push"));
+  CHECK_FALSE(isSimpleCallName(callNamed("if"), "while"));
+}
+
+TEST_CASE("the lowerer policy reads namespaces, collection aliases and SoA aliases") {
+  using primec::ir_lowerer::isSimpleCallName;
+  CHECK(isSimpleCallName(callNamed("if"), "if"));
+  CHECK(isSimpleCallName(callNamed("/if"), "if"));
+  CHECK(isSimpleCallName(callNamed("/std/gpu/if"), "if"));
+  CHECK_FALSE(isSimpleCallName(callNamed("/a/if"), "while"));
+  CHECK(isSimpleCallName(callNamed("count"), "count"));
+  CHECK(isSimpleCallName(callNamed("/std/collections/vector/count"), "count"));
+  CHECK_FALSE(isSimpleCallName(callNamed("/std/collections/vector/count"), "push"));
+  CHECK(isSimpleCallName(callNamed("push"), "push"));
+  // A name inside a namespace is read as the scoped name, whose tail is a builtin.
+  CHECK(isSimpleCallName(callNamed("if", "ns"), "if"));
+  CHECK_FALSE(isSimpleCallName(callNamed("foo", "ns"), "foo"));
+  CHECK_FALSE(isSimpleCallName(callNamed("if"), "while"));
 }
 
 TEST_SUITE_END();

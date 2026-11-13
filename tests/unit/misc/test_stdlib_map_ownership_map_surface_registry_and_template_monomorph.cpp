@@ -338,7 +338,7 @@ TEST_CASE("canonical map surface owns standalone stdlib implementation map surfa
   CHECK(s.callPathHelpersSource.find("mapHelperName") == std::string::npos);
   CHECK(s.callPathHelpersSource.find("resolveMapHelperMemberName(name, keyValueHelperName)") ==
         std::string::npos);
-  CHECK(s.callPathHelpersSource.find("resolveKeyValueHelperMemberName(name, keyValueHelperName)") !=
+  CHECK(s.callPathHelpersSource.find("resolveKeyValueHelperMemberName(name, member)") !=
         std::string::npos);
   CHECK(s.builtinPathHelpersSource.find("rawMethodName.rfind(\"map/\", 0)") ==
         std::string::npos);

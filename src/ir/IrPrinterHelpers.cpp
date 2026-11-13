@@ -86,18 +86,22 @@ bool isReturnCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  return isSingleSegmentName(expr.name, "return");
+  return isSingleSegmentName(expr.name, call_names::Return);
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  return isSingleSegmentName(expr.name, nameToMatch);
+  return matchSimpleCallName(expr.name,
+                             {},
+                             nameToMatch == nullptr ? std::string_view()
+                                                    : std::string_view(nameToMatch),
+                             SimpleCallPolicy{});
 }
 
 bool isIfCall(const Expr &expr) {
-  return isSimpleCallName(expr, "if");
+  return isSimpleCallName(expr, call_names::If.data());
 }
 
 bool getBuiltinComparisonName(const Expr &expr, std::string &out) {

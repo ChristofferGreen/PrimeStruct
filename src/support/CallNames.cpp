@@ -24,6 +24,41 @@ bool isSingleSegmentName(std::string_view spelling, std::string_view target) {
   return rest.find('/') == std::string_view::npos && rest == target;
 }
 
+bool matchSimpleCallName(std::string_view spelling,
+                         std::string_view namespacePrefix,
+                         std::string_view target,
+                         const SimpleCallPolicy &policy) {
+  std::string name(spelling);
+  if (policy.joinNamespacePrefix && !namespacePrefix.empty() &&
+      name.find('/') == std::string::npos) {
+    std::string scoped(namespacePrefix);
+    if (scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    name = scoped + "/" + name;
+  }
+  name = std::string(trimLeadingSlash(name));
+  if (policy.stripGpuPrefix && name.rfind("std/gpu/", 0) == 0) {
+    name.erase(0, 8);
+  }
+  if (policy.decide != nullptr) {
+    bool matches = false;
+    if (policy.decide(name, target, matches)) {
+      return matches;
+    }
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (policy.stripTemplateSuffix) {
+    const size_t suffix = name.find("__t");
+    if (suffix != std::string::npos) {
+      name.erase(suffix);
+    }
+  }
+  return name == target;
+}
+
 ScalarTypeKind scalarTypeKindForName(std::string_view typeName) {
   if (typeName == "int" || typeName == "i32") {
     return ScalarTypeKind::Int32;
