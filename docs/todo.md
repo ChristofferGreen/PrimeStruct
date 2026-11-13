@@ -207,7 +207,6 @@ of sync with them.
 | TODO-5989 | Control-flow call names, simple-call-name tests and return kinds are classified once | ready | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
-| TODO-5983 | `scripts/benchmark.sh` works with the relative `--build-dir` its docs give | ready | benchmark-script |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
@@ -1680,20 +1679,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-5983: `scripts/benchmark.sh` works with the relative `--build-dir` its docs give
-  - owner: ai
-  - status: in_progress
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Tooling
-  - parallel_track: benchmark-script
-  - scope: `./scripts/benchmark.sh --build-dir build-release` (the form in AGENTS.md) fails in its compile_speed step: `BENCH_DIR` becomes the relative `build-release/benchmarks`, the script then runs the Python compile-speed block inside `cd "$BENCH_DIR"` (scripts/benchmark.sh line 322) and the relative paths it passes (`$COMPILE_C_SRC`, `$COMPILE_C_EXE`, `$REPORT_JSON`, ...) no longer resolve, so clang reports `no such file or directory: 'build-release/benchmarks/compile_speed.c'` and the script exits 1 before writing a report. An absolute `--build-dir` avoids it (the script already resolves `PRIMEVM_BIN` that way at line 68). The cause is a relative path used after a `cd`; make `BUILD_DIR`, `BENCH_DIR` and `REPORT_JSON` absolute right after argument parsing.
-  - acceptance:
-    - `./scripts/benchmark.sh --build-dir build-release` runs to the end from the repository root and writes its report
-    - `--bench-dir`, `--report-json` and `--baseline-json` given as relative paths also work
-    - the same run with an absolute `--build-dir` gives the same report layout
-  - stop_rule: path handling in the script only; no benchmark changes.
 
 - [ ] TODO-5984: The http web apps lower in seconds, not minutes
   - owner: ai
