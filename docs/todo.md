@@ -1691,9 +1691,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the listed helpers only.
   - notes: Touches frontend, parser, runtime, backend and wasm; do not run alongside TODO-5959 if it is still editing CMake source lists.
 
-- [ ] TODO-5975: IR opcode categories come from the opcode table
+- [~] TODO-5975: IR opcode categories come from the opcode table
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 14)
   - parallel_track: reuse-opcode-table
