@@ -4,14 +4,15 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/TypeText.h"
 
 namespace primec::ir_printer {
 
 enum class ReturnKind { Unknown, Int, Int64, UInt64, UInt8, Float32, Float64, Bool, String, Void, Array };
 
 std::string joinTemplateArgs(const std::vector<std::string> &args);
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
+using primec::splitTemplateTypeName;
+using primec::splitTopLevelTemplateArgs;
 std::string bindingTypeName(const Expr &expr);
 bool isAssignCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);

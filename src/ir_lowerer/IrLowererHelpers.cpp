@@ -547,40 +547,6 @@ bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error) {
   return true;
 }
 
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
-  base.clear();
-  arg.clear();
-  if (text.empty()) {
-    return false;
-  }
-  const size_t open = text.find('<');
-  if (open == std::string::npos || open == 0 || text.back() != '>') {
-    return false;
-  }
-  const std::string parsedBase = text.substr(0, open);
-  int depth = 0;
-  size_t start = open + 1;
-  for (size_t i = start; i < text.size(); ++i) {
-    char c = text[i];
-    if (c == '<') {
-      depth++;
-      continue;
-    }
-    if (c == '>') {
-      if (depth == 0) {
-        if (i + 1 != text.size()) {
-          return false;
-        }
-        base = parsedBase;
-        arg = text.substr(start, i - start);
-        return true;
-      }
-      depth--;
-    }
-  }
-  return false;
-}
-
 bool getPrintBuiltin(const Expr &expr, PrintBuiltin &out) {
   // Monomorphized template bodies carry their enclosing namespace on every
   // expression, so a bare `print_line` there reads as `/ns/print_line`; the

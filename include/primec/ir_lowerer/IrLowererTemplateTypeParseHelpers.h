@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/support/TypeText.h"
+
 #include <string>
 #include <vector>
 
@@ -7,8 +9,8 @@
 
 namespace primec::ir_lowerer {
 
-std::string trimTemplateTypeText(const std::string &text);
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
+using primec::splitTemplateTypeName;
+using primec::trimTemplateTypeText;
 bool splitTemplateArgs(const std::string &text, std::vector<std::string> &out);
 std::string mangleTemplateTypeArgsSuffix(const std::vector<std::string> &args);
 bool isResultTemplateTypeBaseName(const std::string &base);

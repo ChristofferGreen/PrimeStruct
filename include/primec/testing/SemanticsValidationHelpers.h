@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/support/TypeText.h"
+
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -15,7 +17,7 @@ std::string resolveTypePath(const std::string &name, const std::string &namespac
 bool validateBuiltinComparableKeyType(const std::string &typeName,
                                       const std::vector<std::string> *templateArgs,
                                       std::string &error);
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
+using primec::splitTopLevelTemplateArgs;
 bool isRootBuiltinName(const std::string &name);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std::string rawMethodName);

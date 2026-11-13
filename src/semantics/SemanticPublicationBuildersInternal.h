@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/support/TypeText.h"
+
 // Internal helpers of SemanticPublicationBuilders*.cpp (TODO-5384): types and declarations; the
 // definitions live in the SemanticPublicationBuilders*.cpp units.
 #include "SemanticPublicationBuilders.h"
@@ -55,7 +57,7 @@ bool isReflectionMetadataQueryPath(std::string_view path);
 
 bool isRuntimeReflectionPath(std::string_view path);
 
-bool splitTopLevelTemplateArgs(std::string_view text, std::vector<std::string> &out);
+using primec::splitTopLevelTemplateArgs;
 
 std::string findSoftwareNumericType(std::string_view typeName);
 

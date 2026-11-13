@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/TypeText.h"
 
 namespace primec::semantics {
 
@@ -131,8 +132,10 @@ bool findTrailingArgsPackParameter(const std::vector<ParameterInfo> &params,
                                    size_t &indexOut,
                                    std::string *elementTypeOut = nullptr);
 std::string joinTemplateArgs(const std::vector<std::string> &args);
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
+// The one template type text parsers (include/primec/support/TypeText.h), under their old names for the
+// semantics call sites.
+using primec::splitTemplateTypeName;
+using primec::splitTopLevelTemplateArgs;
 bool isBuiltinTemplateTypeName(const std::string &name);
 bool restrictMatchesBinding(const std::string &restrictType,
                             const std::string &typeName,

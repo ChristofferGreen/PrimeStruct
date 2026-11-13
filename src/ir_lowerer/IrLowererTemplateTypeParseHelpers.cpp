@@ -10,18 +10,6 @@
 
 namespace primec::ir_lowerer {
 
-std::string trimTemplateTypeText(const std::string &text) {
-  size_t start = 0;
-  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
-    start++;
-  }
-  size_t end = text.size();
-  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-    end--;
-  }
-  return text.substr(start, end - start);
-}
-
 bool splitTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   out.clear();
   int depth = 0;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/support/TypeText.h"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -92,6 +94,6 @@ bool getExperimentalVectorConstructorElementTypeAlias(const Expr &expr,
 bool getExperimentalVectorConstructorElementTypeAliasFromPath(
     std::string path,
     std::string &out);
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
+using primec::splitTemplateTypeName;
 
 } // namespace primec::ir_lowerer

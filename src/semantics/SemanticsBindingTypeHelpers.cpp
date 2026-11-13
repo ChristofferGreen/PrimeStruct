@@ -35,8 +35,6 @@ CompileContext::TypeNameCaches &typeNameCaches() {
 }
 
 std::string normalizeBindingTypeNameUncached(const std::string &name);
-bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg);
-bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out);
 
 }  // namespace
 
@@ -523,103 +521,7 @@ std::string joinTemplateArgs(const std::vector<std::string> &args) {
 
 namespace {
 
-bool splitTopLevelTemplateArgsUncached(const std::string &text, std::vector<std::string> &out) {
-  out.clear();
-  int depth = 0;
-  size_t start = 0;
-  auto pushSegment = [&](size_t end) {
-    size_t segStart = start;
-    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
-      ++segStart;
-    }
-    size_t segEnd = end;
-    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
-      --segEnd;
-    }
-    out.push_back(text.substr(segStart, segEnd - segStart));
-  };
-  for (size_t i = 0; i < text.size(); ++i) {
-    char c = text[i];
-    if (c == '<') {
-      ++depth;
-      continue;
-    }
-    if (c == '>') {
-      if (depth > 0) {
-        --depth;
-      }
-      continue;
-    }
-    if (c == ',' && depth == 0) {
-      pushSegment(i);
-      start = i + 1;
-    }
-  }
-  pushSegment(text.size());
-  for (const auto &seg : out) {
-    if (seg.empty()) {
-      return false;
-    }
-  }
-  return !out.empty();
-}
-
-bool splitTemplateTypeNameUncached(const std::string &text, std::string &base, std::string &arg) {
-  size_t lt = text.find('<');
-  if (lt == std::string::npos) {
-    base = text;
-    arg.clear();
-    return false;
-  }
-  size_t gt = text.rfind('>');
-  if (gt == std::string::npos || gt <= lt || gt != text.size() - 1) {
-    base = text;
-    arg.clear();
-    return false;
-  }
-  base = text.substr(0, lt);
-  arg = text.substr(lt + 1, gt - lt - 1);
-  return true;
-}
-
 }  // namespace
-
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
-  auto &splitTopLevelTemplateArgsCache = typeNameCaches().splitTopLevelTemplateArgs;
-  auto it = splitTopLevelTemplateArgsCache.find(text);
-  if (it != splitTopLevelTemplateArgsCache.end()) {
-    out = it->second.second;
-    return it->second.first;
-  }
-  bool ok = splitTopLevelTemplateArgsUncached(text, out);
-  {
-    // TODO-5235: see normalizeBindingTypeName's matching comment above -
-    // the cache's own bucket-array buffer needs system-heap allocation on
-    // every mutation, not just at declaration.
-    primec::SystemHeapScope systemHeapGuard;
-    splitTopLevelTemplateArgsCache.emplace(text, std::make_pair(ok, out));
-  }
-  return ok;
-}
-
-bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
-  auto &splitTemplateTypeNameCache = typeNameCaches().splitTemplateTypeName;
-  auto it = splitTemplateTypeNameCache.find(text);
-  if (it != splitTemplateTypeNameCache.end()) {
-    base = std::get<1>(it->second);
-    arg = std::get<2>(it->second);
-    return std::get<0>(it->second);
-  }
-  bool ok = splitTemplateTypeNameUncached(text, base, arg);
-  {
-    // TODO-5235: see normalizeBindingTypeName's matching comment above -
-    // the cache's own bucket-array buffer needs system-heap allocation on
-    // every mutation, not just at declaration.
-    primec::SystemHeapScope systemHeapGuard;
-    splitTemplateTypeNameCache.emplace(text, std::make_tuple(ok, base, arg));
-  }
-  return ok;
-}
 
 bool isBuiltinTemplateTypeName(const std::string &name) {
   return name == "Pointer" || name == "Reference" || name == "Buffer" ||

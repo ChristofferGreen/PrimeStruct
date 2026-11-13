@@ -37,6 +37,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.move
   primestruct.semantics.intra_body_call_diagnostics
   primestruct.semantics.collection_path_predicates
+  primestruct.semantics.type_text
 )
 
 set(PrimeStructManagedSemanticsCommon
@@ -380,4 +381,12 @@ addPrimeStructManagedDoctestSuite(
   TIMEOUT 30
   LABEL "parallel-safe"
   TOTAL_CASES 4
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.type_text"
+  TARGET PrimeStruct_semantics_tests
+  TIMEOUT 30
+  LABEL "parallel-safe"
+  TOTAL_CASES 5
 )
