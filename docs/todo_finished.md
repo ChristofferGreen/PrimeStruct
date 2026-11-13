@@ -2317,6 +2317,7 @@ are left unarchived.
 | TODO-5958 | A field `[S mut] state{}` of a generic struct in a namespace lowers | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5959 | The AST C++ and GLSL emitters are deleted | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5960 | Executions and definitions get the same intra-body call diagnostics from one implementation | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5961 | One template-type-text parser serves every compiler layer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5963 | The lowerer reads collection spellings only through CollectionSpellingClassifier | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5964 | Semantics has one copy of each key-value and collection path predicate | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5966 | Binding validation is ordered rules with explicit inputs, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |

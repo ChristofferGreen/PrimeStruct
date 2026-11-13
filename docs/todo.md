@@ -203,7 +203,6 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-5961 | One template-type-text parser serves every compiler layer | ready | reuse-type-text |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
@@ -261,7 +260,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973, TODO-5974; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973, TODO-5974; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1564,24 +1563,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
-
-- [~] TODO-5961: One template-type-text parser serves every compiler layer
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 3)
-  - parallel_track: reuse-type-text
-  - depends_on: TODO-5959
-  - scope: Types travel as strings and every layer has its own parser. `splitTemplateTypeName` is defined in src/semantics/SemanticsBindingTypeHelpers.cpp:605 (over `splitTemplateTypeNameUncached` at :567, cached in `typeNameCaches()`), src/ir_lowerer/IrLowererHelpers.cpp:550 and src/ir/IrPrinterHelpers.cpp:21 (plus the emitter copy deleted by TODO-5959); `splitTopLevelTemplateArgs` in SemanticsBindingTypeHelpers.cpp:587, src/semantics/SemanticPublicationBuildersSupport.cpp:249 and IrPrinterHelpers.cpp:51; `trimTemplateTypeText` in src/ir_lowerer/IrLowererTemplateTypeParseHelpers.cpp:13; `returnKindForTypeName` in SemanticsBindingTypeHelpers.cpp:673 and IrPrinterHelpers.cpp:413, with the lowerer variant `valueKindFromTypeName` (src/ir_lowerer/IrLowererSetupTypeHelpers.cpp:28). Call sites: `splitTemplateTypeName` 341 in semantics, 163 in the lowerer, 4 in the IR printer; `splitTopLevelTemplateArgs` 220 in semantics. The copies diverge: the semantics `splitTemplateTypeName` takes the first `<` and a final `>` with no depth matching and sets `base = text` on failure, so `A<B>C<D>` splits as base `A`, argument `B>C<D`; the lowerer and IR printer copies match by depth and reject it; the lowerer copy writes `base` only on success. Create one `TypeText` unit (include/primec/support/TypeText.h, src/support/TypeText.cpp in primec_support_lib) with the depth-matching algorithm, one failure convention and the semantics cache, and route all layers to it. Keep the existing function names as thin forwarding declarations only where removing them would touch hundreds of call sites in one commit; say which in the commit.
-  - implementation_notes: The cache in SemanticsBindingTypeHelpers.cpp allocates under `primec::SystemHeapScope` (TODO-5235 comment); keep that. Check with `--dump-stage` on examples/ that semantic product and IR dumps do not change (wrap both sides in `stripDumpTimings`).
-  - acceptance:
-    - one definition each of `splitTemplateTypeName`, `splitTopLevelTemplateArgs` and `trimTemplateTypeText` in src/support; the per-layer copies are deleted
-    - a support unit test covers nesting, `A<B>C<D>`, empty text, whitespace and trailing text, and a semantics diagnostic test shows a type spelled `A<B>C<D>` is rejected with a readable message
-    - IR and semantic-product dumps of examples/ are unchanged
-    - full release gate green
-  - stop_rule: the text parsers only; no structured type object (TODO-5976) and no builtin-name work (TODO-5962).
-  - notes: Do not run alongside TODO-5962 or TODO-5963 (all three touch src/ir_lowerer/IrLowererHelpers.cpp).
 
 - [ ] TODO-5962: Builtin math and control-flow call names are classified once, with one rule
   - owner: ai
