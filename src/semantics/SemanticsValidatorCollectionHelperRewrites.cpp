@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"
 
@@ -177,14 +178,6 @@ std::string SemanticsValidator::specializedExperimentalKeyValueHelperTarget(
     std::string_view helperName,
     const std::string &keyType,
     const std::string &valueType) const {
-  auto fnv1a64 = [](const std::string &text) {
-    uint64_t hash = 1469598103934665603ULL;
-    for (unsigned char ch : text) {
-      hash ^= static_cast<uint64_t>(ch);
-      hash *= 1099511628211ULL;
-    }
-    return hash;
-  };
   auto stripWhitespace = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -250,11 +243,9 @@ std::string SemanticsValidator::specializedExperimentalKeyValueHelperTarget(
   const std::string basePath =
       preferredCanonicalExperimentalKeyValueHelperTarget(helperName);
   std::ostringstream specializedPath;
-  specializedPath << basePath
-                  << "__t"
-                  << std::hex
-                  << fnv1a64(stripWhitespace(joinTemplateArgs(
-                      {canonicalizeTypeText(keyType), canonicalizeTypeText(valueType)})));
+  specializedPath << basePath << "__t" << std::hex
+                  << nameHash(stripWhitespace(joinTemplateArgs(
+                         {canonicalizeTypeText(keyType), canonicalizeTypeText(valueType)})));
   if (defMap_.count(specializedPath.str()) > 0) {
     return specializedPath.str();
   }

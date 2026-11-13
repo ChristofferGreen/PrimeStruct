@@ -3,6 +3,7 @@
 // Helpers shared by the CompileTimeEvaluation*.cpp units (split out of
 // CompileTimeEvaluation.cpp without changes).
 #include "primec/frontend/CompileTimeEvaluation.h"
+#include "primec/support/Hash.h"
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/runtime/VmKernelBoundary.h"
 #include <algorithm>
@@ -428,12 +429,7 @@ inline std::string hex64(std::uint64_t value) {
 }
 
 inline std::string fnv1a64Hex(std::string_view text) {
-  std::uint64_t hash = 1469598103934665603ull;
-  for (const unsigned char ch : text) {
-    hash ^= ch;
-    hash *= 1099511628211ull;
-  }
-  return hex64(hash);
+  return hex64(nameHash(text));
 }
 
 inline std::vector<std::string> sortedUniqueStrings(std::vector<std::string> values) {

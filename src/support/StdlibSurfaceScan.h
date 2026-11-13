@@ -73,7 +73,6 @@ struct ScannedFunctionRecord {
   bool takesCollectionParam;  // first param type contains the collection type name
 };
 
-std::string trimAscii(std::string_view value);
 std::optional<std::filesystem::path> findStdlibCollectionsDirectory();
 std::vector<std::filesystem::path> listStdlibCollectionFiles();
 std::size_t leadingSpaces(std::string_view line);

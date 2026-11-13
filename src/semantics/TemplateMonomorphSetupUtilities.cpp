@@ -1,4 +1,5 @@
 #include "TemplateMonomorphSetupUtilities.h"
+#include "primec/support/Hash.h"
 
 #include <algorithm>
 #include <cctype>
@@ -9,15 +10,6 @@
 #include "TemplateMonomorphCoreUtilities.h"
 
 namespace primec {
-
-uint64_t fnv1a64(const std::string &text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char c : text) {
-    hash ^= static_cast<uint64_t>(c);
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
 
 
 bool isUnsignedIntegerTemplateArgText(std::string_view text) {
@@ -124,7 +116,7 @@ std::string stripMangledTemplateArgKindPrefix(std::string value) {
 std::string mangleTemplateArgs(const std::vector<std::string> &args,
                                const std::vector<TemplateArgument> *details) {
   const std::string canonical = joinMangledTemplateArgs(args, details);
-  const uint64_t hash = fnv1a64(canonical);
+  const uint64_t hash = nameHash(canonical);
   std::ostringstream out;
   out << "__t" << std::hex << hash;
   return out.str();

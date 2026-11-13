@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/support/Ascii.h"
 #include "primec/frontend/StringLiteral.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -44,7 +45,7 @@
 namespace primec {
 
 bool isCompileTimeTypeofPredicateArg(const std::string &arg) {
-  const std::string trimmed = trimWhitespace(arg);
+  const std::string trimmed = trimAscii(arg);
   return trimmed.rfind("typeof<", 0) == 0 && trimmed.size() > 8 && trimmed.back() == '>';
 }
 

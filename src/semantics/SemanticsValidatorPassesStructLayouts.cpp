@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
@@ -134,14 +135,7 @@ bool SemanticsValidator::validateStructLayouts() {
     if (typeTemplateArg.empty()) {
       return {};
     }
-    uint64_t hash = 1469598103934665603ULL;
-    for (unsigned char c : typeTemplateArg) {
-      if (std::isspace(c)) {
-        continue;
-      }
-      hash ^= static_cast<uint64_t>(c);
-      hash *= 1099511628211ULL;
-    }
+    const uint64_t hash = nameHashSkippingWhitespace(typeTemplateArg);
     std::ostringstream out;
     out << canonicalVectorTypeIdentityPrefix()
         << "Vector__t" << std::hex << hash;

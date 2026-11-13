@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/support/Ascii.h"
 #include "primec/frontend/StringLiteral.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -186,7 +187,7 @@ std::string inferCollectionReceiverFamilyForRewrite(ExprRewriteContext &rc,
          semantics::normalizeBindingTypeName(base) == "Pointer")) {
       std::vector<std::string> args;
       if (semantics::splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
-        typeText = trimWhitespace(args.front());
+        typeText = trimAscii(args.front());
       }
     }
     return normalizeCollectionReceiverTypeName(typeText);

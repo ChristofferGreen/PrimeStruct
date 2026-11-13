@@ -135,7 +135,6 @@ bool resolveGenericTypeOverloadDefinitionIdentity(const Definition &def,
                                                   std::string &internalPathOut,
                                                   std::string &nameOut);
 
-std::string trimWhitespace(const std::string &text);
 
 std::string stripWhitespace(const std::string &text);
 

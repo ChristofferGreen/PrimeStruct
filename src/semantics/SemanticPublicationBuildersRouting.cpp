@@ -1,4 +1,5 @@
 #include "SemanticPublicationBuilders.h"
+#include "primec/support/Hash.h"
 
 #include "RequirementPredicateFacts.h"
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -169,12 +170,8 @@ std::string mangleSemanticTemplateArgsSuffix(const std::vector<std::string> &arg
     canonicalArgs << "type:" << stripWhitespace(args[index]);
   }
 
-  uint64_t hash = 1469598103934665603ULL;
   const std::string canonicalText = canonicalArgs.str();
-  for (unsigned char ch : canonicalText) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
+  const uint64_t hash = nameHash(canonicalText);
 
   std::ostringstream suffix;
   suffix << "__t" << std::hex << hash;

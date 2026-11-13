@@ -1,4 +1,5 @@
 #include "primec/frontend/StdlibSymbolManifest.h"
+#include "primec/support/Ascii.h"
 #include "primec/support/Hash.h"
 
 #include "primec/ast/Ast.h"
@@ -16,16 +17,6 @@
 namespace primec {
 
 namespace {
-
-std::string trimAscii(std::string_view value) {
-  while (!value.empty() && std::isspace(static_cast<unsigned char>(value.front())) != 0) {
-    value.remove_prefix(1);
-  }
-  while (!value.empty() && std::isspace(static_cast<unsigned char>(value.back())) != 0) {
-    value.remove_suffix(1);
-  }
-  return std::string(value);
-}
 
 bool readFile(const std::string &path, std::string &out) {
   std::ifstream in(path, std::ios::binary);

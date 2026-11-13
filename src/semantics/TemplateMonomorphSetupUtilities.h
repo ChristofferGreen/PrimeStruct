@@ -11,8 +11,6 @@
 
 namespace primec {
 
-uint64_t fnv1a64(const std::string &text);
-
 bool isUnsignedIntegerTemplateArgText(std::string_view text);
 
 TemplateArgument normalizedTemplateArgumentAt(const std::vector<std::string> &args,

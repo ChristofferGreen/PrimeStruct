@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cctype>
 #include <cstdint>
 #include <string_view>
 
@@ -26,6 +27,20 @@ constexpr uint64_t fnv1a64(std::string_view text, uint64_t offsetBasis = Fnv1a64
 // The hash of generated names and manifest entries.
 constexpr uint64_t nameHash(std::string_view text) {
   return fnv1a64(text, NameHashOffsetBasis);
+}
+
+// nameHash of `text` with every whitespace character left out: the hash of a template argument
+// list, which must not depend on how the source spaced it.
+inline uint64_t nameHashSkippingWhitespace(std::string_view text) {
+  uint64_t hash = NameHashOffsetBasis;
+  for (const char c : text) {
+    if (std::isspace(static_cast<unsigned char>(c))) {
+      continue;
+    }
+    hash ^= static_cast<unsigned char>(c);
+    hash *= 1099511628211ull;
+  }
+  return hash;
 }
 
 } // namespace primec

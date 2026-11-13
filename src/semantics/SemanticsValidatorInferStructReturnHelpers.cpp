@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -348,14 +349,6 @@ std::string SemanticsValidator::specializedExperimentalKeyValueStructReturnPath(
     }
     return result;
   };
-  auto fnv1a64 = [](const std::string &text) {
-    uint64_t hash = 1469598103934665603ULL;
-    for (unsigned char ch : text) {
-      hash ^= static_cast<uint64_t>(ch);
-      hash *= 1099511628211ULL;
-    }
-    return hash;
-  };
 
   std::ostringstream canonicalArgs;
   for (size_t index = 0; index < templateArgs.size(); ++index) {
@@ -371,8 +364,7 @@ std::string SemanticsValidator::specializedExperimentalKeyValueStructReturnPath(
   if (keyValueBackingRoot.empty()) {
     return {};
   }
-  specializedPath << keyValueBackingRoot << "__t" << std::hex
-                  << fnv1a64(canonicalArgs.str());
+  specializedPath << keyValueBackingRoot << "__t" << std::hex << nameHash(canonicalArgs.str());
   return specializedPath.str();
 }
 

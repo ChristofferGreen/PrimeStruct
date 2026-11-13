@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/support/Ascii.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
@@ -65,18 +66,18 @@ void rewriteSliceCapabilityAlias(std::string &name, std::vector<std::string> &ar
 } // namespace
 
 bool splitTypePackExpansionText(const std::string &input, std::string &packNameOut) {
-  const std::string trimmed = trimWhitespace(input);
+  const std::string trimmed = trimAscii(input);
   if (trimmed.size() <= 3 || trimmed.compare(trimmed.size() - 3, 3, "...") != 0) {
     return false;
   }
-  packNameOut = trimWhitespace(trimmed.substr(0, trimmed.size() - 3));
+  packNameOut = trimAscii(trimmed.substr(0, trimmed.size() - 3));
   return !packNameOut.empty();
 }
 
 bool splitTypePackIndexText(const std::string &input,
                             std::string &packNameOut,
                             std::string &indexTextOut) {
-  const std::string trimmed = trimWhitespace(input);
+  const std::string trimmed = trimAscii(input);
   if (trimmed.size() < 4 || trimmed.back() != ']') {
     return false;
   }
@@ -94,8 +95,8 @@ bool splitTypePackIndexText(const std::string &input,
     if (ch != '[' || templateDepth != 0) {
       continue;
     }
-    packNameOut = trimWhitespace(trimmed.substr(0, i));
-    indexTextOut = trimWhitespace(trimmed.substr(i + 1, trimmed.size() - i - 2));
+    packNameOut = trimAscii(trimmed.substr(0, i));
+    indexTextOut = trimAscii(trimmed.substr(i + 1, trimmed.size() - i - 2));
     return !packNameOut.empty() && !indexTextOut.empty() &&
            indexTextOut.find('[') == std::string::npos &&
            indexTextOut.find(']') == std::string::npos;
@@ -153,10 +154,10 @@ bool parseUnsignedTemplateIndex(std::string_view text, uint64_t &valueOut) {
 bool resolveTemplateIndexText(const std::string &indexText,
                               const SubstMap &mapping,
                               uint64_t &indexOut) {
-  std::string resolved = trimWhitespace(indexText);
+  std::string resolved = trimAscii(indexText);
   const auto mappedIt = mapping.find(resolved);
   if (mappedIt != mapping.end()) {
-    resolved = trimWhitespace(mappedIt->second);
+    resolved = trimAscii(mappedIt->second);
   }
   return parseUnsignedTemplateIndex(resolved, indexOut);
 }
@@ -339,7 +340,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
                                    std::string &error,
                                    std::unordered_set<std::string> &substitutionStack) {
   ResolvedType result;
-  std::string trimmed = trimWhitespace(input);
+  std::string trimmed = trimAscii(input);
   if (trimmed.empty()) {
     result.text = input;
     result.concrete = true;
@@ -398,7 +399,7 @@ ResolvedType resolveTypeStringImpl(std::string input,
       result.concrete = false;
       return result;
     }
-    const std::string mapped = trimWhitespace(mapIt->second);
+    const std::string mapped = trimAscii(mapIt->second);
     if (mapped == trimmed || !substitutionStack.insert(trimmed).second) {
       result.text = trimmed;
       result.concrete = !isEnclosingTemplateParamName(trimmed, namespacePrefix, ctx);

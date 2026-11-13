@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/support/Ascii.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
 #include "TemplateMonomorphDefinitionBindingSetup.h"
@@ -662,8 +663,8 @@ bool inferImplicitTemplateArgs(const Definition &def,
         std::vector<std::string> entryTemplateArgNames;
         if (semantics::splitTopLevelTemplateArgs(wrapperArgs, entryTemplateArgNames) &&
             entryTemplateArgNames.size() == 2) {
-          std::string entryKeyParamName = trimWhitespace(entryTemplateArgNames[0]);
-          std::string entryValueParamName = trimWhitespace(entryTemplateArgNames[1]);
+          std::string entryKeyParamName = trimAscii(entryTemplateArgNames[0]);
+          std::string entryValueParamName = trimAscii(entryTemplateArgNames[1]);
           if (!entryKeyParamName.empty() && !entryValueParamName.empty() &&
               implicitSet.count(entryKeyParamName) > 0 &&
               implicitSet.count(entryValueParamName) > 0 &&
@@ -753,7 +754,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         }
         bool allImplicit = true;
         for (std::string &wrappedArg : wrappedTemplateArgs) {
-          wrappedArg = trimWhitespace(wrappedArg);
+          wrappedArg = trimAscii(wrappedArg);
           if (wrappedArg.empty() || wrappedArg.find('<') != std::string::npos ||
               implicitSet.count(wrappedArg) == 0) {
             allImplicit = false;

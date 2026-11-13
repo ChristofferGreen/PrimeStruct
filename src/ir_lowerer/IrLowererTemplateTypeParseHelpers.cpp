@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/Hash.h"
 
 #include <algorithm>
 #include <cctype>
@@ -54,12 +55,8 @@ std::string mangleTemplateTypeArgsSuffix(const std::vector<std::string> &args) {
     canonical << "type:" << arg;
   }
 
-  uint64_t hash = 1469598103934665603ULL;
   const std::string canonicalText = canonical.str();
-  for (unsigned char ch : canonicalText) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
+  const uint64_t hash = nameHash(canonicalText);
 
   std::ostringstream suffix;
   suffix << "__t" << std::hex << hash;

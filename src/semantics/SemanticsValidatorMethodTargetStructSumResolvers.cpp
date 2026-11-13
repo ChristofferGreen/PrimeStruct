@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "SemanticsValidatorMethodTargetResolutionDetail.h"
@@ -80,14 +81,7 @@ std::string SemanticsValidator::resolveSumTypePath(
       if (splitTemplateTypeName(normalizeBindingTypeName(typeText),
                                 typeBase, typeArgs) &&
           !typeArgs.empty()) {
-        uint64_t hash = 1469598103934665603ULL;
-        for (const char ch : typeArgs) {
-          if (std::isspace(static_cast<unsigned char>(ch))) {
-            continue;
-          }
-          hash ^= static_cast<uint64_t>(static_cast<unsigned char>(ch));
-          hash *= 1099511628211ULL;
-        }
+        const uint64_t hash = nameHashSkippingWhitespace(typeArgs);
         std::ostringstream candidate;
         candidate << sumDef->fullPath << "__t" << std::hex << hash;
         if (sumNames_.count(candidate.str()) > 0) {

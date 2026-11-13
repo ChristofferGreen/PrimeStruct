@@ -1,4 +1,5 @@
 #include "VmDebugDapProtocol.h"
+#include "primec/support/Ascii.h"
 #include "primec/support/Json.h"
 
 #include <cctype>
@@ -309,18 +310,6 @@ private:
 
 } // namespace
 
-std::string trimWhitespace(std::string_view text) {
-  size_t start = 0;
-  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start])) != 0) {
-    ++start;
-  }
-  size_t end = text.size();
-  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1])) != 0) {
-    --end;
-  }
-  return std::string(text.substr(start, end - start));
-}
-
 std::string lowercase(std::string_view text) {
   std::string out;
   out.reserve(text.size());
@@ -449,7 +438,7 @@ bool parseDapFrame(std::istream &input, std::string &payload, bool &eof, std::st
       continue;
     }
     const std::string key = lowercase(std::string_view(line).substr(0, colon));
-    const std::string value = trimWhitespace(std::string_view(line).substr(colon + 1));
+    const std::string value = trimAscii(std::string_view(line).substr(colon + 1));
     if (key != "content-length") {
       continue;
     }

@@ -12,7 +12,6 @@
 
 namespace primec::vm_debug_dap_detail {
 
-std::string trimWhitespace(std::string_view text);
 std::string lowercase(std::string_view text);
 std::string fileNameFromPath(std::string_view path);
 

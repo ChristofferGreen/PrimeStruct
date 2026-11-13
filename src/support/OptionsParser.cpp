@@ -1,4 +1,5 @@
 #include "primec/support/OptionsParser.h"
+#include "primec/support/Ascii.h"
 
 #include "primec/support/EmitKind.h"
 #include "primec/support/Options.h"
@@ -54,18 +55,6 @@ bool normalizeWasmProfile(const std::string &value, std::string &normalized) {
     return true;
   }
   return false;
-}
-
-std::string trimWhitespace(const std::string &text) {
-  size_t start = 0;
-  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
-    ++start;
-  }
-  size_t end = text.size();
-  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-    --end;
-  }
-  return text.substr(start, end - start);
 }
 
 void addUniqueTransform(std::vector<std::string> &list, const std::string &name) {
@@ -224,8 +213,8 @@ bool parseTransformRule(const std::string &text,
     error = "transform rule must include '=': " + text;
     return false;
   }
-  std::string pathSpec = trimWhitespace(text.substr(0, sep));
-  std::string listSpec = trimWhitespace(text.substr(sep + 1));
+  std::string pathSpec = trimAscii(text.substr(0, sep));
+  std::string listSpec = trimAscii(text.substr(sep + 1));
   if (pathSpec.empty()) {
     error = "transform rule path cannot be empty";
     return false;
@@ -240,16 +229,16 @@ bool parseTransformRule(const std::string &text,
   if (pathSpec.size() >= recurseSuffix.size() &&
       pathSpec.compare(pathSpec.size() - recurseSuffix.size(), recurseSuffix.size(), recurseSuffix) == 0) {
     recursive = true;
-    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - recurseSuffix.size()));
+    pathSpec = trimAscii(pathSpec.substr(0, pathSpec.size() - recurseSuffix.size()));
   } else if (pathSpec.size() >= recursiveSuffix.size() &&
              pathSpec.compare(pathSpec.size() - recursiveSuffix.size(), recursiveSuffix.size(), recursiveSuffix) == 0) {
     recursive = true;
-    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - recursiveSuffix.size()));
+    pathSpec = trimAscii(pathSpec.substr(0, pathSpec.size() - recursiveSuffix.size()));
   }
   bool wildcard = false;
   if (pathSpec.size() >= 2 && pathSpec.compare(pathSpec.size() - 2, 2, "/*") == 0) {
     wildcard = true;
-    pathSpec = trimWhitespace(pathSpec.substr(0, pathSpec.size() - 2));
+    pathSpec = trimAscii(pathSpec.substr(0, pathSpec.size() - 2));
   }
   if (!pathSpec.empty() && pathSpec[0] != '/') {
     error = "transform rule path must start with '/': " + pathSpec;
@@ -284,7 +273,7 @@ bool parseTransformRules(const std::string &text,
     if (end == std::string::npos) {
       end = text.size();
     }
-    std::string token = trimWhitespace(text.substr(start, end - start));
+    std::string token = trimAscii(text.substr(start, end - start));
     if (!token.empty()) {
       if (token == "none") {
         out.clear();
@@ -320,7 +309,7 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
     if (end == std::string::npos) {
       end = text.size();
     }
-    std::string token = trimWhitespace(text.substr(start, end - start));
+    std::string token = trimAscii(text.substr(start, end - start));
     if (!token.empty()) {
       if (token == "default") {
         for (const auto &name : defaultEffectsList()) {
@@ -341,7 +330,7 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
 }
 
 bool parseBenchmarkForceSemanticProduct(const std::string &text, std::optional<bool> &out, std::string &error) {
-  const std::string normalized = trimWhitespace(text);
+  const std::string normalized = trimAscii(text);
   if (normalized == "on" || normalized == "true" || normalized == "1") {
     out = true;
     return true;
@@ -364,7 +353,7 @@ bool parseBenchmarkSemanticFactFamilies(const std::string &text,
                                         std::vector<std::string> &out) {
   out.clear();
   specified = true;
-  const std::string trimmed = trimWhitespace(text);
+  const std::string trimmed = trimAscii(text);
   if (trimmed.empty() || trimmed == "auto" || trimmed == "all") {
     specified = false;
     return true;
@@ -386,7 +375,7 @@ bool parseBenchmarkSemanticFactFamilies(const std::string &text,
     if (end == std::string::npos) {
       end = trimmed.size();
     }
-    std::string token = trimWhitespace(trimmed.substr(start, end - start));
+    std::string token = trimAscii(trimmed.substr(start, end - start));
     if (!token.empty()) {
       addUnique(token);
     }
@@ -440,7 +429,7 @@ bool addOptimizationPass(const std::string &name,
 }
 
 bool parsePositiveUint32(const std::string &text, uint32_t &out, std::string &error, const char *optionName) {
-  const std::string normalized = trimWhitespace(text);
+  const std::string normalized = trimAscii(text);
   if (normalized.empty()) {
     error = std::string(optionName) + " requires a positive integer value";
     return false;
@@ -467,7 +456,7 @@ bool parseScheduleSeed(const std::string &text,
                        uint64_t &out,
                        std::string &error,
                        const char *source) {
-  const std::string normalized = trimWhitespace(text);
+  const std::string normalized = trimAscii(text);
   if (normalized.empty()) {
     error = std::string(source) + " requires a number";
     return false;

@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/support/Hash.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
@@ -142,11 +143,7 @@ std::string templateSpecializationSuffixForStructType(const std::string &templat
       canonical.push_back(static_cast<char>(ch));
     }
   }
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : canonical) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
+  const uint64_t hash = nameHash(canonical);
   std::ostringstream out;
   out << "__t" << std::hex << hash;
   return out.str();

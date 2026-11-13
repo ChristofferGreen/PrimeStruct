@@ -1,4 +1,5 @@
 #include "ImportResolverInternal.h"
+#include "primec/support/Ascii.h"
 #include "ExpandedSourceBuilder.h"
 
 #include "primec/frontend/ImportResolver.h"
@@ -140,7 +141,7 @@ bool expandImportsInternal(const std::string &baseDir,
           error = parseError;
           return false;
         }
-        versionTag = trim(versionValue);
+        versionTag = trimAscii(versionValue);
         if (pos < payload.size()) {
           if (!std::isspace(static_cast<unsigned char>(payload[pos])) && payload[pos] != ',' &&
               payload[pos] != ';') {
@@ -155,7 +156,7 @@ bool expandImportsInternal(const std::string &baseDir,
           error = parseError;
           return false;
         }
-        paths.push_back({trim(path), false});
+        paths.push_back({trimAscii(path), false});
         if (pos < payload.size() && !std::isspace(static_cast<unsigned char>(payload[pos])) &&
             payload[pos] != ',' && payload[pos] != ';') {
           error = "import path cannot have suffix";
@@ -167,7 +168,7 @@ bool expandImportsInternal(const std::string &baseDir,
           error = "invalid import entry in import<...>";
           return false;
         }
-        path = trim(path);
+        path = trimAscii(path);
         if (path.empty() || path.front() != '/') {
           error = "unquoted import paths must be slash paths";
           return false;

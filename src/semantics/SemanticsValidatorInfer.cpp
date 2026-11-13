@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <algorithm>
@@ -174,14 +175,7 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
             if (lookupTypeName != "Vector" || templateArgText.empty()) {
               return false;
             }
-            uint64_t hash = 1469598103934665603ULL;
-            for (unsigned char c : templateArgText) {
-              if (std::isspace(c)) {
-                continue;
-              }
-              hash ^= static_cast<uint64_t>(c);
-              hash *= 1099511628211ULL;
-            }
+            const uint64_t hash = nameHashSkippingWhitespace(templateArgText);
             std::ostringstream out;
             out << canonicalVectorTypeIdentityPrefix()
                 << "Vector__t" << std::hex << hash;

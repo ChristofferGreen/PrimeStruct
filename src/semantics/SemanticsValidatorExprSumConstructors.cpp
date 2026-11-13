@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 
 #include <cctype>
 #include <cstdint>
@@ -127,21 +128,10 @@ std::string stripTemplateHashWhitespace(const std::string &text) {
   return out;
 }
 
-uint64_t fnv1a64ForSumTemplate(const std::string &text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char c : text) {
-    hash ^= static_cast<uint64_t>(c);
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
-
 std::string templateSpecializationSuffixForSum(
     const std::vector<std::string> &templateArgs) {
   std::ostringstream out;
-  out << "__t" << std::hex
-      << fnv1a64ForSumTemplate(
-             stripTemplateHashWhitespace(joinTemplateArgs(templateArgs)));
+  out << "__t" << std::hex << nameHash(stripTemplateHashWhitespace(joinTemplateArgs(templateArgs)));
   return out.str();
 }
 

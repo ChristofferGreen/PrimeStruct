@@ -1,4 +1,5 @@
 #include "SemanticsHelpers.h"
+#include "primec/support/Ascii.h"
 
 #include <cctype>
 #include <functional>
@@ -6,14 +7,6 @@
 #include <string_view>
 
 namespace primec::semantics {
-
-bool isAsciiAlpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-
-bool isAsciiDigit(char c) {
-  return c >= '0' && c <= '9';
-}
 
 bool isEffectName(const std::string &text) {
   if (text.empty()) {

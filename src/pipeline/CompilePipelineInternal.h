@@ -121,7 +121,6 @@ struct StdlibModuleManifest {
   std::unordered_map<std::string, std::filesystem::path> sourceFilesByRoot;
 };
 
-std::string trimAscii(std::string_view value);
 
 bool isValidStdlibModuleRoot(std::string_view root);
 

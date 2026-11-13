@@ -1,4 +1,5 @@
 #include "TemplateMonomorphAssignmentTargetResolution.h"
+#include "primec/support/Ascii.h"
 #include "primec/frontend/StringLiteral.h"
 #include "TemplateMonomorphBindingBlockInference.h"
 #include "TemplateMonomorphBindingCallInference.h"
@@ -251,7 +252,7 @@ PhaseStatus rewriteCollectionHelperTemplate(ExprRewriteContext &rc) {
       }
       return true;
     };
-    std::string fieldStem = trimWhitespace(expr.templateArgs[1]);
+    std::string fieldStem = trimAscii(expr.templateArgs[1]);
     if (!isPackAtFieldStem(fieldStem)) {
       error = "pack_at field stem must be an identifier: " + fieldStem;
       return rc.done(false);

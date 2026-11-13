@@ -1,4 +1,5 @@
 #include "primec/support/CompileContext.h"
+#include "primec/support/Hash.h"
 #include "primec/support/CompileArena.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 
@@ -169,14 +170,7 @@ std::string specializedCollectionVectorRecordPathForElementType(
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : normalized) {
-    if (std::isspace(ch)) {
-      continue;
-    }
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
+  const uint64_t hash = nameHashSkippingWhitespace(normalized);
   std::ostringstream specializedPath;
   specializedPath << collection_paths::moduleRoot(collection_paths::kVectorFolder)
                   << "/Vector__t" << std::hex << hash;
@@ -197,14 +191,7 @@ std::string specializedExperimentalSoaVectorStructPathForElementType(
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : normalized) {
-    if (std::isspace(ch)) {
-      continue;
-    }
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
+  const uint64_t hash = nameHashSkippingWhitespace(normalized);
   std::ostringstream specializedPath;
   specializedPath << collection_paths::templateSpecializedTypePrefix(collection_paths::kSoaFolder, collection_paths::kSoaVectorTypeName)
                   << std::hex << hash;

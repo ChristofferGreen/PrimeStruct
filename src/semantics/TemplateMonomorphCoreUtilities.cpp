@@ -1044,18 +1044,6 @@ bool resolveGenericTypeOverloadDefinitionIdentity(const Definition &def,
 }
 
 
-std::string trimWhitespace(const std::string &text) {
-  size_t start = 0;
-  while (start < text.size() && std::isspace(static_cast<unsigned char>(text[start]))) {
-    ++start;
-  }
-  size_t end = text.size();
-  while (end > start && std::isspace(static_cast<unsigned char>(text[end - 1]))) {
-    --end;
-  }
-  return text.substr(start, end - start);
-}
-
 
 std::string stripWhitespace(const std::string &text) {
   std::string out;

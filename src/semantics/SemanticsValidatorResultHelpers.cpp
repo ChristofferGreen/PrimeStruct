@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
@@ -40,15 +41,6 @@ std::string stripWhitespace(std::string text) {
   return text;
 }
 
-uint64_t fnv1a64(std::string_view text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (unsigned char ch : text) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
-
 std::string canonicalKeyValueIdentity(const std::string &typeText) {
   std::string normalized = normalizeBindingTypeName(trimText(typeText));
   if (!normalized.empty() && normalized.front() != '/') {
@@ -80,7 +72,7 @@ std::string canonicalKeyValueIdentity(const std::string &typeText) {
   }
 
   std::ostringstream out;
-  out << keyValueRoot << "__t" << std::hex << fnv1a64(canonicalArgs.str());
+  out << keyValueRoot << "__t" << std::hex << nameHash(canonicalArgs.str());
   return out.str();
 }
 

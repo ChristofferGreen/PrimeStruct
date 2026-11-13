@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "primec/support/CompileArena.h"
+#include "primec/support/Hash.h"
 #include "primec/semantics/Semantics.h"
 #include "primec/semantics/SemanticsBenchmark.h"
 #include "primec/semantics/SemanticValidationPlan.h"
@@ -106,14 +107,7 @@ std::string bindingTypeTextForSnapshot(const BindingInfo &binding) {
 }
 
 uint64_t hashSemanticNodePath(const std::string &path) {
-  constexpr uint64_t FnvOffsetBasis = 14695981039346656037ull;
-  constexpr uint64_t FnvPrime = 1099511628211ull;
-
-  uint64_t hash = FnvOffsetBasis;
-  for (unsigned char ch : path) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= FnvPrime;
-  }
+  const uint64_t hash = fnv1a64(path);
   return hash == 0 ? 1 : hash;
 }
 

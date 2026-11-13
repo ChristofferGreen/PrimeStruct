@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/support/Hash.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 
@@ -286,14 +287,6 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return isKeyValueEntryConstructorPath(explicitCallPath(argExpr));
   };
-  auto fnv1a64 = [](const std::string &text) {
-    uint64_t hash = 1469598103934665603ULL;
-    for (unsigned char c : text) {
-      hash ^= static_cast<uint64_t>(c);
-      hash *= 1099511628211ULL;
-    }
-    return hash;
-  };
   auto stripWhitespace = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -349,7 +342,7 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
                 << stripWhitespace(expr.templateArgs[i]);
     }
     std::ostringstream out;
-    out << std::hex << fnv1a64(canonical.str());
+    out << std::hex << nameHash(canonical.str());
     return out.str();
   }();
   auto specializedPathForBase = [&](const std::string &basePath) {

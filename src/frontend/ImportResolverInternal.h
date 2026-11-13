@@ -15,7 +15,6 @@ bool readFile(const std::string &path, std::string &out);
 
 std::string normalizePathKey(const std::filesystem::path &path);
 
-std::string trim(const std::string &value);
 
 size_t skipQuotedLiteral(const std::string &text, size_t start);
 

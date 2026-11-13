@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "TemplateMonomorphContext.h"
+#include "primec/support/Ascii.h"
 #include "primec/ast/Ast.h"
 #include "SemanticsHelpers.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
@@ -89,7 +90,7 @@ bool rewriteExperimentalKeyValueTargetValueForType(const std::string &typeText,
     if (!semantics::splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
       return true;
     }
-    return rewriteExperimentalKeyValueTargetValueForType(trimWhitespace(storageArgs.front()),
+    return rewriteExperimentalKeyValueTargetValueForType(trimAscii(storageArgs.front()),
                                                          valueExpr,
                                                          mapping,
                                                          allowedParams,
@@ -108,11 +109,8 @@ bool rewriteExperimentalKeyValueTargetValueForType(const std::string &typeText,
   if (!semantics::splitTopLevelTemplateArgs(argText, resultArgs) || resultArgs.size() != 2) {
     return true;
   }
-  if (!resolvesExperimentalKeyValueTypeText(trimWhitespace(resultArgs.front()),
-                                            mapping,
-                                            allowedParams,
-                                            namespacePrefix,
-                                            ctx)) {
+  if (!resolvesExperimentalKeyValueTypeText(
+          trimAscii(resultArgs.front()), mapping, allowedParams, namespacePrefix, ctx)) {
     return true;
   }
   return rewriteKeyValuePayload(valueExpr);
@@ -129,9 +127,8 @@ bool rewriteExperimentalVectorTargetValueForType(const std::string &typeText,
     if (!semantics::splitTopLevelTemplateArgs(argText, storageArgs) || storageArgs.size() != 1) {
       return true;
     }
-    return rewriteExperimentalVectorTargetValueForType(trimWhitespace(storageArgs.front()),
-                                                       valueExpr,
-                                                       rewriteNestedVectorValue);
+    return rewriteExperimentalVectorTargetValueForType(
+        trimAscii(storageArgs.front()), valueExpr, rewriteNestedVectorValue);
   }
   if (!resolvesCollectionVectorValueTypeText(typeText)) {
     return true;

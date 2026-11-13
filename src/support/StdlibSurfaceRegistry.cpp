@@ -1,4 +1,5 @@
 #include "primec/support/StdlibSurfaceRegistry.h"
+#include "primec/support/Ascii.h"
 #include "primec/support/CompileContext.h"
 
 #include "primec/support/CompileArena.h"
