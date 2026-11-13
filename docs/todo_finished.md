@@ -2334,6 +2334,7 @@ are left unarchived.
 | TODO-5985 | `rewriteExprReference` is ordered rules, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5986 | `rewriteExpr` is ordered rules over a context, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5988 | Builtin math names are classified by one rule in support | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5989 | Control-flow call names, simple-call-name tests and return kinds are classified once | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

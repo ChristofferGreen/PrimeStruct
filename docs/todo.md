@@ -204,7 +204,7 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-5962 | Builtin math and control-flow call names are classified once, with one rule | blocked | reuse-builtin-names |
-| TODO-5989 | Control-flow call names, simple-call-name tests and return kinds are classified once | ready | reuse-builtin-names |
+| TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | deferred | reuse-builtin-names |
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
@@ -1566,9 +1566,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 - [~] TODO-5962: Builtin math and control-flow call names are classified once, with one rule
   - owner: ai
   - status: blocked
-  - blocked_on: TODO-5989
+  - blocked_on: TODO-5990
   - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
-  - split_into: TODO-5988 (the math-name rule, done with this split), TODO-5989 (control-flow call names, `isSimpleCallName`, `trimLeadingSlash`, convert and return kinds; closes this leaf)
+  - split_into: TODO-5988 (the math-name rule, done with this split), TODO-5989 (single-segment names, `trimLeadingSlash` and scalar types, done), TODO-5990 (`isSimpleCallName` and the control-flow predicates; closes this leaf)
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 4)
   - parallel_track: reuse-builtin-names
@@ -1707,18 +1707,16 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [~] TODO-5989: Control-flow call names, simple-call-name tests and return kinds are classified once
+- [ ] TODO-5990: `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies
   - owner: ai
-  - status: ready
-  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
+  - status: deferred
   - created_at: 2026-11-13
-  - phase: Code reuse (docs/CodeReusePlan.md, section 4; closes TODO-5962)
+  - phase: Code reuse (docs/CodeReusePlan.md, section 4; left over from TODO-5989)
   - parallel_track: reuse-builtin-names
-  - depends_on: TODO-5988
-  - scope: What is left of TODO-5962 after the math names: `isSimpleCallName` (src/semantics/SemanticsCallPathHelpers.cpp:123, src/ir_lowerer/IrLowererHelpers.cpp, src/ir/IrPrinterHelpers.cpp), `isReturnCall` (SemanticsCallPathHelpers.cpp, IrLowererHelpers.cpp, IrPrinterHelpers.cpp, src/ast/AstPrinter.cpp:17), `isIfCall`, `isLoopCall`, `isWhileCall`, `isForCall`, `isRepeatCall` (semantics, lowerer, printer), `trimLeadingSlash` (SemanticsCallPathHelpers.cpp, SemanticsValidatorInferCollectionCompatibilityInternal.h three times, src/ir_lowerer/IrLowererCallHelpers.cpp), `getBuiltinConvertName` (semantics, lowerer, printer), and `returnKindForTypeName` (src/semantics/SemanticsBindingTypeHelpers.cpp:673, src/ir/IrPrinterHelpers.cpp:413) with the lowerer's `valueKindFromTypeName` (src/ir_lowerer/IrLowererSetupTypeHelpers.cpp:28). The printer and AST printer copies reject any name containing `/`; the semantics and lowerer ones read through a cached key-value member resolver. Put the single-segment test in support with a policy bit for the member-resolver spelling, and one type-name to return-kind table.
+  - scope: `isSimpleCallName` has three definitions that are three rules, not one: the semantics one (src/semantics/SemanticsCallPathHelpers.cpp:123) strips `std/gpu/`, reads vector and key-value helper member spellings and template specialization suffixes; the lowerer one (src/ir_lowerer/IrLowererHelpers.cpp:296) reads the namespace-prefixed name, normalizes internal SoA storage aliases and accepts scoped builtin tails; the IR printer and AST printer ones are the strict single-segment test (already `primec::isSingleSegmentName`). `isIfCall`, `isLoopCall`, `isWhileCall`, `isForCall`, `isRepeatCall`, `isMatchCall` and `isReturnCall` in semantics and the lowerer are one-line wrappers over their layer's rule. A single definition needs the member-resolver and SoA-alias spellings in support, which is the collection spelling work of TODO-5963 and TODO-5964; do it after those, as a policy-parameterized classifier (strict, semantic-member, lowered-scoped) with a table test of every spelling.
   - acceptance:
-    - one definition of each listed predicate and of the return-kind table; the per-layer copies are deleted
-    - a table test pins the spellings through each policy
+    - one `isSimpleCallName` rule with explicit policies and one definition of each control-flow predicate
+    - a table test runs bare, rooted, namespaced, member and SoA-alias spellings through each policy
     - ast-semantic, semantic-product, ir and ir-lowered dumps of examples/ are unchanged
     - full release gate green
-  - stop_rule: name and type-name classification only; collection spellings are TODO-5963 and TODO-5964.
+  - stop_rule: call-name classification only.
