@@ -455,74 +455,80 @@
       inlineStack.erase(callee.fullPath);
     }
     LocalMap calleeLocals;
-    if (!ir_lowerer::emitInlineDefinitionCallParameters(
-            callParams,
-            orderedArgs,
-            packedArgs,
-            packedParamIndex,
-            callee.fullPath,
-            callerLocals,
-            nextLocal,
-            calleeLocals,
-            [&](const Expr &param, LocalInfo &infoOut, std::string &errorOut) {
-              return ir_lowerer::inferCallParameterLocalInfo(param,
-                                                             callerLocals,
-                                                             isBindingMutable,
-                                                             hasExplicitBindingTypeTransform,
-                                                             bindingKind,
-                                                             bindingValueKind,
-                                                             inferExprKind,
-                                                             isFileErrorBinding,
-                                                             setReferenceArrayInfo,
-                                                             applyStructArrayInfo,
-                                                             applyStructValueInfo,
-                                                             isStringBinding,
-                                                             infoOut,
-                                                             errorOut,
-                                                             [&](const Expr &callExpr,
-                                                                 const LocalMap &callLocals) {
-                                                               return resolveMethodCallDefinition(callExpr, callLocals);
-                                                             },
-                                                             [&](const Expr &callExpr) {
-                                                               return resolveDefinitionCall(callExpr);
-                                                             },
-                                                             [&](const std::string &definitionPath,
-                                                                 ReturnInfo &returnInfo) {
-                                                               return getReturnInfo(definitionPath, returnInfo);
-                                                             },
-                                                             callResolutionAdapters.semanticProgram,
-                                                             &callResolutionAdapters.semanticProductTargets.semanticIndex);
-            },
-            [&](const Expr &param) { return isStringBinding(param); },
-            [&](const Expr &argExpr,
-                const LocalMap &locals,
-                LocalInfo::StringSource &sourceOut,
-                int32_t &indexOut,
-                bool &argvCheckedOut) {
-              return emitStringValueForCall(argExpr, locals, sourceOut, indexOut, argvCheckedOut);
-            },
-            [&](const Expr &argExpr, const LocalMap &locals) {
-              return inferStructExprPath(argExpr, locals);
-            },
-            [&](const Expr &argExpr, const LocalMap &locals) {
-              return inferExprKind(argExpr, locals);
-            },
-            [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
-            [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-              return resolveStructSlotLayout(structPath, layoutOut);
-            },
-            [&](const Expr &argExpr, const LocalMap &locals) { return emitExpr(argExpr, locals); },
-            [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
-              return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
-            },
-            [&]() { return allocTempLocal(); },
-            [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
-            error,
-            [&](const Expr &argExpr,
-                const LocalMap &localsForInference,
-                LocalInfo &infoOut,
-                std::string &infoError) -> bool {
+    if (!ir_lowerer::emitInlineDefinitionCallParameters(ir_lowerer::InlineDefinitionCallParameters{
+            .callParams = callParams,
+            .orderedArgs = orderedArgs,
+            .packedArgs = packedArgs,
+            .packedParamIndex = packedParamIndex,
+            .calleePath = callee.fullPath,
+            .callerLocals = callerLocals,
+            .nextLocal = nextLocal,
+            .calleeLocals = calleeLocals,
+            .inferCallParameterLocalInfo =
+                [&](const Expr &param, LocalInfo &infoOut, std::string &errorOut) {
+                  return ir_lowerer::inferCallParameterLocalInfo(
+                      param,
+                      callerLocals,
+                      isBindingMutable,
+                      hasExplicitBindingTypeTransform,
+                      bindingKind,
+                      bindingValueKind,
+                      inferExprKind,
+                      isFileErrorBinding,
+                      setReferenceArrayInfo,
+                      applyStructArrayInfo,
+                      applyStructValueInfo,
+                      isStringBinding,
+                      infoOut,
+                      errorOut,
+                      [&](const Expr &callExpr, const LocalMap &callLocals) {
+                        return resolveMethodCallDefinition(callExpr, callLocals);
+                      },
+                      [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+                      [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                        return getReturnInfo(definitionPath, returnInfo);
+                      },
+                      callResolutionAdapters.semanticProgram,
+                      &callResolutionAdapters.semanticProductTargets.semanticIndex);
+                },
+            .isStringBinding = [&](const Expr &param) { return isStringBinding(param); },
+            .emitStringValueForCall =
+                [&](const Expr &argExpr,
+                    const LocalMap &locals,
+                    LocalInfo::StringSource &sourceOut,
+                    int32_t &indexOut,
+                    bool &argvCheckedOut) {
+                  return emitStringValueForCall(
+                      argExpr, locals, sourceOut, indexOut, argvCheckedOut);
+                },
+            .inferStructExprPath =
+                [&](const Expr &argExpr, const LocalMap &locals) {
+                  return inferStructExprPath(argExpr, locals);
+                },
+            .inferExprKind = [&](const Expr &argExpr,
+                                 const LocalMap &locals) { return inferExprKind(argExpr, locals); },
+            .resolveDefinitionCall =
+                [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
+            .resolveStructSlotLayout =
+                [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(structPath, layoutOut);
+                },
+            .emitExpr = [&](const Expr &argExpr,
+                            const LocalMap &locals) { return emitExpr(argExpr, locals); },
+            .emitStructCopySlots =
+                [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+                  return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);
+                },
+            .allocTempLocal = [&]() { return allocTempLocal(); },
+            .emitInstruction = [&](IrOpcode op,
+                                   uint64_t imm) { function.instructions.push_back({op, imm}); },
+            .trackFileHandleLocal =
+                [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
+            .error = error,
+            .inferExprLocalInfo = [&](const Expr &argExpr,
+                                      const LocalMap &localsForInference,
+                                      LocalInfo &infoOut,
+                                      std::string &infoError) -> bool {
               const Expr *targetExpr = &argExpr;
               for (size_t peelSteps = 0; peelSteps < 8; ++peelSteps) {
                 if (targetExpr->kind != Expr::Kind::Call ||
@@ -549,31 +555,33 @@
               infoError.clear();
               return true;
             },
-            [&]() { return function.instructions.size(); },
-            [&](size_t index, uint64_t target) { function.instructions[index].imm = target; },
-            emitArrayIndexOutOfBounds,
-            [&](int32_t destPtrLocal,
-                int32_t srcPtrLocal,
-                const std::string &structPath,
-                bool &ranHelper) {
-              return ir_lowerer::emitStructCopyHelpersFromPtrs(
-                  destPtrLocal,
-                  srcPtrLocal,
-                  structPath,
-                  [&](const std::string &path) -> const Definition * {
-                    auto copyIt = setupStage.defMap.find(path + "/Copy");
-                    return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
-                  },
-                  [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
-                    return resolveStructSlotLayout(path, layoutOut);
-                  },
-                  [&]() { return allocTempLocal(); },
-                  function.instructions,
-                  callerLocals,
-                  stateOut.emitInlineDefinitionCall,
-                  ranHelper,
-                  error);
-            })) {
+            .instructionCount = [&]() { return function.instructions.size(); },
+            .patchInstructionImm =
+                [&](size_t index, uint64_t target) { function.instructions[index].imm = target; },
+            .emitArrayIndexOutOfBounds = emitArrayIndexOutOfBounds,
+            .emitStructCopyHelper =
+                [&](int32_t destPtrLocal,
+                    int32_t srcPtrLocal,
+                    const std::string &structPath,
+                    bool &ranHelper) {
+                  return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                      destPtrLocal,
+                      srcPtrLocal,
+                      structPath,
+                      [&](const std::string &path) -> const Definition * {
+                        auto copyIt = setupStage.defMap.find(path + "/Copy");
+                        return copyIt == setupStage.defMap.end() ? nullptr : copyIt->second;
+                      },
+                      [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                        return resolveStructSlotLayout(path, layoutOut);
+                      },
+                      [&]() { return allocTempLocal(); },
+                      function.instructions,
+                      callerLocals,
+                      stateOut.emitInlineDefinitionCall,
+                      ranHelper,
+                      error);
+                }})) {
       if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
         const Expr *diagnosticAnchor = &callExpr;
         for (const Expr *packedArg : packedArgs) {

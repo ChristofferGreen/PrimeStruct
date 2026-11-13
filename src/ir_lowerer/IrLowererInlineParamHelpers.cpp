@@ -319,170 +319,38 @@ bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
 
 } // namespace
 
-bool emitInlineDefinitionCallParameters(
-    const std::vector<Expr> &callParams,
-    const std::vector<const Expr *> &orderedArgs,
-    const std::vector<const Expr *> &packedArgs,
-    size_t packedParamIndex,
-    const LocalMap &callerLocals,
-    int32_t &nextLocal,
-    LocalMap &calleeLocals,
-    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
-    const ExprPredicateFn &isStringBinding,
-    const EmitInlineParameterStringValueFn &emitStringValueForCall,
-    const InferInlineParameterStructExprPathFn &inferStructExprPath,
-    const InferInlineParameterExprKindFn &inferExprKind,
-    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
-    const ExprLocalsPredicateFn &emitExpr,
-    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
-    const Int32ProviderFn &allocTempLocal,
-    const EmitInstructionFn &emitInstruction,
-    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
-  return emitInlineDefinitionCallParameters(callParams,
-                                            orderedArgs,
-                                            packedArgs,
-                                            packedParamIndex,
-                                            std::string(),
-                                            callerLocals,
-                                            nextLocal,
-                                            calleeLocals,
-                                            inferCallParameterLocalInfo,
-                                            isStringBinding,
-                                            emitStringValueForCall,
-                                            inferStructExprPath,
-                                            inferExprKind,
-                                            {},
-                                            resolveStructSlotLayout,
-                                            emitExpr,
-                                            emitStructCopySlots,
-                                            allocTempLocal,
-                                            emitInstruction,
-                                            trackFileHandleLocal,
-                                            error,
-                                            inferExprLocalInfo);
-}
-
-bool emitInlineDefinitionCallParameters(
-    const std::vector<Expr> &callParams,
-    const std::vector<const Expr *> &orderedArgs,
-    const std::vector<const Expr *> &packedArgs,
-    size_t packedParamIndex,
-    const std::string &calleePath,
-    const LocalMap &callerLocals,
-    int32_t &nextLocal,
-    LocalMap &calleeLocals,
-    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
-    const ExprPredicateFn &isStringBinding,
-    const EmitInlineParameterStringValueFn &emitStringValueForCall,
-    const InferInlineParameterStructExprPathFn &inferStructExprPath,
-    const InferInlineParameterExprKindFn &inferExprKind,
-    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
-    const ExprLocalsPredicateFn &emitExpr,
-    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
-    const Int32ProviderFn &allocTempLocal,
-    const EmitInstructionFn &emitInstruction,
-    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
-  return emitInlineDefinitionCallParameters(callParams,
-                                            orderedArgs,
-                                            packedArgs,
-                                            packedParamIndex,
-                                            calleePath,
-                                            callerLocals,
-                                            nextLocal,
-                                            calleeLocals,
-                                            inferCallParameterLocalInfo,
-                                            isStringBinding,
-                                            emitStringValueForCall,
-                                            inferStructExprPath,
-                                            inferExprKind,
-                                            {},
-                                            resolveStructSlotLayout,
-                                            emitExpr,
-                                            emitStructCopySlots,
-                                            allocTempLocal,
-                                            emitInstruction,
-                                            trackFileHandleLocal,
-                                            error,
-                                            inferExprLocalInfo);
-}
-
-bool emitInlineDefinitionCallParameters(
-    const std::vector<Expr> &callParams,
-    const std::vector<const Expr *> &orderedArgs,
-    const std::vector<const Expr *> &packedArgs,
-    size_t packedParamIndex,
-    const LocalMap &callerLocals,
-    int32_t &nextLocal,
-    LocalMap &calleeLocals,
-    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
-    const ExprPredicateFn &isStringBinding,
-    const EmitInlineParameterStringValueFn &emitStringValueForCall,
-    const InferInlineParameterStructExprPathFn &inferStructExprPath,
-    const InferInlineParameterExprKindFn &inferExprKind,
-    const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
-    const ExprLocalsPredicateFn &emitExpr,
-    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
-    const Int32ProviderFn &allocTempLocal,
-    const EmitInstructionFn &emitInstruction,
-    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
-  return emitInlineDefinitionCallParameters(callParams,
-                                            orderedArgs,
-                                            packedArgs,
-                                            packedParamIndex,
-                                            std::string(),
-                                            callerLocals,
-                                            nextLocal,
-                                            calleeLocals,
-                                            inferCallParameterLocalInfo,
-                                            isStringBinding,
-                                            emitStringValueForCall,
-                                            inferStructExprPath,
-                                            inferExprKind,
-                                            resolveDefinitionCall,
-                                            resolveStructSlotLayout,
-                                            emitExpr,
-                                            emitStructCopySlots,
-                                            allocTempLocal,
-                                            emitInstruction,
-                                            trackFileHandleLocal,
-                                            error,
-                                            inferExprLocalInfo);
-}
-
-bool emitInlineDefinitionCallParameters(
-    const std::vector<Expr> &callParams,
-    const std::vector<const Expr *> &orderedArgs,
-    const std::vector<const Expr *> &packedArgs,
-    size_t packedParamIndex,
-    const std::string &calleePath,
-    const LocalMap &callerLocals,
-    int32_t &nextLocal,
-    LocalMap &calleeLocals,
-    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo,
-    const ExprPredicateFn &isStringBinding,
-    const EmitInlineParameterStringValueFn &emitStringValueForCall,
-    const InferInlineParameterStructExprPathFn &inferStructExprPath,
-    const InferInlineParameterExprKindFn &inferExprKind,
-    const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall,
-    const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout,
-    const ExprLocalsPredicateFn &emitExpr,
-    const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots,
-    const Int32ProviderFn &allocTempLocal,
-    const EmitInstructionFn &emitInstruction,
-    const TrackInlineParameterFileHandleFn &trackFileHandleLocal,
-    std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
-    const SizeProviderFn &instructionCount,
-    const PatchInstructionImmFn &patchInstructionImm,
-    const ActionFn &emitArrayIndexOutOfBounds,
-    const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper) {
+bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &parameters) {
+  const std::vector<Expr> &callParams = parameters.callParams;
+  const std::vector<const Expr *> &orderedArgs = parameters.orderedArgs;
+  const std::vector<const Expr *> &packedArgs = parameters.packedArgs;
+  const size_t packedParamIndex = parameters.packedParamIndex;
+  const std::string &calleePath = parameters.calleePath;
+  const LocalMap &callerLocals = parameters.callerLocals;
+  int32_t &nextLocal = parameters.nextLocal;
+  LocalMap &calleeLocals = parameters.calleeLocals;
+  const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo =
+      parameters.inferCallParameterLocalInfo;
+  const ExprPredicateFn &isStringBinding = parameters.isStringBinding;
+  const EmitInlineParameterStringValueFn &emitStringValueForCall =
+      parameters.emitStringValueForCall;
+  const InferInlineParameterStructExprPathFn &inferStructExprPath = parameters.inferStructExprPath;
+  const InferInlineParameterExprKindFn &inferExprKind = parameters.inferExprKind;
+  const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall =
+      parameters.resolveDefinitionCall;
+  const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout =
+      parameters.resolveStructSlotLayout;
+  const ExprLocalsPredicateFn &emitExpr = parameters.emitExpr;
+  const EmitInlineParameterStructCopySlotsFn &emitStructCopySlots = parameters.emitStructCopySlots;
+  const Int32ProviderFn &allocTempLocal = parameters.allocTempLocal;
+  const EmitInstructionFn &emitInstruction = parameters.emitInstruction;
+  const TrackInlineParameterFileHandleFn &trackFileHandleLocal = parameters.trackFileHandleLocal;
+  std::string &error = parameters.error;
+  const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = parameters.inferExprLocalInfo;
+  const SizeProviderFn &instructionCount = parameters.instructionCount;
+  const PatchInstructionImmFn &patchInstructionImm = parameters.patchInstructionImm;
+  const ActionFn &emitArrayIndexOutOfBounds = parameters.emitArrayIndexOutOfBounds;
+  const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper =
+      parameters.emitStructCopyHelper;
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;

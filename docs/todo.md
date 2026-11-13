@@ -211,7 +211,6 @@ of sync with them.
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
-| TODO-5972 | Lowerer helpers copied per translation unit exist once | ready | reuse-lowerer-helpers |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5974 | Shared string, hash, JSON and C-literal helpers replace their copies | ready | reuse-support-utils |
 | TODO-5975 | IR opcode categories come from the opcode table | ready | reuse-opcode-table |
@@ -263,7 +262,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5968, TODO-5970, TODO-5971, TODO-5972, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5961, TODO-5962, TODO-5965, TODO-5968, TODO-5970, TODO-5971, TODO-5973, TODO-5974, TODO-5975; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1662,21 +1661,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: this file and its header only.
   - notes: Do not run alongside TODO-5970 if both edit include/primec/frontend/SemanticProduct.h.
-
-- [~] TODO-5972: Lowerer helpers copied per translation unit exist once
-  - owner: ai
-  - status: ready
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 11)
-  - parallel_track: reuse-lowerer-helpers
-  - scope: First slice landed (reuse-a, 2026-11-13): part (2) `resultErrorTypesMatch` and the identical `resolveSemanticQueryResultErrorTypeText` now exist once (IrLowererResultInternal.h); part (3) `extractParameterTypeName` (4 copies), `isPublishedKeyValueConstructorExpr` and `rewritePublishedKeyValueConstructorExpr` are one definition in IrLowererKeyValueConstructorRewrite.{h,cpp} with options for the two intended differences (the builtin `map(...)` call, and rewriting to the resolved callee path); part (1): the four byte-identical helpers (`findSemanticBindingFactForExpr`, `isFileErrorTypeText`, `isFileHandleTypeText`, `resolveSemanticFactTypeText`) moved to IrLowererLowerInferenceSharedHelpers.h. Second slice landed (reuse-a, 2026-11-13): the 11 remaining helpers that differed only by whitespace, except `isFileHandleMethodName` (the Base copy also accepts `read_byte`; the Dispatch copy lacked it, now one shared Base set, identical IR on 1118 programs) moved to IrLowererLowerInferenceSharedHelpers.h. Kept separate on purpose: `isResultTypeMethodCall` (the Dispatch copy accepts only the method-call form, the Base copy any `Result.ok/error/why` call, including namespace-prefix spellings) and `base_kind_internal::resolveScopedExprPath` (joins prefix and name even when the name already contains `/`, unlike `resolveScopedCallPath`); `rewritePackedResultKeyValueConstructorExpr` (requires a resolved callee and infers key/value types from the declared return or from literals) and the member-name `isPublishedKeyValueConstructorExpr` in IrLowererAccessTargetInternal.h (resolves a member name, not a call shape). Remaining: part (4) only, the `emitInlineDefinitionCallParameters` context struct: four overloads in include/primec/ir_lowerer/IrLowererInlineParamHelpers.h, called from IrLowererLowerInlineCallsBody.h and from about 25 validation tests (via test_ir_pipeline_validation_callback_factories.h and direct), so the new struct and all call sites change in one commit. Original scope: (1) src/ir_lowerer/IrLowererLowerInferenceBaseKindInternal.h (940 lines, included by IrLowererLowerInferenceBaseKindHelpers.cpp) and IrLowererLowerInferenceDispatchSetupFileLocal.h (569 lines, included by IrLowererLowerInferenceDispatchSetup.cpp) hold the same inline helpers renamed `BaseSetup*` / `DispatchSetup*` (for example `isBaseSetupFileErrorTypeText` / `isDispatchSetupFileErrorTypeText`, `inferBaseSetupSemanticFileHandleMethodKind` / `inferDispatchSetupSemanticFileHandleMethodKind`); they drift (Dispatch says "KeyValue" where Base says "Map"; only Dispatch has `inferDispatchSetupNameValueKindFromTypeText`). Merge them into one helper unit with a .cpp. (2) `resultErrorTypesMatch` is identical in IrLowererPackedResultHelpers.cpp:68 and IrLowererResultWhyHelpers.cpp:31 (the files share 73 duplicated 8-line windows); keep one. (3) IrLowererInlineParamHelpers.cpp and IrLowererInlinePackedArgs.cpp both define `isPublishedKeyValueConstructorExpr`, `extractParameterTypeName` (identical) and `rewritePublishedKeyValueConstructorExpr` (about 23 differing diff lines), and `rewritePackedResultKeyValueConstructorExpr` in IrLowererPackedResultHelpers.cpp is a third near-copy; keep one of each. (4) The four `emitInlineDefinitionCallParameters` overloads in IrLowererInlineParamHelpers.cpp forward 20+ positional `std::function` parameters to each other (one inserts `{}` for an argument around line 457); replace them with one function taking a context struct.
-  - acceptance:
-    - the two inference headers are one unit; each listed function has one definition; one `emitInlineDefinitionCallParameters` with a context struct
-    - IR dumps of examples/ and all lowering and compile-run tests are unchanged
-    - full release gate green
-  - stop_rule: the listed helpers only; no inference-logic changes.
-  - notes: Do not run alongside TODO-5963 or TODO-5961.
 
 - [ ] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

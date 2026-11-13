@@ -203,29 +203,34 @@ inline bool emitInlineParamsInertKind(
     const primec::ir_lowerer::ExprLocalsPredicateFn &emitExpr =
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; }) {
   return primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      callParams,
-      orderedArgs,
-      packedArgs,
-      packedParamIndex,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      inferCallParameterLocalInfo,
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [exprKind](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return exprKind; },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      emitExpr,
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error);
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = callParams,
+          .orderedArgs = orderedArgs,
+          .packedArgs = packedArgs,
+          .packedParamIndex = packedParamIndex,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo = inferCallParameterLocalInfo,
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .inferExprKind = [exprKind](const primec::Expr &,
+                                      const primec::ir_lowerer::LocalMap &) { return exprKind; },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr = emitExpr,
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error});
 }
 
 // Same, with every expression inferring to Unknown.

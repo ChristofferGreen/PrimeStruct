@@ -367,45 +367,52 @@ TEST_CASE("ir lowerer inline param helper materializes mixed borrowed soa variad
   std::string error;
 
   REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &spreadArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
-        infoOut.referenceToVector = true;
-        infoOut.isSoaVector = true;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
-        if (arg.name != "head") {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, 21u});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      [&]() { return nextLocal++; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {valuesParam},
+          .orderedArgs = {nullptr},
+          .packedArgs = {&firstArg, &spreadArg},
+          .packedParamIndex = 0,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+                infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+                infoOut.isArgsPack = true;
+                infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+                infoOut.referenceToVector = true;
+                infoOut.isSoaVector = true;
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr =
+              [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+                if (arg.name != "head") {
+                  return false;
+                }
+                instructions.push_back({primec::IrOpcode::LoadLocal, 21u});
+                return true;
+              },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error.empty());
   REQUIRE(calleeLocals.count("values") == 1u);
@@ -434,42 +441,49 @@ TEST_CASE("ir lowerer inline param helper materializes soa variadic args packs")
   std::string error;
 
   REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &secondArg},
-      0,
-      {},
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
-        infoOut.isSoaVector = true;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
-        instructions.push_back(
-            {primec::IrOpcode::LoadLocal, static_cast<uint64_t>(arg.name == "left" ? 21 : 22)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {valuesParam},
+          .orderedArgs = {nullptr},
+          .packedArgs = {&firstArg, &secondArg},
+          .packedParamIndex = 0,
+          .callerLocals = {},
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+                infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+                infoOut.isArgsPack = true;
+                infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+                infoOut.isSoaVector = true;
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr =
+              [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+                instructions.push_back({primec::IrOpcode::LoadLocal,
+                                        static_cast<uint64_t>(arg.name == "left" ? 21 : 22)});
+                return true;
+              },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error.empty());
   CHECK(nextLocal == 7);

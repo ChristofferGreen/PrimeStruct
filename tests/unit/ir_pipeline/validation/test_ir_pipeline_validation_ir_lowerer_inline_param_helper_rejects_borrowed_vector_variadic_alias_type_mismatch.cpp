@@ -317,45 +317,53 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct pointer vari
   std::string error;
 
   REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&firstArg, &spreadArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.structTypeName = "/pkg/Pair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
-        auto it = locals.find(arg.name);
-        if (it == locals.end()) {
-          return false;
-        }
-        instructions.push_back({primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
-        return true;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      [&]() { return nextLocal++; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {valuesParam},
+          .orderedArgs = {nullptr},
+          .packedArgs = {&firstArg, &spreadArg},
+          .packedParamIndex = 0,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+                infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+                infoOut.isArgsPack = true;
+                infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+                infoOut.structTypeName = "/pkg/Pair";
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr =
+              [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &locals) {
+                auto it = locals.find(arg.name);
+                if (it == locals.end()) {
+                  return false;
+                }
+                instructions.push_back(
+                    {primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+                return true;
+              },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = [&]() { return nextLocal++; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error.empty());
   REQUIRE(calleeLocals.count("values") == 1u);
@@ -393,38 +401,45 @@ TEST_CASE("ir lowerer inline param helper rejects struct pointer variadic alias 
   std::string error;
 
   CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {valuesParam},
-      {nullptr},
-      {&spreadArg},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
-        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        infoOut.isArgsPack = true;
-        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
-        infoOut.structTypeName = "/pkg/OtherPair";
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {valuesParam},
+          .orderedArgs = {nullptr},
+          .packedArgs = {&spreadArg},
+          .packedParamIndex = 0,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+                infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+                infoOut.isArgsPack = true;
+                infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+                infoOut.structTypeName = "/pkg/OtherPair";
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr = [](const primec::Expr &,
+                         const primec::ir_lowerer::LocalMap &) { return true; },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error == "variadic parameter type mismatch");
   CHECK(calleeLocals.empty());
@@ -609,43 +624,51 @@ TEST_CASE("ir lowerer inline param helper aliases immutable concrete map params 
   std::string error;
 
   REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {entriesParam},
-      {&argExpr},
-      {},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.index = 7;
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-        infoOut.structTypeName = MapStructPath;
-        infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        return expr.name == "values" ? std::string(MapStructPath) : std::string();
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        FAIL("emitExpr should not materialize map locals for immutable concrete map params");
-        return false;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {entriesParam},
+          .orderedArgs = {&argExpr},
+          .packedArgs = {},
+          .packedParamIndex = 0,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.index = 7;
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+                infoOut.structTypeName = MapStructPath;
+                infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+                infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath =
+              [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+                return expr.name == "values" ? std::string(MapStructPath) : std::string();
+              },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                FAIL(
+                    "emitExpr should not materialize map locals for immutable concrete map params");
+                return false;
+              },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error.empty());
   CHECK(nextLocal == 4);
@@ -682,44 +705,51 @@ TEST_CASE("ir lowerer inline param helper aliases mutable concrete map params fr
   std::string error;
 
   REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-      {entriesParam},
-      {&argExpr},
-      {},
-      0,
-      callerLocals,
-      nextLocal,
-      calleeLocals,
-      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
-        infoOut.index = 11;
-        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
-        infoOut.isMutable = true;
-        infoOut.structTypeName = MapStructPath;
-        infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-        return true;
-      },
-      [](const primec::Expr &) { return false; },
-      [](const primec::Expr &,
-         const primec::ir_lowerer::LocalMap &,
-         primec::ir_lowerer::LocalInfo::StringSource &,
-         int32_t &,
-         bool &) { return true; },
-      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-        return expr.name == "values" ? std::string(MapStructPath) : std::string();
-      },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-      },
-      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
-      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-        FAIL("emitExpr should not materialize map locals for mutable concrete map params");
-        return false;
-      },
-      [](int32_t, int32_t, int32_t) { return true; },
-      []() { return 0; },
-      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-      [](int32_t) {},
-      error));
+      primec::ir_lowerer::InlineDefinitionCallParameters{
+          .callParams = {entriesParam},
+          .orderedArgs = {&argExpr},
+          .packedArgs = {},
+          .packedParamIndex = 0,
+          .callerLocals = callerLocals,
+          .nextLocal = nextLocal,
+          .calleeLocals = calleeLocals,
+          .inferCallParameterLocalInfo =
+              [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+                infoOut.index = 11;
+                infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+                infoOut.isMutable = true;
+                infoOut.structTypeName = MapStructPath;
+                infoOut.keyValueKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+                infoOut.keyValueValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+                return true;
+              },
+          .isStringBinding = [](const primec::Expr &) { return false; },
+          .emitStringValueForCall = [](const primec::Expr &,
+                                       const primec::ir_lowerer::LocalMap &,
+                                       primec::ir_lowerer::LocalInfo::StringSource &,
+                                       int32_t &,
+                                       bool &) { return true; },
+          .inferStructExprPath =
+              [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+                return expr.name == "values" ? std::string(MapStructPath) : std::string();
+              },
+          .inferExprKind =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+              },
+          .resolveStructSlotLayout =
+              [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+          .emitExpr =
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                FAIL("emitExpr should not materialize map locals for mutable concrete map params");
+                return false;
+              },
+          .emitStructCopySlots = [](int32_t, int32_t, int32_t) { return true; },
+          .allocTempLocal = []() { return 0; },
+          .emitInstruction = [&](primec::IrOpcode op,
+                                 uint64_t imm) { instructions.push_back({op, imm}); },
+          .trackFileHandleLocal = [](int32_t) {},
+          .error = error}));
 
   CHECK(error.empty());
   REQUIRE(calleeLocals.count("entries") == 1u);
