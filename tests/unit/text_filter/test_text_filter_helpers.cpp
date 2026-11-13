@@ -1,4 +1,5 @@
 #include "primec/testing/TextFilterHelpers.h"
+#include "primec/support/Ascii.h"
 
 #include "third_party/doctest.h"
 
@@ -26,9 +27,9 @@ TEST_CASE("character classification helpers") {
   CHECK(isLeftOperandEndChar('"'));
   CHECK(isDigitChar('8'));
   CHECK_FALSE(isDigitChar('x'));
-  CHECK(isHexDigitChar('a'));
-  CHECK(isHexDigitChar('F'));
-  CHECK_FALSE(isHexDigitChar('g'));
+  CHECK(primec::isHexDigitChar('a'));
+  CHECK(primec::isHexDigitChar('F'));
+  CHECK_FALSE(primec::isHexDigitChar('g'));
   CHECK(isCommentStart("//x", 0));
   CHECK(isCommentStart("/*x", 0));
   CHECK_FALSE(isCommentStart("/", 0));

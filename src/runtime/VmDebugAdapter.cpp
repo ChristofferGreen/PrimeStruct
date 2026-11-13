@@ -1,4 +1,5 @@
 #include "primec/runtime/VmDebugAdapter.h"
+#include "primec/support/Json.h"
 
 #include <optional>
 #include <string>
@@ -7,47 +8,6 @@
 
 namespace primec {
 namespace {
-
-std::string jsonEscape(std::string_view text) {
-  std::string out;
-  out.reserve(text.size() + 8);
-  for (const char c : text) {
-    switch (c) {
-      case '\"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (static_cast<unsigned char>(c) < 0x20) {
-          out += "\\u00";
-          static constexpr char Hex[] = "0123456789abcdef";
-          out.push_back(Hex[(static_cast<unsigned char>(c) >> 4) & 0x0f]);
-          out.push_back(Hex[static_cast<unsigned char>(c) & 0x0f]);
-        } else {
-          out.push_back(c);
-        }
-        break;
-    }
-  }
-  return out;
-}
 
 size_t resolveLocalVariableCount(const IrFunction &function, const VmDebugSnapshotPayload &payload, size_t frameOrdinal) {
   size_t slotCount = 0;

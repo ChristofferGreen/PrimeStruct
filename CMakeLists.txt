@@ -166,6 +166,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/StdlibSurfaceRegistry.cpp
   src/support/StdlibSurfaceScan.cpp
   src/frontend/SymbolInterner.cpp
+  src/support/Json.cpp
   src/support/TempPaths.cpp
   src/support/TransformRules.cpp
   src/support/TransformRegistry.cpp

@@ -25,8 +25,8 @@ struct StdlibSymbolManifestEntry {
   uint64_t contentHash = 0;
 };
 
-// FNV-1a 64-bit. Not cryptographic - only needs to detect content drift.
-uint64_t fnv1a64(std::string_view text);
+// The entry hash is primec::nameHash (primec/support/Hash.h): FNV-1a 64-bit, not cryptographic,
+// only needs to detect content drift.
 
 // Splits text into 1-indexed lines (index 0 is unused/empty), so manifest
 // line numbers map directly onto vector indices.

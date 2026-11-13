@@ -38,11 +38,6 @@ constexpr uint32_t WasmDecimalBase = 10u;
 constexpr uint32_t WasmAsciiZero = 48u;
 constexpr uint32_t WasmAsciiMinus = 45u;
 
-void appendI32MemArg(uint32_t offset, std::vector<uint8_t> &out) {
-  appendU32Leb(2, out);
-  appendU32Leb(offset, out);
-}
-
 } // namespace
 
 void emitWasiWritePtrLen(uint32_t fd,

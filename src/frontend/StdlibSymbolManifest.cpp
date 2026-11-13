@@ -1,4 +1,5 @@
 #include "primec/frontend/StdlibSymbolManifest.h"
+#include "primec/support/Hash.h"
 
 #include "primec/ast/Ast.h"
 #include "primec/ast/AstPrinter.h"
@@ -38,15 +39,6 @@ bool readFile(const std::string &path, std::string &out) {
 }
 
 } // namespace
-
-uint64_t fnv1a64(std::string_view text) {
-  uint64_t hash = 1469598103934665603ULL;
-  for (const unsigned char c : text) {
-    hash ^= c;
-    hash *= 1099511628211ULL;
-  }
-  return hash;
-}
 
 std::vector<std::string> splitSourceIntoLines(const std::string &text) {
   std::vector<std::string> lines;
@@ -279,7 +271,7 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
   single.definitions.push_back(*definitionIt);
   AstPrinter printer;
   const std::string canonical = printer.print(single);
-  const uint64_t hash = fnv1a64(canonical);
+  const uint64_t hash = nameHash(canonical);
   if (hash != entry.contentHash) {
     error = "manifest entry " + entry.path + " content hash mismatch for " +
             moduleSourcePath +

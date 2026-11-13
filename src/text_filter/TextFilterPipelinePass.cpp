@@ -1,4 +1,5 @@
 #include "TextFilterPipelineInternal.h"
+#include "primec/support/Ascii.h"
 
 #include "TextFilterHelpers.h"
 #include "primec/support/TextFilterPipeline.h"

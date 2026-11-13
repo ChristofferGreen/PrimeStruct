@@ -1,4 +1,5 @@
 #include "primec/runtime/VmDebugDap.h"
+#include "primec/support/Json.h"
 
 #include "VmDebugDapProtocol.h"
 #include "primec/runtime/VmDebugAdapter.h"
@@ -16,7 +17,6 @@ using vm_debug_dap_detail::JsonValue;
 using vm_debug_dap_detail::buildEvent;
 using vm_debug_dap_detail::buildResponse;
 using vm_debug_dap_detail::fileNameFromPath;
-using vm_debug_dap_detail::jsonEscape;
 using vm_debug_dap_detail::jsonNumberField;
 using vm_debug_dap_detail::jsonObjectField;
 using vm_debug_dap_detail::jsonStringField;

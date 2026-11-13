@@ -1,4 +1,5 @@
 #include "test_parser_basic_helpers.h"
+#include "primec/support/Ascii.h"
 
 #include "primec/testing/ParserHelpers.h"
 
@@ -193,10 +194,10 @@ TEST_CASE("parser helper describes invalid token high-byte and newline") {
 }
 
 TEST_CASE("parser helper hex digit utility handles edge chars") {
-  CHECK(primec::parser::isHexDigitChar('0'));
-  CHECK(primec::parser::isHexDigitChar('a'));
-  CHECK(primec::parser::isHexDigitChar('F'));
-  CHECK_FALSE(primec::parser::isHexDigitChar('g'));
+  CHECK(primec::isHexDigitChar('0'));
+  CHECK(primec::isHexDigitChar('a'));
+  CHECK(primec::isHexDigitChar('F'));
+  CHECK_FALSE(primec::isHexDigitChar('g'));
 }
 
 TEST_CASE("parser helper rejects reserved keyword slash segments") {

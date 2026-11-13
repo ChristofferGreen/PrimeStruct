@@ -1,4 +1,5 @@
 #include "ParserHelpers.h"
+#include "primec/support/Ascii.h"
 
 #include <cctype>
 #include <iomanip>
@@ -12,14 +13,6 @@ bool isReservedKeyword(const std::string &text) {
   return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
          text == "class" || text == "true" || text == "false" || text == "if" || text == "else" ||
          text == "loop" || text == "while" || text == "for" || text == "match";
-}
-
-bool isAsciiAlpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-
-bool isAsciiDigit(char c) {
-  return c >= '0' && c <= '9';
 }
 
 bool isIdentifierSegmentStart(char c) {
@@ -186,10 +179,6 @@ bool isBuiltinName(const std::string &name, bool allowMathBare) {
          candidate == "print_line" || candidate == "print_error" || candidate == "print_line_error" ||
          candidate == "notify" || candidate == "insert" || candidate == "take" ||
          (isGpuBuiltin && isGpuQualified) || (isMemoryBuiltin && isMemoryQualified);
-}
-
-bool isHexDigitChar(char c) {
-  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
 bool isValidFloatLiteral(const std::string &text) {

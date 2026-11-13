@@ -1,4 +1,5 @@
 #include "primec/frontend/Parser.h"
+#include "primec/frontend/TokenClasses.h"
 
 #include "ParserHelpers.h"
 
@@ -8,26 +9,10 @@ namespace primec {
 using namespace parser;
 
 namespace {
-bool isArgumentLabelValueStart(TokenKind kind) {
-  switch (kind) {
-    case TokenKind::Identifier:
-    case TokenKind::Number:
-    case TokenKind::String:
-    case TokenKind::LBracket:
-      return true;
-    default:
-      return false;
-  }
-}
-
 bool isSimpleSpreadMarker(const std::vector<Token> &tokens, size_t index) {
   return index + 2 < tokens.size() && tokens[index].kind == TokenKind::LBracket &&
          tokens[index + 1].kind == TokenKind::Identifier && tokens[index + 1].text == "spread" &&
          tokens[index + 2].kind == TokenKind::RBracket;
-}
-
-bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment;
 }
 
 bool isVectorBindingTypeName(std::string name) {

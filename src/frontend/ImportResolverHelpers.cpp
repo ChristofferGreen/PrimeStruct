@@ -1,4 +1,5 @@
 #include "ImportResolverInternal.h"
+#include "primec/support/Ascii.h"
 
 #include "primec/support/TempPaths.h"
 
@@ -25,14 +26,6 @@ bool isReservedKeyword(const std::string &text) {
   return text == "mut" || text == "return" || text == "include" || text == "import" || text == "namespace" ||
          text == "true" || text == "false" || text == "if" || text == "else" || text == "loop" || text == "while" ||
          text == "for" || text == "match";
-}
-
-bool isAsciiAlpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-
-bool isAsciiDigit(char c) {
-  return c >= '0' && c <= '9';
 }
 
 bool isIdentifierSegmentStart(char c) {

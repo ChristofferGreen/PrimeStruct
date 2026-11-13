@@ -18,7 +18,6 @@ bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_vie
 bool hasExplicitBindingTypeTransform(const std::vector<Transform> &transforms);
 bool isBindingTransformList(const std::vector<Transform> &transforms);
 bool isBuiltinName(const std::string &name, bool allowMathBare);
-bool isHexDigitChar(char c);
 bool isValidFloatLiteral(const std::string &text);
 
 } // namespace primec::parser

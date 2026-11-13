@@ -1,4 +1,5 @@
 #include "primec/frontend/Parser.h"
+#include "primec/frontend/TokenClasses.h"
 
 #include "ParserHelpers.h"
 
@@ -10,10 +11,6 @@ namespace primec {
 using namespace parser;
 
 namespace {
-
-bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
-}
 
 } // namespace
 
@@ -39,14 +36,14 @@ bool Parser::parse(Program &program,
     }
     ++scan;
     while (scan < tokens_.size()) {
-      if (isIgnorableToken(tokens_[scan].kind)) {
+      if (isIgnorableOrSeparatorToken(tokens_[scan].kind)) {
         ++scan;
         continue;
       }
       if (tokens_[scan].kind == TokenKind::Identifier) {
         std::string path = tokens_[scan].text;
         size_t next = scan + 1;
-        while (next < tokens_.size() && isIgnorableToken(tokens_[next].kind)) {
+        while (next < tokens_.size() && isIgnorableOrSeparatorToken(tokens_[next].kind)) {
           ++next;
         }
         if (!path.empty() && path.back() == '/' && next < tokens_.size() &&

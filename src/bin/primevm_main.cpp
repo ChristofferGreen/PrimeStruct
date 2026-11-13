@@ -1,4 +1,5 @@
 #include "primec/pipeline/CliDriver.h"
+#include "primec/support/Json.h"
 #include "primec/support/CompileArena.h"
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/support/Diagnostics.h"
@@ -25,48 +26,9 @@
 #include <variant>
 #include <vector>
 
-namespace {
-std::string jsonEscape(std::string_view text) {
-  std::string out;
-  out.reserve(text.size() + 8);
-  for (const char c : text) {
-    switch (c) {
-      case '\"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (static_cast<unsigned char>(c) < 0x20) {
-          out += "\\u00";
-          static constexpr char Hex[] = "0123456789abcdef";
-          out.push_back(Hex[(static_cast<unsigned char>(c) >> 4) & 0x0f]);
-          out.push_back(Hex[static_cast<unsigned char>(c) & 0x0f]);
-        } else {
-          out.push_back(c);
-        }
-        break;
-    }
-  }
-  return out;
-}
+using primec::jsonEscape;
 
+namespace {
 std::string encodeDebugSnapshotJson(const primec::VmDebugSnapshot &snapshot) {
   return std::string("{\"state\":\"") + std::string(primec::vmDebugSessionStateName(snapshot.state)) +
          "\",\"function_index\":" + std::to_string(snapshot.functionIndex) + ",\"instruction_pointer\":" +
@@ -200,7 +162,7 @@ std::string encodeParsedJsonValue(const primec::vm_debug_dap_detail::JsonValue &
     case JsonValue::Kind::Number:
       return std::to_string(value.numberValue);
     case JsonValue::Kind::String:
-      return std::string("\"") + primec::vm_debug_dap_detail::jsonEscape(value.stringValue) + "\"";
+      return std::string("\"") + primec::jsonEscape(value.stringValue) + "\"";
     case JsonValue::Kind::Array: {
       std::string out = "[";
       for (size_t i = 0; i < value.arrayValue.size(); ++i) {
@@ -222,7 +184,7 @@ std::string encodeParsedJsonValue(const primec::vm_debug_dap_detail::JsonValue &
         if (i > 0) {
           out += ",";
         }
-        out += std::string("\"") + primec::vm_debug_dap_detail::jsonEscape(value.objectValue[i].first) + "\":";
+        out += std::string("\"") + primec::jsonEscape(value.objectValue[i].first) + "\":";
         if (value.objectValue[i].second != nullptr) {
           out += encodeParsedJsonValue(*value.objectValue[i].second);
         } else {

@@ -20,6 +20,7 @@
 //       stdlib/std/image/image.psmeta
 
 #include "primec/ast/Ast.h"
+#include "primec/support/Hash.h"
 #include "primec/ast/AstPrinter.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
@@ -277,7 +278,7 @@ int main(int argc, char **argv) {
     entry.path = def->fullPath;
     entry.startLine = startLine;
     entry.endLine = endLine;
-    entry.contentHash = primec::fnv1a64(slicedCanonical);
+    entry.contentHash = primec::nameHash(slicedCanonical);
     entries.push_back(std::move(entry));
   }
 

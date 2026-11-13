@@ -1,4 +1,5 @@
 #include "primec/frontend/Lexer.h"
+#include "primec/support/Ascii.h"
 
 #include <cctype>
 
@@ -37,18 +38,6 @@ std::vector<Token> Lexer::tokenize() {
     }
   }
   return tokens;
-}
-
-static bool isHexDigitChar(char c) {
-  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
-}
-
-static bool isAsciiAlpha(char c) {
-  return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-
-static bool isAsciiDigit(char c) {
-  return c >= '0' && c <= '9';
 }
 
 static bool isAsciiWhitespace(char c) {

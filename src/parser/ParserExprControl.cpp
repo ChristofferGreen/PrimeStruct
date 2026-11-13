@@ -1,4 +1,5 @@
 #include "primec/frontend/Parser.h"
+#include "primec/frontend/TokenClasses.h"
 
 #include "ParserHelpers.h"
 
@@ -8,21 +9,6 @@ namespace primec {
 using namespace parser;
 
 namespace {
-bool isArgumentLabelValueStart(TokenKind kind) {
-  switch (kind) {
-  case TokenKind::Identifier:
-  case TokenKind::Number:
-  case TokenKind::String:
-  case TokenKind::LBracket:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment;
-}
 } // namespace
 
 bool Parser::tryParseIfStatementSugar(Expr &out,

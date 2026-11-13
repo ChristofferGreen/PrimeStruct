@@ -1,4 +1,5 @@
 #include "TextFilterHelpers.h"
+#include "primec/support/Ascii.h"
 
 #include "primec/frontend/StringLiteral.h"
 
@@ -33,10 +34,6 @@ bool isLeftOperandEndChar(char c) {
 
 bool isDigitChar(char c) {
   return std::isdigit(static_cast<unsigned char>(c)) != 0;
-}
-
-bool isHexDigitChar(char c) {
-  return std::isxdigit(static_cast<unsigned char>(c)) != 0;
 }
 
 bool isCommentStart(const std::string &input, size_t index) {

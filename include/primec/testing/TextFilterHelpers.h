@@ -13,7 +13,6 @@ bool isStringSuffixBody(char c);
 bool isOperatorTokenChar(char c);
 bool isLeftOperandEndChar(char c);
 bool isDigitChar(char c);
-bool isHexDigitChar(char c);
 bool isCommentStart(const std::string &input, size_t index);
 bool isCommentEnd(const std::string &input, size_t index);
 bool isUnaryPrefixPosition(const std::string &input, size_t index);

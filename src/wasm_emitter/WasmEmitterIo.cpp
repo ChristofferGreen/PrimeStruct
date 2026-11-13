@@ -43,11 +43,6 @@ constexpr uint64_t WasiRightsFdWrite = 64ull;
 constexpr uint32_t WasmFileHandleErrorBit = 0x80000000u;
 constexpr uint32_t WasmFileHandleErrorMask = 0x7fffffffu;
 
-void appendI32MemArg(uint32_t offset, std::vector<uint8_t> &out) {
-  appendU32Leb(2, out);
-  appendU32Leb(offset, out);
-}
-
 void emitI32LoadAtAddress(uint32_t address, std::vector<uint8_t> &out) {
   out.push_back(WasmOpI32Const);
   appendS32Leb(static_cast<int32_t>(address), out);

@@ -1,4 +1,5 @@
 #include "primec/frontend/Parser.h"
+#include "primec/frontend/TokenClasses.h"
 
 #include "ParserHelpers.h"
 
@@ -8,10 +9,6 @@ namespace primec {
 using namespace parser;
 
 namespace {
-
-bool isIgnorableToken(TokenKind kind) {
-  return kind == TokenKind::Comment || kind == TokenKind::Comma || kind == TokenKind::Semicolon;
-}
 
 bool isControlKeyword(const std::string &name) {
   return name == "if" || name == "else" || name == "loop" || name == "while" || name == "for" ||
@@ -23,7 +20,7 @@ bool isNoReturnDefinitionTransform(const std::string &name) {
 }
 
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
-  while (index < tokens.size() && isIgnorableToken(tokens[index].kind)) {
+  while (index < tokens.size() && isIgnorableOrSeparatorToken(tokens[index].kind)) {
     ++index;
   }
   return index;
@@ -171,7 +168,7 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int depth = 1;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
-    if (isIgnorableToken(kind)) {
+    if (isIgnorableOrSeparatorToken(kind)) {
       ++index;
       continue;
     }
@@ -199,7 +196,7 @@ bool Parser::definitionHasReturnBeforeClose() const {
   int braceDepth = 0;
   while (braceIndex < tokens_.size()) {
     TokenKind kind = tokens_[braceIndex].kind;
-    if (isIgnorableToken(kind)) {
+    if (isIgnorableOrSeparatorToken(kind)) {
       ++braceIndex;
       continue;
     }

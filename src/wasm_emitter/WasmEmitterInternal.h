@@ -124,6 +124,12 @@ inline void appendU32Leb(uint32_t value, std::vector<uint8_t> &out) {
   } while (value != 0);
 }
 
+// The memory argument of an i32 load or store: alignment 2 (4 bytes) and the offset.
+inline void appendI32MemArg(uint32_t offset, std::vector<uint8_t> &out) {
+  appendU32Leb(2, out);
+  appendU32Leb(offset, out);
+}
+
 inline void appendS32Leb(int32_t value, std::vector<uint8_t> &out) {
   bool more = true;
   while (more) {
