@@ -1598,9 +1598,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: survey first; do not refactor before the table exists.
   - notes: deferred: needs the survey. Do not run alongside TODO-5960.
 
-- [ ] TODO-5979: `--collect-diagnostics` reports no false intra-body call diagnostics
+- [~] TODO-5979: `--collect-diagnostics` reports no false intra-body call diagnostics
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-12
   - phase: Semantics diagnostics (found while doing TODO-5960)
   - parallel_track: collect-diagnostics-false-positives
