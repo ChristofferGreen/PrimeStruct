@@ -377,10 +377,10 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
       return samePathVectorHelper;
     }
   }
-  // Map twin of the vector same-path branch above: a rooted
-  // `/map/count` / `/map/count_ref` user shadow wins for bare
-  // `count(m)` / `count_ref(m)` on a map receiver, exactly like
-  // `/vector/count` / `/vector/capacity` do for vector receivers.
+  // Map twin of the vector same-path branch above: a user shadow of the
+  // rooted key-value count and count_ref helpers wins for bare `count(m)` /
+  // `count_ref(m)` on a map receiver, as the rooted vector count and
+  // capacity shadows do for vector receivers.
   if (receiverFamily == "map" && (collection_helpers::isCountHelperName(helperName))) {
     const std::string samePathMapHelper = "/" + std::string("map") + "/" + helperName;
     if (hasDefinitionFamilyPath(samePathMapHelper)) {
