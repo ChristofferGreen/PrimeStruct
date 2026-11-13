@@ -1681,9 +1681,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-5983: `scripts/benchmark.sh` works with the relative `--build-dir` its docs give
+- [~] TODO-5983: `scripts/benchmark.sh` works with the relative `--build-dir` its docs give
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
   - created_at: 2026-11-12
   - phase: Tooling
   - parallel_track: benchmark-script
