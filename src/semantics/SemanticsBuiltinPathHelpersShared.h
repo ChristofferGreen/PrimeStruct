@@ -3,6 +3,7 @@
 // Helpers shared by the SemanticsBuiltinPathHelpers*.cpp units (split out of
 // SemanticsBuiltinPathHelpers.cpp without changes, TODO-5384).
 #include "SemanticsHelpers.h"
+#include "primec/support/MathNames.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/BuiltinArrayAccessNameClassifier.h"
 #include "primec/support/CollectionSpellingClassifier.h"
@@ -36,33 +37,6 @@ struct HelperSuffixInfo {
   std::string_view suffix;
   std::string_view placement;
 };
-
-inline bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
-  if (name.empty()) {
-    return false;
-  }
-  std::string normalized = name;
-  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
-  if (hasLeadingSlash) {
-    normalized.erase(0, 1);
-  }
-  if (normalized.rfind("std/math/", 0) == 0) {
-    out = normalized.substr(9);
-    return true;
-  }
-  if (normalized.find('/') != std::string::npos) {
-    return false;
-  }
-  if (hasLeadingSlash) {
-    out = normalized;
-    return true;
-  }
-  if (!allowBare) {
-    return false;
-  }
-  out = normalized;
-  return true;
-}
 
 inline bool parseGpuName(const std::string &name, std::string &out) {
   if (name.empty()) {

@@ -157,6 +157,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/CompileContext.cpp
   src/support/Diagnostics.cpp
   src/support/EmitKind.cpp
+  src/support/MathNames.cpp
   src/support/OptionsParser.cpp
   src/support/ProcessRunner.cpp
   src/support/BenchmarkSink.cpp
@@ -2182,6 +2183,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_intra_body_call_diagnostics.cpp
     tests/unit/semantics/test_semantics_collection_path_predicates.cpp
     tests/unit/semantics/test_semantics_type_text.cpp
+    tests/unit/semantics/test_semantics_math_names.cpp
     tests/unit/semantics/test_semantics_never_return.cpp
     tests/unit/semantics/test_semantics_transitive_collection_imports.cpp
     tests/unit/semantics/test_semantics_numeric_software.cpp
@@ -2394,6 +2396,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.intra_body_call_diagnostics
     primestruct.semantics.collection_path_predicates
     primestruct.semantics.type_text
+    primestruct.semantics.math_names
     primestruct.semantics.never_return
     primestruct.semantics.transitive_collection_imports
     primestruct.semantics.software_numeric
@@ -3696,7 +3699,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
-    control=37 element_copies=10 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=16
+    control=37 element_copies=10 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=17
     shared_strings=5 struct_methods=8 sum_owners=6 tasks=17 text_views=6 vector_owners=23)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

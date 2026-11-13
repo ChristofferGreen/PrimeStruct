@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererHelpers.h"
+#include "primec/support/MathNames.h"
 
 #include <algorithm>
 #include <array>
@@ -186,140 +187,95 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   return name;
 }
 
-bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
-  if (name.empty()) {
-    return false;
-  }
-  std::string normalized = name;
-  normalized = normalizeInternalSoaStorageBuiltinAlias(normalized);
-  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
-  if (hasLeadingSlash) {
-    normalized.erase(0, 1);
-  }
-  if (normalized.rfind("std/math/", 0) == 0) {
-    out = normalized.substr(9);
-    return true;
-  }
-  if (normalized.find('/') != std::string::npos) {
-    if (!hasLeadingSlash) {
-      return false;
-    }
-    const size_t slash = normalized.find_last_of('/');
-    if (slash == std::string::npos || slash + 1 >= normalized.size()) {
-      return false;
-    }
-    normalized = normalized.substr(slash + 1);
-  }
-  if (hasLeadingSlash) {
-    out = normalized;
-    return true;
-  }
-  if (!allowBare) {
-    return false;
-  }
-  out = normalized;
-  return true;
-}
-
-// Accepted spellings per builtin math family; every classifier shares one lookup.
-using MathNameSet = std::initializer_list<std::string_view>;
-
-bool classifyMathName(const Expr &expr, std::string &out, bool allowBare, MathNameSet names) {
+bool classifyMathName(const Expr &expr, std::string &out, bool allowBare, MathFamily family) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
-    return false;
-  }
-  for (const std::string_view candidate : names) {
-    if (out == candidate) {
-      return true;
-    }
-  }
-  return false;
+  return primec::classifyMathName(
+      normalizeInternalSoaStorageBuiltinAlias(resolveMathExprName(expr)), out, {allowBare}, family);
 }
 
 } // namespace
 
 bool getBuiltinClampName(const Expr &expr, bool allowBare) {
   std::string name;
-  return classifyMathName(expr, name, allowBare, {"clamp"});
+  return classifyMathName(expr, name, allowBare, MathFamily::Clamp);
 }
 
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"min", "max"});
+  return classifyMathName(expr, out, allowBare, MathFamily::MinMax);
 }
 
 bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"lerp"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Lerp);
 }
 
 bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"fma"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Fma);
 }
 
 bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"hypot"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Hypot);
 }
 
 bool getBuiltinCopysignName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"copysign"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Copysign);
 }
 
 bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"radians", "degrees"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Angle);
 }
 
 bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"sin", "cos", "tan"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Trig);
 }
 
 bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"atan2"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Trig2);
 }
 
 bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"asin", "acos", "atan"});
+  return classifyMathName(expr, out, allowBare, MathFamily::ArcTrig);
 }
 
 bool getBuiltinHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"sinh", "cosh", "tanh"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Hyperbolic);
 }
 
 bool getBuiltinArcHyperbolicName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"asinh", "acosh", "atanh"});
+  return classifyMathName(expr, out, allowBare, MathFamily::ArcHyperbolic);
 }
 
 bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"exp", "exp2"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Exp);
 }
 
 bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"log", "log2", "log10"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Log);
 }
 
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"abs", "sign"});
+  return classifyMathName(expr, out, allowBare, MathFamily::AbsSign);
 }
 
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"saturate"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Saturate);
 }
 
 bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"pow"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Pow);
 }
 
 bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"is_nan", "is_inf", "is_finite"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Predicate);
 }
 
 bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"floor", "ceil", "round", "trunc", "fract"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Rounding);
 }
 
 bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare) {
-  return classifyMathName(expr, out, allowBare, {"sqrt", "cbrt"});
+  return classifyMathName(expr, out, allowBare, MathFamily::Root);
 }
 
 bool getBuiltinConvertName(const Expr &expr) {

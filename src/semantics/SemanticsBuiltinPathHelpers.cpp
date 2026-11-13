@@ -1,4 +1,5 @@
 #include "primec/support/CompileContext.h"
+#include "primec/support/MathNames.h"
 #include "SemanticsHelpers.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -327,54 +328,28 @@ bool isRootBuiltinName(const std::string &name) {
 }
 
 bool getBuiltinClampName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
-    return false;
-  }
-  return out == "clamp";
+  return classifyMathName(expr.name, out, {allowBare}, MathFamily::Clamp);
 }
 
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
-    return false;
-  }
-  return out == "min" || out == "max";
+  return classifyMathName(expr.name, out, {allowBare}, MathFamily::MinMax);
 }
 
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
-    return false;
-  }
-  return out == "abs" || out == "sign";
+  return classifyMathName(expr.name, out, {allowBare}, MathFamily::AbsSign);
 }
 
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
-    return false;
-  }
-  return out == "saturate";
+  return classifyMathName(expr.name, out, {allowBare}, MathFamily::Saturate);
 }
 
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
-    return false;
-  }
-  if (out == "lerp" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" || out == "fract" ||
-      out == "sqrt" || out == "cbrt" || out == "pow" || out == "exp" || out == "exp2" || out == "log" ||
-      out == "log2" || out == "log10" || out == "sin" || out == "cos" || out == "tan" || out == "asin" ||
-      out == "acos" || out == "atan" || out == "atan2" || out == "radians" || out == "degrees" || out == "sinh" ||
-      out == "cosh" || out == "tanh" || out == "asinh" || out == "acosh" || out == "atanh" || out == "fma" ||
-      out == "hypot" || out == "copysign" || out == "is_nan" || out == "is_inf" || out == "is_finite") {
-    return true;
-  }
-  return false;
+  return parseMathName(expr.name, out, {allowBare}) && isElementaryMathName(out);
 }
 
 bool isBuiltinMathConstant(const std::string &name, bool allowBare) {
   std::string candidate;
-  if (!parseMathName(name, candidate, allowBare)) {
-    return false;
-  }
-  return candidate == "pi" || candidate == "tau" || candidate == "e";
+  return classifyMathName(name, candidate, {allowBare}, MathFamily::Constant);
 }
 
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std::string rawMethodName) {

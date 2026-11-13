@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
+#include "primec/support/MathNames.h"
 
 namespace primec::ir_lowerer {
 
@@ -13,32 +14,6 @@ std::string resolveMathExprName(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
-bool parseMathName(const std::string &name, bool hasMathImport, std::string &out) {
-  if (name.empty()) {
-    return false;
-  }
-  std::string normalized = name;
-  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
-  if (hasLeadingSlash) {
-    normalized.erase(0, 1);
-  }
-  if (normalized.rfind("std/math/", 0) == 0) {
-    out = normalized.substr(9);
-    return true;
-  }
-  if (normalized.find('/') != std::string::npos) {
-    return false;
-  }
-  if (hasLeadingSlash) {
-    out = normalized;
-    return true;
-  }
-  if (!hasMathImport) {
-    return false;
-  }
-  out = normalized;
-  return true;
-}
 } // namespace
 
 bool isMathImportPath(const std::string &path) {
@@ -58,17 +33,7 @@ bool hasProgramMathImport(const std::vector<std::string> &imports) {
 }
 
 bool isSupportedMathBuiltinName(const std::string &name) {
-  return name == "abs" || name == "sign" || name == "min" || name == "max" ||
-         name == "clamp" || name == "lerp" || name == "saturate" || name == "floor" ||
-         name == "ceil" || name == "round" || name == "trunc" || name == "fract" ||
-         name == "sqrt" || name == "cbrt" || name == "pow" || name == "exp" ||
-         name == "exp2" || name == "log" || name == "log2" || name == "log10" ||
-         name == "sin" || name == "cos" || name == "tan" || name == "asin" ||
-         name == "acos" || name == "atan" || name == "atan2" || name == "radians" ||
-         name == "degrees" || name == "sinh" || name == "cosh" || name == "tanh" ||
-         name == "asinh" || name == "acosh" || name == "atanh" || name == "fma" ||
-         name == "hypot" || name == "copysign" || name == "is_nan" ||
-         name == "is_inf" || name == "is_finite";
+  return isMathFunctionName(name);
 }
 
 SetupMathResolvers makeSetupMathResolvers(bool hasMathImport) {
@@ -102,17 +67,14 @@ bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &
   if (expr.kind != Expr::Kind::Call) {
     return false;
   }
-  if (!parseMathName(resolveMathExprName(expr), hasMathImport, out)) {
+  if (!primec::parseMathName(resolveMathExprName(expr), out, {hasMathImport})) {
     return false;
   }
   return isSupportedMathBuiltinName(out);
 }
 
 bool getSetupMathConstantName(const std::string &name, bool hasMathImport, std::string &out) {
-  if (!parseMathName(name, hasMathImport, out)) {
-    return false;
-  }
-  return out == "pi" || out == "tau" || out == "e";
+  return primec::classifyMathName(name, out, {hasMathImport}, MathFamily::Constant);
 }
 
 } // namespace primec::ir_lowerer

@@ -1,4 +1,5 @@
 #include "IrPrinterInternal.h"
+#include "primec/support/MathNames.h"
 
 #include <cctype>
 #include <sstream>
@@ -150,75 +151,23 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
 }
 
 bool getBuiltinClampName(const Expr &expr, std::string &out) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "clamp") {
-    out = name;
-    return true;
-  }
-  return false;
+  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
+         classifyMathName(expr.name, out, {true}, MathFamily::Clamp);
 }
 
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "min" || name == "max") {
-    out = name;
-    return true;
-  }
-  return false;
+  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
+         classifyMathName(expr.name, out, {true}, MathFamily::MinMax);
 }
 
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "abs" || name == "sign") {
-    out = name;
-    return true;
-  }
-  return false;
+  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
+         classifyMathName(expr.name, out, {true}, MathFamily::AbsSign);
 }
 
 bool getBuiltinSaturateName(const Expr &expr, std::string &out) {
-  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return false;
-  }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  if (name == "saturate") {
-    out = name;
-    return true;
-  }
-  return false;
+  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
+         classifyMathName(expr.name, out, {true}, MathFamily::Saturate);
 }
 
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {

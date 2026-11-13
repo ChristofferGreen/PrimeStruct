@@ -340,4 +340,31 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE(
+    "a user function named like a math builtin in its own namespace is called, not the builtin") {
+  // /mylib/min and /mylib/abs are ordinary functions: only a bare, rooted single-segment or /std/math spelling is
+  // the math builtin (include/primec/support/MathNames.h).
+  program_matrix::ProgramCase program;
+  program.name = "user_function_named_like_math_builtin";
+  program.source = R"(
+[return<int>]
+/mylib/min([int] a, [int] b) {
+  return(a + b)
+}
+
+[return<int>]
+/mylib/abs([int] a) {
+  return(a + 100i32)
+}
+
+[return<int>]
+main() {
+  return(/mylib/min(3i32, 4i32) + /mylib/abs(1i32))
+}
+)";
+  program.exitCode = 108;
+  program.onlyConfigs = {"vm-O2", "native-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
