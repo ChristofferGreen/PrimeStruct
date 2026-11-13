@@ -1,4 +1,5 @@
 #include "IrPassUtil.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrPureSemantics.h"
@@ -15,8 +16,8 @@ namespace {
 constexpr size_t NoProducer = std::numeric_limits<size_t>::max();
 
 bool isConstantPush(IrOpcode op) {
-  return op == IrOpcode::PushI32 || op == IrOpcode::PushI64 || op == IrOpcode::PushF32 ||
-         op == IrOpcode::PushF64;
+  const IrOpCategory category = irOpcodeCategory(op);
+  return category == IrOpCategory::ConstInt || category == IrOpCategory::ConstFloat;
 }
 
 // The 64-bit slot the VM leaves on the stack for a constant push.

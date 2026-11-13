@@ -1,4 +1,5 @@
 #include "primec/ir/IrCfg.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include <algorithm>
 
@@ -7,12 +8,12 @@ namespace {
 
 // A return, or a trap, which also leaves the function (it ends the program).
 bool isReturnOpcode(IrOpcode op) {
-  return op == IrOpcode::ReturnVoid || op == IrOpcode::ReturnI32 || op == IrOpcode::ReturnI64 ||
-         op == IrOpcode::ReturnF32 || op == IrOpcode::ReturnF64 || op == IrOpcode::Trap;
+  const IrOpCategory category = irOpcodeCategory(op);
+  return category == IrOpCategory::Return || category == IrOpCategory::Trap;
 }
 
 bool isJumpOpcode(IrOpcode op) {
-  return op == IrOpcode::Jump || op == IrOpcode::JumpIfZero;
+  return irOpcodeCategory(op) == IrOpCategory::Jump;
 }
 
 bool isTerminatorOpcode(IrOpcode op) {

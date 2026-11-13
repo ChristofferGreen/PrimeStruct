@@ -1,4 +1,5 @@
 #include "VmFastKernelProgram.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include "primec/ir/IrCfg.h"
 #include "primec/runtime/VmExecutionKernel.h"
@@ -10,16 +11,7 @@ namespace primec::vm_detail {
 namespace {
 
 bool isReturnOpcode(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::ReturnVoid:
-  case IrOpcode::ReturnI32:
-  case IrOpcode::ReturnI64:
-  case IrOpcode::ReturnF32:
-  case IrOpcode::ReturnF64:
-    return true;
-  default:
-    return false;
-  }
+  return irOpcodeCategory(op) == IrOpCategory::Return;
 }
 
 int comparisonKind(IrOpcode op) {
@@ -49,15 +41,17 @@ int comparisonKind(IrOpcode op) {
 
 // 0 add, 1 sub, 2 mul; -1 otherwise. The I32 and I64 forms share semantics.
 int arithmeticKind(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::AddI32:
-  case IrOpcode::AddI64:
+  const IrOpResult result = irOpcodeResult(op);
+  if (irOpcodeCategory(op) != IrOpCategory::IntArith ||
+      (result != IrOpResult::I32 && result != IrOpResult::I64)) {
+    return -1;
+  }
+  switch (irOpcodeArith(op)) {
+  case IrOpArith::Add:
     return 0;
-  case IrOpcode::SubI32:
-  case IrOpcode::SubI64:
+  case IrOpArith::Sub:
     return 1;
-  case IrOpcode::MulI32:
-  case IrOpcode::MulI64:
+  case IrOpArith::Mul:
     return 2;
   default:
     return -1;
@@ -65,14 +59,17 @@ int arithmeticKind(IrOpcode op) {
 }
 
 int arithmeticKindF64(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::AddF64:
+  if (irOpcodeCategory(op) != IrOpCategory::FloatArith || irOpcodeResult(op) != IrOpResult::F64) {
+    return -1;
+  }
+  switch (irOpcodeArith(op)) {
+  case IrOpArith::Add:
     return 0;
-  case IrOpcode::SubF64:
+  case IrOpArith::Sub:
     return 1;
-  case IrOpcode::MulF64:
+  case IrOpArith::Mul:
     return 2;
-  case IrOpcode::DivF64:
+  case IrOpArith::Div:
     return 3;
   default:
     return -1;
@@ -80,7 +77,7 @@ int arithmeticKindF64(IrOpcode op) {
 }
 
 bool isConstantPush(IrOpcode op) {
-  return op == IrOpcode::PushI32 || op == IrOpcode::PushI64;
+  return irOpcodeCategory(op) == IrOpCategory::ConstInt;
 }
 
 uint64_t constantOf(const IrInstruction &instruction) {

@@ -1,4 +1,5 @@
 #include "test_ir_pipeline_validation_helpers.h"
+#include "primec/ir/IrOpcodeTable.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/support/CollectionSpellingClassifier.h"
 
@@ -138,6 +139,38 @@ TEST_CASE("lowerer vector record paths and collection helper candidates have one
       primec::StdlibSurfaceId::CollectionsManifestSurface0, "insert");
   CHECK(collectionHelperPathCandidates("/array/insert").size() ==
         (canonicalInsert.empty() ? 1u : 2u));
+}
+
+TEST_CASE("every IR opcode has a category and the passes read it from the table") {
+  using primec::IrOpArith;
+  using primec::IrOpCategory;
+  using primec::IrOpcode;
+  using primec::IrOpResult;
+  for (const primec::IrOpcodeInfo &info : primec::IrOpcodeTable) {
+    INFO(info.name);
+    // A new opcode must be classified: Unclassified is the value a forgotten column would leave.
+    CHECK(info.category != IrOpCategory::Unclassified);
+    const std::string name = info.name;
+    CHECK((name.rfind("Return", 0) == 0) == (info.category == IrOpCategory::Return));
+    CHECK((name.rfind("Cmp", 0) == 0) == (info.category == IrOpCategory::Compare));
+    CHECK((name.rfind("Convert", 0) == 0) == (info.category == IrOpCategory::Convert));
+    const bool arithmetic =
+        info.category == IrOpCategory::IntArith || info.category == IrOpCategory::FloatArith;
+    CHECK(arithmetic == (info.arith != IrOpArith::None));
+    if (arithmetic) {
+      CHECK(info.result != IrOpResult::None);
+    }
+  }
+  // The groups the optimizer, the VM kernels and the CFG used to spell out by hand.
+  CHECK(primec::irOpcodeCategory(IrOpcode::Trap) == IrOpCategory::Trap);
+  CHECK(primec::irOpcodeCategory(IrOpcode::ReturnF64) == IrOpCategory::Return);
+  CHECK(primec::irOpcodeCategory(IrOpcode::JumpIfZero) == IrOpCategory::Jump);
+  CHECK(primec::irOpcodeCategory(IrOpcode::PushI64) == IrOpCategory::ConstInt);
+  CHECK(primec::irOpcodeCategory(IrOpcode::PushF32) == IrOpCategory::ConstFloat);
+  CHECK(primec::irOpcodeArith(IrOpcode::MulI32) == IrOpArith::Mul);
+  CHECK(primec::irOpcodeResult(IrOpcode::DivU64) == IrOpResult::U64);
+  CHECK(primec::irOpcodeResult(IrOpcode::AddF64) == IrOpResult::F64);
+  CHECK(primec::irOpcodeArith(IrOpcode::NegF32) == IrOpArith::Neg);
 }
 
 TEST_SUITE_END();

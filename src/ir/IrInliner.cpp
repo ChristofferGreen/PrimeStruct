@@ -1,4 +1,5 @@
 #include "primec/ir/IrInliner.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -10,8 +11,7 @@ namespace primec {
 namespace {
 
 bool isReturnOpcode(IrOpcode opcode) {
-  return opcode == IrOpcode::ReturnVoid || opcode == IrOpcode::ReturnI32 || opcode == IrOpcode::ReturnI64 ||
-         opcode == IrOpcode::ReturnF32 || opcode == IrOpcode::ReturnF64;
+  return irOpcodeCategory(opcode) == IrOpCategory::Return;
 }
 
 bool hasCallOpcode(const IrFunction &function) {

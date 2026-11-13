@@ -21,7 +21,7 @@ def enum_opcodes(ir_header: str) -> list[str]:
 
 
 def table_opcodes(table_header: str) -> list[str]:
-    return re.findall(r"^\s+X\((\w+), [01], [01], [01]\)", table_header, re.M)
+    return re.findall(r"^\s+X\((\w+), \w+, \w+, \w+, [01], [01], [01]\)", table_header, re.M)
 
 
 def check(enum_names: list[str], table_names: list[str]) -> list[str]:

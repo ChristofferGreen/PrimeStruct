@@ -1,4 +1,5 @@
 #include "primec/runtime/VmKernelBoundary.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include "primec/ir/IrPureSemantics.h"
 
@@ -21,52 +22,31 @@ bool isPureNumericOpcode(IrOpcode op) {
 }
 
 const char *pureOpcodeUnderflowMessage(IrOpcode op) {
-  switch (op) {
-  case IrOpcode::AddI32:
-  case IrOpcode::AddI64:
-    return "IR stack underflow on add";
-  case IrOpcode::SubI32:
-  case IrOpcode::SubI64:
-    return "IR stack underflow on sub";
-  case IrOpcode::MulI32:
-  case IrOpcode::MulI64:
-    return "IR stack underflow on mul";
-  case IrOpcode::DivI32:
-  case IrOpcode::DivI64:
-  case IrOpcode::DivU64:
-    return "IR stack underflow on div";
-  case IrOpcode::NegI32:
-  case IrOpcode::NegI64:
-  case IrOpcode::NegF32:
-  case IrOpcode::NegF64:
-    return "IR stack underflow on negate";
-  case IrOpcode::SextI32:
+  const IrOpArith arith = irOpcodeArith(op);
+  switch (irOpcodeCategory(op)) {
+  case IrOpCategory::IntArith:
+  case IrOpCategory::FloatArith:
+    if (arith == IrOpArith::Neg) {
+      return "IR stack underflow on negate";
+    }
+    if (irOpcodeCategory(op) == IrOpCategory::FloatArith) {
+      return "IR stack underflow on float op";
+    }
+    switch (arith) {
+    case IrOpArith::Add:
+      return "IR stack underflow on add";
+    case IrOpArith::Sub:
+      return "IR stack underflow on sub";
+    case IrOpArith::Mul:
+      return "IR stack underflow on mul";
+    default:
+      return "IR stack underflow on div";
+    }
+  case IrOpCategory::SignExtend:
     return "IR stack underflow on sext";
-  case IrOpcode::ZextU8:
+  case IrOpCategory::ZeroExtend:
     return "IR stack underflow on zext";
-  case IrOpcode::AddF32:
-  case IrOpcode::SubF32:
-  case IrOpcode::MulF32:
-  case IrOpcode::DivF32:
-  case IrOpcode::AddF64:
-  case IrOpcode::SubF64:
-  case IrOpcode::MulF64:
-  case IrOpcode::DivF64:
-    return "IR stack underflow on float op";
-  case IrOpcode::ConvertI32ToF32:
-  case IrOpcode::ConvertI32ToF64:
-  case IrOpcode::ConvertI64ToF32:
-  case IrOpcode::ConvertI64ToF64:
-  case IrOpcode::ConvertU64ToF32:
-  case IrOpcode::ConvertU64ToF64:
-  case IrOpcode::ConvertF32ToI32:
-  case IrOpcode::ConvertF32ToI64:
-  case IrOpcode::ConvertF32ToU64:
-  case IrOpcode::ConvertF64ToI32:
-  case IrOpcode::ConvertF64ToI64:
-  case IrOpcode::ConvertF64ToU64:
-  case IrOpcode::ConvertF32ToF64:
-  case IrOpcode::ConvertF64ToF32:
+  case IrOpCategory::Convert:
     return "IR stack underflow on convert";
   default:
     return "IR stack underflow on compare";

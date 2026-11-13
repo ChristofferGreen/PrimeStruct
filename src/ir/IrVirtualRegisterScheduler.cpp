@@ -1,4 +1,5 @@
 #include "primec/ir/IrVirtualRegisterScheduler.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include <algorithm>
 #include <optional>
@@ -42,57 +43,23 @@ bool isRegisterSpilled(const std::vector<std::optional<AssignmentLookupEntry>> &
 }
 
 uint32_t opcodeBaseLatency(IrOpcode op) {
-  switch (op) {
-    case IrOpcode::DivI32:
-    case IrOpcode::DivI64:
-    case IrOpcode::DivU64:
-    case IrOpcode::DivF32:
-    case IrOpcode::DivF64:
-      return 8;
-    case IrOpcode::MulI32:
-    case IrOpcode::MulI64:
-    case IrOpcode::MulF32:
-    case IrOpcode::MulF64:
-      return 4;
-    case IrOpcode::AddI32:
-    case IrOpcode::SubI32:
-    case IrOpcode::AddI64:
-    case IrOpcode::SubI64:
-    case IrOpcode::AddF32:
-    case IrOpcode::SubF32:
-    case IrOpcode::AddF64:
-    case IrOpcode::SubF64:
-    case IrOpcode::CmpEqI32:
-    case IrOpcode::CmpNeI32:
-    case IrOpcode::CmpLtI32:
-    case IrOpcode::CmpLeI32:
-    case IrOpcode::CmpGtI32:
-    case IrOpcode::CmpGeI32:
-    case IrOpcode::CmpEqI64:
-    case IrOpcode::CmpNeI64:
-    case IrOpcode::CmpLtI64:
-    case IrOpcode::CmpLeI64:
-    case IrOpcode::CmpGtI64:
-    case IrOpcode::CmpGeI64:
-    case IrOpcode::CmpLtU64:
-    case IrOpcode::CmpLeU64:
-    case IrOpcode::CmpGtU64:
-    case IrOpcode::CmpGeU64:
-    case IrOpcode::CmpEqF32:
-    case IrOpcode::CmpNeF32:
-    case IrOpcode::CmpLtF32:
-    case IrOpcode::CmpLeF32:
-    case IrOpcode::CmpGtF32:
-    case IrOpcode::CmpGeF32:
-    case IrOpcode::CmpEqF64:
-    case IrOpcode::CmpNeF64:
-    case IrOpcode::CmpLtF64:
-    case IrOpcode::CmpLeF64:
-    case IrOpcode::CmpGtF64:
-    case IrOpcode::CmpGeF64:
-      return 2;
-    default:
-      return 1;
+  const IrOpCategory category = irOpcodeCategory(op);
+  if (category == IrOpCategory::Compare) {
+    return 2;
+  }
+  if (category != IrOpCategory::IntArith && category != IrOpCategory::FloatArith) {
+    return 1;
+  }
+  switch (irOpcodeArith(op)) {
+  case IrOpArith::Div:
+    return 8;
+  case IrOpArith::Mul:
+    return 4;
+  case IrOpArith::Add:
+  case IrOpArith::Sub:
+    return 2;
+  default:
+    return 1;
   }
 }
 

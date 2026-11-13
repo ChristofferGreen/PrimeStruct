@@ -1,4 +1,5 @@
 #include "IrPassUtil.h"
+#include "primec/ir/IrOpcodeTable.h"
 
 #include <cstdint>
 #include <vector>
@@ -7,7 +8,7 @@ namespace primec::ir_opt {
 namespace {
 
 bool isConstantPush(const IrInstruction &instruction) {
-  return instruction.op == IrOpcode::PushI32 || instruction.op == IrOpcode::PushI64;
+  return irOpcodeCategory(instruction.op) == IrOpCategory::ConstInt;
 }
 
 // Value a JumpIfZero would test, for a constant integer push.
