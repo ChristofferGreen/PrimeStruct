@@ -18,16 +18,24 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
     out << "          return 1;\n";
     out << "        }\n";
   };
-  const auto emitPrintValue = [&](const char *valueExpr, uint64_t flags) {
-    const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
-    const bool newline = (flags & PrintFlagNewline) != 0;
-    out << "        " << stream << " << " << valueExpr << ";\n";
-    if (newline) {
-      out << "        " << stream << " << '\\n';\n";
-    }
-    out << "        pc = " << nextIndex << ";\n";
-    out << "        break;\n";
-  };
+  // `lengthExpr`, when given, is the byte length of the text at `valueExpr`: the text is written
+  // with it, so a NUL inside a string literal does not cut the output.
+  const auto emitPrintValue =
+      [&](const char *valueExpr, uint64_t flags, const char *lengthExpr = nullptr) {
+        const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
+        const bool newline = (flags & PrintFlagNewline) != 0;
+        if (lengthExpr != nullptr) {
+          out << "        " << stream << ".write(" << valueExpr << ", static_cast<std::streamsize>("
+              << lengthExpr << "));\n";
+        } else {
+          out << "        " << stream << " << " << valueExpr << ";\n";
+        }
+        if (newline) {
+          out << "        " << stream << " << '\\n';\n";
+        }
+        out << "        pc = " << nextIndex << ";\n";
+        out << "        break;\n";
+      };
   const auto stringOperandError = [&](const char *opcodeName, uint64_t stringIndex) {
     error = "IrToCppEmitter string index out of range at instruction " + std::to_string(index) + " (" + opcodeName +
             ", imm=" + std::to_string(instruction.imm) + ", stringIndex=" + std::to_string(stringIndex) + ")";
@@ -59,7 +67,9 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       }
       std::ostringstream value;
       value << "ps_string_table[" << stringIndex << "]";
-      emitPrintValue(value.str().c_str(), decodePrintFlags(instruction.imm));
+      std::ostringstream length;
+      length << "ps_string_table_lengths[" << stringIndex << "]";
+      emitPrintValue(value.str().c_str(), decodePrintFlags(instruction.imm), length.str().c_str());
       return true;
     }
     case IrOpcode::PrintStringDynamic: {
@@ -72,7 +82,9 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       out << "        }\n";
       const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
       const bool newline = (flags & PrintFlagNewline) != 0;
-      out << "        " << stream << " << ps_string_table[stringIndex];\n";
+      out << "        " << stream
+          << ".write(ps_string_table[stringIndex], "
+             "static_cast<std::streamsize>(ps_string_table_lengths[stringIndex]));\n";
       if (newline) {
         out << "        " << stream << " << '\\n';\n";
       }

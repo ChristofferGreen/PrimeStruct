@@ -4,6 +4,7 @@
 #include "IrToCppHostImports.h"
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmHeapCore.h"
+#include "primec/support/CStringLiteral.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -15,34 +16,6 @@
 
 namespace primec {
 namespace {
-
-std::string escapeCppStringLiteral(const std::string &text) {
-  std::string escaped;
-  escaped.reserve(text.size() + 2);
-  for (unsigned char ch : text) {
-    switch (ch) {
-      case '\\':
-        escaped += "\\\\";
-        break;
-      case '"':
-        escaped += "\\\"";
-        break;
-      case '\n':
-        escaped += "\\n";
-        break;
-      case '\r':
-        escaped += "\\r";
-        break;
-      case '\t':
-        escaped += "\\t";
-        break;
-      default:
-        escaped.push_back(static_cast<char>(ch));
-        break;
-    }
-  }
-  return escaped;
-}
 
 size_t computeLocalCount(const IrFunction &function) {
   size_t localCount = 0;
@@ -433,7 +406,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
     body << "  \"\",\n";
   } else {
     for (const std::string &text : module.stringTable) {
-      body << "  \"" << escapeCppStringLiteral(text) << "\",\n";
+      body << "  " << cStringLiteral(text) << ",\n";
     }
   }
   body << "};\n\n";

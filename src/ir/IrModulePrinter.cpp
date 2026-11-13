@@ -18,6 +18,8 @@ std::string hex(uint64_t value, int digits) {
   return buffer;
 }
 
+// The dump format of a string: `\n`, `\t`, `\r`, `\"` and `\\`, and `\xNN` for other bytes. It is its own
+// documented dump format, not the C literal of primec/support/CStringLiteral.h.
 std::string quote(const std::string &text) {
   std::string out = "\"";
   for (const unsigned char c : text) {

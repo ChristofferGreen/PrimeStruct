@@ -483,4 +483,29 @@ main() {
   CHECK(runCommand(quoteShellArg(exePath)) == 15);
 }
 
+TEST_CASE("exe and optexe print a string literal byte for byte") {
+  // NUL, a trigraph start, a tab, a quote and every byte from 0x80 to 0xFF: the two C++ emitters
+  // share one literal escaper, so both write all of them (the exe emitter used to copy NUL and the
+  // high bytes raw, which cut the literal at the NUL).
+  std::string highBytes;
+  for (int byte = 0x80; byte <= 0xFF; ++byte) {
+    highBytes.push_back(static_cast<char>(byte));
+  }
+  const std::string source = std::string("[effects(io_out), return<int>]\nmain() {\n") +
+                             "  print_line(\"a\\0b ?\?= \\t \\\" " + highBytes + " z\"utf8)\n" +
+                             "  return(0i32)\n}\n";
+  const std::string srcPath = writeTemp("compile_c_string_literal_bytes.prime", source);
+  const std::string expected =
+      std::string("a") + std::string(1, '\0') + "b ?\?= \t \" " + highBytes + " z\n";
+  for (const char *kind : {"exe", "optexe"}) {
+    const std::string exePath =
+        (testScratchPath("") / (std::string("primec_c_string_literal_") + kind)).string();
+    CHECK(runCommand(std::string("./primec --emit=") + kind + " " + quoteShellArg(srcPath) +
+                     " -o " + quoteShellArg(exePath) + " --entry /main") == 0);
+    const std::string outPath = exePath + ".out.txt";
+    CHECK(runCommand(quoteShellArg(exePath) + " > " + quoteShellArg(outPath)) == 0);
+    CHECK(readFile(outPath) == expected);
+  }
+}
+
 TEST_SUITE_END();

@@ -1,4 +1,5 @@
 #include "primec/backend/IrToOptCppEmitter.h"
+#include "primec/support/CStringLiteral.h"
 
 #include "primec/ir/IrCfg.h"
 #include "primec/ir/IrOpcodeTable.h"
@@ -36,27 +37,6 @@ uint64_t pushedSlot(const IrInstruction &instruction) {
 std::string opcodeName(IrOpcode op) {
   const IrOpcodeInfo *info = irOpcodeInfo(op);
   return info != nullptr ? info->name : "Unknown";
-}
-
-// C++ for a C++-quoted string literal that preserves every byte (octal escapes
-// are always three digits, so they never swallow a following character).
-std::string quote(const std::string &text) {
-  std::string out = "\"";
-  for (const unsigned char c : text) {
-    if (c == '"' || c == '\\') {
-      out += '\\';
-      out += static_cast<char>(c);
-    } else if (c >= 0x20 && c < 0x7F && c != '?') {
-      out += static_cast<char>(c);
-    } else {
-      out += '\\';
-      out += static_cast<char>('0' + ((c >> 6) & 7));
-      out += static_cast<char>('0' + ((c >> 3) & 7));
-      out += static_cast<char>('0' + (c & 7));
-    }
-  }
-  out += "\"";
-  return out;
 }
 
 // Expression for a pure opcode over operand expressions `a` (and `b`). Mirrors
@@ -665,7 +645,7 @@ private:
           }
           line("{");
           line("  const uint64_t targs[] = " + args + "};");
-          answer = "ps_text_call(rt, " + quote(std::string(textName)) + ", targs + 1)";
+          answer = "ps_text_call(rt, " + cStringLiteral(std::string(textName)) + ", targs + 1)";
         }
         if (import.returnKind == IrHostValueKind::Void) {
           line("  " + answer + ";");
@@ -784,7 +764,7 @@ private:
       const uint64_t flags = decodePrintFlags(instruction.imm);
       const std::string text = module_.stringTable[static_cast<size_t>(stringIndex)] +
                                ((flags & PrintFlagNewline) != 0 ? "\n" : "");
-      line("ps_emit(" + quote(text) + ", " + std::to_string(text.size()) + ", " +
+      line("ps_emit(" + cStringLiteral(text) + ", " + std::to_string(text.size()) + ", " +
            std::to_string(flags & ~static_cast<uint64_t>(PrintFlagNewline)) + ");");
       return true;
     }
@@ -957,7 +937,7 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   source << "namespace {\n\n";
   source << "const PsString ps_strings[] = {";
   for (const std::string &text : module.stringTable) {
-    source << "{" << quote(text) << ", " << text.size() << "}, ";
+    source << "{" << cStringLiteral(text) << ", " << text.size() << "}, ";
   }
   if (module.stringTable.empty()) {
     source << "{nullptr, 0}";
