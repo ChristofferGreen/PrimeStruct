@@ -1,5 +1,6 @@
 // Per-family semantic-product fact snapshots (types, bindings, array extents, returns, queries).
 #include "SemanticsValidatorSnapshotHelpers.h"
+#include "SemanticsValidatorPublicationFactTraits.h"
 
 namespace primec::semantics {
 using namespace snapshot_detail;
@@ -78,12 +79,7 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
     });
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.fullPath != right.fullPath) {
-      return left.fullPath < right.fullPath;
-    }
-    return left.category < right.category;
-  });
+  sortSnapshotEntries<TypeMetadataFactTraits>(entries);
   return entries;
 }
 
@@ -126,15 +122,7 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
     }
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.structPath != right.structPath) {
-      return left.structPath < right.structPath;
-    }
-    if (left.fieldIndex != right.fieldIndex) {
-      return left.fieldIndex < right.fieldIndex;
-    }
-    return left.fieldName < right.fieldName;
-  });
+  sortSnapshotEntries<StructFieldMetadataFactTraits>(entries);
   return entries;
 }
 
@@ -159,9 +147,7 @@ SemanticsValidator::sumTypeMetadataSnapshotForSemanticProduct() const {
     });
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    return left.fullPath < right.fullPath;
-  });
+  sortSnapshotEntries<SumTypeMetadataFactTraits>(entries);
   return entries;
 }
 
@@ -200,15 +186,7 @@ SemanticsValidator::sumVariantMetadataSnapshotForSemanticProduct() const {
     }
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.sumPath != right.sumPath) {
-      return left.sumPath < right.sumPath;
-    }
-    if (left.variantIndex != right.variantIndex) {
-      return left.variantIndex < right.variantIndex;
-    }
-    return left.variantName < right.variantName;
-  });
+  sortSnapshotEntries<SumVariantMetadataFactTraits>(entries);
   return entries;
 }
 
@@ -448,24 +426,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     resetSnapshotInferenceCaches();
   }
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.scopePath != right.scopePath) {
-      return left.scopePath < right.scopePath;
-    }
-    if (left.sourceLine != right.sourceLine) {
-      return left.sourceLine < right.sourceLine;
-    }
-    if (left.sourceColumn != right.sourceColumn) {
-      return left.sourceColumn < right.sourceColumn;
-    }
-    if (left.siteKind != right.siteKind) {
-      return left.siteKind < right.siteKind;
-    }
-    if (left.name != right.name) {
-      return left.name < right.name;
-    }
-    return left.resolvedPath < right.resolvedPath;
-  });
+  sortSnapshotEntries<BindingFactTraits>(entries);
   return entries;
 }
 
@@ -575,27 +536,7 @@ SemanticsValidator::arrayExtentFactSnapshotForSemanticProduct() {
         entries.push_back(std::move(entry));
       });
 
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    if (left.scopePath != right.scopePath) {
-      return left.scopePath < right.scopePath;
-    }
-    if (left.sourceLine != right.sourceLine) {
-      return left.sourceLine < right.sourceLine;
-    }
-    if (left.sourceColumn != right.sourceColumn) {
-      return left.sourceColumn < right.sourceColumn;
-    }
-    if (left.siteKind != right.siteKind) {
-      return left.siteKind < right.siteKind;
-    }
-    if (left.targetName != right.targetName) {
-      return left.targetName < right.targetName;
-    }
-    if (left.extentExpression != right.extentExpression) {
-      return left.extentExpression < right.extentExpression;
-    }
-    return left.semanticNodeId < right.semanticNodeId;
-  });
+  sortSnapshotEntries<ArrayExtentFactTraits>(entries);
   return entries;
 }
 
@@ -647,9 +588,7 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() {
     }
     entries.push_back(std::move(entry));
   }
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    return left.definitionPath < right.definitionPath;
-  });
+  sortSnapshotEntries<ReturnFactTraits>(entries);
   return entries;
 }
 

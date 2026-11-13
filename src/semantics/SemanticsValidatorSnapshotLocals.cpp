@@ -1,5 +1,6 @@
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorPublicationFactTraits.h"
 #include "primec/support/CollectionHelperNames.h"
 
 #include <algorithm>
@@ -607,23 +608,7 @@ void SemanticsValidator::ensureQuerySnapshotFactCaches() {
     });
   });
 
-  std::stable_sort(queryFactSnapshotCache_.begin(),
-                   queryFactSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     if (left.callName != right.callName) {
-                       return left.callName < right.callName;
-                     }
-                     return left.resolvedPath < right.resolvedPath;
-                   });
+  snapshot_detail::sortSnapshotEntries<snapshot_detail::QueryFactTraits>(queryFactSnapshotCache_);
   queryFactSnapshotCacheValid_ = true;
 }
 
@@ -687,38 +672,13 @@ void SemanticsValidator::ensureCallAndTrySnapshotFactCaches(bool includeTryValue
   });
 
   if (buildCallBindings) {
-    std::stable_sort(callBindingSnapshotCache_.begin(),
-                     callBindingSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       return left.callName < right.callName;
-                     });
+    snapshot_detail::sortSnapshotEntries<snapshot_detail::CallBindingFactTraits>(
+        callBindingSnapshotCache_);
     callBindingSnapshotCacheValid_ = true;
   }
 
   if (buildTryValues) {
-    std::stable_sort(tryValueSnapshotCache_.begin(),
-                     tryValueSnapshotCache_.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       return left.operandResolvedPath < right.operandResolvedPath;
-                     });
+    snapshot_detail::sortSnapshotEntries<snapshot_detail::TryFactTraits>(tryValueSnapshotCache_);
     tryValueSnapshotCacheValid_ = true;
   }
 }

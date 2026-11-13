@@ -1,5 +1,6 @@
 // Definition publication facts, worker-fact rebinding and pilot routing collection.
 #include "SemanticsValidatorSnapshotHelpers.h"
+#include "SemanticsValidatorPublicationFactTraits.h"
 
 #include <string>
 
@@ -170,354 +171,39 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
   auto freshOnErrorFacts = onErrorFactSnapshotForSemanticProduct();
 
   mergedWorkerPublicationFactsValid_ = true;
-  const auto directCallTargetSnapshotKey =
-      [](const CollectedDirectCallTargetEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.callName,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.resolvedPath);
-      };
-  const auto directCallTargetIdentityKey =
-      [](const CollectedDirectCallTargetEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.callName,
-                           entry.sourceLine,
-                           entry.sourceColumn);
-      };
-  const bool prunedDirectCallTargets = pruneReplacedEntriesBySnapshotKey(
-      mergedWorkerPublicationFacts_.directCallTargets,
-      freshDirectCallTargets,
-      directCallTargetIdentityKey,
-      directCallTargetSnapshotKey);
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.directCallTargets,
-          freshDirectCallTargets,
-          directCallTargetSnapshotKey) ||
-      prunedDirectCallTargets) {
-    std::stable_sort(mergedWorkerPublicationFacts_.directCallTargets.begin(),
-                     mergedWorkerPublicationFacts_.directCallTargets.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.callName != right.callName) {
-                         return left.callName < right.callName;
-                       }
-                       if (left.resolvedPath != right.resolvedPath) {
-                         return left.resolvedPath < right.resolvedPath;
-                       }
-                       return left.semanticNodeId < right.semanticNodeId;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.directCallTargets,
-      std::move(freshDirectCallTargets),
-      directCallTargetSnapshotKey);
-  const auto methodCallTargetSnapshotKey = [](const CollectedMethodCallTargetEntry &entry) {
-    return snapshotKey(entry.scopePath,
-                       entry.methodName,
-                       entry.sourceLine,
-                       entry.sourceColumn,
-                       entry.resolvedPath);
-  };
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.methodCallTargets,
-          freshMethodCallTargets,
-          methodCallTargetSnapshotKey)) {
-    std::stable_sort(mergedWorkerPublicationFacts_.methodCallTargets.begin(),
-                     mergedWorkerPublicationFacts_.methodCallTargets.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.methodName != right.methodName) {
-                         return left.methodName < right.methodName;
-                       }
-                       return left.resolvedPath < right.resolvedPath;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.methodCallTargets,
-      std::move(freshMethodCallTargets),
-      methodCallTargetSnapshotKey);
-  const auto bridgePathChoiceSnapshotKey = [](const CollectedBridgePathChoiceEntry &entry) {
-    return snapshotKey(entry.scopePath,
-                       entry.collectionFamily,
-                       entry.sourceLine,
-                       entry.sourceColumn,
-                       entry.helperName,
-                       entry.chosenPath);
-  };
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.bridgePathChoices,
-          freshBridgePathChoices,
-          bridgePathChoiceSnapshotKey)) {
-    std::stable_sort(mergedWorkerPublicationFacts_.bridgePathChoices.begin(),
-                     mergedWorkerPublicationFacts_.bridgePathChoices.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.collectionFamily != right.collectionFamily) {
-                         return left.collectionFamily < right.collectionFamily;
-                       }
-                       if (left.helperName != right.helperName) {
-                         return left.helperName < right.helperName;
-                       }
-                       if (left.chosenPath != right.chosenPath) {
-                         return left.chosenPath < right.chosenPath;
-                       }
-                       return left.semanticNodeId < right.semanticNodeId;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.bridgePathChoices,
-      std::move(freshBridgePathChoices),
-      bridgePathChoiceSnapshotKey);
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.typeMetadata,
-      std::move(freshTypeMetadata),
-      [](const TypeMetadataSnapshotEntry &entry) {
-        return snapshotKey(entry.fullPath, entry.category, 0, 0);
-      });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.structFieldMetadata,
-      std::move(freshStructFieldMetadata),
-      [](const StructFieldMetadataSnapshotEntry &entry) {
-        return snapshotKey(entry.structPath,
-                           entry.fieldName,
-                           0,
-                           0,
-                           std::to_string(entry.fieldIndex));
-      });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.sumTypeMetadata,
-      std::move(freshSumTypeMetadata),
-      [](const SumTypeMetadataSnapshotEntry &entry) {
-        return snapshotKey(entry.fullPath, std::string_view{}, 0, 0);
-      });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.sumVariantMetadata,
-      std::move(freshSumVariantMetadata),
-      [](const SumVariantMetadataSnapshotEntry &entry) {
-        return snapshotKey(entry.sumPath,
-                           entry.variantName,
-                           0,
-                           0,
-                           std::to_string(entry.variantIndex));
-      });
-  const auto bindingFactSnapshotKey =
-      [](const BindingFactSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.siteKind,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.name,
-                           entry.resolvedPath);
-      };
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.bindingFacts,
-          freshBindingFacts,
-          bindingFactSnapshotKey)) {
-    std::stable_sort(mergedWorkerPublicationFacts_.bindingFacts.begin(),
-                     mergedWorkerPublicationFacts_.bindingFacts.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.siteKind != right.siteKind) {
-                         return left.siteKind < right.siteKind;
-                       }
-                       if (left.name != right.name) {
-                         return left.name < right.name;
-                       }
-                       if (left.resolvedPath != right.resolvedPath) {
-                         return left.resolvedPath < right.resolvedPath;
-                       }
-                       return left.semanticNodeId < right.semanticNodeId;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.bindingFacts,
-      std::move(freshBindingFacts),
-      bindingFactSnapshotKey);
-  const auto arrayExtentFactSnapshotKey =
-      [](const ArrayExtentFactSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.siteKind,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.targetName,
-                           entry.targetResolvedPath,
-                           entry.extentExpression);
-      };
-  const auto arrayExtentFactIdentityKey =
-      [](const ArrayExtentFactSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.siteKind,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.targetName);
-      };
-  const bool prunedArrayExtentFacts = pruneReplacedEntriesBySnapshotKey(
-      mergedWorkerPublicationFacts_.arrayExtentFacts,
-      freshArrayExtentFacts,
-      arrayExtentFactIdentityKey,
-      arrayExtentFactSnapshotKey);
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.arrayExtentFacts,
-          freshArrayExtentFacts,
-          arrayExtentFactSnapshotKey) ||
-      prunedArrayExtentFacts) {
-    std::stable_sort(mergedWorkerPublicationFacts_.arrayExtentFacts.begin(),
-                     mergedWorkerPublicationFacts_.arrayExtentFacts.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.siteKind != right.siteKind) {
-                         return left.siteKind < right.siteKind;
-                       }
-                       if (left.targetName != right.targetName) {
-                         return left.targetName < right.targetName;
-                       }
-                       if (left.extentExpression != right.extentExpression) {
-                         return left.extentExpression < right.extentExpression;
-                       }
-                       return left.semanticNodeId < right.semanticNodeId;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.arrayExtentFacts,
-      std::move(freshArrayExtentFacts),
-      arrayExtentFactSnapshotKey);
-  for (auto &entry : mergedWorkerPublicationFacts_.arrayExtentFacts) {
+  auto &merged = mergedWorkerPublicationFacts_;
+  mergePublicationFactKind<DirectCallTargetFactTraits>(merged.directCallTargets,
+                                                       std::move(freshDirectCallTargets));
+  mergePublicationFactKind<MethodCallTargetFactTraits>(merged.methodCallTargets,
+                                                       std::move(freshMethodCallTargets));
+  mergePublicationFactKind<BridgePathChoiceFactTraits>(merged.bridgePathChoices,
+                                                       std::move(freshBridgePathChoices));
+  mergePublicationFactKind<TypeMetadataFactTraits>(merged.typeMetadata,
+                                                   std::move(freshTypeMetadata));
+  mergePublicationFactKind<StructFieldMetadataFactTraits>(merged.structFieldMetadata,
+                                                          std::move(freshStructFieldMetadata));
+  mergePublicationFactKind<SumTypeMetadataFactTraits>(merged.sumTypeMetadata,
+                                                      std::move(freshSumTypeMetadata));
+  mergePublicationFactKind<SumVariantMetadataFactTraits>(merged.sumVariantMetadata,
+                                                         std::move(freshSumVariantMetadata));
+  mergePublicationFactKind<BindingFactTraits>(merged.bindingFacts, std::move(freshBindingFacts));
+  mergePublicationFactKind<ArrayExtentFactTraits>(merged.arrayExtentFacts,
+                                                  std::move(freshArrayExtentFacts));
+  for (auto &entry : merged.arrayExtentFacts) {
     entry.targetSemanticNodeId = entry.semanticNodeId;
   }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.returnFacts,
-      std::move(freshReturnFacts),
-      [](const ReturnFactSnapshotEntry &entry) {
-        return snapshotKey(entry.definitionPath, std::string_view{}, 0, 0);
-      });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.localAutoFacts,
-      std::move(freshLocalAutoFacts),
-      [](const LocalAutoBindingSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.bindingName,
-                           entry.sourceLine,
-                           entry.sourceColumn);
-      });
-  const auto queryFactSnapshotKey =
-      [](const QueryFactSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.callName,
-                           entry.sourceLine,
-                           entry.sourceColumn,
-                           entry.resolvedPath);
-      };
-  const auto queryFactIdentityKey =
-      [](const QueryFactSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.callName,
-                           entry.sourceLine,
-                           entry.sourceColumn);
-      };
-  const bool prunedQueryFacts = pruneReplacedEntriesBySnapshotKey(
-      mergedWorkerPublicationFacts_.queryFacts,
-      freshQueryFacts,
-      queryFactIdentityKey,
-      queryFactSnapshotKey);
-  if (appendMissingEntriesBySnapshotKey(
-          mergedWorkerPublicationFacts_.queryFacts,
-          freshQueryFacts,
-          queryFactSnapshotKey) ||
-      prunedQueryFacts) {
-    std::stable_sort(mergedWorkerPublicationFacts_.queryFacts.begin(),
-                     mergedWorkerPublicationFacts_.queryFacts.end(),
-                     [](const auto &left, const auto &right) {
-                       if (left.scopePath != right.scopePath) {
-                         return left.scopePath < right.scopePath;
-                       }
-                       if (left.sourceLine != right.sourceLine) {
-                         return left.sourceLine < right.sourceLine;
-                       }
-                       if (left.sourceColumn != right.sourceColumn) {
-                         return left.sourceColumn < right.sourceColumn;
-                       }
-                       if (left.callName != right.callName) {
-                         return left.callName < right.callName;
-                       }
-                       if (left.resolvedPath != right.resolvedPath) {
-                         return left.resolvedPath < right.resolvedPath;
-                       }
-                       return left.semanticNodeId < right.semanticNodeId;
-                     });
-  }
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.queryFacts,
-      std::move(freshQueryFacts),
-      queryFactSnapshotKey);
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.tryFacts,
-      std::move(freshTryFacts),
-      [](const TryValueSnapshotEntry &entry) {
-        return snapshotKey(entry.scopePath,
-                           entry.operandResolvedPath,
-                           entry.sourceLine,
-                           entry.sourceColumn);
-      });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.onErrorFacts,
-      std::move(freshOnErrorFacts),
-      [](const OnErrorSnapshotEntry &entry) {
-        return snapshotKey(entry.definitionPath, std::string_view{}, 0, 0);
-      });
+  mergePublicationFactKind<ReturnFactTraits>(merged.returnFacts, std::move(freshReturnFacts));
+  mergePublicationFactKind<LocalAutoFactTraits>(merged.localAutoFacts,
+                                                std::move(freshLocalAutoFacts));
+  mergePublicationFactKind<QueryFactTraits>(merged.queryFacts, std::move(freshQueryFacts));
+  mergePublicationFactKind<TryFactTraits>(merged.tryFacts, std::move(freshTryFacts));
+  mergePublicationFactKind<OnErrorFactTraits>(merged.onErrorFacts, std::move(freshOnErrorFacts));
   mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = true;
 }
 
 void SemanticsValidator::sortCollectedOnErrorSnapshots(
     std::vector<OnErrorSnapshotEntry> &entries) {
-  std::stable_sort(entries.begin(),
-                   entries.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.definitionPath != right.definitionPath) {
-                       return left.definitionPath < right.definitionPath;
-                     }
-                     return left.semanticNodeId < right.semanticNodeId;
-                   });
+  sortSnapshotEntries<OnErrorFactTraits>(entries);
 }
 
 void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
@@ -775,69 +461,9 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
 
   sortCollectedCallableSummaries(collectedCallableSummaries_);
 
-  std::stable_sort(collectedDirectCallTargets_.begin(),
-                   collectedDirectCallTargets_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     if (left.callName != right.callName) {
-                       return left.callName < right.callName;
-                     }
-                     if (left.resolvedPath != right.resolvedPath) {
-                       return left.resolvedPath < right.resolvedPath;
-                     }
-                     return left.semanticNodeId < right.semanticNodeId;
-                   });
-  std::stable_sort(collectedMethodCallTargets_.begin(),
-                   collectedMethodCallTargets_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     if (left.methodName != right.methodName) {
-                       return left.methodName < right.methodName;
-                     }
-                     if (left.resolvedPath != right.resolvedPath) {
-                       return left.resolvedPath < right.resolvedPath;
-                     }
-                     return left.semanticNodeId < right.semanticNodeId;
-                   });
-  std::stable_sort(collectedBridgePathChoices_.begin(),
-                   collectedBridgePathChoices_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.scopePath != right.scopePath) {
-                       return left.scopePath < right.scopePath;
-                     }
-                     if (left.sourceLine != right.sourceLine) {
-                       return left.sourceLine < right.sourceLine;
-                     }
-                     if (left.sourceColumn != right.sourceColumn) {
-                       return left.sourceColumn < right.sourceColumn;
-                     }
-                     if (left.collectionFamily != right.collectionFamily) {
-                       return left.collectionFamily < right.collectionFamily;
-                     }
-                     if (left.helperName != right.helperName) {
-                       return left.helperName < right.helperName;
-                     }
-                     if (left.chosenPath != right.chosenPath) {
-                       return left.chosenPath < right.chosenPath;
-                     }
-                     return left.semanticNodeId < right.semanticNodeId;
-                   });
+  sortSnapshotEntries<DirectCallTargetFactTraits>(collectedDirectCallTargets_);
+  sortSnapshotEntries<MethodCallTargetFactTraits>(collectedMethodCallTargets_);
+  sortSnapshotEntries<BridgePathChoiceFactTraits>(collectedBridgePathChoices_);
   pilotRoutingSemanticCollectorsValid_ = true;
 }
 
