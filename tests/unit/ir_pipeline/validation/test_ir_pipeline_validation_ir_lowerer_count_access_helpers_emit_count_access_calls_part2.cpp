@@ -741,16 +741,22 @@ TEST_CASE("ir lowerer template type parse helper splits template type names") {
   CHECK(base == "Result");
   CHECK(arg == " map<string, i64> , FileError ");
 
+  // One convention in every layer (include/primec/support/TypeText.h): a failed split leaves the whole text as the
+  // base and no argument.
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("Result<i64", base, arg));
-  CHECK(base.empty());
+  CHECK(base == "Result<i64");
   CHECK(arg.empty());
 
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("i64", base, arg));
-  CHECK(base.empty());
+  CHECK(base == "i64");
   CHECK(arg.empty());
 
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("", base, arg));
   CHECK(base.empty());
+  CHECK(arg.empty());
+
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("A<B>C<D>", base, arg));
+  CHECK(base == "A<B>C<D>");
   CHECK(arg.empty());
 }
 
