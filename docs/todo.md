@@ -1658,9 +1658,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the six SoA rewrite files and their shared unit only.
   - notes: Safe alongside the lowerer and backend leaves.
 
-- [ ] TODO-5974: Shared string, hash, JSON and C-literal helpers replace their copies
+- [~] TODO-5974: Shared string, hash, JSON and C-literal helpers replace their copies
   - owner: ai
   - status: ready
+  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
   - created_at: 2026-11-12
   - phase: Code reuse (docs/CodeReusePlan.md, section 13)
   - parallel_track: reuse-support-utils
