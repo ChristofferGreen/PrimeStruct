@@ -1737,9 +1737,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-5989: Control-flow call names, simple-call-name tests and return kinds are classified once
+- [~] TODO-5989: Control-flow call names, simple-call-name tests and return kinds are classified once
   - owner: ai
   - status: ready
+  - claimed_by: reuse-b (worktree-agent-a051c39accd554d52), 2026-11-13
   - created_at: 2026-11-13
   - phase: Code reuse (docs/CodeReusePlan.md, section 4; closes TODO-5962)
   - parallel_track: reuse-builtin-names
