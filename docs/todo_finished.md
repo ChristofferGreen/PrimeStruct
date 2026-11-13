@@ -2331,6 +2331,7 @@ are left unarchived.
 | TODO-5982 | `validateBinding` is ordered rules, not seven phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5985 | `rewriteExprReference` is ordered rules, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5986 | `rewriteExpr` is ordered rules over a context, not eight phases | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5988 | Builtin math names are classified by one rule in support | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
