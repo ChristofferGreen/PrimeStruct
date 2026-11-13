@@ -1,4 +1,5 @@
 #include "primec/ast/AstPrinter.h"
+#include "primec/support/CallNames.h"
 
 #include <cstdint>
 #include <sstream>
@@ -18,14 +19,7 @@ bool isReturnCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  return name == "return";
+  return isSingleSegmentName(expr.name, "return");
 }
 
 void printExpr(std::ostringstream &out, const Expr &expr) {

@@ -1,4 +1,5 @@
 #include "IrPrinterInternal.h"
+#include "primec/support/CallNames.h"
 #include "primec/support/MathNames.h"
 
 #include <cctype>
@@ -85,28 +86,14 @@ bool isReturnCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  return name == "return";
+  return isSingleSegmentName(expr.name, "return");
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
-  return name == nameToMatch;
+  return isSingleSegmentName(expr.name, nameToMatch);
 }
 
 bool isIfCall(const Expr &expr) {
@@ -117,11 +104,8 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!readSingleSegmentName(expr.name, name)) {
     return false;
   }
   if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
@@ -136,11 +120,8 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!readSingleSegmentName(expr.name, name)) {
     return false;
   }
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide" || name == "negate") {
@@ -174,11 +155,8 @@ bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!readSingleSegmentName(expr.name, name)) {
     return false;
   }
   if (name == "convert") {
@@ -292,31 +270,29 @@ std::string legacySoaCollectionNameForIrText() {
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
-  if (name == "int" || name == "i32") {
+  switch (scalarTypeKindForName(name)) {
+  case ScalarTypeKind::Int32:
     return ReturnKind::Int;
-  }
-  if (name == "i64") {
+  case ScalarTypeKind::Int64:
     return ReturnKind::Int64;
-  }
-  if (name == "u64") {
+  case ScalarTypeKind::UInt64:
     return ReturnKind::UInt64;
-  }
-  if (name == "u8") {
+  case ScalarTypeKind::UInt8:
     return ReturnKind::UInt8;
-  }
-  if (name == "bool") {
+  case ScalarTypeKind::Bool:
     return ReturnKind::Bool;
-  }
-  if (name == "string") {
+  case ScalarTypeKind::String:
     return ReturnKind::String;
-  }
-  if (name == "float" || name == "f32") {
+  case ScalarTypeKind::Float32:
     return ReturnKind::Float32;
-  }
-  if (name == "f64") {
+  case ScalarTypeKind::Float64:
     return ReturnKind::Float64;
+  case ScalarTypeKind::Void:
+    return ReturnKind::Void;
+  case ScalarTypeKind::None:
+    break;
   }
-  if (name == "void" || name == "never") {
+  if (name == "never") {
     return ReturnKind::Void;
   }
   std::string base;

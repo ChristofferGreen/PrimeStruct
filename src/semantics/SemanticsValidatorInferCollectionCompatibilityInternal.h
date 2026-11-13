@@ -1,6 +1,7 @@
 #pragma once
 
 #include "StdlibCollectionSurfaceHelpers.h"
+#include "primec/support/CallNames.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -55,13 +56,6 @@ enum class RemovedCollectionHelperFamily {
                                           std::string_view basePath) {
   return resolvedPath == basePath ||
          resolvedPath.rfind(std::string(basePath) + "__", 0) == 0;
-}
-
-[[maybe_unused]] std::string_view trimLeadingSlash(std::string_view text) {
-  if (!text.empty() && text.front() == '/') {
-    text.remove_prefix(1);
-  }
-  return text;
 }
 
 [[maybe_unused]] const StdlibSurfaceMetadata *vectorHelperSurfaceMetadata() {

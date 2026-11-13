@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/support/CallNames.h"
 
 #include <algorithm>
 #include <cctype>
@@ -41,10 +42,6 @@ bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
          isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, collection_paths::kSoaColumnTypeName)) ||
          isSinglePathSegmentWithPrefix(path, collection_paths::specializedTypePrefix(collection_paths::kInternalSoaStorageFolder, "SoaFieldView")) ||
          isGeneratedSinglePathSegmentWithPrefix(path, collection_paths::memberPath(collection_paths::kInternalSoaStorageFolder, "SoaColumns"));
-}
-
-std::string_view trimLeadingSlash(std::string_view path) {
-  return !path.empty() && path.front() == '/' ? path.substr(1) : path;
 }
 
 bool resolveCanonicalVectorHelperDefinitionMember(const std::string &path,

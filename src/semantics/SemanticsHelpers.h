@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/support/CallNames.h"
 #include "primec/support/TypeText.h"
 
 namespace primec::semantics {
@@ -136,6 +137,7 @@ std::string joinTemplateArgs(const std::vector<std::string> &args);
 // semantics call sites.
 using primec::splitTemplateTypeName;
 using primec::splitTopLevelTemplateArgs;
+using primec::trimLeadingSlash;
 bool isBuiltinTemplateTypeName(const std::string &name);
 bool restrictMatchesBinding(const std::string &restrictType,
                             const std::string &typeName,

@@ -1,4 +1,5 @@
 #include "primec/support/CompileContext.h"
+#include "primec/support/CallNames.h"
 #include "primec/support/CompileArena.h"
 #include "SemanticsHelpers.h"
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -11,13 +12,6 @@
 namespace primec::semantics {
 
 namespace {
-
-std::string_view trimLeadingSlash(std::string_view text) {
-  if (!text.empty() && text.front() == '/') {
-    text.remove_prefix(1);
-  }
-  return text;
-}
 
 std::string stripTemplateSpecializationSuffix(std::string value) {
   const size_t suffix = value.find("__t");
@@ -83,11 +77,8 @@ bool isAssignCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!readSingleSegmentName(expr.name, name)) {
     return false;
   }
   return name == "assign";

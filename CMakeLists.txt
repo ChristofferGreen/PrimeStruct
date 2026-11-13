@@ -152,6 +152,7 @@ endfunction()
 
 set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/BuiltinArrayAccessNameClassifier.cpp
+  src/support/CallNames.cpp
   src/support/CollectionSpellingClassifier.cpp
   src/support/CompileArena.cpp
   src/support/CompileContext.cpp
@@ -2185,6 +2186,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_collection_path_predicates.cpp
     tests/unit/semantics/test_semantics_type_text.cpp
     tests/unit/semantics/test_semantics_math_names.cpp
+    tests/unit/semantics/test_semantics_call_names.cpp
     tests/unit/semantics/test_semantics_never_return.cpp
     tests/unit/semantics/test_semantics_transitive_collection_imports.cpp
     tests/unit/semantics/test_semantics_numeric_software.cpp
@@ -2398,6 +2400,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.collection_path_predicates
     primestruct.semantics.type_text
     primestruct.semantics.math_names
+    primestruct.semantics.call_names
     primestruct.semantics.never_return
     primestruct.semantics.transitive_collection_imports
     primestruct.semantics.software_numeric

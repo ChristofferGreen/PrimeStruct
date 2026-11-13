@@ -1,4 +1,5 @@
 #include "SemanticsHelpers.h"
+#include "primec/support/CallNames.h"
 
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/support/CompileArena.h"
@@ -573,32 +574,30 @@ bool restrictMatchesBinding(const std::string &restrictType,
 }
 
 ReturnKind returnKindForTypeName(const std::string &name) {
-  if (name == "int" || name == "i32") {
+  switch (scalarTypeKindForName(name)) {
+  case ScalarTypeKind::Int32:
     return ReturnKind::Int;
+  case ScalarTypeKind::Int64:
+    return ReturnKind::Int64;
+  case ScalarTypeKind::UInt64:
+    return ReturnKind::UInt64;
+  case ScalarTypeKind::UInt8:
+    return ReturnKind::UInt8;
+  case ScalarTypeKind::Bool:
+    return ReturnKind::Bool;
+  case ScalarTypeKind::String:
+    return ReturnKind::String;
+  case ScalarTypeKind::Float32:
+    return ReturnKind::Float32;
+  case ScalarTypeKind::Float64:
+    return ReturnKind::Float64;
+  case ScalarTypeKind::Void:
+    return ReturnKind::Void;
+  case ScalarTypeKind::None:
+    break;
   }
   if (name == "FileError") {
     return ReturnKind::Int;
-  }
-  if (name == "i64") {
-    return ReturnKind::Int64;
-  }
-  if (name == "u64") {
-    return ReturnKind::UInt64;
-  }
-  if (name == "u8") {
-    return ReturnKind::UInt8;
-  }
-  if (name == "bool") {
-    return ReturnKind::Bool;
-  }
-  if (name == "string") {
-    return ReturnKind::String;
-  }
-  if (name == "float" || name == "f32") {
-    return ReturnKind::Float32;
-  }
-  if (name == "f64") {
-    return ReturnKind::Float64;
   }
   if (name == "integer") {
     return ReturnKind::Integer;
@@ -608,9 +607,6 @@ ReturnKind returnKindForTypeName(const std::string &name) {
   }
   if (name == "complex") {
     return ReturnKind::Complex;
-  }
-  if (name == "void") {
-    return ReturnKind::Void;
   }
   std::string base;
   std::string arg;

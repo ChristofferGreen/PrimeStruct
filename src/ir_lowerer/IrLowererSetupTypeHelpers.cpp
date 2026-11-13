@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/support/CallNames.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
@@ -30,29 +31,26 @@ LocalInfo::ValueKind valueKindFromTypeName(const std::string &name) {
   const size_t lastSlash = trimmed.rfind('/');
   const std::string normalized = (lastSlash == std::string::npos) ? trimmed : trimmed.substr(lastSlash + 1);
 
-  if (normalized == "int" || normalized == "i32") {
+  switch (scalarTypeKindForName(normalized)) {
+  case ScalarTypeKind::Int32:
     return LocalInfo::ValueKind::Int32;
-  }
-  if (normalized == "i64") {
+  case ScalarTypeKind::Int64:
     return LocalInfo::ValueKind::Int64;
-  }
-  if (normalized == "u64") {
+  case ScalarTypeKind::UInt64:
     return LocalInfo::ValueKind::UInt64;
-  }
-  if (normalized == "u8") {
+  case ScalarTypeKind::UInt8:
     return LocalInfo::ValueKind::UInt8;
-  }
-  if (normalized == "float" || normalized == "f32") {
+  case ScalarTypeKind::Float32:
     return LocalInfo::ValueKind::Float32;
-  }
-  if (normalized == "f64") {
+  case ScalarTypeKind::Float64:
     return LocalInfo::ValueKind::Float64;
-  }
-  if (normalized == "bool") {
+  case ScalarTypeKind::Bool:
     return LocalInfo::ValueKind::Bool;
-  }
-  if (normalized == "string") {
+  case ScalarTypeKind::String:
     return LocalInfo::ValueKind::String;
+  case ScalarTypeKind::Void: // the lowerer has no kind for void
+  case ScalarTypeKind::None:
+    break;
   }
   if (normalized == "FileError" || normalized == "ImageError" || normalized == "ContainerError" ||
       normalized == "GfxError") {

@@ -1,4 +1,5 @@
 #include "primec/support/CompileContext.h"
+#include "primec/support/CallNames.h"
 #include "primec/support/MathNames.h"
 #include "SemanticsHelpers.h"
 
@@ -248,11 +249,8 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.find('/') != std::string::npos) {
+  std::string name;
+  if (!readSingleSegmentName(expr.name, name)) {
     return false;
   }
   if (name == "increment" || name == "decrement") {
