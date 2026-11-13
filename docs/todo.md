@@ -208,7 +208,6 @@ of sync with them.
 | TODO-5965 | Reflection-generated helpers build AST nodes through one builder set | ready | reuse-ast-builders |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
-| TODO-5970 | Publication fact snapshots run one templated merge per fact kind | ready | reuse-semantic-facts |
 | TODO-5971 | Semantic product lookups are one template over index and fact members | ready | reuse-semantic-facts |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -259,7 +258,7 @@ of sync with them.
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5847, TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5837, TODO-5854, TODO-5862
-- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5970, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
+- Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5962, TODO-5965, TODO-5971, TODO-5973; deferred TODO-5976, TODO-5977
 
 ### Execution Queue
 
@@ -1596,22 +1595,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: AST builders only.
   - notes: Safe alongside TODO-5959, TODO-5969, TODO-5970.
-
-- [~] TODO-5970: Publication fact snapshots run one templated merge per fact kind
-  - owner: ai
-  - status: in_progress
-  - claimed_by: reuse-a (worktree-agent-a7863bef322c6bc3f), 2026-11-13
-  - created_at: 2026-11-12
-  - phase: Code reuse (docs/CodeReusePlan.md, section 10)
-  - parallel_track: reuse-semantic-facts
-  - scope: `SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds` (src/semantics/SemanticsValidatorSnapshotsPublicationFacts.cpp:140 to about 510) repeats, once per fact kind (direct call, method call, bridge, callable summary, binding, return, query, try, on-error and more, about 12), the sequence: key lambda, `pruneReplacedEntriesBySnapshotKey`, `appendMissingEntriesBySnapshotKey`, `stable_sort` with a hand-written comparator, `rebindSemanticNodeIdsBySnapshotKey`. src/semantics/SemanticsValidatorSnapshotsFacts.cpp has about 12 `*FactSnapshotForSemanticProduct` functions that build, key and sort a vector each, and src/semantics/SemanticsValidatorSnapshotLocals.cpp is the query/call/try variant. Add a per-fact-kind traits struct (key function, ordering tuple, node-id fields) and one template for each sequence.
-  - acceptance:
-    - the merge sequence and the snapshot builder exist once each as templates; per-kind code is a traits definition
-    - semantic-product dumps of examples/ and the multi-worker semantics tests are byte-identical (compared through `stripDumpTimings`)
-    - semantics publication time on the benchmark suite is not slower (numbers in the commit)
-    - full release gate green
-  - stop_rule: these three files and the traits unit only; frontend lookups are TODO-5971.
-  - notes: Safe alongside TODO-5959, TODO-5969, TODO-5965.
 
 - [ ] TODO-5971: Semantic product lookups are one template over index and fact members
   - owner: ai

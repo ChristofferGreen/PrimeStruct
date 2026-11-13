@@ -2324,6 +2324,7 @@ are left unarchived.
 | TODO-5967 | Template monomorph expression rewriting is ordered rules, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5968 | Expression call validation is ordered rules, not numbered phases | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5969 | Float math builtins lower through one table-driven emitter | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5970 | Publication fact snapshots run one templated merge per fact kind | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5972 | Lowerer helpers copied per translation unit exist once | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5974 | Shared string, hash, JSON and C-literal helpers replace their copies | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5975 | IR opcode categories come from the opcode table | [2026-11.md](todo_archive/2026-11.md) | - |
