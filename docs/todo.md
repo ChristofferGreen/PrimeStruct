@@ -996,9 +996,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5905: `/std/path` joins, splits and normalizes paths
+- [~] TODO-5905: `/std/path` joins, splits and normalizes paths
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: path-5905 (worktree-agent-aa796ec198c683672), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
   - parallel_track: build-path
