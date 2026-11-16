@@ -864,9 +864,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5843: `namespace name { ... }` is sugar for the `[namespace]` definition
+- [~] TODO-5843: `namespace name { ... }` is sugar for the `[namespace]` definition
   - owner: ai
   - status: ready
+  - claimed_by: ns-5843 (worktree-agent-aadd66e14af55d2ef), 2026-11-16
   - created_at: 2026-11-10
   - phase: AI workflow (docs/AiWorkflowPlan.md section 6.5)
   - parallel_track: namespace-envelope
