@@ -2344,6 +2344,7 @@ are left unarchived.
 | TODO-5991 | A field read of a struct a call returns destroys the temporary copy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5992 | A spawned call with a builtin `vector<T>` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5993 | A spawned call with a stdlib `Vector` or `Map` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
+| TODO-5994 | `wait(t).count()` of a stdlib `Vector` task result waits twice | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

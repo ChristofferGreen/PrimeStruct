@@ -268,6 +268,70 @@ main() {
   CHECK(error.find("task handle already waited: left") != std::string::npos);
 }
 
+TEST_CASE("a wait result used as a method receiver is one wait") {
+  const std::string source = R"(
+import /std/text/*
+
+[struct]
+Box() {
+  [i32] n{0i32}
+
+  [return<i32>]
+  twice() {
+    return(this.n * 2i32)
+  }
+}
+
+[effects(task), return<Box>]
+makeBox() {
+  return(Box{4i32})
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<Box>] box{[spawn] makeBox()};
+  [i32] value{wait(box).twice()}
+  return(value)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("a second wait of a method receiver handle is still rejected") {
+  const std::string source = R"(
+import /std/text/*
+
+[struct]
+Box() {
+  [i32] n{0i32}
+
+  [return<i32>]
+  twice() {
+    return(this.n * 2i32)
+  }
+}
+
+[effects(task), return<Box>]
+makeBox() {
+  return(Box{4i32})
+}
+
+[effects(task), return<i32>]
+main() {
+  [Task<Box>] box{[spawn] makeBox()};
+  [i32] first{wait(box).twice()}
+  [i32] second{wait(box).twice()}
+  return(first + second)
+}
+)";
+  std::string error;
+  INFO(error);
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("task handle already waited: box") != std::string::npos);
+}
+
 TEST_CASE("multi wait consumes each task handle") {
   const std::string source = R"(
 namespace std {

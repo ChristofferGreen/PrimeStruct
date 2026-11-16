@@ -141,9 +141,9 @@ cross like any struct, and their `Copy` and `Destroy` helpers own the buffers),
 and `optexe` runs it on an OS thread of its own (Threads For Real, Runtime
 Model); other callees (builtin maps and `copy` or `move` sums, TODO-5847;
 `string` parameters), and every other backend, keep the inline form, which
-starts no thread and runs the calls one after another. Bind the result of a
-task that returns a stdlib `Vector` or `Map` before reading it (`[Vector<i32>]
-list{wait(t)}`): `wait(t).count()` waits twice (TODO-5994).
+starts no thread and runs the calls one after another. A method or index read
+of a waited result (`wait(t).count()`, `wait(t)[i]`, `wait(t).weight()`) waits
+once and reads the result while it is alive.
 
 ## Required Effect
 

@@ -644,11 +644,20 @@ bool SemanticsValidator::validateTaskWaitExpr(
                              ValidationState::TaskHandleState{resultType, true, false})
                     .first;
     }
+    // A method call validates its receiver once to resolve the target and again as the call's first
+    // argument: the same `wait` expression seen again is that second look, not a second wait.
+    if (stateIt->second.waited && expr.sourceLine > 0 &&
+        stateIt->second.waitLine == expr.sourceLine &&
+        stateIt->second.waitColumn == expr.sourceColumn) {
+      continue;
+    }
     if (stateIt->second.waited || !stateIt->second.live) {
       return failExprDiagnostic(arg, "task handle already waited: " + arg.name);
     }
     stateIt->second.live = false;
     stateIt->second.waited = true;
+    stateIt->second.waitLine = expr.sourceLine;
+    stateIt->second.waitColumn = expr.sourceColumn;
   }
   return true;
 }

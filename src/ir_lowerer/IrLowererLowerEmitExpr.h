@@ -185,6 +185,49 @@
         }
       }
     }
+    // A method call or element read on a call result that owns resources (`make_values().count()`)
+    // binds the receiver to a hidden local that lives to the end of the statement and is destroyed
+    // there, so the receiver is evaluated once and is still alive while the method reads it
+    // (docs/spec/value-lifecycle.md).
+    const bool receiverReadForm =
+        expr.isMethodCall || (expr.args.size() == 2 && (isSimpleCallName(expr, "at") ||
+                                                        isSimpleCallName(expr, "at_unsafe")));
+    if (expr.kind == Expr::Kind::Call && receiverReadForm && !expr.isBinding &&
+        !expr.isFieldAccess && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Call &&
+        !fileScopeStack.empty() && setupStage.statementNesting > 0 &&
+        ((!ownedTemporaryStructPath(expr.args.front(), localsIn).empty() &&
+          ir_lowerer::shouldDisarmStructCopySourceExpr(expr.args.front())) ||
+         (isSimpleCallName(expr.args.front(), "wait") && expr.args.front().args.size() == 1 &&
+          expr.args.front().args.front().kind == Expr::Kind::Name &&
+          !inferStructExprPath(expr.args.front(), localsIn).empty()))) {
+      const Expr &receiver = expr.args.front();
+      Expr hiddenBinding;
+      hiddenBinding.kind = Expr::Kind::Call;
+      hiddenBinding.isBinding = true;
+      hiddenBinding.name = "__temporary_receiver_" + std::to_string(allocTempLocal());
+      hiddenBinding.namespacePrefix = receiver.namespacePrefix;
+      hiddenBinding.sourceLine = receiver.sourceLine;
+      hiddenBinding.sourceColumn = receiver.sourceColumn;
+      hiddenBinding.args.push_back(receiver);
+      Expr methodExpr = expr;
+      Expr &receiverName = methodExpr.args.front();
+      receiverName = Expr{};
+      receiverName.kind = Expr::Kind::Name;
+      receiverName.name = hiddenBinding.name;
+      receiverName.namespacePrefix = receiver.namespacePrefix;
+      const size_t scopeDepth = fileScopeStack.size() - 1;
+      const size_t entriesBefore = fileScopeStack[scopeDepth].size();
+      LocalMap readLocals = localsIn;
+      if (!emitStatement(hiddenBinding, readLocals)) {
+        return false;
+      }
+      for (size_t entry = entriesBefore; entry < fileScopeStack[scopeDepth].size(); ++entry) {
+        if (fileScopeStack[scopeDepth][entry] < 0) {
+          setupStage.statementTemporaryDrops.push_back(fileScopeStack[scopeDepth][entry]);
+        }
+      }
+      return emitExpr(methodExpr, readLocals);
+    }
     const auto matchesGeneratedSpecializedType =
         [&](std::string_view path, std::string_view collectionName,
             std::string_view typeName) {

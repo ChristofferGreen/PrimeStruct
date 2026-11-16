@@ -1135,6 +1135,114 @@ main() {
   runTaskProgram(program);
 }
 
+// A method or index read of a waited result (`wait(t).count()`, `wait(t)[i]`, `wait(t).weight()`) evaluates the wait
+// once and reads the result while it is alive; the heap is balanced afterwards (`probe`).
+TEST_CASE("a method call on a wait result waits once") {
+  program_matrix::ProgramCase program;
+  program.name = "task_wait_method_receiver";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+
+  [return<i32>]
+  weight() {
+    return(this.id * 10i32 + this.label.count())
+  }
+}
+
+[return<Vector<i32>> effects(heap_alloc)]
+make_numbers([i32] count) {
+  [Vector<i32> mut] out{/std/collections/vector/vector<i32>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    out.push(i * 3i32)
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<Vector<Item>> effects(heap_alloc)]
+make_items([i32] count) {
+  [Vector<Item> mut] out{/std/collections/vector/vector<Item>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    [String mut] w{String{}}
+    w.append("item label")
+    out.push(Item{i, w})
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<Item> effects(heap_alloc)]
+make_item([i32] id) {
+  [String mut] w{String{}}
+  w.append("a label long enough to live on the string heap")
+  return(Item{id, w})
+}
+
+[return<String> effects(heap_alloc)]
+make_text([i32] times) {
+  [String mut] out{String{}}
+  [i32 mut] i{0i32}
+  while(i < times) {
+    out.append("some text that is long enough for the heap; ")
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [Task<Vector<i32>>] a{[spawn] make_numbers(4i32)}
+  [Task<Vector<i32>>] b{[spawn] make_numbers(6i32)}
+  [Task<Vector<Item>>] c{[spawn] make_items(3i32)}
+  [Task<Item>] d{[spawn] make_item(5i32)}
+  [Task<String>] e{[spawn] make_text(2i32)}
+  [Task<Vector<i32>>] f{[spawn] make_numbers(3i32)}
+  [i32] na{wait(a).count()}
+  print_line(na)
+  [i32] nb{wait(b)[2i32]}
+  print_line(nb)
+  [i32] nc{wait(c).count() + wait(d).weight()}
+  print_line(nc)
+  [i32] ne{wait(e).count()}
+  print_line(ne)
+  [i32 mut] total{0i32}
+  total = total + wait(f).count() * 2i32
+  return(total)
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "4\n6\n99\n88\n6\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 // A spawn that still runs inline (a map parameter, a vector result that is not a local the task built) gives the
 // same values on every schedule.
 TEST_CASE("a spawn that stays inline still returns its values") {

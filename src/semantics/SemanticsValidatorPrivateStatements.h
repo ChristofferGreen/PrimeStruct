@@ -124,6 +124,8 @@
       std::string resultType;
       bool live = false;
       bool waited = false;
+      int waitLine = 0;
+      int waitColumn = 0;
     };
     std::unordered_map<std::string, TaskHandleState> taskHandles;
   };
