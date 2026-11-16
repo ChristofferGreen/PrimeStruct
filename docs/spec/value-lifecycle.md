@@ -73,7 +73,9 @@
   parameter, `location`, `dereference` and the `return` of a `Reference`-returning definition keep the reference.
 - **Borrows at a call:** borrowed parameters (`[T]`, `[T mut]`) follow the borrow rules of `type-system.md` for the
   duration of the call: a place passed to a `mut` parameter may not also be passed to any other parameter of the same
-  call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved).
+  call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved). A borrowed stdlib
+  collection parameter (`[Vector<T> mut]`, `[Vector<T>]`) is the caller's own record, not a copy: `count()`,
+  `capacity()` and element reads see what the caller pushed, and a push through a `mut` one is seen by the caller.
 - **Ownership:** a `move` parameter's value is destroyed when the callee's scope ends unless the callee moves it on
   (for example into a container); the caller does not destroy it. `move(...)` at the call site is optional for a `move`
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned, on every path:

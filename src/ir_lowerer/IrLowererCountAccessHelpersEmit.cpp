@@ -29,6 +29,17 @@
 namespace primec::ir_lowerer {
 using namespace count_access_internal;
 
+namespace {
+
+// A local holding the address of a stdlib vector record: a value local or a `mut` parameter (a Reference).
+bool isCanonicalVectorStructLocal(const LocalInfo &info, const std::string &canonicalVecPath) {
+  return (info.kind == LocalInfo::Kind::Value || info.kind == LocalInfo::Kind::Reference) &&
+         (info.structTypeName == canonicalVecPath ||
+          info.structTypeName.rfind(canonicalVecPath + "__", 0) == 0);
+}
+
+} // namespace
+
 CountAccessCallEmitResult tryEmitCountAccessCall(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -335,9 +346,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
           return true;
         }
         const std::string canonicalVecPath = vectorBackingTypePath();
-        if (it->second.kind == LocalInfo::Kind::Value &&
-            (it->second.structTypeName == canonicalVecPath ||
-             it->second.structTypeName.rfind(canonicalVecPath + "__", 0) == 0)) {
+        // A `mut` parameter of the collection struct is a Reference holding the address of the caller's record.
+        if (isCanonicalVectorStructLocal(it->second, canonicalVecPath)) {
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
           emitInstruction(IrOpcode::PushI64, IrSlotBytes);
           emitInstruction(IrOpcode::AddI64, 0);
@@ -365,9 +375,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         const std::string canonicalVecPath = vectorBackingTypePath();
         const bool isCanonicalVectorLocal =
             (it->second.kind == LocalInfo::Kind::Vector && !it->second.isSoaVector) ||
-            (it->second.kind == LocalInfo::Kind::Value &&
-             (it->second.structTypeName == canonicalVecPath ||
-              it->second.structTypeName.rfind(canonicalVecPath + "__", 0) == 0));
+            isCanonicalVectorStructLocal(it->second, canonicalVecPath);
         if (isCanonicalVectorLocal) {
           emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
           emitInstruction(IrOpcode::PushI64, 2ull * IrSlotBytes);

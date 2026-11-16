@@ -1177,4 +1177,106 @@ TEST_CASE("a Vector of structs reads an element of a copy mut parameter with the
   runItemReadProgram("vector_item_parameter_read_with_map", "import /std/collections/map/*\n");
 }
 
+// A stdlib `Vector` passed to a `[Vector<T> mut]` parameter is a borrow of the caller's record: `count()`, `capacity()`,
+// element reads (also of a `String` or a struct) and a push through it all see the caller's vector, and handing the
+// parameter on to a read-only parameter passes the same record.
+TEST_CASE("a Vector mut parameter reads the caller's count, capacity and elements") {
+  runVectorOwnerProgram("vector_mut_parameter_reads",
+                        LongTextHelper + R"(
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+}
+
+[return<i32> effects(heap_alloc)]
+read_numbers([Vector<i32> mut] values) {
+  return(values.count() * 100i32 + values[0i32] + values.at(1i32))
+}
+
+[return<i32> effects(heap_alloc)]
+view_numbers([Vector<i32>] values) {
+  return(values.count() * 100i32 + values[0i32])
+}
+
+[return<i32> effects(heap_alloc)]
+forward_numbers([Vector<i32> mut] values) {
+  return(view_numbers(values))
+}
+
+[return<i32> effects(heap_alloc)]
+same_capacity([Vector<i32> mut] values, [i32] expected) {
+  if(values.capacity() == expected) {
+    return(1i32)
+  }
+  return(0i32)
+}
+
+[effects(heap_alloc)]
+add_number([Vector<i32> mut] values, [i32] number) {
+  values.push(number)
+}
+
+[return<i32> effects(heap_alloc)]
+name_length([Vector<String> mut] names) {
+  return(names[0i32].count() + names.at(1i32).count())
+}
+
+[return<i32> effects(heap_alloc)]
+item_sum([Vector<Item> mut] items) {
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < items.count()) {
+    sum = sum + items[i].id + items[i].label.count()
+    i = i + 1i32
+  }
+  return(sum)
+}
+)",
+                        R"(
+    [Vector<i32> mut] numbers{/std/collections/vector/vector<i32>()}
+    numbers.push(7i32)
+    numbers.push(8i32)
+    print_line(read_numbers(numbers))
+    [i32] capacity{numbers.capacity()}
+    print_line(same_capacity(numbers, capacity))
+    add_number(numbers, 9i32)
+    print_line(numbers.count())
+    print_line(forward_numbers(numbers))
+    [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+    names.push(long_text(1i32))
+    names.push(long_text(2i32))
+    print_line(name_length(names))
+    [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+    items.push(Item{3i32, label(1i32)})
+    items.push(Item{5i32, label(2i32)})
+    print_line(item_sum(items))
+)",
+                        "215\n1\n3\n307\n94\n10\n");
+}
+
+TEST_CASE("a place passed to a Vector mut parameter cannot be passed to another parameter") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_mut_parameter_alias_rejected";
+  program.source = R"(
+import /std/collections/*
+
+[return<i32> effects(heap_alloc)]
+both([Vector<i32> mut] first, [Vector<i32>] second) {
+  first.push(1i32)
+  return(second.count())
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Vector<i32> mut] v{/std/collections/vector/vector<i32>()}
+  return(both(v, v))
+}
+)";
+  program.exitCode = 2;
+  program.stdoutText = "";
+  program.onlyConfigs = {"vm-O0"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

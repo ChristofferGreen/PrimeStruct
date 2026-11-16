@@ -660,7 +660,10 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.structTypeName = it->second.structTypeName;
       return info;
     }
-    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+    // A `mut` parameter of the stdlib vector struct is a Reference holding the address of the caller's record.
+    if (it != localsIn.end() &&
+        (it->second.kind == LocalInfo::Kind::Value ||
+         it->second.kind == LocalInfo::Kind::Reference) &&
         !it->second.isSoaVector && isCollectionVectorTypeText(it->second.structTypeName)) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = it->second.valueKind;

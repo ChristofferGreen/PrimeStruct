@@ -262,8 +262,13 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         // A local of the stdlib vector struct calls the helper, which returns a copy of the element.
         if (callExpr.args.front().kind == Expr::Kind::Name) {
           const auto receiverLocal = locals.find(callExpr.args.front().name);
+          // A `mut` parameter of the struct is a Reference to the caller's record.
           if (receiverLocal != locals.end() &&
-              receiverLocal->second.kind == LocalInfo::Kind::Value &&
+              (receiverLocal->second.kind == LocalInfo::Kind::Value ||
+               (receiverLocal->second.kind == LocalInfo::Kind::Reference &&
+                !receiverLocal->second.referenceToArray &&
+                !receiverLocal->second.referenceToVector &&
+                !receiverLocal->second.referenceToBuffer)) &&
               !receiverLocal->second.structTypeName.empty()) {
             return false;
           }

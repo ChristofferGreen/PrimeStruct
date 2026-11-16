@@ -208,7 +208,6 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-5997 | A `[Vector<T> mut]` parameter reads the caller's count and `String` elements | ready | vector-owners |
 
 ### Ready Now
 
@@ -1626,18 +1625,3 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
-
-- [~] TODO-5997: A `[Vector<T> mut]` parameter reads the caller's count and `String` elements
-  - owner: ai
-  - status: ready
-  - claimed_by: vec-mut (worktree-agent-a8a8b90676221312d), 2026-11-16
-  - created_at: 2026-11-16
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Ownership)
-  - parallel_track: vector-owners
-  - scope: Found with TODO-5993. A stdlib `Vector<i32>` passed to a `[Vector<i32> mut] v` parameter returns 0 from `v.count()` after the caller pushed 7 while `v[0i32]` reads 7, and a `[Vector<String> mut] names` parameter fails on `names[0i32].count()` with `VM error: unaligned indirect address in IR: 4`. A `copy mut` parameter works. The `mut` parameter is a Reference to the struct record, and a method call or element read treats the reference slot as the record (slot 0, the type tag, read as the count), the same symptom the `copy mut` task parameter fix removed. The borrowed parameter must see the caller's pushes (docs/spec/value-lifecycle.md, Borrows at a call).
-  - implementation_notes: lowering of a `Reference` stdlib-struct parameter for method calls (`count`, `capacity`, `at`, `[]`) in src/ir_lowerer; the commit that ran stdlib `Vector` spawns as tasks shows the `copy mut` side. Reproduce on the VM and `optexe` in release.
-  - acceptance:
-    - positive: `v.count()`, `v.capacity()`, `v[i]`, `v.at(i)` and `names[i].count()` through a `[Vector<T> mut]` and a `[Vector<T>]` parameter see the caller's pushes, on the VM and `optexe`, with the heap and string heap balanced (heap statistics); a push through the parameter is seen by the caller
-    - negative: a `mut` parameter still rejects the same place passed twice in one call
-    - full release gate green
-  - stop_rule: method calls and element reads of a stdlib `Vector` borrowed parameter; maps and builtin vectors only if the same root cause shows.
