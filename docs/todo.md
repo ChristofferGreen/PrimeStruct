@@ -861,9 +861,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5842: `summary("...")` is a checked transform on definitions
+- [~] TODO-5842: `summary("...")` is a checked transform on definitions
   - owner: ai
   - status: ready
+  - claimed_by: summary-5842 (worktree-agent-a0bd31ef3b8908164), 2026-11-17
   - created_at: 2026-11-10
   - phase: AI workflow (docs/AiWorkflowPlan.md section 6.2)
   - parallel_track: summary-transform
