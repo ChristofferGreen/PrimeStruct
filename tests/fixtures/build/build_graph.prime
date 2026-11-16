@@ -1,0 +1,161 @@
+// /std/build (tests/unit/backend_host/test_build_graph.cpp). Builds one graph twice, in two call orders, checks that
+// the exports are equal and report no problems, checks the problem report of a broken graph, checks that the heap is
+// balanced, and writes the export to standard output (tests/fixtures/build/build_graph.golden.json is its golden
+// file). The exit code is the number of the first check that failed, 100 for a heap leak, 101 for a String heap leak,
+// or 0. Only the printing needs `file_write`: the two build functions need `heap_alloc` alone.
+import /std/build/*
+import /std/file/*
+import /std/text/*
+import /std/text/view/*
+
+// The settings of the optimized program: native code, level 2, one import path and one native source to link.
+[return<Compiler> effects(heap_alloc)]
+optimized([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  cc.optimize(2i32)
+  cc.importPath("stdlib")
+  cc.defaultEffect("heap_alloc")
+  cc.linkArg("native/host.cpp")
+  return(cc)
+}
+
+// The same program as a second configuration: a copy of the settings with another emit kind and no optimization.
+[return<Compiler> effects(heap_alloc)]
+debuggable([Compiler] cc) {
+  [Compiler mut] vm{cc}
+  vm.emit("vm")
+  vm.optimize(0i32)
+  return(vm)
+}
+
+[return<Compiler> effects(heap_alloc)]
+library_settings([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("lib")
+  cc.importPath("stdlib")
+  cc.entry("/core/start")
+  return(cc)
+}
+
+// The build script: two configurations of one program, a library and the link edge between them.
+[return<Graph> effects(heap_alloc)]
+build_graph([Build mut] b) {
+  [Compiler] cc{optimized(b)}
+  b.executable("app", cc, "src/main.prime")
+  b.compile("app_vm", debuggable(cc), "src/main.prime")
+  b.library("core", library_settings(b), "src/core.prime")
+  b.link("app", "core")
+  return(b.graph())
+}
+
+// The same targets added in the opposite order, the link edge first.
+[return<Graph> effects(heap_alloc)]
+build_graph_reversed([Build mut] b) {
+  [Compiler] cc{optimized(b)}
+  b.link("app", "core")
+  b.library("core", library_settings(b), "src/core.prime")
+  b.compile("app_vm", debuggable(cc), "src/main.prime")
+  b.executable("app", cc, "src/main.prime")
+  return(b.graph())
+}
+
+// A graph whose link edge names no library and whose two executables share an id.
+[return<Graph> effects(heap_alloc)]
+build_broken_graph([Build mut] b) {
+  [Compiler] cc{optimized(b)}
+  b.executable("app", cc, "src/main.prime")
+  b.executable("app", cc, "src/other.prime")
+  b.link("app", "missing")
+  return(b.graph())
+}
+
+[return<bool> effects(heap_alloc)]
+contains([String] text, [string] part) {
+  return(text.view().contains(part))
+}
+
+// The check of every build, and its export for the golden file.
+[return<i32> effects(heap_alloc)]
+run_checks() {
+  [Build mut] first{Build{}}
+  [Graph] graph{build_graph(first)}
+  [Build mut] second{Build{}}
+  [Graph] reversed{build_graph_reversed(second)}
+  [String] text{graph.export()}
+  if(graph.nodeCount() != 4i32) {
+    return(1i32)
+  }
+  [String] other{reversed.export()}
+  [bool] same{text.view().equals(other.view())}
+  if(!same) {
+    return(2i32)
+  }
+  if(!contains(text, "\"version\":1,")) {
+    return(3i32)
+  }
+  if(!contains(text, "\"problems\":[]")) {
+    return(4i32)
+  }
+  if(!contains(text, "\"id\":\"exe:app\"") || !contains(text, "\"id\":\"link:app>core\"")) {
+    return(5i32)
+  }
+  if(contains(text, "hash")) {
+    return(6i32)
+  }
+  [Build mut] third{Build{}}
+  [String] broken{build_broken_graph(third).export()}
+  if(!contains(broken, "\"problems\":[\"duplicate id exe:app\",\"link link:app>missing names a missing library lib:missing\"]")) {
+    return(7i32)
+  }
+  return(0i32)
+}
+
+// Writes `text` and a newline to standard output.
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(FileError.why(err))
+}
+
+[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
+write_stdout([String] text) {
+  [File<Write>] out{File<Write>("/dev/stdout"utf8)?}
+  for([i32 mut] i{0i32}, i < text.count(), i++) {
+    [Result<FileError>] wrote{out.write_byte(convert<i32>(text.byteAt(i)))}
+    if(Result.error(wrote)) {
+      return(wrote)
+    }
+  }
+  out.write_byte(10i32)?
+  out.close()?
+  return(Result.ok())
+}
+
+[return<int> effects(heap_alloc, file_write)]
+main() {
+  // The first run also makes the byte region of every string literal it meets (made once, kept for the whole run), so
+  // the heap is measured around the second run.
+  [i32] warmup{run_checks()}
+  if(warmup != 0i32) {
+    return(warmup)
+  }
+  [i32] blocksBefore{heapLiveBlocks()}
+  [u64] bytesBefore{stringHeapBytesInUse()}
+  [i32] failed{run_checks()}
+  if(failed != 0i32) {
+    return(failed)
+  }
+  if(heapLiveBlocks() != blocksBefore) {
+    return(100i32)
+  }
+  if(stringHeapBytesInUse() != bytesBefore) {
+    return(101i32)
+  }
+  [Build mut] printed{Build{}}
+  [String] exported{build_graph(printed).export()}
+  [Result<FileError>] written{write_stdout(exported)}
+  if(Result.error(written)) {
+    return(102i32)
+  }
+  return(0i32)
+}

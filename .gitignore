@@ -23,3 +23,5 @@ test_alias_capacity.psir
 test_map_helper.psir
 __pycache__/
 *.pyc
+!stdlib/std/build/
+!tests/fixtures/build/

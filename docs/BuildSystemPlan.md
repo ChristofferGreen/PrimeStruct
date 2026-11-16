@@ -70,29 +70,59 @@ the one dangerous call in plain sight.
   only the runner can execute it. The export is for inspection and for tools such as the box view.
 - The script runs once and quickly; it needs only `file_read` to list files. Executing steps is the runner's work.
 
-## 5. The script (illustrative, not run through the compiler)
+## 5. The script (run)
+
+This is `tests/fixtures/build/build_script.prime`, compiled and run under `--profile build` on the VM and as an `optexe`
+executable (`primec --profile build --emit=vm tests/fixtures/build/build_script.prime` exits with 4, the number of nodes it
+made). `build` is the script; the `main` below it only stands in for the runner, which `primec build` replaces (the
+loader is a later slice).
 
 ```
 import /std/build/*
 
-[return<Graph> effects(file_read)]
+[return<Graph> effects(heap_alloc)]
 build([Build mut] b) {
-  [auto mut] cc{b.compiler()}
-  cc.emit(optexe)
-  cc.optimize(2)
-  cc.import_path("stdlib")
-  cc.link_arg("native/host.cpp")
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  cc.optimize(2i32)
+  cc.importPath("stdlib")
+  cc.linkArg("native/host.cpp")
+
+  [Compiler mut] vm{cc}
+  vm.emit("vm")
+  vm.optimize(0i32)
+
+  [Compiler mut] lib{b.compiler()}
+  lib.emit("lib")
+  lib.importPath("stdlib")
 
   b.executable("primescroll", cc, "src/main.prime")
+  b.compile("primescroll_vm", vm, "src/main.prime")
+  b.library("core", lib, "src/core.prime")
+  b.link("primescroll", "core")
   return(b.graph())
+}
+
+// Until `primec build` loads this file, a main runs the script and returns how many nodes it made.
+[return<int> effects(heap_alloc)]
+main() {
+  [Build mut] b{Build{}}
+  [Graph] graph{build(b)}
+  return(graph.nodeCount())
 }
 ```
 
-- A compiler object holds the settings; copying it and changing `emit` gives the same program as a second target.
+- A compiler object holds the settings. `[Compiler mut] vm{cc}` copies it, and changing `emit` on the copy gives the
+  same program as a second target. A target keeps the settings its compiler had at the call.
+- The script needs only `heap_alloc` (its strings and vectors). It does not need `file_read` yet: nothing lists a
+  directory until glob exists, and `--profile build` allows `file_read` and `heap_alloc`. `--allow-effects file_read`
+  alone rejects it.
+- `graph.export()` returns the deterministic JSON of section 4. `tests/fixtures/build/build_graph.prime` prints the export
+  of a graph like this one; the output is `tests/fixtures/build/build_graph.golden.json`, and building the same
+  graph in the opposite call order gives the same text.
 - File arrays come from `b.files("src/**/*.prime")` once glob exists; for `.prime` sources the compiler discovers the
-  import closure itself, so arrays matter most for native glue passed through link arguments.
-- Options: `b.option("native_ui", true)` is read from `primec build --option native_ui=false`, recorded in the export
-  and in the cache key.
+  import closure itself, so arrays matter most for native glue passed through link arguments. `b.files` and options
+  (`b.option("native_ui", true)`, read from `primec build --option native_ui=false`) are not part of the graph value yet.
 
 ## 6. The run profile
 

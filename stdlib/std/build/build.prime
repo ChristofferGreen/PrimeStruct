@@ -1,0 +1,377 @@
+// The build graph (docs/BuildSystemPlan.md, docs/spec/stdlib-reference.md, /std/build). A build script calls a `Build`
+// to add nodes to a `Graph`: compile steps, executables, static libraries and link edges. Nothing runs while the graph
+// is built, and nothing here touches the file system or starts a process; `graph.export()` turns the graph into
+// deterministic JSON. Node ids are derived from target names ("exe:app", "lib:core", "link:app>core") and the export
+// lists the nodes sorted by id, so the order of the calls that built the graph does not show in the export.
+import /std/text/*
+import /std/text/view/*
+import /std/collections/vector/*
+import /std/json/*
+
+namespace std {
+namespace build {
+
+  // The version field of the export; it changes when the shape of the JSON changes.
+  [public return<i32>]
+  export_version() {
+    return(1i32)
+  }
+
+  // A snapshot of the compiler settings a compile step uses. Copy it and change one setting to get a second
+  // configuration of the same program: `[Compiler mut] fast{cc}` then `fast.optimize(2i32)`.
+  [public struct]
+  Compiler() {
+    // The `--emit` kind: "exe", "optexe", "vm", "ir", ...
+    [public String mut] emitKind{stringFrom("exe")}
+    // The optimization level, as in `-O<level>`.
+    [public i32 mut] optimization{0i32}
+    // The entry definition, as in `--entry`.
+    [public String mut] entryPath{stringFrom("/main")}
+    [public vector<String> mut] importPaths{vector<String>{}}
+    [public vector<String> mut] transforms{vector<String>{}}
+    [public vector<String> mut] defaultEffects{vector<String>{}}
+    [public vector<String> mut] linkArgs{vector<String>{}}
+
+    [mut effects(heap_alloc)]
+    emit([StringView] kind) {
+      this.emitKind = kind.toOwned()
+    }
+
+    [mut]
+    optimize([i32] level) {
+      this.optimization = level
+    }
+
+    [mut effects(heap_alloc)]
+    entry([StringView] path) {
+      this.entryPath = path.toOwned()
+    }
+
+    // Adds an import path, as in `-I`; the order of the calls is the order of the search.
+    [mut effects(heap_alloc)]
+    importPath([StringView] path) {
+      this.importPaths.push(path.toOwned())
+    }
+
+    [mut effects(heap_alloc)]
+    transform([StringView] name) {
+      this.transforms.push(name.toOwned())
+    }
+
+    // Adds an effect to the default effects, as in `--default-effects`.
+    [mut effects(heap_alloc)]
+    defaultEffect([StringView] name) {
+      this.defaultEffects.push(name.toOwned())
+    }
+
+    // Adds an argument for the native link step, as in `--link-arg`.
+    [mut effects(heap_alloc)]
+    linkArg([StringView] arg) {
+      this.linkArgs.push(arg.toOwned())
+    }
+
+    // The settings as one JSON object.
+    [return<String> effects(heap_alloc)]
+    toJson() {
+      [Writer mut] json{Writer{}}
+      this.write(json)
+      return(json.out.view().toOwned())
+    }
+
+    [effects(heap_alloc)]
+    write([Reference<Writer>] json) {
+      json.beginObject()
+      json.key("emit")
+      json.stringValue(this.emitKind.view())
+      json.key("optimize")
+      json.i64Value(convert<i64>(this.optimization))
+      json.key("entry")
+      json.stringValue(this.entryPath.view())
+      json.key("import_paths")
+      write_list(json, this.importPaths)
+      json.key("transforms")
+      write_list(json, this.transforms)
+      json.key("default_effects")
+      write_list(json, this.defaultEffects)
+      json.key("link_args")
+      write_list(json, this.linkArgs)
+      json.endObject()
+    }
+  }
+
+  // `values` as a JSON array of strings, in order.
+  [effects(heap_alloc)]
+  write_list([Reference<Writer>] json, [Reference<vector<String>>] values) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < values.count(), i++) {
+      json.stringValue(values[i].view())
+    }
+    json.endArray()
+  }
+
+  // One node of the graph. `kind` is "compile", "executable", "library" or "link". A compile step, an executable and
+  // a library carry a compiler snapshot, a source file and an output name; a link edge names the executable and the
+  // library it links. `runnable` is false for the nodes a runner cannot execute yet.
+  [public struct]
+  Node() {
+    [public String mut] id{String{}}
+    [public String mut] kind{String{}}
+    [public String mut] name{String{}}
+    [public String mut] source{String{}}
+    [public String mut] output{String{}}
+    [public String mut] fromId{String{}}
+    [public String mut] toId{String{}}
+    [public bool mut] runnable{true}
+    // The compiler snapshot of the target as JSON text, made when the target was added (empty for a link edge).
+    [public String mut] compilerJson{String{}}
+
+    [return<bool>]
+    isLink() {
+      return(this.kind.equalsText("link"))
+    }
+
+    [effects(heap_alloc)]
+    write([Reference<Writer>] json) {
+      json.beginObject()
+      json.key("id")
+      json.stringValue(this.id.view())
+      json.key("kind")
+      json.stringValue(this.kind.view())
+      if(this.isLink()) {
+        json.key("from")
+        json.stringValue(this.fromId.view())
+        json.key("to")
+        json.stringValue(this.toId.view())
+      } else {
+        json.key("name")
+        json.stringValue(this.name.view())
+        json.key("source")
+        json.stringValue(this.source.view())
+        json.key("output")
+        json.stringValue(this.output.view())
+        json.key("compiler")
+        json.rawValue(this.compilerJson.view())
+      }
+      json.key("runnable")
+      json.boolValue(this.runnable)
+      if(!this.runnable) {
+        json.key("note")
+        json.stringValue("static libraries are not supported by this compiler yet")
+      }
+      json.endObject()
+    }
+
+    // This node alone as JSON text (the order of nodes with the same id is decided by it).
+    [return<String> effects(heap_alloc)]
+    render() {
+      [Writer mut] json{Writer{}}
+      this.write(json)
+      return(json.out.view().toOwned())
+    }
+  }
+
+  // True when node `left` sorts before node `right`: by id, then by their JSON text, so even a graph with two nodes of
+  // one id (which the export reports) exports the same whatever the order of the calls.
+  [return<bool> effects(heap_alloc)]
+  sorts_before([Node] left, [Node] right) {
+    [i32] order{left.id.view().compare(right.id.view())}
+    if(order != 0i32) {
+      return(order < 0i32)
+    }
+    return(left.render().view().compare(right.render().view()) < 0i32)
+  }
+
+  // The indices of `nodes` in export order.
+  [return<vector<i32>> effects(heap_alloc)]
+  sorted_order([Reference<vector<Node>>] nodes) {
+    [vector<i32> mut] order{vector<i32>{}}
+    for([i32 mut] i{0i32}, i < nodes.count(), i++) {
+      [i32 mut] slot{order.count()}
+      order.push(i)
+      while(slot > 0i32 && sorts_before(nodes[i], nodes[order[slot - 1i32]])) {
+        order[slot] = order[slot - 1i32]
+        slot = slot - 1i32
+      }
+      order[slot] = i
+    }
+    return(order)
+  }
+
+  // True when some node of `nodes` has the id `id`.
+  [return<bool>]
+  has_node([Reference<vector<Node>>] nodes, [StringView] id) {
+    for([i32 mut] i{0i32}, i < nodes.count(), i++) {
+      [String] candidate{nodes[i].id}
+      if(candidate.view().equals(id)) {
+        return(true)
+      }
+    }
+    return(false)
+  }
+
+  // The four parts as one text.
+  [return<String> effects(heap_alloc)]
+  problem_text([StringView] head, [StringView] first, [StringView] middle, [StringView] second) {
+    [String mut] text{head.toOwned()}
+    text.appendBytes(first.data, first.count())
+    text.appendBytes(middle.data, middle.count())
+    text.appendBytes(second.data, second.count())
+    return(text)
+  }
+
+  // The nodes in export order, as the elements of a JSON array.
+  [effects(heap_alloc)]
+  write_nodes([Reference<vector<Node>>] nodes, [Reference<vector<i32>>] order, [Reference<Writer>] json) {
+    for([i32 mut] i{0i32}, i < order.count(), i++) {
+      nodes[order[i]].write(json)
+    }
+  }
+
+  // The problems of a graph, in node order: every id that two nodes share and every link edge that names a target that
+  // is not in the graph. `order` is the export order of `nodes`.
+  [effects(heap_alloc)]
+  write_problems([Reference<vector<Node>>] nodes, [Reference<vector<i32>>] order, [Reference<Writer>] json) {
+    for([i32 mut] i{0i32}, i < order.count(), i++) {
+      // The ids are copied into locals: a view of a vector element would not outlive the expression that made it.
+      [String] id{nodes[order[i]].id}
+      if(i > 0i32) {
+        [String] previous{nodes[order[i - 1i32]].id}
+        [bool] repeated{previous.view().equals(id.view())}
+        if(repeated) {
+          json.stringValue(problem_text("duplicate id ", id.view(), "", "").view())
+        }
+      }
+      if(nodes[order[i]].isLink()) {
+        [String] fromId{nodes[order[i]].fromId}
+        [String] toId{nodes[order[i]].toId}
+        [bool] hasExecutable{has_node(nodes, fromId.view())}
+        if(!hasExecutable) {
+          json.stringValue(problem_text("link ", id.view(), " names a missing executable ", fromId.view()).view())
+        }
+        [bool] hasLibrary{has_node(nodes, toId.view())}
+        if(!hasLibrary) {
+          json.stringValue(problem_text("link ", id.view(), " names a missing library ", toId.view()).view())
+        }
+      }
+    }
+  }
+
+  // The nodes of a build, in the order they were added; `export` is the only reader that matters.
+  [public struct]
+  Graph() {
+    [public vector<Node> mut] nodes{vector<Node>{}}
+
+    [return<i32>]
+    nodeCount() {
+      return(this.nodes.count())
+    }
+
+    [mut effects(heap_alloc)]
+    add([Node copy] node) {
+      this.nodes.push(node)
+    }
+
+    // The graph as JSON: {"version":1,"nodes":[...],"problems":[...]}. Nodes are sorted by id. `problems` lists, in
+    // that order, every id that two nodes share and every link edge that names a target that is not in the graph; a
+    // graph with problems still exports, so a tool can show them. There are no hashes: those belong to the runner.
+    [return<String> effects(heap_alloc)]
+    export() {
+      [vector<i32>] order{sorted_order(this.nodes)}
+      [Writer mut] json{Writer{}}
+      json.beginObject()
+      json.key("version")
+      json.i64Value(convert<i64>(export_version()))
+      json.key("nodes")
+      json.beginArray()
+      write_nodes(this.nodes, order, json)
+      json.endArray()
+      json.key("problems")
+      json.beginArray()
+      write_problems(this.nodes, order, json)
+      json.endArray()
+      json.endObject()
+      return(json.out.view().toOwned())
+    }
+  }
+
+  // `prefix` and `name` as one id.
+  [return<String> effects(heap_alloc)]
+  derive_id([StringView] prefix, [StringView] name) {
+    [String mut] id{prefix.toOwned()}
+    id.appendBytes(name.data, name.count())
+    return(id)
+  }
+
+  // What a script receives: it creates compilers and adds targets, then returns `b.graph()`.
+  [public struct]
+  Build() {
+    [Graph mut] collected{Graph{}}
+
+    // A compiler with the defaults: emit "exe", no optimization, entry "/main", no paths, transforms, effects or link
+    // arguments.
+    [return<Compiler> effects(heap_alloc)]
+    compiler() {
+      return(Compiler{})
+    }
+
+    [mut effects(heap_alloc)]
+    addTarget([StringView] prefix, [StringView] kind, [StringView] name, [Compiler copy] settings, [StringView] source) {
+      [Node mut] node{Node{}}
+      node.id = derive_id(prefix, name)
+      node.kind = kind.toOwned()
+      node.name = name.toOwned()
+      node.source = source.toOwned()
+      node.output = name.toOwned()
+      node.compilerJson = settings.toJson()
+      this.collected.add(node)
+    }
+
+    // A compile step named `name` that compiles `source` with the settings `cc` had at this call (id "compile:<name>").
+    [mut effects(heap_alloc)]
+    compile([StringView] name, [Compiler copy] cc, [StringView] source) {
+      this.addTarget("compile:", "compile", name, cc, source)
+    }
+
+    // A compile step whose output is an executable (id "exe:<name>").
+    [mut effects(heap_alloc)]
+    executable([StringView] name, [Compiler copy] cc, [StringView] source) {
+      this.addTarget("exe:", "executable", name, cc, source)
+    }
+
+    // A static library target (id "lib:<name>", output "<name>.psa"). It exports, but a runner cannot build it yet.
+    [mut effects(heap_alloc)]
+    library([StringView] name, [Compiler copy] cc, [StringView] source) {
+      [Node mut] node{Node{}}
+      node.id = derive_id("lib:", name)
+      node.kind = stringFrom("library")
+      node.name = name.toOwned()
+      node.source = source.toOwned()
+      node.output = name.toOwned()
+      node.output.append(".psa")
+      node.compilerJson = cc.toJson()
+      node.runnable = false
+      this.collected.add(node)
+    }
+
+    // The dependency of the executable `executableName` on the library `libraryName` (id "link:<exe>><lib>"). The
+    // targets may be added before or after the edge; a name that never appears is reported by `export`.
+    [mut effects(heap_alloc)]
+    link([StringView] executableName, [StringView] libraryName) {
+      [Node mut] node{Node{}}
+      node.fromId = derive_id("exe:", executableName)
+      node.toId = derive_id("lib:", libraryName)
+      node.id = problem_text("link:", executableName, ">", libraryName)
+      node.kind = stringFrom("link")
+      node.runnable = false
+      this.collected.add(node)
+    }
+
+    // The graph built so far, as a value.
+    [return<Graph> effects(heap_alloc)]
+    graph() {
+      return(this.collected)
+    }
+  }
+
+}
+}

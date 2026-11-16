@@ -1377,6 +1377,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_net.cpp
     tests/unit/backend_host/test_http.cpp
     tests/unit/backend_host/test_path.cpp
+    tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
   )
@@ -1495,6 +1496,36 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_path_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+
+  # /std/build: the build graph value and its JSON export (tests/unit/backend_host/test_build_graph.cpp). The VM run, the
+  # optexe build and the build-profile script are CTest entries of their own.
+  add_test(
+    NAME PrimeStruct_build_graph_vm
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*on the VM*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_graph_vm
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_graph_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_graph_optexe
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_graph_profile
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*under the build profile*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_graph_profile
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
   add_test(

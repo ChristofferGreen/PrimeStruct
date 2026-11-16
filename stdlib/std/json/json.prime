@@ -103,6 +103,13 @@ namespace json {
       this.out.append("null")
     }
 
+    // `json`, which must already be valid JSON text (a value built elsewhere), as the next value, written as given.
+    [mut effects(heap_alloc)]
+    rawValue([StringView] json) {
+      this.beginValue()
+      this.out.appendBytes(json.data, json.count())
+    }
+
     // `text` between quotes: quote, backslash and control bytes are escaped; other bytes (UTF-8) pass through.
     [mut effects(heap_alloc)]
     quoted([StringView] text) {

@@ -1,0 +1,32 @@
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  cc.optimize(2i32)
+  cc.importPath("stdlib")
+  cc.linkArg("native/host.cpp")
+
+  [Compiler mut] vm{cc}
+  vm.emit("vm")
+  vm.optimize(0i32)
+
+  [Compiler mut] lib{b.compiler()}
+  lib.emit("lib")
+  lib.importPath("stdlib")
+
+  b.executable("primescroll", cc, "src/main.prime")
+  b.compile("primescroll_vm", vm, "src/main.prime")
+  b.library("core", lib, "src/core.prime")
+  b.link("primescroll", "core")
+  return(b.graph())
+}
+
+// Until `primec build` loads this file, a main runs the script and returns how many nodes it made.
+[return<int> effects(heap_alloc)]
+main() {
+  [Build mut] b{Build{}}
+  [Graph] graph{build(b)}
+  return(graph.nodeCount())
+}

@@ -1309,6 +1309,7 @@ such as UTF-8, pass through). It does not parse JSON and does not check that cal
 - `beginObject()` / `endObject()`, `beginArray()` / `endArray()`
 - `key(name)` before each member value of an object
 - `stringValue(text)`, `i64Value(n)`, `boolValue(b)`, `nullValue()`; `text` is a `StringView`
+- `rawValue(json)` writes text that is already valid JSON (a value built elsewhere) as the next value, as given
 
 ```prime
 import /std/json/*
@@ -1475,3 +1476,58 @@ main() {
   return(0i32)
 }
 ```
+
+### Build graph (`/std/build`)
+
+`import /std/build/*` provides the values a build script works with (docs/BuildSystemPlan.md, sections 3 to 5): a
+`Build` adds nodes to a `Graph` and `graph.export()` returns the graph as JSON. Nothing here runs anything, lists a
+directory or starts a process; the module needs only the `heap_alloc` effect (its strings and vectors), which the
+`build` run profile allows. Running the graph, the loader for `make.prime` and glob are later slices.
+
+- `Compiler`: a snapshot of compiler settings with public fields `emitKind` (default `"exe"`), `optimization`
+  (default 0), `entryPath` (default `"/main"`), and the lists `importPaths`, `transforms`, `defaultEffects` and
+  `linkArgs`. Setters: `emit(kind)`, `optimize(level)`, `entry(path)`, `importPath(path)`, `transform(name)`,
+  `defaultEffect(name)`, `linkArg(arg)`. A copy is independent of the original. `toJson()` returns it as a JSON object.
+- `Build`: `compiler()` returns a `Compiler` with the defaults; `compile(name, cc, source)`, `executable(name, cc,
+  source)` and `library(name, cc, source)` add a target with the settings `cc` has at the call; `link(executableName,
+  libraryName)` adds the dependency edge of an executable on a library; `graph()` returns the `Graph` built so far.
+  Names and sources are `StringView`s.
+- `Graph`: `nodes` (a vector of `Node`), `nodeCount()` and `export()`.
+- Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `lib:<name>` and `link:<exe>><lib>`.
+  A library's output is `<name>.psa`. Library and link nodes export with `"runnable":false` and a note, because the
+  compiler cannot build static libraries yet; compile steps and executables are `"runnable":true`.
+- `export()` is deterministic and compact: `{"version":1,"nodes":[...],"problems":[...]}`. Nodes are sorted by id (bytewise,
+  then by their JSON text), so the order of the calls that built the graph does not show. A node has `id`, `kind`
+  (`compile`, `executable`, `library` or `link`), `name`, `source`, `output`, a `compiler` object (`emit`, `optimize`,
+  `entry`, `import_paths`, `transforms`, `default_effects`, `link_args`, each list in call order) and `runnable`; a link
+  has `from` and `to` instead of the target fields. `problems` is a list of messages in node order: `duplicate id <id>`
+  for a second node with an id, and `link <id> names a missing executable|library <id>` for an edge whose target is
+  not in the graph (the edge may be added before its targets). A graph with problems still exports. There are no hashes;
+  the runner computes them.
+
+```prime
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  cc.optimize(2i32)
+  [Compiler mut] vm{cc}
+  vm.emit("vm")
+  b.executable("app", cc, "src/main.prime")
+  b.compile("app_vm", vm, "src/main.prime")
+  return(b.graph())
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Build mut] b{Build{}}
+  [Graph] graph{build(b)}
+  return(graph.nodeCount())
+}
+```
+
+The fixture `tests/fixtures/build/build_graph.prime` prints the export of a larger graph (two configurations of one
+program, a library and a link edge) and checks that the String heap is balanced; its output is the golden file
+`tests/fixtures/build/build_graph.golden.json`.
