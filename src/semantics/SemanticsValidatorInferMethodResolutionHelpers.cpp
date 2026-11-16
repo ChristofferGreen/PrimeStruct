@@ -228,12 +228,25 @@ std::string SemanticsValidator::resolveMethodStructTypePath(const std::string &t
 const std::set<std::string> &SemanticsValidator::definitionFamilyPathIndex() const {
   if (!definitionFamilyPathIndexValid_) {
     definitionFamilyPathIndex_.clear();
+    // A namespace definition only groups paths: it is no name to resolve a call to.
+    std::set<std::string> namespacePaths;
+    for (const auto &def : program_.definitions) {
+      if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+            return transform.name == "namespace";
+          })) {
+        namespacePaths.insert(def.fullPath);
+      }
+    }
     for (const auto &[resolvedPath, params] : paramsByDef_) {
       (void)params;
-      definitionFamilyPathIndex_.insert(resolvedPath);
+      if (namespacePaths.count(resolvedPath) == 0) {
+        definitionFamilyPathIndex_.insert(resolvedPath);
+      }
     }
     for (const auto &def : program_.definitions) {
-      definitionFamilyPathIndex_.insert(def.fullPath);
+      if (namespacePaths.count(def.fullPath) == 0) {
+        definitionFamilyPathIndex_.insert(def.fullPath);
+      }
     }
     definitionFamilyPathIndexValid_ = true;
   }

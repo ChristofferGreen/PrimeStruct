@@ -73,6 +73,12 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
     const std::vector<const Definition *> &family = definitionsByPath.at(publicPath);
     if (family.size() == 1) {
       const Definition &def = *family.front();
+      // A namespace definition only groups paths: it is no name to resolve, import or call.
+      if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+            return transform.name == "namespace";
+          })) {
+        continue;
+      }
       ctx.sourceDefs.emplace(def.fullPath, def);
       if (!def.templateArgs.empty()) {
         ctx.templateDefs.insert(def.fullPath);

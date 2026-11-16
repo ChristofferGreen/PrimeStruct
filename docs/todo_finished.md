@@ -2256,6 +2256,7 @@ are left unarchived.
 | TODO-5839 | A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5841 | `[namespace] name { ... }` is a definition | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
+| TODO-5843 | `namespace name { ... }` is sugar for the `[namespace]` definition | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5848 | `return(wait(task))` returns a `String` task result | [2026-11.md](todo_archive/2026-11.md) | - |

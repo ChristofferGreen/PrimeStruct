@@ -608,9 +608,9 @@ main() {
 }
 )";
   const auto program = parseProgram(source);
-  REQUIRE(program.definitions.size() == 2);
-  REQUIRE(program.definitions[1].returnExpr.has_value());
-  const auto &call = program.definitions[1].returnExpr.value();
+  REQUIRE(program.definitions.size() == 3);
+  REQUIRE(program.definitions[2].returnExpr.has_value());
+  const auto &call = program.definitions[2].returnExpr.value();
   CHECK(call.kind == primec::Expr::Kind::Call);
   CHECK(call.isMethodCall);
   CHECK(call.name == "wrap");

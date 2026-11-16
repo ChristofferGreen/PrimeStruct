@@ -100,8 +100,8 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "namespace_definitions"
                                   SOURCE_FILE "*test_compile_run_text_filters_namespace_definitions.cpp"
-                                  TOTAL_CASES 10
-                                  CASES_PER_SHARD 10)
+                                  TOTAL_CASES 14
+                                  CASES_PER_SHARD 7)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "runtime_if"

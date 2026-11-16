@@ -158,7 +158,6 @@ of sync with them.
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | `Type.staticHelper()` resolves through `import` | deferred | pick-bindings |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
-| TODO-5843 | `namespace name { ... }` is sugar for the `[namespace]` definition | ready | namespace-envelope |
 | TODO-5842 | `summary("...")` is a checked transform on definitions | ready | summary-transform |
 | TODO-5896 | `--vm-threads` runs each spawned task on its own OS thread | ready | vm-threads |
 | TODO-5897 | Atomic, Mutex and Channel run on real primitives under `--vm-threads` | blocked | vm-threads |
@@ -211,7 +210,6 @@ of sync with them.
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
 - TODO-5908 (effect-ceiling): `--allow-effects` rejects declared effects outside a list in user code
-- TODO-5843 (namespace-envelope): `namespace name { ... }` is sugar for the `[namespace]` definition
 - TODO-5842 (summary-transform): `summary("...")` is a checked transform on definitions
 
 ### Immediate Next 10
@@ -221,8 +219,7 @@ of sync with them.
 3. TODO-5906
 4. TODO-5911
 5. TODO-5908
-6. TODO-5843
-7. TODO-5842
+6. TODO-5842
 
 ### Priority Lanes
 
@@ -230,7 +227,7 @@ of sync with them.
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
-- AI workflow (docs/AiWorkflowPlan.md): TODO-5843, TODO-5842
+- AI workflow (docs/AiWorkflowPlan.md): TODO-5842
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
@@ -863,22 +860,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
-
-- [~] TODO-5843: `namespace name { ... }` is sugar for the `[namespace]` definition
-  - owner: ai
-  - status: ready
-  - claimed_by: worktree-agent-ab4ff12320e47f113, 2026-11-16
-  - created_at: 2026-11-10
-  - phase: AI workflow (docs/AiWorkflowPlan.md section 6.5)
-  - parallel_track: namespace-envelope
-  - scope: `namespace name { ... }` has its own grammar production (`namespace_decl`) and parser function, which pushes a prefix and leaves no definition. It becomes surface sugar: the parser reads it as `[namespace] name { ... }` and goes through the definition path of TODO-5841, so the grammar has no top-level item besides `import`, definitions and executions. Executions inside a namespace block keep their prefix as today. The stdlib and the examples keep the keyword spelling.
-  - implementation_notes: `Parser::parseNamespace` and `namespaceStack_` (src/parser/ParserCoreDefinitions.cpp, ParserCore.cpp). `namespace std` is opened in 50 stdlib files, so the fold of TODO-5841 carries the load. The parser skips `import` inside a namespace block today; keep that.
-  - acceptance:
-    - `namespace_decl` is gone from the grammar in docs/PrimeStruct_SyntaxSpec.md; section 3.2 gives the keyword form as sugar with its rewritten form
-    - `--dump-stage ast` of a keyword namespace shows the `[namespace]` definition (golden test)
-    - `--dump-stage ir-lowered` of examples/apps/text_editor/main.prime and of one stdlib-heavy test program is identical before and after (compared through `stripDumpTimings`)
-    - full release gate green
-  - stop_rule: the keyword's parser path and the grammar text only; no source file is rewritten to the envelope spelling.
 
 - [ ] TODO-5842: `summary("...")` is a checked transform on definitions
   - owner: ai

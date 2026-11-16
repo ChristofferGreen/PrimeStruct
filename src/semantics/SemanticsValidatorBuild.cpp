@@ -234,7 +234,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
     if (definitionTransformError) {
       continue;
     }
-    defMap_[def.fullPath] = &def;
+    // A namespace definition only groups paths: it is no name to resolve, import or conflict with.
+    if (std::none_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+          return transform.name == "namespace";
+        })) {
+      defMap_[def.fullPath] = &def;
+    }
   }
   if (!finalizeCollectedStructuredDiagnostics(transformDiagnosticRecords)) {
     return false;

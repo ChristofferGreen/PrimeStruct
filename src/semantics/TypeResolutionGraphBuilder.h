@@ -147,13 +147,18 @@ inline void countInvalidationExpr(const Expr &expr,
 
 inline InvalidationCounts computeInvalidationCounts(const Program &program) {
   InvalidationCounts counts;
-  for (size_t index = 0; index < program.definitions.size(); ++index) {
-    recordInvalidationObservation(
-        counts, TypeResolutionGraphInvalidationEditFamily::DefinitionSignature);
+  for (const auto &def : program.definitions) {
+    // A namespace definition only groups paths; its edit changes no signature.
+    if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+          return transform.name == "namespace";
+        })) {
+      continue;
+    }
+    recordInvalidationObservation(counts,
+                                  TypeResolutionGraphInvalidationEditFamily::DefinitionSignature);
   }
   for (size_t index = 0; index < program.imports.size(); ++index) {
-    recordInvalidationObservation(
-        counts, TypeResolutionGraphInvalidationEditFamily::ImportAlias);
+    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ImportAlias);
   }
   for (const auto &def : program.definitions) {
     for (const auto &param : def.parameters) {
@@ -527,6 +532,12 @@ private:
   }
 
   bool isCallableDefinition(const Definition &def) const {
+    // A namespace definition only groups paths; it has no return to infer.
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "namespace") {
+        return false;
+      }
+    }
     return !isStructDefinition(def) && !isSumDefinition(def);
   }
 

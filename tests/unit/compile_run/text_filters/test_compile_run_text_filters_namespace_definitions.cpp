@@ -105,20 +105,121 @@ main() {
 )";
   const NamespaceRun run = runNamespaceSource("namespace_definition_fold", source, "--dump-stage ast");
   CHECK(run.exitCode == 0);
-  CHECK(run.out ==
-        "ast {\n"
-        "  [return<i32>] /demo/one() {\n"
-        "    return 1\n"
-        "  }\n"
-        "  [namespace] /demo() {\n"
-        "  }\n"
-        "  [return<i32>] /demo/two() {\n"
-        "    return 2\n"
-        "  }\n"
-        "  [return<int>] /main() {\n"
-        "    return plus(/demo/one(), /demo/two())\n"
-        "  }\n"
-        "}\n");
+  CHECK(run.out == "ast {\n"
+                   "  [return<i32>] /demo/one() {\n"
+                   "    return 1\n"
+                   "  }\n"
+                   "  [namespace] /demo() {\n"
+                   "  }\n"
+                   "  [return<i32>] /demo/two() {\n"
+                   "    return 2\n"
+                   "  }\n"
+                   "  [return<int>] /main() {\n"
+                   "    return plus(/demo/one(), /demo/two())\n"
+                   "  }\n"
+                   "}\n");
+}
+
+TEST_CASE("keyword namespace block reads as the namespace definition in the ast dump") {
+  const std::string source = R"(
+namespace demo {
+  [return<i32>] one() { return(1i32) }
+  namespace inner {
+    [return<i32>] three() { return(3i32) }
+  }
+}
+
+namespace demo {
+  [return<i32>] two() { return(2i32) }
+}
+
+[return<int>]
+main() {
+  return(plus(/demo/one(), /demo/inner/three()))
+}
+)";
+  const NamespaceRun run = runNamespaceSource("namespace_keyword_ast", source, "--dump-stage ast");
+  CHECK(run.exitCode == 0);
+  CHECK(run.out == "ast {\n"
+                   "  [return<i32>] /demo/one() {\n"
+                   "    return 1\n"
+                   "  }\n"
+                   "  [return<i32>] /demo/inner/three() {\n"
+                   "    return 3\n"
+                   "  }\n"
+                   "  [namespace] /demo/inner() {\n"
+                   "  }\n"
+                   "  [namespace] /demo() {\n"
+                   "  }\n"
+                   "  [return<i32>] /demo/two() {\n"
+                   "    return 2\n"
+                   "  }\n"
+                   "  [return<int>] /main() {\n"
+                   "    return plus(/demo/one(), /demo/inner/three())\n"
+                   "  }\n"
+                   "}\n");
+}
+
+TEST_CASE("keyword namespace block shares a path with a struct without a diagnostic") {
+  const std::string source = R"(
+namespace demo {
+  [return<i32>] one() { return(1i32) }
+}
+
+[struct]
+demo() {
+  [i32] x{2i32}
+}
+
+[return<int>]
+main() {
+  return(/demo/one())
+}
+)";
+  const NamespaceRun run =
+      runNamespaceSource("namespace_keyword_struct_path", source, "--emit=vm --entry /main");
+  CHECK(run.exitCode == 1);
+}
+
+TEST_CASE("keyword namespace block calls a function named like its own namespace") {
+  const std::string source = R"(
+namespace lib {
+  namespace inner {
+    [return<i32>] inner() { return(5i32) }
+    [return<i32>] call() { return(inner()) }
+  }
+}
+
+[return<int>]
+main() {
+  return(/lib/inner/call())
+}
+)";
+  const NamespaceRun run =
+      runNamespaceSource("namespace_keyword_same_name", source, "--emit=vm --entry /main");
+  CHECK(run.exitCode == 5);
+}
+
+TEST_CASE("keyword namespace block allows a local named like a sibling namespace") {
+  const std::string source = R"(
+namespace lib {
+  namespace util {
+    [return<i32>] one() { return(1i32) }
+  }
+  [return<i32>] run() {
+    [i32] util{4i32}
+    return(plus(util, /lib/util/one()))
+  }
+}
+
+[return<int>]
+main() {
+  return(/lib/run())
+}
+)";
+  const NamespaceRun run =
+      runNamespaceSource("namespace_keyword_local_name", source, "--emit=vm --entry /main");
+  CHECK(run.exitCode == 5);
 }
 
 TEST_CASE("namespace definition lowers to no function") {

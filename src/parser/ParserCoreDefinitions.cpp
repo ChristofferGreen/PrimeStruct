@@ -137,6 +137,19 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   if (!expect(TokenKind::LBrace, "expected '{' after namespace")) {
     return false;
   }
+  // The keyword form is sugar for the `[namespace]` definition: the block reads as `[namespace] name { ... }`.
+  Definition namespaceDef;
+  namespaceDef.name = name.text;
+  namespaceDef.namespacePrefix = currentNamespacePrefix();
+  namespaceDef.fullPath = makeFullPath(namespaceDef.name, namespaceDef.namespacePrefix);
+  namespaceDef.sourceLine = name.line;
+  namespaceDef.sourceColumn = name.column;
+  Transform namespaceTransform;
+  namespaceTransform.name = "namespace";
+  namespaceTransform.phase = TransformPhase::Auto;
+  namespaceTransform.sourceLine = name.line;
+  namespaceTransform.sourceColumn = name.column;
+  namespaceDef.transforms.push_back(std::move(namespaceTransform));
   namespaceStack_.push_back(name.text);
   while (!match(TokenKind::RBrace)) {
     if (match(TokenKind::End)) {
@@ -180,6 +193,8 @@ bool Parser::parseNamespace(std::vector<Definition> &defs, std::vector<Execution
   }
   expect(TokenKind::RBrace, "expected '}'");
   namespaceStack_.pop_back();
+  // Members come first in the definition list, like the nested definitions of any other definition.
+  defs.push_back(std::move(namespaceDef));
   return true;
 }
 

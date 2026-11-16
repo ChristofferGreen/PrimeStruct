@@ -104,6 +104,19 @@ PhaseStatus SemanticsValidator::resolveCallee(ExprCallContext &cc) {
       calleeParamsIt = firstMatchIt;
     }
   }
+  // Namespace definitions are not in the definition map, but their paths have (empty) parameter entries: a call
+  // that names one is not callable.
+  if (it == defMap_.end() && calleeParamsIt != paramsByDef_.end() &&
+      calleeParamsIt->first == resolved && calleeParamsIt->second.empty()) {
+    for (const Definition &candidate : program_.definitions) {
+      if (candidate.fullPath == resolved &&
+          std::any_of(candidate.transforms.begin(),
+                      candidate.transforms.end(),
+                      [](const Transform &transform) { return transform.name == "namespace"; })) {
+        return cc.done(failExprRootDiagnostic("namespace is not callable: " + candidate.fullPath));
+      }
+    }
+  }
   // A vector access (`values[i]`, `at`, `at_unsafe`) of a builtin vector, outside a specialization of the helper,
   // that found only a specialization for another element type (such as `at<Route>`, made by /std/http, for a
   // `vector<i32>`): the late builtin fallback validates it, as when no specialization exists, rather than the
@@ -468,12 +481,6 @@ PhaseStatus SemanticsValidator::validateResolvedCall(ExprCallContext &cc) {
       return cc.done(failExprRootDiagnostic("argument count mismatch for builtin capacity"));
     }
     return cc.done(failExprRootDiagnostic("unknown call target: " + unknownCallTarget));
-  }
-  if (std::any_of(resolvedDefinition->transforms.begin(),
-                  resolvedDefinition->transforms.end(),
-                  [](const Transform &transform) { return transform.name == "namespace"; })) {
-    return cc.done(
-        failExprRootDiagnostic("namespace is not callable: " + resolvedDefinition->fullPath));
   }
   if (!validateCalleeEffects(expr, *resolvedDefinition)) {
     return cc.done(false);

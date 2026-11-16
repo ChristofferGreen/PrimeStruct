@@ -318,6 +318,13 @@ namespace foo {
 
 Namespaces prefix enclosed definitions/executions with `/foo`. Namespace blocks may be reopened.
 
+The keyword form is surface sugar for the `[namespace]` definition of section 3.3: the parser reads
+`namespace foo { ... }` as `[namespace] foo { ... }`, so `--dump-stage ast` shows a `[namespace] /foo` definition and
+reopened blocks fold into one. Its members keep the path `/foo/member`. An `import` inside a block is skipped by the
+parser (the import resolver handles it), and an execution inside a block keeps the `/foo` prefix. The keyword name is
+a simple identifier; nested blocks (`namespace a { namespace b { ... } }`) read as `[namespace] /a/b`. A bare call
+name never resolves to a namespace definition of an enclosing path; it falls through to the imports.
+
 ### 3.3 Namespace Definitions
 
 `[namespace] name { ... }` is a definition whose body holds only definitions. It is the envelope form of a namespace
@@ -350,7 +357,7 @@ Rules:
 - Definitions with `namespace` at one path are one namespace: the parser folds them into the first, in source order,
   with their transform lists joined (`--dump-stage ast` shows one `[namespace] /demo`).
 - A namespace definition may share its path with a struct, enum or function only when its list is `namespace` alone.
-- The keyword form `namespace foo { ... }` is unchanged.
+- The keyword form `namespace foo { ... }` is sugar for this definition (section 3.2).
 
 ## 4. Grammar (EBNF-style)
 
@@ -359,7 +366,7 @@ This grammar describes surface syntax before text-transform rewriting.
 ```
 file           = { top_item } ;
 
-top_item       = import_decl | namespace_decl | definition | execution ;
+top_item       = import_decl | definition | execution ;
 
 import_decl          = "import" ( import_source_list | import_path_list ) ;
 import_source_list   = "<" import_source_entry { [ "," | ";" ] import_source_entry } ">" ;
@@ -368,8 +375,6 @@ import_source_string = quoted_string ;
 import_source_path   = quoted_string | slash_path ;
 import_path_list     = import_path { [ "," | ";" ] import_path } ;
 import_path          = slash_path [ "/*" ] ;
-
-namespace_decl = "namespace" identifier "{" { top_item } "}" ;
 
 definition     = canonical_definition | post_params_definition ;
 execution      = transforms_opt call ;
