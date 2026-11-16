@@ -926,6 +926,215 @@ main() {
   runTaskProgram(program);
 }
 
+// The stdlib `Vector<T>` is a struct whose `Copy` and `Destroy` helpers own its buffer, so a spawned call takes and
+// returns it like any struct: the spawner copies the argument (a `copy` or `move` parameter's copy belongs to the
+// task, the others are lent until the wait), the record's slots cross in the task block, and a result moves to the
+// waiter. The heap is balanced afterwards (`probe`). Elements are scalars, `String`s and structs.
+TEST_CASE("a task takes and returns stdlib Vectors") {
+  program_matrix::ProgramCase program;
+  program.name = "task_stdlib_vector_arguments";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+}
+
+[return<i32> effects(heap_alloc)]
+total([Vector<i32>] values) {
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < values.count()) {
+    sum = sum + values[i]
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<i32> effects(heap_alloc)]
+grow([Vector<i32> copy mut] values) {
+  values.push(7i32)
+  values.push(8i32)
+  return(values.count() * 100i32 + values[3i32])
+}
+
+[return<i32> effects(heap_alloc)]
+eat([Vector<i32> move] values) {
+  return(values.count() * 10i32)
+}
+
+[return<i32> effects(heap_alloc)]
+names_count([Vector<String>] names) {
+  return(names.count())
+}
+
+[return<i32> effects(heap_alloc)]
+items_size([Vector<Item> copy mut] items) {
+  items.push(Item{99i32, String{}})
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < items.count()) {
+    sum = sum + items[i].id + items[i].label.count()
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<Vector<i32>> effects(heap_alloc)]
+make_numbers([i32] count) {
+  [Vector<i32> mut] out{/std/collections/vector/vector<i32>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    out.push(i * 3i32)
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<Vector<Item>> effects(heap_alloc)]
+make_items([i32] count) {
+  [Vector<Item> mut] out{/std/collections/vector/vector<Item>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    [String mut] w{String{}}
+    w.append("item label")
+    out.push(Item{i, w})
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>()}
+  values.push(4i32)
+  values.push(5i32)
+  [Vector<i32> mut] other{/std/collections/vector/vector<i32>()}
+  other.push(1i32)
+  other.push(2i32)
+  other.push(3i32)
+  [Vector<i32> mut] last_in{/std/collections/vector/vector<i32>()}
+  last_in.push(9i32)
+  [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+  [String mut] n{String{}}
+  n.append("a name long enough to live on the string heap")
+  names.push(n)
+  [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+  [String mut] l{String{}}
+  l.append("lbl")
+  items.push(Item{3i32, l})
+  [Task<i32>] a{[spawn] total(values)}
+  [Task<i32>] g{[spawn] grow(values)}
+  [Task<i32>] e{[spawn] eat(move(other))}
+  [Task<i32>] s{[spawn] names_count(names)}
+  [Task<i32>] t{[spawn] items_size(items)}
+  [Task<Vector<i32>>] w{[spawn] make_numbers(4i32)}
+  [Task<Vector<Item>>] m{[spawn] make_items(2i32)}
+  print_line(wait(a))
+  print_line(wait(g))
+  print_line(wait(e))
+  print_line(wait(s))
+  print_line(wait(t))
+  [Vector<i32>] ws{wait(w)}
+  print_line(ws.count())
+  print_line(ws[3i32])
+  [Vector<Item>] ms{wait(m)}
+  print_line(ms.count())
+  print_line(ms[1i32].label.count() + ms[1i32].id)
+  print_line(values.count())
+  print_line(items.count())
+  [Task<Vector<i32>>] w2{[spawn] make_numbers(2i32)}
+  [Task<i32>] last{[spawn] eat(move(last_in))}
+  print_line(wait(last))
+  [Vector<i32>] w2v{wait(w2)}
+  return(w2v.count())
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "9\n408\n30\n1\n105\n4\n9\n2\n11\n2\n1\n10\n2\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
+// The stdlib `Map<K, V>` struct owns a `MapValue` the same way: a map crosses as a borrowed argument and returns
+// as a result the waiter owns.
+TEST_CASE("a task takes and returns a stdlib Map") {
+  program_matrix::ProgramCase program;
+  program.name = "task_stdlib_map_arguments";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+import /std/collections/map/*
+
+[return<i32> effects(heap_alloc)]
+table_size([Map<i32, i32>] table) {
+  return(table.count())
+}
+
+[return<Map<i32, i32>> effects(heap_alloc)]
+make_table([i32] count) {
+  [Map<i32, i32> mut] out{mapPair<i32, i32>(1i32, 2i32, 3i32, count)}
+  out.insert(9i32, 9i32)
+  return(out)
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [Map<i32, i32> mut] table{mapPair<i32, i32>(1i32, 2i32, 4i32, 5i32)}
+  [Task<i32>] s{[spawn] table_size(table)}
+  [Task<Map<i32, i32>>] m{[spawn] make_table(3i32)}
+  print_line(wait(s))
+  [Map<i32, i32>] got{wait(m)}
+  print_line(got.count())
+  return(0i32)
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n3\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
 // A spawn that still runs inline (a map parameter, a vector result that is not a local the task built) gives the
 // same values on every schedule.
 TEST_CASE("a spawn that stays inline still returns its values") {

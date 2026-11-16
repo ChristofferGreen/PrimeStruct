@@ -98,8 +98,12 @@
   is returned the same way: the body copies the record of the returned local into the result block and clears the
   local's drop flag, and the wait moves the record into a frame record of the waiter, whose binding owns the vector
   (`wait(t)` is a fresh vector). A `copy` or `move` parameter of a scalar is the task's own slot
-  (the spawner evaluates the argument), and one of a struct is the block's copy, which the task destroys. Any other
-  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a map or stdlib `Vector` parameter or result, a
+  (the spawner evaluates the argument), and one of a struct is the block's copy, which the task destroys. The stdlib `Vector` and `Map` are
+  structs, so they cross like any struct: the spawner binds the argument in a hidden struct local (its `Copy` helper
+  copies the buffer), copies the slots into the block, and the task owns the copy when the parameter is `copy` or
+  `move` (a `copy mut` one is its own value, not a reference to a place of the spawner), and a result is moved to the
+  waiter as for a struct. Any other
+  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a builtin map parameter or result, a
   vector result that is not a `mut` local the task built, a sum result, a callee with `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and
   `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.

@@ -762,8 +762,8 @@ main() {
 TEST_CASE("primec lowers a spawned call with String and struct values to a task") {
   // Positive: a `String` parameter, a `String` result, a struct result with a `String` field, a `vector<i32>`
   // parameter and a `vector<i32>` result built in a local run as tasks, with no inline note. Negative: a map
-  // parameter, a vector result that is not a local the task built, a `Vector` (stdlib) result and a `string`
-  // parameter keep the call inline, and the report names the reason.
+  // parameter, a vector result that is not a local the task built and a `string` parameter keep the call inline, and
+  // the report names the reason.
   const std::string source = R"(
 import /std/text/*
 import /std/collections/*
@@ -888,6 +888,120 @@ main() {
                                       "spawn_structs_build");
   REQUIRE_MESSAGE(build.exitCode == 0, build.err);
   const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_structs_run");
+  CHECK(actual.exitCode == 0);
+  CHECK(actual.out == expectedOut);
+  CHECK(actual.err.empty());
+}
+
+TEST_CASE("primec lowers a spawned call with stdlib Vector values to a task") {
+  // Positive: a borrowed, a `copy mut` and a `move` `Vector<i32>` parameter and a `Vector<i32>` result run as tasks,
+  // with no inline note. Negative: a `string` parameter and a builtin `map` parameter keep the call inline, and the
+  // report names the reason.
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[return<i32> effects(heap_alloc)]
+total([Vector<i32>] values) {
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < values.count()) {
+    sum = sum + values[i]
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<i32> effects(heap_alloc)]
+grow([Vector<i32> copy mut] values) {
+  values.push(7i32)
+  return(values.count() * 100i32 + values[2i32])
+}
+
+[return<i32> effects(heap_alloc)]
+eat([Vector<i32> move] values) {
+  return(values.count() * 10i32)
+}
+
+[return<Vector<i32>> effects(heap_alloc)]
+numbers([i32] count) {
+  [Vector<i32> mut] out{/std/collections/vector/vector<i32>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    out.push(i * 2i32)
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<i32>]
+label_size([string] label) {
+  return(label.count())
+}
+
+[return<i32>]
+table_size([map<i32, i32>] table) {
+  return(table.count())
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>()}
+  values.push(4i32)
+  values.push(5i32)
+  [Vector<i32> mut] other{/std/collections/vector/vector<i32>()}
+  other.push(1i32)
+  [Task<i32>] a{[spawn] total(values)};
+  [Task<i32>] g{[spawn] grow(values)};
+  [Task<i32>] e{[spawn] eat(move(other))};
+  [Task<Vector<i32>>] n{[spawn] numbers(3i32)};
+  [Task<i32>] l{[spawn] label_size("four")};
+  [map<i32, i32> mut] table{map<i32, i32>(1i32, 2i32)}
+  [Task<i32>] sized{[spawn] table_size(table)};
+  print_line(wait(a))
+  print_line(wait(g))
+  print_line(wait(e))
+  [Vector<i32>] list{wait(n)}
+  print_line(list.count())
+  print_line(list[2i32])
+  print_line(wait(l))
+  print_line(wait(sized))
+  print_line(values.count())
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = scratch("spawn_stdlib_vector.prime");
+  std::ofstream(sourcePath) << source;
+  const std::string expectedOut = "9\n307\n10\n3\n4\n4\n1\n2\n";
+  const auto checkNotes = [](const std::string &report) {
+    CHECK_FALSE(contains(report, "/total"));
+    CHECK_FALSE(contains(report, "/grow"));
+    CHECK_FALSE(contains(report, "/eat"));
+    CHECK_FALSE(contains(report, "/numbers"));
+    CHECK(contains(report,
+                   "lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
+                   "which no real call takes yet\n"));
+    CHECK(contains(
+        report,
+        "lowering: spawn of /table_size runs inline: parameter `table` is a collection or another "
+        "template type\n"));
+  };
+
+  const ProgramRun vm =
+      runCommand("./primec --emit=vm '" + sourcePath.string() + "' --entry /main --opt-report",
+                 "spawn_stdlib_vector_vm");
+  CHECK(vm.exitCode == 0);
+  CHECK(vm.out == expectedOut);
+  checkNotes(vm.err);
+
+  const std::filesystem::path binary = scratch("spawn_stdlib_vector.bin");
+  const ProgramRun build =
+      runCommand("./primec --emit=optexe '" + sourcePath.string() +
+                     "' --entry /main --opt-report -o '" + binary.string() + "'",
+                 "spawn_stdlib_vector_build");
+  REQUIRE_MESSAGE(build.exitCode == 0, build.err);
+  checkNotes(build.err);
+  const ProgramRun actual = runCommand("'" + binary.string() + "'", "spawn_stdlib_vector_run");
   CHECK(actual.exitCode == 0);
   CHECK(actual.out == expectedOut);
   CHECK(actual.err.empty());

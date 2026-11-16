@@ -391,8 +391,7 @@ std::string realCallStructReturnPath(const Definition &def,
     // struct with lifecycle helpers returns the same way as a plain one.
     const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
     if (path.empty() || isPackedErrorStructTypeName(returnType) ||
-        isPackedErrorStructTypeName(path) ||
-        path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+        isPackedErrorStructTypeName(path)) {
       return {};
     }
     const auto defIt = definitionsByPath.find(path);
@@ -418,11 +417,13 @@ bool paramHasTransformNamed(const Expr &param, const char *name) {
 }
 
 // A struct (by its full path) whose values the address ABI passes: a struct definition outside the collections, which
-// keep element metadata in their locals.
+// keep element metadata in their locals. A spawned call (`allowCollections`) also takes the stdlib collection structs,
+// whose slots cross like any struct's and whose `Copy` and `Destroy` helpers own the buffer.
 bool isAddressAbiStruct(const std::string &path,
-                        const std::unordered_set<std::string> &structNames) {
+                        const std::unordered_set<std::string> &structNames,
+                        bool allowCollections = false) {
   return !path.empty() && structNames.count(path) != 0 &&
-         path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0;
+         (allowCollections || path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0);
 }
 
 // Whether every use of the `string` parameter `name` in `def` is `count()` of it or its passing to
@@ -538,7 +539,8 @@ bool isAddressAbiParameter(
       }
       const std::string path =
           resolveStructTypeName(transform.name, def.namespacePrefix, structNames);
-      return isAddressAbiStruct(path, structNames) && !isSumDefinitionPath(path, definitionsByPath);
+      return isAddressAbiStruct(path, structNames, allowCollections) &&
+             !isSumDefinitionPath(path, definitionsByPath);
     }
     if (!transform.arguments.empty()) {
       return false;
@@ -561,7 +563,8 @@ bool isAddressAbiParameter(
     }
     return isSupportedScalarTypeName(target) ||
            isAddressAbiStruct(resolveStructTypeName(target, def.namespacePrefix, structNames),
-                              structNames);
+                              structNames,
+                              allowCollections);
   }
   return false;
 }
@@ -660,7 +663,7 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     const std::string leaf =
         leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
     if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
-        !isAddressAbiStruct(parentStructPath, structNames)) {
+        !isAddressAbiStruct(parentStructPath, structNames, context.allowCollections)) {
       return false;
     }
     // A closure with a `[ref name]` capture runs its `call` inline, in the frame that holds the borrowed locals
@@ -685,8 +688,13 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
+  const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath);
+  if (!context.allowCollections &&
+      structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+    return false;
+  }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
-      realCallStructReturnPath(def, structNames, byPath).empty() &&
+      structResultPath.empty() &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return false;
   }
@@ -783,7 +791,7 @@ bool resolveTaskSpawnShape(const Definition &def,
         reasonOut = subject + "has no type a real call takes";
         return false;
       }
-      if (!isAddressAbiStruct(parameter.structPath, structNames)) {
+      if (!isAddressAbiStruct(parameter.structPath, structNames, true)) {
         reasonOut = subject + "is a collection";
         return false;
       }

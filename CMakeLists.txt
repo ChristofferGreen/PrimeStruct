@@ -3661,8 +3661,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
       continue()
     endif()
     if(suite STREQUAL "primestruct.ir.optexe_tasks")
-      # 20 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
-      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 20 2 300 "--test-suite=${suite}")
+      # 21 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 21 2 300 "--test-suite=${suite}")
       continue()
     endif()
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
@@ -3706,7 +3706,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
     control=37 element_copies=10 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_subjects=20 pick_values=24 results=9 shared_programs=17
-    shared_strings=5 struct_methods=8 sum_owners=6 tasks=19 text_views=6 vector_owners=27)
+    shared_strings=5 struct_methods=8 sum_owners=6 tasks=21 text_views=6 vector_owners=27)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

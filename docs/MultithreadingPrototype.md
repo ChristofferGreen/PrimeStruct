@@ -136,10 +136,14 @@ returns scalars, `String`s, other structs outside the collections, closures
 and the waiter owns the result) or builtin `vector<T>`s (TODO-5992; the spawner
 copies a vector argument, a `copy` or `move` parameter's copy belongs to the
 task, and a vector result must be a `mut` vector local the task built, which the
-waiter takes over), and `optexe` runs it on an OS thread of its own (Threads For
-Real, Runtime Model); other callees (the stdlib `Vector`, maps and `copy` or
-`move` sums, TODO-5847; `string` parameters), and every other backend, keep the
-inline form, which starts no thread and runs the calls one after another.
+waiter takes over) or the stdlib `Vector` and `Map` structs (TODO-5993; they
+cross like any struct, and their `Copy` and `Destroy` helpers own the buffers),
+and `optexe` runs it on an OS thread of its own (Threads For Real, Runtime
+Model); other callees (builtin maps and `copy` or `move` sums, TODO-5847;
+`string` parameters), and every other backend, keep the inline form, which
+starts no thread and runs the calls one after another. Bind the result of a
+task that returns a stdlib `Vector` or `Map` before reading it (`[Vector<i32>]
+list{wait(t)}`): `wait(t).count()` waits twice (TODO-5994).
 
 ## Required Effect
 

@@ -2343,6 +2343,7 @@ are left unarchived.
 | TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5991 | A field read of a struct a call returns destroys the temporary copy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5992 | A spawned call with a builtin `vector<T>` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
+| TODO-5993 | A spawned call with a stdlib `Vector` or `Map` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 
 <!-- INDEX-END -->
 

@@ -1,6 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerEffects.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStep.h"
@@ -294,8 +295,14 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
           const bool ownedScalar =
               info.structTypeName.empty() &&
               (parameterHasTransform(param, "copy") || parameterHasTransform(param, "move"));
+          // A stdlib collection struct a task owns (`copy mut` or `move mut`) stays a value of the body: its element
+          // reads and `count()` take the record the way they take any collection local.
+          const bool ownedCollectionStruct =
+              !info.structTypeName.empty() &&
+              (parameterHasTransform(param, "copy") || parameterHasTransform(param, "move")) &&
+              info.structTypeName.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0;
           if (info.kind == LocalInfo::Kind::Value && info.isMutable && !info.isFileHandle &&
-              !ownedScalar &&
+              !ownedScalar && !ownedCollectionStruct &&
               (!info.structTypeName.empty() || (!info.isFileError && !info.isResult &&
                                                 info.valueKind != LocalInfo::ValueKind::Unknown &&
                                                 info.valueKind != LocalInfo::ValueKind::String))) {
