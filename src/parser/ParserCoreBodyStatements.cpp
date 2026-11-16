@@ -1,6 +1,7 @@
 #include "primec/frontend/Parser.h"
 
 #include "ParserHelpers.h"
+#include "ParserNamespaceDefinitions.h"
 
 #include <sstream>
 
@@ -324,6 +325,10 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
     def.statements.push_back(std::move(statementExpr));
   }
   expect(TokenKind::RBrace, "expected '}' to close body");
+  if (const std::string namespaceError = namespaceDefinitionShapeError(def);
+      !namespaceError.empty()) {
+    return failAt(def.sourceLine, def.sourceColumn, namespaceError);
+  }
   if (!foundReturn && !returnsVoid && !allowNoReturn && !allowNoReturnAuto) {
     if (!allowImplicitVoidReturn) {
       return fail("missing return statement in definition body");

@@ -79,6 +79,9 @@ or a semicolon if you intended to index.
 ### Slash paths & textual operator transforms
 - Slash-prefixed identifiers (`/pkg/module/thing`) are valid anywhere the Envelope expects a name; `namespace foo { ...
   }` is shorthand for prepending `/foo` to enclosed names, and namespaces may be reopened freely.
+- **`namespace` transform:** `[namespace] foo { ... }` is a definition that holds only definitions, so its transform
+  list can carry other transforms. It takes no parameters, template list or `return`, is not callable and not a type,
+  lowers to nothing, and blocks at one path fold into one namespace. See `docs/PrimeStruct_SyntaxSpec.md` section 3.3.
 - Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see
   a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact
   when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary

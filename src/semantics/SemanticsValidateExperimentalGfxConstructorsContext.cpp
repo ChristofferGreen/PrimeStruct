@@ -30,7 +30,7 @@ std::unordered_set<std::string> collectExperimentalGfxStructNames(const Program 
       if (transform.name == "sum") {
         hasSumTransform = true;
       }
-      if (transform.name == "return") {
+      if (transform.name == "return" || transform.name == "namespace") {
         hasReturnTransform = true;
       }
       if (isStructTransformName(transform.name)) {

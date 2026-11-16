@@ -103,7 +103,7 @@ bool validateIdentifierText(const std::string &text, std::string &error) {
 }
 
 bool validateTransformName(const std::string &text, std::string &error) {
-  if (text == "return" || text == "mut") {
+  if (text == "return" || text == "mut" || text == "namespace") {
     return true;
   }
   return validateIdentifierText(text, error);

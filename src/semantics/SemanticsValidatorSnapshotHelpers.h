@@ -548,7 +548,7 @@ inline bool isImplicitStructDefinitionSnapshot(const Definition &def) {
   bool hasStructTransform = false;
   bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
-    if (transform.name == "return") {
+    if (transform.name == "return" || transform.name == "namespace") {
       hasReturnTransform = true;
     }
     if (isStructTransformName(transform.name)) {

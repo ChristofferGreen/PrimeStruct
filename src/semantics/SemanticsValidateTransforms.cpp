@@ -24,12 +24,12 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "struct" || name == "enum" || name == "compute" || name == "workgroup_size" ||
          name == "unsafe" || name == "unsafe_api" || name == "pod" || name == "handle" ||
          name == "gpu_lane" || name == "no_padding" || name == "platform_independent_padding" ||
-         name == "sum" || name == "public" || name == "private" || name == "static" ||
-         name == "single_type_to_return" || name == "stack" || name == "heap" || name == "buffer" ||
-         name == "spawn" || name == "ast" || name == "reflect" || name == "generate" ||
-         name == "Additive" || name == "Multiplicative" || name == "Comparable" ||
-         name == "Indexable" || name == "collection_type" || name == "key_value_type" ||
-         name == "sendable";
+         name == "sum" || name == "namespace" || name == "public" || name == "private" ||
+         name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
+         name == "buffer" || name == "spawn" || name == "ast" || name == "reflect" ||
+         name == "generate" || name == "Additive" || name == "Multiplicative" ||
+         name == "Comparable" || name == "Indexable" || name == "collection_type" ||
+         name == "key_value_type" || name == "sendable";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {

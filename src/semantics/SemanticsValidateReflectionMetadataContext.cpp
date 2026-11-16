@@ -252,7 +252,7 @@ ReflectionMetadataRewriteContext buildReflectionMetadataRewriteContext(const Pro
       if (isStructTransformName(transform.name)) {
         hasStructTransform = true;
       }
-      if (transform.name == "return") {
+      if (transform.name == "return" || transform.name == "namespace") {
         hasReturnTransform = true;
       }
     }

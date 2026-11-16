@@ -159,6 +159,13 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
   if (match(TokenKind::RBracket)) {
     return fail("transform list cannot be empty");
   }
+  // `namespace` is a keyword token that doubles as the namespace definition transform.
+  auto consumeTransformNameToken = [&]() -> Token {
+    if (match(TokenKind::KeywordNamespace)) {
+      return consume(TokenKind::KeywordNamespace, "expected transform identifier");
+    }
+    return consume(TokenKind::Identifier, "expected transform identifier");
+  };
   auto isBoolLiteral = [](const std::string &text) {
     return text == "true" || text == "false";
   };
@@ -351,7 +358,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return true;
   };
   auto parseTransformItem = [&](TransformPhase phase, Transform &transform) -> bool {
-    Token name = consume(TokenKind::Identifier, "expected transform identifier");
+    Token name = consumeTransformNameToken();
     if (name.kind == TokenKind::End) {
       return false;
     }
@@ -406,7 +413,7 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     return true;
   };
   while (!match(TokenKind::RBracket)) {
-    Token name = consume(TokenKind::Identifier, "expected transform identifier");
+    Token name = consumeTransformNameToken();
     if (name.kind == TokenKind::End) {
       return false;
     }

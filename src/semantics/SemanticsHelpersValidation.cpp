@@ -149,7 +149,7 @@ bool isStructLikeDefinition(const Definition &def) {
     if (transform.name == "sum") {
       return false;
     }
-    if (transform.name == "return") {
+    if (transform.name == "return" || transform.name == "namespace") {
       hasReturnTransform = true;
     }
     if (isStructTransformName(transform.name)) {

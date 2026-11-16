@@ -25,7 +25,7 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
       if (transform.name == "sum") {
         hasSumTransform = true;
       }
-      if (transform.name == "return") {
+      if (transform.name == "return" || transform.name == "namespace") {
         hasReturnTransform = true;
       }
       if (semantics::isStructTransformName(transform.name)) {

@@ -739,7 +739,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool hasHandle = false;
   bool hasGpuLane = false;
   for (const auto &transform : def.transforms) {
-    if (transform.name == "return") {
+    if (transform.name == "return" || transform.name == "namespace") {
       hasReturnTransform = true;
     }
     if (transform.name == "pod") {

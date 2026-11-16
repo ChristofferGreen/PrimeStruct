@@ -173,6 +173,7 @@ private:
   bool expect(TokenKind kind, const std::string &message);
   Token consume(TokenKind kind, const std::string &message);
   bool fail(const std::string &message);
+  bool failAt(int line, int column, const std::string &message);
   void recoverToTopLevel(size_t startPos);
 
   std::vector<Token> tokens_;

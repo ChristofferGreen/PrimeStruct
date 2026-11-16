@@ -40,7 +40,7 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
       if (isStructTransformName(transform.name)) {
         hasStructTransform = true;
       }
-      if (transform.name == "return") {
+      if (transform.name == "return" || transform.name == "namespace") {
         hasReturnTransform = true;
       }
     }

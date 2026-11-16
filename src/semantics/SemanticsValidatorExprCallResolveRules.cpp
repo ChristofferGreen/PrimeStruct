@@ -469,6 +469,12 @@ PhaseStatus SemanticsValidator::validateResolvedCall(ExprCallContext &cc) {
     }
     return cc.done(failExprRootDiagnostic("unknown call target: " + unknownCallTarget));
   }
+  if (std::any_of(resolvedDefinition->transforms.begin(),
+                  resolvedDefinition->transforms.end(),
+                  [](const Transform &transform) { return transform.name == "namespace"; })) {
+    return cc.done(
+        failExprRootDiagnostic("namespace is not callable: " + resolvedDefinition->fullPath));
+  }
   if (!validateCalleeEffects(expr, *resolvedDefinition)) {
     return cc.done(false);
   }

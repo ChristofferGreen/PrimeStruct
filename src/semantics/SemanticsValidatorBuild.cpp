@@ -77,7 +77,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
         isExplicitOut = false;
         return false;
       }
-      if (transform.name == "return") {
+      if (transform.name == "return" || transform.name == "namespace") {
         hasReturn = true;
       }
       if (isStructTransformName(transform.name)) {

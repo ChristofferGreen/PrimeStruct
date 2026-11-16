@@ -318,6 +318,40 @@ namespace foo {
 
 Namespaces prefix enclosed definitions/executions with `/foo`. Namespace blocks may be reopened.
 
+### 3.3 Namespace Definitions
+
+`[namespace] name { ... }` is a definition whose body holds only definitions. It is the envelope form of a namespace
+block: its members get the path `/name/member`, siblings call each other by bare name, and `import /name/*` brings
+its `public` members into scope.
+
+```
+[namespace]
+demo {
+  [public, struct] Point() {
+    [public i32] x{3i32}
+  }
+  [return<i32>] one() { return(7i32) }
+  [public, return<i32>] two() { return(plus(one(), 1i32)) }
+  [namespace]
+  inner {
+    [public, return<i32>] three() { return(3i32) }
+  }
+}
+
+[return<int>]
+main() {
+  return(plus(/demo/two(), /demo/inner/three()))
+}
+```
+
+Rules:
+- A namespace definition has no parameters, template list or `return`; a binding or statement in its body is a
+  diagnostic. It is not callable and not a type, its members get no implicit `this`, and it lowers to nothing.
+- Definitions with `namespace` at one path are one namespace: the parser folds them into the first, in source order,
+  with their transform lists joined (`--dump-stage ast` shows one `[namespace] /demo`).
+- A namespace definition may share its path with a struct, enum or function only when its list is `namespace` alone.
+- The keyword form `namespace foo { ... }` is unchanged.
+
 ## 4. Grammar (EBNF-style)
 
 This grammar describes surface syntax before text-transform rewriting.

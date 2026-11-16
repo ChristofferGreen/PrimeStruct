@@ -202,7 +202,7 @@ bool isFieldOnlyStructDefinition(const Definition &def) {
     if (semantics::isStructTransformName(transform.name)) {
       hasStructTransform = true;
     }
-    if (transform.name == "return") {
+    if (transform.name == "return" || transform.name == "namespace") {
       hasReturnTransform = true;
     }
   }

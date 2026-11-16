@@ -2,6 +2,7 @@
 #include "primec/frontend/TokenClasses.h"
 
 #include "ParserHelpers.h"
+#include "ParserNamespaceDefinitions.h"
 
 #include <algorithm>
 #include <sstream>
@@ -109,6 +110,13 @@ bool Parser::parse(Program &program,
         }
         continue;
       }
+    }
+  }
+  if (!hadError) {
+    NamespaceDefinitionError foldError;
+    if (!foldNamespaceDefinitions(program.definitions, foldError)) {
+      failAt(foldError.line, foldError.column, foldError.message);
+      hadError = true;
     }
   }
   if (hadError) {
@@ -228,6 +236,24 @@ Token Parser::consume(TokenKind kind, const std::string &message) {
     return {TokenKind::End, ""};
   }
   return tokens_[pos_++];
+}
+
+bool Parser::failAt(int line, int column, const std::string &message) {
+  if (error_) {
+    lastErrorInfo_.line = line;
+    lastErrorInfo_.column = column;
+    lastErrorInfo_.message = message;
+    const std::string text = message + " at " + std::to_string(line) + ":" + std::to_string(column);
+    if (errorInfos_ != nullptr) {
+      errorInfos_->push_back(lastErrorInfo_);
+      if (error_->empty()) {
+        *error_ = text;
+      }
+    } else {
+      *error_ = text;
+    }
+  }
+  return false;
 }
 
 bool Parser::fail(const std::string &message) {
