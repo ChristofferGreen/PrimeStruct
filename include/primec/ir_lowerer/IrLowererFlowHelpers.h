@@ -209,9 +209,17 @@ bool isTemporaryStructCopySourceExpr(
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
 // Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
-// user definition returning a vector, never a name, field, element or stdlib accessor result.
-bool isFreshBuiltinVectorExpr(
-    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
+// user definition or method returning a vector, never a name, field, element or stdlib accessor
+// result. `resolveCallee` resolves a method call too (see makeCallOrMethodResolver).
+bool isFreshBuiltinVectorExpr(const Expr &expr,
+                              const std::function<const Definition *(const Expr &)> &resolveCallee);
+// A callee resolver for calls and method calls: a method call resolves through the type of its
+// receiver in `locals`, any other call by name. The arguments must outlive the returned function.
+std::function<const Definition *(const Expr &)> makeCallOrMethodResolver(
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)>
+        &resolveMethodCallDefinition,
+    const LocalMap &locals);
 bool emitCompareToZero(std::vector<IrInstruction> &instructions,
                        LocalInfo::ValueKind kind,
                        bool equals,

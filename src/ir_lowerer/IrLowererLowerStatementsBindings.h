@@ -122,7 +122,9 @@
       }
       return ir_lowerer::isTaskVectorWait(initExpr, localsIn) ||
              ir_lowerer::isFreshBuiltinVectorExpr(
-                 initExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
+                 initExpr,
+                 ir_lowerer::makeCallOrMethodResolver(
+                     resolveDefinitionCall, resolveMethodCallDefinition, localsIn));
     };
     auto extractDeclaredSumReturnDefinition = [&]() -> const Definition * {
       const std::string &definitionPath =
@@ -509,7 +511,8 @@
                      ir_lowerer::isElementAccessCopySourceExpr(*vectorArg) ||
                      ir_lowerer::isFreshBuiltinVectorExpr(
                          *vectorArg,
-                         [&](const Expr &maker) { return resolveDefinitionCall(maker); }) ||
+                         ir_lowerer::makeCallOrMethodResolver(
+                             resolveDefinitionCall, resolveMethodCallDefinition, localsIn)) ||
                      (isSimpleCallName(*vectorArg, "move") && vectorArg->args.size() == 1 &&
                       vectorArg->args.front().kind == Expr::Kind::Name))));
               if (!copyable) {

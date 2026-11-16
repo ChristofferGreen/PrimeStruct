@@ -1394,4 +1394,193 @@ TEST_CASE("a vector of Strings returned by a stdlib definition is freed by its c
                         "2080\n");
 }
 
+// A method that returns a vector hands over a vector of its own, like a function does; one that returns a place hands
+// out the owner's field and must leave it alone.
+namespace {
+const std::string MethodVectorReturns = R"(
+import /std/text/view/*
+
+[struct]
+Maker() {
+  [i32] base{3i32}
+  [vector<i32>] kept{vector<i32>{}}
+
+  [effects(heap_alloc), return<vector<i32>>]
+  makeValues() {
+    return(make_values(this.base))
+  }
+
+  [effects(heap_alloc), return<vector<String>>]
+  makeLabels() {
+    [vector<String> mut] out{vector<String>{}}
+    out.push(label(this.base))
+    out.push(label(this.base + 1i32))
+    return(out)
+  }
+
+  [effects(heap_alloc), return<vector<i32>>]
+  makeAgain() {
+    [vector<i32>] inner{this.makeValues()}
+    return(inner)
+  }
+
+  [return<Reference<vector<i32>>>]
+  keptValues() {
+    return(this.kept)
+  }
+}
+
+[effects(heap_alloc), return<vector<i32>>]
+forward_values([Reference<Maker>] maker) {
+  return(maker.makeValues())
+}
+
+[return<i32>]
+count_of([vector<i32>] values) {
+  return(values.count())
+}
+
+[effects(heap_alloc), return<i32>]
+count_through([Reference<Maker>] maker) {
+  [vector<i32>] values{maker.makeValues()}
+  return(values.count())
+}
+)";
+} // namespace
+
+TEST_CASE("a vector a user method returns is freed by its caller") {
+  runVectorOwnerProgram("method_returned_vector_scalars",
+                        MethodVectorReturns,
+                        R"(
+    [Maker] maker{Maker{}}
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      [vector<i32>] values{maker.makeValues()}
+      total = total + values.count() + values.at(1i32)
+    }
+    print_line(total)
+)",
+                        "240\n");
+}
+
+TEST_CASE("a vector of Strings a user method returns is freed by its caller") {
+  runVectorOwnerProgram("method_returned_vector_strings",
+                        MethodVectorReturns,
+                        R"(
+    [Maker] maker{Maker{}}
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      [vector<String>] labels{maker.makeLabels()}
+      total = total + labels.count() + first_byte(labels.at(1i32))
+    }
+    print_line(total)
+)",
+                        "2160\n");
+}
+
+TEST_CASE(
+    "a vector a method returns is freed through a reference receiver and when it is passed on") {
+  runVectorOwnerProgram("method_returned_vector_reference_receiver",
+                        MethodVectorReturns,
+                        R"(
+    [Maker mut] maker{Maker{}}
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      total = total + count_through(maker)
+      [vector<i32>] again{maker.makeAgain()}
+      [vector<i32>] forwarded{forward_values(maker)}
+      total = total + again.count() + forwarded.count()
+      total = total + count_of(maker.makeValues())
+    }
+    print_line(total)
+)",
+                        "320\n");
+}
+
+TEST_CASE("a vector of scalars a method returns is freed as a temporary and when discarded") {
+  runVectorOwnerProgram("method_returned_vector_temporary",
+                        MethodVectorReturns,
+                        R"(
+    [Maker] maker{Maker{}}
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      total = total + maker.makeValues().count()
+      maker.makeValues()
+    }
+    print_line(total)
+)",
+                        "80\n");
+}
+
+TEST_CASE("a vector of Strings a method returns is freed as a temporary") {
+  runVectorOwnerProgram("method_returned_vector_strings_temporary",
+                        MethodVectorReturns,
+                        R"(
+    [Maker] maker{Maker{}}
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      total = total + maker.makeLabels().count()
+    }
+    print_line(total)
+)",
+                        "80\n");
+}
+
+TEST_CASE("a vector of Strings a method returns is freed when its result is discarded") {
+  runVectorOwnerProgram("method_returned_vector_strings_discarded",
+                        MethodVectorReturns,
+                        R"(
+    [Maker] maker{Maker{}}
+    repeat(40i32) {
+      maker.makeLabels()
+    }
+)",
+                        "");
+}
+
+TEST_CASE("a vector of Strings a function returns is freed as a temporary") {
+  runVectorOwnerProgram("function_returned_vector_strings_temporary",
+                        MethodVectorReturns,
+                        R"(
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      total = total + make_named(1i32).count()
+    }
+    print_line(total)
+)",
+                        "80\n");
+}
+
+TEST_CASE("a method that returns a reference to a vector field leaves the field alone") {
+  runVectorOwnerProgram("method_returned_vector_reference",
+                        MethodVectorReturns,
+                        R"(
+    [Maker mut] maker{Maker{}}
+    maker.kept.push(7i32)
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      total = total + maker.keptValues().count()
+    }
+    print_line(total)
+    print_line(maker.kept.at(0i32))
+)",
+                        "40\n7\n");
+}
+
+TEST_CASE("a vector of Strings a stdlib view method returns is freed by its caller") {
+  runVectorOwnerProgram("stdlib_method_returned_vector_strings",
+                        MethodVectorReturns,
+                        R"(
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      [StringView] text{textOf("a,b,,c")}
+      [vector<String>] pieces{text.splitOwned(textOf(","))}
+      total = total + pieces.count()
+      total = total + text.splitOwned(textOf(",")).count()
+    }
+    print_line(total)
+)",
+                        "320\n");
+}
+
 TEST_SUITE_END();

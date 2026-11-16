@@ -41,20 +41,21 @@
 
   // An element read from a fresh builtin vector inside a statement: the vector becomes a hidden local that
   // lives to the end of the statement (see `emitExpr`), so the element is a place like any other.
-  auto readsStatementVectorTemporary = [&](const Expr &candidate) {
+  auto readsStatementVectorTemporary = [&](const Expr &candidate, const LocalMap &localsIn) {
     return candidate.kind == Expr::Kind::Call && candidate.args.size() == 2 &&
            !fileScopeStack.empty() && setupStage.statementNesting > 0 &&
-           ir_lowerer::isFreshBuiltinVectorExpr(candidate.args.front(), [&](const Expr &maker) {
-             return resolveDefinitionCall(maker);
-           });
+           ir_lowerer::isFreshBuiltinVectorExpr(
+               candidate.args.front(),
+               ir_lowerer::makeCallOrMethodResolver(
+                   resolveDefinitionCall, resolveMethodCallDefinition, localsIn));
   };
 
   // A place (a chain of field and element reads) inside such a statement temporary: it is gone when the
   // statement ends, so a binding cannot stay a view of it.
-  auto isPlaceInStatementVectorTemporary = [&](const Expr &place) {
+  auto isPlaceInStatementVectorTemporary = [&](const Expr &place, const LocalMap &localsIn) {
     const Expr *current = &place;
     while (current->kind == Expr::Kind::Call && !current->args.empty()) {
-      if (readsStatementVectorTemporary(*current)) {
+      if (readsStatementVectorTemporary(*current, localsIn)) {
         return true;
       }
       if (!(current->isFieldAccess && current->args.size() == 1) &&
@@ -90,9 +91,10 @@
       if ((countRead || elementRead) && !read->isFieldAccess && !read->isBinding &&
           read->bodyArguments.empty() &&
           (ir_lowerer::isTaskVectorWait(read->args.front(), localsIn) ||
-           ir_lowerer::isFreshBuiltinVectorExpr(read->args.front(), [&](const Expr &candidate) {
-             return resolveDefinitionCall(candidate);
-           }))) {
+           ir_lowerer::isFreshBuiltinVectorExpr(
+               read->args.front(),
+               ir_lowerer::makeCallOrMethodResolver(
+                   resolveDefinitionCall, resolveMethodCallDefinition, localsIn)))) {
         const Definition *reader = read->isMethodCall ? resolveMethodCallDefinition(*read, localsIn)
                                                       : resolveDefinitionCall(*read);
         const auto resultKind =
@@ -129,7 +131,9 @@
                 !handleIt->second.taskResultVectorElementText.empty()) {
               vectorType.templateArgs.push_back(handleIt->second.taskResultVectorElementText);
             }
-          } else if (const Definition *maker = resolveDefinitionCall(receiver); maker != nullptr) {
+          } else if (const Definition *maker = ir_lowerer::makeCallOrMethodResolver(
+                         resolveDefinitionCall, resolveMethodCallDefinition, localsIn)(receiver);
+                     maker != nullptr) {
             hiddenBinding.namespacePrefix = maker->namespacePrefix;
             for (const auto &transform : maker->transforms) {
               std::string base;
@@ -499,7 +503,7 @@
         // struct a wrapper returned.
         if (expr.args.size() == 1 && !expr.isFieldAccess &&
             isWrapperReturnedKeyValueAccessCall(expr.args.front()) &&
-            !readsStatementVectorTemporary(expr.args.front()) &&
+            !readsStatementVectorTemporary(expr.args.front(), localsIn) &&
             !ir_lowerer::isNestedBuiltinVectorElementAccess(
                 expr.args.front(),
                 localsIn,

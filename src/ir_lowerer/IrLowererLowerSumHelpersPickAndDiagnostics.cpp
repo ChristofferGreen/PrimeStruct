@@ -1050,7 +1050,12 @@ namespace primec::ir_lowerer {
           const bool freshValue =
               vectorResultLifecyclePath.empty()
                   ? shouldDisarmStructCopySourceExpr(*valueExpr)
-                  : ir_lowerer::isFreshBuiltinVectorExpr(*valueExpr, resolveDefinitionCall);
+                  : ir_lowerer::isFreshBuiltinVectorExpr(
+                        *valueExpr,
+                        ir_lowerer::makeCallOrMethodResolver(
+                            resolveDefinitionCall,
+                            setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition,
+                            valueLocals));
           if (releasedDropFlagLocal >= 0) {
             function.instructions.push_back({IrOpcode::PushI32, 0});
             function.instructions.push_back(

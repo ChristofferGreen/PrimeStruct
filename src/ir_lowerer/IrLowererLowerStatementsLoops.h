@@ -431,30 +431,14 @@
       }
       // A discarded fresh builtin vector (`vector<T>(...)`, or a user definition or method
       // returning one) frees its buffer and destroys its elements at the end of its statement.
-      auto returnsBuiltinVector = [&](const Definition &callee) {
-        for (const auto &transform : callee.transforms) {
-          std::string base;
-          std::string argText;
-          if (transform.name == "return" && transform.templateArgs.size() == 1 &&
-              splitTemplateTypeName(
-                  trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
-            return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "vector";
-          }
-        }
-        return false;
-      };
+      const auto resolveDiscardedCallee = ir_lowerer::makeCallOrMethodResolver(
+          resolveDefinitionCall, resolveMethodCallDefinition, localsIn);
       const Definition *discardedVectorMethod = nullptr;
-      if (stmt.isMethodCall && !stmt.isFieldAccess) {
-        discardedVectorMethod = resolveMethodCallDefinition(stmt, localsIn);
-        if (discardedVectorMethod != nullptr &&
-            (discardedVectorMethod->fullPath.rfind("/std/", 0) == 0 ||
-             !returnsBuiltinVector(*discardedVectorMethod))) {
-          discardedVectorMethod = nullptr;
-        }
+      if (stmt.isMethodCall && ir_lowerer::isFreshBuiltinVectorExpr(stmt, resolveDiscardedCallee)) {
+        discardedVectorMethod = resolveDiscardedCallee(stmt);
       }
       if (discardedVectorMethod != nullptr ||
-          ir_lowerer::isFreshBuiltinVectorExpr(
-              stmt, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); })) {
+          ir_lowerer::isFreshBuiltinVectorExpr(stmt, resolveDiscardedCallee)) {
         std::string elementText;
         std::string elementNamespace = stmt.namespacePrefix;
         std::string collectionName;

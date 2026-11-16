@@ -340,7 +340,7 @@
             };
             if (expr.args.size() == 1 && methodCalleeFirstParameterIsStruct() &&
                 isWrapperReturnedKeyValueAccessCall(expr.args.front()) &&
-                !readsStatementVectorTemporary(expr.args.front())) {
+                !readsStatementVectorTemporary(expr.args.front(), localsIn)) {
               error = "struct parameter type mismatch";
               return false;
             }

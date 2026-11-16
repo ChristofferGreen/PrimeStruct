@@ -1120,21 +1120,35 @@ bool isOwnedTemporaryArgumentExpr(
   return true;
 }
 
+std::function<const Definition *(const Expr &)> makeCallOrMethodResolver(
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<const Definition *(const Expr &, const LocalMap &)>
+        &resolveMethodCallDefinition,
+    const LocalMap &locals) {
+  return [&](const Expr &candidate) -> const Definition * {
+    if (candidate.isMethodCall) {
+      return resolveMethodCallDefinition ? resolveMethodCallDefinition(candidate, locals) : nullptr;
+    }
+    return resolveDefinitionCall ? resolveDefinitionCall(candidate) : nullptr;
+  };
+}
+
 bool isFreshBuiltinVectorExpr(
-    const Expr &expr,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
-  if (expr.kind != Expr::Kind::Call || expr.isFieldAccess || expr.isMethodCall) {
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee) {
+  if (expr.kind != Expr::Kind::Call || expr.isFieldAccess) {
     return false;
   }
-  std::string collectionName;
-  if (getBuiltinCollectionName(expr, collectionName)) {
-    return collectionName == "vector";
+  if (!expr.isMethodCall) {
+    std::string collectionName;
+    if (getBuiltinCollectionName(expr, collectionName)) {
+      return collectionName == "vector";
+    }
+    // A `pick` expression that yields a vector builds a record of its own (`tryEmitPickExpr`).
+    if (isSimpleCallName(expr, "pick") && expr.args.size() == 1 && !expr.bodyArguments.empty()) {
+      return true;
+    }
   }
-  // A `pick` expression that yields a vector builds a record of its own (`tryEmitPickExpr`).
-  if (isSimpleCallName(expr, "pick") && expr.args.size() == 1 && !expr.bodyArguments.empty()) {
-    return true;
-  }
-  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
+  const Definition *callee = resolveCallee ? resolveCallee(expr) : nullptr;
   if (callee == nullptr) {
     return false;
   }

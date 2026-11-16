@@ -141,11 +141,10 @@
                     emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(newBaseLocal));
                     emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(newPtrLocal));
                     if (!takesOverMovedLocal &&
-                        !ir_lowerer::isFreshBuiltinVectorExpr(rhsExpr,
-                                                              [&](const Expr &candidate) {
-                                                                return resolveDefinitionCall(
-                                                                    candidate);
-                                                              }) &&
+                        !ir_lowerer::isFreshBuiltinVectorExpr(
+                            rhsExpr,
+                            ir_lowerer::makeCallOrMethodResolver(
+                                resolveDefinitionCall, resolveMethodCallDefinition, localsIn)) &&
                         !ir_lowerer::emitBuiltinVectorCopyFromPtrs(
                             newPtrLocal,
                             srcPtrLocal,

@@ -729,8 +729,12 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
       }
     }
     if (nestedBuiltinVector) {
-      bool takesOver = isSimpleCallName(*payloadArg, "move") ||
-                       isFreshBuiltinVectorExpr(*payloadArg, input.resolveDefinitionCall);
+      bool takesOver =
+          isSimpleCallName(*payloadArg, "move") ||
+          isFreshBuiltinVectorExpr(*payloadArg,
+                                   makeCallOrMethodResolver(input.resolveDefinitionCall,
+                                                            input.resolveMethodCallDefinition,
+                                                            localsIn));
       if (payloadArg->kind == Expr::Kind::Name) {
         const auto payloadIt = localsIn.find(payloadArg->name);
         takesOver = payloadIt != localsIn.end() && payloadIt->second.dropFlagLocal >= 0;

@@ -539,7 +539,7 @@
                             sourceIt->second.kind == LocalInfo::Kind::Vector &&
                             !sourceIt->second.isSoaVector;
       } else if (vectorElementTypeFound &&
-                 (info.isMutable || isPlaceInStatementVectorTemporary(init)) &&
+                 (info.isMutable || isPlaceInStatementVectorTemporary(init, localsIn)) &&
                  !fileScopeStack.empty() && init.kind == Expr::Kind::Call &&
                  (init.isFieldAccess || ir_lowerer::isElementAccessCopySourceExpr(init)) &&
                  !isTemporaryStructCopySource(init, localsIn)) {

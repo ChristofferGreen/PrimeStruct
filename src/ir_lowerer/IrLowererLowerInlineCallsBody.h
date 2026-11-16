@@ -622,7 +622,9 @@
         const bool freshArg =
             moveParam || (copyParam && isSimpleCallName(*argExpr, "move")) ||
             ir_lowerer::isFreshBuiltinVectorExpr(
-                *argExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
+                *argExpr,
+                ir_lowerer::makeCallOrMethodResolver(
+                    resolveDefinitionCall, resolveMethodCallDefinition, callerLocals));
         std::string elementStructPath;
         bool elementKnown = false;
         for (const auto &transform : param.transforms) {
