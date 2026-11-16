@@ -1141,8 +1141,11 @@ bool isFreshBuiltinVectorExpr(
   if (callee->fullPath.rfind("/std/", 0) == 0) {
     std::string leaf = callee->fullPath.substr(callee->fullPath.find_last_of('/') + 1);
     leaf.erase(std::min(leaf.find("__"), leaf.size()));
-    return callee->fullPath.rfind(vectorBackingMemberRoot(), 0) == 0 && leaf == "vector";
+    if (callee->fullPath.rfind(vectorBackingMemberRoot(), 0) == 0 && leaf == "vector") {
+      return true;
+    }
   }
+  // A definition returning `vector<T>` hands over a vector of its own, whether the user's or the stdlib's.
   for (const auto &transform : callee->transforms) {
     std::string base;
     std::string argText;

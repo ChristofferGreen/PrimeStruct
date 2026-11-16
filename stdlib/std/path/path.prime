@@ -45,13 +45,12 @@ namespace path {
     return(dot)
   }
 
-  // Fills `spans` with the components that remain after resolving "." and "..": a "..", which removes the component
-  // before it, is kept only at the start of a relative path and is dropped at the root. Each component is two entries
-  // of `spans`, its start and its end in `path` (a vector of views would let slices of `path` escape through the
-  // container, and a vector returned by a function imported from the stdlib was measured not to be freed by the caller, so
-  // the caller makes the vector and this function fills it).
-  [return<void> effects(heap_alloc)]
-  resolve_into([StringView] path, [vector<i32> mut] spans) {
+  // The components that remain after resolving "." and "..": a "..", which removes the component before it, is kept
+  // only at the start of a relative path and is dropped at the root. Each component is two entries of the result, its
+  // start and its end in `path` (a vector of views would let slices of `path` escape through the container).
+  [return<vector<i32>> effects(heap_alloc)]
+  resolve([StringView] path) {
+    [vector<i32> mut] spans{vector<i32>{}}
     [bool] absolute{is_absolute(path)}
     [i32 mut] start{0i32}
     for([i32 mut] at{0i32}, at <= path.count(), at++) {
@@ -83,9 +82,10 @@ namespace path {
         start = at + 1i32
       }
     }
+    return(spans)
   }
 
-  // The component `index` of `spans` (made by resolve_into from the same `path`).
+  // The component `index` of `spans` (made by resolve from the same `path`).
   [return<StringView>]
   component([StringView] path, [vector<i32>] spans, [i32] index) {
     return(path.slice(spans[index * 2i32], spans[index * 2i32 + 1i32]))
@@ -165,8 +165,7 @@ namespace path {
   // root, so "/.." is "/" and "../a" stays. The result of an empty relative path is ".".
   [public return<String> effects(heap_alloc)]
   normalize([StringView] path) {
-    [vector<i32> mut] spans{vector<i32>{}}
-    resolve_into(path, spans)
+    [vector<i32>] spans{resolve(path)}
     [String mut] out{String{}}
     if(is_absolute(path)) {
       out.append("/")
@@ -192,10 +191,8 @@ namespace path {
     if(is_absolute(path) != is_absolute(base)) {
       return(String{})
     }
-    [vector<i32> mut] targetSpans{vector<i32>{}}
-    [vector<i32> mut] originSpans{vector<i32>{}}
-    resolve_into(path, targetSpans)
-    resolve_into(base, originSpans)
+    [vector<i32>] targetSpans{resolve(path)}
+    [vector<i32>] originSpans{resolve(base)}
     [i32] targetCount{targetSpans.count() / 2i32}
     [i32] originCount{originSpans.count() / 2i32}
     [i32 mut] shared{0i32}

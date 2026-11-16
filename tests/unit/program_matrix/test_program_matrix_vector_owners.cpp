@@ -1339,4 +1339,59 @@ TEST_CASE("printing at of a builtin vector beside stdlib Vectors of other elemen
                         "7\n9\n10\n5000000000\n47\n");
 }
 
+// A definition of the stdlib returns a vector it built, and the caller owns it: a function of an imported stdlib module
+// is a definition under `/std/`, which the lowerer once took for an accessor that hands out a place. The namespace
+// below stands in for such a module.
+namespace {
+const std::string StdlibVectorReturns = R"(
+namespace std {
+namespace probe {
+  [effects(heap_alloc), return<vector<i32>>]
+  make_ints([i32] first) {
+    [vector<i32> mut] out{vector<i32>{}}
+    out.push(first)
+    out.push(first + 1i32)
+    return(out)
+  }
+
+  [effects(heap_alloc), return<vector<String>>]
+  make_labels([i32] id) {
+    [vector<String> mut] out{vector<String>{}}
+    out.push(/label(id))
+    out.push(/label(id + 1i32))
+    return(out)
+  }
+}
+}
+)";
+} // namespace
+
+TEST_CASE("a vector of scalars returned by a stdlib definition is freed by its caller") {
+  runVectorOwnerProgram("stdlib_returned_vector_scalars",
+                        StdlibVectorReturns,
+                        R"(
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      [vector<i32>] values{/std/probe/make_ints(3i32)}
+      total = total + values.count() + values.at(1i32)
+    }
+    print_line(total)
+)",
+                        "240\n");
+}
+
+TEST_CASE("a vector of Strings returned by a stdlib definition is freed by its caller") {
+  runVectorOwnerProgram("stdlib_returned_vector_strings",
+                        StdlibVectorReturns,
+                        R"(
+    [i32 mut] total{0i32}
+    repeat(40i32) {
+      [vector<String>] labels{/std/probe/make_labels(1i32)}
+      total = total + labels.count() + first_byte(labels.at(1i32))
+    }
+    print_line(total)
+)",
+                        "2080\n");
+}
+
 TEST_SUITE_END();

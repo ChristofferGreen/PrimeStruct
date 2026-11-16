@@ -2358,6 +2358,7 @@ are left unarchived.
 | TODO-5997 | A `[Vector<T> mut]` parameter reads the caller's count and `String` elements | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5998 | `at` on a builtin `vector<T>` is not lowered through another instance of the stdlib `at` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5999 | `print_line` of `at` on a builtin `vector<T>` is typed when a stdlib `Vector` of another element type exists | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6000 | A `vector<T>` a stdlib-imported function returns is freed by its caller | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 
 <!-- INDEX-END -->
 
