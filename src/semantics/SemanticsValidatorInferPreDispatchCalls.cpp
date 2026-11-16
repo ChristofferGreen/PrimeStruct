@@ -486,8 +486,21 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           logicalMethodResolved == "/FileError/why") {
         return finish(ReturnKind::String);
       }
+      // The element access of a builtin vector receiver keeps its builtin return kind: the path also names the
+      // generated instances made for stdlib vectors of other element types, which must not answer for it.
+      const bool hasDefinitionForReceiver = [&]() {
+        if (isStdNamespacedVectorCompatibilityHelperPath(logicalMethodResolved, "at") ||
+            isStdNamespacedVectorCompatibilityHelperPath(logicalMethodResolved, "at_unsafe")) {
+          std::string builtinReceiverElemType;
+          if (resolveVectorTarget(expr.args.front(), builtinReceiverElemType)) {
+            const auto exactIt = defMap_.find(logicalMethodResolved);
+            return exactIt != defMap_.end() && exactIt->second != nullptr;
+          }
+        }
+        return hasDefinitionPath(logicalMethodResolved);
+      }();
       if (isVisibleStdlibKeyValueMethodWithBuiltinReturn(logicalMethodResolved) &&
-          !hasDefinitionPath(logicalMethodResolved)) {
+          !hasDefinitionForReceiver) {
         ReturnKind builtinMethodKind = ReturnKind::Unknown;
         if (resolveBuiltinCollectionMethodReturnKind(
                 logicalMethodResolved,
@@ -507,12 +520,11 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
             soaUnavailableMethodDiagnostic(methodResolved));
       }
       ReturnKind builtinMethodKind = ReturnKind::Unknown;
-      if (!hasDefinitionPath(logicalMethodResolved) &&
-          resolveBuiltinCollectionMethodReturnKind(
-              logicalMethodResolved,
-              expr.args.front(),
-              builtinCollectionDispatchResolvers,
-              builtinMethodKind)) {
+      if (!hasDefinitionForReceiver &&
+          resolveBuiltinCollectionMethodReturnKind(logicalMethodResolved,
+                                                   expr.args.front(),
+                                                   builtinCollectionDispatchResolvers,
+                                                   builtinMethodKind)) {
         return finish(builtinMethodKind);
       }
       if (!hasDefinitionPath(methodResolved) &&

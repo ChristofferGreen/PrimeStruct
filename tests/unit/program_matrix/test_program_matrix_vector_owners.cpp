@@ -1317,4 +1317,26 @@ TEST_CASE("at on a stdlib Vector still reads its own element type beside builtin
                         "47\n47\n97\n");
 }
 
+// The return kind of the element access is the builtin one as well: `print_line` and arithmetic on `values.at(i)` must
+// not ask the generated instances of the stdlib `at` made for other element types.
+TEST_CASE("printing at of a builtin vector beside stdlib Vectors of other element types") {
+  runVectorOwnerProgram("builtin_vector_at_print_beside_stdlib_vector",
+                        LongTextHelper,
+                        R"(
+    [Vector<i64> mut] wide{/std/collections/vector/vector<i64>()}
+    wide.push(5000000000i64)
+    [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+    names.push(long_text(3i32))
+    [vector<i32> mut] values{vector<i32>{}}
+    values.push(7i32)
+    values.push(9i32)
+    print_line(values.at(0i32))
+    print_line(values.at_unsafe(1i32))
+    print_line(values.at(1i32) + 1i32)
+    print_line(wide.at(0i32))
+    print_line(names.at(0i32).count())
+)",
+                        "7\n9\n10\n5000000000\n47\n");
+}
+
 TEST_SUITE_END();

@@ -208,7 +208,6 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-5999 | `print_line` of `at` on a builtin `vector<T>` is typed when a stdlib `Vector` of another element type exists | ready | vector-owners |
 
 ### Ready Now
 
@@ -1626,18 +1625,3 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
-
-- [~] TODO-5999: `print_line` of `at` on a builtin `vector<T>` is typed when a stdlib `Vector` of another element type exists
-  - owner: ai
-  - status: ready
-  - claimed_by: vec-5999 (worktree-agent-aa9bb45efaa5b13e4), 2026-11-16
-  - created_at: 2026-11-16
-  - phase: Collections (docs/spec/stdlib-reference.md)
-  - parallel_track: vector-owners
-  - scope: Found with TODO-5998. `[vector<i32> mut] values{vector<i32>{}}` with `print_line(values.at(0i32))` fails with `print_line requires an integer/bool or string literal/binding argument` when the program also holds a stdlib `Vector<String>` (or two stdlib vectors of other element types): the return kind of the method call `at` (`inferExprReturnKind`, not the query type that TODO-5998 fixed) is answered by the generated instances of the stdlib `at` (none, or an ambiguous family) instead of the builtin receiver. `[i32] y{values.at(0i32)}` and `values[0i32]` work.
-  - implementation_notes: the method-call branch of the return-kind inference in src/semantics/SemanticsValidatorInfer*.cpp and `resolveBuiltinCollectionAccessCallReturnKind` in src/semantics/SemanticsValidatorInferCollectionDispatch.cpp (it returns false for a method call); `isPrintableStatementExpr` in src/semantics/SemanticsValidatorStatementPrintability.cpp. Reproduce: a stdlib `Vector<i64>` and a builtin `vector<i32>`, `print_line(values.at(0i32))`.
-  - acceptance:
-    - positive: `print_line(values.at(i))`, `at_unsafe`, and `values.at(i) + 1i32` of a builtin `vector<i32>` next to stdlib vectors of other element types print on the VM and `optexe` with balanced heaps
-    - negative: `.at` on the stdlib `Vector<T>` still reads its own element type
-    - full release gate green
-  - stop_rule: the return kind of `at` and `at_unsafe` method calls on a builtin vector receiver.
