@@ -767,6 +767,201 @@ main() {
   runTaskProgram(program);
 }
 
+// A spawned call with a builtin `vector<T>` parameter or result runs as a task: the spawner copies the vector (a
+// `copy` or `move` parameter's copy belongs to the task, which destroys it; the others are lent), the record crosses
+// in the task block, and a vector result is a local the task built, whose record and buffer the waiter takes over.
+// Elements are scalars, `String`s and structs; the heap is balanced afterwards (`probe`).
+TEST_CASE("a task takes and returns builtin vectors") {
+  program_matrix::ProgramCase program;
+  program.name = "task_vector_arguments";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+}
+
+[return<i32> effects(heap_alloc)]
+total([vector<i32>] values) {
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < values.count()) {
+    sum = sum + values[i]
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<i32> effects(heap_alloc)]
+grow([vector<i32> copy mut] values) {
+  values.push(7i32)
+  values.push(8i32)
+  return(values.count())
+}
+
+[return<i32> effects(heap_alloc)]
+eat([vector<i32> move] values) {
+  return(values.count() * 10i32)
+}
+
+[return<i32> effects(heap_alloc)]
+labels_size([vector<String>] names) {
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < names.count()) {
+    sum = sum + names[i].count()
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<i32> effects(heap_alloc)]
+items_size([vector<Item> copy mut] items) {
+  items.push(Item{99i32, String{}})
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < items.count()) {
+    sum = sum + items[i].id + items[i].label.count()
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<vector<String>> effects(heap_alloc)]
+words([i32] count) {
+  [vector<String> mut] out{vector<String>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    [String mut] w{String{}}
+    w.append("word number, long enough to live on the string heap")
+    out.push(w)
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<vector<Item>> effects(heap_alloc)]
+make_items([i32] count) {
+  [vector<Item> mut] out{vector<Item>()}
+  [i32 mut] i{0i32}
+  while(i < count) {
+    [String mut] w{String{}}
+    w.append("item label")
+    out.push(Item{i, w})
+    i = i + 1i32
+  }
+  return(out)
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [vector<i32> mut] values{vector<i32>()}
+  values.push(4i32)
+  values.push(5i32)
+  [vector<String> mut] names{vector<String>()}
+  [String mut] n{String{}}
+  n.append("a name long enough to live on the string heap")
+  names.push(n)
+  [vector<Item> mut] items{vector<Item>()}
+  [String mut] l{String{}}
+  l.append("lbl")
+  items.push(Item{3i32, l})
+  [vector<i32> mut] other{vector<i32>()}
+  other.push(1i32)
+  other.push(2i32)
+  other.push(3i32)
+  [vector<i32> mut] last_in{vector<i32>()}
+  last_in.push(9i32)
+  [Task<i32>] a{[spawn] total(values)}
+  [Task<i32>] g{[spawn] grow(values)}
+  [Task<i32>] e{[spawn] eat(other)}
+  [Task<i32>] s{[spawn] labels_size(names)}
+  [Task<i32>] t{[spawn] items_size(items)}
+  [Task<vector<String>>] w{[spawn] words(3i32)}
+  [Task<vector<Item>>] m{[spawn] make_items(2i32)}
+  print_line(wait(a))
+  print_line(wait(g))
+  print_line(wait(e))
+  print_line(wait(s))
+  print_line(wait(t))
+  [vector<String>] ws{wait(w)}
+  print_line(ws.count())
+  print_line(ws[2i32].count())
+  [vector<Item>] ms{wait(m)}
+  print_line(ms.count())
+  print_line(ms[1i32].label.count() + ms[1i32].id)
+  print_line(values.count())
+  print_line(items.count())
+  [Task<vector<String>>] w2{[spawn] words(2i32)}
+  [Task<i32>] last{[spawn] eat(move(last_in))}
+  print_line(wait(last))
+  return(wait(w2).count())
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "9\n4\n30\n45\n105\n3\n51\n2\n11\n2\n1\n10\n2\n0\n";
+  // The native backend has no heap statistics.
+  program.skipConfigs = {"native-O0", "native-O2"};
+  runTaskProgram(program);
+}
+
+// A spawn that still runs inline (a map parameter, a vector result that is not a local the task built) gives the
+// same values on every schedule.
+TEST_CASE("a spawn that stays inline still returns its values") {
+  program_matrix::ProgramCase program;
+  program.name = "task_vector_inline_shapes";
+  program.source = R"(
+import /std/collections/*
+
+[return<i32>]
+table_size([map<i32, i32>] table) {
+  return(table.count())
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+twice([i32] count) {
+  [vector<i32>] out{vector<i32>(count, count)}
+  return(out)
+}
+
+[effects(task, io_out, heap_alloc) return<int>]
+main() {
+  [map<i32, i32> mut] table{map<i32, i32>(1i32, 2i32)}
+  [Task<i32>] sized{[spawn] table_size(table)}
+  [Task<vector<i32>>] doubled{[spawn] twice(5i32)}
+  print_line(wait(sized))
+  [vector<i32>] pair{wait(doubled)}
+  print_line(pair.count())
+  print_line(pair[1i32])
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n2\n5\n";
+  runTaskProgram(program);
+}
+
 TEST_CASE("a name bound twice by a destructuring inside a block is a duplicate binding") {
   const std::filesystem::path dir =
       primec::testing::testScratchPath("program_matrix/task_destructuring_duplicate/x")

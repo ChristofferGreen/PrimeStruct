@@ -3,6 +3,7 @@
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererSharedTypes.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -475,6 +476,30 @@ bool isSumDefinitionPath(
          definitionHasTransform(*defIt->second, "sum");
 }
 
+// A builtin `vector<T>` type (not the stdlib struct of the capitalized spelling) whose element the lowerer knows how to copy and
+// destroy.
+bool isBuiltinVectorType(const Transform &transform,
+                         const std::string &namespacePrefix,
+                         const std::unordered_set<std::string> &structNames) {
+  if (transform.name != "vector" || transform.templateArgs.size() != 1 ||
+      !transform.arguments.empty()) {
+    return false;
+  }
+  std::string elementPath;
+  return resolveBuiltinVectorElementStructPath(
+      transform.templateArgs.front(),
+      namespacePrefix,
+      [&](const std::string &typeName, const std::string &prefix, std::string &pathOut) {
+        pathOut = resolveStructTypeName(typeName, prefix, structNames);
+        if (pathOut.empty() && typeName == "String" && structNames.count("/std/text/String") > 0) {
+          pathOut =
+              "/std/text/String"; // the stdlib text, declared `[String]` after `import /std/text/*`
+        }
+        return !pathOut.empty();
+      },
+      elementPath);
+}
+
 // A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
 // a scalar or such a struct (the address). A `copy` or `move` parameter of a scalar or of a struct that is not a sum
 // is taken too: the call site binds it (copying or moving the argument) in its own frame and passes the value or the
@@ -484,7 +509,8 @@ bool isAddressAbiParameter(
     const Expr &param,
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, const Definition *> &definitionsByPath,
-    bool allowStringParams) {
+    bool allowStringParams,
+    bool allowCollections) {
   // A default (`[i32] limit{3i32}`) is fine: the call site binds the parameter, default included, as an inlined call
   // would, and the callee gets its value.
   if (isArgsPackBinding(param) || param.args.size() > 1) {
@@ -499,6 +525,9 @@ bool isAddressAbiParameter(
         transform.name == "effects" || transform.name == "capabilities" ||
         transform.name == "copy" || transform.name == "move") {
       continue;
+    }
+    if (allowCollections && isBuiltinVectorType(transform, def.namespacePrefix, structNames)) {
+      return true;
     }
     if (ownedParam) {
       if (!transform.arguments.empty() || !transform.templateArgs.empty()) {
@@ -549,6 +578,70 @@ bool hasTransformReturnType(const Definition &def, const char *typeName) {
   return false;
 }
 
+// The `return<vector<T>>` transform of `def` when it names a builtin vector the lowerer can copy, else null.
+const Transform *builtinVectorReturnType(const Definition &def,
+                                         const std::unordered_set<std::string> &structNames) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+      return nullptr;
+    }
+    Transform inner;
+    inner.name = trimTemplateTypeText(base);
+    inner.templateArgs.push_back(trimTemplateTypeText(argText));
+    return isBuiltinVectorType(inner, def.namespacePrefix, structNames) ? &transform : nullptr;
+  }
+  return nullptr;
+}
+
+// The mutable `vector<T>` bindings of a body and whether every `return` hands back one of them: a task returns the
+// record of a vector it built, so the waiter takes that vector over. A parameter, a field or another expression would
+// need a copy the return does not make.
+void collectVectorReturnForms(const Expr &expr,
+                              std::unordered_set<std::string> &ownedVectors,
+                              bool &allReturnsOwned) {
+  if (expr.isLambda) {
+    return;
+  }
+  if (expr.isBinding && expr.args.size() == 1) {
+    bool isMutVector = false;
+    bool isVector = false;
+    for (const Transform &transform : expr.transforms) {
+      isMutVector = isMutVector || transform.name == "mut";
+      isVector = isVector || (transform.name == "vector" && transform.templateArgs.size() == 1);
+    }
+    if (isVector && isMutVector) {
+      ownedVectors.insert(expr.name);
+    }
+  }
+  if (expr.kind == Expr::Kind::Call && expr.name == "return") {
+    if (expr.args.size() != 1 || expr.args.front().kind != Expr::Kind::Name ||
+        ownedVectors.count(expr.args.front().name) == 0) {
+      allReturnsOwned = false;
+    }
+  }
+  for (const Expr &arg : expr.args) {
+    collectVectorReturnForms(arg, ownedVectors, allReturnsOwned);
+  }
+  for (const Expr &bodyArg : expr.bodyArguments) {
+    collectVectorReturnForms(bodyArg, ownedVectors, allReturnsOwned);
+  }
+}
+
+bool vectorResultReturnsOwnedLocals(const Definition &def) {
+  std::unordered_set<std::string> ownedVectors;
+  bool allReturnsOwned = true;
+  for (const Expr &stmt : def.statements) {
+    collectVectorReturnForms(stmt, ownedVectors, allReturnsOwned);
+  }
+  return allReturnsOwned;
+}
+
 bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext &context) {
   const auto &byPath = *context.definitionsByPath;
   const auto &structNames = *context.structNames;
@@ -586,13 +679,15 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     }
   }
   for (const Expr &param : def.parameters) {
-    if (!isAddressAbiParameter(def, param, structNames, byPath, context.allowStringParams)) {
+    if (!isAddressAbiParameter(
+            def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
       return false;
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
-      realCallStructReturnPath(def, structNames, byPath).empty()) {
+      realCallStructReturnPath(def, structNames, byPath).empty() &&
+      !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return false;
   }
   if (definitionUsesTry(def)) {
@@ -607,6 +702,20 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
 }
 
 } // namespace
+
+const Transform *taskParameterTypeTransform(const Expr &param) {
+  for (const Transform &transform : param.transforms) {
+    if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+        transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+        transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+        transform.name == "effects" || transform.name == "capabilities" ||
+        transform.name == "copy" || transform.name == "move") {
+      continue;
+    }
+    return &transform;
+  }
+  return nullptr;
+}
 
 bool resolveTaskSpawnShape(const Definition &def,
                            const RealCallShapeContext &context,
@@ -652,6 +761,13 @@ bool resolveTaskSpawnShape(const Definition &def,
       reasonOut = subject + "is a `string`, which no real call takes yet";
       return false;
     }
+    if (isBuiltinVectorType(*typeTransform, def.namespacePrefix, structNames)) {
+      TaskSpawnParameterShape parameter;
+      parameter.kind = ownedParam ? TaskSpawnParameterShape::Kind::OwnedVector
+                                  : TaskSpawnParameterShape::Kind::Vector;
+      shapeOut.parameters.push_back(std::move(parameter));
+      continue;
+    }
     if (!typeTransform->templateArgs.empty() || !typeTransform->arguments.empty() ||
         typeTransform->name.find('<') != std::string::npos) {
       reasonOut = subject + "is a collection or another template type";
@@ -684,7 +800,13 @@ bool resolveTaskSpawnShape(const Definition &def,
   if (!scalarOrVoidResult) {
     shapeOut.resultStructPath =
         realCallStructReturnPath(def, structNames, *context.definitionsByPath);
-    if (shapeOut.resultStructPath.empty()) {
+    if (shapeOut.resultStructPath.empty() && builtinVectorReturnType(def, structNames) != nullptr) {
+      shapeOut.resultIsVector = true;
+      if (!vectorResultReturnsOwnedLocals(def)) {
+        reasonOut = "its vector result is not always a `mut` vector local the task built";
+        return false;
+      }
+    } else if (shapeOut.resultStructPath.empty()) {
       reasonOut = "its result is not a scalar or a struct a real call returns";
       return false;
     }
@@ -703,6 +825,7 @@ bool resolveTaskSpawnShape(const Definition &def,
   }
   RealCallShapeContext addressContext = context;
   addressContext.allowStructs = true;
+  addressContext.allowCollections = true;
   if (!isAddressAbiRealCallShape(def, addressContext)) {
     reasonOut = "it is not a definition a real call takes";
     return false;

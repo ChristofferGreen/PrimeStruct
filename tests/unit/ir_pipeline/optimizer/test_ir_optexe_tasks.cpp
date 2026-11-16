@@ -760,9 +760,10 @@ main() {
 }
 
 TEST_CASE("primec lowers a spawned call with String and struct values to a task") {
-  // Positive: a `String` parameter, a `String` result and a struct result with a `String` field run as tasks, with
-  // no inline note. Negative: a collection parameter or result and a `string` parameter keep the call inline, and
-  // the report names the reason.
+  // Positive: a `String` parameter, a `String` result, a struct result with a `String` field, a `vector<i32>`
+  // parameter and a `vector<i32>` result built in a local run as tasks, with no inline note. Negative: a map
+  // parameter, a vector result that is not a local the task built, a `Vector` (stdlib) result and a `string`
+  // parameter keep the call inline, and the report names the reason.
   const std::string source = R"(
 import /std/text/*
 import /std/collections/*
@@ -791,6 +792,17 @@ make_reply([String] text, [i32] code) {
 [return<i32>]
 total([vector<i32>] values) {
   return(values.count())
+}
+
+[return<i32>]
+table_size([map<i32, i32>] table) {
+  return(table.count())
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+twice([i32] count) {
+  [vector<i32>] out{vector<i32>(count, count)}
+  return(out)
 }
 
 [return<i32>]
@@ -824,27 +836,34 @@ main() {
   [Task<vector<i32>>] listed{[spawn] numbers(3i32)};
   [vector<i32>] list{wait(listed)}
   print_line(list.count())
+  [map<i32, i32> mut] table{map<i32, i32>(1i32, 2i32)}
+  [Task<i32>] sized{[spawn] table_size(table)};
+  print_line(wait(sized))
+  [Task<vector<i32>>] doubled{[spawn] twice(5i32)};
+  [vector<i32>] pair{wait(doubled)}
+  print_line(pair.count())
   return(0i32)
 }
 )";
   const std::filesystem::path sourcePath = scratch("spawn_structs.prime");
   std::ofstream(sourcePath) << source;
-  const std::string expectedOut = "51\n52\n1\n4\n1\n";
+  const std::string expectedOut = "51\n52\n1\n4\n1\n1\n2\n";
   const auto checkNotes = [](const std::string &report) {
     CHECK_FALSE(contains(report, "/greet"));
     CHECK_FALSE(contains(report, "/make_reply"));
+    CHECK_FALSE(contains(report, "/total"));
+    CHECK_FALSE(contains(report, "/numbers"));
     CHECK(contains(
         report,
-        "lowering: spawn of /total runs inline: parameter `values` is a collection or another "
+        "lowering: spawn of /table_size runs inline: parameter `table` is a collection or another "
         "template type\n"));
     CHECK(contains(report,
                    "lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
                    "which no real "
                    "call takes yet\n"));
     CHECK(contains(report,
-                   "lowering: spawn of /numbers runs inline: its result is not a scalar or a "
-                   "struct a real call "
-                   "returns\n"));
+                   "lowering: spawn of /twice runs inline: its vector result is not always a `mut` "
+                   "vector local the task built\n"));
   };
 
   const std::filesystem::path cppPath = scratch("spawn_structs.cpp");

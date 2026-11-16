@@ -120,8 +120,9 @@
           vectorInfo.isSoaVector) {
         return false;
       }
-      return ir_lowerer::isFreshBuiltinVectorExpr(
-          initExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
+      return ir_lowerer::isTaskVectorWait(initExpr, localsIn) ||
+             ir_lowerer::isFreshBuiltinVectorExpr(
+                 initExpr, [&](const Expr &candidate) { return resolveDefinitionCall(candidate); });
     };
     auto extractDeclaredSumReturnDefinition = [&]() -> const Definition * {
       const std::string &definitionPath =
@@ -470,13 +471,14 @@
           const Definition *spawnedCallee = resolveDefinitionCall(spawnedTaskCall);
           std::string inlineReason = "it is not a definition";
           ir_lowerer::TaskSpawnShape taskShape;
-          if (spawnedCallee != nullptr &&
-              ir_lowerer::taskSpawnRunsOnScheduler(
-                  *spawnedCallee, setupStage, taskShape, inlineReason)) {
-            std::vector<Expr> taskParams;
-            std::vector<const Expr *> taskArgs;
-            std::vector<const Expr *> taskPackedArgs;
-            size_t taskPackedParamIndex = 0;
+          std::vector<Expr> taskParams;
+          std::vector<const Expr *> taskArgs;
+          std::vector<const Expr *> taskPackedArgs;
+          size_t taskPackedParamIndex = 0;
+          bool spawnAsTask =
+              spawnedCallee != nullptr && ir_lowerer::taskSpawnRunsOnScheduler(
+                                              *spawnedCallee, setupStage, taskShape, inlineReason);
+          if (spawnAsTask) {
             if (!ir_lowerer::buildInlineCallOrderedArguments(spawnedTaskCall,
                                                              *spawnedCallee,
                                                              structNames,
@@ -488,6 +490,36 @@
                                                              error)) {
               return false;
             }
+            // A vector argument crosses as a copy the spawner makes: a named vector, a field or element of one, a
+            // fresh vector, or `move` of a name. Another expression may only alias a vector, so it stays inline.
+            for (size_t argIndex = 0;
+                 argIndex < taskArgs.size() && argIndex < taskShape.parameters.size();
+                 ++argIndex) {
+              const auto kind = taskShape.parameters[argIndex].kind;
+              if (kind != ir_lowerer::TaskSpawnParameterShape::Kind::Vector &&
+                  kind != ir_lowerer::TaskSpawnParameterShape::Kind::OwnedVector) {
+                continue;
+              }
+              const Expr *vectorArg = taskArgs[argIndex];
+              const bool copyable =
+                  vectorArg != nullptr &&
+                  (vectorArg->kind == Expr::Kind::Name ||
+                   (vectorArg->kind == Expr::Kind::Call &&
+                    (vectorArg->isFieldAccess ||
+                     ir_lowerer::isElementAccessCopySourceExpr(*vectorArg) ||
+                     ir_lowerer::isFreshBuiltinVectorExpr(
+                         *vectorArg,
+                         [&](const Expr &maker) { return resolveDefinitionCall(maker); }) ||
+                     (isSimpleCallName(*vectorArg, "move") && vectorArg->args.size() == 1 &&
+                      vectorArg->args.front().kind == Expr::Kind::Name))));
+              if (!copyable) {
+                spawnAsTask = false;
+                inlineReason = "its vector argument is not a name, a place or a fresh vector";
+                break;
+              }
+            }
+          }
+          if (spawnAsTask) {
             if (!taskPackedArgs.empty() || taskArgs.size() != spawnedCallee->parameters.size() ||
                 taskArgs.size() != taskShape.parameters.size()) {
               error = "internal error: unexpected arguments for spawned task " +
@@ -501,7 +533,15 @@
                 return false;
               }
             }
+            const bool hasVectorArgument = std::any_of(
+                taskShape.parameters.begin(),
+                taskShape.parameters.end(),
+                [](const ir_lowerer::TaskSpawnParameterShape &parameter) {
+                  return parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::Vector ||
+                         parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::OwnedVector;
+                });
             const bool usesTaskBlock =
+                hasVectorArgument || taskShape.resultIsVector ||
                 !taskShape.resultStructPath.empty() ||
                 std::any_of(taskShape.parameters.begin(),
                             taskShape.parameters.end(),
@@ -537,7 +577,11 @@
             LowerSetupStageState::TaskSpawnSite site;
             const int32_t siteIndex = static_cast<int32_t>(setupStage.taskSpawnSites.size());
             StructSlotLayout resultLayout;
-            if (!taskShape.resultStructPath.empty()) {
+            if (taskShape.resultIsVector) {
+              // The task copies the vector's record into the block; the waiter takes it over.
+              site.resultSlots = 5;
+              site.resultIsVector = true;
+            } else if (!taskShape.resultStructPath.empty()) {
               if (!resolveStructSlotLayout(taskShape.resultStructPath, resultLayout) ||
                   resultLayout.totalSlots <= 0) {
                 error = "internal error: no struct layout for the result of spawned task " +
@@ -552,6 +596,7 @@
               int32_t blockOffset = 0;
             };
             std::vector<TaskArgument> taskArguments(taskArgs.size());
+            constexpr int32_t VectorRecordSlots = 5;
             int32_t blockSlots = site.resultSlots;
             for (size_t argIndex = 0; argIndex < taskArgs.size(); ++argIndex) {
               const ir_lowerer::TaskSpawnParameterShape &parameter = taskShape.parameters[argIndex];
@@ -563,6 +608,62 @@
                 argument.local = allocTempLocal();
                 function.instructions.push_back(
                     {IrOpcode::StoreLocal, static_cast<uint64_t>(argument.local)});
+                continue;
+              }
+              const bool vectorArgument =
+                  parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::Vector ||
+                  parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::OwnedVector;
+              if (vectorArgument) {
+                // The record's address is the argument: a vector of this scope that owns a copy of the spawner's
+                // (or the moved or fresh one), which the task reads while the spawner's flag is off, or, an owned
+                // parameter, destroys.
+                const Expr *typeParam = &spawnedCallee->parameters[argIndex];
+                const Transform *vectorType = ir_lowerer::taskParameterTypeTransform(*typeParam);
+                if (vectorType == nullptr) {
+                  error = "internal error: no vector type for an argument of spawned task " +
+                          spawnedCallee->fullPath;
+                  return false;
+                }
+                Expr argumentBinding = stmt;
+                argumentBinding.name =
+                    "__task_argument_" + std::to_string(siteIndex) + "_" + std::to_string(argIndex);
+                argumentBinding.transforms.clear();
+                argumentBinding.transforms.push_back(*vectorType);
+                Transform argumentMut;
+                argumentMut.name = "mut";
+                argumentBinding.transforms.push_back(std::move(argumentMut));
+                // `move(name)` is copied like the name: the spawner's vector is destroyed with its scope, and
+                // the task owns the copy.
+                const Expr &vectorSource = isSimpleCallName(*taskArgs[argIndex], "move") &&
+                                                   taskArgs[argIndex]->args.size() == 1
+                                               ? taskArgs[argIndex]->args.front()
+                                               : *taskArgs[argIndex];
+                argumentBinding.args.front() = vectorSource;
+                argumentBinding.semanticNodeId = 0;
+                if (!emitStatement(argumentBinding, localsIn)) {
+                  return false;
+                }
+                const auto argumentIt = localsIn.find(argumentBinding.name);
+                if (argumentIt == localsIn.end() ||
+                    argumentIt->second.kind != LocalInfo::Kind::Vector ||
+                    argumentIt->second.dropFlagLocal < 0) {
+                  error = "internal error: vector argument of spawned task " +
+                          spawnedCallee->fullPath + " is not an owning vector local";
+                  return false;
+                }
+                // The record (a frame local of this function, which another call stack cannot read) is copied into
+                // the block; the task reads the copy, which holds the same buffer.
+                argument.local = argumentIt->second.index;
+                argument.slots = VectorRecordSlots;
+                argument.blockOffset = blockSlots;
+                blockSlots += VectorRecordSlots;
+                function.instructions.push_back({IrOpcode::PushI32, 0});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal,
+                     static_cast<uint64_t>(argumentIt->second.dropFlagLocal)});
+                if (parameter.kind == ir_lowerer::TaskSpawnParameterShape::Kind::Vector) {
+                  site.lentArgumentDropFlags.push_back(argumentIt->second.dropFlagLocal);
+                }
                 continue;
               }
               StructSlotLayout argumentLayout;
@@ -660,7 +761,16 @@
             LocalInfo taskInfo;
             taskInfo.kind = LocalInfo::Kind::Value;
             taskInfo.taskSpawnSite = siteIndex;
-            if (site.resultSlots == 0) {
+            if (site.resultSlots == 0 || site.resultIsVector) {
+              if (site.resultIsVector) {
+                site.resultRecordLocal = nextLocal;
+                nextLocal += 5;
+                std::string vectorBase;
+                std::string vectorElement;
+                if (splitTemplateTypeName(taskResultType, vectorBase, vectorElement)) {
+                  taskInfo.taskResultVectorElementText = trimTemplateTypeText(vectorElement);
+                }
+              }
               taskInfo.isTaskHandle = true;
               taskInfo.valueKind = taskResultType == "void" ? LocalInfo::ValueKind::Unknown
                                                             : valueKindFromTypeName(taskResultType);

@@ -66,6 +66,9 @@ struct LocalInfo {
   // LowerSetupStageState::taskSpawnSites, or -1. With a struct result the binding is an owning struct local (not a
   // task handle) that the wait fills.
   int32_t taskSpawnSite = -1;
+  // A task handle whose result is a builtin vector: the element type text of that vector, so a read of `wait(t)` as
+  // a temporary knows the type of the vector it owns.
+  std::string taskResultVectorElementText;
 };
 
 inline bool hasKeyValueKinds(const LocalInfo &info) {

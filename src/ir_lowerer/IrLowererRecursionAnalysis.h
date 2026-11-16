@@ -84,6 +84,9 @@ struct RealCallShapeContext {
   // the parameter as `count()` or as the argument of `__pstext_literal`, since indexing a runtime string expands to
   // a branch per table string.
   bool allowStringParams = false;
+  // A builtin `vector<T>` parameter or result: only a spawned call's shape takes them (the spawner copies the vector
+  // and the task reads or owns the record's address), a direct call keeps its definition inline.
+  bool allowCollections = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
@@ -95,13 +98,19 @@ bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &
 // address does not cross to another call stack, and the task gets the block's address; a struct result is written to
 // such a block too (`resultStructPath`, empty for a scalar or void result).
 struct TaskSpawnParameterShape {
-  enum class Kind { Scalar, Struct, OwnedStruct } kind = Kind::Scalar;
+  // A `Vector` parameter is a builtin `vector<T>`: one slot holding the record's address, a copy of the spawner's
+  // vector that it lends (or, `owned`, gives the task to destroy).
+  enum class Kind { Scalar, Struct, OwnedStruct, Vector, OwnedVector } kind = Kind::Scalar;
   std::string structPath;
 };
 struct TaskSpawnShape {
   std::vector<TaskSpawnParameterShape> parameters;
   std::string resultStructPath;
+  // The result is a builtin `vector<T>`: the task returns the record's address and the waiter owns the vector.
+  bool resultIsVector = false;
 };
+// The parameter's type transform (past `mut`, `copy`, `move` and the like), or null.
+const Transform *taskParameterTypeTransform(const Expr &param);
 // False with the reason in `reasonOut` when `def` cannot run as a task: a `mut`, Pointer, Reference, `string` or
 // collection parameter, or a definition the address ABI does not call.
 bool resolveTaskSpawnShape(const Definition &def,

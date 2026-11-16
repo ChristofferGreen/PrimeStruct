@@ -89,9 +89,10 @@
                                                           isSimpleCallName(*read, "at_unsafe"));
       if ((countRead || elementRead) && !read->isFieldAccess && !read->isBinding &&
           read->bodyArguments.empty() &&
-          ir_lowerer::isFreshBuiltinVectorExpr(read->args.front(), [&](const Expr &candidate) {
-            return resolveDefinitionCall(candidate);
-          })) {
+          (ir_lowerer::isTaskVectorWait(read->args.front(), localsIn) ||
+           ir_lowerer::isFreshBuiltinVectorExpr(read->args.front(), [&](const Expr &candidate) {
+             return resolveDefinitionCall(candidate);
+           }))) {
         const Definition *reader = read->isMethodCall ? resolveMethodCallDefinition(*read, localsIn)
                                                       : resolveDefinitionCall(*read);
         const auto resultKind =
@@ -120,6 +121,14 @@
           std::string collectionName;
           if (getBuiltinCollectionName(receiver, collectionName)) {
             vectorType.templateArgs = receiver.templateArgs;
+          } else if (isSimpleCallName(receiver, "wait") && receiver.args.size() == 1 &&
+                     receiver.args.front().kind == Expr::Kind::Name) {
+            // The vector a task returned: its element type is on the handle.
+            const auto handleIt = localsIn.find(receiver.args.front().name);
+            if (handleIt != localsIn.end() &&
+                !handleIt->second.taskResultVectorElementText.empty()) {
+              vectorType.templateArgs.push_back(handleIt->second.taskResultVectorElementText);
+            }
           } else if (const Definition *maker = resolveDefinitionCall(receiver); maker != nullptr) {
             hiddenBinding.namespacePrefix = maker->namespacePrefix;
             for (const auto &transform : maker->transforms) {
@@ -276,6 +285,34 @@
           if (it->second.isTaskHandle) {
             // The only read of a task handle the checker allows is a wait (`wait(t)`, or a name in a multi-wait
             // tuple), and it consumes the handle. A `Task<void>` wait pushes 0, which its statement pops.
+            if (it->second.taskSpawnSite >= 0) {
+              const LowerSetupStageState::TaskSpawnSite &vectorSite =
+                  setupStage.taskSpawnSites[static_cast<size_t>(it->second.taskSpawnSite)];
+              if (vectorSite.resultIsVector) {
+                // A vector result: the task copied the record into the block; it moves to a record of this frame,
+                // whose address is the value, and the waiter owns the vector it holds.
+                function.instructions.push_back({IrOpcode::TaskWait, 0});
+                function.instructions.push_back({IrOpcode::Pop, 0});
+                const int32_t destPtrLocal = allocTempLocal();
+                function.instructions.push_back(
+                    {IrOpcode::AddressOfLocal,
+                     static_cast<uint64_t>(vectorSite.resultRecordLocal)});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+                if (!ir_lowerer::emitStructCopyFromPtrs(function.instructions,
+                                                        destPtrLocal,
+                                                        vectorSite.blockLocal,
+                                                        vectorSite.resultSlots,
+                                                        [&]() { return allocTempLocal(); })) {
+                  return false;
+                }
+                emitTaskBlockRelease(vectorSite);
+                function.instructions.push_back(
+                    {IrOpcode::AddressOfLocal,
+                     static_cast<uint64_t>(vectorSite.resultRecordLocal)});
+                return true;
+              }
+            }
             function.instructions.push_back({IrOpcode::TaskWait, 0});
             if (it->second.taskSpawnSite >= 0) {
               emitTaskBlockRelease(

@@ -920,29 +920,15 @@
     };
     // An integer value that is not sum storage is a packed Result.
     const auto returnValueIsPackedResult = [&](const Expr &valueExpr) {
-      if (valueExpr.kind == Expr::Kind::Name) {
-        auto localIt = localsIn.find(valueExpr.name);
-        if (localIt == localsIn.end() || !localIt->second.structTypeName.empty() ||
-            localIt->second.kind != LocalInfo::Kind::Value) {
-          return false;
-        }
-        if (localIt->second.isResult) {
-          return true;
-        }
-      } else if (valueExpr.kind == Expr::Kind::Call) {
-        if (const Definition *callee = resolveDefinitionCall(valueExpr);
-            callee != nullptr && sumHelpers.declaredStdlibResultSumReturn(*callee) != nullptr) {
-          return false;
-        }
-      } else if (valueExpr.kind != Expr::Kind::Literal) {
-        return false;
-      }
-      if (!inferStructExprPath(valueExpr, localsIn).empty()) {
-        return false;
-      }
-      const LocalInfo::ValueKind kind = inferExprKind(valueExpr, localsIn);
-      return kind == LocalInfo::ValueKind::Int32 || kind == LocalInfo::ValueKind::Int64 ||
-             (kind == LocalInfo::ValueKind::UInt64 || kind == LocalInfo::ValueKind::UInt8);
+      return ir_lowerer::isPackedResultReturnValue(
+          valueExpr,
+          localsIn,
+          [&](const Expr &e) { return resolveDefinitionCall(e); },
+          [&](const Definition &d) {
+            return sumHelpers.declaredStdlibResultSumReturn(d) != nullptr;
+          },
+          inferStructExprPath,
+          inferExprKind);
     };
     if (isReturnCall(stmt) && stmt.args.size() == 1) {
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
@@ -1028,7 +1014,23 @@
           !aggregateStructPath.empty() &&
           !declaredReturnIsPointerLikeHandle &&
           (stableReturnValueExpr.kind == Expr::Kind::Call || stableReturnValueExpr.kind == Expr::Kind::Name);
-      if (realCallStructReturnLocal >= 0 && !returnInlineContext.has_value() && !shouldStabilizeAggregateReturn) {
+      if (realCallStructReturnLocal >= 0 && !returnInlineContext.has_value() &&
+          ir_lowerer::definitionReturnsBuiltinVector(defMap, function.name)) {
+        if (!ir_lowerer::emitRealCallVectorReturn(*emittedReturnStmt,
+                                                  *emittedReturnLocals,
+                                                  realCallStructReturnLocal,
+                                                  emitExpr,
+                                                  allocTempLocal,
+                                                  function.instructions,
+                                                  rewrittenReturnStmt,
+                                                  rewrittenReturnLocals,
+                                                  error)) {
+          return false;
+        }
+        emittedReturnStmt = &rewrittenReturnStmt;
+        emittedReturnLocals = &rewrittenReturnLocals;
+      } else if (realCallStructReturnLocal >= 0 && !returnInlineContext.has_value() &&
+                 !shouldStabilizeAggregateReturn) {
         error = "a real call that returns a struct needs a struct value to return: " + function.name;
         return false;
       }

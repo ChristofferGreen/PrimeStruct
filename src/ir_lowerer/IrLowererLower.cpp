@@ -459,6 +459,13 @@ bool IrLowerer::lower(const Program &program,
                                           ir_lowerer::StructSlotLayoutInfo &layoutOut) {
                                         return resolveStructSlotLayout(structPath, layoutOut);
                                       },
+                                      [&](const std::string &typeName,
+                                          const std::string &namespacePrefix,
+                                          std::string &pathOut) {
+                                        return setupTypeAndStructTypeAdapters
+                                            .structTypeResolutionAdapters.resolveStructTypeName(
+                                                typeName, namespacePrefix, pathOut);
+                                      },
                                       [&]() { return allocTempLocal(); },
                                       function.instructions,
                                       setupStage.dropEntries,

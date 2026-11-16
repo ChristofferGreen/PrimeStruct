@@ -90,10 +90,17 @@
   slots from the block into `t`, the drop flags of `t` and of the lent arguments turned on, and `HeapFree` of the
   block; `wait(t)` then reads that place, so a binding or call argument copies from it and `t` destroys its value
   when its scope ends. What the task allocated for the result (a `String`'s bytes) is freed by the spawner; on
-  `optexe` that free is queued to the task's arena. A `copy` or `move` parameter of a scalar is the task's own slot
+  `optexe` that free is queued to the task's arena. A builtin `vector<T>` is a pointer to a 5-slot record of the frame
+  that made it (the buffer is on the heap), and such a record cannot cross to another call stack: the spawner binds a
+  vector argument in a hidden `mut` local of its scope (a copy of the name or place, or a fresh vector), copies the
+  record into the block and passes the block address; the hidden local's drop flag is off while the task may read the
+  vector (lent), and for a `copy` or `move` parameter for good, since the task's body destroys it. A vector result
+  is returned the same way: the body copies the record of the returned local into the result block and clears the
+  local's drop flag, and the wait moves the record into a frame record of the waiter, whose binding owns the vector
+  (`wait(t)` is a fresh vector). A `copy` or `move` parameter of a scalar is the task's own slot
   (the spawner evaluates the argument), and one of a struct is the block's copy, which the task destroys. Any other
-  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a collection parameter or result, a sum
-  result, a callee with `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and
+  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a map or stdlib `Vector` parameter or result, a
+  vector result that is not a `mut` local the task built, a sum result, a callee with `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and
   `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
 - **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The

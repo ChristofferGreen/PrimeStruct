@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 #include "primec/ir_lowerer/IrLowererSetupLocalsHelpers.h"
@@ -112,6 +113,10 @@ struct LowerSetupStageState {
     int32_t handleLocal = -1;
     int32_t blockLocal = -1;
     int32_t resultSlots = 0;
+    // A builtin vector result: the block starts with the 5-slot record the task copied there, and the wait moves
+    // it to the frame record `resultRecordLocal` (a vector is a pointer to a record of the frame that owns it).
+    bool resultIsVector = false;
+    int32_t resultRecordLocal = -1;
     std::vector<int32_t> lentArgumentDropFlags;
   };
   std::vector<TaskSpawnSite> taskSpawnSites;
@@ -132,6 +137,7 @@ bool registerRealCallOwnedParameters(
     LocalMap &bodyLocals,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::vector<LowerSetupStageState::DropEntry> &dropEntries,

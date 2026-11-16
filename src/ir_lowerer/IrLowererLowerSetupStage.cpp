@@ -233,6 +233,7 @@ bool registerRealCallOwnedParameters(
     LocalMap &bodyLocals,
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    const ResolveStructTypeNameFn &resolveStructTypeName,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::vector<LowerSetupStageState::DropEntry> &dropEntries,
@@ -243,6 +244,56 @@ bool registerRealCallOwnedParameters(
     return false;
   }
   for (const Expr &param : def.parameters) {
+    // A builtin `vector<T>` parameter (a spawned call's): the record's address arrives in one slot. The body needs
+    // the element layout to step through it, and owns the vector (destroys its elements and frees the buffer) when
+    // the parameter is `copy` or `move`.
+    if (const auto vectorIt = bodyLocals.find(param.name);
+        vectorIt != bodyLocals.end() && vectorIt->second.kind == LocalInfo::Kind::Vector &&
+        !vectorIt->second.isSoaVector) {
+      LocalInfo &vectorInfo = vectorIt->second;
+      std::string elementStructPath;
+      bool elementKnown = false;
+      for (const Transform &transform : param.transforms) {
+        if (transform.templateArgs.size() == 1 && transform.name == "vector") {
+          elementKnown = resolveBuiltinVectorElementStructPath(transform.templateArgs.front(),
+                                                               param.namespacePrefix,
+                                                               resolveStructTypeName,
+                                                               elementStructPath);
+          break;
+        }
+      }
+      StructSlotLayoutInfo elementLayout;
+      if (elementKnown && !elementStructPath.empty() &&
+          vectorInfo.vectorStructElementSlotCount == 0 &&
+          resolveStructSlotLayout(elementStructPath, elementLayout)) {
+        vectorInfo.vectorStructElementSlotCount = elementLayout.totalSlots;
+      }
+      if (elementKnown &&
+          (parameterHasTransform(param, "copy") || parameterHasTransform(param, "move"))) {
+        std::string destroyElementPath;
+        if (!elementStructPath.empty() &&
+            structNeedsDestroyHelpers(
+                elementStructPath,
+                [&](const std::string &path) { return findStackDestroyHelper(defMap, path); },
+                resolveStructSlotLayout)) {
+          destroyElementPath = elementStructPath;
+        }
+        if (parameterHasTransform(param, "mut")) {
+          vectorInfo.vectorElementLifecyclePath = elementStructPath;
+        }
+        vectorInfo.dropFlagLocal = allocTempLocal();
+        instructions.push_back({IrOpcode::PushI32, 1});
+        instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(vectorInfo.dropFlagLocal)});
+        LowerSetupStageState::DropEntry entry{
+            vectorInfo.index, vectorInfo.dropFlagLocal, destroyElementPath};
+        entry.builtinVectorElementSlots =
+            std::max<int32_t>(1, vectorInfo.vectorStructElementSlotCount);
+        dropEntries.push_back(std::move(entry));
+        fileScopeStack.back().push_back(-static_cast<int32_t>(dropEntries.size()));
+      }
+      continue;
+    }
     if (!parameterHasTransform(param, "copy") && !parameterHasTransform(param, "move")) {
       continue;
     }
