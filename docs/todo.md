@@ -551,9 +551,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: scalar-result reads of a `String` element of a stdlib `Vector`.
 
-- [ ] TODO-5996: Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter
+- [~] TODO-5996: Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter
   - owner: ai
   - status: ready
+  - claimed_by: vec-5996 (worktree-agent-a2942be0580f5bc22), 2026-11-16
   - created_at: 2026-11-16
   - phase: Collections (docs/spec/stdlib-reference.md)
   - parallel_track: vector-owners
