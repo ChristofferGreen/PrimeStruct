@@ -1627,9 +1627,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-5999: `print_line` of `at` on a builtin `vector<T>` is typed when a stdlib `Vector` of another element type exists
+- [~] TODO-5999: `print_line` of `at` on a builtin `vector<T>` is typed when a stdlib `Vector` of another element type exists
   - owner: ai
   - status: ready
+  - claimed_by: vec-5999 (worktree-agent-aa9bb45efaa5b13e4), 2026-11-16
   - created_at: 2026-11-16
   - phase: Collections (docs/spec/stdlib-reference.md)
   - parallel_track: vector-owners
