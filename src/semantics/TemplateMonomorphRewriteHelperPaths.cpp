@@ -288,6 +288,20 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
     }
     return canonicalPath;
   };
+  // `at`, `at_unsafe` and `[]` on a local of the stdlib vector struct take the stdlib helper: the builtin access
+  // assumes the layout of the builtin vector and one slot per element, which is not the struct's.
+  const auto isStdlibVectorElementAccess = [&](std::string_view name) {
+    if (!collection_helpers::isAtHelperName(name) && !collection_helpers::isAtUnsafeHelperName(name)) {
+      return false;
+    }
+    if (!resolvesCollectionVectorValueReceiver(receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
+      return false;
+    }
+    std::vector<std::string> receiverTemplateArgs;
+    return resolveCollectionVectorValueReceiverTemplateArgs(
+               receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs) &&
+           receiverTemplateArgs.size() == 1;
+  };
   std::string helperName;
   bool resolvesVectorFamilyPath = false;
   if (semantics::isCanonicalVectorCompatibilityPath(path)) {
@@ -302,7 +316,9 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
   } else if (!expr.isMethodCall && !expr.name.empty() && expr.name.find('/') == std::string::npos &&
              ctx.sourceDefs.count(path) == 0 && ctx.helperOverloads.count(path) == 0) {
     helperName = expr.name;
-  } else if (expr.isMethodCall && (expr.name == "remove_at" || expr.name == "remove_swap") &&
+  } else if (expr.isMethodCall &&
+             (expr.name == "remove_at" || expr.name == "remove_swap" ||
+              isStdlibVectorElementAccess(expr.name)) &&
              ctx.sourceDefs.count(path) == 0 && ctx.helperOverloads.count(path) == 0) {
     // TODO-4753: every branch above this one is explicitly gated on
     // `!expr.isMethodCall` - none of them ever ran for method-call-sugar
@@ -328,7 +344,7 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
   if (!collection_helpers::isCountHelperName(helperName) && helperName != "capacity" &&
       helperName != "push" && helperName != "pop" && helperName != "reserve" &&
       helperName != "clear" && helperName != "remove_at" && helperName != "remove_swap" &&
-      !collection_helpers::isGetHelperName(helperName) &&
+      !isStdlibVectorElementAccess(helperName) && !collection_helpers::isGetHelperName(helperName) &&
       !collection_helpers::isRefHelperName(helperName) &&
       helperName != templateMonomorphSoaToAosHelperName() &&
       helperName != templateMonomorphSoaToAosHelperName(true)) {
@@ -453,6 +469,13 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
     const std::string preferred = templateMonomorphCanonicalKeyValueHelperPath(helperName);
     if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
         ctx.sourceDefs.count(preferred) > 0) {
+      return preferred;
+    }
+  }
+  if (isStdlibVectorElementAccess(helperName)) {
+    const std::string preferred =
+        semantics::canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+    if (ctx.sourceDefs.count(preferred) > 0) {
       return preferred;
     }
   }

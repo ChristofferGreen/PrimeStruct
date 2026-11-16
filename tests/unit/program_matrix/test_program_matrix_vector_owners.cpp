@@ -931,8 +931,7 @@ TEST_CASE("the mutating methods change a local declared Vector<T>") {
 
 TEST_CASE("a Vector of Strings destroys the strings that pop, clear, remove_at and remove_swap remove") {
   // The stdlib vector struct has no element size of its own: `pop` and `clear` take it from the specialization, so
-  // the removed strings are freed and the heap statistics end where they began. Elements are read through the
-  // stdlib `at` helper.
+  // the removed strings are freed and the heap statistics end where they began.
   runVectorOwnerProgram("vector_string_removals",
                         "",
                         R"(
@@ -952,6 +951,54 @@ TEST_CASE("a Vector of Strings destroys the strings that pop, clear, remove_at a
     names.push(label(5i32))
 )",
                         "3\n50\n51\n0\n");
+}
+
+TEST_CASE("at, at_unsafe and [] read the element of a local declared Vector<String>") {
+  // The method and index forms take the stdlib `at` like the explicit helper: a String is more than one slot.
+  runVectorOwnerProgram("vector_string_element_reads",
+                        "",
+                        R"(
+    [Vector<String> mut] names{vector<String>{}}
+    names.push(label(1i32))
+    names.push(label(2i32))
+    names.push(label(3i32))
+    print_line(first_byte(names[1i32]))
+    print_line(first_byte(names.at(2i32)))
+    print_line(first_byte(names.at_unsafe(0i32)))
+    names.remove_at(0i32)
+    print_line(first_byte(names[0i32]))
+    print_line(first_byte(names.at(1i32)))
+    names.remove_swap(0i32)
+    print_line(first_byte(names[0i32]))
+    [String] kept{names[0i32]}
+    names.clear()
+    print_line(first_byte(kept))
+)",
+                        "50\n51\n49\n50\n51\n51\n51\n");
+}
+
+TEST_CASE("at and [] read a struct element and a scalar element of a local declared Vector<T>") {
+  // A struct with a String is read into a binding (a copy the scope destroys); a vector of i32 that only pushed
+  // reads its elements through the same helper.
+  runVectorOwnerProgram("vector_struct_and_scalar_element_reads",
+                        "",
+                        R"(
+    [Vector<Named> mut] items{vector<Named>{}}
+    items.push(Named{label(1i32)})
+    items.push(Named{label(2i32)})
+    [Named] second{items[1i32]}
+    [Named] third{items.at(0i32)}
+    print_line(first_byte(second.text))
+    print_line(first_byte(third.text))
+    items.remove_at(0i32)
+    [Named] now_first{items[0i32]}
+    print_line(first_byte(now_first.text))
+    [Vector<i32> mut] numbers{vector<i32>{}}
+    numbers.push(7i32)
+    numbers.push(8i32)
+    print_line(numbers[0i32] + numbers.at(1i32))
+)",
+                        "50\n49\n50\n15\n");
 }
 
 TEST_SUITE_END();
