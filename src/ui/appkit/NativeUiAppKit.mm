@@ -141,6 +141,7 @@ struct State {
   std::unordered_map<uint64_t, NSSplitView *> previewSplits;
   std::unordered_map<uint64_t, NSView *> previewWebs;
   std::unordered_map<uint64_t, bool> previewLoading;
+  std::unordered_map<uint64_t, id> previewNavigation; // the navigation of the page loaded last (older ones are superseded)
   std::unordered_map<uint64_t, double> previewKeepY; // where an independent page was before it reloaded
   std::unordered_map<uint64_t, int> previewScriptsPending; // scripts sent to the page that have not answered
   std::unordered_map<uint64_t, double> previewFraction;    // the source line both views were last put at
@@ -536,8 +537,18 @@ Class webKitClass(NSString *name) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Warc-performSelector-leaks"
 
-void loadPage(NSView *web, NSString *page) {
-  [web performSelector:NSSelectorFromString(@"loadHTMLString:baseURL:") withObject:page withObject:nil];
+// Loads a page and remembers its navigation: a load that supersedes one still in flight must not be mistaken for the
+// end of the newer one (the older navigation's callbacks arrive after the new load began).
+void loadPage(uint64_t window, NSView *web, NSString *page) {
+  id navigation = [web performSelector:NSSelectorFromString(@"loadHTMLString:baseURL:") withObject:page withObject:nil];
+  state().previewNavigation[window] = navigation;
+}
+
+// False for the callback of a navigation that a later load superseded.
+bool isCurrentNavigation(uint64_t window, id navigation) {
+  const auto found = state().previewNavigation.find(window);
+  return found == state().previewNavigation.end() || found->second == nil || navigation == nil ||
+         found->second == navigation;
 }
 
 void evaluateScript(NSView *web, NSString *script, void (^done)(id)) {
@@ -945,8 +956,11 @@ Class previewDelegateClass() {
                     "v@:@@@?");
     // A page that has loaded goes to where the text view is.
     class_addMethod(made, NSSelectorFromString(@"webView:didFinishNavigation:"),
-                    imp_implementationWithBlock(^(id, id web, id) {
+                    imp_implementationWithBlock(^(id, id web, id navigation) {
                       const uint64_t window = handleOf(web);
+                      if (!isCurrentNavigation(window, navigation)) {
+                        return;
+                      }
                       state().previewLoading[window] = false;
                       restorePreviewPosition(window);
                     }),
@@ -954,7 +968,12 @@ Class previewDelegateClass() {
     for (NSString *failed in @[ @"webView:didFailNavigation:withError:",
                                 @"webView:didFailProvisionalNavigation:withError:" ]) {
       class_addMethod(made, NSSelectorFromString(failed),
-                      imp_implementationWithBlock(^(id, id web, id, id) { state().previewLoading[handleOf(web)] = false; }),
+                      imp_implementationWithBlock(^(id, id web, id navigation, id) {
+                        const uint64_t window = handleOf(web);
+                        if (isCurrentNavigation(window, navigation)) {
+                          state().previewLoading[window] = false;
+                        }
+                      }),
                       "v@:@@@");
     }
     // A web content process that ends (a crash, or the system reclaiming it) finishes no navigation: the page is not
@@ -1012,11 +1031,11 @@ void renderPreview(uint64_t window) {
       State &now = state();
       primec::ui::finishPendingScript(now.previewScriptsPending, window);
       now.previewKeepY[window] = [y respondsToSelector:@selector(doubleValue)] ? [y doubleValue] : 0;
-      loadPage(pageView, page);
+      loadPage(window, pageView, page);
     });
     return;
   }
-  loadPage(pageView, page);
+  loadPage(window, pageView, page);
 }
 
 // One monitor for every preview: a wheel turn, a key or a drag over a page may have scrolled it, so the text
@@ -1079,6 +1098,7 @@ void dropPreviewState(uint64_t window) {
   s.previewSplits.erase(window);
   s.previewWebs.erase(window);
   s.previewLoading.erase(window);
+  s.previewNavigation.erase(window);
   s.previewScriptsPending.erase(window);
   s.previewFraction.erase(window);
   s.previewKeepY.erase(window);
