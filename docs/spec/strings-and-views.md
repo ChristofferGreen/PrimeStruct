@@ -54,6 +54,8 @@ that takes `[string]` parameters, returns literals or prints literals keeps its 
 - `view()` covers the whole container; `slice(start, end)` and `sliceMut(start, end)` cover `[start, end)`. The range
   is checked once when the slice is made (`0 <= start <= end <= count`); a statically known bad range is a compile
   error, a run-time one a fault. `slice(values, start, end)` stays as the free-function spelling.
+  The receiver may be a binding or a field of one (`holder.items.slice(0i32, 2i32)`); a `sliceMut` on a field
+  writes the field's storage.
 - A slice of a slice narrows it and borrows the same owner.
 - Contiguous containers: `array<T>`, `Vector<T>`, `Buffer<T>`, SoA columns, `String` (as text, see below) and its
   bytes. `map` and `soa_vector` rows are not contiguous and have no `view()`.

@@ -233,6 +233,28 @@ main() {
   CHECK(err.find("unknown call target: set") != std::string::npos);
 }
 
+TEST_CASE("rejects slice on a non-vector field of a struct") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/slice/*
+
+[struct]
+Holder() {
+  [i32 mut] total{4i32}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Holder mut] holder{Holder{}}
+  [Slice<i32, Read>] window{holder.total.slice(0i32, 1i32)}
+  return(window.count())
+}
+)";
+  std::string err;
+  CHECK(compileErrorOf("vm_slice_capability_non_vector_field_rejected", source, err) == 2);
+  CHECK(err.find("unknown method: /i32/slice") != std::string::npos);
+}
+
 TEST_CASE("plain array parameters and locals are unaffected by Slice recognition") {
   const std::string source = R"(
 [return<int>]

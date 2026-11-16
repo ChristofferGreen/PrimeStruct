@@ -370,6 +370,7 @@ bool foldLiteralTextCall(Expr &expr, std::string &error) {
   return true;
 }
 
+// The receiver is a binding or a field of one (`holder.items.slice(0i32, 2i32)`).
 // `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on a `vector<T>` are the calls
 // `/std/collections/vector/view<T>(values)` and friends (the vector surface resolves its methods by name, so the three
 // slice makers are spelled out here).
@@ -389,7 +390,9 @@ bool rewriteVectorViewMethod(Expr &expr,
     return false;
   }
   const Expr &receiver = expr.args.front();
-  if (receiver.kind != Expr::Kind::Name) {
+  const bool fieldReceiver =
+      receiver.kind == Expr::Kind::Call && receiver.isFieldAccess && receiver.args.size() == 1;
+  if (receiver.kind != Expr::Kind::Name && !fieldReceiver) {
     return false;
   }
   semantics::BindingInfo receiverInfo;

@@ -1386,7 +1386,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # The entries below are shards of the cases each filter selects (primestructAddDoctestShards), sized to stay short
   # under a loaded gate: in one gate (load up to 40) host calls took 185 s for 20 cases, the VM string conformance
   # cases 419 s for 50, the optexe ones 458 s for 37 and the native UI cases 310 s for 9.
-  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 20 5 600
+  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 23 5 600
                               "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings")
   # The String / StringView differential suite (tests/unit/backend_host/test_string_conformance.cpp). Most of its time is
   # the host C++ compiler building optexe programs, so the cases that go through optexe are entries of their own and
@@ -3333,11 +3333,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                    FIRST ${firstCase} LAST ${lastCase})
       endforeach()
     elseif(suite STREQUAL "primestruct.compile.run.vm.slice_capability")
-      # 11 cases, 31 s in a loaded gate (30 s timeout): shards of three.
-      foreach(firstCase RANGE 1 10 3)
+      # 12 cases, 31 s in a loaded gate (30 s timeout): shards of three.
+      foreach(firstCase RANGE 1 12 3)
         math(EXPR lastCase "${firstCase} + 2")
-        if(lastCase GREATER 11)
-          set(lastCase 11)
+        if(lastCase GREATER 12)
+          set(lastCase 12)
         endif()
         addPrimeStructDoctestSuite("${suite}" TIMEOUT 30
                                    SHARD_NAME "capability_parameterized_slices_${firstCase}_${lastCase}"

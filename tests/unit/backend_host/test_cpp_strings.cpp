@@ -187,6 +187,68 @@ TEST_CASE("slices over vectors agree with the VM") {
           4 + 9 + 16 + 25);
 }
 
+const std::string ByteHolder = "[struct]\n"
+                               "Holder() {\n"
+                               "  [vector<u8> mut] bytes{vector<u8>{}}\n"
+                               "}\n";
+
+TEST_CASE("slice and sliceMut on a vector field of a local struct read and write its storage") {
+  matches("field_slice_local",
+          "  [Holder mut] holder{Holder{}}\n"
+          "  for([i32 mut] i{0i32}, i < 5i32, i++) {\n"
+          "    holder.bytes.push(convert<u8>(i + 1i32))\n"
+          "  }\n"
+          "  [Slice<u8, Write>] middle{holder.bytes.sliceMut(1i32, 4i32)}\n"
+          "  middle.set(0i32, 40u8)\n"
+          "  middle.set(2i32, 60u8)\n"
+          "  [Slice<u8, Read>] head{holder.bytes.slice(0i32, 3i32)}\n"
+          "  [i32] n{head.count()}\n"
+          "  return(n * 1000i32 + convert<i32>(holder.bytes.at(1i32)) + "
+          "convert<i32>(holder.bytes.at(3i32)) + "
+          "convert<i32>(head.at(1i32)))",
+          3 * 1000 + 40 + 60 + 40,
+          ByteHolder);
+}
+
+TEST_CASE("slice and sliceMut on a vector field of a mut struct parameter write the field") {
+  matches("field_slice_param",
+          "  [Holder mut] holder{Holder{}}\n"
+          "  holder.bytes.push(1u8)\n"
+          "  holder.bytes.push(2u8)\n"
+          "  holder.bytes.push(3u8)\n"
+          "  return(overwrite_tail(holder) + sum_head(holder))",
+          9 + 1 + 2,
+          ByteHolder + "\n[return<int>]\n"
+                       "overwrite_tail([Holder mut] holder) {\n"
+                       "  [Slice<u8, Write>] tail{holder.bytes.sliceMut(1i32, 3i32)}\n"
+                       "  tail.set(1i32, 9u8)\n"
+                       "  return(convert<i32>(tail.at(1i32)))\n"
+                       "}\n"
+                       "\n[return<int>]\n"
+                       "sum_head([Holder mut] holder) {\n"
+                       "  [Slice<u8, Read>] head{holder.bytes.slice(0i32, 2i32)}\n"
+                       "  return(convert<i32>(head.at(0i32)) + convert<i32>(head.at(1i32)))\n"
+                       "}\n");
+}
+
+TEST_CASE("an out-of-range slice of a vector field stops the program on the VM and optexe") {
+  const std::string source = programOf(
+      "  [Holder mut] holder{Holder{}}\n  holder.bytes.push(1u8)\n"
+      "  [Slice<u8, Read>] window{holder.bytes.slice(0i32, 5i32)}\n  return(window.count())",
+      ByteHolder);
+  ScriptEngine engine;
+  const auto script = engine.compileSource("/cpp_strings_field_slice_fault.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  const auto vm = script.run();
+  REQUIRE_MESSAGE(vm.ok, vm.diagnostics);
+  CHECK((vm.exitCode & 0xFF) != 1);
+  const Compiled compiled = compileWith("optexe", "field_slice_fault", source);
+  REQUIRE_MESSAGE(compiled.status == 0, compiled.diagnostics);
+  const int exitCode = run(shellQuote(compiled.program) + " > /dev/null 2>&1");
+  CHECK(exitCode == (vm.exitCode & 0xFF));
+  CHECK(exitCode != 0);
+}
+
 TEST_CASE("an out-of-range vector<u8> read stops the program the same way") {
   const std::string source = programOf(
       "  [vector<u8> mut] bytes{vector<u8>{}}\n  bytes.push(1u8)\n  bytes.push(2u8)\n  return(convert<i32>(bytes.at(5i32)))", "");
