@@ -208,6 +208,7 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-5998 | `at` on a builtin `vector<T>` is not lowered through another instance of the stdlib `at` | ready | vector-owners |
 
 ### Ready Now
 
@@ -1625,3 +1626,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
+
+- [~] TODO-5998: `at` on a builtin `vector<T>` is not lowered through another instance of the stdlib `at`
+  - owner: ai
+  - status: ready
+  - claimed_by: vec-mut (worktree-agent-a8a8b90676221312d), 2026-11-16
+  - created_at: 2026-11-16
+  - phase: Collections (docs/spec/stdlib-reference.md)
+  - parallel_track: vector-owners
+  - scope: Found with TODO-5997. A program that holds a stdlib `Vector<i32>` and calls `.at(i)` on it, and also calls `rows.at(0i32).count()` on a builtin `vector<String>`, fails to lower with `struct parameter type mismatch: expected /std/text/String, got <unknown>` (`[String] x{rows.at(0i32)}` reads a wrong address instead). Each alone works. Not the same root as TODO-5997 (a Reference receiver): the semantic product resolves the builtin receiver's `at` to the generic stdlib path and the method-call resolution of the lowerer finds any generated specialization of that family (`matchesGeneratedDefinitionFamilyPath`), here the `Vector<i32>` one, whatever the receiver type.
+  - implementation_notes: `resolveLoweredDefinitionPath` in src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp (the lookup of the resolved path before the `semantic-product method-call target missing lowered definition` error); the receiver type text is `findSemanticProductMethodCallReceiverTypeText`. A builtin vector receiver must keep taking the builtin element access.
+  - acceptance:
+    - positive: the program above prints the right values on the VM and `optexe` with balanced heaps; `at` and `at_unsafe` of a builtin `vector<String>` and `vector<i32>` next to stdlib `Vector` instances of other element types
+    - negative: `.at` on a stdlib `Vector<T>` still resolves to its own instance
+    - full release gate green
+  - stop_rule: method-call resolution of `at` and `at_unsafe` (and `count`/`capacity` only if the same lookup shows) for a builtin vector receiver.
