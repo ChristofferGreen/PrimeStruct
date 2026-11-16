@@ -60,6 +60,8 @@ struct Options {
   bool requireCanonicalSyntax = false;
   std::vector<std::string> defaultEffects = {"io_out"};
   std::vector<std::string> entryDefaultEffects = {"io_out"};
+  // --allow-effects: the effects user code may declare (stdlib paths are not checked); unset is no ceiling.
+  std::optional<std::vector<std::string>> allowEffects;
   std::vector<std::string> programArgs;
   std::vector<std::string> importPaths;
   // --link-arg: extra arguments for the host C++ compiler when it links an exe or optexe output,

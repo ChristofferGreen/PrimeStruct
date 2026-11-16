@@ -266,6 +266,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticPublicationBuildersFacts.cpp
   src/semantics/SemanticsValidationBenchmarkOrchestration.cpp
   src/semantics/SemanticsValidationPublicationOrchestration.cpp
+  src/semantics/EffectCeiling.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateKeyValueRewrites.cpp
   src/semantics/SemanticsValidateBuiltinSoaMetadata.cpp
@@ -2013,6 +2014,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_allow_effects.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_semantic_rules.cpp

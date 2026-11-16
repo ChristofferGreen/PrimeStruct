@@ -10,6 +10,7 @@
 #include "primec/ir/IrPrinter.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
+#include "primec/semantics/EffectCeiling.h"
 #include "primec/semantics/Semantics.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/semantics/SemanticsBenchmark.h"
@@ -280,6 +281,36 @@ bool runCompilePipeline(const Options &options,
     output.dumpOutput = semantics::formatTypeResolutionGraph(graph);
     output.hasDumpOutput = true;
     return true;
+  }
+
+  if (options.allowEffects.has_value()) {
+    const auto violations = findEffectCeilingViolations(output.program,
+                                                        options.entryPath,
+                                                        *options.allowEffects,
+                                                        options.defaultEffects,
+                                                        options.entryDefaultEffects);
+    if (!violations.empty()) {
+      error = violations.front().message;
+      SemanticDiagnosticInfo ceilingInfo;
+      ceilingInfo.message = error;
+      for (const auto &violation : violations) {
+        SemanticDiagnosticRecord record;
+        record.message = violation.message;
+        record.primarySpan.line = violation.line;
+        record.primarySpan.column = violation.column;
+        record.primarySpan.endLine = violation.line;
+        record.primarySpan.endColumn = violation.column;
+        record.hasPrimarySpan = violation.line > 0;
+        ceilingInfo.records.push_back(std::move(record));
+        if (!options.collectDiagnostics) {
+          break;
+        }
+      }
+      ceilingInfo.primarySpan = ceilingInfo.records.front().primarySpan;
+      ceilingInfo.hasPrimarySpan = ceilingInfo.records.front().hasPrimarySpan;
+      mapAndSortDiagnosticReportSpansToSourceUnits(importStage.expandedSource, ceilingInfo);
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, ceilingInfo);
+    }
   }
 
   Semantics semantics;

@@ -328,6 +328,27 @@ module {
   effect`) and the same backends (docs/spec/vm-design.md, Mutexes). `channel` (`1 << 15`) is the effect of `send`,
   `receive` and `close` of a `Channel` of `/std/sync`, again with the same rule (`channel operation requires
   channel effect`) and the same backends (docs/spec/vm-design.md, Conditions).
+  `primec --allow-effects <list>` caps the effects of user code: a definition or top-level execution outside `/std/`
+  whose `[effects(...)]` names an effect that is not in the comma-separated list, or that has no `[effects]` and
+  receives a default effect outside the list (`--default-effects`, or `io_out`), is a diagnostic naming the
+  definition, the effect and the allowed list. Struct, sum and enum definitions that only receive defaults are not
+  checked. `none` or an empty list allows no effect; an unknown effect name in the list is an argument error. Stdlib
+  definitions (paths under `/std/`, imported or included) are trusted and not checked, and without the flag nothing
+  changes. `--collect-diagnostics` reports every violation. This is the ceiling a build script runs under and lets an
+  embedder cap scripts.
+  ```
+  [effects(net_io), return<i32>]
+  reach() {
+    return(1i32)
+  }
+
+  [effects(heap_alloc), return<i32>]
+  main() {
+    return(7i32)
+  }
+  ```
+  `primevm reach.prime --allow-effects heap_alloc,file_read` fails with `definition /reach declares effect net_io,
+  outside the allowed effects: heap_alloc,file_read`; with `--allow-effects heap_alloc,net_io` it runs and exits 7.
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.

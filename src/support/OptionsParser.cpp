@@ -329,6 +329,55 @@ std::vector<std::string> parseDefaultEffects(const std::string &text) {
   return effects;
 }
 
+// The effect names the VM and native back ends accept (docs/spec/language-core.md, Effects).
+const std::vector<std::string> &knownEffectNames() {
+  static const std::vector<std::string> names = {"io_out",
+                                                 "io_err",
+                                                 "heap_alloc",
+                                                 "pathspace_notify",
+                                                 "pathspace_insert",
+                                                 "pathspace_take",
+                                                 "pathspace_bind",
+                                                 "pathspace_schedule",
+                                                 "file_write",
+                                                 "file_read",
+                                                 "gpu_dispatch",
+                                                 "task",
+                                                 "net_io",
+                                                 "atomic",
+                                                 "lock",
+                                                 "channel"};
+  return names;
+}
+
+// Parses the --allow-effects list: comma-separated known effect names; an empty list or `none` allows nothing.
+bool parseAllowEffects(const std::string &text, std::vector<std::string> &out, std::string &error) {
+  out.clear();
+  size_t start = 0;
+  while (start <= text.size()) {
+    size_t end = text.find(',', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    const std::string token = trimAscii(text.substr(start, end - start));
+    if (!token.empty() && token != "none") {
+      const auto &known = knownEffectNames();
+      if (std::find(known.begin(), known.end(), token) == known.end()) {
+        error = "unknown effect in --allow-effects: " + token;
+        return false;
+      }
+      if (std::find(out.begin(), out.end(), token) == out.end()) {
+        out.push_back(token);
+      }
+    }
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return true;
+}
+
 bool parseBenchmarkForceSemanticProduct(const std::string &text, std::optional<bool> &out, std::string &error) {
   const std::string normalized = trimAscii(text);
   if (normalized == "on" || normalized == "true" || normalized == "1") {
@@ -783,6 +832,18 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       auto effects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+    } else if (arg == "--allow-effects" && i + 1 < argc) {
+      std::vector<std::string> allowed;
+      if (!parseAllowEffects(argv[++i], allowed, error)) {
+        return false;
+      }
+      out.allowEffects = std::move(allowed);
+    } else if (arg.rfind("--allow-effects=", 0) == 0) {
+      std::vector<std::string> allowed;
+      if (!parseAllowEffects(arg.substr(std::string("--allow-effects=").size()), allowed, error)) {
+        return false;
+      }
+      out.allowEffects = std::move(allowed);
     } else if (arg == "--benchmark-force-semantic-product" && i + 1 < argc) {
       if (!parseBenchmarkForceSemanticProduct(argv[++i], out.benchmarkForceSemanticProduct, error)) {
         return false;

@@ -169,7 +169,6 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | ready | file-listing |
 | TODO-5907 | `/std/file` expands glob patterns | blocked | build-glob |
-| TODO-5908 | `--allow-effects` rejects declared effects outside a list in user code | ready | effect-ceiling |
 | TODO-5909 | `--allow-import` rejects imports outside a list of prefixes | ready | import-allowlist |
 | TODO-5910 | `--profile build` sets the defaults of a build script | blocked | build-profile |
 | TODO-5911 | `/std/build` builds a graph value and exports it as JSON | ready | build-graph |
@@ -207,7 +206,6 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
-- TODO-5908 (effect-ceiling): `--allow-effects` rejects declared effects outside a list in user code
 
 ### Immediate Next 10
 
@@ -215,7 +213,6 @@ of sync with them.
 2. TODO-5535
 3. TODO-5906
 4. TODO-5911
-5. TODO-5908
 
 ### Priority Lanes
 
@@ -224,7 +221,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -247,7 +244,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5908 (`--allow-effects`), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5909 (`--allow-import`), TODO-5911 (the graph value and its JSON export) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5910 (`--profile build`), TODO-5912 (`primec build --dry-run`), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
@@ -1024,23 +1021,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/stdlib-reference.md documents it
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
-
-- [~] TODO-5908: `--allow-effects` rejects declared effects outside a list in user code
-  - owner: ai
-  - status: in_progress
-  - claimed_by: effects-5908 (worktree-agent-a25d25025486fcf48), 2026-11-17
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md, section 6)
-  - parallel_track: effect-ceiling
-  - scope: A compiler option `--allow-effects <list>`: a definition or execution in user code (not the stdlib, which is trusted) that declares an effect outside the list, or whose default effects fall outside it, is a diagnostic naming the definition, the effect and the allowed list. It works with `--collect-diagnostics`. This is the ceiling a build script runs under, and also lets an embedder cap scripts. Where the effect subset check lives was not found; start from the validation that reports "effect/capability subset failures" (docs/spec/source-pipeline.md) and `Options::defaultEffects` (include/primec/support/Options.h).
-  - acceptance:
-    - with `--allow-effects heap_alloc,file_read`, user code declaring `net_io` is rejected with the diagnostic, and code within the list compiles and runs
-    - a definition without `[effects]` is checked against the default set it receives
-    - stdlib definitions are not checked against the list
-    - without the flag every existing diagnostic and output is unchanged
-    - docs/spec/language-core.md, Effects, documents the option
-    - full release gate green
-  - stop_rule: the option and its check on user code; no per-directory ceilings, no new effects.
 
 - [ ] TODO-5909: `--allow-import` rejects imports outside a list of prefixes
   - owner: ai
