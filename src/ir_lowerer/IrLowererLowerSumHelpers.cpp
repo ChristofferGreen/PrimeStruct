@@ -306,17 +306,20 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
         infoOut.slotCount = 1;
         return true;
       }
-      infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
-      if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
-        infoOut.slotCount = 1;
-        return true;
-      }
       std::string payloadStructPath;
-      if (!resolveStructTypeName(payloadTypeText,
-                                 sumDef.namespacePrefix,
-                                 payloadStructPath) &&
-          !resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
-        return false;
+      // A struct payload is stored inline even when its single field is an int (the
+      // error structs), so construction, pick, try and why share one storage rule.
+      const bool isStructPayload =
+          resolveStructTypeName(payloadTypeText, sumDef.namespacePrefix, payloadStructPath);
+      if (!isStructPayload) {
+        infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
+        if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
+          infoOut.slotCount = 1;
+          return true;
+        }
+        if (!resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
+          return false;
+        }
       }
       StructSlotLayout payloadLayout;
       if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
@@ -353,17 +356,20 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
         infoOut.slotCount = 1;
         return true;
       }
-      infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
-      if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
-        infoOut.slotCount = 1;
-        return true;
-      }
       std::string payloadStructPath;
-      if (!resolveStructTypeName(payloadTypeText,
-                                 sumDef.namespacePrefix,
-                                 payloadStructPath) &&
-          !resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
-        return false;
+      // A struct payload is stored inline even when its single field is an int (the
+      // error structs), so construction, pick, try and why share one storage rule.
+      const bool isStructPayload =
+          resolveStructTypeName(payloadTypeText, sumDef.namespacePrefix, payloadStructPath);
+      if (!isStructPayload) {
+        infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
+        if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
+          infoOut.slotCount = 1;
+          return true;
+        }
+        if (!resolveVectorPayloadStructPath(payloadTypeText, payloadStructPath)) {
+          return false;
+        }
       }
       StructSlotLayout payloadLayout;
       if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
@@ -931,8 +937,22 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
               sumDef, *errorVariant, "packed Result error decode", errorPayload)) {
         return false;
       }
-      if (okPayload.isAggregate || errorPayload.isAggregate) {
+      if (okPayload.isAggregate) {
         return std::nullopt;
+      }
+      // An error payload that is a one-field int struct is rebuilt inline from the code.
+      int32_t errorFieldSlot = -1;
+      if (errorPayload.isAggregate) {
+        StructSlotLayout errorLayout;
+        if (!resolveStructSlotLayout(errorPayload.structPath, errorLayout)) {
+          return false;
+        }
+        if (errorLayout.fields.size() != 1 || errorLayout.fields.front().slotOffset < 0 ||
+            !errorLayout.fields.front().structPath.empty() ||
+            errorLayout.fields.front().valueKind != LocalInfo::ValueKind::Int32) {
+          return std::nullopt;
+        }
+        errorFieldSlot = errorLayout.fields.front().slotOffset;
       }
       if (!resolveSemanticProductSumVariantTag(
               sumDef, *okVariant, "packed Result ok decode", okTag) ||
@@ -970,8 +990,14 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(errorTag)});
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
       if (errorVariant->hasPayload) {
+        if (errorFieldSlot >= 0) {
+          instructions.push_back(
+              {IrOpcode::PushI32, static_cast<uint64_t>(errorPayload.slotCount - 1)});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+        }
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(upperLocal)});
-        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+        const int32_t errorPayloadSlot = baseLocal + 2 + std::max(errorFieldSlot, 0);
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorPayloadSlot)});
       }
       instructions[jumpToEnd].imm = static_cast<uint64_t>(instructions.size());
       return true;

@@ -197,15 +197,14 @@
                      payload.valueKind == resultInfo.valueKind;
             };
             auto payloadMatchesError = [&](const LoweredSumPayloadStorageInfo &payload) {
-              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
-              if (errorKind != LocalInfo::ValueKind::Unknown) {
-                return !payload.isAggregate && payload.valueKind == errorKind;
-              }
               std::string errorStructPath;
-              if (!resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
-                return false;
+              if (resolveStructTypeName(
+                      resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+                return payload.isAggregate && payload.structPath == errorStructPath;
               }
-              return payload.isAggregate && payload.structPath == errorStructPath;
+              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+              return errorKind != LocalInfo::ValueKind::Unknown && !payload.isAggregate &&
+                     payload.valueKind == errorKind;
             };
             return (!resultInfo.hasValue || payloadMatchesValue(candidateOkPayload)) &&
                    payloadMatchesError(candidateErrorPayload);
@@ -398,15 +397,14 @@
 
             auto resultErrorMatchesPayload =
                 [&](const LoweredSumPayloadStorageInfo &payload) -> bool {
-              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
-              if (errorKind != LocalInfo::ValueKind::Unknown) {
-                return !payload.isAggregate && payload.valueKind == errorKind;
-              }
               std::string errorStructPath;
-              if (!resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
-                return false;
+              if (resolveStructTypeName(
+                      resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+                return payload.isAggregate && payload.structPath == errorStructPath;
               }
-              return payload.isAggregate && payload.structPath == errorStructPath;
+              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+              return errorKind != LocalInfo::ValueKind::Unknown && !payload.isAggregate &&
+                     payload.valueKind == errorKind;
             };
 
             auto stdlibResultSumMatchesResultInfo = [&](const Definition &candidateDef) -> bool {

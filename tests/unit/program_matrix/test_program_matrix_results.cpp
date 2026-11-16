@@ -299,6 +299,120 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// An int-backed error struct (one int field) is stored inline in the sum payload, so
+// construction, pick, Result.why and try read the same storage.
+
+TEST_CASE("int-backed error struct payload reads through pick and Result.why") {
+  program_matrix::ProgramCase program;
+  program.name = "result_error_struct_pick_why";
+  program.source = R"(
+import /std/result/*
+import /std/collections/*
+
+[return<i32>]
+show([Result<i32, ContainerError>] r) {
+  return(pick(r) {
+    ok(v) { v }
+    error(e) { 100i32 + e.code }
+  })
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, ContainerError>] r{/std/result/error<i32, ContainerError>(ContainerError{2i32})}
+  print_line(show(r))
+  print_line(Result.why(r))
+  print_line(Result.error(r))
+  [Result<i32, ContainerError>] ok{/std/result/ok<i32, ContainerError>(5i32)}
+  print_line(show(ok))
+  print_line(Result.error(ok))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "102\ncontainer index out of bounds\n1\n5\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("int-backed error struct payload reaches an on_error handler through try") {
+  program_matrix::ProgramCase program;
+  program.name = "result_error_struct_try_on_error";
+  program.source = R"(
+import /std/result/*
+import /std/collections/*
+
+[effects(io_out)]
+on_err([ContainerError] err) {
+  print_line(err.code)
+}
+
+[return<Result<i32, ContainerError>>]
+fail() {
+  return(/std/result/error<i32, ContainerError>(ContainerError{2i32}))
+}
+
+[return<Result<i32, ContainerError>>]
+succeed() {
+  return(/std/result/ok<i32, ContainerError>(7i32))
+}
+
+[return<Result<i32, ContainerError>> effects(io_out) on_error<ContainerError, /on_err>]
+run_fail() {
+  [i32] v{try(fail())}
+  print_line(v)
+  return(/std/result/ok<i32, ContainerError>(v))
+}
+
+[return<Result<i32, ContainerError>> effects(io_out) on_error<ContainerError, /on_err>]
+run_ok() {
+  [i32] v{try(succeed())}
+  print_line(v)
+  return(/std/result/ok<i32, ContainerError>(v))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, ContainerError>] bad{run_fail()}
+  print_line(Result.error(bad))
+  print_line(Result.why(bad))
+  [Result<i32, ContainerError>] good{run_ok()}
+  print_line(Result.error(good))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n1\ncontainer index out of bounds\n7\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("map tryAt of a missing key reads its error struct through Result.why") {
+  program_matrix::ProgramCase program;
+  program.name = "result_map_try_at_why";
+  program.source = R"(
+import /std/result/*
+import /std/collections/*
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [map<i32, i32>] m{map<i32, i32>(1i32, 10i32)}
+  [Result<i32, ContainerError>] hit{m.tryAt(1i32)}
+  print_line(Result.error(hit))
+  print_line(Result.why(hit))
+  [Result<i32, ContainerError>] miss{m.tryAt(5i32)}
+  print_line(Result.error(miss))
+  print_line(Result.why(miss))
+  print_line(pick(miss) {
+    ok(v) { v }
+    error(e) { 100i32 + e.code }
+  })
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n\n1\ncontainer missing key\n101\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("try over a call whose callee and caller hold a struct with a vector field") {
   // TODO-5697: the try path sized the struct from its fields and looked up the
   // vector<i32> field's /vector path as a struct.

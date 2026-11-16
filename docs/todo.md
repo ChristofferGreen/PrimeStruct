@@ -140,7 +140,6 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
@@ -210,7 +209,6 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5841 (namespace-envelope): `[namespace] name { ... }` is a definition
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
@@ -220,11 +218,10 @@ of sync with them.
 
 1. TODO-5603
 2. TODO-5535
-3. TODO-5524
-4. TODO-5841
-5. TODO-5906
-6. TODO-5911
-7. TODO-5908
+3. TODO-5841
+4. TODO-5906
+5. TODO-5911
+6. TODO-5908
 
 ### Priority Lanes
 
@@ -236,7 +233,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -686,19 +683,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
-
-- [~] TODO-5524: Int-backed error structs round-trip through stdlib Result sums
-  - owner: ai
-  - status: ready
-  - claimed_by: result-5524 (worktree-agent-a8cda20511872e0fb), 2026-11-16
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: result-error-structs
-  - scope: With `/std/result/*` imported, a sum payload of `ContainerError`/`ImageError`/`GfxError` is stored as a scalar i32 (`valueKindFromTypeName` treats them as int-backed), but `[error] ContainerError{2i32}` stores the struct's address instead of its code; `Result.why(r)` passes the payload slot to `why()` as if it were struct storage (prints `container error` for a missing key); `pick(r) { error(e) { e.code } }` fails with "field access requires struct receiver"; the `on_error` handler receives the address as the code (`err.code` prints 560). Pick one payload storage (the code, or inline struct storage) and use it in construction, `why`, `pick` and `try`.
-  - acceptance:
-    - matrix cases on VM, native and C++: `error<i32, ContainerError>(ContainerError{2i32})` read through `pick`, `Result.why`, `try` with an `on_error` handler, and `m.tryAt(missing)` through `Result.why`
-    - full release gate green
-  - stop_rule: int-backed error struct payloads only.
 
 - [ ] TODO-5523: A Result-returning main exits with its error code
   - owner: ai

@@ -540,15 +540,14 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
           maxPayloadSlots = std::max(maxPayloadSlots, 1);
           continue;
         }
-        if (valueKindFromTypeName(payloadType) != LocalInfo::ValueKind::Unknown) {
-          maxPayloadSlots = std::max(maxPayloadSlots, 1);
-          continue;
-        }
         std::string payloadStructPath;
-        if (!resolveStructTypeName(payloadType, def.namespacePrefix, payloadStructPath) &&
-            !resolveVectorPayloadRecordPath(payloadType, payloadStructPath)) {
-          maxPayloadSlots = std::max(maxPayloadSlots, 1);
-          continue;
+        // A struct payload is stored inline, including the int-backed error structs.
+        if (!resolveStructTypeName(payloadType, def.namespacePrefix, payloadStructPath)) {
+          if (valueKindFromTypeName(payloadType) != LocalInfo::ValueKind::Unknown ||
+              !resolveVectorPayloadRecordPath(payloadType, payloadStructPath)) {
+            maxPayloadSlots = std::max(maxPayloadSlots, 1);
+            continue;
+          }
         }
         StructSlotLayoutInfo payloadLayout;
         if (!resolveStructSlotLayoutFromDefinitionFieldIndex(payloadStructPath,
