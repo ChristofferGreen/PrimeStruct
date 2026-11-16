@@ -378,6 +378,40 @@ bool parseAllowEffects(const std::string &text, std::vector<std::string> &out, s
   return true;
 }
 
+// Parses the --allow-import list: comma-separated slash paths, each optionally ending in `/*`; an empty list or
+// `none` allows no stdlib import.
+bool parseAllowImport(const std::string &text, std::vector<std::string> &out, std::string &error) {
+  out.clear();
+  size_t start = 0;
+  while (start <= text.size()) {
+    size_t end = text.find(',', start);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    std::string token = trimAscii(text.substr(start, end - start));
+    if (!token.empty() && token != "none") {
+      if (token.front() != '/') {
+        error = "--allow-import prefixes must be slash paths: " + token;
+        return false;
+      }
+      if (token.size() >= 2 && token.compare(token.size() - 2, 2, "/*") == 0) {
+        token.erase(token.size() - 2);
+      }
+      while (token.size() > 1 && token.back() == '/') {
+        token.pop_back();
+      }
+      if (std::find(out.begin(), out.end(), token) == out.end()) {
+        out.push_back(token);
+      }
+    }
+    if (end == text.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+  return true;
+}
+
 bool parseBenchmarkForceSemanticProduct(const std::string &text, std::optional<bool> &out, std::string &error) {
   const std::string normalized = trimAscii(text);
   if (normalized == "on" || normalized == "true" || normalized == "1") {
@@ -844,6 +878,18 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         return false;
       }
       out.allowEffects = std::move(allowed);
+    } else if (arg == "--allow-import" && i + 1 < argc) {
+      std::vector<std::string> allowed;
+      if (!parseAllowImport(argv[++i], allowed, error)) {
+        return false;
+      }
+      out.allowImport = std::move(allowed);
+    } else if (arg.rfind("--allow-import=", 0) == 0) {
+      std::vector<std::string> allowed;
+      if (!parseAllowImport(arg.substr(std::string("--allow-import=").size()), allowed, error)) {
+        return false;
+      }
+      out.allowImport = std::move(allowed);
     } else if (arg == "--benchmark-force-semantic-product" && i + 1 < argc) {
       if (!parseBenchmarkForceSemanticProduct(argv[++i], out.benchmarkForceSemanticProduct, error)) {
         return false;

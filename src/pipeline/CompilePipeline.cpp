@@ -8,6 +8,7 @@
 #include "primec/frontend/ImportResolver.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/IrPrinter.h"
+#include "primec/frontend/ImportAllowlist.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 #include "primec/semantics/EffectCeiling.h"
@@ -210,6 +211,33 @@ bool runCompilePipeline(const Options &options,
     return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
   }
   output.expandedSource = importStage.expandedSource;
+
+  if (options.allowImport.has_value()) {
+    const auto violations = findImportAllowlistViolations(
+        importStage.expandedSource, *options.allowImport, options.importPaths);
+    if (!violations.empty()) {
+      error = violations.front().message;
+      SemanticDiagnosticInfo importInfo;
+      importInfo.message = error;
+      for (const auto &violation : violations) {
+        SemanticDiagnosticRecord record;
+        record.message = violation.message;
+        record.primarySpan.line = violation.line;
+        record.primarySpan.column = violation.column;
+        record.primarySpan.endLine = violation.line;
+        record.primarySpan.endColumn = violation.column;
+        record.hasPrimarySpan = violation.line > 0;
+        importInfo.records.push_back(std::move(record));
+        if (!options.collectDiagnostics) {
+          break;
+        }
+      }
+      importInfo.primarySpan = importInfo.records.front().primarySpan;
+      importInfo.hasPrimarySpan = importInfo.records.front().hasPrimarySpan;
+      mapAndSortDiagnosticReportSpansToSourceUnits(importStage.expandedSource, importInfo);
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, importInfo);
+    }
+  }
 
   CompilePipelinePreParseStageState preParseStage;
   if (!runCompilePipelineTransformStage(options,

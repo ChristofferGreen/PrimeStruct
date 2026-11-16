@@ -65,6 +65,7 @@ void printEffectsAndIrSection(std::ostream &err) {
   err << "Effects / IR:\n";
   flagLine(err, "--default-effects <list>", "Default effect set for definitions without one");
   flagLine(err, "--allow-effects <list>", "Reject effects of user code outside the list");
+  flagLine(err, "--allow-import <list>", "Reject stdlib imports of user code outside the prefixes");
   flagLine(err, "--ir-inline", "Inline eligible calls during IR lowering");
   flagLine(err, "--vm-schedule-seed <n>", "Run VM tasks under the schedule seed n picks");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");

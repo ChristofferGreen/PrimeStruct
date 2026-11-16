@@ -182,6 +182,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/frontend/CompileTimeValue.cpp
   src/frontend/ExpandedSourceBuilder.cpp
   src/frontend/FrontendSyntax.cpp
+  src/frontend/ImportAllowlist.cpp
   src/frontend/ImportResolver.cpp
   src/frontend/ImportResolverHelpers.cpp
   src/frontend/Lexer.cpp
@@ -2015,6 +2016,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_allow_effects.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_allow_import.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_semantic_rules.cpp

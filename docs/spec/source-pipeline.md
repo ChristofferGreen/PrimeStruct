@@ -17,6 +17,25 @@
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved; the base-level tree
    contains no templates or `auto`, and every backend consumes an identical canonical form.
 
+- **Import allowlist:** `primec --allow-import <prefix>[,<prefix>...]` restricts which stdlib modules user source may
+  import. An explicit `import /std/...` in the primary file or in an imported project file whose path is not at or
+  below a listed prefix is a diagnostic naming the import and the allowed prefixes. Prefixes match whole path
+  components: `/std/file` allows `/std/file`, `/std/file/*` and `/std/file/x`, never `/std/filesystem`; a trailing
+  `/*` on a prefix is optional. Imports that do not name a stdlib path (project files and project namespaces) are never
+  restricted. `none` or an empty list allows no stdlib import. Imports written inside stdlib files are trusted and not
+  checked, and there is no transitive analysis: only explicit imports of user source count. Without the flag nothing
+  changes; `--collect-diagnostics` reports every violation. This is the import ceiling a build script runs under.
+  ```
+  import /std/net/*
+
+  [return<i32>]
+  main() {
+    return(3i32)
+  }
+  ```
+  `primevm net.prime --allow-import /std/math,/std/file` fails with `import /std/net/* is outside the allowed imports:
+  /std/math,/std/file`; with `--allow-import /std/math,/std/net` it runs and exits 3.
+
 Pipeline operating rules:
 - Each stage halts on error and exposes `--dump-stage=<name>` so tooling/tests can capture the text/tree output just
   before failure.
