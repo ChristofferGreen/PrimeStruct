@@ -1374,6 +1374,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_cpp_native_ui.cpp
     tests/unit/backend_host/test_net.cpp
     tests/unit/backend_host/test_http.cpp
+    tests/unit/backend_host/test_path.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
   )
@@ -1471,6 +1472,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # (12 cases, 268 s in a loaded gate: shards of two.)
   primestructAddDoctestShards(PrimeStruct_web PrimeStruct_cpp_host_call_tests 12 2 900
                               "--test-suite=primestruct.backend.web")
+
+  # /std/path: the textual path functions (tests/unit/backend_host/test_path.cpp). One case runs the fixture on the VM,
+  # the other builds it with optexe, so each is a CTest entry of its own.
+  add_test(
+    NAME PrimeStruct_path_vm
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.path"
+            "--test-case-exclude=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_path_vm
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_path_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.path"
+            "--test-case=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_path_optexe
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
   add_test(

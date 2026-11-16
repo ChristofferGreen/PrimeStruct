@@ -1,0 +1,215 @@
+// /std/path (tests/unit/backend_host/test_path.cpp). The exit code is the number of the first case that failed, or
+// 100 when the cases leaked a heap block, or 0. Generated cases are numbered in the order below.
+import /std/path/*
+import /std/text/*
+import /std/text/view/*
+
+[return<bool> effects(heap_alloc)]
+same([String] got, [string] want) {
+  return(got.equalsText(want))
+}
+
+[return<i32> effects(heap_alloc)]
+run_cases() {
+  if(!same(join("a", "b"), "a/b")) {
+    return(1i32)
+  }
+  if(!same(join("a/", "b"), "a/b")) {
+    return(2i32)
+  }
+  if(!same(join("", "b"), "b")) {
+    return(3i32)
+  }
+  if(!same(join("a", ""), "a")) {
+    return(4i32)
+  }
+  if(!same(join("", ""), "")) {
+    return(5i32)
+  }
+  if(!same(join("a", "/b"), "/b")) {
+    return(6i32)
+  }
+  if(!same(join("/a", "b"), "/a/b")) {
+    return(7i32)
+  }
+  if(!same(join("a/b", "../c"), "a/b/../c")) {
+    return(8i32)
+  }
+  if(!same(parent("a/b"), "a")) {
+    return(9i32)
+  }
+  if(!same(parent("/a"), "/")) {
+    return(10i32)
+  }
+  if(!same(parent("/"), "/")) {
+    return(11i32)
+  }
+  if(!same(parent(""), ".")) {
+    return(12i32)
+  }
+  if(!same(parent("a"), ".")) {
+    return(13i32)
+  }
+  if(!same(parent("a/b/"), "a")) {
+    return(14i32)
+  }
+  if(!same(parent("a//b"), "a")) {
+    return(15i32)
+  }
+  if(!same(parent("/a/b/c"), "/a/b")) {
+    return(16i32)
+  }
+  if(!same(file_name("a/b.txt"), "b.txt")) {
+    return(17i32)
+  }
+  if(!same(file_name("a/b/"), "b")) {
+    return(18i32)
+  }
+  if(!same(file_name(""), "")) {
+    return(19i32)
+  }
+  if(!same(file_name("/"), "")) {
+    return(20i32)
+  }
+  if(!same(file_name("name"), "name")) {
+    return(21i32)
+  }
+  if(!same(stem("a/b.tar.gz"), "b.tar")) {
+    return(22i32)
+  }
+  if(!same(extension("a/b.tar.gz"), ".gz")) {
+    return(23i32)
+  }
+  if(!same(stem(".bashrc"), ".bashrc")) {
+    return(24i32)
+  }
+  if(!same(extension(".bashrc"), "")) {
+    return(25i32)
+  }
+  if(!same(stem("a."), "a.")) {
+    return(26i32)
+  }
+  if(!same(extension("a."), "")) {
+    return(27i32)
+  }
+  if(!same(stem("a"), "a")) {
+    return(28i32)
+  }
+  if(!same(extension("a"), "")) {
+    return(29i32)
+  }
+  if(!same(extension("dir.d/file"), "")) {
+    return(30i32)
+  }
+  if(!same(extension(""), "")) {
+    return(31i32)
+  }
+  if(!same(stem("a/b.txt/"), "b")) {
+    return(32i32)
+  }
+  if(!same(normalize(""), ".")) {
+    return(33i32)
+  }
+  if(!same(normalize("a/./b//c/"), "a/b/c")) {
+    return(34i32)
+  }
+  if(!same(normalize("a/b/../c"), "a/c")) {
+    return(35i32)
+  }
+  if(!same(normalize("/.."), "/")) {
+    return(36i32)
+  }
+  if(!same(normalize("/a/../../b"), "/b")) {
+    return(37i32)
+  }
+  if(!same(normalize("../a"), "../a")) {
+    return(38i32)
+  }
+  if(!same(normalize("a/.."), ".")) {
+    return(39i32)
+  }
+  if(!same(normalize("a/../.."), "..")) {
+    return(40i32)
+  }
+  if(!same(normalize("../.."), "../..")) {
+    return(41i32)
+  }
+  if(!same(normalize("/"), "/")) {
+    return(42i32)
+  }
+  if(!same(normalize("//a"), "/a")) {
+    return(43i32)
+  }
+  if(!same(normalize("./"), ".")) {
+    return(44i32)
+  }
+  if(!same(normalize("a/./b/../../c"), "c")) {
+    return(45i32)
+  }
+  if(!same(relative_to("/a/b/c", "/a"), "b/c")) {
+    return(46i32)
+  }
+  if(!same(relative_to("/a/x", "/a/b"), "../x")) {
+    return(47i32)
+  }
+  if(!same(relative_to("/a", "/a"), ".")) {
+    return(48i32)
+  }
+  if(!same(relative_to("a/b", "/a"), "")) {
+    return(49i32)
+  }
+  if(!same(relative_to("a", "../b"), "")) {
+    return(50i32)
+  }
+  if(!same(relative_to("../a", ".."), "a")) {
+    return(51i32)
+  }
+  if(!same(relative_to("", ""), ".")) {
+    return(52i32)
+  }
+  if(!same(relative_to("a/b/", "a"), "b")) {
+    return(53i32)
+  }
+  if(!same(relative_to("/a", "/a/b/c"), "../..")) {
+    return(54i32)
+  }
+  if(!same(relative_to("/a/../b", "/b/./c"), "..")) {
+    return(55i32)
+  }
+  if(!is_absolute("/a")) {
+    return(56i32)
+  }
+  if(is_absolute("a")) {
+    return(57i32)
+  }
+  if(is_absolute("")) {
+    return(58i32)
+  }
+  if(!is_absolute("/")) {
+    return(59i32)
+  }
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  // The first run also makes the byte region of every string literal it meets (made once, kept for the whole run), so
+  // the heap is measured around the second run.
+  [i32] warmup{run_cases()}
+  if(warmup != 0i32) {
+    return(warmup)
+  }
+  [i32] blocksBefore{heapLiveBlocks()}
+  [u64] bytesBefore{stringHeapBytesInUse()}
+  [i32] failed{run_cases()}
+  if(failed != 0i32) {
+    return(failed)
+  }
+  if(heapLiveBlocks() != blocksBefore) {
+    return(100i32)
+  }
+  if(stringHeapBytesInUse() != bytesBefore) {
+    return(101i32)
+  }
+  return(0i32)
+}

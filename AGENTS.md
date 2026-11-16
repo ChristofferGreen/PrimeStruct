@@ -49,7 +49,7 @@ build and layout solidify.
   `stdlib/std/maybe/*`, `stdlib/std/file/*`, `stdlib/std/image/*`,
   `stdlib/std/ui/native/*`, `stdlib/std/ui/events/*`,
   `stdlib/std/scene/*`, `stdlib/std/os/*`,
-  `stdlib/std/net/*`, `stdlib/std/http/*`, `stdlib/std/html/*`,
+  `stdlib/std/net/*`, `stdlib/std/http/*`, `stdlib/std/html/*`, `stdlib/std/path/*`,
   `stdlib/std/sync/*`,
   `stdlib/std/collections/vector.prime`,
   `stdlib/std/collections/map.prime`,

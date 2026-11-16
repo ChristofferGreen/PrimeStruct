@@ -1418,3 +1418,60 @@ main() {
   return(0i32)
 }
 ```
+
+### Paths (`/std/path`)
+
+`import /std/path/*` provides textual path functions for POSIX paths: the separator is `/`, and a path that starts with
+`/` is absolute. They work on the text alone, with no file system access, no host call and no effect beyond
+`heap_alloc`: they never check that a path exists, never follow a symbolic link and never read the working directory,
+so `normalize("a/link/..")` is `a` whether or not `link` is a link. Windows separators and drive letters are not
+interpreted. Every path parameter is a `StringView` (a literal passes as it is, a `String` as `s.view()`) and every
+result is an owned `String`, except `is_absolute`.
+
+- `join(base, path)`: `path` alone when it is absolute or `base` is empty, `base` alone when `path` is empty, else
+  the two with one `/` between them (none is added when `base` already ends with one). Nothing is resolved:
+  `join("a", "../b")` is `a/../b`, and `join("a", "/b")` is `/b`.
+- `parent(path)`: the path without its last component and the separators before it. `parent("a/b/")` is `a`,
+  `parent("/a")` and `parent("/")` are `/`, and a path with no separator, including `""`, gives `.`.
+- `file_name(path)`: the last component, ignoring trailing separators: `file_name("a/b.txt/")` is `b.txt`;
+  `file_name("")` and `file_name("/")` are `""`.
+- `stem(path)` and `extension(path)`: the file name without and with its last extension. The extension keeps its
+  dot: `extension("a/b.tar.gz")` is `.gz` and `stem` of it is `b.tar`. A name that starts with a dot (`.bashrc`) or
+  ends with one (`a.`) has no extension, so `extension` gives `""` and `stem` gives the whole name.
+- `is_absolute(path) -> bool`: the path starts with `/`.
+- `normalize(path)`: removes `.` components and repeated and trailing separators and resolves `..` against the
+  component before it. A `..` that has nothing to remove is kept at the start of a relative path (`../a`) and dropped
+  at the root (`/..` is `/`). An empty relative result is `.`.
+- `relative_to(path, base)`: the path that leads from `base` to `path`, both normalized first:
+  `relative_to("/a/b/c", "/a")` is `b/c`, `relative_to("/a/x", "/a/b")` is `../x`, and the same path gives `.`. The
+  result is `""` when the text cannot say: one path is absolute and the other is not, or the rest of `base` still
+  contains `..` (`relative_to("a", "../b")`), since that depends on the working directory.
+
+```prime
+import /std/path/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] source{join("src/app", "../lib/util.tar.gz")}
+  [String] clean{normalize(source.view())}
+  [bool] cleaned{clean.equalsText("src/lib/util.tar.gz")}
+  if(!cleaned) {
+    return(1i32)
+  }
+  [bool] split{stem(clean.view()).equalsText("util.tar") && extension(clean.view()).equalsText(".gz")}
+  if(!split) {
+    return(2i32)
+  }
+  [bool] placed{parent(clean.view()).equalsText("src/lib") && !is_absolute(clean.view())}
+  if(!placed) {
+    return(3i32)
+  }
+  [bool] related{relative_to("/work/src/lib", "/work/out").equalsText("../src/lib")}
+  if(!related) {
+    return(4i32)
+  }
+  return(0i32)
+}
+```

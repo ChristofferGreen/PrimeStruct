@@ -1,0 +1,230 @@
+// Textual path functions (docs/spec/stdlib-reference.md, /std/path). Paths are POSIX: the separator is "/", and a path
+// that starts with "/" is absolute. Every function works on the text alone: it never asks the file system whether a
+// path exists, never follows a link and never reads the working directory, so `normalize("a/link/..")` is "a" even
+// when `link` is a symbolic link. Path parameters are `StringView`s, so a literal passes as it is and a `String`
+// passes as `s.view()`; results are owned `String`s.
+import /std/text/*
+import /std/text/view/*
+import /std/collections/vector/*
+
+namespace std {
+namespace path {
+
+  // True when the path starts with "/".
+  [public return<bool>]
+  is_absolute([StringView] path) {
+    return(path.count() > 0i32 && path.byteAt(0i32) == 47u8)
+  }
+
+  // `path` without its trailing separators (the empty view for "" and for "///").
+  [return<StringView>]
+  without_trailing_separators([StringView] path) {
+    [i32 mut] end{path.count()}
+    while(end > 0i32 && path.byteAt(end - 1i32) == 47u8) {
+      end = end - 1i32
+    }
+    return(path.slice(0i32, end))
+  }
+
+  // The last component as a view: "" for "" and "/", "b" for "a/b" and "a/b/".
+  [return<StringView>]
+  last_component([StringView] path) {
+    [StringView] body{without_trailing_separators(path)}
+    [i32] slash{body.lastIndexOf("/")}
+    return(body.slice(slash + 1i32, body.count()))
+  }
+
+  // The index of the dot that starts the extension of `name`, or -1: a name that starts with a dot (".bashrc") or ends
+  // with one ("a.") has no extension.
+  [return<i32>]
+  extension_dot([StringView] name) {
+    [i32] dot{name.lastIndexOf(".")}
+    if(dot <= 0i32 || dot == name.count() - 1i32) {
+      return(-1i32)
+    }
+    return(dot)
+  }
+
+  // Fills `spans` with the components that remain after resolving "." and "..": a "..", which removes the component
+  // before it, is kept only at the start of a relative path and is dropped at the root. Each component is two entries
+  // of `spans`, its start and its end in `path` (a vector of views would let slices of `path` escape through the
+  // container, and a vector returned by a function imported from the stdlib was measured not to be freed by the caller, so
+  // the caller makes the vector and this function fills it).
+  [return<void> effects(heap_alloc)]
+  resolve_into([StringView] path, [vector<i32> mut] spans) {
+    [bool] absolute{is_absolute(path)}
+    [i32 mut] start{0i32}
+    for([i32 mut] at{0i32}, at <= path.count(), at++) {
+      if(at == path.count() || path.byteAt(at) == 47u8) {
+        if(at > start) {
+          [StringView] part{path.slice(start, at)}
+          if(part.equalsText("..")) {
+            [bool mut] canPop{false}
+            if(spans.count() > 0i32) {
+              [StringView] top{path.slice(spans[spans.count() - 2i32], spans[spans.count() - 1i32])}
+              canPop = !top.equalsText("..")
+            }
+            if(canPop) {
+              spans.pop()
+              spans.pop()
+            } else {
+              if(!absolute) {
+                spans.push(start)
+                spans.push(at)
+              }
+            }
+          } else {
+            if(!part.equalsText(".")) {
+              spans.push(start)
+              spans.push(at)
+            }
+          }
+        }
+        start = at + 1i32
+      }
+    }
+  }
+
+  // The component `index` of `spans` (made by resolve_into from the same `path`).
+  [return<StringView>]
+  component([StringView] path, [vector<i32>] spans, [i32] index) {
+    return(path.slice(spans[index * 2i32], spans[index * 2i32 + 1i32]))
+  }
+
+  // `base` joined with `path`: `path` alone when it is absolute or `base` is empty, `base` alone when `path` is empty,
+  // else the two with one separator between them (none is added when `base` already ends with one). Nothing is
+  // resolved: join("a", "../b") is "a/../b".
+  [public return<String> effects(heap_alloc)]
+  join([StringView] base, [StringView] path) {
+    if(is_absolute(path) || base.empty()) {
+      return(path.toOwned())
+    }
+    [String mut] out{base.toOwned()}
+    if(path.empty()) {
+      return(out)
+    }
+    if(base.byteAt(base.count() - 1i32) != 47u8) {
+      out.append("/")
+    }
+    out.appendBytes(path.data, path.count())
+    return(out)
+  }
+
+  // The path without its last component and the separators before it: "a/b" gives "a", "/a" and "/" give "/", and a
+  // path with no separator (including "") gives ".".
+  [public return<String> effects(heap_alloc)]
+  parent([StringView] path) {
+    [StringView] body{without_trailing_separators(path)}
+    if(body.empty()) {
+      if(path.empty()) {
+        return(stringFrom("."))
+      }
+      return(stringFrom("/"))
+    }
+    [i32] slash{body.lastIndexOf("/")}
+    if(slash < 0i32) {
+      return(stringFrom("."))
+    }
+    [StringView] head{without_trailing_separators(body.slice(0i32, slash))}
+    if(head.empty()) {
+      return(stringFrom("/"))
+    }
+    return(head.toOwned())
+  }
+
+  // The last component, ignoring trailing separators: "a/b.txt" and "a/b.txt/" give "b.txt"; "" and "/" give "".
+  [public return<String> effects(heap_alloc)]
+  file_name([StringView] path) {
+    return(last_component(path).toOwned())
+  }
+
+  // The file name without its extension: "a/b.tar.gz" gives "b.tar", ".bashrc" gives ".bashrc".
+  [public return<String> effects(heap_alloc)]
+  stem([StringView] path) {
+    [StringView] name{last_component(path)}
+    [i32] dot{extension_dot(name)}
+    if(dot < 0i32) {
+      return(name.toOwned())
+    }
+    return(name.slice(0i32, dot).toOwned())
+  }
+
+  // The extension of the file name with its dot: "a/b.tar.gz" gives ".gz"; "" when there is none (".bashrc", "a.", "a").
+  [public return<String> effects(heap_alloc)]
+  extension([StringView] path) {
+    [StringView] name{last_component(path)}
+    [i32] dot{extension_dot(name)}
+    if(dot < 0i32) {
+      return(String{})
+    }
+    return(name.slice(dot, name.count()).toOwned())
+  }
+
+  // The path with "." components removed, repeated and trailing separators collapsed, and ".." resolved against the
+  // component before it. A ".." that has nothing to remove stays at the start of a relative path and is dropped at the
+  // root, so "/.." is "/" and "../a" stays. The result of an empty relative path is ".".
+  [public return<String> effects(heap_alloc)]
+  normalize([StringView] path) {
+    [vector<i32> mut] spans{vector<i32>{}}
+    resolve_into(path, spans)
+    [String mut] out{String{}}
+    if(is_absolute(path)) {
+      out.append("/")
+    }
+    for([i32 mut] i{0i32}, i < spans.count() / 2i32, i++) {
+      if(i > 0i32) {
+        out.append("/")
+      }
+      [StringView] part{component(path, spans, i)}
+      out.appendBytes(part.data, part.count())
+    }
+    if(out.empty()) {
+      out.append(".")
+    }
+    return(out)
+  }
+
+  // The path that leads from `base` to `path`, both normalized first: relative_to("/a/b/c", "/a") is "b/c" and
+  // relative_to("/a/x", "/a/b") is "../x"; the same path gives ".". It is "" when no such path exists in the text: one
+  // path is absolute and the other is not, or the rest of `base` still contains "..".
+  [public return<String> effects(heap_alloc)]
+  relative_to([StringView] path, [StringView] base) {
+    if(is_absolute(path) != is_absolute(base)) {
+      return(String{})
+    }
+    [vector<i32> mut] targetSpans{vector<i32>{}}
+    [vector<i32> mut] originSpans{vector<i32>{}}
+    resolve_into(path, targetSpans)
+    resolve_into(base, originSpans)
+    [i32] targetCount{targetSpans.count() / 2i32}
+    [i32] originCount{originSpans.count() / 2i32}
+    [i32 mut] shared{0i32}
+    while(shared < targetCount && shared < originCount &&
+          component(path, targetSpans, shared).equals(component(base, originSpans, shared))) {
+      shared = shared + 1i32
+    }
+    [String mut] out{String{}}
+    for([i32 mut] i{shared}, i < originCount, i++) {
+      if(component(base, originSpans, i).equalsText("..")) {
+        return(String{})
+      }
+      if(!out.empty()) {
+        out.append("/")
+      }
+      out.append("..")
+    }
+    for([i32 mut] i{shared}, i < targetCount, i++) {
+      if(!out.empty()) {
+        out.append("/")
+      }
+      [StringView] part{component(path, targetSpans, i)}
+      out.appendBytes(part.data, part.count())
+    }
+    if(out.empty()) {
+      out.append(".")
+    }
+    return(out)
+  }
+
+}
+}
