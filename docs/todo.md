@@ -863,8 +863,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5841: `[namespace] name { ... }` is a definition
+- [~] TODO-5841: `[namespace] name { ... }` is a definition
   - owner: ai
+  - claimed_by: ns-5841 (worktree-agent-a7919c960bc8f5979), 2026-11-16
   - status: ready
   - created_at: 2026-11-10
   - phase: AI workflow (docs/AiWorkflowPlan.md section 6.5)
