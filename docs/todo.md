@@ -687,9 +687,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [ ] TODO-5524: Int-backed error structs round-trip through stdlib Result sums
+- [~] TODO-5524: Int-backed error structs round-trip through stdlib Result sums
   - owner: ai
   - status: ready
+  - claimed_by: result-5524 (worktree-agent-a8cda20511872e0fb), 2026-11-16
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-error-structs
