@@ -1020,9 +1020,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5911: `/std/build` builds a graph value and exports it as JSON
+- [~] TODO-5911: `/std/build` builds a graph value and exports it as JSON
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: build-5911 (worktree-agent-a04312cdc0df56aeb), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, sections 3 to 5)
   - parallel_track: build-graph
