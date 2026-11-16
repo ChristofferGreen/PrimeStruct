@@ -1025,9 +1025,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5908: `--allow-effects` rejects declared effects outside a list in user code
+- [~] TODO-5908: `--allow-effects` rejects declared effects outside a list in user code
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: effects-5908 (worktree-agent-a25d25025486fcf48), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 6)
   - parallel_track: effect-ceiling
