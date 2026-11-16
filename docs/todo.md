@@ -122,7 +122,6 @@ of sync with them.
 | TODO-5938 | A byte loop over one large region on `optexe` takes the cycles it took before the granule table | ready | optexe-bytes |
 | TODO-5847 | A spawned call with a builtin `map<K, V>` or an owned sum parameter or result runs as a task | ready | mt-vm-tasks |
 | TODO-5995 | A `String` element read of a stdlib `Vector<String>` leaks the copy | ready | vector-owners |
-| TODO-5996 | Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter | ready | vector-owners |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
@@ -550,21 +549,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - negative: reading an element of a `Vector<i32>` still emits no destroy
     - full release gate green
   - stop_rule: scalar-result reads of a `String` element of a stdlib `Vector`.
-
-- [~] TODO-5996: Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter
-  - owner: ai
-  - status: ready
-  - claimed_by: vec-5996 (worktree-agent-a2942be0580f5bc22), 2026-11-16
-  - created_at: 2026-11-16
-  - phase: Collections (docs/spec/stdlib-reference.md)
-  - parallel_track: vector-owners
-  - scope: Found with TODO-5993. A program that declares `[struct] Item() { [i32] id{0i32} [String] label{String{}} }`, a function `items_size([Vector<Item> copy mut] items)` that pushes an `Item` and sums `items[i].id + items[i].label.count()`, and calls it inline with a `Vector<Item>` local runs on the VM and prints 105; adding the unused line `import /std/collections/map/*` makes the same program stop with `VM error: unaligned indirect address in IR: 22`. Without the import the same function runs, inline and as a task.
-  - implementation_notes: bisect with the `Item` program of the test `a task takes and returns stdlib Vectors` in tests/unit/program_matrix/test_program_matrix_tasks.cpp (it is the Map case that carries the import, in a separate program because of this); compare `--dump-stage ir-lowered` with and without the import.
-  - acceptance:
-    - positive: the program above prints 105 with and without the import, on the VM and `optexe`
-    - negative: none beyond the full gate
-    - full release gate green
-  - stop_rule: the one program; the cause may be any resolution that depends on the imported module set.
 
 - [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
   - owner: ai

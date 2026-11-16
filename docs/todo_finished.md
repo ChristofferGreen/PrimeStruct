@@ -2345,6 +2345,7 @@ are left unarchived.
 | TODO-5992 | A spawned call with a builtin `vector<T>` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5993 | A spawned call with a stdlib `Vector` or `Map` parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5994 | `wait(t).count()` of a stdlib `Vector` task result waits twice | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5996 | Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 
 <!-- INDEX-END -->
 

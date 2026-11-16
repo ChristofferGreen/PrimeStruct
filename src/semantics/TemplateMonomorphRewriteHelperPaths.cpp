@@ -211,6 +211,27 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
     return anySourceDefStartsWith(ctx, ownedPath + "<") ||
            anySourceDefStartsWith(ctx, ownedPath + "__t");
   };
+  // `at`, `at_unsafe` and `[]` on a local of the stdlib vector struct take the stdlib helper: the builtin access
+  // assumes the layout of the builtin vector and one slot per element, which is not the struct's.
+  const auto isStdlibVectorElementAccess = [&](std::string_view name) {
+    if (!collection_helpers::isAtHelperName(name) &&
+        !collection_helpers::isAtUnsafeHelperName(name)) {
+      return false;
+    }
+    if (!resolvesCollectionVectorValueReceiver(
+            receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
+      return false;
+    }
+    std::vector<std::string> receiverTemplateArgs;
+    return resolveCollectionVectorValueReceiverTemplateArgs(receiverExpr,
+                                                            params,
+                                                            locals,
+                                                            allowMathBare,
+                                                            namespacePrefix,
+                                                            ctx,
+                                                            receiverTemplateArgs) &&
+           receiverTemplateArgs.size() == 1;
+  };
   // Shadow precedence: a real definition at the exact spelled path always
   // wins over any compat/alias rewrite this function would otherwise
   // apply below. Without this, an explicit call to a fully-qualified
@@ -218,7 +239,13 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
   // definition of its own could still get silently redirected to an
   // unrelated same-named alias (e.g. /vector/count) defined elsewhere,
   // even though the two paths are not declared equivalent.
-  if (hasDefinitionFamilyPath(path)) {
+  // The one exception: importing the map module makes the bare `at` of a stdlib vector receiver resolve to the map
+  // helper, and the element must keep the vector helper so an import never changes how it is read.
+  const bool mapHelperShadowsVectorRead = !expr.isMethodCall &&
+                                          isStdlibVectorElementAccess(expr.name) &&
+                                          (path == collection_helpers::kCanonicalMapAt ||
+                                           path == collection_helpers::kCanonicalMapAtUnsafe);
+  if (hasDefinitionFamilyPath(path) && !mapHelperShadowsVectorRead) {
     return path;
   }
   auto hasVisibleRootBuiltinSoaConversionHelper = [&](std::string_view helperPath) {
@@ -288,20 +315,6 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
     }
     return canonicalPath;
   };
-  // `at`, `at_unsafe` and `[]` on a local of the stdlib vector struct take the stdlib helper: the builtin access
-  // assumes the layout of the builtin vector and one slot per element, which is not the struct's.
-  const auto isStdlibVectorElementAccess = [&](std::string_view name) {
-    if (!collection_helpers::isAtHelperName(name) && !collection_helpers::isAtUnsafeHelperName(name)) {
-      return false;
-    }
-    if (!resolvesCollectionVectorValueReceiver(receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
-      return false;
-    }
-    std::vector<std::string> receiverTemplateArgs;
-    return resolveCollectionVectorValueReceiverTemplateArgs(
-               receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx, receiverTemplateArgs) &&
-           receiverTemplateArgs.size() == 1;
-  };
   std::string helperName;
   bool resolvesVectorFamilyPath = false;
   if (semantics::isCanonicalVectorCompatibilityPath(path)) {
@@ -336,6 +349,8 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
     // supposed to interfere with - widening this to all method calls
     // regressed several diagnostic-pinning tests that require those paths
     // to keep rejecting specific visibility-gated shapes.
+    helperName = expr.name;
+  } else if (mapHelperShadowsVectorRead) {
     helperName = expr.name;
   } else {
     return path;

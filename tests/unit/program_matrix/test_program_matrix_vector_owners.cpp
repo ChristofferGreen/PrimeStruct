@@ -1056,4 +1056,63 @@ pick_coded([Reference<Coded> mut] value) {
                         "53\n53\n53\n54\n54\n54\n");
 }
 
+// The element read of a stdlib vector never depends on which stdlib modules the program imports: importing the map
+// module used to send the bare `at` behind `[]` to the map helper and read the element with the builtin layout.
+namespace {
+
+void runItemReadProgram(const std::string &name, const std::string &extraImport) {
+  program_matrix::ProgramCase program;
+  program.name = name;
+  program.source = "import /std/text/*\nimport /std/collections/*\n" + extraImport + R"(
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+}
+
+[return<i32> effects(heap_alloc)]
+items_size([Vector<Item> copy mut] items) {
+  items.push(Item{99i32, String{}})
+  [i32 mut] sum{0i32}
+  [i32 mut] i{0i32}
+  while(i < items.count()) {
+    sum = sum + items[i].id + items[i].label.count()
+    i = i + 1i32
+  }
+  return(sum)
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+    [String mut] l{String{}}
+    l.append("lbl")
+    items.push(Item{3i32, l})
+    print_line(items_size(items))
+    print_line(items.count())
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "105\n1\n0\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+} // namespace
+
+TEST_CASE("a Vector of structs reads an element of a copy mut parameter without a map import") {
+  runItemReadProgram("vector_item_parameter_read_plain", "");
+}
+
+TEST_CASE("a Vector of structs reads an element of a copy mut parameter with the map import") {
+  runItemReadProgram("vector_item_parameter_read_with_map", "import /std/collections/map/*\n");
+}
+
 TEST_SUITE_END();
