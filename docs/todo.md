@@ -594,9 +594,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
 
-- [ ] TODO-5991: A field read of a struct a call returns destroys the temporary copy
+- [~] TODO-5991: A field read of a struct a call returns destroys the temporary copy
   - owner: ai
   - status: ready
+  - claimed_by: perf-5991 (worktree-agent-aeba390f62e9bc341), 2026-11-16
   - created_at: 2026-11-16
   - phase: Result and control flow (docs/spec/errors-and-file-io.md; found by TODO-5978)
   - parallel_track: pick-payloads
