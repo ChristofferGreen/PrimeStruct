@@ -29,6 +29,10 @@ struct OptimizationOptions {
   bool report = false;
 };
 
+// --profile: the named set of defaults a run starts from. Program is today's behavior; Build is the sandbox of a
+// build script (docs/spec/integration-and-tooling.md, Run profiles).
+enum class RunProfile { Program, Build };
+
 struct Options {
   std::string emitKind;
   std::string wasmProfile = "wasi";
@@ -58,6 +62,8 @@ struct Options {
   bool allowEnvelopeTextTransforms = true;
   std::vector<std::string> semanticTransforms = {"single_type_to_return"};
   bool requireCanonicalSyntax = false;
+  // --profile: a flag given explicitly always overrides the profile's value, whichever comes first.
+  RunProfile profile = RunProfile::Program;
   std::vector<std::string> defaultEffects = {"io_out"};
   std::vector<std::string> entryDefaultEffects = {"io_out"};
   // --allow-effects: the effects user code may declare (stdlib paths are not checked); unset is no ceiling.

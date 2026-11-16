@@ -7,6 +7,40 @@
 - **Testing:** unit/looped regression suites verify backend parity (C++, VM, GLSL).
 - **Diagnostics:** metrics/logs land under `diagnostics/PrimeStruct/*`. Effect annotations drive error messaging.
 
+### Run Profiles
+`primec` and `primevm` take `--profile <program|build>`: a named set of defaults, so a runner does not pass a pile of
+flags. `program` is today's behavior and the default; without the flag nothing changes. `build` is the sandbox of a
+build script (docs/BuildSystemPlan.md, section 6):
+
+| Setting | `program` | `build` |
+| --- | --- | --- |
+| Default effects | `io_out` | none, so a definition without `[effects]` cannot print |
+| `--allow-effects` | none | `file_read,heap_alloc` |
+| `--allow-import` | none | `/std/build,/std/path,/std/file,/std/collections` |
+| Optimization | `-O2` on the VM | `-O0` |
+| `--vm-schedule-seed` | eager schedule | `0`, a fixed deterministic schedule |
+
+Override rule: a flag given explicitly always wins over the profile's value of the same setting, whether it comes
+before or after `--profile`; the order of arguments never changes the result. `PRIMESTRUCT_VM_SCHEDULE_SEED` also
+wins over the profile. An unknown profile name is an argument error. The allowlist is prefix text only, so a prefix
+such as `/std/build` does not need that module to exist. The runner picks the profile; a source file cannot choose or
+relax its own.
+```
+[return<i32>]
+square([i32] x) {
+  return(x * x)
+}
+
+[return<i32>]
+main() {
+  return(square(2i32) + 1i32)
+}
+```
+`primevm sum.prime --profile build` and `primevm sum.prime` both exit 5. With `import /std/net/*` added,
+`--profile build` fails with `import /std/net/* is outside the allowed imports: /std/build,/std/path,/std/file,
+/std/collections`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
+`[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc`.
+
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
   canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export

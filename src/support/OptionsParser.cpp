@@ -412,6 +412,45 @@ bool parseAllowImport(const std::string &text, std::vector<std::string> &out, st
   return true;
 }
 
+// Fills in what the selected profile sets and no explicit flag did. A flag always wins over the profile, whether it
+// comes before or after `--profile`, so the order of arguments never changes the result.
+void applyRunProfile(Options &out, bool defaultEffectsExplicit) {
+  if (out.profile != RunProfile::Build) {
+    return;
+  }
+  if (!defaultEffectsExplicit) {
+    out.defaultEffects.clear();
+    out.entryDefaultEffects.clear();
+  }
+  if (!out.allowEffects.has_value()) {
+    out.allowEffects = std::vector<std::string>{"file_read", "heap_alloc"};
+  }
+  if (!out.allowImport.has_value()) {
+    out.allowImport =
+        std::vector<std::string>{"/std/build", "/std/path", "/std/file", "/std/collections"};
+  }
+  if (!out.optimization.levelSpecified) {
+    out.optimization.level = 0;
+    out.optimization.levelSpecified = true;
+  }
+  if (!out.vmScheduleSeed.has_value()) {
+    out.vmScheduleSeed = 0;
+  }
+}
+
+bool parseRunProfile(const std::string &text, RunProfile &out, std::string &error) {
+  if (text == "program") {
+    out = RunProfile::Program;
+    return true;
+  }
+  if (text == "build") {
+    out = RunProfile::Build;
+    return true;
+  }
+  error = "unsupported --profile value: " + text + " (expected program|build)";
+  return false;
+}
+
 bool parseBenchmarkForceSemanticProduct(const std::string &text, std::optional<bool> &out, std::string &error) {
   const std::string normalized = trimAscii(text);
   if (normalized == "on" || normalized == "true" || normalized == "1") {
@@ -658,6 +697,7 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
   bool noTransforms = false;
   bool noTextTransforms = false;
   bool noSemanticTransforms = false;
+  bool defaultEffectsExplicit = false;
 
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
@@ -862,10 +902,23 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       auto effects = parseDefaultEffects(argv[++i]);
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+      defaultEffectsExplicit = true;
     } else if (arg.rfind("--default-effects=", 0) == 0) {
       auto effects = parseDefaultEffects(arg.substr(std::string("--default-effects=").size()));
       out.defaultEffects = effects;
       out.entryDefaultEffects = effects;
+      defaultEffectsExplicit = true;
+    } else if (arg == "--profile" && i + 1 < argc) {
+      if (!parseRunProfile(argv[++i], out.profile, error)) {
+        return false;
+      }
+    } else if (arg == "--profile") {
+      error = "--profile requires a value (program|build)";
+      return false;
+    } else if (arg.rfind("--profile=", 0) == 0) {
+      if (!parseRunProfile(arg.substr(std::string("--profile=").size()), out.profile, error)) {
+        return false;
+      }
     } else if (arg == "--allow-effects" && i + 1 < argc) {
       std::vector<std::string> allowed;
       if (!parseAllowEffects(argv[++i], allowed, error)) {
@@ -1077,6 +1130,7 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     }
   }
 
+  applyRunProfile(out, defaultEffectsExplicit);
   applyNoTransformFlags(out, noTransforms, noTextTransforms, noSemanticTransforms);
   normalizeEntryPath(out);
 
