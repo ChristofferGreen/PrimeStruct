@@ -1001,4 +1001,59 @@ TEST_CASE("at and [] read a struct element and a scalar element of a local decla
                         "50\n49\n50\n15\n");
 }
 
+TEST_CASE("a field read of a struct a call returns destroys the temporary") {
+  // `items.at(i).code` copies the element, reads one field and drops the copy: the String it holds is freed.
+  runVectorOwnerProgram("call_result_field_read",
+                        R"(
+[struct]
+Coded() {
+  [String] code{String{}}
+}
+
+[effects(heap_alloc), return<Coded>]
+make_coded([i32] id) {
+  return(Coded{label(id)})
+}
+)",
+                        R"(
+    [Vector<Coded> mut] items{vector<Coded>{}}
+    items.push(make_coded(1i32))
+    items.push(make_coded(2i32))
+    items.push(make_coded(3i32))
+    print_line(first_byte(/std/collections/vector/at(items, 2i32).code))
+    print_line(first_byte(items.at(1i32).code))
+    print_line(first_byte(items[0i32].code))
+    print_line(first_byte(make_coded(4i32).code))
+)",
+                        "51\n50\n49\n52\n");
+}
+
+TEST_CASE("a field read of a place a call returns is not destroyed") {
+  // A Reference-returning call hands back the owner's own value: reading a field of it must leave it intact.
+  runVectorOwnerProgram("reference_result_field_read",
+                        R"(
+[struct]
+Coded() {
+  [String] code{String{}}
+}
+
+[return<Reference<Coded>>]
+pick_coded([Reference<Coded> mut] value) {
+  return(value)
+}
+)",
+                        R"(
+    [Coded mut] kept{Coded{label(5i32)}}
+    print_line(first_byte(pick_coded(kept).code))
+    print_line(first_byte(pick_coded(kept).code))
+    print_line(first_byte(kept.code))
+    [vector<Coded> mut] rows{vector<Coded>{}}
+    rows.push(Coded{label(6i32)})
+    print_line(first_byte(rows[0i32].code))
+    print_line(first_byte(rows.at(0i32).code))
+    print_line(first_byte(rows[0i32].code))
+)",
+                        "53\n53\n53\n54\n54\n54\n");
+}
+
 TEST_SUITE_END();

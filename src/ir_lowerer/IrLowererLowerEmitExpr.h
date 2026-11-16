@@ -569,6 +569,37 @@
                 {IrOpcode::LoadLocal, static_cast<uint64_t>(fieldValueLocal)});
             return true;
           }
+          // A struct or `String` field of such a temporary stays a place inside it that the reader copies, so
+          // the receiver becomes a hidden local that lives to the end of the statement and is destroyed there.
+          if (!fileScopeStack.empty() && setupStage.statementNesting > 0 &&
+              !ownedTemporaryStructPath(receiver, localsIn).empty()) {
+            Expr hiddenBinding;
+            hiddenBinding.kind = Expr::Kind::Call;
+            hiddenBinding.isBinding = true;
+            hiddenBinding.name = "__temporary_receiver_" + std::to_string(allocTempLocal());
+            hiddenBinding.namespacePrefix = receiver.namespacePrefix;
+            hiddenBinding.sourceLine = receiver.sourceLine;
+            hiddenBinding.sourceColumn = receiver.sourceColumn;
+            hiddenBinding.args.push_back(receiver);
+            Expr fieldExpr = expr;
+            Expr &receiverName = fieldExpr.args.front();
+            receiverName = Expr{};
+            receiverName.kind = Expr::Kind::Name;
+            receiverName.name = hiddenBinding.name;
+            receiverName.namespacePrefix = receiver.namespacePrefix;
+            const size_t scopeDepth = fileScopeStack.size() - 1;
+            const size_t entriesBefore = fileScopeStack[scopeDepth].size();
+            LocalMap readLocals = localsIn;
+            if (!emitStatement(hiddenBinding, readLocals)) {
+              return false;
+            }
+            for (size_t entry = entriesBefore; entry < fileScopeStack[scopeDepth].size(); ++entry) {
+              if (fileScopeStack[scopeDepth][entry] < 0) {
+                setupStage.statementTemporaryDrops.push_back(fileScopeStack[scopeDepth][entry]);
+              }
+            }
+            return emitExpr(fieldExpr, readLocals);
+          }
           auto describeFieldReceiver = [&](const Expr &receiverExpr) {
             if (receiverExpr.kind == Expr::Kind::Name && !receiverExpr.name.empty()) {
               return function.name + " -> " + receiverExpr.name + "." + expr.name;

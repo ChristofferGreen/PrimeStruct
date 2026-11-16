@@ -258,6 +258,15 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             path != primec::collection_helpers::kCanonicalVectorAtUnsafe) {
           return false;
         }
+        // A local of the stdlib vector struct calls the helper, which returns a copy of the element.
+        if (callExpr.args.front().kind == Expr::Kind::Name) {
+          const auto receiverLocal = locals.find(callExpr.args.front().name);
+          if (receiverLocal != locals.end() &&
+              receiverLocal->second.kind == LocalInfo::Kind::Value &&
+              !receiverLocal->second.structTypeName.empty()) {
+            return false;
+          }
+        }
         const auto receiverInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
             callExpr.args.front(),
             locals,

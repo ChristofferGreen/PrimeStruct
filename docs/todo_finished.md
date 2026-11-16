@@ -2341,6 +2341,7 @@ are left unarchived.
 | TODO-5988 | Builtin math names are classified by one rule in support | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5989 | Control-flow call names, simple-call-name tests and return kinds are classified once | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5990 | `isSimpleCallName` and the control-flow call predicates have one rule with explicit layer policies | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5991 | A field read of a struct a call returns destroys the temporary copy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 
 <!-- INDEX-END -->
 

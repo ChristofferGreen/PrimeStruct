@@ -95,7 +95,8 @@
   destroyed at the end of its statement (a call result, a constructor statement such as `Named{...}`, a bindings-only
   definition called as a statement, which constructs its implicit struct, and a fresh `vector<T>(...)` or call
   returning one, whose elements are destroyed and buffer freed), and a temporary field-access receiver (`make().id`) is destroyed once the
-  field is read. A fresh builtin vector that is only read (`make_values().count()`, `capacity()`,
+  field is read (a `String` or struct field, `make().text` or `items.at(i).text` on a `Vector<T>` local, stays a place
+  inside the receiver, which lives to the end of the statement that reads it and is destroyed there). A fresh builtin vector that is only read (`make_values().count()`, `capacity()`,
   `make_values()[0i32]`, `at`, `at_unsafe`, and a scalar field of an element such as `make_rows()[1i32].id`) is
   destroyed, elements and buffer, once the scalar result is loaded. An element of a vector temporary read as a
   struct, a `String` or a vector (`[Row] copy{make_rows()[1i32]}`, `first_byte(make_rows()[1i32].text)`,
