@@ -1056,6 +1056,68 @@ pick_coded([Reference<Coded> mut] value) {
                         "53\n53\n53\n54\n54\n54\n");
 }
 
+// A text of 47 bytes is on the string heap; `long_text(id)` ends in the digit `id`.
+const std::string LongTextHelper = R"(
+[effects(heap_alloc), return<String>]
+long_text([i32] id) {
+  [String mut] text{String{}}
+  text.append("a text long enough to live on the string heap-")
+  text.pushByte(convert<u8>(48i32 + id))
+  return(text)
+}
+)";
+
+TEST_CASE(
+    "a method call on a String element of a local declared Vector<String> destroys the copy") {
+  // `names[i].count()` and `names.at(i).count()` copy the element, read it and drop the copy.
+  runVectorOwnerProgram("vector_string_element_method_call",
+                        LongTextHelper,
+                        R"(
+    [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+    names.push(long_text(1i32))
+    names.push(long_text(2i32))
+    print_line(names[0i32].count())
+    print_line(names.at(1i32).count())
+    print_line(names.at_unsafe(1i32).count())
+    [i32 mut] total{0i32}
+    [i32 mut] i{0i32}
+    while(i < names.count()) {
+      total = total + names[i].count()
+      i = i + 1i32
+    }
+    print_line(total)
+    print_line(first_byte(names[1i32]))
+)",
+                        "47\n47\n47\n94\n97\n");
+}
+
+TEST_CASE("element reads of a Vector<i32> and a builtin vector<String> destroy nothing") {
+  // A scalar element has no destroy, and a builtin vector element is a place its vector keeps owning.
+  runVectorOwnerProgram("vector_scalar_element_reads",
+                        "",
+                        R"(
+    [Vector<i32> mut] numbers{vector<i32>{}}
+    numbers.push(4i32)
+    numbers.push(5i32)
+    print_line(numbers[0i32] + numbers.at(1i32))
+    [vector<String> mut] rows{vector<String>{}}
+    rows.push(label(3i32))
+    print_line(rows[0i32].count())
+    print_line(rows[0i32].count())
+)",
+                        "9\n1\n1\n");
+  runVectorOwnerProgram("builtin_vector_string_element_reads",
+                        LongTextHelper,
+                        R"(
+    [vector<String> mut] rows{vector<String>{}}
+    rows.push(long_text(3i32))
+    print_line(rows[0i32].count())
+    print_line(rows.at(0i32).count())
+    print_line(rows[0i32].count())
+)",
+                        "47\n47\n47\n");
+}
+
 // The element read of a stdlib vector never depends on which stdlib modules the program imports: importing the map
 // module used to send the bare `at` behind `[]` to the map helper and read the element with the builtin layout.
 namespace {

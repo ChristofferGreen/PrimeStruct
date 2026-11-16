@@ -121,7 +121,6 @@ of sync with them.
 | TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
 | TODO-5938 | A byte loop over one large region on `optexe` takes the cycles it took before the granule table | ready | optexe-bytes |
 | TODO-5847 | A spawned call with a builtin `map<K, V>` or an owned sum parameter or result runs as a task | ready | mt-vm-tasks |
-| TODO-5995 | A `String` element read of a stdlib `Vector<String>` leaks the copy | ready | vector-owners |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
@@ -536,21 +535,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin `map<K, V>` and owned-sum parameters and results of spawned calls on the VM and `optexe`; `string` parameters stay inline for a task (it would need the module-table index passed as a scalar); native is TODO-5799.
 
-- [~] TODO-5995: A `String` element read of a stdlib `Vector<String>` leaks the copy
-  - owner: ai
-  - status: ready
-  - claimed_by: vec-5995 (worktree-agent-aa5c3feef6e045f46), 2026-11-16
-  - created_at: 2026-11-16
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Ownership)
-  - parallel_track: vector-owners
-  - scope: Found with TODO-5993. `names[0i32].count()` on a `[Vector<String> mut] names` local (stdlib `Vector`, built with `/std/collections/vector/vector<String>()` and one pushed `String` of 45 bytes) leaves 48 bytes on the string heap after the function returns (`stringHeapBytesInUse` differs before and after); a loop that sums `names[i].count()` in a callee does the same, inline or as a task. The element read copies the `String` into a temporary that is never destroyed. `names.count()` alone is balanced.
-  - implementation_notes: the element read of a stdlib `Vector<T>` for a `String` element (TODO-5978 and TODO-5888 did the builtin vector and the struct-element cases); the probe in tests/unit/program_matrix/test_program_matrix_tasks.cpp (`probe`) measures it.
-  - acceptance:
-    - positive: `names[i].count()` and `names.at(i).count()` of a stdlib `Vector<String>` leave the heap and the string heap balanced on the VM and `optexe`
-    - negative: reading an element of a `Vector<i32>` still emits no destroy
-    - full release gate green
-  - stop_rule: scalar-result reads of a `String` element of a stdlib `Vector`.
-
 - [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
   - owner: ai
   - status: deferred
@@ -608,7 +592,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - negative: a `?` in an `if` block of a definition without `on_error` is reported at that `?`, naming that definition
     - full release gate green
   - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
-
 
 - [ ] TODO-5940: The HTTP load generator costs less CPU per connection than the servers it measures
   - owner: ai
