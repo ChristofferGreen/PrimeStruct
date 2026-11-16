@@ -203,6 +203,10 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5912 (build-cli): `primec build --dry-run` prints the graph of `make.prime`
+- TODO-6002 (build-graph-defects): a method call on an element of a builtin vector of Strings frees the element twice
+- TODO-6003 (build-graph-defects): a read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
+- TODO-6004 (build-graph-defects): a struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
+- TODO-6005 (build-graph-defects): a view of an indexed element dangles after the expression that made it
 
 ### Immediate Next 10
 
@@ -210,6 +214,10 @@ of sync with them.
 2. TODO-5535
 3. TODO-5906
 4. TODO-5912
+5. TODO-6002
+6. TODO-6003
+7. TODO-6004
+8. TODO-6005
 
 ### Priority Lanes
 
@@ -220,6 +228,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
+- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6002, TODO-6003, TODO-6004, TODO-6005, TODO-6006, TODO-6007
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -243,9 +252,89 @@ VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5912 (`primec build --dry-run`, on the finished graph value) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
+Language defects found by the build graph: TODO-6002 (an element's method call frees the element twice, the root of the reported by-value `vector<String>` parameter defect), then TODO-6003 (`this.nodes[i].method()`), TODO-6004 (push of a struct holding a `vector<String>`), TODO-6005 (a view of an indexed element); TODO-6006 (message for storing a read-only struct parameter) and TODO-6007 (`this.nodes.count()` next to a struct `count`) are `ready` outside `Ready Now`.
+
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
+
+- [~] TODO-6002: A method call on an element of a builtin vector of Strings frees the element twice
+  - owner: ai
+  - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - scope: Reported as "a by-value `vector<String>` parameter frees its strings twice (`string heap block freed twice`)". Reproduced 2026-11-17 on the VM and optexe in release, but the parameter is not the cause: with `import /std/collections/vector/*` (not `/std/collections/*`), `values[0i32].view().count()` on a `[vector<String>]` parameter or a plain `[vector<String> mut]` local binds the element to a hidden read-only struct binding whose drop flag is armed, so the shallow copy of the element is destroyed at the end of the statement and again by the vector. The lowerer's `isTemporaryStructCopySource` treats an element access as a temporary whenever the access resolves to a definition (meant for a user `at`), and the narrow import resolves `values[i]` to the stdlib `/std/collections/vector/at`, which `ownedTemporaryStructPath` already recognises as the builtin element place. Make the two agree through one shared predicate. Check the by-value parameter itself (a local, a field, a temporary as the argument) and the by-value forms that read an element and call a method on it.
+  - implementation_notes: `src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp` (`isBuiltinVectorElementHelperCall`, `isTemporaryStructCopySource`), `src/ir_lowerer/IrLowererFlowControlHelpers.cpp` (`isTemporaryStructCopySourceExpr`). Tests go in a program matrix suite with heap and string-heap statistics.
+  - acceptance:
+    - the program matrix runs `values[i].view().count()`, `values[i].byteAt(0i32)` style reads and a by-value `vector<String>` parameter given a local, a field and a temporary, with `import /std/collections/vector/*` and with `import /std/collections/*`, on the VM and optexe, and ends with balanced heap and string-heap statistics
+    - a negative case keeps a user-defined `at` returning a struct value treated as a temporary
+    - full release gate green
+  - stop_rule: the element read of a builtin vector; the other defects of the build graph list have their own leaves.
+
+- [ ] TODO-6003: A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - depends_on: TODO-6002
+  - scope: A non-mut struct method that evaluates `this.nodes[i].first()` (element of a `vector<Node>` field, then a method of `Node` that reads a String field) left the element damaged: a later read printed `array index out of bounds` on the VM and optexe (2026-11-17, `import /std/collections/vector/*`). It is probably the same element-copy defect as TODO-6002; verify it after that fix. If it persists, bind the receiver of the method call to the element place (not a copy that is destroyed), as the call-result receivers are bound to hidden locals (commits 43215eb06, dbda0e2f3, ea470d678).
+  - acceptance:
+    - program matrix cases: a non-mut method of a struct reads `this.nodes[i].method()` for a struct element holding a `String` and a `vector<String>`, twice and in a loop, then the graph is read again; balanced statistics on the VM and optexe
+    - negative: a mutating method on the element through a non-mut `this` is still diagnosed
+    - full release gate green
+  - stop_rule: read-only element access through `this.<vector field>[i]`.
+
+- [ ] TODO-6004: A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - scope: Reported: a `vector<Node>` element that holds a `vector<String>` came back with empty or zeroed strings after `push`. A first reproduction attempt on 2026-11-17 (a local `Node` pushed in a loop, a temporary `Node{...}` pushed, growth past the capacity) printed the right strings with balanced statistics on the VM and optexe, so it may need a different shape: a `[Node copy]` parameter pushed from a method (`Graph.add`), a `Node` built in a method and pushed from a field, and growth that moves elements which own vectors. Find the shape, or close the report with the shapes as regression tests.
+  - acceptance:
+    - program matrix cases for every shape above with `vector<String>` elements read back after growth, balanced heap and string-heap statistics, VM and optexe
+    - a root-cause fix with the failing shape as a test, or a finding in `docs/spec/value-lifecycle.md` that the shapes work, with the tests as the regression guard
+    - full release gate green
+  - stop_rule: push of a struct holding a `vector<String>` into a builtin vector.
+
+- [ ] TODO-6005: A view of an indexed element dangles after the expression that made it
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - scope: `[StringView] a{values[i].view()}` and `nodes[i].id.view()` bind a view of an element; the element can change or move (a `push` that grows the vector) while the view is read. Decide with `docs/spec/strings-and-views.md` (slice and view lifetime, borrowed bindings): the binding is a borrow of `values` and a later `push` is already a `borrowed binding` diagnostic, or it is not diagnosed and must be. Diagnose where the language rule says a view must not outlive the statement for such receivers, otherwise fix it.
+  - acceptance:
+    - the rule is stated in `docs/spec/strings-and-views.md`; a negative test per diagnosed shape and a positive test per accepted shape, with balanced statistics for the accepted ones
+    - full release gate green
+  - stop_rule: views of vector elements and of their fields.
+
+- [ ] TODO-6006: The diagnostic for storing a read-only struct parameter says how to fix it
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - scope: `[Compiler] p` assigned into a field is `borrowed parameter escapes via assignment: p`, and the workaround is `[Compiler copy] p`. That is the ownership rule of `docs/spec/value-lifecycle.md` (a borrowed parameter cannot be stored); only the message is thin. Add the remedy to the message (take the parameter as `[T copy]` or `[T move]`) and state the rule where the diagnostic is listed.
+  - acceptance:
+    - the message names the `copy` and `move` parameter forms; negative test on the message and positive tests that `[T copy]` and `[T move]` parameters may be stored
+    - full release gate green
+  - stop_rule: this message; the borrow rules stay as they are.
+
+- [ ] TODO-6007: `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - parallel_track: build-graph-defects
+  - scope: In `Bag() { [vector<i32> mut] nodes{...} count() { return(7i32) } total() { return(this.nodes.count()) } }` the call `this.nodes.count()` fails in lowering with `struct parameter type mismatch: expected /Bag, got /std/collections/vector/Vector__...` on the VM and optexe (2026-11-17): a method call on an explicit receiver whose type is a builtin vector must resolve through the receiver's type, never through the enclosing struct. Fix the resolution at its root; a call on a receiver of the struct's own type still reaches the struct's method.
+  - acceptance:
+    - program matrix cases: a struct with its own `count` and a builtin vector field, `this.nodes.count()`, `b.count()` and `b.nodes.count()`, on the VM and optexe; a negative case where the receiver has no such method
+    - full release gate green
+  - stop_rule: method resolution on a builtin vector receiver inside a struct.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
