@@ -536,9 +536,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin `map<K, V>` and owned-sum parameters and results of spawned calls on the VM and `optexe`; `string` parameters stay inline for a task (it would need the module-table index passed as a scalar); native is TODO-5799.
 
-- [ ] TODO-5995: A `String` element read of a stdlib `Vector<String>` leaks the copy
+- [~] TODO-5995: A `String` element read of a stdlib `Vector<String>` leaks the copy
   - owner: ai
   - status: ready
+  - claimed_by: vec-5995 (worktree-agent-aa5c3feef6e045f46), 2026-11-16
   - created_at: 2026-11-16
   - phase: Value lifecycle (docs/spec/value-lifecycle.md, Ownership)
   - parallel_track: vector-owners
