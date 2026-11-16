@@ -368,9 +368,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
 
-- [ ] TODO-5728: `slice` and `sliceMut` on a vector field of a struct resolve
+- [~] TODO-5728: `slice` and `sliceMut` on a vector field of a struct resolve
   - owner: ai
   - status: ready
+  - claimed_by: slice-5728 (worktree-agent-ad163c2861ac3ec77), 2026-11-16
   - created_at: 2026-11-07
   - phase: Collections (docs/spec/strings-and-views.md, slices; found by TODO-5705)
   - parallel_track: collections-access
