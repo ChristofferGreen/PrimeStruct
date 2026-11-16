@@ -200,6 +200,7 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-6001 | A vector a method call returns is freed by its caller | ready | vector-method-returns |
 
 ### Ready Now
 
@@ -227,7 +228,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
-- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
+- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513, TODO-6001
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
@@ -1499,3 +1500,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
+
+- [~] TODO-6001: A vector a method call returns is freed by its caller
+  - owner: ai
+  - status: in_progress
+  - claimed_by: vecmethod (worktree-agent-add5ef8b6a633ab56), 2026-11-17
+  - created_at: 2026-11-17
+  - phase: Result and control flow (found with the stdlib vector return fix)
+  - parallel_track: vector-method-returns
+  - scope: `isFreshBuiltinVectorExpr` (src/ir_lowerer/IrLowererFlowControlHelpers.cpp) returns false for every method call, so `[vector<i32>] v{maker.makeValues()}` gives the local no drop entry and leaks one slot-heap block per call (and a String block per element for `vector<String>`); a method-call temporary that is only read (`maker.makeValues().count()`) or discarded (`maker.makeValues()`) leaks too, as does a method result passed on through a Reference receiver. Measured with `heapLiveBlocks()` and `stringHeapBytesInUse()` on vm-O2 and optexe. Resolve a method call to its definition with the same resolver the free-function path uses and apply one shared rule: a callee declared `return<vector<T>>` hands over a vector of its own, whether a user method or a stdlib struct method (`StringView.splitOwned`); a method returning `Reference<vector<T>>` hands out a place and is not destroyed.
+  - acceptance:
+    - program-matrix cases on the VM and optexe: a user method returning `vector<i32>` and `vector<String>` bound to a local, a method on a Reference receiver, a chained temporary, a discarded result, a result returned onward, a stdlib method (`splitOwned`) all end with heap statistics balanced to 0
+    - a method returning `Reference<vector<i32>>` leaves the field intact on every backend
+    - full release gate green
+  - stop_rule: builtin vector results of method calls only; no change to String or struct results.
+  - notes: Same predicate as the free-function path; do not add a second copy of the rule.
