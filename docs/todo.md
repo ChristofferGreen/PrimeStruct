@@ -538,9 +538,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin `map<K, V>` and owned-sum parameters and results of spawned calls on the VM and `optexe`; `string` parameters stay inline for a task (it would need the module-table index passed as a scalar); native is TODO-5799.
 
-- [ ] TODO-5994: `wait(t).count()` of a stdlib `Vector` task result waits twice
+- [~] TODO-5994: `wait(t).count()` of a stdlib `Vector` task result waits twice
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: mt-5994 (worktree-agent-a28edddfce783f0fa), 2026-11-16
   - created_at: 2026-11-16
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-vm-tasks
