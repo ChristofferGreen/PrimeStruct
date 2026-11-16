@@ -281,6 +281,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateSliceLoans.cpp
   src/semantics/SemanticsSendable.cpp
+  src/semantics/SemanticsSummaryTransform.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
   src/semantics/SemanticsValidateLambdaClosures.cpp
   src/semantics/SemanticsValidateFunctionTypeRewrite.cpp
@@ -1993,6 +1994,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_semantic_rules.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_summary_transform.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_text_rules.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_bounds.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core.cpp

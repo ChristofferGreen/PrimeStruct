@@ -1,3 +1,4 @@
+#include "SemanticsSummaryTransform.h"
 #include "SemanticsValidator.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 
@@ -106,6 +107,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawCollectionType = false;
   bool sawKeyValueType = false;
   bool sawSendable = false;
+  const Transform *firstSummary = nullptr;
   bool hasReturnTransform = false;
   const bool collectTransformDiagnostics =
       transformDiagnosticRecords != nullptr && shouldCollectStructuredDiagnostics();
@@ -546,6 +548,15 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (definitionTransformError) {
         break;
       }
+    } else if (transform.name == "summary") {
+      const std::string summaryError = summaryTransformError(transform, firstSummary, def.fullPath);
+      if (!summaryError.empty()) {
+        if (addTransformDiagnostic(summaryError)) {
+          return false;
+        }
+        break;
+      }
+      firstSummary = &transform;
     } else if (transform.name == "sendable") {
       if (sawSendable) {
         if (addTransformDiagnostic("duplicate sendable transform on " + def.fullPath)) {

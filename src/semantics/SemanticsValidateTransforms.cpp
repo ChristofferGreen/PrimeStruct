@@ -29,7 +29,7 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "buffer" || name == "spawn" || name == "ast" || name == "reflect" ||
          name == "generate" || name == "Additive" || name == "Multiplicative" ||
          name == "Comparable" || name == "Indexable" || name == "collection_type" ||
-         name == "key_value_type" || name == "sendable";
+         name == "key_value_type" || name == "sendable" || name == "summary";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {
@@ -172,6 +172,10 @@ bool validateTransformListContext(const std::vector<Transform> &transforms,
       }
       if (transform.name == "ast") {
         error = "ast transform is only valid on definitions: " + context;
+        return false;
+      }
+      if (transform.name == "summary") {
+        error = "summary transform is only valid on definitions: " + context;
         return false;
       }
     }

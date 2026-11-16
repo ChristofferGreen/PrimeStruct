@@ -36,6 +36,9 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
       definitionText += " template_pack_bindings=" +
                         formatSemanticTemplatePackBindingList(entry.templatePackBindings);
     }
+    if (!entry.summary.empty()) {
+      definitionText += " summary=" + quoteSemanticString(entry.summary);
+    }
     definitionText += " provenance_handle=" + std::to_string(entry.provenanceHandle) +
                       " source=" +
                       quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine,

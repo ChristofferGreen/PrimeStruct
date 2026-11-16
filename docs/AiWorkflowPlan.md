@@ -264,7 +264,8 @@ Document() { ... }
 - The toolchain ships a default `summary.md`: instructions for an AI on how to write a summary. A project can
   replace it.
 - A namespace carries a summary the same way, because a namespace is a definition (section 6.5):
-  `[namespace summary("Text buffers and cursors.")] model { ... }`. TODO-5842 makes `summary` a checked transform.
+  `[namespace summary("Text buffers and cursors.")] model { ... }`. `summary` is a checked transform
+  (docs/spec/transforms.md) and the semantic product publishes it.
 
 ### 6.3 `[pure]`, `[test]`, `ensure(...)`
 

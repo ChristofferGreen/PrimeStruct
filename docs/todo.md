@@ -158,7 +158,6 @@ of sync with them.
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | `Type.staticHelper()` resolves through `import` | deferred | pick-bindings |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
-| TODO-5842 | `summary("...")` is a checked transform on definitions | ready | summary-transform |
 | TODO-5896 | `--vm-threads` runs each spawned task on its own OS thread | ready | vm-threads |
 | TODO-5897 | Atomic, Mutex and Channel run on real primitives under `--vm-threads` | blocked | vm-threads |
 | TODO-5898 | Host calls under `--vm-threads` serialize by default and block only their own task | blocked | vm-threads |
@@ -210,7 +209,6 @@ of sync with them.
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
 - TODO-5908 (effect-ceiling): `--allow-effects` rejects declared effects outside a list in user code
-- TODO-5842 (summary-transform): `summary("...")` is a checked transform on definitions
 
 ### Immediate Next 10
 
@@ -219,7 +217,6 @@ of sync with them.
 3. TODO-5906
 4. TODO-5911
 5. TODO-5908
-6. TODO-5842
 
 ### Priority Lanes
 
@@ -227,7 +224,6 @@ of sync with them.
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
-- AI workflow (docs/AiWorkflowPlan.md): TODO-5842
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
@@ -860,22 +856,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
-
-- [~] TODO-5842: `summary("...")` is a checked transform on definitions
-  - owner: ai
-  - status: ready
-  - claimed_by: summary-5842 (worktree-agent-a0bd31ef3b8908164), 2026-11-17
-  - created_at: 2026-11-10
-  - phase: AI workflow (docs/AiWorkflowPlan.md section 6.2)
-  - parallel_track: summary-transform
-  - scope: `[summary("One.") return<i32>] one() { ... }` already passes semantics, but only because the transform is not checked: nothing documents it, validates its argument or publishes it. `summary` becomes a documented transform that carries a text for tools and has no effect on generated code. It takes exactly one string literal, appears at most once per list, and is valid on every definition: functions, structs, enums and `[namespace]` definitions (TODO-5841). Blocks of one namespace that carry two summaries are a diagnostic that names both positions. The semantic product publishes the summary of each definition.
-  - acceptance:
-    - docs/spec/transforms.md documents `summary` with a runnable example
-    - wrong argument count, a non-literal argument, a repeated `summary`, and two summaries for one namespace are diagnostics (one test each)
-    - `--dump-stage semantic-product` shows the summaries of a function, a struct and a namespace (golden test)
-    - `--dump-stage ir-lowered` is identical with and without the summaries (compared through `stripDumpTimings`)
-    - full release gate green
-  - stop_rule: the `summary` transform only; no summary on fields or parameters, no outline output, no staleness tracking.
 
 - [ ] TODO-5896: `--vm-threads` runs each spawned task on its own OS thread
   - owner: ai

@@ -82,6 +82,23 @@ or a semicolon if you intended to index.
 - **`namespace` transform:** `[namespace] foo { ... }` is a definition that holds only definitions, so its transform
   list can carry other transforms. It takes no parameters, template list or `return`, is not callable and not a type,
   lowers to nothing, and blocks at one path fold into one namespace. See `docs/PrimeStruct_SyntaxSpec.md` section 3.3.
+- **`summary` transform:** `[summary("One line of text.")]` carries a text for tools and has no effect on generated
+  code. It takes exactly one string literal (`--dump-stage semantic-product` publishes it as `summary="..."` on the
+  definition), appears at most once per transform list, and is valid on every definition (functions, structs, enums
+  and `[namespace]` definitions); on a field, parameter, binding or execution it is an error. Blocks of one namespace
+  fold into one list, so two summaries across blocks are a duplicate. Diagnostics name both positions:
+  `duplicate summary transform on /ui (first at 1:12, again at 5:12)`. A summary is a claim, not a checked fact.
+
+  ```
+  [namespace summary("Text buffers and cursors.")]
+  model {
+    [summary("The answer.") return<i32>] answer() { return(42i32) }
+    [summary("A point on the grid.") struct] Point() { [i32] x{1i32} }
+  }
+
+  [return<int>]
+  main() { return(/model/answer()) }
+  ```
 - Text transforms run before the AST exists. Operator transforms scan the raw character stream and rewrite when they see
   a left operand and right operand, allowing optional whitespace around the operator token. Slash paths remain intact
   when `/` begins a path segment with no left operand (start of line or immediately after whitespace/delimiters). Binary

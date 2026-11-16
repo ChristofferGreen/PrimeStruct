@@ -309,7 +309,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     if (!match(TokenKind::LParen)) {
       return true;
     }
-    const bool allowFullForms = allowFullTransformArguments(phase, transform.name);
+    // A summary argument is the literal's text, so it never goes through the expression printer.
+    const bool allowFullForms =
+        transform.name != "summary" && allowFullTransformArguments(phase, transform.name);
     auto failTextTransformArgument = [&]() -> bool {
       return fail("text transform arguments must be identifiers or literals");
     };
@@ -319,6 +321,9 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
       return fail("transform argument list cannot be empty");
     }
     while (true) {
+      if (transform.name == "summary" && !match(TokenKind::String)) {
+        return fail("summary transform argument must be a string literal");
+      }
       if (allowFullForms) {
         if (!parseFullTransformArgument(transform.arguments)) {
           return false;

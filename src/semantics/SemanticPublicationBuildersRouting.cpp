@@ -2,6 +2,7 @@
 #include "primec/support/Hash.h"
 
 #include "RequirementPredicateFacts.h"
+#include "SemanticsSummaryTransform.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
@@ -281,6 +282,7 @@ void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &
                                                      def.templateArgIsPack[index]);
       }
       definition.templatePackBindings = def.templatePackBindings;
+      definition.summary = definitionSummaryText(def.transforms);
       definition.sourceLine = def.sourceLine;
       definition.sourceColumn = def.sourceColumn;
       definition.semanticNodeId = def.semanticNodeId;

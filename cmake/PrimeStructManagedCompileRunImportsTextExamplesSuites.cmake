@@ -104,6 +104,12 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   CASES_PER_SHARD 7)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
+                                  SHARD_PREFIX "summary_transform"
+                                  SOURCE_FILE "*test_compile_run_text_filters_summary_transform.cpp"
+                                  TOTAL_CASES 9
+                                  CASES_PER_SHARD 5)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 300
                                   SHARD_PREFIX "runtime_if"
                                   SOURCE_FILE "*test_compile_run_text_filters_runtime_if.cpp"
                                   TOTAL_CASES 19

@@ -70,6 +70,8 @@ struct SemanticProgramDefinition {
   std::vector<std::string> templateParameters = {};
   std::vector<bool> templateParameterIsPack = {};
   std::vector<TemplatePackBinding> templatePackBindings = {};
+  // Text of the definition's `summary("...")` transform; empty when it has none.
+  std::string summary = {};
 };
 
 struct SemanticProgramExecution {
