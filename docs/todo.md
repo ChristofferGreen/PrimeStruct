@@ -200,6 +200,7 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-6000 | A `vector<T>` a stdlib-imported function returns is freed by its caller | ready | stdlib-vector-return |
 
 ### Ready Now
 
@@ -208,6 +209,7 @@ of sync with them.
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5911 (build-graph): `/std/build` builds a graph value and exports it as JSON
 - TODO-5908 (effect-ceiling): `--allow-effects` rejects declared effects outside a list in user code
+- TODO-6000 (stdlib-vector-return): a `vector<T>` a stdlib-imported function returns is freed by its caller
 
 ### Immediate Next 10
 
@@ -216,6 +218,7 @@ of sync with them.
 3. TODO-5906
 4. TODO-5911
 5. TODO-5908
+6. TODO-6000
 
 ### Priority Lanes
 
@@ -228,6 +231,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
+- Memory safety, stdlib returns: TODO-6000
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
@@ -1499,3 +1503,16 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves above exist as task blocks with their own scope, acceptance and stop_rule
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
+
+- [~] TODO-6000: A `vector<T>` a stdlib-imported function returns is freed by its caller
+  - owner: ai
+  - status: ready
+  - claimed_by: stdlib-vecret (worktree-agent-a4c8d8260c2cc14fa), 2026-11-17
+  - created_at: 2026-11-17
+  - parallel_track: stdlib-vector-return
+  - scope: A builtin `vector<i32>` that a function builds locally and returns leaks one slot-heap block per call when the function is imported from a stdlib module (`heapLiveBlocks()` grows by one per call). The same function in the user file, or inside a namespace of the user file, is balanced. Found writing `stdlib/std/path/path.prime`, which works around it with `resolve_into` (the caller makes the vector and the module fills it). Find the lowerer or semantics decision that treats the return of a local vector differently for definitions of stdlib origin (return-ownership, drop flag, place-versus-temporary; compare `--dump-stage ir-lowered` of the imported and in-file forms) and fix it at the root on the VM and on `optexe`.
+  - acceptance:
+    - A program-matrix case (VM and optexe) calls an imported stdlib-style function returning a local `vector<i32>` in a loop and ends with balanced `heapLiveBlocks()`; a second case does the same in a `/std/probe`-style namespace.
+    - `stdlib/std/path/path.prime` returns the vector directly (the `resolve_into` workaround and its comment are gone) if that is clean; `PrimeStruct_path_vm` and `PrimeStruct_path_optexe` pass leak-free.
+    - Full `./scripts/compile.sh --release` is green.
+  - stop_rule: If the root cause lies in the optexe C++ emitter alone and the VM is balanced, fix that emitter and say so; stop when the imported and in-file forms lower to the same ownership steps.
