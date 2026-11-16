@@ -1023,9 +1023,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5910: `--profile build` sets the defaults of a build script
+- [~] TODO-5910: `--profile build` sets the defaults of a build script
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: profile-5910 (worktree-agent-a702756b7c5926294), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 6)
   - parallel_track: build-profile
