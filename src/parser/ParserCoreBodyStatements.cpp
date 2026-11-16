@@ -289,6 +289,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
             return false;
           }
         } else {
+          pickArmListPending_ = callExpr.name == "pick";
           if (!parseBraceExprList(callExpr.bodyArguments, def.namespacePrefix, true)) {
             return false;
           }

@@ -510,4 +510,56 @@ main() {
   }
 }
 
+TEST_CASE("pick statement unit arm return leaves the function") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+leave([Maybe<i32>] m) {
+  pick(m) {
+    none {
+      return(-1i32)
+    }
+    some(v) {
+      return(v)
+    }
+  }
+  return(99i32)
+}
+
+[return<int>]
+main() {
+  [Maybe<i32>] value{none<i32>()}
+  return(leave(value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pick statement unit arm return of the wrong type is rejected") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+leave([Maybe<i32>] m) {
+  pick(m) {
+    none {
+      return(true)
+    }
+    some(v) {
+      return(v)
+    }
+  }
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [Maybe<i32>] value{none<i32>()}
+  return(leave(value))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
 TEST_SUITE_END();

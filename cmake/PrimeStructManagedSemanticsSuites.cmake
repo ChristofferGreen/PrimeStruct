@@ -345,7 +345,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.maybe"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 15
+  TOTAL_CASES 17
   SHARD_PREFIX "maybe"
 )
 

@@ -285,6 +285,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
               return false;
             }
           } else {
+            pickArmListPending_ = call.name == "pick";
             if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
               return false;
             }
@@ -589,6 +590,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
               return false;
             }
           } else {
+            pickArmListPending_ = call.name == "pick";
             if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
               return false;
             }
@@ -708,6 +710,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         call.argNames.insert(call.argNames.begin(), std::nullopt);
         if (match(TokenKind::LBrace)) {
           call.hasBodyArguments = true;
+          pickArmListPending_ = call.name == "pick";
           if (!parseBraceExprList(call.bodyArguments, namespacePrefix, allowSingleBranchIfStatementBlocks_)) {
             return false;
           }

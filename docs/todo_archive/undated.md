@@ -509,3 +509,16 @@
     - editor scenarios: no toolbar for a text file, the toolbar for a markdown file and for a file with the preview on, the commands change the text through the selection, the modes switch and are restored with the session; the toolbar's outline is pinned; the pictures of the installed app; full release gate green
   - stop_rule: the editor's toolbar, Format menu, commands and session; smart list continuation on Return is separate.
   - notes: PrimeScroll builds the toolbar when the first markdown window needs it (three handles: the toolbar and its two menus); the Format menu has Bold cmd+b, Italic cmd+i, Strikethrough cmd+shift+x, Code cmd+e and Link cmd+k, View has Editor, Split View and Preview on cmd+alt+1, 2 and 3. Seven new editor scenarios pin the toolbar, the modes, the formats, tables and the session; the handles of the editor tests moved by three (the Format menus). Smart list continuation on Return is not part of this.
+
+- [x] TODO-5510: `return` returns from unit-variant pick arms correctly
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: control-returns
+  - scope: `pick(m) { none { return(-1i32) } num(v) { return(v) } }` in statement position does not return from the unit-variant arm (rewritten to `none{-1}`, IR `PushI32 -1; Pop`); same for `Result<E>`'s `ok { return(...) }`. (The lambda half is done: lambdas are closure structs, TODO-5663.)
+  - acceptance:
+    - unit-variant pick arms return; parse/semantic + matrix tests
+    - full release gate green
+  - stop_rule: return lowering in pick arms.
+  - completed: 2026-11-16. The parser read a unit arm `none { ... return(x) }` as a value block and replaced its `return` by the value, so a statement `pick` fell through. A unit arm of a `pick` now keeps the `return` (and allows a single-branch `if`), like a payload arm, so a statement `pick` returns from the function and a value `pick` still yields the arm value. Tests: program matrix `pick_returns` (unit, payload, Result ok arm, nested, loop, owned payloads balanced, type mismatch), parser and semantics cases.

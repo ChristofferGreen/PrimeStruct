@@ -170,7 +170,7 @@
   payload of its own. A
   `pick` whose subject is a fresh value (`pick(get())`, a method
   call included, or a constructor) owns it for as long as the `pick` runs and destroys its active payload when the
-  `pick` ends or a `return` in an arm leaves the function. The payload binding of an arm stands for what the sum owns:
+  `pick` ends or a `return` in an arm leaves the function (in a unit arm such as `none { return(-1i32) }` too; in a `pick` expression the same `return` is the value of the arm). The payload binding of an arm stands for what the sum owns:
   moving it out (`move(line)`, a `move` parameter, `return(line)`) leaves nothing for the sum to
   destroy, so the payload is destroyed once, by its new owner. A fresh subject ends with the `pick`; a sum local or
   `copy`/`move` parameter whose payload was moved out is moved-from after the arm (`use-after-move` until it is

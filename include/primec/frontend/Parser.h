@@ -187,6 +187,10 @@ private:
   bool allowSeparatorWhitespace_ = true;
   bool allowBraceBindings_ = true;
   bool allowBraceReturn_ = true;
+  // Set by the parser right before it reads the arm list of a `pick`; the next brace list takes it (and clears it).
+  bool pickArmListPending_ = false;
+  // True while an element of a `pick` arm list is parsed: a unit arm `name { ... return(x) }` keeps its `return`.
+  bool pickArmElement_ = false;
   bool allowSingleBranchIfStatementBlocks_ = false;
   bool mathImportAll_ = false;
   std::unordered_set<std::string> mathImports_;

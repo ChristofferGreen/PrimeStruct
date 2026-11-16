@@ -140,7 +140,6 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | ready | result-error-structs |
 | TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
@@ -211,7 +210,6 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5510 (control-returns): `return` returns from unit-variant pick arms correctly
 - TODO-5524 (result-error-structs): int-backed error structs round-trip through stdlib Result sums
 - TODO-5841 (namespace-envelope): `[namespace] name { ... }` is a definition
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
@@ -222,12 +220,11 @@ of sync with them.
 
 1. TODO-5603
 2. TODO-5535
-3. TODO-5510
-4. TODO-5524
-5. TODO-5841
-6. TODO-5906
-7. TODO-5911
-8. TODO-5908
+3. TODO-5524
+4. TODO-5841
+5. TODO-5906
+6. TODO-5911
+7. TODO-5908
 
 ### Priority Lanes
 
@@ -239,7 +236,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5905, TODO-5906, TODO-5907, TODO-5908, TODO-5909, TODO-5910, TODO-5911, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5510, TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5524, TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -389,19 +386,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the repro (a two-level wrapped `Function` called, copied and destroyed) runs on VM, native and optexe with no leaked blocks
     - full release gate green
   - stop_rule: recursive generated lifecycle helpers.
-
-- [~] TODO-5510: `return` returns from unit-variant pick arms correctly
-  - owner: ai
-  - status: in_progress
-  - claimed_by: pick-5510 (worktree-agent-ab69994e0efc4f697), 2026-11-16
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: control-returns
-  - scope: `pick(m) { none { return(-1i32) } num(v) { return(v) } }` in statement position does not return from the unit-variant arm (rewritten to `none{-1}`, IR `PushI32 -1; Pop`); same for `Result<E>`'s `ok { return(...) }`. (The lambda half is done: lambdas are closure structs, TODO-5663.)
-  - acceptance:
-    - unit-variant pick arms return; parse/semantic + matrix tests
-    - full release gate green
-  - stop_rule: return lowering in pick arms.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai

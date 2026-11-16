@@ -28,6 +28,39 @@ main() {
   CHECK(stmt.args[1].bodyArguments[0].isBinding);
 }
 
+TEST_CASE("keeps return in a unit arm of a pick but not in a value block") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i32] picked{pick(m) {
+    none {
+      return(1i32)
+    }
+    some(v) {
+      return(v)
+    }
+  }}
+  [i32] plain{ return(2i32) }
+  return(plain)
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &statements = program.definitions[0].statements;
+  REQUIRE(statements.size() == 3);
+  REQUIRE(statements[0].args.size() == 1);
+  const auto &pick = statements[0].args[0];
+  REQUIRE(pick.name == "pick");
+  REQUIRE(pick.bodyArguments.size() == 2);
+  const auto &unitArm = pick.bodyArguments[0];
+  CHECK(unitArm.isBinding);
+  REQUIRE(unitArm.args.size() == 1);
+  CHECK(unitArm.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(unitArm.args[0].name == "return");
+  REQUIRE(statements[1].args.size() == 1);
+  CHECK(statements[1].args[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("parses single-branch if statement sugar") {
   const std::string source = R"(
 [return<int>]

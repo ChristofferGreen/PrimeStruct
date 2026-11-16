@@ -230,9 +230,16 @@ bool Parser::parseValueBlock(std::vector<Expr> &out, const std::string &namespac
     bool previousAllowImplicitVoid_;
   } returnGuard(*this);
 
+  // A unit arm of a `pick` is a value block too, but its `return` leaves the function in statement position and
+  // yields the arm value in value position; later stages decide, so the `return` stays.
+  const bool keepReturn = pickArmElement_;
+  pickArmElement_ = false;
   BraceListGuard braceGuard(*this, true, true);
-  if (!parseBraceExprList(out, namespacePrefix, false)) {
+  if (!parseBraceExprList(out, namespacePrefix, keepReturn)) {
     return false;
+  }
+  if (keepReturn) {
+    return true;
   }
   return normalizeValueBlock(out);
 }
@@ -257,6 +264,9 @@ bool Parser::normalizeValueBlock(std::vector<Expr> &body) {
 bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
                                          std::vector<std::optional<std::string>> &argNames,
                                          const std::string &namespacePrefix) {
+  // Trying the labeled form parses nested bindings, which must not see (or take) the unit arm marker.
+  const bool pickArmUnitInitializer = pickArmElement_;
+  pickArmElement_ = false;
   auto tryParseLabeledInitializerList = [&]() -> bool {
     const size_t savedPos = pos_;
     std::string ignoredError;
@@ -401,6 +411,7 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
   block.name = "block";
   block.namespacePrefix = namespacePrefix;
   block.hasBodyArguments = true;
+  pickArmElement_ = pickArmUnitInitializer;
   if (!parseValueBlock(block.bodyArguments, namespacePrefix)) {
     return false;
   }
@@ -710,11 +721,27 @@ bool Parser::parseBraceExprList(std::vector<Expr> &out,
     return false;
   }
   BareBindingGuard bindingGuard(*this, allowBraceBindings_);
+  struct PickArmListGuard {
+    explicit PickArmListGuard(Parser &parser)
+        : parser_(parser), armList(parser.pickArmListPending_), previous_(parser.pickArmElement_) {
+      parser_.pickArmListPending_ = false;
+      parser_.pickArmElement_ = false;
+    }
+    ~PickArmListGuard() {
+      parser_.pickArmElement_ = previous_;
+    }
+    PickArmListGuard(const PickArmListGuard &) = delete;
+    PickArmListGuard &operator=(const PickArmListGuard &) = delete;
+    Parser &parser_;
+    bool armList;
+    bool previous_;
+  } pickArmGuard(*this);
   if (match(TokenKind::RBrace)) {
     expect(TokenKind::RBrace, "expected '}'");
     return true;
   }
   while (true) {
+    pickArmElement_ = pickArmGuard.armList;
     if (match(TokenKind::Semicolon)) {
       expect(TokenKind::Semicolon, "expected ';'");
       if (match(TokenKind::RBrace)) {
