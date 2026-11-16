@@ -367,9 +367,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
 
 
-- [ ] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
+- [~] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
   - owner: ai
   - status: ready
+  - claimed_by: native-5682 (worktree-agent-a7a551cd753651d09), 2026-11-16
   - created_at: 2026-11-06
   - phase: Closures follow-ups (split from TODO-5668)
   - parallel_track: native-backend
