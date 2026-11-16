@@ -1279,4 +1279,42 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// The element access of a builtin `vector<T>` is the builtin access even when the program also holds a stdlib vector:
+// the stdlib `at` has a generated instance for that vector's element type, and a builtin receiver of another element
+// type must not take its result type or its code.
+TEST_CASE("at on a builtin vector beside a stdlib Vector of another element type") {
+  runVectorOwnerProgram("builtin_vector_at_beside_stdlib_vector",
+                        LongTextHelper,
+                        R"(
+    [Vector<i32> mut] numbers{/std/collections/vector/vector<i32>()}
+    numbers.push(7i32)
+    numbers.push(8i32)
+    print_line(numbers.at(1i32))
+    [vector<String> mut] rows{vector<String>{}}
+    rows.push(long_text(1i32))
+    rows.push(long_text(2i32))
+    print_line(rows.at(0i32).count())
+    print_line(rows.at_unsafe(1i32).count())
+    print_line(first_byte(rows.at(1i32)))
+    [String] second{rows.at(1i32)}
+    print_line(second.count())
+)",
+                        "8\n47\n47\n97\n47\n");
+}
+
+TEST_CASE("at on a stdlib Vector still reads its own element type beside builtin vectors") {
+  runVectorOwnerProgram("stdlib_vector_at_beside_builtin_vector",
+                        LongTextHelper,
+                        R"(
+    [vector<String> mut] rows{vector<String>{}}
+    rows.push(long_text(4i32))
+    [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+    names.push(long_text(3i32))
+    print_line(names.at(0i32).count())
+    print_line(rows.at(0i32).count())
+    print_line(first_byte(names.at(0i32)))
+)",
+                        "47\n47\n97\n");
+}
+
 TEST_SUITE_END();

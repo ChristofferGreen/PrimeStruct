@@ -2348,6 +2348,7 @@ are left unarchived.
 | TODO-5995 | A `String` element read of a stdlib `Vector<String>` leaks the copy | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5996 | Importing `/std/collections/map/*` breaks element reads of a `copy mut` `Vector<Item>` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5997 | A `[Vector<T> mut]` parameter reads the caller's count and `String` elements | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5998 | `at` on a builtin `vector<T>` is not lowered through another instance of the stdlib `at` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

@@ -504,9 +504,30 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           }
         }
       }
-      if (const Definition *resolvedDef =
-              resolveLoweredDefinitionPath(preferredResolvedPath);
-          resolvedDef != nullptr) {
+      // The element access of a builtin vector receiver stays the builtin access: the generic helper path the
+      // semantic product names must not match a generated instance made for another receiver type.
+      const auto isBuiltinVectorElementReceiver = [&]() {
+        if (!(isSimpleCallName(callExpr, "at") || isSimpleCallName(callExpr, "at_unsafe"))) {
+          return false;
+        }
+        std::string base;
+        std::string argText;
+        return splitTemplateTypeName(
+                   trimTemplateTypeText(unwrapSemanticReceiverTypeText(
+                       findSemanticProductMethodCallReceiverTypeText(semanticProgram, callExpr))),
+                   base,
+                   argText) &&
+               trimTemplateTypeText(base) == "vector";
+      };
+      if (isBuiltinVectorElementReceiver()) {
+        // Only a definition at the helper path itself (a user override) answers; the generated instances do not.
+        if (const auto exactIt = defMap.find(preferredResolvedPath);
+            exactIt != defMap.end() && exactIt->second != nullptr) {
+          return exactIt->second;
+        }
+      } else if (const Definition *resolvedDef =
+                     resolveLoweredDefinitionPath(preferredResolvedPath);
+                 resolvedDef != nullptr) {
         return resolvedDef;
       }
       if (preferredResolvedPath.rfind("/file/", 0) == 0) {

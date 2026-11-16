@@ -367,15 +367,15 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
         }
       }
     }
-    auto inferNonTemplateDefinitionReturnType =
-        [&](const std::string &candidatePath,
-            std::string &typeTextOut) -> bool {
+    auto inferNonTemplateDefinitionReturnType = [&](const std::string &candidatePath,
+                                                    std::string &typeTextOut,
+                                                    bool allowGeneratedInstance = true) -> bool {
       typeTextOut.clear();
       const Definition *definition = nullptr;
       auto defIt = defMap_.find(candidatePath);
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         definition = defIt->second;
-      } else {
+      } else if (allowGeneratedInstance) {
         const auto matches = definitionsMatchingPathOrSpecialization(candidatePath);
         if (!matches.empty()) {
           definition = matches.front();
@@ -442,12 +442,18 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           resolvedAccessTarget = resolveCalleePath(candidate);
           haveResolvedAccessTarget = !resolvedAccessTarget.empty();
         }
+        // A builtin vector receiver keeps the element type of the receiver unless a definition sits at the helper
+        // path itself: the path also names the generated instances made for stdlib vectors of other element types,
+        // and the first of them must not answer.
+        std::string builtinReceiverElemType;
+        const bool receiverIsBuiltinVector = builtinCollectionDispatchResolvers.resolveVectorTarget(
+            receiver, builtinReceiverElemType);
         if (haveResolvedAccessTarget &&
             (isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at") ||
              isStdNamespacedVectorCompatibilityHelperPath(resolvedAccessTarget, "at_unsafe"))) {
           std::string declaredReturnType;
-          if (inferNonTemplateDefinitionReturnType(resolvedAccessTarget,
-                                                   declaredReturnType)) {
+          if (inferNonTemplateDefinitionReturnType(
+                  resolvedAccessTarget, declaredReturnType, !receiverIsBuiltinVector)) {
             currentTypeTextOut = declaredReturnType;
             return true;
           }
