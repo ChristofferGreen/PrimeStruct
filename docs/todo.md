@@ -390,9 +390,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: recursive generated lifecycle helpers.
 
-- [ ] TODO-5510: `return` returns from unit-variant pick arms correctly
+- [~] TODO-5510: `return` returns from unit-variant pick arms correctly
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: pick-5510 (worktree-agent-ab69994e0efc4f697), 2026-11-16
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: control-returns
