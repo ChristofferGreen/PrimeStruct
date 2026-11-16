@@ -138,7 +138,6 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
-| TODO-5682 | Native: a mutating vector-field method inside an arithmetic expression returns the right value | ready | native-backend |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | ready | control-returns |
@@ -246,7 +245,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5682, TODO-5727
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
@@ -366,19 +365,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
 
-
-- [~] TODO-5682: Native: a mutating vector-field method inside an arithmetic expression returns the right value
-  - owner: ai
-  - status: ready
-  - claimed_by: native-5682 (worktree-agent-a7a551cd753651d09), 2026-11-16
-  - created_at: 2026-11-06
-  - phase: Closures follow-ups (split from TODO-5668)
-  - parallel_track: native-backend
-  - scope: With `KeepV { [vector<i32> mut] seen  add([i32] x) { this.seen.push(x)  return(this.seen.count()) } }`, `return(direct * 10i32 + m.add(6i32))` returns 18 on `--emit=native` and 22 on the VM and optexe; binding `[i32] second{m.add(6i32)}` first gives 22 everywhere. Present before TODO-5668's count fix, so the native backend likely clobbers a pending operand while lowering the inlined push.
-  - acceptance:
-    - the expression form returns 22 on native-O0 and native-O2 (matrix case)
-    - full release gate green
-  - stop_rule: operand preservation around inlined vector mutations on native.
 
 - [ ] TODO-5676: Lambdas can state their return type
   - owner: ai

@@ -383,3 +383,76 @@ main() {
 )",
                    45);
 }
+
+// A method that pushes onto a vector field and then returns its count, called inside an arithmetic expression: the
+// operands before the call keep their values and the operands after it see the push, left to right on every backend
+// (native was reported to return a wrong sum for `direct * 10i32 + m.add(6i32)`).
+TEST_CASE(
+    "a mutating vector-field method inside an arithmetic expression keeps its other operands") {
+  runMethodProgram("struct_methods_mutating_field_call_in_expression",
+                   R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+
+  [mut effects(heap_alloc) return<i32>]
+  add([i32] x) {
+    this.seen.push(x)
+    return(this.seen.count())
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [KeepV mut] m{KeepV{[seen] vector<i32>(5i32)}}
+  m.seen.push(1i32)
+  [i32] direct{m.seen.count()}
+  [i32] before{direct * 10i32 + m.add(6i32)}
+  if(before != 23i32) { return(1i32) }
+  [i32] after{m.add(7i32) + direct * 10i32}
+  if(after != 24i32) { return(2i32) }
+  [i32] viaCount{m.seen.count() * 10i32 + m.add(8i32)}
+  if(viaCount != 45i32) { return(3i32) }
+  [i32] countAfter{m.add(9i32) * 10i32 + m.seen.count()}
+  if(countAfter != 66i32) { return(4i32) }
+  return(0i32)
+}
+)",
+                   0);
+}
+
+TEST_CASE("two mutating vector-field methods and a nested call in one expression evaluate left to "
+          "right") {
+  runMethodProgram("struct_methods_two_mutating_field_calls_in_expression",
+                   R"(
+import /std/collections/*
+
+[struct]
+KeepV {
+  [vector<i32> mut] seen
+
+  [mut effects(heap_alloc) return<i32>]
+  add([i32] x) {
+    this.seen.push(x)
+    return(this.seen.count())
+  }
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [KeepV mut] m{KeepV{[seen] vector<i32>(5i32)}}
+  m.seen.push(1i32)
+  [i32] direct{m.seen.count()}
+  [i32] twice{m.add(1i32) * 10i32 + m.add(2i32)}
+  if(twice != 34i32) { return(1i32) }
+  [i32] nested{direct + m.add(1i32) * (m.seen.count() + m.add(2i32))}
+  if(nested != 57i32) { return(2i32) }
+  [i32] grouped{(direct + m.add(1i32)) * 10i32 + m.add(2i32) * 100i32}
+  if(grouped != 890i32) { return(3i32) }
+  return(0i32)
+}
+)",
+                   0);
+}
