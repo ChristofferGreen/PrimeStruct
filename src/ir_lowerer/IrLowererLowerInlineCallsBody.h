@@ -730,6 +730,12 @@
                   })) {
             destroyElementPath = elementStructPath;
           }
+          // A real call's body owns its `copy` or `move` vector (a drop flag and a drop entry, see
+          // registerRealCallOwnedParameters): the call site binds the copy or the handed-over vector and leaves
+          // the destruction to the callee, or the buffer would be freed twice.
+          if (addressAbiCallImm.has_value() && (copyParam || moveParam)) {
+            continue;
+          }
           vectorInfo.dropFlagLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::PushI32, 1});
           function.instructions.push_back(

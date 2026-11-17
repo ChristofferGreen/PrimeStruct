@@ -84,8 +84,8 @@ struct RealCallShapeContext {
   // the parameter as `count()` or as the argument of `__pstext_literal`, since indexing a runtime string expands to
   // a branch per table string.
   bool allowStringParams = false;
-  // A builtin `vector<T>` parameter or result: only a spawned call's shape takes them (the spawner copies the vector
-  // and the task reads or owns the record's address), a direct call keeps its definition inline.
+  // A builtin `vector<T>` result, and a struct with collection fields: only a spawned call's shape takes them. A
+  // builtin `vector<T>` parameter is taken by direct calls too, `copy` and `move` included.
   bool allowCollections = false;
 };
 

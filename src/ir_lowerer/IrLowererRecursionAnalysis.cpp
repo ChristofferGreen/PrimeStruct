@@ -548,10 +548,10 @@ bool isAddressAbiParameter(
       continue;
     }
     if (isBuiltinVectorType(transform, def.namespacePrefix, structNames)) {
-      // A spawned call also takes the vector by `copy` or `move`. A direct call takes the record's address of a
-      // borrowed one (`mut` or read-only: no copy, the callee writes the caller's record); an owned vector stays
-      // inline, since the call site would have to copy or give it over.
-      return allowCollections || !ownedParam;
+      // The record's address is the argument. A borrowed vector (`mut` or read-only) is the caller's own, with no
+      // copy; a `copy` parameter gets a copy the call site makes in its frame and a `move` parameter the vector
+      // handed over, and the real call's body owns that vector and frees it.
+      return true;
     }
     if (!ownedParam && isReferenceToBuiltinVector(transform, def.namespacePrefix, structNames)) {
       return true;
@@ -1037,9 +1037,7 @@ std::string realCallBlockerReason(const Definition &def, const RealCallShapeCont
     }
     if (type->name == "vector" && !type->templateArgs.empty()) {
       return subject + "is a `vector<" + trimTemplateTypeText(type->templateArgs.front()) +
-             ">` taken by `copy` or `move`, or of an element the lowerer cannot copy: only a "
-             "spawned "
-             "call passes a builtin vector owned, a direct call keeps its definition inline";
+             ">` of an element the lowerer cannot copy or destroy";
     }
     if ((type->name == "Reference" || type->name == "Pointer") && type->templateArgs.size() == 1 &&
         trimTemplateTypeText(type->templateArgs.front()).find('<') != std::string::npos) {

@@ -167,7 +167,6 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
-| TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
 | TODO-6018 | A compile step leaves no generated C++ next to its executable | ready | build-dogfood |
@@ -210,7 +209,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -291,19 +290,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the medians of both executables are recorded in docs/todo_log.md and are within noise
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
-
-- [~] TODO-6022: A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Language defects found by glob (split from TODO-6015, which took `mut`, read-only and `Reference` vector parameters)
-  - parallel_track: build-graph-defects
-  - scope: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes a `copy` or `move` builtin `vector<T>` parameter only for a spawned call (`allowCollections`); a direct call keeps such a definition inline. A real call's body already owns a `copy`/`move` vector parameter (`registerRealCallOwnedParameters` gives it a drop flag and a drop entry), so the call site must not also register the copy's drop in its own scope (the vector block of `src/ir_lowerer/IrLowererLowerInlineCallsBody.h` does today, which would free the buffer twice): when `addressAbiCallImm` is set, a `copy` parameter's copy or a `move` parameter's handed-over vector is bound there and left to the callee. Then drop the `!ownedParam` condition of the vector case in `isAddressAbiParameter`.
-  - acceptance:
-    - a recursive definition with a `[vector<i32> copy]` and a `[vector<String> move]` parameter runs on the VM and optexe with balanced heap and string-heap statistics, a copy argument from a place (the caller keeps its vector) and from a fresh vector or `move(x)` (the callee takes it over)
-    - full release gate green
-  - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai

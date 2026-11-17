@@ -441,13 +441,13 @@ bool vectorParameterShapeEligible(const std::string &mode, bool referenced) {
 }
 } // namespace
 
-TEST_CASE("address ABI takes a borrowed builtin vector parameter and keeps an owned one inline") {
+TEST_CASE("address ABI takes a builtin vector parameter, borrowed or owned") {
   CHECK(vectorParameterShapeEligible("mut", false));
   CHECK(vectorParameterShapeEligible("", false));
   CHECK(vectorParameterShapeEligible("", true));
-  // A direct call would have to copy or give over the vector; only a spawned call does (TODO-6022).
-  CHECK_FALSE(vectorParameterShapeEligible("copy", false));
-  CHECK_FALSE(vectorParameterShapeEligible("move", false));
+  // The call site copies a `copy` argument or hands a `move` one over; the real call's body owns it (TODO-6022).
+  CHECK(vectorParameterShapeEligible("copy", false));
+  CHECK(vectorParameterShapeEligible("move", false));
 }
 
 namespace {

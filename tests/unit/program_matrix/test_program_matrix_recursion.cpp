@@ -6,7 +6,8 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.recursion");
 
 // A recursive definition runs on the VM only as a real call. A builtin `vector<T>` parameter taken by `mut` or read
 // only, and a `Reference<vector<T>>`, pass the caller's record address (docs/spec/vm-design.md, Real calls), so the
-// recursion pushes to and reads the caller's vector, growth included. Each program reads the heap statistics before
+// recursion pushes to and reads the caller's vector, growth included; a `copy` or `move` parameter is owned by the
+// callee (the call site binds the copy or the handed-over vector). Each program reads the heap statistics before
 // and after its body and prints the differences last.
 
 namespace {
@@ -153,6 +154,95 @@ rebuild([i32] depth, [vector<i32> mut] out) {
     print_line(out[2i32])
 )",
                       "3\n1\n100\n");
+}
+
+TEST_CASE("a recursive definition owns a vector taken by copy, from a place or a fresh vector") {
+  // A real call's body owns its `copy` vector: the call site binds the copy (the caller keeps its own vector) or the
+  // fresh vector and leaves the destruction to the callee (TODO-6022). Each level pushes past the capacity.
+  runRecursionProgram("recursion_copy_vector_parameter",
+                      R"(
+[effects(heap_alloc), return<vector<i32>>]
+make_values([i32] first) {
+  [vector<i32> mut] values{vector<i32>{}}
+  values.push(first)
+  values.push(first + 1i32)
+  return(values)
+}
+
+[effects(heap_alloc), return<i32>]
+sum_copy([vector<i32> copy] values, [i32] depth) {
+  if(depth == 0i32) {
+    return(values.count() + values[0i32])
+  }
+  values.push(depth)
+  return(sum_copy(values, depth - 1i32) + values.count())
+}
+
+[effects(heap_alloc), return<i32>]
+count_names([vector<String> copy] names, [i32] depth) {
+  if(depth == 0i32) {
+    return(names.count())
+  }
+  names.push(label(depth))
+  if(depth == 2i32) {
+    return(names.count() + 100i32)
+  }
+  return(count_names(names, depth - 1i32) + 1i32)
+}
+)",
+                      R"(
+    [vector<i32>] keep{make_values(5i32)}
+    print_line(sum_copy(keep, 3i32))
+    print_line(keep.count())
+    print_line(sum_copy(make_values(1i32), 2i32))
+    [vector<String> mut] names{vector<String>{}}
+    names.push(label(1i32))
+    print_line(count_names(names, 4i32))
+    print_line(names.count())
+    print_line(count_names(vector<String>{}, 4i32))
+)",
+                      "22\n2\n12\n106\n1\n105\n");
+}
+
+TEST_CASE("a recursive definition owns a vector taken by move, handed on to the next level") {
+  runRecursionProgram("recursion_move_vector_parameter",
+                      R"(
+[effects(heap_alloc), return<vector<i32>>]
+make_values([i32] first) {
+  [vector<i32> mut] values{vector<i32>{}}
+  values.push(first)
+  values.push(first + 1i32)
+  return(values)
+}
+
+[effects(heap_alloc), return<i32>]
+count_move([vector<String> move] names, [i32] depth) {
+  if(depth == 0i32) {
+    return(names.count())
+  }
+  names.push(label(depth))
+  return(count_move(move(names), depth - 1i32) + 1i32)
+}
+
+[effects(heap_alloc), return<i32>]
+sum_move([vector<i32> move] values, [i32] depth) {
+  if(depth == 0i32) {
+    return(values.count())
+  }
+  values.push(depth)
+  return(sum_move(move(values), depth - 1i32))
+}
+)",
+                      R"(
+    [vector<String> mut] names{vector<String>{}}
+    names.push(label(1i32))
+    print_line(count_move(move(names), 3i32))
+    print_line(count_move(vector<String>{}, 2i32))
+    [vector<i32> mut] other{make_values(7i32)}
+    print_line(sum_move(move(other), 2i32))
+    print_line(sum_move(make_values(1i32), 1i32))
+)",
+                      "7\n4\n4\n3\n");
 }
 
 TEST_SUITE_END();
