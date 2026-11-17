@@ -292,9 +292,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [ ] TODO-6021: An early `return` repeats the destruction of every live local in optimized C++
+- [~] TODO-6021: An early `return` repeats the destruction of every live local in optimized C++
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: exits-a (worktree-agent-ad166147012dc6e3c), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (found by TODO-6020: the optexe build entries of the build graph and glob)
   - parallel_track: build-graph-defects
