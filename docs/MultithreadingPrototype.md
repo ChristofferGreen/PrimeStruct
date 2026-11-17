@@ -586,7 +586,7 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 Classification: **design direction**, decided 2026-11-11. `--vm-threads` with tasks, heap arenas and the one host lock
 is implemented (TODO-5896; docs/spec/vm-design.md, Tasks on threads), with the per-function reentrant and
 main-thread-only registrations of host functions (TODO-5898); the rest is the VM threads lane of
-`docs/todo.md` (TODO-5899 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, landed). The VM scheduler above describes what the VM does today and stays
+`docs/todo.md` (TODO-5900 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, and TODO-5899, the embed API's `RunOptions::threads`, landed). The VM scheduler above describes what the VM does today and stays
 true of the default until TODO-5904.
 
 The VM gets a second way to run tasks: each on its own OS thread, in parallel, with the semantics `optexe` already
@@ -614,7 +614,8 @@ has. The deterministic scheduler stays; it is not replaced.
   table and `Script::setHostThreading` (`HostThreading`) on the embed API; the default stays serialized (TODO-5898).
 - **Faults and cancel:** a fault or `Trap` on any task sets a stop flag that every thread polls at calls and loop
   back-edges; the run ends with exit code 3 after flushing, and the process survives, so the embed API
-  (`Script::run`, `RunOptions::cancel`) can use the mode.
+  uses the mode (`RunOptions::threads`; `RunOptions::cancel` stops every thread with `VM error: execution stopped`;
+  TODO-5899). A module without task opcodes starts no thread.
 - **Speed:** a VM program that uses tasks runs each task on the flat loop between scheduler opcodes (TODO-5870), as
   fast as a program without tasks. The flat loop's state is already per call stack (`VmFastTask`), so TODO-5902 is the
   threads mode giving each task's `VmFastTask` an OS thread and the scheduler opcodes real primitives.

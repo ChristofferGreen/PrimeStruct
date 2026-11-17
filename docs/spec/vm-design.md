@@ -254,7 +254,7 @@
   message, or the trap's or the return's value), and the run returns once every task thread ended, so the process
   survives and a task never hangs the run (a thread inside a blocking host call ends when that call returns). A task
   nobody waited for is stopped when the main task returns. `Vm::setCancelFlag` is polled too. The mode does not use
-  the schedule seed, takes no JIT (`primevm` skips the native tier). The embed API does not offer the mode until TODO-5899. Tasks run in parallel, so the
+  the schedule seed, takes no JIT (`primevm` skips the native tier). The embed API offers it as `RunOptions::threads` (TODO-5899): a fault or `RunOptions::cancel` stops every thread, `Script::run` returns once all are joined, and a script without task opcodes starts no thread. Tasks run in parallel, so the
   order of what two live tasks print is not fixed.
   **Atomics, mutexes, conditions and deadlock (TODO-5897):** the atomic opcodes run on the slot through `std::atomic_ref`,
   sequentially consistent (a 32-bit add or compare-exchange is a compare-exchange loop on the sign-extended slot), so

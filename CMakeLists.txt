@@ -1193,6 +1193,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_diagnostics.cpp
     tests/unit/embed/test_embed_bytecode.cpp
     tests/unit/embed/test_embed_threads.cpp
+    tests/unit/embed/test_embed_task_threads.cpp
     tests/unit/embed/test_embed_host_calls.cpp
     tests/unit/embed/test_embed_host_language.cpp
     tests/unit/embed/test_embed_exports.cpp
@@ -1290,6 +1291,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_embed_threads
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_embed_task_threads
+    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.task_threads"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_embed_task_threads
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
   # Installs to a scratch prefix and builds/runs examples/embed against the

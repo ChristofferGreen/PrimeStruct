@@ -251,6 +251,11 @@ struct RunOptions {
   // When set and it becomes true the run stops with the diagnostic "VM error: execution stopped". A run with a
   // flag uses the plain interpreter, which polls it. The flag must outlive the run.
   const std::atomic<bool> *cancel = nullptr;
+  // Runs each task of a script that spawns tasks on an OS thread of its own (`--vm-threads`, docs/spec/vm-design.md,
+  // Tasks on threads; see HostThreading for host functions). A fault of any task or the cancel flag stops every
+  // thread; `run` returns after all of them are joined, so the process and the next `run` are unaffected. A script
+  // without tasks starts no thread and runs as it does without this option.
+  bool threads = false;
 };
 
 // A compiled script. Cheap to copy (shares the compiled module); `run` may be
