@@ -4,6 +4,7 @@
 #include "VmFastKernel.h"
 #include "VmKernelLocalize.h"
 #include "VmTaskScheduler.h"
+#include "VmThreadedTasks.h"
 #include "primec/ir/IrPureSemantics.h"
 #include "primec/runtime/VmStringLookup.h"
 #include "primec/runtime/VmKernelBoundary.h"
@@ -611,6 +612,9 @@ bool executeVmKernel(const IrModule &module,
   }
 
   if (moduleUsesTasks(module)) {
+    if (host.runsTasksOnThreads()) {
+      return runVmThreadedTasks(module, host, result, error);
+    }
     return runVmTaskScheduler(module, host, result, error);
   }
 

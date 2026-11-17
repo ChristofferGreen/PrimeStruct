@@ -80,6 +80,9 @@ struct Options {
   // --vm-schedule-seed (or PRIMESTRUCT_VM_SCHEDULE_SEED): the VM's task schedule; none is the eager default
   // (docs/spec/vm-design.md, Tasks).
   std::optional<uint64_t> vmScheduleSeed;
+  // --vm-threads: the VM runs each task on an OS thread of its own (docs/spec/vm-design.md, Tasks on threads); the
+  // schedule seed does not apply then. Off by default.
+  bool vmThreads = false;
   bool skipSemanticProductForNonConsumingPath = false;
   std::optional<bool> benchmarkForceSemanticProduct;
   bool benchmarkSemanticNoFactEmission = false;

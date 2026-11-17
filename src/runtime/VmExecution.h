@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -30,15 +31,18 @@ bool executeVmModule(const IrModule &module,
                      const VmHostFunctions *hostFunctions = nullptr,
                      const VmOutputSink *outputSink = nullptr,
                      const std::atomic<bool> *cancel = nullptr,
-                     std::optional<uint64_t> scheduleSeed = std::nullopt);
+                     std::optional<uint64_t> scheduleSeed = std::nullopt,
+                     bool taskThreads = false);
 
 // Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
-// pops the import's parameters, invokes the binding and pushes its result.
+// pops the import's parameters, invokes the binding and pushes its result. `hostLock`, when set, is held while a
+// binding of the embedder runs (threads mode, docs/spec/vm-design.md, Tasks on threads).
 bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error,
-                      TextHeapContext *text = nullptr);
+                      TextHeapContext *text = nullptr,
+                      std::mutex *hostLock = nullptr);
 
 } // namespace primec::vm_detail

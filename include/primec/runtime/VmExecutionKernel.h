@@ -26,6 +26,28 @@ public:
     return std::nullopt;
   }
 
+  // Threads mode (--vm-threads; docs/spec/vm-design.md, Tasks on threads): a host that answers true runs each task on
+  // a thread of its own with a heap and string heap of its own, and is called from several threads at once.
+  virtual bool runsTasksOnThreads() const {
+    return false;
+  }
+  // Called by the spawning thread for the task it is about to start: the heap the task allocates from, as an opaque
+  // token (null with `error` set when none can be had).
+  virtual void *acquireTaskHeap(std::string &error) {
+    error = "task threads are not supported by this VM host";
+    return nullptr;
+  }
+  // The first thing a task thread does: its heap calls then use `heap`. The calling thread of a run is the main task
+  // and needs no call (it uses the first arena).
+  virtual void enterTaskHeap(void *heap) {
+    (void)heap;
+  }
+  // Gives the heap back, when its task ended or never started: its live blocks stay valid, and a later task reuses
+  // the arena.
+  virtual void releaseTaskHeap(void *heap) {
+    (void)heap;
+  }
+
   virtual bool resolveIndirectAddress(uint64_t address,
                                       std::vector<uint64_t> &locals,
                                       uint64_t *&slot,

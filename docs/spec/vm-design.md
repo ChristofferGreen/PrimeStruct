@@ -220,6 +220,37 @@
   opcodes for the VM, serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL before it
   looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by the wasm
   backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `channel` is `1 << 15`.
+- **Tasks on threads (the VM, `--vm-threads`):** `primevm --vm-threads` and `primec --emit=vm --vm-threads` (the
+  embedder's `Vm::setTaskThreads`) run each `TaskSpawn` on an OS thread of its own instead of under the deterministic
+  scheduler; without the flag nothing changes, and a program without tasks runs as before (its heap is the first
+  arena, with today's addresses). The calling thread is the main task. A spawned task is a detached pthread with an
+  8 MiB stack that runs the step kernel on a call stack of its own (`VmThreadedTasks` in
+  `src/runtime/VmThreadedTasks.cpp`; the flat loop is not used until TODO-5902) and numbers its locals from 0, as
+  every task does. The task table (slots with generations, the handle format of Tasks above) and the flags below sit
+  behind one mutex; `TaskWait` consumes the handle, sleeps on one condition variable until the task's function has
+  returned and reads the result, with the faults of the deterministic scheduler (`invalid task handle in IR`, `task
+  handle already waited`). A thread is started per live task (`too many live tasks` past a million, and
+  `cannot start a task thread: <reason>` when the system refuses one), so a program that has thousands of tasks live
+  at once is bounded by the operating system. **Heaps:** the VM allocates through `VmHeapArenas`
+  (`include/primec/runtime/VmHeapArenas.h`, shared with `optexe`): the main task uses arena 0 and each task thread
+  an arena its spawner acquired, found by the arena number in address bits 41 to 46, so a block a task allocates has
+  a non-zero arena number and an arena whose task ended is used again. The first spawn moves arena 0's storage into
+  its address-space reservation while the main task is the only thread, so every address stays valid. A block a task
+  returns (a `String`, a vector, a struct) stays valid after the task ended and is freed by the waiter through the
+  owning arena's remote-free queue. **Host calls:** a `print`, a file operation and every embedder host function take
+  one global lock, so a line is written by one thread at a time (the output sink needs no lock of its own) and a host
+  function never runs twice at once; a host function that blocks therefore blocks every task's host calls until
+  TODO-5898 refines it. The `__pstext_*` functions the VM answers itself run without the lock, on the calling
+  thread's own string heap. **Faults and cancel:** a fault, a `Trap` or the main task's return sets a stop flag that
+  every thread polls every 256 steps and that wakes every waiter; the first of them is the run's outcome (its fault
+  message, or the trap's or the return's value), and the run returns once every task thread ended, so the process
+  survives and a task never hangs the run (a thread inside a blocking host call ends when that call returns). A task
+  nobody waited for is stopped when the main task returns. `Vm::setCancelFlag` is polled too. The mode does not use
+  the schedule seed, takes no JIT (`primevm` skips the native tier), and has no deadlock check yet, since tasks and
+  handles alone cannot deadlock. A module with an atomic, mutex or condition opcode (so `Atomic`, `Mutex`,
+  `Channel<T>` and `SharedString`) is refused before it runs: `--vm-threads does not support atomics, mutexes or
+  channels yet` (TODO-5897), and the embed API does not offer the mode until TODO-5899. Tasks run in parallel, so the
+  order of what two live tasks print is not fixed.
 - **Tasks on threads (arm64 native, PSIR v34):** the direct Mach-O emitter runs each `TaskSpawn` on a pthread
   (TODO-5942; `src/native_emitter/NativeEmitterInternalsArm64Tasks.h`). The spawner allocates a task block on the
   heap (result, `pthread_t`, argc, argv, then the parameters; the handle is its address), fills it from the value

@@ -2,6 +2,7 @@
 
 #include "VmFastKernel.h"
 #include "VmKernelLocalize.h"
+#include "VmTaskHandle.h"
 
 #include <algorithm>
 #include <optional>
@@ -17,11 +18,6 @@ bool isAtomicOpcode(IrOpcode op) {
   return op == IrOpcode::AtomicLoad || op == IrOpcode::AtomicStore || op == IrOpcode::AtomicAdd ||
          op == IrOpcode::AtomicExchange || op == IrOpcode::AtomicCompareExchange;
 }
-
-// A task handle: a tag in bits 48-62 (bit 63 clear, so it is never a heap address), the slot's generation in bits
-// 32-47 and the task slot in bits 0-31. A slot is reused once its task was waited, with the next generation.
-constexpr uint64_t TaskHandleTag = uint64_t{0x7A5C} << 48;
-constexpr uint64_t TaskHandleTagMask = uint64_t{0xFFFF} << 48;
 
 // The VM's tasks (docs/spec/vm-design.md, Tasks): each is a call stack of its own; all run on this one thread and
 // share the heap. A task switch happens only at a spawn, a wait and a task's end. The default schedule is eager: a
@@ -237,9 +233,7 @@ private:
     // createTask may grow tasks_, so the spawner is found again by its slot afterwards.
     const size_t child = createTask(functionIndex, std::move(arguments), spawner);
     Task &task = tasks_[spawner];
-    operands(task).push_back(TaskHandleTag |
-                             (static_cast<uint64_t>(tasks_[child].generation) << 32) |
-                             static_cast<uint64_t>(child));
+    operands(task).push_back(makeTaskHandle(tasks_[child].generation, child));
     advance(task);
     if (seeded_) {
       pickSeeded();

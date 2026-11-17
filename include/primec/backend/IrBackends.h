@@ -41,6 +41,8 @@ struct IrBackendEmitOptions {
   bool collectReport = false;
   // The VM's task schedule (--vm-schedule-seed); none is the eager default.
   std::optional<uint64_t> vmScheduleSeed;
+  // --vm-threads: each VM task runs on an OS thread of its own (docs/spec/vm-design.md, Tasks on threads).
+  bool vmThreads = false;
 };
 
 struct IrBackendEmitResult {

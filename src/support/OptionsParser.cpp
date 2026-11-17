@@ -1076,6 +1076,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         return false;
       }
       out.vmScheduleSeed = seed;
+    } else if (arg == "--vm-threads") {
+      out.vmThreads = true;
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
     } else if (arg.rfind("-O", 0) == 0) {

@@ -2,10 +2,14 @@
 
 #include "VmHeapHelpers.h"
 #include "VmIoHelpers.h"
+#include "VmThreadedTasks.h"
 #include "primec/runtime/VmExecutionKernel.h"
+#include "primec/runtime/VmHeapArenas.h"
 #include "primec/runtime/VmTextHeap.h"
 
 #include <exception>
+#include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -17,7 +21,8 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error,
-                      TextHeapContext *text) {
+                      TextHeapContext *text,
+                      std::mutex *hostLock) {
   if (inst.imm >= module.hostImports.size()) {
     error = "invalid host import index in IR";
     return false;
@@ -76,6 +81,12 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
       }
       return true;
     }
+  }
+  // Threads mode: one host function runs at a time (the `__pstext_*` functions above work on the calling thread's
+  // own string heap and take no part in it).
+  std::unique_lock<std::mutex> hostGuard;
+  if (hostLock != nullptr) {
+    hostGuard = std::unique_lock<std::mutex>(*hostLock);
   }
   const VmHostBinding *binding = hostFunctions != nullptr ? hostFunctions->find(import.name) : nullptr;
   if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
@@ -210,9 +221,13 @@ public:
                       const VmHostFunctions *hostFunctions,
                       const VmOutputSink *outputSink,
                       const std::atomic<bool> *cancel,
-                      std::optional<uint64_t> scheduleSeed)
+                      std::optional<uint64_t> scheduleSeed,
+                      bool taskThreads)
       : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink),
         cancel_(cancel), scheduleSeed_(scheduleSeed) {
+    if (taskThreads) {
+      arenas_ = std::make_unique<VmHeapArenas>();
+    }
   }
 
   const std::atomic<bool> *cancelFlag() const override { return cancel_; }
@@ -224,50 +239,64 @@ public:
   uint64_t slotBytes() const override { return IrSlotBytes; }
   size_t maxCallDepth() const override { return 4096; }
 
+  bool runsTasksOnThreads() const override {
+    return arenas_ != nullptr;
+  }
+  void *acquireTaskHeap(std::string &error) override {
+    return arenas_->acquire(error);
+  }
+  void enterTaskHeap(void *heap) override {
+    threadBinding() = {this, static_cast<VmHeapArena *>(heap)};
+  }
+  void releaseTaskHeap(void *heap) override {
+    arenas_->release(static_cast<VmHeapArena *>(heap));
+  }
+
   bool resolveIndirectAddress(uint64_t address,
                               std::vector<uint64_t> &locals,
                               uint64_t *&slot,
                               std::string &error) override {
-    return vm_detail::resolveIndirectAddress(address, slotBytes(), locals, heap_, slot, error);
+    return vm_detail::resolveIndirectAddress(address, slotBytes(), locals, core(), slot, error);
   }
   bool resolveAtomicAddress(uint64_t address,
                             std::vector<uint64_t> &locals,
                             uint64_t *&slot,
                             std::string &error) override {
-    return vm_detail::resolveAtomicAddress(address, slotBytes(), locals, heap_, slot, error);
+    return vm_detail::resolveAtomicAddress(address, slotBytes(), locals, core(), slot, error);
   }
 
   bool allocateHeapSlots(uint64_t slotCount, uint64_t &address, std::string &error) override {
-    return heap_.allocate(slotCount, address, error);
+    return core().allocate(slotCount, address, error);
   }
 
   bool allocateHeapBytes(uint64_t byteCount, uint64_t &address, std::string &error) override {
-    return heap_.allocateBytes(byteCount, address, error);
+    return core().allocateBytes(byteCount, address, error);
   }
 
   bool loadHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t &value, std::string &error) override {
-    return vm_detail::loadHeapByte(address, slotBytes(), locals, heap_, value, error);
+    return vm_detail::loadHeapByte(address, slotBytes(), locals, core(), value, error);
   }
 
   bool storeHeapByte(uint64_t address, std::vector<uint64_t> &locals, uint8_t value, std::string &error) override {
-    return vm_detail::storeHeapByte(address, slotBytes(), locals, heap_, value, error);
+    return vm_detail::storeHeapByte(address, slotBytes(), locals, core(), value, error);
   }
 
   bool freeHeapSlots(uint64_t address, std::string &error) override {
-    return heap_.release(address, error);
+    return core().release(address, error);
   }
 
   bool reallocHeapSlots(uint64_t address,
                         uint64_t slotCount,
                         uint64_t &newAddress,
                         std::string &error) override {
-    return heap_.reallocate(address, slotCount, newAddress, error);
+    return core().reallocate(address, slotCount, newAddress, error);
   }
 
   bool handlePrintInstruction(const IrModule &module,
                               const IrInstruction &inst,
                               std::vector<uint64_t> &stack,
                               std::string &error) override {
+    const HostGuard guard(*this);
     return handlePrintOpcode(module, inst, stack, args_, error, outputSink_);
   }
 
@@ -276,6 +305,7 @@ public:
                              std::vector<uint64_t> &stack,
                              std::vector<uint64_t> &locals,
                              std::string &error) override {
+    const HostGuard guard(*this);
     return handleFileOpcode(module, inst, stack, locals, error, outputSink_);
   }
 
@@ -283,11 +313,47 @@ public:
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
-    TextHeapContext text{&heap_, &textHeap_, args_};
-    return handleVmHostCall(hostFunctions_, module, inst, stack, error, &text);
+    TextHeapContext text{&core(), &textHeap(), args_};
+    return handleVmHostCall(
+        hostFunctions_, module, inst, stack, error, &text, arenas_ ? &hostLock_ : nullptr);
   }
 
 private:
+  // The heap a thread binds in threads mode: the arena its task acquired, and the host it belongs to, so a stale
+  // binding of an earlier run is never used. A thread without one (the run's calling thread) uses the first arena.
+  struct ThreadBinding {
+    const void *host = nullptr;
+    VmHeapArena *arena = nullptr;
+  };
+  static ThreadBinding &threadBinding() {
+    thread_local ThreadBinding binding;
+    return binding;
+  }
+  VmHeapArena &arena() {
+    const ThreadBinding &binding = threadBinding();
+    return binding.host == this ? *binding.arena : arenas_->main();
+  }
+  VmHeapCore &core() {
+    return arenas_ ? arena().core : heap_;
+  }
+  VmTextHeap &textHeap() {
+    return arenas_ ? arena().text : textHeap_;
+  }
+
+  // Prints and file operations take the one host lock in threads mode, so a line is written by one thread at a time
+  // and the output sink needs no lock of its own.
+  class HostGuard {
+  public:
+    explicit HostGuard(RuntimeVmKernelHost &host) {
+      if (host.arenas_) {
+        lock_ = std::unique_lock<std::mutex>(host.hostLock_);
+      }
+    }
+
+  private:
+    std::unique_lock<std::mutex> lock_;
+  };
+
   uint64_t argCount_ = 0;
   const VmHostFunctions *hostFunctions_ = nullptr;
   const std::vector<std::string_view> *args_ = nullptr;
@@ -296,6 +362,9 @@ private:
   std::optional<uint64_t> scheduleSeed_;
   VmHeapCore heap_;
   VmTextHeap textHeap_;
+  // Threads mode only: one arena per task thread (arena 0 is the main task's), and the host lock.
+  std::unique_ptr<VmHeapArenas> arenas_;
+  std::mutex hostLock_;
 };
 
 } // namespace
@@ -308,7 +377,12 @@ bool executeVmModule(const IrModule &module,
                      const VmHostFunctions *hostFunctions,
                      const VmOutputSink *outputSink,
                      const std::atomic<bool> *cancel,
-                     std::optional<uint64_t> scheduleSeed) {
+                     std::optional<uint64_t> scheduleSeed,
+                     bool taskThreads) {
+  if (taskThreads && moduleUsesSyncPrimitives(module)) {
+    error = "--vm-threads does not support atomics, mutexes or channels yet";
+    return false;
+  }
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;
@@ -316,7 +390,8 @@ bool executeVmModule(const IrModule &module,
       return false;
     }
   }
-  RuntimeVmKernelHost host(argCount, args, hostFunctions, outputSink, cancel, scheduleSeed);
+  RuntimeVmKernelHost host(
+      argCount, args, hostFunctions, outputSink, cancel, scheduleSeed, taskThreads);
   return executeVmKernel(module, host, result, error);
 }
 

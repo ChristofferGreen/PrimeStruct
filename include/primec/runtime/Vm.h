@@ -216,6 +216,14 @@ public:
     scheduleSeed_ = seed;
   }
 
+  // Runs each task of a module that spawns tasks on an OS thread of its own, with a heap per thread and one lock for
+  // host calls (docs/spec/vm-design.md, Tasks on threads; --vm-threads). Off by default. The run then ignores the
+  // schedule seed, takes the step kernel for a module with tasks, and refuses a module with atomic, mutex or
+  // condition opcodes. A fault or trap of any task ends the run; it returns once every task thread ended.
+  void setTaskThreads(bool enabled) {
+    taskThreads_ = enabled;
+  }
+
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
   bool execute(const IrModule &module,
                uint64_t &result,
@@ -234,6 +242,7 @@ private:
   VmOutputSink outputSink_{};
   const std::atomic<bool> *cancelFlag_ = nullptr;
   std::optional<uint64_t> scheduleSeed_;
+  bool taskThreads_ = false;
 };
 
 class VmDebugSession {

@@ -19,7 +19,8 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, u
                                     nullptr,
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
-                                    scheduleSeed_);
+                                    scheduleSeed_,
+                                    taskThreads_);
 }
 
 bool Vm::execute(const IrModule &module,
@@ -34,7 +35,8 @@ bool Vm::execute(const IrModule &module,
                                     nullptr,
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
-                                    scheduleSeed_);
+                                    scheduleSeed_,
+                                    taskThreads_);
 }
 
 bool Vm::execute(const IrModule &module,
@@ -50,7 +52,8 @@ bool Vm::execute(const IrModule &module,
                                     &hostFunctions,
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
-                                    scheduleSeed_);
+                                    scheduleSeed_,
+                                    taskThreads_);
 }
 
 } // namespace primec

@@ -668,6 +668,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmExecution.cpp
   src/runtime/VmExecutionKernel.cpp
   src/runtime/VmTaskScheduler.cpp
+  src/runtime/VmThreadedTasks.cpp
   src/runtime/VmFastKernel.cpp
   src/runtime/VmFastKernelPrepare.cpp
   src/runtime/VmHeapHelpers.cpp
@@ -1330,6 +1331,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_heap_arenas.cpp
     tests/unit/runtime/test_vm_text_heap.cpp
     tests/unit/runtime/test_vm_tasks.cpp
+    tests/unit/runtime/test_vm_threads.cpp
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
     tests/unit/runtime/test_vm_conditions.cpp
@@ -1344,6 +1346,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_byte_regions
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The VM's threads mode (--vm-threads), with hand-built IR.
+  add_test(
+    NAME PrimeStruct_vm_threads
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_vm_threads
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The per-thread heap arenas of generated programs (VmHeapArenas.h), driven by std::threads.
   add_test(

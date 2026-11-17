@@ -163,3 +163,7 @@ open-work-only scope rule as `docs/todo.md` itself.
   reading its finished-task entry, it wasn't one of the seams
   landed there (that task decomposed a different function
   entirely). This item's remaining scope is unchanged.
+
+## TODO-5902
+
+- 2026-11-17 (from TODO-5896): four tasks that each sum 10^8 integers in a `while` loop of i64 adds: default schedule (flat loop) 1.14 s real; `--vm-threads` (step kernel per task) 12.5 s real, 46.3 s user on an 11-core machine. The threads are about 3.7 times parallel and each task is about 10 times slower than on the flat loop, so the fast kernel per task is what makes the mode faster than the default for CPU-bound tasks.

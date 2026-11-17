@@ -3,7 +3,7 @@
 TEST_SUITE_BEGIN("primestruct.program_matrix.tasks");
 
 // Spawned tasks (docs/spec/vm-design.md, Tasks): the VM runs them under its scheduler, on the eager default schedule
-// and on seeds 1 to 8, optexe runs each on a thread, and arm64 native runs each on a pthread (the others run the spawned calls inline). A program free of races
+// and on seeds 1 to 8 (and, with --vm-threads, each on an OS thread), optexe runs each on a thread, and arm64 native runs each on a pthread (the others run the spawned calls inline). A program free of races
 // prints the same on every schedule. Each case builds one optexe binary (host C++ compiler), which takes a few seconds.
 
 namespace {
@@ -16,6 +16,10 @@ std::vector<program_matrix::ExecutionConfig> taskConfigs() {
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};
     configs.push_back(std::move(config));
   }
+  // Each task on an OS thread of its own (--vm-threads): the same answers, whatever the interleaving.
+  program_matrix::ExecutionConfig threads{"vm-O2-threads", program_matrix::Backend::Vm, 2, false};
+  threads.vmFlags = {"--vm-threads"};
+  configs.push_back(std::move(threads));
   return configs;
 }
 
@@ -124,7 +128,9 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "1500\n1623\n";
-  // The tasks count in an Atomic so the output does not depend on their order.
+  // The tasks count in an Atomic so the output does not depend on their order. --vm-threads refuses atomics until
+  // TODO-5897.
+  program.skipConfigs.push_back("vm-O2-threads");
   runTaskProgram(program);
 }
 

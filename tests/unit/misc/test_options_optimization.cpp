@@ -190,6 +190,19 @@ TEST_CASE("optimization flags after the program-args separator belong to the pro
   CHECK(options.programArgs == std::vector<std::string>{"-O3", "--opt-report"});
 }
 
+TEST_CASE("vm-threads is a flag of primec and primevm and is off by default") {
+  primec::Options defaults;
+  std::string error;
+  REQUIRE(parsePrimec({"primec", "--emit=vm", "/tmp/input.prime"}, defaults, error));
+  CHECK_FALSE(defaults.vmThreads);
+  primec::Options options;
+  REQUIRE(parsePrimec({"primec", "--emit=vm", "--vm-threads", "/tmp/input.prime"}, options, error));
+  CHECK(options.vmThreads);
+  primec::Options vmOptions;
+  REQUIRE(parsePrimevm({"primevm", "--vm-threads", "/tmp/input.prime"}, vmOptions, error));
+  CHECK(vmOptions.vmThreads);
+}
+
 TEST_CASE("the vm schedule seed takes a number for primec and primevm") {
   primec::Options options;
   std::string error;

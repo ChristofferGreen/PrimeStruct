@@ -167,6 +167,7 @@ public:
       args.push_back(arg);
     }
     vm.setScheduleSeed(options.vmScheduleSeed);
+    vm.setTaskThreads(options.vmThreads);
     uint64_t vmResult = 0;
     if (!vm.execute(module, vmResult, error, args)) {
       return false;
