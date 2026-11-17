@@ -81,7 +81,9 @@ Views), checked lexically until the slice's last use:
 
 The checker (`validateSliceLoans`, run after the validator) is lexical and name based. A binding of type `Slice`,
 `ReadSlice`, `WriteSlice` or `StringView` whose initializer is a call on a binding `o` (`o.view()`, `v.slice(a, b)`,
-`firstHalf(o)`) is a loan on `o`'s root, through any chain of views. The loan lasts until the last statement of the block
+`firstHalf(o)`) is a loan on `o`'s root, through any chain of views. A field or an element of `o` is part of `o`, so
+`names[i].view()` and `nodes[i].id.view()` are loans on `names` and `nodes`: the view does not outlive the element,
+and a `push`, `clear` or assignment of the vector before the view's last use is `borrowed binding`. The loan lasts until the last statement of the block
 that mentions the view; a statement before that one that pushes, pops, inserts, erases, appends, replaces, clears,
 reserves, resizes, sets, assigns or moves the owner (or a field of it) is rejected with `borrowed binding: <root> (root:
 <root>, sink: <view>)`. A view assigned to a field (`slice escapes via field <name> (root: <root>)`), pushed or inserted

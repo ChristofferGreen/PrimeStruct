@@ -320,6 +320,41 @@ TEST_CASE("views may overlap, narrow, and the owner changes again after the last
                TextViews) == 13);
 }
 
+TEST_CASE("a view of a vector element is a loan on the vector until its last use") {
+  const std::string node = "[struct]\nNode() {\n  [String] id{String{}}\n}\n";
+  const std::string names =
+      "  [vector<String> mut] values{vector<String>{}}\n  values.push(stringFromI32(12i32))\n"
+      "  values.push(stringFromI32(345i32))\n";
+  const Outcome cleared = runViews(
+      names + "  [StringView] a{values[0i32].view()}\n  values.clear()\n  return(a.count())");
+  CHECK_FALSE(cleared.compiled);
+  CHECK(cleared.diagnostics.find("borrowed binding: values (root: values, sink: a)") !=
+        std::string::npos);
+
+  const Outcome pushed =
+      runViews(names + "  [StringView] a{values[1i32].view()}\n"
+                       "  values.push(stringFromI32(6i32))\n  return(a.count())");
+  CHECK_FALSE(pushed.compiled);
+  CHECK(pushed.diagnostics.find("borrowed binding: values (root: values, sink: a)") !=
+        std::string::npos);
+
+  const Outcome field = runViews(
+      "  [vector<Node> mut] nodes{vector<Node>{}}\n  nodes.push(Node{stringFromI32(12i32)})\n"
+      "  [StringView] id{nodes[0i32].id.view()}\n  nodes.clear()\n  return(id.count())",
+      node);
+  CHECK_FALSE(field.compiled);
+  CHECK(field.diagnostics.find("borrowed binding: nodes (root: nodes, sink: id)") !=
+        std::string::npos);
+
+  // Reading other elements while the view lives, and changing the vector after its last use, are fine.
+  CHECK(
+      exitOf(
+          names +
+              "  [StringView] a{values[0i32].view()}\n  [i32] n{a.count() + values[1i32].count()}\n"
+              "  values.push(stringFromI32(6i32))\n  values.clear()\n  return(n)",
+          TextViews) == 5);
+}
+
 TEST_CASE("a view cannot be stored in a field, a container, or returned from a local owner") {
   const std::string holder = "[struct]\nHolder() {\n  [StringView mut] kept{textOf(\"x\")}\n}\n";
   const Outcome field = runViews("  [String] s{stringFromI32(12345i32)}\n  [StringView] v{s.view()}\n  [Holder mut] h{Holder{}}\n"

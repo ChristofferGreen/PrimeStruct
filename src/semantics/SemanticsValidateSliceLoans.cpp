@@ -1,5 +1,7 @@
 #include "SemanticsValidateSliceLoans.h"
 
+#include "SemanticsHelpers.h"
+
 #include <algorithm>
 #include <array>
 #include <map>
@@ -137,10 +139,27 @@ bool isMutatingName(const std::string &name) {
          name.rfind("assign", 0) == 0 || name.rfind("remove", 0) == 0 || name.rfind("push", 0) == 0;
 }
 
-// The binding a place expression starts at: `v`, `v.field`, `v.view()`.
+// An element read with a receiver and an index (`v[i]`, `at(v, i)`, `at_unsafe(v, i)`, also as the stdlib helper
+// specialized for the element type).
+bool isElementRead(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.args.size() != 2 || expr.isMethodCall ||
+      expr.isFieldAccess) {
+    return false;
+  }
+  std::string accessName;
+  if (getBuiltinArrayAccessName(expr, accessName)) {
+    return true;
+  }
+  const std::string leaf = typeLeafName(expr.name);
+  return leaf == "at" || leaf == "at_unsafe";
+}
+
+// The binding a place expression starts at: `v`, `v.field`, `v.view()`, `v[i]`, `v[i].field.view()`. An element is
+// part of its vector, so a view of it is a loan on the vector's root.
 const Expr *placeBase(const Expr &expr) {
   const Expr *current = &expr;
-  while (current->kind == Expr::Kind::Call && !current->args.empty() && (current->isFieldAccess || current->isMethodCall)) {
+  while (current->kind == Expr::Kind::Call && !current->args.empty() &&
+         (current->isFieldAccess || current->isMethodCall || isElementRead(*current))) {
     current = &current->args.front();
   }
   return current;

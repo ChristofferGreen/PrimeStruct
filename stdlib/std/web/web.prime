@@ -424,7 +424,7 @@ namespace web {
         if(routeMatches(pattern, path)) {
           if(request.method.equals(method)) {
             [Request mut] routed{request}
-            routed.route = pattern
+            routed.route = this.routes[index].pattern.view()
             this.routes[index].handler(location(this.state), routed, response)
             this.answerFragment(request, response)
             return()
