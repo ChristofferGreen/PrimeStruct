@@ -253,9 +253,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: by-value method call results as call arguments; not receivers (TODO-6008) and not references.
 
-- [ ] TODO-6017: A build graph copies a file into the output directory
+- [~] TODO-6017: A build graph copies a file into the output directory
   - owner: ai
   - status: ready
+  - claimed_by: claude-sonnet (worktree-agent-a8280ef4c563c11a5), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (found by TODO-5920; docs/BuildSystemPlan.md section 3)
   - parallel_track: build-dogfood
@@ -266,9 +267,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the copy step and the `direct` option; no command steps.
 
-- [ ] TODO-6018: A compile step leaves no generated C++ next to its executable
+- [~] TODO-6018: A compile step leaves no generated C++ next to its executable
   - owner: ai
   - status: ready
+  - claimed_by: claude-sonnet (worktree-agent-a8280ef4c563c11a5), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (found by TODO-5920)
   - parallel_track: build-dogfood
