@@ -7,6 +7,17 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-6030
+
+- 2026-11-17 (TODO-6027): `scripts/tsan_vm_check.sh --also-runtime`
+  (ThreadSanitizer build of primevm, primec and PrimeStruct_vm_byte_tests, 5 threads runs per
+  program) ran the 19 corpus programs and the runtime suites vm_threads, vm_threads_sync,
+  vm_threads_host, vm_sync_replay (TODO-5901: tests/unit/runtime/test_vm_sync_replay.cpp,
+  src/runtime/VmSyncLog.cpp), heap_arenas, tasks, atomics, mutexes and conditions: no
+  ThreadSanitizer report, exit 0. The embed sync-replay suite (test_embed_sync_replay.cpp) is a
+  `repeated` corpus line and is covered by the release gate, not by this script's ThreadSanitizer
+  build. TODO-6027 left the 382 corpus entries alone (each at most 2.9 s alone).
+
 ## TODO-6019
 
 - 2026-11-17 (found by TODO-5920): `examples/apps/text_editor/make.prime`
