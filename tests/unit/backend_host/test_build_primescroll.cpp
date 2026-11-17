@@ -59,4 +59,21 @@ TEST_CASE("the PrimeScroll make.prime prints the graph of the script's optexe bu
   CHECK_FALSE(contains(text, "-framework"));
 }
 
+TEST_CASE(
+    "the PrimeScroll make.prime prints the graph of the direct form with a copy of the dylib") {
+  // `--option direct=true` is scripts/build_native_app.sh's `--direct`: primec's native back end, the link argument
+  // `@executable_path/libps_ui_appkit.dylib` and a copy step that puts the dylib next to the executable (TODO-6017).
+  const std::filesystem::path dir = primec::testing::testScratchDir("build_primescroll_direct");
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir);
+  std::filesystem::copy_file(SourceDir + "/examples/apps/text_editor/make.prime",
+                             dir / "make.prime");
+
+  const std::string out = (dir / "direct.json").string();
+  const int status = dryRun(dir.string(), "--option direct=true", out);
+  CHECK_MESSAGE(status == 0, readFile(out + ".err"));
+  CHECK(readFile(out) ==
+        readFile(SourceDir + "/tests/fixtures/build/primescroll_direct_dry_run.golden.json"));
+}
+
 TEST_SUITE_END();

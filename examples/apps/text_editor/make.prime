@@ -7,8 +7,13 @@
 //
 // The backend libraries come from a CMake build directory (`cmake --build build-release --target
 // primec_ui_appkit_lib primec_ui_highlight_lib`); `build_dir` names it, relative to this folder. The executable is
-// `.ps/out/primescroll` (the script's `--direct` form needs a file copy that a graph cannot say yet; see TODO-5920 in
-// docs/todo_log.md).
+// `out/primescroll`.
+//
+//   primec build examples/apps/text_editor --option direct=true
+//
+// builds the script's `--direct` form: the program compiled by primec's own native back end (no C++ compiler), which
+// loads `libps_ui_appkit.dylib` from its own folder at launch (`cmake --build build-release --target
+// primec_ui_appkit_dylib` makes it). A copy step puts the dylib next to the executable as a new file.
 import /std/build/*
 
 // `<dir>/<name>`: one backend library inside the build directory.
@@ -25,15 +30,23 @@ build([Build mut] b) {
   [String] buildDir{b.option("build_dir", "../../../build-release", "CMake build directory with the UI backend libraries, relative to this folder")}
   [String] backend{b.option("backend", "appkit", "UI backend to link: appkit or headless")}
 
+  [bool] direct{b.option("direct", false, "Build the native back end form that loads libps_ui_appkit.dylib (appkit only)")}
+
   [Compiler mut] cc{b.compiler()}
-  cc.emit("optexe")
+  cc.emit(if(direct, then() { "native" }, else() { "optexe" }))
   // The script passes no level, and `primec` optimizes a native program at level 2 then; the runner always passes one.
   cc.optimize(2i32)
-  if(backend.equalsText("headless")) {
+  if(direct) {
+    cc.linkArg("@executable_path/libps_ui_appkit.dylib")
+    b.copy("appkit_dylib", library_path(buildDir, "libps_ui_appkit.dylib").view(), "libps_ui_appkit.dylib")
+  }
+  [bool] headless{backend.equalsText("headless")}
+  if(!direct && headless) {
     cc.linkArg("-I../../../include")
     cc.linkArg(library_path(buildDir, "libprimec_ui_headless_lib.a").view())
     cc.linkArg(library_path(buildDir, "libprimec_ui_highlight_lib.a").view())
-  } else {
+  }
+  if(!direct && !headless) {
     cc.linkArg(library_path(buildDir, "libprimec_ui_appkit_lib.a").view())
     cc.linkArg(library_path(buildDir, "libprimec_ui_highlight_lib.a").view())
     cc.linkArg("-framework")

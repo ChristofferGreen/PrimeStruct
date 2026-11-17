@@ -190,8 +190,10 @@ namespace build {
         json.stringValue(this.source.view())
         json.key("output")
         json.stringValue(this.output.view())
-        json.key("compiler")
-        json.rawValue(this.compilerJson.view())
+        if(this.compilerJson.count() > 0i32) {
+          json.key("compiler")
+          json.rawValue(this.compilerJson.view())
+        }
         if(this.inputDirs.count() > 0i32) {
           json.key("inputDirs")
           this.writeInputDirs(json)
@@ -651,6 +653,22 @@ namespace build {
     [mut effects(heap_alloc)]
     executable([StringView] name, [Compiler copy] cc, [StringView] source) {
       this.addTarget("exe:", "executable", name, cc, source)
+    }
+
+    // A copy step (id "copy:<name>", docs/BuildSystemPlan.md section 3): the runner copies the file `from` (relative to the
+    // project) to `to` inside the output directory, removing the target first so the copy is a new file (the kernel keeps
+    // the signature of the pages of an old one). It runs in the runner, not in the compiler; it is cached by the content
+    // hash of the source and of the copy, so an unchanged source is not copied again. The destination must stay inside the
+    // output directory.
+    [mut effects(heap_alloc)]
+    copy([StringView] name, [StringView] from, [StringView] to) {
+      [Node mut] node{Node{}}
+      node.id = derive_id("copy:", name)
+      node.kind = stringFrom("copy")
+      node.name = name.toOwned()
+      node.source = from.toOwned()
+      node.output = to.toOwned()
+      this.collected.add(node)
     }
 
     // A static library target (id "lib:<name>", output "<name>.psa"). It exports, but a runner cannot build it yet.

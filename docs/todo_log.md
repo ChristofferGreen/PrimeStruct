@@ -22,8 +22,8 @@ open-work-only scope rule as `docs/todo.md` itself.
   files, not code, since the C++ is identical. (3) The executable is
   `<project>/out/primescroll`, not a path the caller names. (4) The
   runner leaves `out/primescroll.cpp`; the script deletes it
-  (TODO-6018). (5) No `--direct` form: no step copies
-  `libps_ui_appkit.dylib` (TODO-6017). (6) The backend libraries are
+  (fixed by TODO-6018). (5) No `--direct` form: no step copied
+  `libps_ui_appkit.dylib` (fixed by TODO-6017: `--option direct=true`). (6) The backend libraries are
   CMake products; the graph reads them through `--option build_dir`
   and cannot build them (needs command steps, not planned yet). (7) Cold
   `primec build` of the folder 3.4 s of which the script compile is

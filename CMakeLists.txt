@@ -470,6 +470,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/BuildCache.cpp
+  src/pipeline/BuildCopyStep.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildSubprojects.cpp
   src/pipeline/BuildGraphJson.cpp
@@ -1398,6 +1399,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_glob.cpp
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
+    tests/unit/backend_host/test_build_copy.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_options.cpp
@@ -1647,6 +1649,21 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set_tests_properties(PrimeStruct_build_cache_${cache_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
+  # Copy steps and the generated C++ of executable steps (tests/unit/backend_host/test_build_copy.cpp).
+  foreach(copy_case
+          "puts a file into the output" "edited copy source" "deleted or edited copy" "outside the output directory"
+          "absolute copy destination" "copy of a missing file" "optexe step leaves")
+    string(MAKE_C_IDENTIFIER "${copy_case}" copy_id)
+    add_test(
+      NAME PrimeStruct_build_copy_${copy_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_copy"
+              "--test-case=*${copy_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_copy_${copy_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
   # The compiled make.prime is cached in the project (tests/unit/backend_host/test_build_script_cache.cpp).
   add_test(
     NAME PrimeStruct_build_script_cache
@@ -1722,9 +1739,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
     NAME PrimeStruct_build_primescroll
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_primescroll"
+            "--test-case=*prints the graph of the script's optexe build*"
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_build_primescroll PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_primescroll_direct
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_primescroll"
+            "--test-case=*direct form*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_primescroll_direct PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
   add_test(
     NAME PrimeStruct_build_command_native

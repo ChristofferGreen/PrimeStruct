@@ -1591,12 +1591,19 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   graph at that point and is the one call that is not a pure value: the runner starts the script once per stage, `run`
   of an earlier stage returns, and the wanted one writes the export with `"incomplete":true` and ends the script
   (docs/spec/integration-and-tooling.md, Build Command, Stages). `exportStage(incomplete)` is `export` with that marker.
-- Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `lib:<name>` and `link:<exe>><lib>`.
+- `copy(name, from, to)` adds a copy step (id `copy:<name>`, kind `copy`, `source` the file relative to the project, `output`
+  its place in the output directory, no `compiler` object, `"runnable":true`): the runner removes the target, copies the
+  file as a new file and caches the step by the content hashes of the source and of the copy, so an unchanged source is not
+  copied again and an edited or deleted copy re-runs only this step. A destination that is absolute or leaves the output
+  directory, and a source that is not a file, are diagnostics of `primec build`.
+- `primec build` deletes the `<output>.cpp` that `--emit=optexe` leaves next to the executable of an `optexe` step; the
+  executable is the result.
+- Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `copy:<name>`, `lib:<name>` and `link:<exe>><lib>`.
   A library's output is `<name>.psa`. Library and link nodes export with `"runnable":false` and a note, because the
   compiler cannot build static libraries yet; compile steps and executables are `"runnable":true`.
 - `export()` is deterministic and compact: `{"version":1,"nodes":[...],"problems":[...]}`. Nodes are sorted by id (bytewise,
   then by their JSON text), so the order of the calls that built the graph does not show. A node has `id`, `kind`
-  (`compile`, `executable`, `library` or `link`), `name`, `source`, `output`, a `compiler` object (`emit`, `optimize`,
+  (`compile`, `executable`, `copy`, `library` or `link`), `name`, `source`, `output`, a `compiler` object (`emit`, `optimize`,
   `entry`, `import_paths`, `transforms`, `default_effects`, `link_args`, each list in call order) and `runnable`; a link
   has `from` and `to` instead of the target fields. `problems` is a list of messages in node order: `duplicate id <id>`
   for a second node with an id, and `link <id> names a missing executable|library <id>` for an edge whose target is

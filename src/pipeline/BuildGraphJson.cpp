@@ -568,7 +568,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     }
     const std::string kind = stringField(node, "kind");
     const std::string id = stringField(node, "id");
-    if (kind != "compile" && kind != "executable") {
+    if (kind != "compile" && kind != "executable" && kind != "copy") {
       graph.unsupportedNodes.push_back(id);
       continue;
     }
@@ -579,6 +579,11 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.source = stringField(node, "source");
     step.output = stringField(node, "output");
     step.inputDirs = stringList(node, "inputDirs");
+    if (kind == "copy") {
+      // A copy step has no compiler: `source` is the file and `output` its place in the output directory.
+      graph.steps.push_back(std::move(step));
+      continue;
+    }
     const JsonValue *compiler = node.find("compiler");
     if (compiler == nullptr || compiler->kind != JsonValue::Kind::Object) {
       error = "node " + id + " has no compiler settings";

@@ -1,6 +1,8 @@
 #include "primec/pipeline/BuildRunner.h"
 
 #include "primec/pipeline/BuildCache.h"
+#include "primec/pipeline/BuildCopyStep.h"
+#include "primec/pipeline/BuildCopyStep.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
 
@@ -100,6 +102,52 @@ void storeBuildCacheEntry(const BuildStep &step,
   }
   entry.dirs = hashBuildInputDirs(inputDirs);
   writeBuildCacheEntry(cacheFile, entry);
+}
+
+enum class CopyOutcome { Copied, UpToDate, Failed };
+
+// Runs a copy step: the file `step.source` (relative to the project) is copied to `step.output` inside the output
+// directory. The cache entry holds the content hash of the source and of the copy, so an unchanged source with an
+// intact copy is not copied again, and an edited or deleted copy is made again (only this step).
+CopyOutcome runCopyStep(const BuildStep &step,
+                        const BuildRunSettings &settings,
+                        bool caching,
+                        std::string &diagnostics) {
+  const std::string outDir = absoluteAgainst(settings.outDir, settings.projectDir);
+  std::string destination;
+  if (!resolveCopyDestination(step.output, outDir, destination, diagnostics)) {
+    diagnostics += "\n";
+    return CopyOutcome::Failed;
+  }
+  const std::string source = absoluteAgainst(step.source, settings.projectDir);
+  std::string cacheFile;
+  std::string key;
+  if (caching) {
+    cacheFile = buildCacheFilePath(settings.cacheDir, step.id);
+    // The compiler does not take part: a copy does not change with its version.
+    key = buildStepKey("copy", {step.kind, step.source, step.output});
+    BuildCacheEntry entry;
+    if (readBuildCacheEntry(cacheFile, entry) &&
+        buildCacheEntryIsCurrent(entry, key, destination)) {
+      return CopyOutcome::UpToDate;
+    }
+    std::error_code ec;
+    std::filesystem::remove(cacheFile, ec);
+    std::filesystem::create_directories(settings.cacheDir, ec);
+  }
+  if (!copyBuildFile(source, destination, diagnostics)) {
+    diagnostics += "\n";
+    return CopyOutcome::Failed;
+  }
+  if (caching) {
+    BuildCacheEntry entry;
+    entry.key = key;
+    if (sha256FileHex(destination, entry.outputHash) &&
+        hashBuildDependencies({source}, entry.deps)) {
+      writeBuildCacheEntry(cacheFile, entry);
+    }
+  }
+  return CopyOutcome::Copied;
 }
 
 } // namespace
@@ -297,6 +345,16 @@ int runBuildGraph(const BuildGraphData &graph,
       }
       const BuildStep &step = graph.steps[index];
       Result &result = results[index];
+      if (step.kind == "copy") {
+        const CopyOutcome outcome = runCopyStep(step, settings, caching, result.diagnostics);
+        if (outcome == CopyOutcome::Failed) {
+          result.state = State::Failed;
+          stop.store(true);
+        } else {
+          result.state = outcome == CopyOutcome::UpToDate ? State::UpToDate : State::Built;
+        }
+        continue;
+      }
       std::vector<std::string> arguments = buildStepArguments(step, settings);
 
       std::string cacheFile;
@@ -341,6 +399,12 @@ int runBuildGraph(const BuildGraphData &graph,
         std::filesystem::remove(cacheFile + ".deps", ec);
       }
       if (status == 0) {
+        // `--emit=optexe` leaves the generated C++ next to the executable; the executable is the result, and the cache
+        // entry does not know the file (scripts/build_native_app.sh deletes it as well).
+        if (step.emitKind == "optexe") {
+          std::error_code ec;
+          std::filesystem::remove(outputPath + ".cpp", ec);
+        }
         result.state = State::Built;
       } else {
         result.state = State::Failed;

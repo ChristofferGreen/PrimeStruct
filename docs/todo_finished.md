@@ -2389,11 +2389,14 @@ are left unarchived.
 | TODO-6014 | A `primec build` spends 2.7 s compiling make.prime before it runs anything | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6017 | A build graph copies a file into the output directory | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-6018 | A compile step leaves no generated C++ next to its executable | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6020 | The optexe CTest entries of the build graph and of glob take 6 to 7 s alone, above the 5 s guardrail | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6021 | An early `return` repeats the destruction of every live local in optimized C++ | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6023 | The arms of a value `pick` leave their owning locals in the enclosing scope | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6024 | A unit arm with a local and a `vector<T>` result fails to lower in a value `pick` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-6025 | A method call result passed by value to a read-only `String` or struct parameter leaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 
 <!-- INDEX-END -->
 

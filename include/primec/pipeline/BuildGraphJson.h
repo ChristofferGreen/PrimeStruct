@@ -5,8 +5,9 @@
 
 namespace primec {
 
-// One compile step of an exported build graph (docs/BuildSystemPlan.md section 4): the fields of a `compile` or
-// `executable` node of the JSON that `graph.export()` writes.
+// One step of an exported build graph (docs/BuildSystemPlan.md section 4): the fields of a `compile`, `executable` or
+// `copy` node of the JSON that `graph.export()` writes. A `copy` step has a `source` and an `output` and no compiler
+// settings.
 struct BuildStep {
   std::string id;
   std::string kind;

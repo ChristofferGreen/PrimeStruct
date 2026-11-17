@@ -60,6 +60,7 @@ the one dangerous call in plain sight.
 | Node | Meaning | First version |
 | --- | --- | --- |
 | Compile step | A compiler snapshot (emit kind, optimization, import paths, entry, transforms, default effects, link arguments), an entry file and its output | Yes |
+| Copy step | `b.copy(name, from, to)`: a file of the project copied into the output directory by the runner (target removed first, cached by content hash; the destination must stay inside the output directory). PrimeScroll's `--option direct=true` copies `libps_ui_appkit.dylib` next to the executable | Yes (TODO-6017) |
 | Command step | An external command with declared inputs and outputs | Later, with the runner |
 | Function step | A PrimeStruct function that runs in the runner on a VM thread, with declared inputs and outputs | After VM threads |
 | Static library, link edge | A library target and a dependency of an executable on it | Appears in the export; `run` rejects it until the compiler supports libraries (section 7) |
