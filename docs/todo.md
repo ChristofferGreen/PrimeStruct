@@ -292,9 +292,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [ ] TODO-6020: The optexe CTest entries of the build graph and of glob take 6 to 7 s alone, above the 5 s guardrail
+- [~] TODO-6020: The optexe CTest entries of the build graph and of glob take 6 to 7 s alone, above the 5 s guardrail
   - owner: ai
   - status: ready
+  - claimed_by: optexe-size (worktree-agent-ada7e19358328e2e0), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (found while re-measuring the build entries for the cold make.prime compile)
   - parallel_track: build-graph-defects
