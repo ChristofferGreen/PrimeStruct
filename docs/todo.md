@@ -111,6 +111,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
+| TODO-6026 | Release-gate tests finish well inside their CTest timeouts under load | ready | gate-timeouts |
 | TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
@@ -232,6 +233,20 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (direc
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
+
+- [~] TODO-6026: Release-gate tests finish well inside their CTest timeouts under load
+  - owner: ai
+  - status: ready
+  - claimed_by: agent-a9dd34d7d82b96967 (worktree-agent-a9dd34d7d82b96967), 2026-11-17
+  - created_at: 2026-11-17
+  - phase: Test infrastructure (flaky timeouts seen in the TODO-5896, TODO-5897 and TODO-6021 gates)
+  - parallel_track: gate-timeouts
+  - scope: Full release gates on a loaded machine (load 40 to 100) time out tests that pass alone: 66 at 300 s, `native_ui_compiled_app`, `native_ui_appkit_scroll_independent`, `native_ui_appkit_scroll_blocks`, and the compile-run example shards `native_window_launcher_and_preflight_56_56` and `language_level_examples_80_80`. Measure each entry alone, find every entry above 5 s alone or with a timeout under 10x its alone time, find the root cause (serial compile-run shells, per-case `primec` spawns, host C++ compiles, sleeps or polls, shared resources), and fix it by splitting shards, event-driven waits, cheaper fixtures or deleting; never by raising a timeout.
+  - acceptance:
+    - docs/todo_log.md records per-entry alone times and the entries still above 5 s with a justification each
+    - no entry has a timeout below 10x its alone time unless listed with a leaf that fixes it
+    - fixed entries pass the full release gate; remaining work is filed as ready leaves
+  - stop_rule: measurement, the fixes this task names, and leaves for the rest; no timeout is raised.
 
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai
