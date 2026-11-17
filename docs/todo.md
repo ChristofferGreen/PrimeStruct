@@ -305,9 +305,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: destruction at early `return`; not `break`/`continue` exits and not real-call selection (TODO-6015).
 
-- [ ] TODO-6015: A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call
+- [~] TODO-6015: A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: vector-real-calls (worktree-agent-a09e68efe454382e0), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by glob (split from which made the diagnostic name the parameter)
   - parallel_track: build-graph-defects
