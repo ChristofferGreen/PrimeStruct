@@ -228,6 +228,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(owned, "/main", error));
   CHECK(error.find("borrowed parameter escapes via return: item") != std::string::npos);
+  CHECK(error.find("take it as [T copy] or [T move] to return it") != std::string::npos);
 
   // A `move` parameter owns its value and may hand it back; plain values return by copy.
   std::string moved = owned;
@@ -261,6 +262,17 @@ main() {
   error.clear();
   CHECK_FALSE(validateProgram(assigned, "/main", error));
   CHECK(error.find("borrowed parameter escapes via assignment: item") != std::string::npos);
+  CHECK(error.find("take it as [T copy] or [T move] to keep it") != std::string::npos);
+
+  // The way out the message names: a `move` parameter owns its value and may be stored (this type has a `Destroy`,
+  // so it is moved, not copied).
+  std::string stored = assigned;
+  stored.replace(stored.find("[Owned] item)"), 13, "[Owned move] item)");
+  stored.replace(stored.find("assign(slot, item)"), 18, "assign(slot, move(item))");
+  stored.replace(stored.find("keep(slot, item)"), 16, "keep(slot, move(item))");
+  error.clear();
+  CHECK(validateProgram(stored, "/main", error));
+  CHECK(error.empty());
 
   const std::string scalar = R"(
 [return<int>]

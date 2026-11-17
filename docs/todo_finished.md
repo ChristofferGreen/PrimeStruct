@@ -2368,6 +2368,7 @@ are left unarchived.
 | TODO-6003 | A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6004 | A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6005 | A view of an indexed element dangles after the expression that made it | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6006 | The diagnostic for storing a read-only struct parameter says how to fix it | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

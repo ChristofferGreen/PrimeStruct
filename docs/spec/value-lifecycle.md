@@ -150,7 +150,8 @@
   `move` parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed
   parameter of an owning type (a container, a type that defines `Destroy`, or one holding either) is not returned,
   assigned or moved (`borrowed parameter escapes via return` / `via assignment`, `borrowed parameter cannot be
-  moved`). A named argument of an owning type passed to a `move` parameter is moved-from after the call (values of
+  moved`; the first two say the way out: take the parameter as `[T move]`, or `[T copy]` for a type that can be copied,
+  to keep it, as `[Compiler copy] settings` does in `/std/build`). A named argument of an owning type passed to a `move` parameter is moved-from after the call (values of
   other types are copied). Stdlib container entry points that store their argument (push, insert, slot writes) take
   it as `move`. A `copy` parameter gets its own storage: scalars by value, structs slot by slot and then through the
   type's `Copy` helper when it defines one (or its fields' helpers); a `move(v)` argument is handed over without a

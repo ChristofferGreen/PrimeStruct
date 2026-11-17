@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsBorrowedParameterMessages.h"
+
 #include <string>
 #include <vector>
 
@@ -467,7 +469,7 @@ bool SemanticsValidator::reportAssignmentValueEscape(
     }
   }
   if (isOwningBorrowedParameter(params, value, assignExpr.namespacePrefix)) {
-    failExprDiagnostic(assignExpr, "borrowed parameter escapes via assignment: " + value.name);
+    failExprDiagnostic(assignExpr, borrowedParameterEscapeMessage("assignment", value.name));
     return true;
   }
   return false;

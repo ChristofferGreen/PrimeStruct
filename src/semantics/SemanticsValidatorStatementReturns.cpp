@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsBorrowedParameterMessages.h"
+
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -451,8 +453,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     // trivially (scalars, strings, pointers, plain structs) are returned by copy.
     if (!expectedReferenceReturnTarget.has_value() &&
         isOwningBorrowedParameter(params, returnExpr, namespacePrefix)) {
-      return failReturnEscapeDiagnostic("borrowed parameter escapes via return: " +
-                                        returnExpr.name);
+      return failReturnEscapeDiagnostic(borrowedParameterEscapeMessage("return", returnExpr.name));
     }
     // The payload binding of a `pick` on a sum somebody else owns stands for their storage too.
     if (!expectedReferenceReturnTarget.has_value() && returnExpr.kind == Expr::Kind::Name &&

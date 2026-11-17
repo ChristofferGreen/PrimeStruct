@@ -220,7 +220,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6006, TODO-6007
+- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6007
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -249,19 +249,6 @@ Language defects found by the build graph: TODO-6002 (an element's method call f
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
-
-- [~] TODO-6006: The diagnostic for storing a read-only struct parameter says how to fix it
-  - owner: ai
-  - status: ready
-  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
-  - parallel_track: build-graph-defects
-  - scope: `[Compiler] p` assigned into a field is `borrowed parameter escapes via assignment: p`, and the workaround is `[Compiler copy] p`. That is the ownership rule of `docs/spec/value-lifecycle.md` (a borrowed parameter cannot be stored); only the message is thin. Add the remedy to the message (take the parameter as `[T copy]` or `[T move]`) and state the rule where the diagnostic is listed.
-  - acceptance:
-    - the message names the `copy` and `move` parameter forms; negative test on the message and positive tests that `[T copy]` and `[T move]` parameters may be stored
-    - full release gate green
-  - stop_rule: this message; the borrow rules stay as they are.
 
 - [~] TODO-6007: `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method
   - owner: ai
