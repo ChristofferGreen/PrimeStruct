@@ -169,7 +169,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | ready | build-graph-defects |
-| TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
+| TODO-5917 | Build options: `b.option` and `primec build --option` | ready | build-options |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-5920 | PrimeScroll builds with `make.prime` | ready | build-dogfood |
 | TODO-5922 | `primevm --link` merges two serialized IR modules | ready | lib-ir-link |
@@ -1021,9 +1021,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5917: Build options: `b.option` and `primec build --option`
+- [~] TODO-5917: Build options: `b.option` and `primec build --option`
   - owner: ai
   - status: ready
+  - claimed_by: options-a (worktree-agent-abcee21ed3126918c), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 5)
   - parallel_track: build-options
