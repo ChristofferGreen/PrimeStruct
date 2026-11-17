@@ -1037,9 +1037,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-6009: A build step whose glob listing changes runs again
+- [~] TODO-6009: A build step whose glob listing changes runs again
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: build-agent (worktree-agent-a86f43f9ea1ce15ab), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (docs/BuildSystemPlan.md, section 8)
   - parallel_track: build-glob
