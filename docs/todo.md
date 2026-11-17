@@ -209,7 +209,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6025
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -233,25 +233,24 @@ VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; ready: TODO-5919 (function steps, after TODO-5896), TODO-6017 (file copy step), TODO-6018 (no stray C++), TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
-Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6022 (a `copy` or `move` vector parameter keeps a direct call inline) are `ready` outside `Ready Now`.
+Language defects found by the build graph and by glob: TODO-6025 (a method call result passed by value to a read-only `String` or struct parameter leaks) is `ready` outside `Ready Now`.
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
 
-- [~] TODO-6008: A call of a user method named `at` that returns a `String` leaks the result when it is a receiver
+- [ ] TODO-6025: A method call result passed by value to a read-only `String` or struct parameter leaks
   - owner: ai
   - status: ready
-  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Language defects found by the build graph (stdlib/std/build/build.prime; found while finishing TODO-6002)
+  - phase: Language defects found by TODO-6008 (user method `at` as a receiver)
   - parallel_track: build-graph-defects
-  - scope: `bag.at(0i32).view().count()` and `bag.at(1i32).byteAt(0i32)`, with `at([i32] index)` a method of `Bag` that returns `this.names[index]` as a `String`, leave the returned `String` alive: 32 bytes of string heap per call on the VM and optexe (2026-11-17). The element-access predicates (`isElementAccessCopySourceExpr`, `shouldDisarmStructCopySourceExpr`) match any two-argument call named `at`, so the receiver-temporary rule that binds an owning call result to a hidden local (`ownedTemporaryStructPath`) never sees a user `at` that returns a copy. A user `at` that resolves to a definition is a call result, not an element place: decide it from the resolved definition (as `isTemporaryStructCopySourceExpr` already does for bindings), at every site that asks.
+  - scope: `take(bag.first())` and `take_named(bag.item(1i32))`, with `first()` and `item(i)` methods of `Bag` that return a `String` and a `Named` by value and `take([String] text)`, `take_named([Named] value)` read-only parameters, leave the returned value alive: 32 bytes of string heap per call on the VM and optexe (2026-11-17; `take_named(make_named(1i32))`, a function call result, is balanced). `isOwnedTemporaryArgumentExpr` (src/ir_lowerer/IrLowererFlowControlHelpers.cpp) resolves a callee only for a call that is not a method call (`expr.isMethodCall || !resolveDefinitionCall ? nullptr`), so the call site never registers the destruction of a method call's by-value result, and the callee only borrows it. Pass the method resolver (`makeCallOrMethodResolver`) through its callers (`parameters.isBuiltinVectorElementPlace` sits next to the resolver in `IrLowererInlineParamHelpers`), and decide a method named `at` or `at_unsafe` from the resolved definition, as TODO-6008 did for receivers (`isTemporaryStructCopySource`).
   - acceptance:
-    - a program matrix case with a user `at` returning a `String` and a struct, read through `.view()`, `.byteAt(0i32)` and a field, ends with balanced heap and string-heap statistics on the VM and optexe
-    - the builtin vector element reads of TODO-6002 stay places (the element_receivers suite stays green)
+    - a program matrix case passes the result of a user method (returning a `String` and a struct, also one named `at`) to read-only and `copy` parameters with balanced heap and string-heap statistics on the VM and optexe
+    - the builtin vector element reads (`take(names[0i32])`) stay places
     - full release gate green
-  - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
+  - stop_rule: by-value method call results as call arguments; not receivers (TODO-6008) and not references.
 
 - [ ] TODO-6017: A build graph copies a file into the output directory
   - owner: ai

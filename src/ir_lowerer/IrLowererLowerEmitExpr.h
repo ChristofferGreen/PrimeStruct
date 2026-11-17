@@ -199,8 +199,10 @@
     if (expr.kind == Expr::Kind::Call && receiverReadForm && !expr.isBinding &&
         !expr.isFieldAccess && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Call &&
         !fileScopeStack.empty() && setupStage.statementNesting > 0 &&
+        // A call shaped like an element access (`bag.at(i)`) is a temporary when it resolves to a user definition
+        // that returns the value; a builtin vector's element read is a place (`isTemporaryStructCopySource`).
         ((!ownedTemporaryStructPath(expr.args.front(), localsIn).empty() &&
-          ir_lowerer::shouldDisarmStructCopySourceExpr(expr.args.front())) ||
+          isTemporaryStructCopySource(expr.args.front(), localsIn)) ||
          (isSimpleCallName(expr.args.front(), "wait") && expr.args.front().args.size() == 1 &&
           expr.args.front().args.front().kind == Expr::Kind::Name &&
           !inferStructExprPath(expr.args.front(), localsIn).empty()))) {

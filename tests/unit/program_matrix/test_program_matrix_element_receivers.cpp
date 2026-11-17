@@ -331,4 +331,62 @@ Graph() {
                     "99\n16\n2363\n99\n2363\n2363\n2513\n");
 }
 
+TEST_CASE("a user method named at that returns a value is a call result, not an element place") {
+  // `bag.at(i)` is shaped like an element access but resolves to a definition that returns a copy (TODO-6008): the
+  // result is a temporary that a receiver read (`.view()`, `.byteAt()`, a field) destroys at the end of the
+  // statement, as for any other call. The vector's own `names[i]` inside `at` stays a place.
+  runElementProgram("element_receiver_user_at",
+                    R"(
+[struct]
+Named() {
+  [String] text{String{}}
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<Named>]
+make_named([i32] id) {
+  return(Named{label(id), id})
+}
+
+[struct]
+Bag() {
+  [vector<String> mut] names{vector<String>{}}
+  [vector<Named> mut] items{vector<Named>{}}
+
+  [effects(heap_alloc), return<String>]
+  at([i32] index) {
+    return(this.names[index])
+  }
+
+  [effects(heap_alloc), return<String>]
+  at_unsafe([i32] index) {
+    return(this.names[index])
+  }
+
+  [effects(heap_alloc), return<Named>]
+  item([i32] index) {
+    return(this.items[index])
+  }
+}
+)",
+                    R"(
+    [Bag mut] bag{Bag{}}
+    bag.names.push(label(1i32))
+    bag.names.push(label(2i32))
+    bag.items.push(make_named(3i32))
+    bag.items.push(make_named(4i32))
+    print_line(bag.at(0i32).view().count())
+    print_line(convert<i32>(bag.at(1i32).byteAt(0i32)))
+    print_line(bag.at_unsafe(1i32).view().count())
+    print_line(bag.item(1i32).id)
+    print_line(bag.item(1i32).text.view().count())
+    print_line(bag.item(0i32).id)
+    [String] copied{bag.at(1i32)}
+    print_line(copied.view().count())
+    bag.at(0i32)
+    print_line(bag.names[0i32].view().count())
+)",
+                    "1\n50\n1\n4\n1\n3\n1\n1\n");
+}
+
 TEST_SUITE_END();

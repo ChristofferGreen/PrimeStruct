@@ -2380,6 +2380,7 @@ are left unarchived.
 | TODO-6005 | A view of an indexed element dangles after the expression that made it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6006 | The diagnostic for storing a read-only struct parameter says how to fix it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6007 | `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6008 | A call of a user method named `at` that returns a `String` leaks the result when it is a receiver | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6009 | A build step whose glob listing changes runs again | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6010 | Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
