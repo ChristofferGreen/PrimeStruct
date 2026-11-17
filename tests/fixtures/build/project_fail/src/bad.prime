@@ -1,0 +1,5 @@
+[return<int>]
+main() {
+  [i32] count{"two"utf8}
+  return(count)
+}

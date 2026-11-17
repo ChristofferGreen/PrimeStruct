@@ -1,4 +1,5 @@
 #include "primec/pipeline/BuildCommand.h"
+#include "primec/pipeline/BuildRunner.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/CompileArena.h"
 #include "primec/pipeline/CompilePipeline.h"
@@ -428,9 +429,8 @@ int main(int argc, char **argv) {
       return 2;
     }
     if (!buildPlan.dryRun) {
-      std::cerr
-          << "primec build: running a graph is not supported yet; use --dry-run to print it\n";
-      return 2;
+      return primec::runBuildCommand(
+          buildPlan, primec::selfExecutablePath(argv[0]), std::cout, std::cerr);
     }
     for (std::string &argument : buildPlan.arguments) {
       buildArgv.push_back(argument.data());

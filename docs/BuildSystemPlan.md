@@ -199,8 +199,13 @@ Leaves in the Build system lane; the VM threads lane has its own list.
 
 ## 11. Open decisions
 
-- **In-process or separate compiler per step.** In-process is faster; a separate process isolates a compiler crash.
-  TODO-5913 starts in-process through the pipeline and records what it finds.
+- **In-process or separate compiler per step.** Decided by TODO-5913: a separate `primec` process per step. The
+  compile pipeline keeps process-wide state (the compile arena of `primec`, the counters of the lowerer) that two
+  concurrent in-process compiles would share, so parallel steps would need that state made thread-local first; a
+  process per step runs in parallel today, isolates a compiler crash to one step and gives each step its own
+  diagnostics. `primec build` runs `primec` itself (found through the path of the running executable); the embed
+  library stays free of process spawning because the runner lives in `primec`. In-process steps can replace this once
+  the pipeline is re-entrant.
 - **The name of the run effect** (`build_run` here) and whether only the root script may hold it (proposed).
 - **Whether the ceiling applies to library code.** Proposed: user code only.
 - **How a subproject is loaded:** a separate VM run whose exported graph the runner merges, or one program that imports

@@ -104,11 +104,74 @@ TEST_CASE("primec build --dry-run finds make.prime in the working directory") {
   CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
 }
 
-TEST_CASE("primec build without --dry-run says a graph cannot run yet") {
-  const std::string out = scratch("no_dry_run.json");
-  CHECK(primecBuild(shellQuote(FixtureDir + "project"), out) != 0);
+namespace {
+// A fresh output directory for one `primec build` run.
+std::string freshOutDir(const std::string &name) {
+  const std::string dir = scratch(name);
+  std::filesystem::remove_all(dir);
+  return dir;
+}
+} // namespace
+
+TEST_CASE("primec build runs two independent steps with --jobs 2") {
+  const std::string outDir = freshOutDir("jobs_out");
+  const std::string out = scratch("jobs.txt");
+  const int status = primecBuild(
+      shellQuote(FixtureDir + "project_jobs") + " --jobs 2 --out-dir " + shellQuote(outDir), out);
+  CHECK_MESSAGE(status == 0, readFile(out + ".err"));
+  CHECK(readFile(out) == "built compile:first\nbuilt compile:second\n");
+  CHECK(std::filesystem::exists(outDir + "/first"));
+  CHECK(std::filesystem::exists(outDir + "/second"));
+}
+
+TEST_CASE("primec build names a failing step and stops the steps after it") {
+  const std::string outDir = freshOutDir("fail_out");
+  const std::string out = scratch("fail.txt");
+  const int status = primecBuild(
+      shellQuote(FixtureDir + "project_fail") + " --jobs 1 --out-dir " + shellQuote(outDir), out);
+  CHECK(status != 0);
+  const std::string diagnostics = readFile(out + ".err");
+  CHECK_MESSAGE(diagnostics.find("step alpha_bad (compile:alpha_bad) failed") != std::string::npos,
+                diagnostics);
+  CHECK_MESSAGE(diagnostics.find("bad.prime") != std::string::npos, diagnostics);
+  CHECK_MESSAGE(diagnostics.find("step beta_good (compile:beta_good) skipped") != std::string::npos,
+                diagnostics);
   CHECK(readFile(out).empty());
-  CHECK(readFile(out + ".err").find("running a graph is not supported yet") != std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(outDir + "/beta_good"));
+}
+
+TEST_CASE("primec build rejects a graph with a library node") {
+  const std::string outDir = freshOutDir("library_out");
+  const std::string out = scratch("library.txt");
+  const int status =
+      primecBuild(shellQuote(FixtureDir + "project") + " --out-dir " + shellQuote(outDir), out);
+  CHECK(status != 0);
+  CHECK(readFile(out + ".err").find("static libraries are not supported by this compiler yet") !=
+        std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(outDir));
+}
+
+TEST_CASE("primec build rejects a bad --jobs") {
+  const std::string out = scratch("bad_jobs.txt");
+  CHECK(primecBuild(shellQuote(FixtureDir + "project_jobs") + " --jobs zero", out) != 0);
+  CHECK(readFile(out + ".err").find("--jobs expects a number") != std::string::npos);
+}
+
+TEST_CASE("primec build reports the diagnostics of a broken script") {
+  const std::string out = scratch("script_error.txt");
+  CHECK(primecBuild(shellQuote(FixtureDir + "project_type_error"), out) != 0);
+  CHECK(readFile(out + ".err").find("project_type_error/make.prime:6") != std::string::npos);
+}
+
+TEST_CASE("building a make.prime with exe and optexe steps gives programs that run") {
+  const std::string outDir = freshOutDir("run_out");
+  const std::string out = scratch("run.txt");
+  const int status = primecBuild(
+      shellQuote(FixtureDir + "project_run") + " --jobs 2 --out-dir " + shellQuote(outDir), out);
+  REQUIRE_MESSAGE(status == 0, readFile(out + ".err"));
+  CHECK(readFile(out) == "built exe:exit_five\nbuilt exe:exit_three\n");
+  CHECK(run(shellQuote(outDir + "/exit_three")) == 3);
+  CHECK(run(shellQuote(outDir + "/exit_five")) == 5);
 }
 
 TEST_CASE("primec build names make.prime when the directory has none") {

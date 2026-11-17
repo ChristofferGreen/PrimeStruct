@@ -11,6 +11,14 @@ namespace primec {
 struct BuildCommandPlan {
   // Whether `--dry-run` was given: print the graph instead of running it.
   bool dryRun = false;
+  // The project directory the command was given (default `.`).
+  std::string projectDir;
+  // `--out-dir` (default `<dir>/out`): where the compile steps write; `--jobs` (0: the core count): how many run at
+  // once. Neither is passed on to the compile of the script.
+  std::string outDir;
+  int jobs = 0;
+  // The options after the directory, except `--dry-run`, `--jobs` and `--out-dir`.
+  std::vector<std::string> forwarded;
   // The path of the script, `<dir>/make.prime`.
   std::string scriptPath;
   // The arguments of the compile, starting with the program name, in the form `parseOptions` takes.

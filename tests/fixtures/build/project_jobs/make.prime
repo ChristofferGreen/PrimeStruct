@@ -1,0 +1,11 @@
+// Two independent compile steps of one program as IR, for `primec build --jobs 2`.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("ir")
+  b.compile("first", cc, "src/main.prime")
+  b.compile("second", cc, "src/main.prime")
+  return(b.graph())
+}

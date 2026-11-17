@@ -1,0 +1,4 @@
+[return<int>]
+main() {
+  return(5i32)
+}

@@ -1,0 +1,12 @@
+// Two compile steps; the first by id, "alpha_bad", does not compile. With `--jobs 1` the second, "beta_good", never
+// starts, so `primec build` names the first step and the diagnostics of the compiler and leaves no output for the second.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("ir")
+  b.compile("alpha_bad", cc, "src/bad.prime")
+  b.compile("beta_good", cc, "src/good.prime")
+  return(b.graph())
+}

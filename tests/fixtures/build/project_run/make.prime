@@ -1,0 +1,17 @@
+// A build script for `primec build` (tests/unit/backend_host/test_build_graph.cpp): one program as a simple
+// executable and one as optimized native code with a link argument. The programs exit with 3 and 5.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] plain{b.compiler()}
+  plain.emit("exe")
+  b.executable("exit_three", plain, "src/exit_three.prime")
+
+  [Compiler mut] fast{b.compiler()}
+  fast.emit("optexe")
+  fast.optimize(2i32)
+  fast.linkArg("-lm")
+  b.executable("exit_five", fast, "src/exit_five.prime")
+  return(b.graph())
+}

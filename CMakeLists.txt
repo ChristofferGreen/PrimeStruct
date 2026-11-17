@@ -469,6 +469,8 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/BuildCommand.cpp
+  src/pipeline/BuildGraphJson.cpp
+  src/pipeline/BuildRunner.cpp
   src/pipeline/CliDriver.cpp
   src/pipeline/CliUsage.cpp
   src/pipeline/CompilePipeline.cpp
@@ -1538,6 +1540,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_build_command
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
+  add_test(
+    NAME PrimeStruct_build_command_native
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*exe and optexe steps*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_command_native
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
   add_test(

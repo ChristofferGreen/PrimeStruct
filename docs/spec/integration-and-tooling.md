@@ -54,11 +54,25 @@ appending `import /std/build_runner/*` (a module of its own, because `import /st
 primec build --dry-run tests/fixtures/build/project
 ```
 prints the deterministic JSON of `tests/fixtures/build/build_graph.golden.json`, the same text the graph prints from a
-plain program that builds those nodes. Without `--dry-run` the command exits with 2 and
-`running a graph is not supported yet` until the runner executes steps. A directory without `make.prime` exits with 2
+plain program that builds those nodes. A directory without `make.prime` exits with 2
 and `no make.prime in <dir>`; a type error, an effect outside the ceiling (`io_out` is one) or an import outside the
 allowlist fails like any compile, with the position in `make.prime`. `primec` without `build` as its first argument
 behaves as before.
+
+Without `--dry-run` the command runs the graph: it starts `primec build --dry-run` on the same arguments for the graph
+(so a broken script reports the diagnostics of an ordinary compile), parses the export and runs every `compile` and
+`executable` node as one `primec` process with the project directory as its working directory. A step's compiler
+settings become flags: `--emit=<kind>`, `-O<level>`, `--entry`, one `--import-path` per path, `--transform-list`,
+`--default-effects` (an empty list leaves the default effects of `primec`), one `--link-arg` per argument,
+`--out-dir <out-dir> -o <output> <source>`. Paths in a step (source, import paths, link arguments) are relative to the
+project directory.
+`--out-dir <dir>` (default `<dir>/out`) is where outputs are written; `--jobs N` (default: the core count) bounds the
+steps that run at once. Both are options of the command and are not passed on to the compile of the script. Each
+finished step prints `built <id>` to standard output, in id order. A failed step prints
+`primec build: step <name> (<id>) failed` and the compiler's diagnostics to standard error, steps that had not started
+print `... skipped after a failure`, and the exit code is 1. A graph with a library or link node, or with a problem
+(duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
+compiler yet` or the problem. There is no cache, no command or function step yet.
 
 The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can

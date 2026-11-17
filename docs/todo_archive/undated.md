@@ -540,3 +540,20 @@
     - full release gate green
   - stop_rule: finding, running and printing; no execution of steps.
   - result: `primec build` runs make.prime on the VM under `--profile build` through `/std/build_runner/run` (stdlib/std/build_runner/build_runner.prime) with the runner import appended to the script text; the effect ceiling now trusts definitions whose source is a stdlib unit (stdlib types such as /File live outside /std).
+
+- [x] TODO-5913: `primec build` runs the graph
+  - owner: ai
+  - status: done
+  - completed_at: 2026-11-17
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-runner
+  - scope: The runner in `primec` executes the compile steps of the graph: each through the in-process compile pipeline (include/primec/pipeline/CompilePipeline.h) with the step's settings, writing under `--out-dir`. Independent steps run in parallel, `--jobs N` (default: the core count) bounds them. A failed step stops its dependents and reports the step name and the compiler's diagnostics; the exit code is non-zero. Library and link nodes are rejected with `static libraries are not supported by this compiler yet`. The embed library stays free of process spawning (scripts/check_embed_no_process.sh): the runner lives in `primec`. Whether to compile in-process or start `primec` per step is decided here and recorded in docs/BuildSystemPlan.md section 11; in-process is the starting point.
+  - acceptance:
+    - a `make.prime` builds a program as `--emit=exe` and one as `--emit=optexe` with a link argument, and both outputs run
+    - two independent steps both produce their outputs with `--jobs 2` (no timing assertion)
+    - a failing step reports its name and diagnostics and stops its dependents
+    - a graph with a library node fails with the diagnostic
+    - full release gate green
+  - stop_rule: compile steps only; no cache (TODO-5915), no command or function steps, no `run` in the script.
+  - result: `primec build` without `--dry-run` starts `primec build --dry-run` for the graph, parses the export (src/pipeline/BuildGraphJson.cpp) and runs each compile and executable node as one `primec` process (src/pipeline/BuildRunner.cpp), `--jobs N` at a time, writing under `--out-dir`. The in-process versus process-per-step decision (a process per step, because the compile pipeline has process-wide state) is recorded in docs/BuildSystemPlan.md section 11. Library and link nodes and graph problems run nothing and exit 1; a failed step names itself and prints the compiler diagnostics, steps not yet started are reported skipped. Tests: tests/unit/backend_host/test_build_graph.cpp.

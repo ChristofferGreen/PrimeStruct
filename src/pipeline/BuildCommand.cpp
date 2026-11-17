@@ -1,5 +1,6 @@
 #include "primec/pipeline/BuildCommand.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -14,9 +15,41 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
   std::vector<std::string> forwarded;
   bool sawOption = false;
   bool sawDirectory = false;
-  for (const std::string &argument : buildArguments) {
+  std::string outDir;
+  for (size_t i = 0; i < buildArguments.size(); ++i) {
+    const std::string &argument = buildArguments[i];
     if (argument == "--dry-run") {
       plan.dryRun = true;
+      continue;
+    }
+    std::string value;
+    bool hasValue = false;
+    const bool isJobs = argument == "--jobs" || argument.rfind("--jobs=", 0) == 0;
+    const bool isOutDir = argument == "--out-dir" || argument.rfind("--out-dir=", 0) == 0;
+    if (isJobs || isOutDir) {
+      const size_t equals = argument.find('=');
+      if (equals != std::string::npos) {
+        value = argument.substr(equals + 1);
+        hasValue = true;
+      } else if (i + 1 < buildArguments.size()) {
+        value = buildArguments[++i];
+        hasValue = true;
+      }
+      if (!hasValue) {
+        error = argument + " requires a value";
+        return false;
+      }
+      if (isOutDir) {
+        outDir = value;
+        continue;
+      }
+      char *end = nullptr;
+      const long jobs = std::strtol(value.c_str(), &end, 10);
+      if (value.empty() || *end != '\0' || jobs < 1 || jobs > 1024) {
+        error = "--jobs expects a number from 1 to 1024";
+        return false;
+      }
+      plan.jobs = static_cast<int>(jobs);
       continue;
     }
     const bool isOption = !argument.empty() && argument[0] == '-';
@@ -29,6 +62,11 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
     forwarded.push_back(argument);
   }
 
+  plan.forwarded = forwarded;
+  plan.projectDir = directory.empty() ? "." : directory;
+  plan.outDir = outDir.empty()
+                    ? (std::filesystem::path(plan.projectDir) / "out").lexically_normal().string()
+                    : outDir;
   const std::filesystem::path script = std::filesystem::path(directory) / "make.prime";
   plan.scriptPath = script.lexically_normal().string();
   std::error_code ec;
