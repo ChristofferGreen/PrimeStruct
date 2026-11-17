@@ -304,9 +304,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
 
-- [ ] TODO-6023: The arms of a value `pick` leave their owning locals in the enclosing scope
+- [~] TODO-6023: The arms of a value `pick` leave their owning locals in the enclosing scope
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: picks-a (worktree-agent-a510a3c620e7c9a42), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by TODO-6021 (shared exits of early `return`)
   - parallel_track: build-graph-defects
