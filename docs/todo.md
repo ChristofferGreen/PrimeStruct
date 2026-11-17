@@ -169,7 +169,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | ready | build-graph-defects |
-| TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
+| TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | ready | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-5920 | PrimeScroll builds with `make.prime` | ready | build-dogfood |
@@ -1022,9 +1022,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
+- [~] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
   - owner: ai
   - status: ready
+  - claimed_by: subprojects-a (worktree-agent-a1bd682959e1d5ad1), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 7)
   - parallel_track: build-subprojects
