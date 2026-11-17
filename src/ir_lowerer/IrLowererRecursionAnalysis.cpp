@@ -501,6 +501,26 @@ bool isBuiltinVectorType(const Transform &transform,
       elementPath);
 }
 
+// `Reference<vector<T>>` of a builtin vector the lowerer can copy and destroy elements of: the argument is the
+// vector's record address, as for a `mut` vector parameter.
+bool isReferenceToBuiltinVector(const Transform &transform,
+                                const std::string &namespacePrefix,
+                                const std::unordered_set<std::string> &structNames) {
+  if (transform.name != "Reference" || transform.templateArgs.size() != 1 ||
+      !transform.arguments.empty()) {
+    return false;
+  }
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
+    return false;
+  }
+  Transform inner;
+  inner.name = trimTemplateTypeText(base);
+  inner.templateArgs.push_back(trimTemplateTypeText(argText));
+  return isBuiltinVectorType(inner, namespacePrefix, structNames);
+}
+
 // A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
 // a scalar or such a struct (the address). A `copy` or `move` parameter of a scalar or of a struct that is not a sum
 // is taken too: the call site binds it (copying or moving the argument) in its own frame and passes the value or the
@@ -527,7 +547,13 @@ bool isAddressAbiParameter(
         transform.name == "copy" || transform.name == "move") {
       continue;
     }
-    if (allowCollections && isBuiltinVectorType(transform, def.namespacePrefix, structNames)) {
+    if (isBuiltinVectorType(transform, def.namespacePrefix, structNames)) {
+      // A spawned call also takes the vector by `copy` or `move`. A direct call takes the record's address of a
+      // borrowed one (`mut` or read-only: no copy, the callee writes the caller's record); an owned vector stays
+      // inline, since the call site would have to copy or give it over.
+      return allowCollections || !ownedParam;
+    }
+    if (!ownedParam && isReferenceToBuiltinVector(transform, def.namespacePrefix, structNames)) {
       return true;
     }
     if (ownedParam) {
@@ -1011,8 +1037,9 @@ std::string realCallBlockerReason(const Definition &def, const RealCallShapeCont
     }
     if (type->name == "vector" && !type->templateArgs.empty()) {
       return subject + "is a `vector<" + trimTemplateTypeText(type->templateArgs.front()) +
-             ">`: only a spawned call passes a builtin vector, a direct call keeps its definition "
-             "inline";
+             ">` taken by `copy` or `move`, or of an element the lowerer cannot copy: only a "
+             "spawned "
+             "call passes a builtin vector owned, a direct call keeps its definition inline";
     }
     if ((type->name == "Reference" || type->name == "Pointer") && type->templateArgs.size() == 1 &&
         trimTemplateTypeText(type->templateArgs.front()).find('<') != std::string::npos) {

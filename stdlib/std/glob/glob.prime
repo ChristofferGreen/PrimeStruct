@@ -171,7 +171,7 @@ namespace glob {
 
   // A directory still to be read: `rel` is its path below the base, `index` the segment of the pattern that applies to
   // its entries and `depth` how many directories lie between it and the base. The walk keeps these in a vector instead
-  // of calling itself: the VM does not run a recursive call whose parameters are vectors.
+  // of calling itself, so the depth of a tree does not grow the call stack.
   [public struct]
   GlobTask() {
     [public String mut] rel{String{}}

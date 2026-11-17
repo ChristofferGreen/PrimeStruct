@@ -1583,4 +1583,64 @@ TEST_CASE("a vector of Strings a stdlib view method returns is freed by its call
                         "320\n");
 }
 
+TEST_CASE("a builtin vector borrowed by a real call is written in place and a temporary is freed "
+          "by the caller") {
+  // Each definition has several statements and call sites, so it is lowered once as a real call that takes the
+  // record's address (`mut`, read only, or `Reference`): pushes past capacity reach the caller's vector.
+  runVectorOwnerProgram("vector_borrowed_real_calls",
+                        R"(
+[effects(heap_alloc)]
+fill([vector<i32> mut] values, [i32] count) {
+  [i32 mut] index{0i32}
+  while(index < count) {
+    values.push(index)
+    index = index + 1i32
+  }
+}
+
+[effects(heap_alloc)]
+fill_named([Reference<vector<Named>>] values, [i32] id) {
+  values.push(Named{label(id)})
+  values.push(Named{label(id + 1i32)})
+  values.push(Named{label(id + 2i32)})
+}
+
+[return<i32>]
+total([vector<i32>] values) {
+  [i32 mut] sum{0i32}
+  [i32 mut] index{0i32}
+  while(index < values.count()) {
+    sum = sum + values[index]
+    index = index + 1i32
+  }
+  return(sum)
+}
+
+[effects(heap_alloc)]
+refill([vector<Named> mut] values) {
+  values = make_named(5i32)
+  values.push(Named{label(1i32)})
+  values.push(Named{label(2i32)})
+}
+)",
+                        R"(
+    [vector<i32> mut] numbers{vector<i32>{}}
+    fill(numbers, 10i32)
+    fill(numbers, 20i32)
+    print_line(numbers.count())
+    print_line(total(numbers))
+    print_line(total(make_values(4i32)))
+    [vector<Named> mut] names{vector<Named>{}}
+    fill_named(names, 1i32)
+    fill_named(names, 4i32)
+    print_line(names.count())
+    print_line(first_byte(names[5i32].text))
+    refill(names)
+    refill(names)
+    print_line(names.count())
+    print_line(first_byte(names[2i32].text))
+)",
+                        "30\n235\n9\n6\n54\n4\n49\n");
+}
+
 TEST_SUITE_END();

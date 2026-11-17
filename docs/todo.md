@@ -167,7 +167,7 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
-| TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
+| TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | ready | build-graph-defects |
 | TODO-6021 | An early `return` repeats the destruction of every live local in optimized C++ | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
@@ -211,7 +211,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019, TODO-6021
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6015
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -235,7 +235,7 @@ VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; ready: TODO-5919 (function steps, after TODO-5896), TODO-6017 (file copy step), TODO-6018 (no stray C++), TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
-Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
+Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6022 (a `copy` or `move` vector parameter keeps a direct call inline) are `ready` outside `Ready Now`.
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
@@ -303,21 +303,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the `run_checks` of the original `build_graph.prime` (graph and seven checks in one body, kept as a test fixture) lowers to under 15,000 lines of `--emit=optcpp` C++, and its output and heap statistics are unchanged on the VM and optexe
     - `--dump-stage ir` of programs with one `return` per body is unchanged; the dumps of programs with several exits differ only in the shared cleanup
     - full release gate green
-  - stop_rule: destruction at early `return`; not `break`/`continue` exits and not real-call selection (TODO-6015).
+  - stop_rule: destruction at early `return`; not `break`/`continue` exits and not real-call selection.
 
-- [~] TODO-6015: A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call
+- [ ] TODO-6022: A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call
   - owner: ai
-  - status: in_progress
-  - claimed_by: vector-real-calls (worktree-agent-a09e68efe454382e0), 2026-11-17
+  - status: ready
   - created_at: 2026-11-17
-  - phase: Language defects found by glob (split from which made the diagnostic name the parameter)
+  - phase: Language defects found by glob (split from TODO-6015, which took `mut`, read-only and `Reference` vector parameters)
   - parallel_track: build-graph-defects
-  - scope: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes a builtin `vector<T>` parameter only for a spawned call (`allowCollections`), and rejects a `Reference<vector<T>>` because the target text contains `<`; a direct call keeps such a definition inline, where recursion is rejected. A direct call needs the vector's element metadata (`LocalInfo::vectorElementLifecyclePath`, `vectorStructElementSlotCount`) in the callee's parameter local, which a real-call body does not rebuild from the address it receives. Pass the vector record's address for a `mut` parameter and a `Reference` of a vector (no copy, the callee writes the caller's record), give the callee parameter local the element metadata from the parameter type, and let a `copy` parameter copy as a spawn does. Start with `[vector<i32> mut]` and `[vector<String> mut]`.
+  - scope: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes a `copy` or `move` builtin `vector<T>` parameter only for a spawned call (`allowCollections`); a direct call keeps such a definition inline. A real call's body already owns a `copy`/`move` vector parameter (`registerRealCallOwnedParameters` gives it a drop flag and a drop entry), so the call site must not also register the copy's drop in its own scope (the vector block of `src/ir_lowerer/IrLowererLowerInlineCallsBody.h` does today, which would free the buffer twice): when `addressAbiCallImm` is set, a `copy` parameter's copy or a `move` parameter's handed-over vector is bound there and left to the callee. Then drop the `!ownedParam` condition of the vector case in `isAddressAbiParameter`.
   - acceptance:
-    - a recursive definition with `[vector<i32> mut]` and `[Reference<vector<String>>]` parameters pushes and reads through the recursion on the VM and optexe, with balanced heap and string-heap statistics
-    - the diagnostics of the recursion program matrix suite (`primestruct.program_matrix.recursion`) become runnable programs
+    - a recursive definition with a `[vector<i32> copy]` and a `[vector<String> move]` parameter runs on the VM and optexe with balanced heap and string-heap statistics, a copy argument from a place (the caller keeps its vector) and from a fresh vector or `move(x)` (the callee takes it over)
     - full release gate green
-  - stop_rule: builtin vector parameters of a real call; not stdlib `Vector`, `Map` or sum parameters.
+  - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai

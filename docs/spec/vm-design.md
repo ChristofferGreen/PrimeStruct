@@ -26,11 +26,11 @@
   The arguments written at a call are lowered before the inlined callee starts, so a call to the same definition
   or template instantiation inside one of them (`twice(twice(x))`, `some<String>(f(some<String>(g())))`) is not
   recursion; a definition inlined into its own body is still rejected (`does not support recursive calls`).
-  Only a definition with a real-call shape recurses: its parameters are scalars, structs outside the collections, or a
-  `mut`, `Reference` or `Pointer` of those. A builtin `vector<T>` parameter, or a `Reference<vector<T>>` (a templated
-  reference target), keeps the definition inline, so its recursion is rejected with the parameter named:
-  `does not support recursive calls: /walk (it stays inline because parameter `out` is a `vector<i32>`: ...)`. Pass the
-  state in a struct, or walk with an explicit stack (as `/std/glob` does), until TODO-6015 lowers such parameters.
+  Only a definition with a real-call shape recurses: its parameters are scalars, structs outside the collections, a
+  builtin `vector<T>` taken by `mut` or read only, or a `mut`, `Reference` or `Pointer` of those (a `Reference<vector<T>>`
+  too). A `copy` or `move` vector parameter keeps the definition inline, so its recursion is rejected with the parameter
+  named: `does not support recursive calls: /walk (it stays inline because parameter `out` is a `vector<i32>` taken by
+  `copy` or `move`...)`. Pass the state by `mut` or in a struct.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
 - **PSIR versioning:** current portable IR is PSIR v37 (v24 to v37 are listed in `include/primec/ir/Ir.h`'s opcode
@@ -405,7 +405,15 @@
   `copy` or `move` is bound (copied or moved) by the call site too, but belongs to the callee: a scalar arrives as the
   value of the call site's copy (a `copy mut` scalar is the body's own slot, not an address), a struct as the copy's
   address, and the body holds the drop flag and destroys the struct on every exit unless it moves it on, as the
-  inlined body does. Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, collection,
+  inlined body does. A builtin `vector<T>` parameter (`mut`, read only, or `Reference<vector<T>>`; element a scalar, a `String`, a struct or
+  a vector) passes the address of the vector's record, which sits in the caller's frame: the callee reads and writes that
+  record, so a push past capacity in the callee (it reallocates the buffer and updates the record) is seen by the caller,
+  and assigning to a `mut` vector parameter replaces the caller's record in place. No copy is made and the caller stays the
+  owner; a temporary vector argument is freed by the call site after the call. The callee's parameter local takes its
+  element layout (`LocalInfo::vectorStructElementSlotCount`) and, for `mut`, the element lifecycle path
+  (`vectorElementLifecyclePath`) from the parameter type (`registerRealCallOwnedParameters`). A vector passed by `copy`
+  or `move` stays inline at a direct call (a spawned call passes it owned).
+  Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, collection,
   `File` and template-typed parameters; sum results (`Result`, `Maybe`);
   definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture

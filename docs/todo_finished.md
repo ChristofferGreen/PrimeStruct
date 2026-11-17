@@ -2386,6 +2386,7 @@ are left unarchived.
 | TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6013 | The glob VM CTest entry runs about 25 s under gate load, above the 5 s guardrail | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6014 | A `primec build` spends 2.7 s compiling make.prime before it runs anything | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6020 | The optexe CTest entries of the build graph and of glob take 6 to 7 s alone, above the 5 s guardrail | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 

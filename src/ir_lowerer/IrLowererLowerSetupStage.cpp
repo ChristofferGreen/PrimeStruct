@@ -247,20 +247,44 @@ bool registerRealCallOwnedParameters(
     // A builtin `vector<T>` parameter (a spawned call's): the record's address arrives in one slot. The body needs
     // the element layout to step through it, and owns the vector (destroys its elements and frees the buffer) when
     // the parameter is `copy` or `move`.
+    // A borrowed one (`mut`, read-only, or `Reference<vector<T>>`: a direct call passes the caller's record address)
+    // needs the same layout and, for `mut`, the element path that assigning to the parameter replaces the caller's
+    // record with.
     if (const auto vectorIt = bodyLocals.find(param.name);
-        vectorIt != bodyLocals.end() && vectorIt->second.kind == LocalInfo::Kind::Vector &&
-        !vectorIt->second.isSoaVector) {
+        vectorIt != bodyLocals.end() &&
+        ((vectorIt->second.kind == LocalInfo::Kind::Vector && !vectorIt->second.isSoaVector) ||
+         (vectorIt->second.kind == LocalInfo::Kind::Reference &&
+          vectorIt->second.referenceToVector && !vectorIt->second.isSoaVector))) {
       LocalInfo &vectorInfo = vectorIt->second;
       std::string elementStructPath;
       bool elementKnown = false;
       for (const Transform &transform : param.transforms) {
-        if (transform.templateArgs.size() == 1 && transform.name == "vector") {
-          elementKnown = resolveBuiltinVectorElementStructPath(transform.templateArgs.front(),
-                                                               param.namespacePrefix,
-                                                               resolveStructTypeName,
-                                                               elementStructPath);
-          break;
+        if (transform.templateArgs.size() != 1) {
+          continue;
         }
+        std::string elementText;
+        if (transform.name == "vector") {
+          elementText = transform.templateArgs.front();
+        } else if (transform.name == "Reference") {
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(
+                  trimTemplateTypeText(transform.templateArgs.front()), base, argText) ||
+              trimTemplateTypeText(base) != "vector") {
+            continue;
+          }
+          elementText = argText;
+        } else {
+          continue;
+        }
+        elementKnown = resolveBuiltinVectorElementStructPath(
+            elementText, param.namespacePrefix, resolveStructTypeName, elementStructPath);
+        break;
+      }
+      if (elementKnown && vectorInfo.kind == LocalInfo::Kind::Vector &&
+          !parameterHasTransform(param, "copy") && !parameterHasTransform(param, "move") &&
+          parameterHasTransform(param, "mut")) {
+        vectorInfo.vectorElementLifecyclePath = elementStructPath;
       }
       StructSlotLayoutInfo elementLayout;
       if (elementKnown && !elementStructPath.empty() &&

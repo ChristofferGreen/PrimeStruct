@@ -414,6 +414,43 @@ TEST_CASE("address ABI takes any struct but a sum by move or copy") {
 }
 
 namespace {
+// A definition `fill(<param>)` returning void and the address-ABI shape check. The parameter is `[vector<i32> <mode>]`,
+// or `[Reference<vector<i32>>]` when `referenced` is set.
+bool vectorParameterShapeEligible(const std::string &mode, bool referenced) {
+  primec::Definition fill = makeDef("/main/fill");
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.name = "values";
+  param.isBinding = true;
+  primec::Transform type;
+  type.name = referenced ? "Reference" : "vector";
+  type.templateArgs = {referenced ? "vector<i32>" : "i32"};
+  param.transforms.push_back(type);
+  if (!mode.empty()) {
+    primec::Transform modeTransform;
+    modeTransform.name = mode;
+    param.transforms.push_back(modeTransform);
+  }
+  fill.parameters.push_back(param);
+  addReturnTransform(fill, "void");
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {fill.fullPath, &fill}};
+  const std::unordered_set<std::string> structNames;
+  return primec::ir_lowerer::isRealCallShapeEligible(
+      fill, primec::ir_lowerer::RealCallShapeContext{&byPath, &structNames, true});
+}
+} // namespace
+
+TEST_CASE("address ABI takes a borrowed builtin vector parameter and keeps an owned one inline") {
+  CHECK(vectorParameterShapeEligible("mut", false));
+  CHECK(vectorParameterShapeEligible("", false));
+  CHECK(vectorParameterShapeEligible("", true));
+  // A direct call would have to copy or give over the vector; only a spawned call does (TODO-6022).
+  CHECK_FALSE(vectorParameterShapeEligible("copy", false));
+  CHECK_FALSE(vectorParameterShapeEligible("move", false));
+}
+
+namespace {
 // A definition `describe([string] text)` whose body is `body` (built from the parameter), and whether the address
 // ABI takes it with `string` parameters allowed or not.
 bool stringParameterShapeEligible(const std::function<primec::Expr(const primec::Expr &)> &makeBody,
