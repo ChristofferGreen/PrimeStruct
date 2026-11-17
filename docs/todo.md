@@ -241,9 +241,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6008: A call of a user method named `at` that returns a `String` leaks the result when it is a receiver
+- [~] TODO-6008: A call of a user method named `at` that returns a `String` leaks the result when it is a receiver
   - owner: ai
   - status: ready
+  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime; found while finishing TODO-6002)
   - parallel_track: build-graph-defects
