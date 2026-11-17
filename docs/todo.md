@@ -292,9 +292,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [ ] TODO-6016: A first `primec build` of a script still spends 1.9 s compiling make.prime
+- [~] TODO-6016: A first `primec build` of a script still spends 1.9 s compiling make.prime
   - owner: ai
   - status: ready
+  - claimed_by: build-speed (worktree-agent-a64a916a3f0e2dd3f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (split from TODO-6014, which cached the compiled script and fixed the IR validator)
   - parallel_track: build-graph-defects
