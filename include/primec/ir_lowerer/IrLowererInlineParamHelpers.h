@@ -51,6 +51,9 @@ struct InlineDefinitionCallParameters {
   InferInlineParameterStructExprPathFn inferStructExprPath;
   InferInlineParameterExprKindFn inferExprKind;
   ResolveInlineParameterDefinitionCallFn resolveDefinitionCall = {};
+  // Resolves a method call through the type of its receiver in the caller's locals (see makeCallOrMethodResolver).
+  std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition =
+      {};
   // Whether an argument reads an element of a builtin vector in place: a place, not a temporary to take over.
   ExprPredicateFn isBuiltinVectorElementPlace = {};
   ResolveInlineParameterStructSlotLayoutFn resolveStructSlotLayout;

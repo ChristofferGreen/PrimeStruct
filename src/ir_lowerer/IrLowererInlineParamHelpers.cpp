@@ -361,7 +361,10 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
         parameterHasTransform(param, "copy") &&
         (orderedArg == nullptr ||
          (!isOwnedTemporaryArgumentExpr(
-              *orderedArg, resolveDefinitionCall, isBuiltinVectorElementPlace) &&
+              *orderedArg,
+              makeCallOrMethodResolver(
+                  resolveDefinitionCall, parameters.resolveMethodCallDefinition, callerLocals),
+              isBuiltinVectorElementPlace) &&
           !isSimpleCallName(*orderedArg, "move")));
     // A binding passed to a `move` parameter is the callee's now.
     if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&

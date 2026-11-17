@@ -1092,9 +1092,11 @@ bool isOwnedTemporaryArgumentExpr(
       }
     }
   }
-  if (!shouldDisarmStructCopySourceExpr(expr) || isSimpleCallName(expr, "move") ||
-      isSimpleCallName(expr, "borrow") || isSimpleCallName(expr, "at") ||
-      isSimpleCallName(expr, "at_unsafe")) {
+  // A call shaped like an element access is a place unless it resolves to a definition (a user `at`).
+  if (!isTemporaryStructCopySourceExpr(expr, resolveDefinitionCall) ||
+      isSimpleCallName(expr, "move") || isSimpleCallName(expr, "borrow") ||
+      (isElementAccessCopySourceExpr(expr) &&
+       (!resolveDefinitionCall || resolveDefinitionCall(expr) == nullptr))) {
     return false;
   }
   if (expr.isBraceConstructor) {
@@ -1110,8 +1112,7 @@ bool isOwnedTemporaryArgumentExpr(
                                   collectionName == "vector") {
     return true;
   }
-  const Definition *callee =
-      (expr.isMethodCall || !resolveDefinitionCall) ? nullptr : resolveDefinitionCall(expr);
+  const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee == nullptr) {
     return false;
   }

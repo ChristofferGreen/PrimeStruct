@@ -212,6 +212,8 @@ bool isElementAccessCopySourceExpr(const Expr &expr);
 // temporary when it resolves to a definition (a user `at`): only the builtin access is a place.
 bool isTemporaryStructCopySourceExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee);
+// `resolveDefinitionCall` resolves a method call too (see makeCallOrMethodResolver): a method returning a value by
+// value gives a temporary, as a function does; a call shaped like an element access is one only when it resolves.
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,

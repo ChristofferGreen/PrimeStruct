@@ -389,4 +389,81 @@ Bag() {
                     "1\n50\n1\n4\n1\n3\n1\n1\n");
 }
 
+TEST_CASE(
+    "a user method result given to a read-only or copy parameter is destroyed by the callee") {
+  // `take(bag.first())` hands a String the method returned by value to a parameter the callee only reads: the
+  // result is a temporary of the call, as for `take(make_named(1i32))` (TODO-6025). A user method named `at` is
+  // a call result too, while `take(names[0i32])` reads the vector's element in place and destroys nothing.
+  runElementProgram("method_result_argument",
+                    R"(
+[struct]
+Named() {
+  [String] text{String{}}
+  [i32] id{0i32}
+}
+
+[effects(heap_alloc), return<Named>]
+make_named([i32] id) {
+  return(Named{label(id), id})
+}
+
+[effects(heap_alloc), return<int>]
+take([String] text) {
+  return(convert<int>(text.view().count()))
+}
+
+[effects(heap_alloc), return<int>]
+take_copy([String copy] text) {
+  return(convert<int>(text.view().count()))
+}
+
+[effects(heap_alloc), return<int>]
+take_named([Named] value) {
+  return(value.id)
+}
+
+[effects(heap_alloc), return<int>]
+take_named_copy([Named copy] value) {
+  return(value.id)
+}
+
+[struct]
+Bag() {
+  [vector<String> mut] names{vector<String>{}}
+  [vector<Named> mut] items{vector<Named>{}}
+
+  [effects(heap_alloc), return<String>]
+  first() {
+    return(this.names[0i32])
+  }
+
+  [effects(heap_alloc), return<String>]
+  at([i32] index) {
+    return(this.names[index])
+  }
+
+  [effects(heap_alloc), return<Named>]
+  item([i32] index) {
+    return(this.items[index])
+  }
+}
+)",
+                    R"(
+    [Bag mut] bag{Bag{}}
+    bag.names.push(label(1i32))
+    bag.names.push(label(2i32))
+    bag.items.push(make_named(3i32))
+    bag.items.push(make_named(4i32))
+    print_line(take(bag.first()))
+    print_line(take(bag.at(1i32)))
+    print_line(take_copy(bag.first()))
+    print_line(take_named(bag.item(1i32)))
+    print_line(take_named_copy(bag.item(0i32)))
+    print_line(take_named(make_named(5i32)))
+    print_line(take(bag.names[0i32]))
+    print_line(take_named(bag.items[1i32]))
+)",
+                    "1\n1\n1\n4\n3\n5\n1\n4\n");
+}
+
 TEST_SUITE_END();

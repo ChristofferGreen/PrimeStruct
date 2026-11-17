@@ -523,6 +523,10 @@
                                  const LocalMap &locals) { return inferExprKind(argExpr, locals); },
             .resolveDefinitionCall =
                 [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
+            .resolveMethodCallDefinition =
+                [&](const Expr &argExpr, const LocalMap &argLocals) {
+                  return resolveMethodCallDefinition(argExpr, argLocals);
+                },
             .isBuiltinVectorElementPlace =
                 [&](const Expr &argExpr) {
                   return stateOut.isBuiltinVectorElementPlace(argExpr, callerLocals);
@@ -626,7 +630,8 @@
           argExpr != nullptr &&
           ir_lowerer::isOwnedTemporaryArgumentExpr(
               *argExpr,
-              [&](const Expr &candidate) { return resolveDefinitionCall(candidate); },
+              ir_lowerer::makeCallOrMethodResolver(
+                  resolveDefinitionCall, resolveMethodCallDefinition, callerLocals),
               [&](const Expr &candidate) {
                 return stateOut.isBuiltinVectorElementPlace(candidate, callerLocals);
               });

@@ -170,7 +170,8 @@
   their own), and a payload
   taken from a place is copied in like a struct field. A sum that holds such a payload is an owning value like a
   struct with `Destroy`: a fresh one (a call result, a constructor, a `pick` expression) passed as an argument belongs
-  to the parameter and is destroyed when the callee's body ends, a named one given to a `move` parameter is moved-from
+  to the parameter and is destroyed when the callee's body ends (a method call that returns a `String` or struct by value
+  is a call result too, `take(bag.first())`, also a user method named `at`; a builtin vector element `take(names[0i32])` is a place), a named one given to a `move` parameter is moved-from
   and destroyed by the callee, and a read-only sum parameter cannot be returned (`borrowed parameter escapes via
   return`). Assigning to a `mut` sum local takes the new value over from a temporary or `move(other)` and copies it
   from a place (the place keeps its payload), then destroys the payload the local held; `held = held` is valid. The
