@@ -21,10 +21,37 @@ std::vector<program_matrix::ExecutionConfig> taskConfigs() {
   return configs;
 }
 
-void runTaskProgram(program_matrix::ProgramCase program) {
+// The configs of a case that runs on the VM (the step interpreter, the two levels, the scheduler seeds and the OS
+// threads) or builds an executable (native and optexe). A program with much to compile is split further (TODO-6027).
+enum class TaskFamily { All, Vm, VmEager, VmSeedsLow, VmSeedsHigh, Compiled };
+
+bool inFamily(const program_matrix::ExecutionConfig &config, TaskFamily family) {
+  using program_matrix::Backend;
+  const bool vm = config.backend == Backend::Vm || config.backend == Backend::VmStep;
+  const bool seeded = config.name.find("-seed") != std::string::npos;
+  const bool threads = program_matrix::isThreadsConfig(config);
+  const bool lowSeed = seeded && config.name.back() <= '4';
+  switch (family) {
+  case TaskFamily::All:
+    return true;
+  case TaskFamily::Vm:
+    return vm;
+  case TaskFamily::VmEager:
+    return vm && !seeded && !threads;
+  case TaskFamily::VmSeedsLow:
+    return lowSeed;
+  case TaskFamily::VmSeedsHigh:
+    return (seeded && !lowSeed) || threads;
+  case TaskFamily::Compiled:
+    return !vm;
+  }
+  return false;
+}
+
+void runTaskProgram(program_matrix::ProgramCase program, TaskFamily family = TaskFamily::All) {
   // Every config but the old C++ emitter (`exe`), which is only run with PRIMESTRUCT_MATRIX_CONFIGS=all.
   for (const program_matrix::ExecutionConfig &config : taskConfigs()) {
-    if (config.name != "exe") {
+    if (config.name != "exe" && inFamily(config, family)) {
       program.onlyConfigs.push_back(config.name);
     }
   }
@@ -932,7 +959,8 @@ main() {
 // returns it like any struct: the spawner copies the argument (a `copy` or `move` parameter's copy belongs to the
 // task, the others are lent until the wait), the record's slots cross in the task block, and a result moves to the
 // waiter. The heap is balanced afterwards (`probe`). Elements are scalars, `String`s and structs.
-TEST_CASE("a task takes and returns stdlib Vectors") {
+namespace {
+program_matrix::ProgramCase stdlibVectorsProgram() {
   program_matrix::ProgramCase program;
   program.name = "task_stdlib_vector_arguments";
   program.source = R"(
@@ -1077,12 +1105,24 @@ main() {
   program.stdoutText = "9\n408\n30\n1\n105\n4\n9\n2\n11\n2\n1\n10\n2\n0\n";
   // The native backend has no heap statistics.
   program.skipConfigs = {"native-O0", "native-O2"};
-  runTaskProgram(program);
+  return program;
+}
+} // namespace
+
+// Two cases (TODO-6027: one took 10 s alone): the VM configs, and the native and optexe builds. The program states its
+// output, so each case checks its configs against it.
+TEST_CASE("a task takes and returns stdlib Vectors") {
+  runTaskProgram(stdlibVectorsProgram(), TaskFamily::Vm);
+}
+
+TEST_CASE("a task takes and returns stdlib Vectors in built executables") {
+  runTaskProgram(stdlibVectorsProgram(), TaskFamily::Compiled);
 }
 
 // The stdlib `Map<K, V>` struct owns a `MapValue` the same way: a map crosses as a borrowed argument and returns
 // as a result the waiter owns.
-TEST_CASE("a task takes and returns a stdlib Map") {
+namespace {
+program_matrix::ProgramCase stdlibMapProgram() {
   program_matrix::ProgramCase program;
   program.name = "task_stdlib_map_arguments";
   program.source = R"(
@@ -1134,7 +1174,26 @@ main() {
   program.exitCode = 0;
   program.stdoutText = "2\n3\n0\n0\n";
   program.skipConfigs = {"native-O0", "native-O2"};
-  runTaskProgram(program);
+  return program;
+}
+} // namespace
+
+// Four cases (TODO-6027: the VM configs of this program took 13 s alone): the eager VM configs, scheduler seeds 1 to 4,
+// seeds 5 to 8 with the OS threads, and the native and optexe builds.
+TEST_CASE("a task takes and returns a stdlib Map") {
+  runTaskProgram(stdlibMapProgram(), TaskFamily::VmEager);
+}
+
+TEST_CASE("a task takes and returns a stdlib Map on scheduler seeds 1 to 4") {
+  runTaskProgram(stdlibMapProgram(), TaskFamily::VmSeedsLow);
+}
+
+TEST_CASE("a task takes and returns a stdlib Map on scheduler seeds 5 to 8 and on threads") {
+  runTaskProgram(stdlibMapProgram(), TaskFamily::VmSeedsHigh);
+}
+
+TEST_CASE("a task takes and returns a stdlib Map in built executables") {
+  runTaskProgram(stdlibMapProgram(), TaskFamily::Compiled);
 }
 
 // A method or index read of a waited result (`wait(t).count()`, `wait(t)[i]`, `wait(t).weight()`) evaluates the wait
@@ -1479,7 +1538,8 @@ main() {
 
 // Four tasks that allocate and free blocks from the start: the answers do not depend on the order the tasks run in,
 // and on the threaded backends the heap routines take their lock (arm64 native) or each thread its own arena.
-TEST_CASE("tasks that allocate and free blocks all finish with their answers") {
+namespace {
+program_matrix::ProgramCase allocatingTasksProgram() {
   program_matrix::ProgramCase program;
   program.name = "task_heap_churn";
   program.source = R"(
@@ -1521,7 +1581,17 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "12000\n44000\n160000\n1200000\n";
-  runTaskProgram(program);
+  return program;
+}
+} // namespace
+
+// Two cases (TODO-6027: one took 10 s alone): the VM configs, and the native and optexe builds.
+TEST_CASE("tasks that allocate and free blocks all finish with their answers") {
+  runTaskProgram(allocatingTasksProgram(), TaskFamily::Vm);
+}
+
+TEST_CASE("tasks that allocate and free blocks all finish in built executables") {
+  runTaskProgram(allocatingTasksProgram(), TaskFamily::Compiled);
 }
 
 // A runtime error in a spawned call ends the whole program with exit code 3 and the usual message.

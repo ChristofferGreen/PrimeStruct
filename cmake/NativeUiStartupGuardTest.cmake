@@ -5,12 +5,22 @@
 # framework link or an eager system lookup adds images (one framework adds about three); the time of a launch is
 # printed but not checked, since it moves by 30 ms or more between runs and with the machine's load.
 #
-#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> -P NativeUiStartupGuardTest.cmake
+#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DAPP=<app>] -P NativeUiStartupGuardTest.cmake
+#
+# APP is hello (hello_window), editor (PrimeScroll) or all, the default; each has a CTest entry of its own
+# (PrimeStruct_native_ui_startup_guard_<app>; TODO-6027: the two together took 15 s alone).
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   if(NOT DEFINED ${var})
     message(FATAL_ERROR "NativeUiStartupGuardTest: ${var} is required")
   endif()
 endforeach()
+
+if(NOT DEFINED APP)
+  set(APP all)
+endif()
+if(NOT APP MATCHES "^(all|hello|editor)$")
+  message(FATAL_ERROR "NativeUiStartupGuardTest: unknown APP '${APP}' (one of: all hello editor)")
+endif()
 
 if(NOT GUARD_ENABLED)
   # CTest reads this line through SKIP_REGULAR_EXPRESSION and reports the test as skipped.
@@ -56,5 +66,9 @@ function(guard_app program name)
   endif()
 endfunction()
 
-guard_app("${SOURCE_DIR}/examples/native_ui/hello_window.prime" HelloWindow)
-guard_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" PrimeScroll)
+if(APP MATCHES "^(all|hello)$")
+  guard_app("${SOURCE_DIR}/examples/native_ui/hello_window.prime" HelloWindow)
+endif()
+if(APP MATCHES "^(all|editor)$")
+  guard_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" PrimeScroll)
+endif()

@@ -28,8 +28,10 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from xml.etree import ElementTree
 from collections import defaultdict
 from pathlib import Path
@@ -238,6 +240,31 @@ def translation_units_from_compile_commands(build_dir: Path) -> tuple[list[Path]
     return units, sorted(include_dirs)
 
 
+def prefetch(tests: list[dict], count_cache: dict, list_cache: dict) -> None:
+    """Runs the doctest binaries the two checks will ask about at once (TODO-6027: one after the other took 12 s).
+
+    Each binary is started once per distinct question; the checks then read the caches.
+    """
+    counts: set[tuple[str, tuple[str, ...]]] = set()
+    listings: set[tuple[str, tuple[str, ...]]] = set()
+    for test in tests:
+        command = test.get("command") or []
+        if not is_doctest_command(command):
+            continue
+        filters, first, last = split_range_args(command[1:])
+        if first is not None or last is not None:
+            counts.add((command[0], filters))
+        extra = tuple(a for a in command[1:] if a.startswith("--order-by="))
+        listings.add((command[0], tuple(filters) + extra))
+        listings.add((command[0], ()))
+    workers = max(2, min(8, os.cpu_count() or 2))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(count_cases, binary, filters, count_cache) for binary, filters in sorted(counts)]
+        futures += [pool.submit(list_cases, binary, args, list_cache) for binary, args in sorted(listings)]
+        for future in futures:
+            future.result()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--build-dir", type=Path, required=True)
@@ -259,8 +286,9 @@ def main() -> int:
     tests = [test for test in json.loads(ctest.stdout)["tests"] if not is_corpus_entry(test)]
 
     cache: dict = {}
-    findings = check_shards(tests, lambda binary, filters: count_cases(binary, filters, cache))
     list_cache: dict = {}
+    prefetch(tests, cache, list_cache)
+    findings = check_shards(tests, lambda binary, filters: count_cases(binary, filters, cache))
     findings += check_coverage(tests, lambda binary, args: list_cases(binary, args, list_cache))
     units, include_dirs = translation_units_from_compile_commands(build_dir)
     findings += check_unregistered_files(root, units, include_dirs)

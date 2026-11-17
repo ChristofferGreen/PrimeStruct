@@ -393,9 +393,22 @@ TEST_CASE("optexe string, argv and file opcodes match the VM") {
   std::filesystem::remove(file, ignored);
 }
 
-TEST_CASE("optexe faults carry the VM's message and exit code 3") {
-  for (const optimizer_test::FaultProgram &fault : optimizer_test::faultPrograms()) {
-    CAPTURE(fault.name);
-    expectMatchesVm(fault.module, "fault_" + fault.name, 0);
+// Each fault program is an optexe build of its own, so the programs are two cases (TODO-6027: one case took 11 s).
+static void expectFaultsMatchVm(bool secondHalf) {
+  const std::vector<optimizer_test::FaultProgram> faults = optimizer_test::faultPrograms();
+  const size_t middle = faults.size() / 2;
+  const size_t begin = secondHalf ? middle : 0;
+  const size_t end = secondHalf ? faults.size() : middle;
+  for (size_t index = begin; index < end; ++index) {
+    CAPTURE(faults[index].name);
+    expectMatchesVm(faults[index].module, "fault_" + faults[index].name, 0);
   }
+}
+
+TEST_CASE("optexe faults carry the VM's message and exit code 3") {
+  expectFaultsMatchVm(false);
+}
+
+TEST_CASE("optexe faults of the later programs carry the VM's message and exit code 3") {
+  expectFaultsMatchVm(true);
 }

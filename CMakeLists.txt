@@ -1948,14 +1948,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # The editor scenarios and the editor acceptance suite (TODO-5552..5554); `ctest -R native_ui_editor` runs both.
   # Each case used to compile the editor again (739 s of a loaded gate for the scenarios, and the acceptance entry ran
   # them a second time); now each process compiles it once and the two suites take 11 s and 8 s alone.
-  add_test(
-    NAME PrimeStruct_native_ui_editor
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.editor"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_native_ui_editor
-                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # 79 cases, 10.5 s alone as one entry: two shards (each compiles the editor, 2.3 s, once).
+  primestructAddDoctestShards(PrimeStruct_native_ui_editor PrimeStruct_native_ui_tests 79 40 300
+                              "--test-suite=primestruct.ui.editor")
   add_test(
     NAME PrimeStruct_native_ui_editor_acceptance
     COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
@@ -1993,7 +1988,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                          PROPERTIES FIXTURES_SETUP native_ui_appkit_editor)
     set_tests_properties(PrimeStruct_native_ui_appkit_editor_bundle_cleanup
                          PROPERTIES FIXTURES_CLEANUP native_ui_appkit_editor)
-    foreach(smokePart hello orphan editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar)
+    foreach(smokePart hello orphan editor_views editor_scroll editor_scroll_uneven run files open settings file_types toolbar
+                        toolbar_table)
       add_test(
         NAME PrimeStruct_native_ui_appkit_smoke_${smokePart}
         COMMAND ${CMAKE_COMMAND}
@@ -2032,35 +2028,50 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endforeach()
     # The same programs compiled to native executables (no VM, no bytecode). One entry per part (TODO-6026): together
     # they took 32 s alone and were killed after 531 s in a loaded gate (the compiled editor is built in only one).
-    foreach(compiledAppPart hello handlers editor bundle)
+    foreach(compiledAppPart hello handlers preview_pane editor_build editor editor_session bundle)
+      # The three editor parts share a directory: editor_build compiles into it, the others run what it built.
+      set(compiledAppDir ${compiledAppPart})
+      if(compiledAppPart MATCHES "^editor")
+        set(compiledAppDir editor)
+      endif()
       add_test(
         NAME PrimeStruct_native_ui_compiled_app_${compiledAppPart}
         COMMAND ${CMAKE_COMMAND}
                 -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
                 -DBUILD_DIR=${CMAKE_BINARY_DIR}
-                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_compiled_app/${compiledAppPart}
+                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_compiled_app/${compiledAppDir}
                 -DPART=${compiledAppPart}
                 -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiCompiledAppTest.cmake
       )
       set_tests_properties(PrimeStruct_native_ui_compiled_app_${compiledAppPart}
                            PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
                            SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+      if(compiledAppPart STREQUAL "editor_build")
+        set_tests_properties(PrimeStruct_native_ui_compiled_app_editor_build
+                             PROPERTIES FIXTURES_SETUP native_ui_compiled_editor)
+      elseif(compiledAppPart MATCHES "^(editor|editor_session)$")
+        set_tests_properties(PrimeStruct_native_ui_compiled_app_${compiledAppPart}
+                             PROPERTIES FIXTURES_REQUIRED native_ui_compiled_editor)
+      endif()
     endforeach()
   endif()
   # The launch guard (TODO-5603): hello_window and PrimeScroll, built natively, may load only a few images more than
   # a plain AppKit program (cmake/NativeUiStartupGuardTest.cmake). Snapshot mode: nothing shows on screen.
-  add_test(
-    NAME PrimeStruct_native_ui_startup_guard
-    COMMAND ${CMAKE_COMMAND}
-            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -DBUILD_DIR=${CMAKE_BINARY_DIR}
-            -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_startup_guard
-            -DGUARD_ENABLED=$<AND:$<BOOL:${PRIMESTRUCT_BUILD_NATIVE_UI}>,$<BOOL:${APPLE}>>
-            -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiStartupGuardTest.cmake
-  )
-  set_tests_properties(PrimeStruct_native_ui_startup_guard
-                       PROPERTIES TIMEOUT 600 RESOURCE_LOCK native_ui_appkit
-                       SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+  foreach(guardApp hello editor)
+    add_test(
+      NAME PrimeStruct_native_ui_startup_guard_${guardApp}
+      COMMAND ${CMAKE_COMMAND}
+              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+              -DBUILD_DIR=${CMAKE_BINARY_DIR}
+              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_startup_guard/${guardApp}
+              -DAPP=${guardApp}
+              -DGUARD_ENABLED=$<AND:$<BOOL:${PRIMESTRUCT_BUILD_NATIVE_UI}>,$<BOOL:${APPLE}>>
+              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiStartupGuardTest.cmake
+    )
+    set_tests_properties(PrimeStruct_native_ui_startup_guard_${guardApp}
+                         PROPERTIES TIMEOUT 600 RESOURCE_LOCK native_ui_appkit
+                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+  endforeach()
 
   set(PrimeStructBackendAllTestSources
     tests/unit/ir_pipeline/test_ir_pipeline.cpp
@@ -3589,12 +3600,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                       CASES_PER_SHARD 10)
     # The one case in test_compile_run_native_backend_collections.cpp has its own
     # shard (array_slice) in PrimeStructManagedCompileRunNativeOtherSuites.cmake.
-    addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
-                                      TIMEOUT 300
-                                      SHARD_PREFIX "apple_collections"
-                                      SOURCE_FILE "*test_compile_run_native_backend_collections_*"
-                                      TOTAL_CASES 583
-                                      CASES_PER_SHARD 10)
+    # Cases 221 to 230 took 11 s alone (TODO-6027): shards of five there, of ten elsewhere (the shard names of the
+    # disabled list below are the same).
+    foreach(appleCollectionsRange "1;220;10" "221;230;5" "231;583;10")
+      list(GET appleCollectionsRange 0 appleCollectionsFirst)
+      list(GET appleCollectionsRange 1 appleCollectionsLast)
+      list(GET appleCollectionsRange 2 appleCollectionsPerShard)
+      addPrimeStructManagedDoctestSuite("primestruct.compile.run.native_backend.collections"
+                                        TIMEOUT 300
+                                        SHARD_PREFIX "apple_collections"
+                                        SOURCE_FILE "*test_compile_run_native_backend_collections_*"
+                                        RANGE_FIRST ${appleCollectionsFirst}
+                                        RANGE_LAST ${appleCollectionsLast}
+                                        CASES_PER_SHARD ${appleCollectionsPerShard})
+    endforeach()
     # These shards were never part of any gate, and some of their cases have
     # drifted from the compiler (stale expected diagnostics, native arm64 output
     # mismatches). They stay registered so the registration check keeps counting
@@ -3956,6 +3975,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                  SHARD_NAME "metal_pipeline_and_borrow_checker"
                                  SOURCE_FILE "*test_compile_run_examples_*.cpp"
                                  FIRST 63 LAST 68)
+    elseif(suite STREQUAL "primestruct.compile.run.benchmark_harness")
+      # TODO-6027: one entry of 61 cases took 13 s alone; one entry per source file.
+      foreach(harnessPart "" "_part2" "_part3")
+        string(REPLACE "_" "" harnessShard "harness${harnessPart}")
+        addPrimeStructDoctestSuite("${suite}" TIMEOUT 900 SHARD_NAME "${harnessShard}"
+                                   SOURCE_FILE "*test_compile_run_benchmark_harness${harnessPart}.cpp")
+      endforeach()
     else()
       addPrimeStructDoctestSuite("${suite}" TIMEOUT 900)
     endif()
@@ -4024,14 +4050,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     if(suite STREQUAL "primestruct.ir.optexe")
-      # 8 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry; shards of two timed out at
-      # 300 s in the TODO-5981 gate (ir_optexe_7_8), so one case per shard.
-      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 8 1 300 "--test-suite=${suite}")
+      # 9 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry; shards of two timed out at
+      # 300 s in the TODO-5981 gate (ir_optexe_7_8), so one case per shard (the fault programs are two cases,
+      # TODO-6027).
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 9 1 300 "--test-suite=${suite}")
       continue()
     endif()
     if(suite STREQUAL "primestruct.ir.optexe_tasks")
       # 21 cases, most of which build one or two optexe programs with the host compiler: shards of two as above.
       primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 21 2 300 "--test-suite=${suite}")
+      continue()
+    endif()
+    if(suite STREQUAL "primestruct.ir.native_codegen")
+      # TODO-6027: 31 cases (macOS arm64) took 11 s alone as one entry: shards of 8.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 31 8 300 "--test-suite=${suite}")
       continue()
     endif()
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
@@ -4083,7 +4115,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
     control=37 early_returns=10 element_assign=4 element_copies=10 element_receivers=8 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=20 pick_values=24 recursion=6 results=12 shared_programs=17
-    shared_strings=5 struct_methods=11 sum_owners=6 tasks=22 text_views=6 vector_owners=48 vm_threads=4 vm_sync_replay=2)
+    shared_strings=5 struct_methods=11 sum_owners=6 tasks=27 text_views=6 vector_owners=48 vm_threads=4 vm_sync_replay=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

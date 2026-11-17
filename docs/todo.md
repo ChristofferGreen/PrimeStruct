@@ -111,7 +111,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6027 | No release-gate entry takes more than 10 s alone | ready | gate-timeouts |
+| TODO-6030 | The concurrent corpus runs in fewer, cheaper CTest entries | ready | gate-timeouts |
 | TODO-6028 | A gate at `nice -n 10` is not starved by other jobs until its tests time out | deferred | gate-timeouts |
 | TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
@@ -231,19 +231,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [~] TODO-6027: No release-gate entry takes more than 10 s alone
+- [ ] TODO-6030: The concurrent corpus runs in fewer, cheaper CTest entries
   - owner: ai
   - status: ready
-  - claimed_by: gate-10s (worktree-agent-ac4e0a9319952efc2), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Test infrastructure (leftover of TODO-6026; data in docs/todo_log.md)
+  - phase: Test infrastructure (leftover of TODO-6027)
   - parallel_track: gate-timeouts
-  - scope: Quiet-machine serial times of the release gate (docs/todo_log.md, TODO-6027) leave these entries above 10 s alone: `program_matrix_tasks_14_14` and `_15_15` (10 and 18 s: one program run on about 20 configs, the eight scheduler seeds, `--vm-threads`, native and optexe), `native_ui_startup_guard` (15 s), `native_ui_compiled_app_editor` (15 s) and `_handlers` (11 s), `compile_run_benchmark_harness` (13 s), `test_registration` (12 s: `--list-test-cases` of every doctest binary), `native_ui_editor` (11 s), `ir_native_codegen` (11 s), `ir_optexe_8_8` (11 s), `native_ui_appkit_smoke_toolbar` (11 s) and `compile_run_native_backend_collections_apple_collections_221_230` (11 s: ten cases; the disabled-shard list in CMakeLists.txt is keyed by shard name, so a finer split renames it). Cut each to 10 s or less by giving a part of its work an entry of its own (a program matrix case keeps one config family per entry only if every program states its expected output, because a case without `exitCode` compares each config with the first one it runs), by one shared build instead of one per case, or by a smaller program; never by a longer timeout.
+  - scope: The corpus of TODO-5900 (tests/vm_threads_corpus.txt, the CMake generator in CMakeLists.txt) registers 382 `PrimeStruct_vm_threads_corpus_*` entries: one per program-matrix case and round (the eager run plus 2 or 5 `--vm-threads` runs, 20 in all per program), most of the time spent in the front end of each run (0.1 to 1.1 s). The slowest takes 2.9 s alone and about 12 s under gate load, so none is above the 10 s of TODO-6027, but the entries cost process starts and a full compile per run. Measure where an entry's time goes (docs/todo_log.md, TODO-5904 section has the numbers) and make them cheaper without lowering the 20 repeats of a program that has a race to find: for example compile each program once and run the produced IR 20 times, or give the cases of a suite one entry per round instead of one per case and round.
   - acceptance:
-    - every entry named in scope is at most 10 s alone on a quiet machine in a release `ctest --parallel 1` run, or is deleted with the reason in its commit
-    - `scripts/check_test_registration.py` and the inventory are current and the full release gate is green
-    - the leaves' measured times replace the table in docs/todo_log.md
-  - stop_rule: the entries named in scope; entries that were 5 to 10 s stay.
+    - the corpus's total CTest time (sum of its entries, alone, serial) falls by at least a third, measured before and after in docs/todo_log.md
+    - every program still runs on the eager schedule once and under `--vm-threads` 20 times, and `scripts/check_vm_threads_corpus.py` and `scripts/tsan_vm_check.sh` still pass
+    - the full release gate is green
+  - stop_rule: the corpus generator and the matrix helper's corpus mode; no program leaves the corpus.
 
 - [ ] TODO-6028: A gate at `nice -n 10` is not starved by other jobs until its tests time out
   - owner: ai

@@ -6,11 +6,12 @@
 #
 #   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DPART=<part>] -P NativeUiCompiledAppTest.cmake
 #
-# PART runs one of hello (the C++ build and the direct build of the hello example), handlers (the pointer, key and
-# preview-pane programs), editor (the compiled editor's pictures and session launches) or bundle (the native bundle);
-# each is a CTest entry (PrimeStruct_native_ui_compiled_app_<part>) of its own, so none takes long on a loaded
-# machine (TODO-6026: the whole driver took 32 s alone and was killed after 531 s in a gate); the default, all, runs
-# them all.
+# PART runs one of hello (the C++ build and the direct build of the hello example), handlers (the pointer and key
+# program), preview_pane (the preview-twice program), editor_build (compiles the editor once, a CTest fixture),
+# editor (its pictures) and editor_session (its session launches; both need editor_build's binary) or bundle (the
+# native bundle); each is a CTest entry (PrimeStruct_native_ui_compiled_app_<part>) of its own, so none takes long
+# on a loaded machine (TODO-6026: the whole driver took 32 s alone and was killed after 531 s in a gate; TODO-6027:
+# no part takes more than 10 s alone); the default, all, runs them all.
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   if(NOT DEFINED ${var})
     message(FATAL_ERROR "NativeUiCompiledAppTest: ${var} is required")
@@ -20,8 +21,9 @@ endforeach()
 if(NOT DEFINED PART)
   set(PART all)
 endif()
-if(NOT PART MATCHES "^(all|hello|handlers|editor|bundle)$")
-  message(FATAL_ERROR "NativeUiCompiledAppTest: unknown PART '${PART}' (one of: all hello handlers editor bundle)")
+if(NOT PART MATCHES "^(all|hello|handlers|preview_pane|editor_build|editor|editor_session|bundle)$")
+  message(FATAL_ERROR "NativeUiCompiledAppTest: unknown PART '${PART}' (one of: all hello handlers preview_pane "
+                      "editor_build editor editor_session bundle)")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
@@ -32,7 +34,10 @@ endif()
 # This test does not look at the bundle's document types: leave them out, so the bundle cannot become the handler of
 # the user's files in Launch Services.
 set(ENV{PS_NO_DOCUMENT_TYPES} "1")
-file(REMOVE_RECURSE "${WORK_DIR}")
+# The editor and editor_session parts run the binary editor_build left in the same directory.
+if(NOT PART MATCHES "^(editor|editor_session)$")
+  file(REMOVE_RECURSE "${WORK_DIR}")
+endif()
 file(MAKE_DIRECTORY "${WORK_DIR}")
 
 function(build_app program name)
@@ -107,6 +112,9 @@ if(NOT rc EQUAL 127)
 endif()
 check_png("${WORK_DIR}/input.png" 2000)
 
+endif()
+
+if(PART MATCHES "^(all|preview_pane)$")
 # A preview that is already on, asked for again, changes nothing: the output pane stays (exit 0; 1 when it was hidden).
 build_app("${SOURCE_DIR}/tests/fixtures/ui/preview_output_pane.prime" PreviewPaneNative)
 set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/preview_pane.png")
@@ -118,7 +126,7 @@ endif()
 
 endif()
 
-if(PART MATCHES "^(all|editor)$")
+if(PART MATCHES "^(all|editor_build)$")
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
 
 # WebKit is loaded when a preview turns on, never linked: neither the compiled editor nor the AppKit dylib
@@ -129,6 +137,9 @@ foreach(binary "${WORK_DIR}/EditorNative" "${BUILD_DIR}/libps_ui_appkit.dylib")
     message(FATAL_ERROR "${binary} links WebKit or cannot be inspected: ${linked}")
   endif()
 endforeach()
+endif()
+
+if(PART MATCHES "^(all|editor)$")
 set(ENV{PRIMESTRUCT_UI_OPEN} "${SOURCE_DIR}/tests/fixtures/ui/screenshot/showcase.prime")
 foreach(shot gutter code menu tabs)
   if(shot STREQUAL "menu" AND NOT PRIMESTRUCT_UI_INTRUSIVE)
@@ -171,6 +182,9 @@ if(NOT rc EQUAL 0)
 endif()
 check_png("${WORK_DIR}/editor_argument.png" 50000)
 
+endif()
+
+if(PART MATCHES "^(all|editor_session)$")
 # The last session comes back after the first frame (TODO-5753): the window is drawn with no tab of the session, then
 # the tabs open in their order and the active one is selected (PRIMESTRUCT_UI_TABS_REPORT lists them at the picture,
 # with how many windows there were when the first frame came).
