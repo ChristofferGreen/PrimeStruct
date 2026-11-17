@@ -304,9 +304,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
 
-- [ ] TODO-6024: A unit arm with a local and a `vector<T>` result fails to lower in a value `pick`
+- [~] TODO-6024: A unit arm with a local and a `vector<T>` result fails to lower in a value `pick`
   - owner: ai
   - status: ready
+  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by TODO-6023 (value `pick` arm scopes)
   - parallel_track: build-graph-defects
