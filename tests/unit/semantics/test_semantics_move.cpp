@@ -888,4 +888,61 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("a name moved in one scope is a new binding in a sibling scope") {
+  std::string error;
+  CHECK(validateWithOwned(R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] round{0i32}
+  while(less_than(round, 2i32)) {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+    assign(round, plus(round, 1i32))
+  }
+  assign(round, 0i32)
+  while(less_than(round, 2i32)) {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+    assign(round, plus(round, 1i32))
+  }
+  if(true) {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+  } else {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+  }
+  return(total)
+}
+)",
+                          error));
+  CHECK(error.empty());
+
+  // A move of the same binding is still a use-after-move inside the second loop body.
+  error.clear();
+  CHECK_FALSE(validateWithOwned(R"(
+[return<int>]
+main() {
+  [i32 mut] total{0i32}
+  [i32 mut] round{0i32}
+  while(less_than(round, 2i32)) {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+    assign(round, plus(round, 1i32))
+  }
+  assign(round, 0i32)
+  while(less_than(round, 2i32)) {
+    [Owned] item{Owned{}}
+    assign(total, plus(total, consume(item)))
+    assign(total, plus(total, consume(item)))
+    assign(round, plus(round, 1i32))
+  }
+  return(total)
+}
+)",
+                                error));
+  CHECK(error.find("use-after-move: item was moved at") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -219,6 +219,10 @@ private:
       bool erasedAny = false;
       for (auto it = insertedNames.rbegin(); it != insertedNames.rend(); ++it) {
         erasedAny = locals.erase(*it) > 0 || erasedAny;
+        // A binding that goes out of scope takes its moved state with it: a later binding of the same name in a
+        // sibling scope is a new local, not the one that was moved.
+        validator.currentValidationState_.movedBindings.erase(*it);
+        validator.currentValidationState_.moveArgumentSites.erase(*it);
       }
       if (erasedAny) {
         validator.bumpLocalBindingMemoRevision(&locals);

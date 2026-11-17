@@ -81,7 +81,8 @@
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned, on every path:
   a move in one `if` branch or one `pick` arm reaches the code after the join (each branch or arm starts from the
   state before it, and a `pick` payload binding's move ends with its arm, so a later arm or `pick` may bind the same
-  name), and a loop body cannot move a binding from outside the
+  name), a binding's moved state ends with its scope (two sibling loop bodies or branches may each declare and move
+  a local of the same name), and a loop body cannot move a binding from outside the
   loop unless it assigns it again before the next iteration. The diagnostic names the binding, where it moved and what
   to write instead: `use-after-move: row was moved at 9:13; assign row a new value before using it again, or keep a
   copy before the move: [vector<i32> mut] kept{row}`. The builtin `vector<T>` `push` (method `a.push(b)` or

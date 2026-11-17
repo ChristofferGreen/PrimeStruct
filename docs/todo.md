@@ -168,7 +168,6 @@ of sync with them.
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6014 | A `primec build` spends 2.7 s compiling make.prime before it runs anything | ready | build-graph-defects |
-| TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | ready | build-graph-defects |
 | TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | ready | build-graph-defects |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
@@ -213,7 +212,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6011, TODO-6012, TODO-6014
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6012, TODO-6014
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -237,7 +236,7 @@ VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) landed; ready: TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
-Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice), TODO-6011 (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
+Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
@@ -267,19 +266,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - an up-to-date `primec build` of a one-step graph takes 1 s or less in release, so every build_glob_cache CTest entry runs in 5 s or less
     - full release gate green
   - stop_rule: the compile of make.prime; not the step runner.
-
-- [~] TODO-6011: A name bound in one loop body and moved there is reported as moved in a sibling loop body
-  - owner: ai
-  - status: ready
-  - claimed_by: glob-defects (worktree-agent-adf9187b22d22091d), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
-  - parallel_track: build-graph-defects
-  - scope: Two `for` loops in one function each declare `[String] existing{items[i]}` and pass it to `merged.push(existing)`; the semantic pass reports `use-after-move: existing was moved at <line of the first loop>` on the second loop's use, although each binding is a new local of its own body. Moves should be tracked per binding, not per name in the function. Workaround in glob: distinct names per loop.
-  - acceptance:
-    - the two-loop shape compiles and runs; a use after a real move of the same binding is still a diagnostic
-    - full release gate green
-  - stop_rule: move tracking for same-named bindings in sibling scopes.
 
 - [ ] TODO-6012: A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM
   - owner: ai
