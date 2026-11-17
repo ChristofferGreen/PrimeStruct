@@ -1583,7 +1583,9 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   source)` and `library(name, cc, source)` add a target with the settings `cc` has at the call; `link(executableName,
   libraryName)` adds the dependency edge of an executable on a library; `subproject(dir)` includes the graph of
   `<dir>/make.prime` (it records the folder; `primec build` runs that script and merges it, see Build Command,
-  Subprojects; a folder named twice counts once); `graph()` returns the `Graph` built so far. Names and sources are
+  Subprojects; a folder named twice counts once); `option(name, default[, description])` declares a build option and returns its
+  value (`--option name=value`, else the default; `bool`, `i32` or a `String` that is a literal, see Build Command,
+  Options); `graph()` returns the `Graph` built so far. Names and sources are
   `StringView`s.
 - `Graph`: `nodes` (a vector of `Node`), `nodeCount()` and `export()`; `run()` (`build_run`, `heap_alloc`) executes the
   graph at that point and is the one call that is not a pure value: the runner starts the script once per stage, `run`
@@ -1599,7 +1601,7 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   has `from` and `to` instead of the target fields. `problems` is a list of messages in node order: `duplicate id <id>`
   for a second node with an id, and `link <id> names a missing executable|library <id>` for an edge whose target is
   not in the graph (the edge may be added before its targets). A graph with problems still exports. When
-  `subproject` was called the export also has `"subprojects":[...]` (the folders, sorted bytewise) after `problems`. There are no hashes;
+  `subproject` was called the export also has `"subprojects":[...]` (the folders, sorted bytewise) after `problems`, and when `option` was called `"options":[...]` (name, type, default, description and value as text, sorted by name). There are no hashes;
   the runner computes them.
 
 ```prime

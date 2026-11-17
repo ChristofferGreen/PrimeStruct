@@ -313,6 +313,136 @@ namespace build {
     }
   }
 
+  // True when `text` is a decimal i32: an optional minus sign, then one to ten digits, within the i32 range.
+  [return<bool>]
+  is_i32_text([String] text) {
+    [i32 mut] start{0i32}
+    if(text.count() > 0i32 && text.byteAt(0i32) == 45u8) {
+      start = 1i32
+    }
+    [i32] digits{text.count() - start}
+    if(digits < 1i32 || digits > 10i32) {
+      return(false)
+    }
+    [i64 mut] value{0i64}
+    for([i32 mut] i{start}, i < text.count(), i++) {
+      [u8] byte{text.byteAt(i)}
+      if(byte < 48u8 || byte > 57u8) {
+        return(false)
+      }
+      value = value * 10i64 + convert<i64>(byte - 48u8)
+    }
+    if(start == 1i32) {
+      return(value <= 2147483648i64)
+    }
+    return(value <= 2147483647i64)
+  }
+
+  // One option a script declared with `Build.option`: its name, type ("bool", "i32" or "String"), default and description
+  // as text, the value this run gave it (`primec build --option name=value`, else the default) and the problem with the
+  // value that was given, if any (the value is then the default).
+  [public struct]
+  OptionDecl() {
+    [public String mut] name{String{}}
+    [public String mut] kind{String{}}
+    [public String mut] defaultText{String{}}
+    [public String mut] description{String{}}
+    [public String mut] value{String{}}
+    [public String mut] problem{String{}}
+
+    // Sets `value` from `argument`, the whole `name=value` text the runner passed (empty when the option was not given).
+    [mut effects(heap_alloc)]
+    resolve([String] argument) {
+      this.value = this.defaultText
+      if(argument.count() == 0i32) {
+        return()
+      }
+      [String] given{argument.substr(this.name.count() + 1i32, argument.count())}
+      if(this.kind.equalsText("bool")) {
+        if(given.equalsText("true") || given.equalsText("false")) {
+          this.value = given
+        } else {
+          this.problem = problem_text("expects true or false, got \"", given.view(), "\"", "")
+        }
+        return()
+      }
+      if(this.kind.equalsText("i32")) {
+        if(is_i32_text(given)) {
+          this.value = given
+        } else {
+          this.problem = problem_text("expects a 32-bit integer, got \"", given.view(), "\"", "")
+        }
+        return()
+      }
+      this.value = given
+    }
+
+    [effects(heap_alloc)]
+    write([Reference<Writer>] json) {
+      json.beginObject()
+      json.key("name")
+      json.stringValue(this.name.view())
+      json.key("type")
+      json.stringValue(this.kind.view())
+      json.key("default")
+      json.stringValue(this.defaultText.view())
+      json.key("description")
+      json.stringValue(this.description.view())
+      json.key("value")
+      json.stringValue(this.value.view())
+      if(this.problem.count() > 0i32) {
+        json.key("error")
+        json.stringValue(this.problem.view())
+      }
+      json.endObject()
+    }
+  }
+
+  // The whole `name=value` argument of the program for option `name` (the runner passes the options after the stage
+  // number, from argument 2 on), or an empty String when the option was not given.
+  [return<String> effects(heap_alloc)]
+  option_argument([StringView] name) {
+    [String] prefix{problem_text("", name, "=", "")}
+    [String mut] found{String{}}
+    [bool mut] searching{true}
+    for([i32 mut] i{2i32}, searching && i < 4096i32, i++) {
+      [String] argument{argumentText(i)}
+      if(argument.count() == 0i32) {
+        searching = false
+      } else {
+        if(argument.view().startsWith(prefix.view())) {
+          found = argument
+          searching = false
+        }
+      }
+    }
+    return(found)
+  }
+
+  // The indices of `options` ordered by name, bytewise.
+  [return<vector<i32>> effects(heap_alloc)]
+  sorted_option_order([Reference<vector<OptionDecl>>] options) {
+    [vector<i32> mut] order{vector<i32>{}}
+    for([i32 mut] i{0i32}, i < options.count(), i++) {
+      [i32 mut] slot{order.count()}
+      order.push(i)
+      [String] mine{options[i].name}
+      [bool mut] shifting{true}
+      while(shifting && slot > 0i32) {
+        // The names are copied into locals: a view of a vector element would not outlive the expression that made it.
+        [String] other{options[order[slot - 1i32]].name}
+        if(mine.view().compare(other.view()) < 0i32) {
+          order[slot] = order[slot - 1i32]
+          slot = slot - 1i32
+        } else {
+          shifting = false
+        }
+      }
+      order[slot] = i
+    }
+    return(order)
+  }
+
   // The nodes of a build, in the order they were added; `export` is the only reader that matters.
   [public struct]
   Graph() {
@@ -322,6 +452,25 @@ namespace build {
     // The folders `Build.subproject` named, sorted bytewise and without duplicates. The runner (`primec build`) runs
     // each folder's `make.prime` and merges its graph under that folder's name; the graph value only records them.
     [public vector<String> mut] subprojectDirs{vector<String>{}}
+    // The options `Build.option` declared, with the values of this run; exported sorted by name.
+    [public vector<OptionDecl> mut] options{vector<OptionDecl>{}}
+
+    // Records an option. Declaring a name again with the same type and default is one declaration; with another type or
+    // default it is a problem of the export.
+    [mut effects(heap_alloc)]
+    addOption([OptionDecl copy] decl) {
+      for([i32 mut] i{0i32}, i < this.options.count(), i++) {
+        [String] existing{this.options[i].name}
+        if(existing.view().equals(decl.name.view())) {
+          [bool] same{this.options[i].kind.view().equals(decl.kind.view()) && this.options[i].defaultText.view().equals(decl.defaultText.view())}
+          if(!same) {
+            this.buildProblems.push(problem_text("option ", decl.name.view(), " is declared twice with a different type or default", ""))
+          }
+          return()
+        }
+      }
+      this.options.push(decl)
+    }
 
     [return<i32>]
     nodeCount() {
@@ -378,6 +527,15 @@ namespace build {
       if(this.subprojectDirs.count() > 0i32) {
         json.key("subprojects")
         write_list(json, this.subprojectDirs)
+      }
+      if(this.options.count() > 0i32) {
+        [vector<i32>] optionOrder{sorted_option_order(this.options)}
+        json.key("options")
+        json.beginArray()
+        for([i32 mut] i{0i32}, i < optionOrder.count(), i++) {
+          this.options[optionOrder[i]].write(json)
+        }
+        json.endArray()
       }
       if(incomplete) {
         json.key("incomplete")
@@ -504,6 +662,63 @@ namespace build {
     subproject([StringView] dir) {
       [String] owned{dir.toOwned()}
       insert_sorted_unique(this.collected.subprojectDirs, owned)
+    }
+
+    // Declares the option `name` and returns its value: `primec build --option name=value` when given, else the default.
+    // The type is the type of the default (bool, i32 or String); a value that is not of that type is a diagnostic of
+    // `primec build`. Every script of a build (the project's, its subprojects' and each stage) sees the same options.
+    // The options and their values are listed in the export, and `primec build --list-options` prints them.
+    [mut return<String> effects(heap_alloc)]
+    declareOption([StringView] name, [StringView] kind, [StringView] defaultText, [StringView] description) {
+      [OptionDecl mut] decl{OptionDecl{}}
+      decl.name = name.toOwned()
+      decl.kind = kind.toOwned()
+      decl.defaultText = defaultText.toOwned()
+      decl.description = description.toOwned()
+      [String] argument{option_argument(name)}
+      decl.resolve(argument)
+      [String] resolved{decl.value}
+      this.collected.addOption(decl)
+      return(resolved)
+    }
+
+    [mut return<bool> effects(heap_alloc)]
+    option([StringView] name, [bool] defaultValue, [StringView] description) {
+      [String] resolved{this.declareOption(name, "bool", if(defaultValue, then() { "true" }, else() { "false" }), description)}
+      return(resolved.equalsText("true"))
+    }
+
+    [mut return<bool> effects(heap_alloc)]
+    option([StringView] name, [bool] defaultValue) {
+      return(this.option(name, defaultValue, ""))
+    }
+
+    [mut return<i32> effects(heap_alloc)]
+    option([StringView] name, [i32] defaultValue, [StringView] description) {
+      [String mut] defaultText{String{}}
+      defaultText.appendI64Radix(convert<i64>(defaultValue), 10i32)
+      [String] resolved{this.declareOption(name, "i32", defaultText.view(), description)}
+      [i32 mut] result{0i32}
+      [bool] negative{resolved.count() > 0i32 && resolved.byteAt(0i32) == 45u8}
+      for([i32 mut] i{if(negative, then() { 1i32 }, else() { 0i32 })}, i < resolved.count(), i++) {
+        result = result * 10i32 + convert<i32>(resolved.byteAt(i) - 48u8) * if(negative, then() { -1i32 }, else() { 1i32 })
+      }
+      return(result)
+    }
+
+    [mut return<i32> effects(heap_alloc)]
+    option([StringView] name, [i32] defaultValue) {
+      return(this.option(name, defaultValue, ""))
+    }
+
+    [mut return<String> effects(heap_alloc)]
+    option([StringView] name, [string] defaultValue, [StringView] description) {
+      return(this.declareOption(name, "String", textOf(defaultValue), description))
+    }
+
+    [mut return<String> effects(heap_alloc)]
+    option([StringView] name, [string] defaultValue) {
+      return(this.option(name, defaultValue, ""))
     }
 
     // The graph built so far, as a value.

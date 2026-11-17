@@ -417,6 +417,7 @@ int runBuildCommand(const BuildCommandPlan &plan,
   // One dry run of the script per stage: stage N stops at the Nth `Graph.run` and exports the graph it ran; the stage
   // after the last `run` is the graph the script returns. Every stage starts the script again, so the stages share
   // the cache of the steps and a step a later graph repeats is up to date.
+  std::vector<BuildOption> declaredOptions;
   for (int stage = 0; stage < MaxBuildStages; ++stage) {
     std::string graphText;
     std::string graphDiagnostics;
@@ -435,7 +436,23 @@ int runBuildCommand(const BuildCommandPlan &plan,
     if (graph.incomplete || stage > 0) {
       out << "stage " << (stage + 1) << "\n";
     }
+    // The options of every stage: a script may declare an option in a later stage, so a name nobody declared is only
+    // known to be unknown after the last stage (a single-stage script is checked when its graph is resolved).
+    for (const BuildOption &option : graph.options) {
+      if (std::none_of(declaredOptions.begin(),
+                       declaredOptions.end(),
+                       [&](const BuildOption &seen) { return seen.name == option.name; })) {
+        declaredOptions.push_back(option);
+      }
+    }
     const int status = runBuildGraph(graph, settings, out, err);
+    if (status == 0 && !graph.incomplete && stage > 0) {
+      const std::string unknown = checkBuildOptions(plan.options, declaredOptions, true);
+      if (!unknown.empty()) {
+        err << unknown;
+        return 1;
+      }
+    }
     if (status != 0 || !graph.incomplete) {
       return status;
     }

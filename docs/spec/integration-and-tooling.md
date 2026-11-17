@@ -127,6 +127,29 @@ cache in its folder's `.ps/cache`, whose entry lists every file that script's co
 script or an import of it recompiles that script only; the step cache of the merged steps is the project's and keys on the
 rebased arguments.
 
+Options. `b.option(name, default[, description])` (`/std/build`) declares an option and returns its value for this run:
+the value of `--option name=value` when the command line has one, else the default. The type is the type of the
+default: `bool` (`true` or `false`), `i32` (decimal, optional `-`, within the 32-bit range) or `String` (any text,
+which may be empty). `--option` is repeatable and may stand anywhere after the directory (`--option=name=value` also
+works); the value is everything after the first `=`. The runner passes the options to every script of the build, as the
+program arguments after the stage (`name=value`, sorted by name so the flag order does not matter), so the project
+script, each subproject script and each stage see the same values; they are not part of the compile of the script, so
+changing an option does not recompile it (the script cache key is unchanged), while a script that branches on an option
+exports a different graph and so different step keys: only the steps the option changes run again. The export lists the
+declared options after `problems`: `"options":[{"name","type","default","description","value"[,"error"]}]`, sorted by
+name, with the default and the value as text (an entry has `"error"` when the given value is not of the type; its
+`value` is then the default). Declaring a name again with the same type and default is one declaration; another type
+or default is a problem of the export. Subproject options are merged by name: one entry per name, and a clash of type
+or default is a problem prefixed with the folder. Diagnostics (exit code 1 unless noted; no step runs): a value of the
+wrong type, `primec build: option level (i32) expects a 32-bit integer, got "2.5"`; an `--option` no script declares,
+`primec build: unknown option nope (declared: level, native_ui)` (or `no script declares options`), which a staged
+script reports only after its last stage because a later stage may declare it; an argument without `=`, with a name
+that is not a name (letters, digits, `_`, `-`, `.`, starting with a letter or `_`), or without its value, and a name
+given twice (`--option a was given twice`) are command errors (exit code 2). `--list-options` prints one line per
+declared option, `name: type, default <default> - description` (a `String` default is quoted, an empty description is
+left out), sorted by name, or `no options`; for a staged script it lists the options declared up to the first `run`.
+There are no environment-variable options and no option files.
+
 Glob inputs. A script that expands a pattern with `/std/glob` (docs/spec/stdlib-reference.md) passes the directories
 the glob listed to `b.watch("compile:app", listed)`, after the target is added. The graph export then carries
 `"inputDirs":[...]` on that node (sorted bytewise, without duplicates, written only when there are any), and a watch of a

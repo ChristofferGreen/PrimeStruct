@@ -412,6 +412,58 @@ void moveNodeIntoParent(const std::string &directory,
   }
 }
 
+// Adds the entries of the `"options"` array of `child` to the one of `parent` (created when missing): an entry whose
+// name is there already is dropped when its type and default agree and is a problem otherwise. Sorted by name at the end.
+void mergeOptions(const std::string &directory, const JsonValue &child, JsonValue &parent) {
+  const JsonValue *childOptions = child.find("options");
+  if (childOptions == nullptr || childOptions->kind != JsonValue::Kind::Array ||
+      childOptions->items.empty()) {
+    return;
+  }
+  JsonValue *options = mutableField(parent, "options");
+  if (options == nullptr) {
+    JsonValue created;
+    created.kind = JsonValue::Kind::Array;
+    parent.members.emplace_back("options", std::move(created));
+    options = mutableField(parent, "options");
+  }
+  if (options->kind != JsonValue::Kind::Array) {
+    return;
+  }
+  for (const JsonValue &entry : childOptions->items) {
+    if (entry.kind != JsonValue::Kind::Object) {
+      continue;
+    }
+    bool found = false;
+    for (const JsonValue &existing : options->items) {
+      if (stringField(existing, "name") != stringField(entry, "name")) {
+        continue;
+      }
+      found = true;
+      if (stringField(existing, "type") != stringField(entry, "type") ||
+          stringField(existing, "default") != stringField(entry, "default")) {
+        JsonValue problem;
+        problem.kind = JsonValue::Kind::String;
+        problem.text = directory + ": option " + stringField(entry, "name") + " is declared as " +
+                       stringField(entry, "type") + " with default " +
+                       stringField(entry, "default") + ", but another script declares " +
+                       stringField(existing, "type") + " with default " +
+                       stringField(existing, "default");
+        mutableField(parent, "problems")->items.push_back(std::move(problem));
+      }
+      break;
+    }
+    if (!found) {
+      options->items.push_back(entry);
+    }
+  }
+  std::stable_sort(options->items.begin(),
+                   options->items.end(),
+                   [](const JsonValue &left, const JsonValue &right) {
+                     return stringField(left, "name") < stringField(right, "name");
+                   });
+}
+
 } // namespace
 
 bool mergeBuildGraphJson(const std::string &parentText,
@@ -458,6 +510,10 @@ bool mergeBuildGraphJson(const std::string &parentText,
       }
       nodes->items.push_back(std::move(node));
     }
+    mergeOptions(subgraph.directory, child, parent);
+    // Adding the `"options"` member can move the members of `parent`.
+    nodes = mutableField(parent, "nodes");
+    problems = mutableField(parent, "problems");
     const JsonValue *childProblems = child.find("problems");
     if (childProblems != nullptr && childProblems->kind == JsonValue::Kind::Array) {
       for (JsonValue problem : childProblems->items) {
@@ -539,6 +595,22 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.defaultEffects = stringList(*compiler, "default_effects");
     step.linkArgs = stringList(*compiler, "link_args");
     graph.steps.push_back(std::move(step));
+  }
+  const JsonValue *options = root.find("options");
+  if (options != nullptr && options->kind == JsonValue::Kind::Array) {
+    for (const JsonValue &entry : options->items) {
+      if (entry.kind != JsonValue::Kind::Object) {
+        continue;
+      }
+      BuildOption option;
+      option.name = stringField(entry, "name");
+      option.type = stringField(entry, "type");
+      option.defaultText = stringField(entry, "default");
+      option.description = stringField(entry, "description");
+      option.value = stringField(entry, "value");
+      option.error = stringField(entry, "error");
+      graph.options.push_back(std::move(option));
+    }
   }
   const JsonValue *incomplete = root.find("incomplete");
   graph.incomplete =

@@ -122,8 +122,11 @@ main() {
   of a graph like this one; the output is `tests/fixtures/build/build_graph.golden.json`, and building the same
   graph in the opposite call order gives the same text.
 - File arrays come from `b.files("src/**/*.prime")` (glob exists as `/std/glob`; `b.files` itself is not written yet); for `.prime` sources the compiler discovers the
-  import closure itself, so arrays matter most for native glue passed through link arguments. `b.files` and options
-  (`b.option("native_ui", true)`, read from `primec build --option native_ui=false`) are not part of the graph value yet.
+  import closure itself, so arrays matter most for native glue passed through link arguments. `b.files` is not part of the graph value yet. Options are: `b.option("native_ui", true, "Build the native UI")` returns
+  the value of `primec build --option native_ui=false` or the default (bool, i32 or String), lists itself in the export's
+  `"options"` and in `primec build --list-options`; the runner gives every script (root, subprojects, each stage) the same
+  values as program arguments, so they are not in the script cache key and reach the step keys only through the graph
+  they change (TODO-5917).
 
 ## 6. The run profile
 

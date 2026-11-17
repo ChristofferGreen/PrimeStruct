@@ -65,6 +65,11 @@ void runScript(const BuildCommandPlan &plan,
   const std::vector<std::string> options =
       isRoot ? plan.forwarded : subprojectForwardedOptions(plan.forwarded);
   command.insert(command.end(), options.begin(), options.end());
+  // Every script sees every option: a script that does not declare one ignores it.
+  for (const BuildOptionRequest &request : plan.options) {
+    command.push_back("--option");
+    command.push_back(request.name + "=" + request.value);
+  }
   std::string out;
   std::string err;
   const int status = runProgramCaptured(command, "", out, err);
@@ -143,6 +148,24 @@ private:
     return std::string();
   }
 };
+
+// The options of a graph against `--option`: a value of the wrong type, and (when the script is a single stage) an option
+// nobody declared; `runBuildCommand` checks the names of a staged script against all its stages. Returns 0, or 1 with the diagnostics.
+int checkGraphOptions(const BuildCommandPlan &plan,
+                      int stage,
+                      const std::string &graphText,
+                      std::string &diagnostics) {
+  BuildGraphData graph;
+  std::string error;
+  if (!parseBuildGraphJson(graphText, graph, error)) {
+    diagnostics += "primec build: " + error + "\n";
+    return 1;
+  }
+  const std::string problems =
+      checkBuildOptions(plan.options, graph.options, !graph.incomplete && stage == 0);
+  diagnostics += problems;
+  return problems.empty() ? 0 : 1;
+}
 
 } // namespace
 
@@ -238,7 +261,7 @@ int resolveBuildGraph(const BuildCommandPlan &plan,
   ScriptRun &root = runs.at(".");
   if (runs.size() == 1) {
     graphText = std::move(root.text);
-    return 0;
+    return checkGraphOptions(plan, stage, graphText, diagnostics);
   }
   // `runs` is sorted by folder, so the merge order is the same on every run.
   std::vector<BuildSubgraph> subgraphs;
@@ -252,7 +275,7 @@ int resolveBuildGraph(const BuildCommandPlan &plan,
     diagnostics += "primec build: " + error + "\n";
     return 1;
   }
-  return 0;
+  return checkGraphOptions(plan, stage, graphText, diagnostics);
 }
 
 } // namespace primec

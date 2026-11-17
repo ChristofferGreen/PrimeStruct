@@ -434,12 +434,31 @@ int main(int argc, char **argv) {
   std::vector<char *> buildArgv;
   std::string buildSeparator = "--";
   std::string buildStageArgument;
+  std::vector<std::string> buildOptionArguments;
   const std::string selfPath = isBuildCommand ? primec::selfExecutablePath(argv[0]) : std::string();
   if (isBuildCommand) {
     if (!primec::planBuildCommand(
             std::vector<std::string>(argv + 2, argv + argc), buildPlan, argError)) {
       std::cerr << "primec build: " << argError << "\n";
       return 2;
+    }
+    if (buildPlan.listOptions) {
+      std::string graphText;
+      std::string graphDiagnostics;
+      const int graphStatus =
+          primec::resolveBuildGraph(buildPlan, selfPath, 0, graphText, graphDiagnostics);
+      std::cerr << graphDiagnostics;
+      if (graphStatus != 0) {
+        return graphStatus;
+      }
+      primec::BuildGraphData listed;
+      std::string listError;
+      if (!primec::parseBuildGraphJson(graphText, listed, listError)) {
+        std::cerr << "primec build: " << listError << "\n";
+        return 1;
+      }
+      std::cout << primec::formatBuildOptionList(listed.options);
+      return 0;
     }
     if (!buildPlan.dryRun) {
       return primec::runBuildCommand(buildPlan, selfPath, std::cout, std::cerr);
@@ -464,6 +483,11 @@ int main(int argc, char **argv) {
     buildStageArgument = std::to_string(buildPlan.stage);
     buildArgv.push_back(buildSeparator.data());
     buildArgv.push_back(buildStageArgument.data());
+    // The options follow as `name=value` arguments (argument 2 on); they are not in the cache key of the script either.
+    buildOptionArguments = primec::buildOptionProgramArguments(buildPlan.options);
+    for (std::string &optionArgument : buildOptionArguments) {
+      buildArgv.push_back(optionArgument.data());
+    }
     argc = static_cast<int>(buildArgv.size());
     argv = buildArgv.data();
   }

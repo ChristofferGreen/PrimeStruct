@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/pipeline/BuildOptions.h"
+
 #include <string>
 #include <vector>
 
@@ -23,7 +25,13 @@ struct BuildCommandPlan {
   // `--stage <n>` (internal: the runner starts the dry run once per stage): the zero-based stage of `Graph.run` the
   // script stops at. The script receives it as its first program argument. Default 0.
   int stage = 0;
-  // The options after the directory, except `--dry-run`, `--jobs` and `--out-dir`.
+  // `--option name=value` (repeatable), sorted by name: the values of the options the scripts declare with `Build.option`.
+  // They go to every script of the build (the project's, its subprojects' and each stage) as program arguments after the
+  // stage, so they are not part of the script cache key; the script sees them, the graph carries them.
+  std::vector<BuildOptionRequest> options;
+  // `--list-options`: print the options the scripts declare (types, defaults, descriptions) instead of building.
+  bool listOptions = false;
+  // The options after the directory, except `--dry-run`, `--jobs`, `--out-dir`, `--option` and `--list-options`.
   std::vector<std::string> forwarded;
   // The path of the script, `<dir>/make.prime`.
   std::string scriptPath;

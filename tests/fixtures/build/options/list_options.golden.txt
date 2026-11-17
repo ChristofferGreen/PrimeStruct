@@ -1,0 +1,4 @@
+flavor: String, default "plain" - Flavor of the subproject
+level: i32, default 2 - Optimization level
+name: String, default "app"
+native_ui: bool, default true - Build the native UI

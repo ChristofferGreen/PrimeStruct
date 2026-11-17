@@ -26,12 +26,17 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
       plan.raw = true;
       continue;
     }
+    if (argument == "--list-options") {
+      plan.listOptions = true;
+      continue;
+    }
     std::string value;
     bool hasValue = false;
+    const bool isOptionFlag = argument == "--option" || argument.rfind("--option=", 0) == 0;
     const bool isJobs = argument == "--jobs" || argument.rfind("--jobs=", 0) == 0;
     const bool isOutDir = argument == "--out-dir" || argument.rfind("--out-dir=", 0) == 0;
     const bool isStage = argument == "--stage" || argument.rfind("--stage=", 0) == 0;
-    if (isJobs || isOutDir || isStage) {
+    if (isJobs || isOutDir || isStage || isOptionFlag) {
       const size_t equals = argument.find('=');
       if (equals != std::string::npos) {
         value = argument.substr(equals + 1);
@@ -43,6 +48,14 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
       if (!hasValue) {
         error = argument + " requires a value";
         return false;
+      }
+      if (isOptionFlag) {
+        BuildOptionRequest request;
+        if (!parseBuildOptionArgument(value, request, error)) {
+          return false;
+        }
+        plan.options.push_back(std::move(request));
+        continue;
       }
       if (isOutDir) {
         outDir = value;
@@ -77,6 +90,9 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
     forwarded.push_back(argument);
   }
 
+  if (!normalizeBuildOptions(plan.options, error)) {
+    return false;
+  }
   plan.forwarded = forwarded;
   plan.projectDir = directory.empty() ? "." : directory;
   plan.outDir = outDir.empty()
