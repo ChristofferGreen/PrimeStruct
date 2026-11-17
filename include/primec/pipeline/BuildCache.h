@@ -58,4 +58,10 @@ bool readDependencyList(const std::string &path, std::vector<std::string> &paths
 // has its recorded content hash and every watched directory its recorded listing hash.
 bool buildCacheEntryIsCurrent(const BuildCacheEntry &entry, const std::string &key, const std::string &outputPath);
 
+// The same for a step with several output files (a function step): `outputHash` is the hash the caller computed of the
+// outputs as they are now; the entry is current when it has that hash, the key and unchanged dependencies.
+bool buildCacheEntryIsCurrentForOutput(const BuildCacheEntry &entry,
+                                       const std::string &key,
+                                       const std::string &outputHash);
+
 } // namespace primec

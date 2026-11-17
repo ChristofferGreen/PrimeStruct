@@ -2,7 +2,8 @@
 
 #include "primec/pipeline/BuildCache.h"
 #include "primec/pipeline/BuildCopyStep.h"
-#include "primec/pipeline/BuildCopyStep.h"
+#include "primec/pipeline/BuildFunctionStep.h"
+#include "primec/pipeline/BuildFunctionSteps.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
 
@@ -13,6 +14,7 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <mutex>
+#include <memory>
 #include <ostream>
 #include <poll.h>
 #include <sys/wait.h>
@@ -337,6 +339,50 @@ int runBuildGraph(const BuildGraphData &graph,
 
   std::atomic<size_t> next{0};
   std::atomic<bool> stop{false};
+
+  // Function steps are settled and compiled here, on the calling thread, one at a time: the compile pipeline keeps
+  // process-wide state, so two compiles at once would share it. A step that is up to date is not compiled. The run of
+  // the compiled definitions is what the workers do.
+  std::vector<std::unique_ptr<BuildFunctionStepRunner::Prepared>> prepared(graph.steps.size());
+  std::vector<std::vector<std::string>> compiledFiles(graph.steps.size());
+  std::vector<std::string> functionCacheFiles(graph.steps.size());
+  std::vector<std::string> functionKeys(graph.steps.size());
+  for (size_t index = 0; index < graph.steps.size() && !stop.load(); ++index) {
+    const BuildStep &step = graph.steps[index];
+    if (step.kind != "function") {
+      continue;
+    }
+    Result &result = results[index];
+    if (settings.functionSteps == nullptr) {
+      result.state = State::Failed;
+      result.diagnostics = "function steps are not supported by this build of primec\n";
+      stop.store(true);
+      break;
+    }
+    const FunctionStepCheck check = checkFunctionStep(step,
+                                                      settings,
+                                                      caching,
+                                                      compilerHash,
+                                                      functionCacheFiles[index],
+                                                      functionKeys[index],
+                                                      result.diagnostics);
+    if (check == FunctionStepCheck::UpToDate) {
+      result.state = State::UpToDate;
+      continue;
+    }
+    if (check == FunctionStepCheck::Failed) {
+      result.state = State::Failed;
+      stop.store(true);
+      break;
+    }
+    prepared[index] =
+        settings.functionSteps->prepare(step, settings, compiledFiles[index], result.diagnostics);
+    if (prepared[index] == nullptr) {
+      result.state = State::Failed;
+      stop.store(true);
+    }
+  }
+
   auto worker = [&]() {
     while (!stop.load()) {
       const size_t index = next.fetch_add(1);
@@ -345,6 +391,27 @@ int runBuildGraph(const BuildGraphData &graph,
       }
       const BuildStep &step = graph.steps[index];
       Result &result = results[index];
+      if (step.kind == "function") {
+        // Settled above (up to date) or compiled and waiting to run on this thread.
+        if (prepared[index] == nullptr) {
+          continue;
+        }
+        const bool ran =
+            settings.functionSteps->run(*prepared[index], step, settings, result.diagnostics);
+        if (ran && finishFunctionStep(step,
+                                      settings,
+                                      caching,
+                                      functionCacheFiles[index],
+                                      functionKeys[index],
+                                      compiledFiles[index],
+                                      result.diagnostics)) {
+          result.state = State::Built;
+        } else {
+          result.state = State::Failed;
+          stop.store(true);
+        }
+        continue;
+      }
       if (step.kind == "copy") {
         const CopyOutcome outcome = runCopyStep(step, settings, caching, result.diagnostics);
         if (outcome == CopyOutcome::Failed) {
@@ -465,8 +532,10 @@ constexpr int MaxBuildStages = 256;
 int runBuildCommand(const BuildCommandPlan &plan,
                     const std::string &selfPath,
                     std::ostream &out,
-                    std::ostream &err) {
+                    std::ostream &err,
+                    BuildFunctionStepRunner *functionSteps) {
   BuildRunSettings settings;
+  settings.functionSteps = functionSteps;
   settings.primecPath = selfPath;
   settings.projectDir = plan.projectDir;
   std::error_code ec;

@@ -1,5 +1,6 @@
 #include "primec/pipeline/BuildCommand.h"
 #include "primec/pipeline/BuildSubprojects.h"
+#include "primec/pipeline/BuildFunctionStepEmbed.h"
 #include "primec/pipeline/BuildRunner.h"
 #include "primec/pipeline/BuildScriptCache.h"
 #include "primec/pipeline/CliDriver.h"
@@ -23,6 +24,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -464,7 +466,10 @@ int main(int argc, char **argv) {
       return 0;
     }
     if (!buildPlan.dryRun) {
-      return primec::runBuildCommand(buildPlan, selfPath, std::cout, std::cerr);
+      std::unique_ptr<primec::BuildFunctionStepRunner> functionSteps =
+          primec::makeEmbeddedFunctionStepRunner();
+      return primec::runBuildCommand(
+          buildPlan, selfPath, std::cout, std::cerr, functionSteps.get());
     }
     if (!buildPlan.raw) {
       // The graph of the project and its subprojects, from one raw dry run per script.
@@ -473,6 +478,23 @@ int main(int argc, char **argv) {
       const int graphStatus = primec::resolveBuildGraph(
           buildPlan, selfPath, buildPlan.stage, graphText, graphDiagnostics);
       std::cerr << graphDiagnostics;
+      if (graphStatus == 0 && graphText.find("\"kind\":\"function\"") != std::string::npos) {
+        // A function step names the files of its import closure, which only a compile of its file can tell.
+        std::unique_ptr<primec::BuildFunctionStepRunner> functionSteps =
+            primec::makeEmbeddedFunctionStepRunner();
+        std::string annotated;
+        std::string closureDiagnostics;
+        if (!primec::addFunctionStepClosures(*functionSteps,
+                                             graphText,
+                                             buildPlan.projectDir,
+                                             buildPlan.outDir,
+                                             annotated,
+                                             closureDiagnostics)) {
+          std::cerr << closureDiagnostics;
+          return 1;
+        }
+        graphText = std::move(annotated);
+      }
       if (graphStatus == 0) {
         std::cout << graphText;
       }

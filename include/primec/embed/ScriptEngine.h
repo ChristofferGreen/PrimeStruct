@@ -2,6 +2,7 @@
 
 #include "primec/embed/Script.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,10 @@ public:
   // When unset the engine tries $PRIMESTRUCT_STDLIB, then the installed copy
   // (<prefix>/share/primestruct/stdlib), then the source tree it was built from.
   void setStdlibPath(std::string path);
+
+  // Holds the script's own code (not the stdlib) to this list of effects, as `primec --allow-effects` does: a
+  // definition outside it is a compile diagnostic. Unset (the default): no ceiling.
+  void setAllowEffects(std::vector<std::string> effects);
 
   // Declares a script function the host will call with Script::call. Compile
   // generates one entry per export, so each export adds compile time. The
@@ -54,11 +59,13 @@ private:
                     const std::string &text,
                     const std::string &entryPath,
                     std::shared_ptr<Script::Module> &module,
-                    std::string &diagnostics) const;
+                    std::string &diagnostics,
+                    std::vector<std::string> *sourceFiles = nullptr) const;
 
   std::vector<std::string> importPaths_;
   std::string entryPath_ = "/main";
   std::string stdlibPath_;
+  std::optional<std::vector<std::string>> allowEffects_;
   HostBindings hostBindings_;
   std::vector<ExportDecl> exports_;
 };

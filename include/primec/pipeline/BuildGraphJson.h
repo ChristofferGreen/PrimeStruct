@@ -1,13 +1,15 @@
 #pragma once
 
+#include <map>
 #include <string>
 #include <vector>
 
 namespace primec {
 
-// One step of an exported build graph (docs/BuildSystemPlan.md section 4): the fields of a `compile`, `executable` or
-// `copy` node of the JSON that `graph.export()` writes. A `copy` step has a `source` and an `output` and no compiler
-// settings.
+// One step of an exported build graph (docs/BuildSystemPlan.md section 4): the fields of a `compile`, `executable`,
+// `copy` or `function` node of the JSON that `graph.export()` writes. A `copy` step has a `source` and an `output` and
+// no compiler settings. A `function` step has the file `source`, the definition `function` in it, the files `inputs`
+// it reads (relative to the project) and the files `outputs` it writes (relative to the output directory).
 struct BuildStep {
   std::string id;
   std::string kind;
@@ -23,6 +25,10 @@ struct BuildStep {
   std::vector<std::string> linkArgs;
   // Directories whose listings the step depends on (`Build.watch`); relative paths are relative to the project.
   std::vector<std::string> inputDirs;
+  // A function step only.
+  std::string function;
+  std::vector<std::string> inputs;
+  std::vector<std::string> outputs;
 };
 
 // One option a script declared with `Build.option` (the `"options"` of the export): the text of the default and of the
@@ -50,6 +56,8 @@ struct BuildGraphData {
   std::vector<std::string> subprojects;
   // The declared options, sorted by name.
   std::vector<BuildOption> options;
+  // The export says `"selfContained":false`: the graph has a function step, which only the runner can execute.
+  bool selfContained = true;
 };
 
 // The graph of one subproject: its folder relative to the project root (normalized, `/` separators) and the JSON
@@ -72,5 +80,13 @@ bool mergeBuildGraphJson(const std::string &parentText,
                          const std::string &projectDir,
                          std::string &merged,
                          std::string &error);
+
+// Adds `"closure":[...]` (after `"outputs"`) to the function nodes named in `closures` (node id to the files of the import
+// closure of the step, relative to the project): `primec build --dry-run` lists them so a tool can see what a function
+// step depends on. The text is otherwise the export unchanged.
+bool addBuildClosures(const std::string &graphText,
+                      const std::map<std::string, std::vector<std::string>> &closures,
+                      std::string &annotated,
+                      std::string &error);
 
 } // namespace primec

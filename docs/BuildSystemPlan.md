@@ -62,13 +62,22 @@ the one dangerous call in plain sight.
 | Compile step | A compiler snapshot (emit kind, optimization, import paths, entry, transforms, default effects, link arguments), an entry file and its output | Yes |
 | Copy step | `b.copy(name, from, to)`: a file of the project copied into the output directory by the runner (target removed first, cached by content hash; the destination must stay inside the output directory). PrimeScroll's `--option direct=true` copies `libps_ui_appkit.dylib` next to the executable | Yes (TODO-6017) |
 | Command step | An external command with declared inputs and outputs | Later, with the runner |
-| Function step | A PrimeStruct function that runs in the runner on a VM thread, with declared inputs and outputs | After VM threads |
+| Function step | A PrimeStruct function that runs in the runner on a VM thread, with declared inputs and outputs: `b.step(name, inputs, outputs, source, function)` | Yes (TODO-5919) |
 | Static library, link edge | A library target and a dependency of an executable on it | Appears in the export; `run` rejects it until the compiler supports libraries (section 7) |
 
 - **Export** is deterministic JSON: a version, nodes sorted by id, ids derived from target names. Hashes are the
   runner's job (section 8), not the script's.
-- **Not always self-contained.** A function step exports as the function's path and the files of its import closure;
-  only the runner can execute it. The export is for inspection and for tools such as the box view.
+- **Not always self-contained.** A function step exports as the function's path, the file that holds it and, in
+  `primec build --dry-run`, the files of its import closure that are inside the project; the graph carries
+  `"selfContained":false` because only the runner can execute it. The export is for inspection and for tools such as the
+  box view. How function steps work (TODO-5919): the runner compiles the step's file with the embedding library in its own
+  process, one step at a time (the compile pipeline keeps process-wide state), and runs each compiled definition on a worker
+  thread next to the other steps; tasks the definition spawns run on VM threads. The sandbox is the effect list the
+  definition declares, held under a ceiling without `file_write`, `net_io` and `build_run`; its writes go through
+  `write_output` of `/std/build_step`, a host call that checks the path against the output directory (this is the
+  path confinement: it is one function with a unit test, so it did not need a leaf of its own). The one argument that
+  differs from the first sketch: `b.step` takes the file as well as the function path, because the runner cannot run a
+  closure of the script, and a definition in `make.prime` itself would run under the profile's ceiling.
 - The script runs once and quickly; it needs only `file_read` to list files. Executing steps is the runner's work.
 
 ## 5. The script (run)
@@ -181,6 +190,10 @@ are what bounds it, as with the embed API.
   memoizes the return binding of a definition and the type text of a receiver chain, and the export helpers of
   `/std/build` are methods that read their own vector fields, so they are real calls and `Graph/exportStage` is 6,300
   instructions, not 40,000).
+- A function step (TODO-5919) is cached too: its key holds the compiler hash, the file, the function, the declared inputs and
+  outputs and the output directory, and its entry holds the content hash of every file the compile read (the step file,
+  its imports, the stdlib), of every declared input and of all outputs. A step that is up to date is not compiled. A file
+  the definition reads and the script did not declare as an input is not tracked: declare the inputs.
 - The cache lives in `ProjectRoot/.ps/cache/` and is not committed; `.ps/metadata.json` of the AI workflow plan is.
 - This is one mechanism with the cross-invocation symbol cache of `docs/LibrarySymbolManifestLazyImports.md` (its
   Phase 5), at a different granularity; it should not become a second cache.
@@ -212,7 +225,7 @@ Leaves in the Build system lane; the VM threads lane has its own list.
 | TODO-5916 | subprojects |
 | TODO-5917 | options |
 | TODO-5918 | staged builds with `run` |
-| TODO-5919 | PrimeStruct-function steps |
+| TODO-5919 | PrimeStruct-function steps (landed) |
 | TODO-5920 | PrimeScroll builds with `make.prime` (replaces `scripts/build_native_app.sh` only after parity) |
 | TODO-5922 to TODO-5933 | static libraries, split in `docs/ModulesAndLibrariesPlan.md` section 16 |
 

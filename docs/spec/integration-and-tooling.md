@@ -90,7 +90,40 @@ finished step prints `built <id>` to standard output, in id order. A failed step
 `primec build: step <name> (<id>) failed` and the compiler's diagnostics to standard error, steps that had not started
 print `... skipped after a failure`, and the exit code is 1. A graph with a library or link node, or with a problem
 (duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
-compiler yet` or the problem. There is no command or function step yet.
+compiler yet` or the problem. There is no command step.
+
+Function steps. `b.step(name, inputs, outputs, source, function)` (`/std/build`, TODO-5919) adds a step that is a
+PrimeStruct definition: `primec build` compiles the file `source` (relative to the project; the project directory is an
+import path) with `function` as the entry, in the process of `primec`, and runs it on a VM thread next to the other steps
+(at most `--jobs` steps at once; a task the definition spawns runs on its own thread too). The definition takes no
+arguments and returns `i32`; 0 is success, any other value fails the step (`build step <name>: <function> returned <n>`).
+Sandbox: the compile holds the definition to an effect ceiling of `heap_alloc`, `file_read`, `io_out`, `io_err`, `task`,
+`atomic`, `lock` and `channel`, so it cannot declare `file_write`, `net_io` or `build_run`; the effect list the definition
+declares is the sandbox inside that ceiling. It writes files with `write_output` of `/std/build_step`, whose host call
+refuses a path outside the output directory with `build step <name> writes outside the output directory: <path>`, so the
+step fails and prints that. What the definition prints is kept and shown only when the step fails. Declarations: every
+input must be a file of the project (`the declared input <path> is not a file`), every output must be a place inside the
+output directory, and a step that returns 0 without writing a declared output fails (`the step did not write its
+declared output <path>`). Compiling is done one step at a time before the steps run, because the compile pipeline keeps
+process-wide state; running is parallel. Steps are not ordered with respect to each other: a step that needs the file
+another step wrote runs in a later stage (`graph.run()`), as the generator example below does.
+Cache: a function step is cached in `.ps/cache` like a compile step. Its key is the hash of the compiler, the file, the
+function, the inputs, the outputs and the output directory; its entry holds the hash of every file the compile read (the
+file, the files it imports, the stdlib) and of every declared input, and the hash of all outputs. The step is up to date
+when the key, all those hashes and every output are unchanged, so editing the definition, a helper it imports, an input
+or an output re-runs only this step, and a step that is up to date is not even compiled. A file the definition reads
+without declaring it as an input is not tracked.
+Export: the node is `{"id":"step:<name>","kind":"function","name":..,"source":..,"function":..,"inputs":[..],"outputs":[..]}`
+and the export has `"selfContained":false`, because only the runner can execute the graph. `primec build --dry-run` also
+compiles each function step and adds `"closure":[..]` after `outputs`: the files of the import closure that are inside the
+project (relative, sorted; the stdlib belongs to the compiler version and is not listed). A step file that does not compile
+fails the dry run with `primec build: step <name> (<id>) does not compile` and the compile diagnostics. In a subproject
+the `source` and `inputs` are rebased like other paths; the `outputs` are not, because the definition writes them by
+name.
+
+```
+b.step("gen", inputs, outputs, "tools/gen.prime", "/generate")   // writes out/generated.prime
+```
 
 Stages. A script that must read what a step wrote (the files a generator produced) calls `graph.run()` on the graph it
 has built so far and then builds a second graph; `build` declares `effects(build_run, ...)`, which the profile grants
@@ -105,8 +138,8 @@ results that do not exist yet. Output: a build with more than one stage prints `
 `k`; a failed stage stops the build. The stages share one cache, so a step that a later graph repeats is `up to
 date`; each stage reads the file system again, so a glob after a `run` sees the files the stage wrote. A script that
 is run as a plain program (no stage argument) treats `run` as a no-op. A script with more than 256 stages is an
-error. A step kind that writes PrimeStruct source does not exist yet (function steps, TODO-5919), so the first
-stage of a script today writes other files (`--emit=ir` output, executables).
+error. A function step (above) can write PrimeStruct source, so the first stage of a script can generate the files that
+the second stage compiles (`tests/unit/backend_host/test_build_function_steps.cpp`).
 
 Subprojects. `b.subproject("dir")` (`/std/build`) includes the graph of `<dir>/make.prime`; the call only records the
 folder, in `"subprojects":[...]` of the script's own export. `primec build` runs the project's script, then the script of

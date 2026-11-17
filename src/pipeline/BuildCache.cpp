@@ -217,11 +217,17 @@ bool readDependencyList(const std::string &path, std::vector<std::string> &paths
 }
 
 bool buildCacheEntryIsCurrent(const BuildCacheEntry &entry, const std::string &key, const std::string &outputPath) {
-  if (entry.key.empty() || entry.key != key) {
+  std::string outputHash;
+  if (!sha256FileHex(outputPath, outputHash)) {
     return false;
   }
-  std::string outputHash;
-  if (!sha256FileHex(outputPath, outputHash) || outputHash != entry.outputHash) {
+  return buildCacheEntryIsCurrentForOutput(entry, key, outputHash);
+}
+
+bool buildCacheEntryIsCurrentForOutput(const BuildCacheEntry &entry,
+                                       const std::string &key,
+                                       const std::string &outputHash) {
+  if (entry.key.empty() || entry.key != key || outputHash != entry.outputHash) {
     return false;
   }
   for (const BuildCacheDep &dep : entry.deps) {
