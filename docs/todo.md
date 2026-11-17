@@ -292,9 +292,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [ ] TODO-6022: A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call
+- [~] TODO-6022: A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call
   - owner: ai
   - status: ready
+  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by glob (split from TODO-6015, which took `mut`, read-only and `Reference` vector parameters)
   - parallel_track: build-graph-defects
