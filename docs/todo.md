@@ -849,9 +849,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5896: `--vm-threads` runs each spawned task on its own OS thread
+- [~] TODO-5896: `--vm-threads` runs each spawned task on its own OS thread
   - owner: ai
   - status: ready
+  - claimed_by: claude-sonnet (worktree-agent-aa1694824249987b7), 2026-11-17
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
