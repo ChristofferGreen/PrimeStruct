@@ -24,6 +24,7 @@ test_map_helper.psir
 __pycache__/
 *.pyc
 !stdlib/std/build/
+!stdlib/std/build_step/
 !tests/fixtures/build/
 **/.ps/cache/
 examples/apps/text_editor/out/

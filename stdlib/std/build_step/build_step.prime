@@ -1,0 +1,41 @@
+// The host calls of a function step (docs/BuildSystemPlan.md section 4, docs/spec/stdlib-reference.md, "Function steps
+// (`/std/build_step`)"). A step that `Build.step` of /std/build registers is a plain definition that `primec build` compiles
+// and runs on the VM; it imports this module to write its outputs and to find its project. `primec build` binds the two
+// host functions for the step that runs (src/pipeline/BuildFunctionStepEmbed.cpp): a plain program that calls them fails
+// with an unbound host function. The module is not part of /std/build, so a `make.prime` cannot call it.
+import /std/text/*
+
+// Writes `text` to the file `path` below the output directory, creating the folders in front of it and replacing an old
+// file. The host function stops the run when `path` is empty, absolute, leaves the directory with `..` or goes through a
+// symbolic link.
+[host return<void>]
+ps_build_write_output([String] path, [String] text) {
+}
+
+// The absolute project directory, without a trailing `/`.
+[host return<String>]
+ps_build_project_dir() {
+}
+
+namespace std {
+namespace build_step {
+
+  // Writes `text` to `path`, relative to the output directory.
+  [public return<void> effects(heap_alloc)]
+  write_output([string] path, [string] text) {
+    ps_build_write_output(stringFrom(path), stringFrom(text))
+  }
+
+  // The project directory followed by `/` and `relative`: a path /std/file can open whatever the working directory is.
+  [public return<String> effects(heap_alloc)]
+  project_path([string] relative) {
+    [String] dir{ps_build_project_dir()}
+    [String mut] joined{stringFrom("")}
+    joined.appendString(dir)
+    joined.append("/")
+    joined.append(relative)
+    return(joined)
+  }
+
+}
+}
