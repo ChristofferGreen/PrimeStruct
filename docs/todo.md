@@ -231,9 +231,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6030: The concurrent corpus runs in fewer, cheaper CTest entries
+- [~] TODO-6030: The concurrent corpus runs in fewer, cheaper CTest entries
   - owner: ai
   - status: ready
+  - claimed_by: corpus-cheap (worktree-agent-a873e75abc0da7a83), 2026-11-18
   - created_at: 2026-11-17
   - phase: Test infrastructure (leftover of TODO-6027)
   - parallel_track: gate-timeouts
