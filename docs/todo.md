@@ -269,9 +269,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the compile of make.prime; not the step runner.
 
-- [ ] TODO-6010: Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM
+- [~] TODO-6010: Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM
   - owner: ai
   - status: ready
+  - claimed_by: glob-defects (worktree-agent-adf9187b22d22091d), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
   - parallel_track: build-graph-defects
