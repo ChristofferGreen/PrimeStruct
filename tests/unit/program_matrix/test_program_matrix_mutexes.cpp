@@ -270,6 +270,9 @@ main() {
 
 TEST_CASE(
     "two tasks locking two mutexes in opposite order deadlock on a VM seed that interleaves them") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
   // A seed fixes the schedule, so each run below has one outcome: the tasks either run one after the other (both
   // counters reach 2) or each takes its first lock and waits for the other's.
   const std::filesystem::path sourcePath = writeSource("mutex_opposite_order", R"(
@@ -354,6 +357,9 @@ main() {
 }
 
 TEST_CASE("the Wasm backend rejects a program with a mutex by name") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
   // Making a mutex stores its lock and handle count with atomic opcodes, which this backend meets first; the
   // mutex opcodes' own message is checked on hand-built IR in tests/unit/runtime/test_vm_mutexes.cpp.
   const program_matrix::Outcome wasm = compileFor("mutex_rejected_wasm", "wasm", SmallMutexProgram);

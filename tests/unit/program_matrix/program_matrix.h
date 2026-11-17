@@ -83,6 +83,33 @@ inline ExecutionConfig vmThreadsConfig() {
   return config;
 }
 
+inline bool isThreadsConfig(const ExecutionConfig &config) {
+  for (const std::string &flag : config.vmFlags) {
+    if (flag == "--vm-threads") {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Corpus mode (TODO-5900): PRIMESTRUCT_VM_THREADS_CORPUS=<n> makes every concurrent case run only the eager schedule
+// once and the threads config n times, each run printing what the eager run printed (runThreadsCorpus). The ctest
+// entries of tests/vm_threads_corpus.txt and scripts/tsan_vm_check.sh set it; without it the cases run their configs.
+inline int threadsCorpusRepeats() {
+  const char *value = std::getenv("PRIMESTRUCT_VM_THREADS_CORPUS");
+  if (value == nullptr || *value == '\0') {
+    return 0;
+  }
+  const int repeats = std::atoi(value);
+  return repeats > 0 ? repeats : 0;
+}
+
+// True in corpus mode: a case that is not a concurrent program (a compile-only check, a seed-dependent outcome)
+// returns at once.
+inline bool corpusOnly() {
+  return threadsCorpusRepeats() > 0;
+}
+
 inline std::vector<ExecutionConfig> allConfigs() {
   std::vector<ExecutionConfig> configs = {
       {"vm-step-O0", Backend::VmStep, 0, false},
@@ -215,10 +242,51 @@ inline int expectedExit(int code) {
 #endif
 }
 
+// The corpus check of one concurrent program: the eager schedule (`vm-O2`) runs once and must give the expected
+// results; the threads config then runs `repeats` times and each run must print and exit as the eager run did. A
+// program whose output depends on the interleaving does not belong here: it is made schedule-independent.
+inline void runThreadsCorpus(const ProgramCase &program, int repeats) {
+  const ExecutionConfig eagerConfig{"vm-O2", Backend::Vm, 2, false};
+  const Outcome eager = runConfig(program, eagerConfig);
+  INFO("program " << program.name << " on the eager schedule");
+  REQUIRE_MESSAGE(eager.ran, eager.note);
+  if (program.exitCode.has_value()) {
+    CHECK(eager.exitCode == expectedExit(*program.exitCode));
+  }
+  if (program.stdoutText.has_value()) {
+    CHECK(eager.out == *program.stdoutText);
+  }
+  if (program.vmStderr.has_value()) {
+    CHECK(eager.err == *program.vmStderr);
+  }
+  const ExecutionConfig threads = vmThreadsConfig();
+  for (int repeat = 0; repeat < repeats; ++repeat) {
+    INFO("program " << program.name << " under --vm-threads, run " << repeat);
+    const Outcome outcome = runConfig(program, threads);
+    REQUIRE_MESSAGE(outcome.ran, outcome.note);
+    CHECK(outcome.exitCode == eager.exitCode);
+    CHECK(outcome.out == eager.out);
+    if (program.vmStderr.has_value()) {
+      CHECK(outcome.err == eager.err);
+    }
+  }
+}
+
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
 inline void runProgramMatrix(const ProgramCase &program,
                              std::vector<ExecutionConfig> configs = allConfigs()) {
+  if (corpusOnly()) {
+    // Corpus mode runs the programs that have a threads config, and nothing else.
+    for (const ExecutionConfig &config : configs) {
+      if (isThreadsConfig(config) && !listed(program.skipConfigs, config.name) &&
+          (program.onlyConfigs.empty() || listed(program.onlyConfigs, config.name))) {
+        runThreadsCorpus(program, threadsCorpusRepeats());
+        return;
+      }
+    }
+    return;
+  }
   const bool slow = includeSlowConfigs();
   std::vector<ExecutionConfig> selected;
   for (const ExecutionConfig &config : configs) {

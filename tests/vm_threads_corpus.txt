@@ -1,0 +1,36 @@
+# The concurrent corpus (TODO-5900; docs/MultithreadingPrototype.md, VM Threads).
+#
+# Every test source that runs a program on a task schedule is listed here. A program in the corpus runs on the eager
+# schedule once and under `primevm --vm-threads` repeatedly (PRIMESTRUCT_VM_THREADS_CORPUS=<n>), and each threads run
+# must print and exit as the eager run did. A program whose output depends on the interleaving is made
+# schedule-independent or removed; none is accepted as flaky (AGENTS.md, No flaky tests).
+#
+# CMake turns the `matrix` and `cases` lines into the PrimeStruct_vm_threads_corpus_* ctest entries;
+# scripts/tsan_vm_check.sh runs the same lines with a ThreadSanitizer build of primevm; and
+# scripts/check_vm_threads_corpus.py (ctest PrimeStruct_vm_threads_corpus_registration) fails when a test source that
+# names a task schedule (--vm-schedule-seed, --vm-threads, vmThreadsConfig, vmTaskScheduleFlags) is not listed.
+#
+#   matrix|<doctest suite>|<source file>|<n>         program-matrix suite in corpus mode, <n> threads runs per ctest entry
+#   cases|<doctest suite>|<source file>|<case name>  doctest case run in corpus mode
+#   repeated|<doctest suite>|<source file>           already repeats under threads in its own ctest entry
+#   exclude|<source file>|<reason>                   names a marker but runs no concurrent program
+
+matrix|primestruct.program_matrix.tasks|tests/unit/program_matrix/test_program_matrix_tasks.cpp|2
+matrix|primestruct.program_matrix.atomics|tests/unit/program_matrix/test_program_matrix_atomics.cpp|5
+matrix|primestruct.program_matrix.mutexes|tests/unit/program_matrix/test_program_matrix_mutexes.cpp|5
+matrix|primestruct.program_matrix.channels|tests/unit/program_matrix/test_program_matrix_channels.cpp|5
+matrix|primestruct.program_matrix.shared_strings|tests/unit/program_matrix/test_program_matrix_shared_strings.cpp|2
+
+cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp|runs vm with single task spawn wait
+cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp|runs vm with multi task wait tuple
+cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_variadics.cpp|runs vm with destructured multi task wait
+cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_variadics.cpp|runs vm with sendable spawn arguments copied into the task
+cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_variadics.cpp|runs vm returning a waited task result next to a struct local
+
+repeated|primestruct.program_matrix.vm_threads|tests/unit/program_matrix/test_program_matrix_vm_threads.cpp
+repeated|primestruct.runtime.vm_threads|tests/unit/runtime/test_vm_threads.cpp
+repeated|primestruct.runtime.vm_threads_sync|tests/unit/runtime/test_vm_threads_sync.cpp
+repeated|primestruct.runtime.vm_threads_host|tests/unit/runtime/test_vm_threads_host.cpp
+repeated|primestruct.embed.task_threads|tests/unit/embed/test_embed_task_threads.cpp
+
+exclude|tests/unit/misc/test_options_optimization.cpp|parses the flags only; it runs no program

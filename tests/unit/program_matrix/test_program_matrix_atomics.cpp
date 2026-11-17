@@ -246,6 +246,9 @@ main() {
 }
 
 TEST_CASE("the Wasm backend rejects a program with atomics by name") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
   const program_matrix::Outcome wasm =
       compileFor("atomic_rejected_wasm", "wasm", SmallAtomicProgram);
   CHECK(wasm.exitCode != 0);

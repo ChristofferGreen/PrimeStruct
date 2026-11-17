@@ -12,17 +12,8 @@ namespace {
 constexpr int Repeats = 20;
 
 void runRepeated(const program_matrix::ProgramCase &program) {
-  const program_matrix::ExecutionConfig config = program_matrix::vmThreadsConfig();
-  for (int repeat = 0; repeat < Repeats; ++repeat) {
-    INFO("program " << program.name << " run " << repeat);
-    const program_matrix::Outcome outcome = program_matrix::runConfig(program, config);
-    REQUIRE_MESSAGE(outcome.ran, outcome.note);
-    CHECK(outcome.exitCode == program_matrix::expectedExit(*program.exitCode));
-    CHECK(outcome.out == *program.stdoutText);
-    if (program.vmStderr.has_value()) {
-      CHECK(outcome.err == *program.vmStderr);
-    }
-  }
+  // The eager run, then `Repeats` threads runs, each printing what the eager run printed.
+  program_matrix::runThreadsCorpus(program, Repeats);
 }
 
 } // namespace

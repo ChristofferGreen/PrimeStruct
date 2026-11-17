@@ -630,6 +630,9 @@ main() {
 }
 
 TEST_CASE("the Wasm backend rejects a program with a channel by name") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
   const program_matrix::Outcome wasm =
       compileFor("channel_rejected_wasm", "wasm", SmallChannelProgram);
   CHECK(wasm.exitCode != 0);

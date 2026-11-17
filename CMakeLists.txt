@@ -4081,6 +4081,76 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestructAddDoctestShards("${testName}" PrimeStruct_program_matrix_tests ${suiteCases} ${suiteShardCases} 300
                                 "--test-suite=${suite}")
   endforeach()
+  # The concurrent corpus (TODO-5900, tests/vm_threads_corpus.txt): every concurrent program runs on the eager
+  # schedule and under `primevm --vm-threads` PrimeStructVmThreadsCorpusRepeats times, each threads run printing what
+  # the eager run printed. A run of a program is 0.1 to 1.1 s (most of it is the front end), so the repeats are split
+  # over rounds: an entry is one case with the eager run and the `matrix` line's repeats per entry (2 for the programs
+  # that import much of the stdlib, 5 for the rest), and the entries of the other rounds are the same case again
+  # (entries stay below the 5 s guardrail; a loaded gate stretches them, so no entry is made longer). `matrix`
+  # lines are program-matrix suites, `cases` lines single doctest cases. scripts/check_vm_threads_corpus.py (a ctest
+  # entry below) keeps the list complete; scripts/tsan_vm_check.sh runs the same list against a ThreadSanitizer build.
+  set(PrimeStructVmThreadsCorpusRepeats 20)
+  set(PrimeStructVmThreadsCorpusCaseRepeatsPerEntry 5)
+  set(PrimeStructVmThreadsCorpusList "${CMAKE_SOURCE_DIR}/tests/vm_threads_corpus.txt")
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PrimeStructVmThreadsCorpusList}")
+  file(STRINGS "${PrimeStructVmThreadsCorpusList}" PrimeStructVmThreadsCorpusLines)
+  function(primeStructAddCorpusRounds namePrefix perEntry)
+    math(EXPR rounds "(${PrimeStructVmThreadsCorpusRepeats} + ${perEntry} - 1) / ${perEntry}")
+    foreach(round RANGE 1 ${rounds})
+      add_test(NAME ${namePrefix}_r${round} COMMAND ${ARGN})
+      set_tests_properties(${namePrefix}_r${round} PROPERTIES
+        TIMEOUT 300 LABELS "parallel-safe"
+        ENVIRONMENT "PRIMESTRUCT_VM_THREADS_CORPUS=${perEntry}")
+    endforeach()
+  endfunction()
+  set(primeStructCorpusCaseIndex 0)
+  foreach(corpusLine IN LISTS PrimeStructVmThreadsCorpusLines)
+    string(REGEX REPLACE "#.*$" "" corpusLine "${corpusLine}")
+    string(STRIP "${corpusLine}" corpusLine)
+    if(corpusLine STREQUAL "")
+      continue()
+    endif()
+    string(REPLACE "|" ";" corpusFields "${corpusLine}")
+    list(GET corpusFields 0 corpusKind)
+    list(GET corpusFields 1 corpusSuite)
+    if(corpusKind STREQUAL "matrix")
+      list(GET corpusFields 3 corpusPerEntry)
+      string(REPLACE "primestruct.program_matrix." "" corpusShort "${corpusSuite}")
+      set(corpusCases "")
+      foreach(entry IN LISTS PrimeStructProgramMatrixCaseCounts)
+        if(entry MATCHES "^${corpusShort}=([0-9]+)$")
+          set(corpusCases "${CMAKE_MATCH_1}")
+        endif()
+      endforeach()
+      if(corpusCases STREQUAL "")
+        message(FATAL_ERROR "corpus suite ${corpusSuite} has no case count in PrimeStructProgramMatrixCaseCounts")
+      endif()
+      foreach(index RANGE 1 ${corpusCases})
+        primeStructAddCorpusRounds("PrimeStruct_vm_threads_corpus_${corpusShort}_${index}" ${corpusPerEntry}
+          $<TARGET_FILE:PrimeStruct_program_matrix_tests> "--test-suite=${corpusSuite}" "--order-by=file"
+          "--first=${index}" "--last=${index}")
+      endforeach()
+    elseif(corpusKind STREQUAL "cases")
+      list(GET corpusFields 3 corpusCaseName)
+      math(EXPR primeStructCorpusCaseIndex "${primeStructCorpusCaseIndex} + 1")
+      primeStructSelectDoctestTarget(corpusTarget "${corpusSuite}")
+      primeStructAddCorpusRounds("PrimeStruct_vm_threads_corpus_cases_${primeStructCorpusCaseIndex}"
+        ${PrimeStructVmThreadsCorpusCaseRepeatsPerEntry}
+        $<TARGET_FILE:${corpusTarget}> "--test-suite=${corpusSuite}" "--test-case=${corpusCaseName}"
+        "--order-by=file")
+    endif()
+  endforeach()
+  add_test(
+    NAME PrimeStruct_vm_threads_corpus_registration
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_vm_threads_corpus.py --root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_vm_threads_corpus_registration PROPERTIES TIMEOUT 60)
+  add_test(
+    NAME PrimeStruct_vm_threads_corpus_registration_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_check_vm_threads_corpus.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_vm_threads_corpus_registration_self_test PROPERTIES TIMEOUT 60)
   addPrimeStructSuiteRegistration(
     PrimeStruct_program_matrix_suite_registration
     PrimeStruct_program_matrix_tests

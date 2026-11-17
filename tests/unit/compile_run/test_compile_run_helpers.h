@@ -88,13 +88,24 @@ inline int expectedProcessExitCode(int code) {
 #endif
 }
 
-// The VM schedules a program with tasks runs under (docs/spec/vm-design.md, Tasks): the eager default and seeds 1 to
-// 8, as `primec --emit=vm` flags. A program free of races prints the same on all of them.
+// The VM schedules a program with tasks runs under (docs/spec/vm-design.md, Tasks): the eager default, seeds 1 to 8
+// and the threads mode, as `primec --emit=vm` flags. A program free of races prints the same on all of them. With
+// PRIMESTRUCT_VM_THREADS_CORPUS=<n> (the corpus entries of tests/vm_threads_corpus.txt, TODO-5900) the list is the
+// eager default and n threads runs instead.
 inline std::vector<std::string> vmTaskScheduleFlags() {
   std::vector<std::string> flags = {""};
+  const char *corpus = std::getenv("PRIMESTRUCT_VM_THREADS_CORPUS");
+  const int repeats = corpus == nullptr ? 0 : std::atoi(corpus);
+  if (repeats > 0) {
+    for (int run = 0; run < repeats; ++run) {
+      flags.push_back(" --vm-threads");
+    }
+    return flags;
+  }
   for (int seed = 1; seed <= 8; ++seed) {
     flags.push_back(" --vm-schedule-seed " + std::to_string(seed));
   }
+  flags.push_back(" --vm-threads");
   return flags;
 }
 

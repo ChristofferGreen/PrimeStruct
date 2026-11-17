@@ -255,6 +255,16 @@ open-work-only scope rule as `docs/todo.md` itself.
   landed there (that task decomposed a different function
   entirely). This item's remaining scope is unchanged.
 
+## TODO-5904
+
+- 2026-11-17 (TODO-5900, `scripts/tsan_vm_check.sh --repeats 5`, build-tsan/ RelWithDebInfo with clang++ on macOS arm64, 11 cores): the last
+  ThreadSanitizer result of the concurrent corpus. Ten corpus runs (the five program-matrix suites tasks, atomics, mutexes, channels and
+  shared strings, and the five compile-run task cases), each program on the eager schedule once and under `--vm-threads` five times:
+  all passed and no ThreadSanitizer report was written (`primevm` links libclang_rt.tsan). The hand-built runtime suites of
+  `PrimeStruct_vm_byte_tests`, built in build-tsan/ and run by hand (vm_threads, vm_threads_sync, vm_threads_host, heap_arenas, tasks, atomics,
+  mutexes, conditions), also passed with no report. The release gate runs every program 20 times; rerun the script, and record its
+  result here, before the default flips.
+
 ## TODO-5902
 
 - 2026-11-17 (from TODO-5896): four tasks that each sum 10^8 integers in a `while` loop of i64 adds: default schedule (flat loop) 1.14 s real; `--vm-threads` (step kernel per task) 12.5 s real, 46.3 s user on an 11-core machine. The threads are about 3.7 times parallel and each task is about 10 times slower than on the flat loop, so the fast kernel per task is what makes the mode faster than the default for CPU-bound tasks.

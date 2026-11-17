@@ -586,7 +586,7 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 Classification: **design direction**, decided 2026-11-11. `--vm-threads` with tasks, heap arenas and the one host lock
 is implemented (TODO-5896; docs/spec/vm-design.md, Tasks on threads), with the per-function reentrant and
 main-thread-only registrations of host functions (TODO-5898); the rest is the VM threads lane of
-`docs/todo.md` (TODO-5900 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, and TODO-5899, the embed API's `RunOptions::threads`, landed). The VM scheduler above describes what the VM does today and stays
+`docs/todo.md` (TODO-5901 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, TODO-5899, the embed API's `RunOptions::threads`, and TODO-5900, the concurrent corpus, landed). The VM scheduler above describes what the VM does today and stays
 true of the default until TODO-5904.
 
 The VM gets a second way to run tasks: each on its own OS thread, in parallel, with the semantics `optexe` already
@@ -595,8 +595,18 @@ has. The deterministic scheduler stays; it is not replaced.
 - **Two schedules.** The deterministic scheduler (eager, or seeded with `--vm-schedule-seed`) is the schedule of debug
   sessions, of race checking and of conformance tests. The threads schedule (`--vm-threads`) is the run schedule.
   It starts behind the flag; once the concurrent test corpus passes repeated runs and a ThreadSanitizer run
-  (TODO-5900) it becomes the default (TODO-5904), because the flip changes the print order of every concurrent
-  program.
+  (TODO-5900, done: below) it becomes the default (TODO-5904), because the flip changes the print order of every
+  concurrent program.
+- **The concurrent corpus** is `tests/vm_threads_corpus.txt`: every test source that runs a program on a task
+  schedule (`--vm-schedule-seed`, `--vm-threads`, `vmThreadsConfig`, `vmTaskScheduleFlags`) is listed there, and
+  ctest `PrimeStruct_vm_threads_corpus_registration` (`scripts/check_vm_threads_corpus.py`) fails when one is not.
+  With `PRIMESTRUCT_VM_THREADS_CORPUS=<n>` the program-matrix cases and the compile-run task cases run the eager
+  schedule once and `--vm-threads` n times, and each threads run must print and exit as the eager run did; the
+  `PrimeStruct_vm_threads_corpus_*` entries run every program 20 times that way, split into rounds so no entry
+  grows past a few seconds. A program whose output depends on the interleaving is made schedule-independent or
+  removed; none is accepted as flaky. `scripts/tsan_vm_check.sh` builds `primevm` and `primec` with
+  `-fsanitize=thread` in `build-tsan/` (ignored by git; as heavy as a release build) and runs the same list from the
+  release doctest binaries; a ThreadSanitizer report or a failed case fails it. It is run by hand, alone.
 - **One OS thread per task**, started with an 8 MiB stack as `optexe` does, with a task table of handles and
   generations behind one mutex. The task opcodes, handle format, ordering rules and fault behavior of docs/spec/
   vm-design.md (Tasks, Tasks on threads) apply unchanged.

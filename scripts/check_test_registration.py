@@ -45,6 +45,14 @@ INCLUDE_RE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.MULTILINE)
 COUNT_RE = re.compile(r"unskipped test cases passing the current filters:\s*(\d+)")
 
 
+def is_corpus_entry(test: dict) -> bool:
+    """True for a PrimeStruct_vm_threads_corpus_* entry: a repeated run of already registered cases."""
+    for prop in test.get("properties", []):
+        if prop.get("name") == "ENVIRONMENT":
+            return any(str(item).startswith("PRIMESTRUCT_VM_THREADS_CORPUS=") for item in prop.get("value", []))
+    return False
+
+
 def split_range_args(args: list[str]) -> tuple[tuple[str, ...], int | None, int | None]:
     """Returns (filter args, first, last) for a doctest command line (binary excluded)."""
     first = last = None
@@ -246,7 +254,9 @@ def main() -> int:
     if ctest.returncode != 0:
         print(f"ctest --show-only failed: {ctest.stderr}", file=sys.stderr)
         return 2
-    tests = json.loads(ctest.stdout)["tests"]
+    # The corpus entries of tests/vm_threads_corpus.txt (TODO-5900) run cases that other entries already register,
+    # once per round and under PRIMESTRUCT_VM_THREADS_CORPUS; they are not part of the shard tiling.
+    tests = [test for test in json.loads(ctest.stdout)["tests"] if not is_corpus_entry(test)]
 
     cache: dict = {}
     findings = check_shards(tests, lambda binary, filters: count_cases(binary, filters, cache))

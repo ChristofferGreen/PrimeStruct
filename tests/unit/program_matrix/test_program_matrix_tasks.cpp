@@ -17,9 +17,7 @@ std::vector<program_matrix::ExecutionConfig> taskConfigs() {
     configs.push_back(std::move(config));
   }
   // Each task on an OS thread of its own (--vm-threads): the same answers, whatever the interleaving.
-  program_matrix::ExecutionConfig threads{"vm-O2-threads", program_matrix::Backend::Vm, 2, false};
-  threads.vmFlags = {"--vm-threads"};
-  configs.push_back(std::move(threads));
+  configs.push_back(program_matrix::vmThreadsConfig());
   return configs;
 }
 
@@ -1284,6 +1282,9 @@ main() {
 }
 
 TEST_CASE("a name bound twice by a destructuring inside a block is a duplicate binding") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
   const std::filesystem::path dir =
       primec::testing::testScratchPath("program_matrix/task_destructuring_duplicate/x")
           .parent_path();
