@@ -848,9 +848,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5897: Atomic, Mutex and Channel run on real primitives under `--vm-threads`
+- [~] TODO-5897: Atomic, Mutex and Channel run on real primitives under `--vm-threads`
   - owner: ai
   - status: ready
+  - claimed_by: claude-sonnet (worktree-agent-af856de9fe736c45e), 2026-11-17
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
