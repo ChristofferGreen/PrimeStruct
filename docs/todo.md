@@ -1035,9 +1035,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5912: `primec build --dry-run` prints the graph of `make.prime`
+- [~] TODO-5912: `primec build --dry-run` prints the graph of `make.prime`
   - owner: ai
   - status: ready
+  - claimed_by: build-dry-run agent (worktree agent-a20095dddc8e3381a), 2026-11-17
   - depends_on: TODO-5911
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
