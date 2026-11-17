@@ -1052,9 +1052,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: three option types; no environment-variable options, no option files.
 
-- [ ] TODO-5918: A script can run its graph in stages
+- [~] TODO-5918: A script can run its graph in stages
   - owner: ai
   - status: ready
+  - claimed_by: build-stages (worktree agent-a90d93e81d08d9616), 2026-11-17
   - depends_on: TODO-5908
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 3)
