@@ -1,4 +1,5 @@
 #include "primec/pipeline/BuildCommand.h"
+#include "primec/pipeline/BuildSubprojects.h"
 #include "primec/pipeline/BuildRunner.h"
 #include "primec/pipeline/BuildScriptCache.h"
 #include "primec/pipeline/CliDriver.h"
@@ -442,6 +443,18 @@ int main(int argc, char **argv) {
     }
     if (!buildPlan.dryRun) {
       return primec::runBuildCommand(buildPlan, selfPath, std::cout, std::cerr);
+    }
+    if (!buildPlan.raw) {
+      // The graph of the project and its subprojects, from one raw dry run per script.
+      std::string graphText;
+      std::string graphDiagnostics;
+      const int graphStatus = primec::resolveBuildGraph(
+          buildPlan, selfPath, buildPlan.stage, graphText, graphDiagnostics);
+      std::cerr << graphDiagnostics;
+      if (graphStatus == 0) {
+        std::cout << graphText;
+      }
+      return graphStatus;
     }
     for (std::string &argument : buildPlan.arguments) {
       buildArgv.push_back(argument.data());

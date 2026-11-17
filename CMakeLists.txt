@@ -471,6 +471,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/BuildCache.cpp
   src/pipeline/BuildCommand.cpp
+  src/pipeline/BuildSubprojects.cpp
   src/pipeline/BuildGraphJson.cpp
   src/pipeline/BuildRunner.cpp
   src/pipeline/BuildScriptCache.cpp
@@ -1394,6 +1395,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_build_stages.cpp
+    tests/unit/backend_host/test_build_subprojects.cpp
     tests/unit/backend_host/test_build_script_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
@@ -1643,6 +1645,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
               "--order-by=file"
     )
     set_tests_properties(PrimeStruct_build_stages_${stages_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
+  # `b.subproject` merges the graph of a subfolder's make.prime (tests/unit/backend_host/test_build_subprojects.cpp).
+  foreach(subproject_case
+          "two subfolders merge" "that two scripts include" "subproject cycle" "missing make.prime and a folder outside"
+          "declares build_run" "calls Graph.run" "builds the steps of a subproject" "the merge prefixes ids"
+          "options of the project without build_run")
+    string(MAKE_C_IDENTIFIER "${subproject_case}" subproject_id)
+    add_test(
+      NAME PrimeStruct_build_subprojects_${subproject_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_subprojects"
+              "--test-case=*${subproject_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_subprojects_${subproject_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.

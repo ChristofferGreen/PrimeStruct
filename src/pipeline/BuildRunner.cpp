@@ -1,6 +1,7 @@
 #include "primec/pipeline/BuildRunner.h"
 
 #include "primec/pipeline/BuildCache.h"
+#include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
 
 #include <algorithm>
@@ -417,18 +418,13 @@ int runBuildCommand(const BuildCommandPlan &plan,
   // after the last `run` is the graph the script returns. Every stage starts the script again, so the stages share
   // the cache of the steps and a step a later graph repeats is up to date.
   for (int stage = 0; stage < MaxBuildStages; ++stage) {
-    std::vector<std::string> graphCommand = {
-        selfPath, "build", "--dry-run", plan.projectDir, "--stage", std::to_string(stage)};
-    for (const std::string &argument : plan.forwarded) {
-      graphCommand.push_back(argument);
-    }
     std::string graphText;
     std::string graphDiagnostics;
-    const int graphStatus = runProgramCaptured(graphCommand, "", graphText, graphDiagnostics);
+    const int graphStatus = resolveBuildGraph(plan, selfPath, stage, graphText, graphDiagnostics);
     if (graphStatus != 0) {
       err << graphDiagnostics;
       err << "primec build: the script " << plan.scriptPath << " did not produce a graph\n";
-      return graphStatus > 0 ? graphStatus : 1;
+      return graphStatus;
     }
     BuildGraphData graph;
     std::string error;

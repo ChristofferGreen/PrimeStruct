@@ -151,6 +151,8 @@ are what bounds it, as with the embed API.
 - **Subprojects.** `b.subproject("examples")` runs that folder's `make.prime` under the same profile and merges its
   graph under its own namespace. Inclusion is explicit, as `add_subdirectory` is, so every target has a visible
   origin. Only the root script may call `run`. A file included twice is evaluated once; a cycle is a diagnostic.
+  Landed in TODO-5916 (see section 11 for how it loads, and docs/spec/integration-and-tooling.md, Subprojects, for the
+  merge rules).
 - **Libraries (reserved).** The language is moving toward static libraries that link into an executable. The graph
   has the node kinds now, so the shape of a build does not change when the compiler catches up. The design is
   `docs/ModulesAndLibrariesPlan.md`: a library is the interface of a module as PrimeStruct text plus its unoptimized
@@ -221,8 +223,13 @@ Leaves in the Build system lane; the VM threads lane has its own list.
   Staging is done by running the script once per stage (`--stage <n>`) rather than suspending it: the VM has no
   coroutines, the script is deterministic, and the runner cache makes the repeat of stage 1 cheap.
 - **Whether the ceiling applies to library code.** Proposed: user code only.
-- **How a subproject is loaded:** a separate VM run whose exported graph the runner merges, or one program that imports
-  every script (needing one entry name per file). TODO-5916 decides and records it.
+- **How a subproject is loaded:** decided in TODO-5916: a separate VM run per script whose exported graph the runner
+  merges. A script cannot start a process, so `b.subproject` only records the folder in the export (`"subprojects"`);
+  `primec build` runs each named `make.prime` as `primec build --dry-run --raw <dir>` (a level of scripts at once) under
+  the options of the project minus `build_run`, and merges the exports by prefixing ids and rebasing paths. One program
+  importing every script would need one entry name per file and would let a subproject's definitions collide with the
+  project's; a separate run also gives each script its own compile cache entry and its own diagnostics, and makes the
+  ceiling a plain option.
 - **The library format** (section 7) and whether libraries merge before optimization.
 - **File name:** `make.prime`, as proposed, or `build.prime`. `make` suggests GNU make's semantics, which this is not.
 - **Fetching dependencies over the network** needs a lock file with hashes and the `net_io` effect; out of scope.

@@ -34,9 +34,29 @@ struct BuildGraphData {
   std::vector<std::string> problems;
   // The export ended at a `run` of the script (`"incomplete":true`): later stages follow.
   bool incomplete = false;
+  // The folders of `b.subproject` (`"subprojects"`), sorted; the graph of each is merged by `mergeBuildGraphJson`.
+  std::vector<std::string> subprojects;
+};
+
+// The graph of one subproject: its folder relative to the project root (normalized, `/` separators) and the JSON
+// export of its own script.
+struct BuildSubgraph {
+  std::string directory;
+  std::string text;
 };
 
 // Parses the JSON text of a graph export. Returns false and sets `error` when the text is not a graph export.
 bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::string &error);
+
+// Merges the exports of subprojects into the export of the project (docs/BuildSystemPlan.md section 7). Each node of a
+// subgraph is added with its id (and link ends) prefixed `<directory>/`, its source, output, import paths, watched
+// directories and the link arguments that name a file of the subproject made relative to the project root, and its
+// problems prefixed `<directory>: `. The result lists the nodes sorted as a single export does, keeps the other fields of
+// the project's export and drops `"subprojects"`. `projectDir` is where the link arguments are looked up.
+bool mergeBuildGraphJson(const std::string &parentText,
+                         const std::vector<BuildSubgraph> &subgraphs,
+                         const std::string &projectDir,
+                         std::string &merged,
+                         std::string &error);
 
 } // namespace primec

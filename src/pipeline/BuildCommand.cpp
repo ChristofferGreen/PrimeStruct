@@ -22,6 +22,10 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
       plan.dryRun = true;
       continue;
     }
+    if (argument == "--raw") {
+      plan.raw = true;
+      continue;
+    }
     std::string value;
     bool hasValue = false;
     const bool isJobs = argument == "--jobs" || argument.rfind("--jobs=", 0) == 0;

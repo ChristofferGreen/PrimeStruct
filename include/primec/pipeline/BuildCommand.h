@@ -11,6 +11,9 @@ namespace primec {
 struct BuildCommandPlan {
   // Whether `--dry-run` was given: print the graph instead of running it.
   bool dryRun = false;
+  // `--raw` (internal, with `--dry-run`): print the export of this script alone. Without it the dry run also runs the
+  // scripts of its subprojects and prints the merged graph (include/primec/pipeline/BuildSubprojects.h).
+  bool raw = false;
   // The project directory the command was given (default `.`).
   std::string projectDir;
   // `--out-dir` (default `<dir>/out`): where the compile steps write; `--jobs` (0: the core count): how many run at

@@ -169,7 +169,6 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | ready | build-graph-defects |
-| TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | ready | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-5920 | PrimeScroll builds with `make.prime` | ready | build-dogfood |
@@ -209,7 +208,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5917, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6015, TODO-6016
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -233,7 +232,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; ready: TODO-5916 (subprojects), TODO-5917 (options), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) landed; ready: TODO-5917 (options), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
 
@@ -1021,23 +1020,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a program that does not spawn prints and starts exactly as before
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
-
-- [~] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
-  - owner: ai
-  - status: ready
-  - claimed_by: subprojects-a (worktree-agent-a1bd682959e1d5ad1), 2026-11-17
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md, section 7)
-  - parallel_track: build-subprojects
-  - scope: `b.subproject("dir")` runs `dir/make.prime` under the same profile with paths relative to `dir`, and merges the graph it returns into the parent under the namespace `dir` (node ids prefixed). A file reached twice is evaluated once; a cycle is a diagnostic naming the files; a missing `make.prime` is a diagnostic. How a subproject loads is decided here and recorded in docs/BuildSystemPlan.md section 11: a separate VM run whose export the runner merges (preferred), or one program that imports every script, which needs one entry name per file.
-  - acceptance:
-    - a fixture with two subfolders prints a merged graph with namespaced node ids in the dry run
-    - a diamond (two subprojects including a third) evaluates the third once
-    - a cycle and a missing `make.prime` each give a diagnostic
-    - relative paths in a subproject's script resolve against its own folder
-    - a subproject script that declares `build_run` or calls `Graph.run` is a diagnostic (the build profile grants `build_run` to the root script only; TODO-5918 landed `run` and the effect for the root script)
-    - full release gate green
-  - stop_rule: explicit inclusion and merging; no automatic discovery, no running from a subproject.
 
 - [ ] TODO-5917: Build options: `b.option` and `primec build --option`
   - owner: ai

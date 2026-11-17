@@ -93,7 +93,7 @@ compiler yet` or the problem. There is no command or function step yet.
 Stages. A script that must read what a step wrote (the files a generator produced) calls `graph.run()` on the graph it
 has built so far and then builds a second graph; `build` declares `effects(build_run, ...)`, which the profile grants
 (a definition that calls `run` without declaring it is the ordinary `requires build_run effect` diagnostic, and a
-subproject script will not be granted it: docs/BuildSystemPlan.md section 7). The command starts the dry run once per
+subproject script is not granted it, see Subprojects). The command starts the dry run once per
 stage with the internal option `--stage <n>` (default 0), which reaches the script as its first program argument:
 the `run` that is call number `n` writes the export of the graph it was called on, with `"incomplete":true` after
 `problems`, and ends the script, so nothing after it executes; an earlier `run` returns at once. The command runs
@@ -105,6 +105,27 @@ date`; each stage reads the file system again, so a glob after a `run` sees the 
 is run as a plain program (no stage argument) treats `run` as a no-op. A script with more than 256 stages is an
 error. A step kind that writes PrimeStruct source does not exist yet (function steps, TODO-5919), so the first
 stage of a script today writes other files (`--emit=ir` output, executables).
+
+Subprojects. `b.subproject("dir")` (`/std/build`) includes the graph of `<dir>/make.prime`; the call only records the
+folder, in `"subprojects":[...]` of the script's own export. `primec build` runs the project's script, then the script of
+every folder named, and the scripts those name, each in a `primec build --dry-run --raw` VM run of its own (the internal
+option `--raw` prints one script's export alone; the scripts of a level run at once), and merges the exports. The
+plain `--dry-run` prints the merged graph, so a project that names no subproject prints exactly the export of its script.
+A subproject runs with its folder as the project directory of its script, under the options of the project and an effect
+ceiling without `build_run`: a subproject script that declares `build_run` or calls `Graph.run` fails like any script
+outside the ceiling, with the position in `<dir>/make.prime`; only the root script has stages. Merging: a node's id and
+the ends of a link get the prefix `<dir>/` (`app/exe:app`), the output name moves under the folder (`app/app`, built in
+`<out-dir>/app/app`), and the paths of the node that are relative (source, import paths, watched directories, and the
+link arguments that are not options and name an existing file of the subproject) become relative to the project root
+(`app/src/main.prime`); an absolute path stays. The problems of a subproject get the prefix `<dir>: `. The merged nodes
+are sorted by id as in a single export, and `"subprojects"` is dropped. `<dir>` is the folder relative to the project root,
+normalized (`a/../shared` is `shared`), so a folder two scripts name is run and merged once (a diamond). A folder outside
+the project (absolute, or reaching `..` past the root), one without `make.prime` and an inclusion cycle are diagnostics:
+`primec build: make.prime: subproject "../x" is not a folder inside the project`, `... subproject "x" has no make.prime
+(<path>)` and `primec build: subproject cycle: make.prime -> a/make.prime -> make.prime`. Each script keeps its own script
+cache in its folder's `.ps/cache`, whose entry lists every file that script's compile read, so editing a subproject's
+script or an import of it recompiles that script only; the step cache of the merged steps is the project's and keys on the
+rebased arguments.
 
 Glob inputs. A script that expands a pattern with `/std/glob` (docs/spec/stdlib-reference.md) passes the directories
 the glob listed to `b.watch("compile:app", listed)`, after the target is added. The graph export then carries

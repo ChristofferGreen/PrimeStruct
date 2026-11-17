@@ -319,6 +319,9 @@ namespace build {
     [public vector<Node> mut] nodes{vector<Node>{}}
     // Problems found while the graph was built (a `watch` that names a missing target), in call order.
     [public vector<String> mut] buildProblems{vector<String>{}}
+    // The folders `Build.subproject` named, sorted bytewise and without duplicates. The runner (`primec build`) runs
+    // each folder's `make.prime` and merges its graph under that folder's name; the graph value only records them.
+    [public vector<String> mut] subprojectDirs{vector<String>{}}
 
     [return<i32>]
     nodeCount() {
@@ -372,6 +375,10 @@ namespace build {
         json.stringValue(this.buildProblems[i].view())
       }
       json.endArray()
+      if(this.subprojectDirs.count() > 0i32) {
+        json.key("subprojects")
+        write_list(json, this.subprojectDirs)
+      }
       if(incomplete) {
         json.key("incomplete")
         json.boolValue(true)
@@ -487,6 +494,16 @@ namespace build {
       if(!found) {
         this.collected.buildProblems.push(problem_text("watch names a missing target ", targetId, "", ""))
       }
+    }
+
+    // Includes the graph of `<dir>/make.prime` (docs/BuildSystemPlan.md section 7). Nothing runs here: the export lists
+    // the folder under `"subprojects"` and `primec build` runs that script (without the `build_run` effect, so it cannot
+    // run steps), then merges its nodes with ids prefixed by `<dir>/` and every path of the nodes relative to the project.
+    // A folder named twice is one inclusion.
+    [mut effects(heap_alloc)]
+    subproject([StringView] dir) {
+      [String] owned{dir.toOwned()}
+      insert_sorted_unique(this.collected.subprojectDirs, owned)
     }
 
     // The graph built so far, as a value.

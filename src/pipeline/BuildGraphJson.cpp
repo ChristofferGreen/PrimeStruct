@@ -1,7 +1,10 @@
 #include "primec/pipeline/BuildGraphJson.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <memory>
 #include <utility>
 
@@ -273,7 +276,222 @@ std::vector<std::string> stringList(const JsonValue &object, const std::string &
   return result;
 }
 
+// The text of `value` in the compact form of the graph export (no spaces); members keep their order.
+void writeJson(const JsonValue &value, std::string &out) {
+  switch (value.kind) {
+  case JsonValue::Kind::Null:
+    out += "null";
+    break;
+  case JsonValue::Kind::Bool:
+    out += value.boolean ? "true" : "false";
+    break;
+  case JsonValue::Kind::Number: {
+    char buffer[32];
+    std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<long long>(value.number));
+    out += buffer;
+    break;
+  }
+  case JsonValue::Kind::String:
+    out += '"';
+    for (const char c : value.text) {
+      if (c == '"' || c == '\\') {
+        out += '\\';
+        out += c;
+      } else if (static_cast<unsigned char>(c) < 0x20) {
+        char buffer[8];
+        std::snprintf(buffer,
+                      sizeof(buffer),
+                      "\\u%04x",
+                      static_cast<unsigned>(static_cast<unsigned char>(c)));
+        out += buffer;
+      } else {
+        out += c;
+      }
+    }
+    out += '"';
+    break;
+  case JsonValue::Kind::Array: {
+    out += '[';
+    bool first = true;
+    for (const JsonValue &item : value.items) {
+      out += first ? "" : ",";
+      first = false;
+      writeJson(item, out);
+    }
+    out += ']';
+    break;
+  }
+  case JsonValue::Kind::Object: {
+    out += '{';
+    bool first = true;
+    for (const auto &member : value.members) {
+      out += first ? "" : ",";
+      first = false;
+      JsonValue key;
+      key.kind = JsonValue::Kind::String;
+      key.text = member.first;
+      writeJson(key, out);
+      out += ':';
+      writeJson(member.second, out);
+    }
+    out += '}';
+    break;
+  }
+  }
+}
+
+// `path` as seen from the project root, for a subproject folder `directory` (relative to the root); a path that is
+// empty or absolute stays as it is.
+std::string rebasePath(const std::string &directory, const std::string &path) {
+  if (path.empty() || std::filesystem::path(path).is_absolute()) {
+    return path;
+  }
+  return (std::filesystem::path(directory) / path).lexically_normal().generic_string();
+}
+
+void rebaseStringList(const std::string &directory, JsonValue *list) {
+  if (list == nullptr || list->kind != JsonValue::Kind::Array) {
+    return;
+  }
+  for (JsonValue &item : list->items) {
+    if (item.kind == JsonValue::Kind::String) {
+      item.text = rebasePath(directory, item.text);
+    }
+  }
+}
+
+JsonValue *mutableField(JsonValue &object, const std::string &key) {
+  for (auto &member : object.members) {
+    if (member.first == key) {
+      return &member.second;
+    }
+  }
+  return nullptr;
+}
+
+// A node of the subproject `directory` as the parent graph sees it: the id and the link ends carry the folder as a
+// prefix, and every path moves from "relative to the subproject" to "relative to the project".
+void moveNodeIntoParent(const std::string &directory,
+                        const std::string &projectDir,
+                        JsonValue &node) {
+  for (const char *key : {"id", "from", "to"}) {
+    JsonValue *field = mutableField(node, key);
+    if (field != nullptr && field->kind == JsonValue::Kind::String) {
+      field->text = directory + "/" + field->text;
+    }
+  }
+  JsonValue *source = mutableField(node, "source");
+  if (source != nullptr && source->kind == JsonValue::Kind::String) {
+    source->text = rebasePath(directory, source->text);
+  }
+  // The output keeps its name under the folder, so two subprojects can both build an `app`.
+  JsonValue *output = mutableField(node, "output");
+  if (output != nullptr && output->kind == JsonValue::Kind::String) {
+    output->text = rebasePath(directory, output->text);
+  }
+  rebaseStringList(directory, mutableField(node, "inputDirs"));
+  JsonValue *compiler = mutableField(node, "compiler");
+  if (compiler == nullptr || compiler->kind != JsonValue::Kind::Object) {
+    return;
+  }
+  rebaseStringList(directory, mutableField(*compiler, "import_paths"));
+  // A link argument names a file when it is not an option and the file exists in the subproject.
+  JsonValue *linkArgs = mutableField(*compiler, "link_args");
+  if (linkArgs != nullptr && linkArgs->kind == JsonValue::Kind::Array) {
+    for (JsonValue &item : linkArgs->items) {
+      if (item.kind != JsonValue::Kind::String || item.text.empty() || item.text[0] == '-') {
+        continue;
+      }
+      std::error_code ec;
+      const std::filesystem::path candidate =
+          std::filesystem::path(projectDir) / directory / item.text;
+      if (std::filesystem::is_regular_file(candidate, ec)) {
+        item.text = rebasePath(directory, item.text);
+      }
+    }
+  }
+}
+
 } // namespace
+
+bool mergeBuildGraphJson(const std::string &parentText,
+                         const std::vector<BuildSubgraph> &subgraphs,
+                         const std::string &projectDir,
+                         std::string &merged,
+                         std::string &error) {
+  JsonValue parent;
+  if (!JsonReader(parentText).parse(parent, error)) {
+    error = "the graph is not valid JSON: " + error;
+    return false;
+  }
+  JsonValue *nodes =
+      parent.kind == JsonValue::Kind::Object ? mutableField(parent, "nodes") : nullptr;
+  JsonValue *problems =
+      parent.kind == JsonValue::Kind::Object ? mutableField(parent, "problems") : nullptr;
+  if (nodes == nullptr || nodes->kind != JsonValue::Kind::Array || problems == nullptr ||
+      problems->kind != JsonValue::Kind::Array) {
+    error = "the graph has no \"nodes\" and \"problems\" arrays";
+    return false;
+  }
+  parent.members.erase(
+      std::remove_if(parent.members.begin(),
+                     parent.members.end(),
+                     [](const auto &member) { return member.first == "subprojects"; }),
+      parent.members.end());
+  nodes = mutableField(parent, "nodes");
+  problems = mutableField(parent, "problems");
+  for (const BuildSubgraph &subgraph : subgraphs) {
+    JsonValue child;
+    if (!JsonReader(subgraph.text).parse(child, error)) {
+      error = subgraph.directory + ": the graph is not valid JSON: " + error;
+      return false;
+    }
+    const JsonValue *childNodes =
+        child.kind == JsonValue::Kind::Object ? child.find("nodes") : nullptr;
+    if (childNodes == nullptr || childNodes->kind != JsonValue::Kind::Array) {
+      error = subgraph.directory + ": the graph has no \"nodes\" array";
+      return false;
+    }
+    for (JsonValue node : childNodes->items) {
+      if (node.kind == JsonValue::Kind::Object) {
+        moveNodeIntoParent(subgraph.directory, projectDir, node);
+      }
+      nodes->items.push_back(std::move(node));
+    }
+    const JsonValue *childProblems = child.find("problems");
+    if (childProblems != nullptr && childProblems->kind == JsonValue::Kind::Array) {
+      for (JsonValue problem : childProblems->items) {
+        if (problem.kind == JsonValue::Kind::String) {
+          problem.text = subgraph.directory + ": " + problem.text;
+        }
+        problems->items.push_back(std::move(problem));
+      }
+    }
+  }
+  // The export order: by id, then by the text of the node.
+  std::vector<std::pair<std::string, std::string>> keyed;
+  for (const JsonValue &node : nodes->items) {
+    std::string text;
+    writeJson(node, text);
+    const JsonValue *id = node.find("id");
+    keyed.emplace_back(id != nullptr ? id->text : std::string(), text);
+  }
+  std::sort(keyed.begin(), keyed.end());
+  std::string sortedNodes = "[";
+  for (size_t i = 0; i < keyed.size(); ++i) {
+    sortedNodes += (i == 0 ? "" : ",") + keyed[i].second;
+  }
+  sortedNodes += "]";
+  JsonValue sorted;
+  if (!JsonReader(sortedNodes).parse(sorted, error)) {
+    return false;
+  }
+  *nodes = std::move(sorted);
+  merged.clear();
+  writeJson(parent, merged);
+  merged += "\n";
+  return true;
+}
 
 bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::string &error) {
   graph = {};
@@ -325,6 +543,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
   const JsonValue *incomplete = root.find("incomplete");
   graph.incomplete =
       incomplete != nullptr && incomplete->kind == JsonValue::Kind::Bool && incomplete->boolean;
+  graph.subprojects = stringList(root, "subprojects");
   const JsonValue *problems = root.find("problems");
   if (problems != nullptr && problems->kind == JsonValue::Kind::Array) {
     for (const JsonValue &problem : problems->items) {
