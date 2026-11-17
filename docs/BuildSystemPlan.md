@@ -30,7 +30,7 @@ Checked in the sources on 2026-11-11.
 | Compiling as a library | `include/primec/pipeline/CompilePipeline.h`, `primec_embed` | The pipeline can run in-process; the embed API takes host functions bound by the embedder and a cancel flag (`include/primec/embed/Script.h`) |
 | Compilation unit | `docs/spec/source-pipeline.md` | Whole program: imports flatten into one stream, so a build of `.prime` sources has an entry point and an import closure, not a list of files to compile one by one. The compiler records an expanded-source ledger of the files it read |
 | The current recipe | `scripts/build_native_app.sh` | Compiles a program with `--emit=optexe` and links a UI backend through `--link-arg` (or `--direct` with the native backend) |
-| Stdlib for a build script | `stdlib/std/os/os.prime`, `stdlib/std/file/file.prime` | Environment variable, CPU count, file size, reading a file, opening files. Directory listing with kind, size and modification time is `/std/file/listing` (TODO-5906); **no glob** yet (TODO-5907); path functions are `/std/path` |
+| Stdlib for a build script | `stdlib/std/os/os.prime`, `stdlib/std/file/file.prime` | Environment variable, CPU count, file size, reading a file, opening files. Directory listing with kind, size and modification time is `/std/dir` (TODO-5906); glob is `/std/glob` (TODO-5907), which also returns the directories it listed so the cache can treat them as inputs (TODO-6009); path functions are `/std/path` |
 | Host functions | `[host]` definitions, for example `ps_os_*` in `stdlib/std/os/os.prime`, bound in the VM host table and in `*_posix.cpp` for `optexe` | The pattern for new host calls |
 | Effect checks | `docs/spec/language-core.md`, Effects | A definition without `[effects]` gets the default set (`io_out`); `--default-effects` changes it. There is no ceiling that caps what a definition may declare |
 | Embed library | `scripts/check_embed_no_process.sh` | `primec_embed` must stay free of process spawning, so the build runner lives in `primec` |
@@ -116,12 +116,12 @@ main() {
 - A compiler object holds the settings. `[Compiler mut] vm{cc}` copies it, and changing `emit` on the copy gives the
   same program as a second target. A target keeps the settings its compiler had at the call.
 - The script needs only `heap_alloc` (its strings and vectors). It does not need `file_read` yet: nothing lists a
-  directory until glob exists, and `--profile build` allows `file_read` and `heap_alloc`. `--allow-effects file_read`
+  directory unless it imports `/std/glob` or `/std/dir`, and `--profile build` allows `file_read` and `heap_alloc`. `--allow-effects file_read`
   alone rejects it.
 - `graph.export()` returns the deterministic JSON of section 4. `tests/fixtures/build/build_graph.prime` prints the export
   of a graph like this one; the output is `tests/fixtures/build/build_graph.golden.json`, and building the same
   graph in the opposite call order gives the same text.
-- File arrays come from `b.files("src/**/*.prime")` once glob exists; for `.prime` sources the compiler discovers the
+- File arrays come from `b.files("src/**/*.prime")` (glob exists as `/std/glob`; `b.files` itself is not written yet); for `.prime` sources the compiler discovers the
   import closure itself, so arrays matter most for native glue passed through link arguments. `b.files` and options
   (`b.option("native_ui", true)`, read from `primec build --option native_ui=false`) are not part of the graph value yet.
 

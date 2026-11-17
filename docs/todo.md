@@ -167,7 +167,10 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
-| TODO-5907 | `/std/file` expands glob patterns | ready | build-glob |
+| TODO-6009 | A build step whose glob listing changes runs again | ready | build-glob |
+| TODO-6010 | Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM | ready | build-graph-defects |
+| TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | ready | build-graph-defects |
+| TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | ready | build-graph-defects |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5918 | A script can run its graph in stages | ready | build-stages |
@@ -196,13 +199,13 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5907 (build-glob): `/std/glob` expands glob patterns
+- TODO-6009 (build-glob): A build step whose glob listing changes runs again
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-5535
-3. TODO-5907
+3. TODO-6009
 
 ### Priority Lanes
 
@@ -211,9 +214,9 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5907, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6009, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime): TODO-6008
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6010, TODO-6011, TODO-6012
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -235,9 +238,9 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. Ready: TODO-5907 (glob, over `/std/dir`); then TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) landed; ready: TODO-6009 (a changed glob listing re-runs a step); then TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
-Language defects found by the build graph (all closed but one): TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) is `ready` outside `Ready Now`.
+Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver), TODO-6010 (shifting `vector<String>` elements frees a string twice), TODO-6011 (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
@@ -255,6 +258,42 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the builtin vector element reads of TODO-6002 stay places (the element_receivers suite stays green)
     - full release gate green
   - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
+
+- [ ] TODO-6010: Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
+  - parallel_track: build-graph-defects
+  - scope: `insert_sorted([vector<String> mut] items, [String copy] item) { [i32 mut] slot{0i32}  items.push(item)  [i32 mut] at{items.count() - 1i32}  while(at > slot) { items[at] = items[at - 1i32]  at = at - 1i32 } }`, called six times with `stringFrom("hello world")` bound to a local, ends with `VM error: invalid string heap free address` (2026-11-17, release). The same loop with the assignment removed is clean, and `v[2i32] = v[1i32]` on a three-element vector of distinct literals is clean, so the fault needs the element-to-element assignment inside the loop on strings that were pushed as copies. Find which side drops or copies the slot twice. Workaround in glob: rebuild the vector with `push`.
+  - acceptance:
+    - a program matrix case that shifts the elements of a `vector<String>` up by one with an element-to-element assignment in a loop ends with balanced string-heap statistics on the VM and optexe
+    - full release gate green
+  - stop_rule: element assignment between two elements of one vector of a struct or `String`.
+
+- [ ] TODO-6011: A name bound in one loop body and moved there is reported as moved in a sibling loop body
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
+  - parallel_track: build-graph-defects
+  - scope: Two `for` loops in one function each declare `[String] existing{items[i]}` and pass it to `merged.push(existing)`; the semantic pass reports `use-after-move: existing was moved at <line of the first loop>` on the second loop's use, although each binding is a new local of its own body. Moves should be tracked per binding, not per name in the function. Workaround in glob: distinct names per loop.
+  - acceptance:
+    - the two-loop shape compiles and runs; a use after a real move of the same binding is still a diagnostic
+    - full release gate green
+  - stop_rule: move tracking for same-named bindings in sibling scopes.
+
+- [ ] TODO-6012: A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
+  - parallel_track: build-graph-defects
+  - scope: `visit([StringView] base, [StringView] rel, [Reference<vector<DirEntry>>] entries, [Reference<vector<String>>] segments, ..., [vector<String> mut] matches)` that calls `walk`, which calls `visit` again, stops at lowering with `vm backend does not support recursive calls: /std/glob/visit` (2026-11-17). `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) rejects a `Reference<vector<T>>` (the target text contains `<`) and a `StringView`-by-value mix, so the definition is inlined and the recursion is rejected. Either lower such definitions as real calls or make the diagnostic name the parameter that kept the definition inline. glob walks with an explicit stack instead.
+  - acceptance:
+    - a recursive definition with `[vector<i32> mut]` and `[Reference<vector<String>>]` parameters runs on the VM and optexe, or the diagnostic names the parameter and the rule
+    - full release gate green
+  - stop_rule: the address-ABI parameter check for vectors and references to vectors.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
@@ -998,28 +1037,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [~] TODO-5907: `/std/glob` expands glob patterns (split: the cache inputs are TODO-6009)
-  - owner: ai
-  - status: in_progress
-  - claimed_by: build-agent (worktree-agent-a86f43f9ea1ce15ab), 2026-11-17
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md)
-  - parallel_track: build-glob
-  - scope: `glob(base, pattern)` returns the paths under `base` that match, sorted bytewise: `*` (within a segment), `**` (any number of segments), `?`. A name that begins with a dot matches only a pattern segment that begins with a dot. Written in PrimeStruct over the listing of TODO-5906 (`listDirectory` of `/std/dir`) and the `/std/path` functions. The directory listings it read are what a build treats as inputs, so the function also returns them (or a second function does) for TODO-5915.
-  - acceptance:
-    - tests over a fixture tree for `*.prime`, `**/*.prime`, `?`, a dotted file, and no match
-    - results are identical on the VM and with `--emit=optexe`
-    - docs/spec/stdlib-reference.md documents it
-    - full release gate green
-  - stop_rule: the three pattern forms; no bracket expressions, no negation.
-  - notes: split on 2026-11-17. This leaf is the `glob` function in `/std/glob` (a module of its own, like `/std/dir`)
-    that returns the matches and the directories it listed; TODO-6009 makes the build cache treat those directories as
-    inputs.
-
 - [ ] TODO-6009: A build step whose glob listing changes runs again
   - owner: ai
-  - status: blocked
-  - depends_on: TODO-5907
+  - status: ready
   - created_at: 2026-11-17
   - phase: Build system (docs/BuildSystemPlan.md, section 8)
   - parallel_track: build-glob

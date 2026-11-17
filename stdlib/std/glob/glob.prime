@@ -1,0 +1,320 @@
+// Glob patterns over the directory tree (docs/spec/stdlib-reference.md, /std/glob), written over `listDirectory` of
+// `/std/dir` and the `/std/path` functions. `glob(base, pattern, matches, listed)` walks only the directories the
+// pattern can reach, and returns both the matched paths and the directories it listed: a build treats the listings as
+// inputs, because a file that appears or disappears there changes the answer (TODO-6009 hands them to the cache).
+import /std/dir/*
+import /std/file/*
+import /std/path/*
+import /std/text/*
+import /std/text/view/*
+import /std/collections/vector/*
+
+namespace std {
+namespace glob {
+
+  // The errno that a bad pattern returns (EINVAL).
+  [public return<i32>]
+  patternErrorCode() {
+    return(22i32)
+  }
+
+  // The errno returned when the walk goes deeper than `max_depth` directories (ELOOP on Linux; a link back to a parent
+  // directory would make `**` endless).
+  [public return<i32>]
+  depthErrorCode() {
+    return(40i32)
+  }
+
+  [return<i32>]
+  max_depth() {
+    return(64i32)
+  }
+
+  // True when the name `name` matches the segment `seg`: `*` is any run of bytes (even none), `?` is any one byte, every
+  // other byte matches itself. A segment never contains a "/".
+  [return<bool>]
+  segment_matches([StringView] name, [StringView] seg) {
+    [i32 mut] n{0i32}
+    [i32 mut] p{0i32}
+    [i32 mut] starPattern{-1i32}
+    [i32 mut] starName{0i32}
+    while(n < name.count()) {
+      if(p < seg.count() && seg.byteAt(p) == 42u8) {
+        starPattern = p
+        starName = n
+        p = p + 1i32
+      } else {
+        if(p < seg.count() && (seg.byteAt(p) == 63u8 || seg.byteAt(p) == name.byteAt(n))) {
+          p = p + 1i32
+          n = n + 1i32
+        } else {
+          if(starPattern < 0i32) {
+            return(false)
+          }
+          starName = starName + 1i32
+          n = starName
+          p = starPattern + 1i32
+        }
+      }
+    }
+    while(p < seg.count() && seg.byteAt(p) == 42u8) {
+      p = p + 1i32
+    }
+    return(p == seg.count())
+  }
+
+  // True when the name begins with a dot.
+  [return<bool>]
+  is_hidden([StringView] name) {
+    return(name.count() > 0i32 && name.byteAt(0i32) == 46u8)
+  }
+
+  // True when the entry name `name` may match the segment `seg`: a name that begins with a dot matches only a segment
+  // that begins with a dot.
+  [return<bool>]
+  name_matches([StringView] name, [StringView] seg) {
+    if(is_hidden(name) && !is_hidden(seg)) {
+      return(false)
+    }
+    return(segment_matches(name, seg))
+  }
+
+  // True when `part` is a legal segment: not empty, not "." or "..", and a "**" only as the whole segment.
+  [return<bool>]
+  segment_is_legal([StringView] part) {
+    if(part.count() == 0i32 || part.equalsText(".") || part.equalsText("..")) {
+      return(false)
+    }
+    return(part.indexOf("**") < 0i32 || part.equalsText("**"))
+  }
+
+  // Replaces `segments` with the segments of `pattern`, or returns false when the pattern is bad: empty, absolute, with
+  // an empty segment (a repeated or trailing "/"), with a "." or ".." segment, or with a "**" that is not a whole
+  // segment ("a**", "**b"). Consecutive "**" segments become one.
+  [return<bool> effects(heap_alloc)]
+  split_pattern([StringView] pattern, [vector<String> mut] segments) {
+    segments.clear()
+    [i32 mut] start{0i32}
+    for([i32 mut] at{0i32}, at <= pattern.count(), at++) {
+      if(at == pattern.count() || pattern.byteAt(at) == 47u8) {
+        [StringView] part{pattern.slice(start, at)}
+        start = at + 1i32
+        if(!segment_is_legal(part)) {
+          segments.clear()
+          return(false)
+        }
+        [bool mut] repeated{false}
+        if(part.equalsText("**") && segments.count() > 0i32) {
+          [String] previous{segments[segments.count() - 1i32]}
+          repeated = previous.equalsText("**")
+        }
+        if(!repeated) {
+          segments.push(part.toOwned())
+        }
+      }
+    }
+    return(true)
+  }
+
+  // Inserts `item` into the sorted `items`, bytewise, unless it is there already. The vector is rebuilt: shifting its
+  // elements one by one with `items[at] = items[at - 1]` freed a string twice on the VM (TODO-6010).
+  [effects(heap_alloc)]
+  insert_sorted([vector<String> mut] items, [String copy] item) {
+    [i32 mut] slot{0i32}
+    [bool mut] found{false}
+    [bool mut] searching{true}
+    while(searching && slot < items.count()) {
+      [String] existing{items[slot]}
+      [i32] order{existing.view().compare(item.view())}
+      if(order == 0i32) {
+        found = true
+        searching = false
+      } else {
+        if(order < 0i32) {
+          slot = slot + 1i32
+        } else {
+          searching = false
+        }
+      }
+    }
+    if(found) {
+      return()
+    }
+    [vector<String> mut] merged{vector<String>{}}
+    for([i32 mut] i{0i32}, i < slot, i++) {
+      [String] headItem{items[i]}
+      merged.push(headItem)
+    }
+    merged.push(item)
+    for([i32 mut] i{slot}, i < items.count(), i++) {
+      [String] tailItem{items[i]}
+      merged.push(tailItem)
+    }
+    items.clear()
+    for([i32 mut] i{0i32}, i < merged.count(), i++) {
+      [String] moved{merged[i]}
+      items.push(moved)
+    }
+  }
+
+  // The path to list for the directory `rel` below `base`: "." for an empty base and an empty `rel`.
+  [return<String> effects(heap_alloc)]
+  list_path([StringView] base, [StringView] rel) {
+    if(rel.empty()) {
+      if(base.empty()) {
+        return(stringFrom("."))
+      }
+      return(base.toOwned())
+    }
+    return(join(base, rel))
+  }
+
+  // A directory still to be read: `rel` is its path below the base, `index` the segment of the pattern that applies to
+  // its entries and `depth` how many directories lie between it and the base. The walk keeps these in a vector instead
+  // of calling itself: the VM does not run a recursive call whose parameters are vectors.
+  [public struct]
+  GlobTask() {
+    [public String mut] rel{String{}}
+    [public i32 mut] index{0i32}
+    [public i32 mut] depth{0i32}
+  }
+
+  // Applies the ordinary (not "**") segment `index` to the entries of the directory `rel`: a hit is a match when the
+  // segment is the last one, and a directory hit is read next with the segment after it.
+  [effects(heap_alloc)]
+  apply_plain([StringView] base,
+              [StringView] rel,
+              [Reference<vector<DirEntry>>] entries,
+              [Reference<vector<String>>] segments,
+              [i32] index,
+              [i32] depth,
+              [vector<String> mut] matches,
+              [vector<GlobTask> mut] tasks) {
+    [String] seg{segments[index]}
+    [bool] last{index == segments.count() - 1i32}
+    for([i32 mut] i{0i32}, i < entries.count(), i++) {
+      [String] name{entries[i].name}
+      if(name_matches(name.view(), seg.view())) {
+        [String] childRel{join(rel, name.view())}
+        if(last) {
+          [String] full{join(base, childRel.view())}
+          insert_sorted(matches, full)
+        } else {
+          if(entries[i].isDirectory()) {
+            [GlobTask mut] next{GlobTask{}}
+            next.rel = childRel
+            next.index = index + 1i32
+            next.depth = depth + 1i32
+            tasks.push(next)
+          }
+        }
+      }
+    }
+  }
+
+  // Applies the "**" segment `index` to the entries of the directory `rel`: every entry that does not begin with a dot
+  // is a match when "**" is the last segment, and every such directory is read next with "**" again.
+  [effects(heap_alloc)]
+  apply_deep([StringView] base,
+             [StringView] rel,
+             [Reference<vector<DirEntry>>] entries,
+             [Reference<vector<String>>] segments,
+             [i32] index,
+             [i32] depth,
+             [vector<String> mut] matches,
+             [vector<GlobTask> mut] tasks) {
+    [bool] last{index == segments.count() - 1i32}
+    for([i32 mut] i{0i32}, i < entries.count(), i++) {
+      [String] name{entries[i].name}
+      if(!is_hidden(name.view())) {
+        [String] childRel{join(rel, name.view())}
+        if(last) {
+          [String] full{join(base, childRel.view())}
+          insert_sorted(matches, full)
+        }
+        if(entries[i].isDirectory()) {
+          [GlobTask mut] next{GlobTask{}}
+          next.rel = childRel
+          next.index = index
+          next.depth = depth + 1i32
+          tasks.push(next)
+        }
+      }
+    }
+  }
+
+  // Applies the segment `index` of the pattern to the entries of the directory `rel`. "**" that is not the last segment
+  // stands for no directory as well as for any number of them, so the segment after it applies to these entries too
+  // (`split_pattern` leaves no "**" next to another).
+  [effects(heap_alloc)]
+  apply_segment([StringView] base,
+                [StringView] rel,
+                [Reference<vector<DirEntry>>] entries,
+                [Reference<vector<String>>] segments,
+                [i32] index,
+                [i32] depth,
+                [vector<String> mut] matches,
+                [vector<GlobTask> mut] tasks) {
+    [String] seg{segments[index]}
+    if(seg.equalsText("**")) {
+      if(index < segments.count() - 1i32) {
+        apply_plain(base, rel, entries, segments, index + 1i32, depth, matches, tasks)
+      }
+      apply_deep(base, rel, entries, segments, index, depth, matches, tasks)
+    } else {
+      apply_plain(base, rel, entries, segments, index, depth, matches, tasks)
+    }
+  }
+
+  // Replaces `matches` with the paths under the directory `base` that match `pattern`, and `listed` with the
+  // directories read to find them, both sorted bytewise and without duplicates. A match is `base` joined with the path
+  // of the entry below it: for base "src" and pattern "*.prime" a match is "src/a.prime"; an empty base is the working
+  // directory and adds nothing to the paths (and is listed as ".").
+  //
+  // The pattern is a "/"-separated list of segments. In a segment `*` matches any run of bytes within one name (even
+  // none) and `?` any one byte; a segment that is exactly `**` stands for any number of directories, none included,
+  // and as the last segment it matches every entry below. Entries of every kind match, a directory and a file alike.
+  // A name that begins with a dot matches only a segment that begins with a dot, so `*` and `**` pass over ".git";
+  // a symbolic link is followed. No other character is special: there are no bracket expressions, no negation and no
+  // escapes.
+  //
+  // Returns `Result.ok()`, or a `FileError`: `patternErrorCode()` (22) for a bad pattern (empty, absolute, an empty
+  // segment, a "." or ".." segment, a "**" inside a longer segment), `depthErrorCode()` (40) when the walk goes more
+  // than 64 directories deep, or the errno of `listDirectory` for `base` or a directory below it. A pattern with no
+  // match is `Result.ok()` with no matches. After an error both vectors are empty.
+  [public return<Result<FileError>> effects(file_read, heap_alloc)]
+  glob([StringView] base, [StringView] pattern, [vector<String> mut] matches, [vector<String> mut] listed) {
+    matches.clear()
+    listed.clear()
+    [vector<String> mut] segments{vector<String>{}}
+    if(!split_pattern(pattern, segments)) {
+      [FileError] bad{patternErrorCode()}
+      return(bad)
+    }
+    [vector<GlobTask> mut] tasks{vector<GlobTask>{}}
+    tasks.push(GlobTask{})
+    while(tasks.count() > 0i32) {
+      [GlobTask] task{tasks[tasks.count() - 1i32]}
+      tasks.pop()
+      if(task.depth > max_depth()) {
+        matches.clear()
+        listed.clear()
+        [FileError] tooDeep{depthErrorCode()}
+        return(tooDeep)
+      }
+      [String] dir{list_path(base, task.rel.view())}
+      [vector<DirEntry> mut] entries{vector<DirEntry>{}}
+      [Result<FileError>] read{listDirectory(dir.view(), entries)}
+      if(Result.error(read)) {
+        matches.clear()
+        listed.clear()
+        return(read)
+      }
+      insert_sorted(listed, dir)
+      apply_segment(base, task.rel.view(), entries, segments, task.index, task.depth, matches, tasks)
+    }
+    return(Result.ok())
+  }
+
+}
+}

@@ -1461,6 +1461,56 @@ main() {
 }
 ```
 
+### Glob patterns (`/std/glob`)
+
+`import /std/glob/*` expands a glob pattern over the file system. It is written in PrimeStruct over `listDirectory`
+of `/std/dir` and `join` of `/std/path`, so the VM and `--emit=optexe` give the same answer; like `/std/dir` it is a
+module of its own, and a program that does not import it declares no host import for it.
+
+- `glob(base, pattern, matches, listed) -> Result<FileError>` (`file_read`, `heap_alloc`): `base` and `pattern` are
+  `StringView`s; `matches` and `listed` are `vector<String>`s that the call replaces.
+  - `matches` holds the paths under the directory `base` that match, each `base` joined with the path of the entry below
+    it (`src/a.prime` for base `src`, pattern `*.prime`; an empty base is the working directory and adds nothing),
+    sorted bytewise as whole paths (so `a.prime` is before `a/m.prime` and `Zed` before `alpha`) and without duplicates.
+  - `listed` holds the directories the walk read (`.` for an empty base), sorted bytewise without duplicates. It is what
+    a build treats as the inputs of the expansion: a file added to or removed from one of them can change `matches`,
+    and nothing outside them can. A walk reads only the directories the pattern can reach.
+  - A pattern with no match is `Result.ok()` with empty `matches`.
+- The pattern grammar is the whole of it: a `/`-separated list of segments, each of
+  - `*`, `?` and literal bytes: `*` matches any run of bytes within one name (none included), `?` any one byte (not a
+    UTF-8 character), anything else itself;
+  - `**` alone: any number of directories, none included. As the last segment it matches every entry below.
+  There are no bracket expressions, no negation, no brace alternatives and no escapes. Entries of every kind match, a
+  directory as well as a file; a symbolic link is followed and has the kind of its target.
+- A name that begins with a dot matches only a segment that begins with a dot, so `*`, `?` and `**` never match or
+  enter `.git` or `.hidden`, while `.*` and `**/.dot.prime` do.
+- Errors: a bad pattern returns `EINVAL` (22): empty, absolute (starts with `/`), an empty segment (`a//b`, a trailing
+  `/`), a `.` or `..` segment, or a `**` inside a longer segment (`a**`). Consecutive `**` segments are one. A missing
+  or unreadable `base` or directory below it returns the `errno` of `listDirectory` (`ENOENT`, `EACCES`). A walk more
+  than 64 directories deep, which a symbolic link to a parent directory causes under `**`, returns 40 (`ELOOP` on Linux; `Result.why` has no name for it on macOS).
+  After an error `matches` and `listed` are empty.
+
+```prime
+import /std/glob/*
+import /std/file/*
+import /std/collections/vector/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(io_out, file_read, heap_alloc)]
+main() {
+  [vector<String> mut] sources{vector<String>{}}
+  [vector<String> mut] listed{vector<String>{}}
+  [Result<FileError>] found{glob("src", "**/*.prime", sources, listed)}
+  if(Result.error(found)) {
+    print_line(Result.why(found))
+    return(1i32)
+  }
+  print_line(sources.count())
+  return(0i32)
+}
+```
+
 ### Paths (`/std/path`)
 
 `import /std/path/*` provides textual path functions for POSIX paths: the separator is `/`, and a path that starts with

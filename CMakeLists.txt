@@ -1386,6 +1386,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_http.cpp
     tests/unit/backend_host/test_path.cpp
     tests/unit/backend_host/test_file_listing.cpp
+    tests/unit/backend_host/test_glob.cpp
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
@@ -1526,6 +1527,27 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_file_listing_optexe
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+
+  # /std/glob: glob over a fixture tree (tests/unit/backend_host/test_glob.cpp). The VM cases and the optexe build are
+  # CTest entries of their own.
+  add_test(
+    NAME PrimeStruct_glob_vm
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.glob"
+            "--test-case-exclude=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_glob_vm
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_glob_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.glob"
+            "--test-case=*through optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_glob_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/build: the build graph value and its JSON export (tests/unit/backend_host/test_build_graph.cpp). The VM run, the
