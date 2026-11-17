@@ -304,6 +304,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.name = stringField(node, "name");
     step.source = stringField(node, "source");
     step.output = stringField(node, "output");
+    step.inputDirs = stringList(node, "inputDirs");
     const JsonValue *compiler = node.find("compiler");
     if (compiler == nullptr || compiler->kind != JsonValue::Kind::Object) {
       error = "node " + id + " has no compiler settings";

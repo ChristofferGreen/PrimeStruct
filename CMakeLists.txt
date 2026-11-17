@@ -1389,6 +1389,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_glob.cpp
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
+    tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
   )
@@ -1596,6 +1597,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_build_cache
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  # A step whose glob listing changes runs again (tests/unit/backend_host/test_build_glob_cache.cpp).
+  add_test(
+    NAME PrimeStruct_build_glob_cache
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_glob_cache"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_glob_cache
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
   add_test(

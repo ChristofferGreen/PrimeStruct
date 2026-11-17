@@ -1,7 +1,7 @@
 // Glob patterns over the directory tree (docs/spec/stdlib-reference.md, /std/glob), written over `listDirectory` of
 // `/std/dir` and the `/std/path` functions. `glob(base, pattern, matches, listed)` walks only the directories the
 // pattern can reach, and returns both the matched paths and the directories it listed: a build treats the listings as
-// inputs, because a file that appears or disappears there changes the answer (TODO-6009 hands them to the cache).
+// inputs, because a file that appears or disappears there changes the answer.
 import /std/dir/*
 import /std/file/*
 import /std/path/*

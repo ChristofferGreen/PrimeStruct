@@ -162,6 +162,9 @@ are what bounds it, as with the embed API.
 - The compiler writes the files it read (`--emit-deps`, TODO-5914); the ledger of source units already exists.
 - A step's key is its compiler settings, the content hashes of its import closure and the compiler version. An output
   that exists with an equal key is up to date.
+- A glob is an input of a step too: `b.watch(id, listed)` records the directories a `/std/glob` call listed on the
+  node, and the cache hashes each directory's listing (names and kinds). A directory that gains or loses an entry runs
+  the step again (TODO-6009).
 - The cache lives in `ProjectRoot/.ps/cache/` and is not committed; `.ps/metadata.json` of the AI workflow plan is.
 - This is one mechanism with the cross-invocation symbol cache of `docs/LibrarySymbolManifestLazyImports.md` (its
   Phase 5), at a different granularity; it should not become a second cache.

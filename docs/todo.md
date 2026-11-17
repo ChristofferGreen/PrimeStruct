@@ -167,7 +167,6 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
-| TODO-6009 | A build step whose glob listing changes runs again | ready | build-glob |
 | TODO-6010 | Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM | ready | build-graph-defects |
 | TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | ready | build-graph-defects |
 | TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | ready | build-graph-defects |
@@ -199,13 +198,11 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-6009 (build-glob): A build step whose glob listing changes runs again
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-5535
-3. TODO-6009
 
 ### Priority Lanes
 
@@ -214,7 +211,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6009, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6010, TODO-6011, TODO-6012
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -238,7 +235,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) landed; ready: TODO-6009 (a changed glob listing re-runs a step); then TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) landed; ready: TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver), TODO-6010 (shifting `vector<String>` elements frees a string twice), TODO-6011 (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
 
@@ -1036,22 +1033,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a program that does not spawn prints and starts exactly as before
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
-
-- [~] TODO-6009: A build step whose glob listing changes runs again
-  - owner: ai
-  - status: in_progress
-  - claimed_by: build-agent (worktree-agent-a86f43f9ea1ce15ab), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Build system (docs/BuildSystemPlan.md, section 8)
-  - parallel_track: build-glob
-  - scope: A graph node may carry `inputDirs`, the directories its glob read (`Build.watch(id, dirs)`; written to the export only when non-empty). The cache entry of a step stores a hash of each such directory's listing (entry names and kinds, sorted); a step whose directory gained, lost or renamed an entry is not up to date. The listing hash is computed in C++ by the runner.
-  - acceptance:
-    - a graph with `inputDirs` exports them and `primec build` parses them
-    - adding, removing and renaming a matched file re-runs the step; touching an unrelated directory does not
-    - a missing watched directory is a change, not a crash
-    - docs/spec/integration-and-tooling.md and docs/BuildSystemPlan.md state it
-    - full release gate green
-  - stop_rule: names and kinds of one directory level; no content hashing of matches (compile steps already hash what they read).
 
 - [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
   - owner: ai

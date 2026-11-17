@@ -2376,6 +2376,7 @@ are left unarchived.
 | TODO-6005 | A view of an indexed element dangles after the expression that made it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6006 | The diagnostic for storing a read-only struct parameter says how to fix it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6007 | `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6009 | A build step whose glob listing changes runs again | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 
 <!-- INDEX-END -->
 

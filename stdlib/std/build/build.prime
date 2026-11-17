@@ -124,6 +124,8 @@ namespace build {
     [public bool mut] runnable{true}
     // The compiler snapshot of the target as JSON text, made when the target was added (empty for a link edge).
     [public String mut] compilerJson{String{}}
+    // The directories whose listings the target depends on (`Build.watch`), sorted bytewise and without duplicates.
+    [public vector<String> mut] inputDirs{vector<String>{}}
 
     [return<bool>]
     isLink() {
@@ -151,6 +153,10 @@ namespace build {
         json.stringValue(this.output.view())
         json.key("compiler")
         json.rawValue(this.compilerJson.view())
+        if(this.inputDirs.count() > 0i32) {
+          json.key("inputDirs")
+          write_list(json, this.inputDirs)
+        }
       }
       json.key("runnable")
       json.boolValue(this.runnable)
@@ -256,10 +262,52 @@ namespace build {
     }
   }
 
+  // Inserts `item` into the sorted `items`, bytewise, unless it is there already (the vector is rebuilt: see TODO-6010).
+  [effects(heap_alloc)]
+  insert_sorted_unique([vector<String> mut] items, [String copy] item) {
+    [i32 mut] slot{0i32}
+    [bool mut] found{false}
+    [bool mut] searching{true}
+    while(searching && slot < items.count()) {
+      [String] existing{items[slot]}
+      [i32] order{existing.view().compare(item.view())}
+      if(order == 0i32) {
+        found = true
+        searching = false
+      } else {
+        if(order < 0i32) {
+          slot = slot + 1i32
+        } else {
+          searching = false
+        }
+      }
+    }
+    if(found) {
+      return()
+    }
+    [vector<String> mut] merged{vector<String>{}}
+    for([i32 mut] i{0i32}, i < slot, i++) {
+      [String] headItem{items[i]}
+      merged.push(headItem)
+    }
+    merged.push(item)
+    for([i32 mut] i{slot}, i < items.count(), i++) {
+      [String] tailItem{items[i]}
+      merged.push(tailItem)
+    }
+    items.clear()
+    for([i32 mut] i{0i32}, i < merged.count(), i++) {
+      [String] moved{merged[i]}
+      items.push(moved)
+    }
+  }
+
   // The nodes of a build, in the order they were added; `export` is the only reader that matters.
   [public struct]
   Graph() {
     [public vector<Node> mut] nodes{vector<Node>{}}
+    // Problems found while the graph was built (a `watch` that names a missing target), in call order.
+    [public vector<String> mut] buildProblems{vector<String>{}}
 
     [return<i32>]
     nodeCount() {
@@ -288,6 +336,9 @@ namespace build {
       json.key("problems")
       json.beginArray()
       write_problems(this.nodes, order, json)
+      for([i32 mut] i{0i32}, i < this.buildProblems.count(), i++) {
+        json.stringValue(this.buildProblems[i].view())
+      }
       json.endArray()
       json.endObject()
       return(json.out.view().toOwned())
@@ -364,6 +415,28 @@ namespace build {
       node.kind = stringFrom("link")
       node.runnable = false
       this.collected.add(node)
+    }
+
+    // Declares that the target `targetId` ("compile:app") depends on the listings of the directories `dirs`: pass the
+    // `listed` vector of a `/std/glob` `glob` call, so a file that appears in or disappears from one of them runs the step
+    // again (docs/spec/integration-and-tooling.md, build cache). Call it after the target is added; a target that does not
+    // exist is a problem of the export. The directories are kept sorted and without duplicates.
+    [mut effects(heap_alloc)]
+    watch([StringView] targetId, [vector<String>] dirs) {
+      [bool mut] found{false}
+      for([i32 mut] i{0i32}, i < this.collected.nodes.count(), i++) {
+        [String] nodeId{this.collected.nodes[i].id}
+        if(nodeId.view().equals(targetId)) {
+          found = true
+          for([i32 mut] j{0i32}, j < dirs.count(), j++) {
+            [String] dir{dirs[j]}
+            insert_sorted_unique(this.collected.nodes[i].inputDirs, dir)
+          }
+        }
+      }
+      if(!found) {
+        this.collected.buildProblems.push(problem_text("watch names a missing target ", targetId, "", ""))
+      }
     }
 
     // The graph built so far, as a value.

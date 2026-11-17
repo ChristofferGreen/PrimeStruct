@@ -1,7 +1,7 @@
 // Directory listing and file metadata (docs/spec/stdlib-reference.md, /std/dir). `listDirectory` asks the
 // runtime for the entries of one directory: the VM and the optimized C++ backend (`--emit=optexe`) answer the
 // `__pstext_dir_list` host function themselves, so no shim is linked. It reads one level and does not follow into
-// subdirectories; a glob (TODO-5907) is built on top of it.
+// subdirectories; `/std/glob` is built on top of it.
 import /std/file/*
 import /std/text/*
 import /std/text/view/*

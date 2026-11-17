@@ -92,6 +92,12 @@ void storeBuildCacheEntry(const BuildStep &step,
   if (!sha256FileHex(outputPath, entry.outputHash) || !hashBuildDependencies(paths, entry.deps)) {
     return;
   }
+  // The directories the script's glob read: an entry that appears in or leaves one makes the step stale.
+  std::vector<std::string> inputDirs;
+  for (const std::string &dir : step.inputDirs) {
+    inputDirs.push_back(absoluteAgainst(dir, settings.projectDir));
+  }
+  entry.dirs = hashBuildInputDirs(inputDirs);
   writeBuildCacheEntry(cacheFile, entry);
 }
 
@@ -297,8 +303,16 @@ int runBuildGraph(const BuildGraphData &graph,
       const std::string outputPath = buildStepOutputPath(step, settings);
       if (caching) {
         cacheFile = buildCacheFilePath(settings.cacheDir, step.id);
-        key = buildStepKey(compilerHash,
-                           std::vector<std::string>(arguments.begin() + 1, arguments.end()));
+        // The key also names the watched directories, so a script that starts to watch another one (a new pattern
+        // that reaches a directory the old one did not) is a different step even when no listing changed.
+        std::vector<std::string> keyArguments(arguments.begin() + 1, arguments.end());
+        std::vector<std::string> watched = step.inputDirs;
+        std::sort(watched.begin(), watched.end());
+        watched.erase(std::unique(watched.begin(), watched.end()), watched.end());
+        for (const std::string &dir : watched) {
+          keyArguments.push_back("input-dir:" + dir);
+        }
+        key = buildStepKey(compilerHash, keyArguments);
         BuildCacheEntry entry;
         if (readBuildCacheEntry(cacheFile, entry) &&
             buildCacheEntryIsCurrent(entry, key, outputPath)) {

@@ -426,8 +426,13 @@ void applyRunProfile(Options &out, bool defaultEffectsExplicit) {
     out.allowEffects = std::vector<std::string>{"file_read", "heap_alloc"};
   }
   if (!out.allowImport.has_value()) {
-    out.allowImport =
-        std::vector<std::string>{"/std/build", "/std/path", "/std/file", "/std/collections"};
+    out.allowImport = std::vector<std::string>{"/std/build",
+                                               "/std/path",
+                                               "/std/file",
+                                               "/std/collections",
+                                               "/std/dir",
+                                               "/std/glob",
+                                               "/std/text"};
   }
   if (!out.optimization.levelSpecified) {
     out.optimization.level = 0;

@@ -16,7 +16,7 @@ build script (docs/BuildSystemPlan.md, section 6):
 | --- | --- | --- |
 | Default effects | `io_out` | none, so a definition without `[effects]` cannot print |
 | `--allow-effects` | none | `file_read,heap_alloc` |
-| `--allow-import` | none | `/std/build,/std/path,/std/file,/std/collections` |
+| `--allow-import` | none | `/std/build,/std/path,/std/file,/std/collections,/std/dir,/std/glob,/std/text` |
 | Optimization | `-O2` on the VM | `-O0` |
 | `--vm-schedule-seed` | eager schedule | `0`, a fixed deterministic schedule |
 
@@ -38,7 +38,7 @@ main() {
 ```
 `primevm sum.prime --profile build` and `primevm sum.prime` both exit 5. With `import /std/net/*` added,
 `--profile build` fails with `import /std/net/* is outside the allowed imports: /std/build,/std/path,/std/file,
-/std/collections`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
+/std/collections,/std/dir,/std/glob,/std/text`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
 `[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc`.
 
 ### Dependency List
@@ -90,6 +90,17 @@ print `... skipped after a failure`, and the exit code is 1. A graph with a libr
 (duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
 compiler yet` or the problem. There is no command or function step yet.
 
+Glob inputs. A script that expands a pattern with `/std/glob` (docs/spec/stdlib-reference.md) passes the directories
+the glob listed to `b.watch("compile:app", listed)`, after the target is added. The graph export then carries
+`"inputDirs":[...]` on that node (sorted bytewise, without duplicates, written only when there are any), and a watch of a
+target that is not in the graph is a problem of the export. The cache file of the step has one `dir <hex> <path>` line
+per watched directory: the SHA-256 of that directory's listing, one level, names and kinds (file, directory, other)
+sorted bytewise. A name that appears, disappears or is renamed in a watched directory, or a directory that vanishes or
+turns into a file, makes the step stale; a file rewritten in place does not (a compile step hashes the files it read
+itself). The runner does not know which entries matched, so a new file that does not match the pattern but sits in a
+watched directory also runs the step. The sorted list of watched directories is part of the step key, so a script that
+starts to watch another directory is a different step. A relative path is relative to the project directory.
+
 Incremental builds. Each step has a cache file in `<dir>/.ps/cache/` (not committed; `.ps/cache/` is in `.gitignore`),
 named after its id. A step is skipped, and prints `up to date <id>` instead of `built <id>`, when its output exists and
 nothing it depends on changed. The file is text: the line `primestruct-build-cache 1`, `hash sha256` (the scheme; a
@@ -99,11 +110,10 @@ arguments of the step (emit kind, optimization, entry, import paths, transforms,
 directory, output name, source). The inputs are the files `--emit-deps` listed for the step's last run (the primary
 file, its imports and the stdlib files it included; `/std/math` is builtin and never listed) and every link argument
 that names an existing file. A step is current when the key is equal, the output has the recorded content hash, and
-every input still has its recorded content hash; file times play no part. A step that fails, or whose inputs cannot be
-hashed, leaves no cache file. Deleting `.ps/` or a damaged cache file makes the steps run again and produce the same
+every input still has its recorded content hash and every watched directory its recorded listing hash; file times play
+no part. A step that fails, or whose inputs cannot be hashed, leaves no cache file. Deleting `.ps/` or a damaged cache file makes the steps run again and produce the same
 bytes. Not covered: a file that appears earlier on an import path than the one a step read (the compiler lists only
-files it read), environment variables a host toolchain reads, and the directory listings of a glob (TODO-5907 adds
-them as inputs). There is no early cutoff on interface hashes (TODO-5929) and no shared cache.
+files it read) and environment variables a host toolchain reads. There is no early cutoff on interface hashes (TODO-5929) and no shared cache.
 
 The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can

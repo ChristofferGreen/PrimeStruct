@@ -20,6 +20,8 @@ struct BuildStep {
   std::vector<std::string> transforms;
   std::vector<std::string> defaultEffects;
   std::vector<std::string> linkArgs;
+  // Directories whose listings the step depends on (`Build.watch`); relative paths are relative to the project.
+  std::vector<std::string> inputDirs;
 };
 
 // The part of an exported graph that `primec build` runs.

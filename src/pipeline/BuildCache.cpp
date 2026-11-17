@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <system_error>
+#include <utility>
 
 namespace primec {
 
@@ -69,6 +71,13 @@ bool readBuildCacheEntry(const std::string &path, BuildCacheEntry &entry) {
     } else if (line.rfind("output ", 0) == 0) {
       entry.outputHash = line.substr(7);
       sawOutput = true;
+    } else if (line.rfind("dir ", 0) == 0) {
+      const size_t space = line.find(' ', 4);
+      if (space == std::string::npos) {
+        entry = BuildCacheEntry{};
+        return false;
+      }
+      entry.dirs.push_back({line.substr(space + 1), line.substr(4, space - 4)});
     } else if (line.rfind("dep ", 0) == 0) {
       const size_t space = line.find(' ', 4);
       if (space == std::string::npos) {
@@ -94,6 +103,11 @@ bool writeBuildCacheEntry(const std::string &path, const BuildCacheEntry &entry)
       return false;
     }
   }
+  for (const BuildCacheDep &dir : entry.dirs) {
+    if (!singleLine(dir.path)) {
+      return false;
+    }
+  }
   std::error_code ec;
   std::filesystem::create_directories(std::filesystem::path(path).parent_path(), ec);
   const std::string temporary = path + ".tmp";
@@ -106,6 +120,9 @@ bool writeBuildCacheEntry(const std::string &path, const BuildCacheEntry &entry)
     out << "key " << entry.key << '\n' << "output " << entry.outputHash << '\n';
     for (const BuildCacheDep &dep : entry.deps) {
       out << "dep " << dep.hash << ' ' << dep.path << '\n';
+    }
+    for (const BuildCacheDep &dir : entry.dirs) {
+      out << "dir " << dir.hash << ' ' << dir.path << '\n';
     }
     out.flush();
     if (!out) {
@@ -136,6 +153,54 @@ bool hashBuildDependencies(const std::vector<std::string> &paths, std::vector<Bu
   return true;
 }
 
+std::string hashDirectoryListing(const std::string &path) {
+  std::error_code ec;
+  std::filesystem::directory_iterator it(path, std::filesystem::directory_options::none, ec);
+  if (ec) {
+    return ec == std::errc::no_such_file_or_directory || ec == std::errc::not_a_directory
+               ? "missing"
+               : "unreadable";
+  }
+  std::vector<std::pair<std::string, char>> entries;
+  for (const std::filesystem::directory_iterator end; it != end; it.increment(ec)) {
+    if (ec) {
+      return "unreadable";
+    }
+    std::error_code statusError;
+    const std::filesystem::file_status status = std::filesystem::status(it->path(), statusError);
+    char kind = 'O';
+    if (!statusError && std::filesystem::is_regular_file(status)) {
+      kind = 'F';
+    } else if (!statusError && std::filesystem::is_directory(status)) {
+      kind = 'D';
+    }
+    entries.emplace_back(it->path().filename().string(), kind);
+  }
+  std::sort(entries.begin(), entries.end());
+  // Every name is length-prefixed, so no two listings give the same text.
+  std::string text = "listing\n";
+  for (const auto &entry : entries) {
+    text += entry.second;
+    text += ' ';
+    text += std::to_string(entry.first.size());
+    text += ':';
+    text += entry.first;
+    text += '\n';
+  }
+  return sha256Hex(text);
+}
+
+std::vector<BuildCacheDep> hashBuildInputDirs(const std::vector<std::string> &paths) {
+  std::vector<std::string> sorted = paths;
+  std::sort(sorted.begin(), sorted.end());
+  sorted.erase(std::unique(sorted.begin(), sorted.end()), sorted.end());
+  std::vector<BuildCacheDep> dirs;
+  for (const std::string &path : sorted) {
+    dirs.push_back({path, hashDirectoryListing(path)});
+  }
+  return dirs;
+}
+
 bool readDependencyList(const std::string &path, std::vector<std::string> &paths) {
   paths.clear();
   std::ifstream file(path, std::ios::binary);
@@ -162,6 +227,11 @@ bool buildCacheEntryIsCurrent(const BuildCacheEntry &entry, const std::string &k
   for (const BuildCacheDep &dep : entry.deps) {
     std::string hash;
     if (!sha256FileHex(dep.path, hash) || hash != dep.hash) {
+      return false;
+    }
+  }
+  for (const BuildCacheDep &dir : entry.dirs) {
+    if (hashDirectoryListing(dir.path) != dir.hash) {
       return false;
     }
   }
