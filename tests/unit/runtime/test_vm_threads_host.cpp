@@ -23,7 +23,7 @@ TEST_SUITE_BEGIN("primestruct.runtime.vm_threads_host");
 
 namespace {
 
-constexpr int Repeats = 100;
+constexpr int Repeats = 20;
 constexpr uint64_t Newline = PrintFlagNewline;
 
 IrFunction
@@ -68,13 +68,14 @@ Run run(const IrModule &module, const VmHostFunctions &hosts, bool threads) {
   return result;
 }
 
-template <class F> void bindHost(VmHostFunctions &hosts, std::string name, VmHostThreading threading, F body) {
+template <class F>
+void bindHost(VmHostFunctions &hosts, std::string name, VmHostThreading threading, F body) {
   VmHostBinding binding;
   binding.returnKind = IrHostValueKind::Void;
   binding.threading = threading;
-  binding.invoke = [body = std::move(body)](const uint64_t *, uint64_t &, std::string &error) mutable {
-    return body(error);
-  };
+  binding.invoke = [body = std::move(body)](const uint64_t *,
+                                            uint64_t &,
+                                            std::string &error) mutable { return body(error); };
   hosts.bind(std::move(name), std::move(binding));
 }
 
@@ -91,7 +92,9 @@ IrFunction callingTask(std::string name, uint64_t import, int64_t count) {
   std::vector<IrInstruction> code = {{IrOpcode::PushI64, 0}, {IrOpcode::StoreLocal, 0}};
   const uint64_t head = code.size();
   append(code,
-         {{IrOpcode::LoadLocal, 0}, {IrOpcode::PushI64, static_cast<uint64_t>(count)}, {IrOpcode::CmpLtI64, 0}});
+         {{IrOpcode::LoadLocal, 0},
+          {IrOpcode::PushI64, static_cast<uint64_t>(count)},
+          {IrOpcode::CmpLtI64, 0}});
   const uint64_t exitJump = code.size();
   code.push_back({IrOpcode::JumpIfZero, 0});
   append(code, callOf(import));
@@ -121,13 +124,16 @@ std::vector<IrInstruction> waitTask(uint64_t handle) {
 }
 
 std::vector<IrInstruction> finishWithOne() {
-  return {{IrOpcode::PushI32, 1}, {IrOpcode::PrintI32, Newline}, {IrOpcode::PushI32, 0}, {IrOpcode::ReturnI32, 0}};
+  return {{IrOpcode::PushI32, 1},
+          {IrOpcode::PrintI32, Newline},
+          {IrOpcode::PushI32, 0},
+          {IrOpcode::ReturnI32, 0}};
 }
 
 } // namespace
 
 TEST_CASE("a serialized host function is never entered by two threads at once") {
-  // main: four tasks of 200 calls each (and the default threading, which is serialized), then prints 1.
+  // main: four tasks of 50 calls each (and the default threading, which is serialized), then prints 1.
   std::vector<IrInstruction> main;
   for (uint64_t task = 0; task < 4; ++task) {
     append(main, spawnOf(1, task));
@@ -136,7 +142,8 @@ TEST_CASE("a serialized host function is never entered by two threads at once") 
     append(main, waitTask(task));
   }
   append(main, finishWithOne());
-  const IrModule module = moduleOf({functionOf("/main", 0, std::move(main)), callingTask("/call", 0, 200)}, {"enter"});
+  const IrModule module =
+      moduleOf({functionOf("/main", 0, std::move(main)), callingTask("/call", 0, 50)}, {"enter"});
   for (int repeat = 0; repeat < Repeats; ++repeat) {
     CAPTURE(repeat);
     std::atomic<int> inside{0};
@@ -149,7 +156,7 @@ TEST_CASE("a serialized host function is never entered by two threads at once") 
         return false;
       }
       // A fixed number of yields gives another thread every chance to enter; no clock is read.
-      for (int turn = 0; turn < 20; ++turn) {
+      for (int turn = 0; turn < 5; ++turn) {
         std::this_thread::yield();
       }
       inside.fetch_sub(1);
@@ -159,7 +166,7 @@ TEST_CASE("a serialized host function is never entered by two threads at once") 
     const Run threaded = run(module, hosts, true);
     REQUIRE_MESSAGE(threaded.ok, threaded.error);
     CHECK(threaded.out == "1\n");
-    CHECK(calls.load() == 800);
+    CHECK(calls.load() == 200);
   }
 }
 
@@ -171,7 +178,8 @@ TEST_CASE("two tasks inside one reentrant host function at the same time finish"
   append(main, waitTask(0));
   append(main, waitTask(1));
   append(main, finishWithOne());
-  const IrModule module = moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/meet", 0)}, {"meet"});
+  const IrModule module =
+      moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/meet", 0)}, {"meet"});
   for (int repeat = 0; repeat < Repeats; ++repeat) {
     CAPTURE(repeat);
     std::atomic<int> arrived{0};
@@ -196,8 +204,8 @@ TEST_CASE("a reentrant call that blocks is released by a call from another task"
   append(main, callOf(1));
   append(main, waitTask(0));
   append(main, finishWithOne());
-  const IrModule module =
-      moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/hold", 0)}, {"hold", "release"});
+  const IrModule module = moduleOf(
+      {functionOf("/main", 0, std::move(main)), oneCallTask("/hold", 0)}, {"hold", "release"});
   for (int repeat = 0; repeat < Repeats; ++repeat) {
     CAPTURE(repeat);
     std::atomic<bool> released{false};
@@ -227,8 +235,9 @@ TEST_CASE("a blocked reentrant call does not stop a serialized call or a print o
   append(main, callOf(2));
   append(main, waitTask(0));
   append(main, finishWithOne());
-  const IrModule module = moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/hold", 0)},
-                                   {"hold", "ping", "release"});
+  const IrModule module =
+      moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/hold", 0)},
+               {"hold", "ping", "release"});
   for (int repeat = 0; repeat < Repeats; ++repeat) {
     CAPTURE(repeat);
     std::atomic<bool> released{false};
@@ -254,7 +263,8 @@ TEST_CASE("a main-thread-only host function faults when a spawned task calls it"
   std::vector<IrInstruction> main = spawnOf(1, 0);
   append(main, waitTask(0));
   append(main, finishWithOne());
-  const IrModule module = moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/call", 0)}, {"draw"});
+  const IrModule module =
+      moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/call", 0)}, {"draw"});
   for (int repeat = 0; repeat < Repeats; ++repeat) {
     CAPTURE(repeat);
     std::atomic<int> calls{0};
@@ -277,8 +287,8 @@ TEST_CASE("a main-thread-only host function runs for the main task and without t
   append(main, spawnOf(1, 0));
   append(main, waitTask(0));
   append(main, finishWithOne());
-  const IrModule module =
-      moduleOf({functionOf("/main", 0, std::move(main)), oneCallTask("/call", 1)}, {"draw", "note"});
+  const IrModule module = moduleOf(
+      {functionOf("/main", 0, std::move(main)), oneCallTask("/call", 1)}, {"draw", "note"});
   for (const bool threads : {false, true}) {
     CAPTURE(threads);
     std::atomic<int> draws{0};

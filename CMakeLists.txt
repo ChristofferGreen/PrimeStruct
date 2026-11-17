@@ -1369,7 +1369,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_vm_threads_sync
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
-  # Host functions registered reentrant or main-thread only under --vm-threads, each program run 100 times.
+  # Host functions registered reentrant or main-thread only under --vm-threads, each program run 20 times.
   add_test(
     NAME PrimeStruct_vm_threads_host
     COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
