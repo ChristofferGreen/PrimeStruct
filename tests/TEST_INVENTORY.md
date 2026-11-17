@@ -74,13 +74,13 @@ Total: 10839 test cases across 620 files.
 
 ### test_build_copy.cpp
 
-- a copy step puts a file into the output directory and an unchanged second run copies nothing
+- a copy step puts a file into the output directory and an unchanged second run copies 
 - an edited copy source re-runs only its copy step
 - a deleted or edited copy re-runs only its copy step
 - a copy destination outside the output directory is a diagnostic
 - an absolute copy destination is a diagnostic
 - a copy of a missing file is a diagnostic naming the step
-- an optexe step leaves the executable and no generated C++ and is up to date on the second run
+- an optexe step leaves the executable and no generated C++ and is up to date on the 
 
 ### test_build_glob_cache.cpp
 
