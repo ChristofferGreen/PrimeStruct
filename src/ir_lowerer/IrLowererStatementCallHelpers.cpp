@@ -169,22 +169,48 @@ bool buildCallableDefinitionCallContext(
   return true;
 }
 
-EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
-    const Definition &entryDef,
-    bool definitionReturnsVoid,
-    bool &sawReturn,
-    std::optional<OnErrorHandler> &currentOnError,
-    const std::optional<OnErrorHandler> &entryOnError,
-    std::optional<ResultReturnInfo> &currentReturnResult,
-    const std::optional<ResultReturnInfo> &entryResult,
-    const std::function<bool(const Expr &)> &emitStatement,
-    const std::function<void()> &pushFileScope,
-    const std::function<void()> &emitCurrentFileScopeCleanup,
-    const std::function<void()> &popFileScope,
-    std::vector<IrInstruction> &instructions,
-    std::string &error) {
+namespace {
+
+// The number of `return` statements in a body, nested blocks included.
+size_t countReturnStatements(const std::vector<Expr> &statements) {
+  size_t count = 0;
+  for (const Expr &stmt : statements) {
+    if (stmt.kind != Expr::Kind::Call) {
+      continue;
+    }
+    if (!stmt.isBinding && stmt.name == "return") {
+      ++count;
+    }
+    count += countReturnStatements(stmt.args);
+    count += countReturnStatements(stmt.bodyArguments);
+  }
+  return count;
+}
+
+} // namespace
+
+EntryCallableExecutionResult
+emitEntryCallableExecutionWithCleanup(const Definition &entryDef,
+                                      bool definitionReturnsVoid,
+                                      bool &sawReturn,
+                                      std::optional<OnErrorHandler> &currentOnError,
+                                      const std::optional<OnErrorHandler> &entryOnError,
+                                      std::optional<ResultReturnInfo> &currentReturnResult,
+                                      const std::optional<ResultReturnInfo> &entryResult,
+                                      const std::function<bool(const Expr &)> &emitStatement,
+                                      const std::function<void()> &pushFileScope,
+                                      const std::function<void()> &emitCurrentFileScopeCleanup,
+                                      const std::function<void()> &popFileScope,
+                                      std::vector<IrInstruction> &instructions,
+                                      std::string &error,
+                                      const SharedReturnExitHooks &sharedReturnExits) {
   OnErrorScope entryOnErrorScope(currentOnError, entryOnError);
   ResultReturnScope entryResultScope(currentReturnResult, entryResult);
+  // A body with several `return` statements shares the destruction of its locals between them; one with a single
+  // `return` keeps its inline cleanup.
+  if (sharedReturnExits.begin) {
+    sharedReturnExits.begin(countReturnStatements(entryDef.statements) >= 2);
+  }
   pushFileScope();
   for (const auto &stmt : entryDef.statements) {
     if (!emitStatement(stmt)) {
@@ -219,7 +245,11 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
     const IrOpcode lastOp = instructions.back().op;
     if (lastOp != IrOpcode::ReturnVoid && lastOp != IrOpcode::ReturnI32 &&
         lastOp != IrOpcode::ReturnI64 && lastOp != IrOpcode::ReturnF32 &&
-        lastOp != IrOpcode::ReturnF64) {
+        lastOp != IrOpcode::ReturnF64 && lastOp != IrOpcode::Jump) {
+      return false;
+    }
+    if (lastOp == IrOpcode::Jump &&
+        !(sharedReturnExits.endsWithExit && sharedReturnExits.endsWithExit())) {
       return false;
     }
     return std::none_of(instructions.begin(), instructions.end(), [&](const IrInstruction &inst) {
@@ -244,11 +274,17 @@ EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
           return (inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) &&
                  inst.imm == instructions.size();
         });
-    if (instructions.empty() || !isReturnOpcode(instructions.back().op) || jumpReachesEnd) {
+    const bool endsWithSharedExit =
+        sharedReturnExits.endsWithExit && sharedReturnExits.endsWithExit();
+    if (instructions.empty() || (!isReturnOpcode(instructions.back().op) && !endsWithSharedExit) ||
+        jumpReachesEnd) {
       instructions.push_back({IrOpcode::ReturnVoid, 0});
     }
   } else if (!sawReturn) {
     error = "native backend requires an explicit return statement";
+    return EntryCallableExecutionResult::Error;
+  }
+  if (sharedReturnExits.finish && !sharedReturnExits.finish()) {
     return EntryCallableExecutionResult::Error;
   }
   return EntryCallableExecutionResult::Emitted;

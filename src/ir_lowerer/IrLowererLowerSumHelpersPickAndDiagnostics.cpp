@@ -1158,6 +1158,8 @@ namespace primec::ir_lowerer {
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
+        // An arm is a scope of its own, so no later exit reads the drop flag of an arm that never ran.
+        returnEmitStage.pushFileScope();
         if (payloadArm && !bindPickPayload(*sumDef,
                                            *variant,
                                            arm.args.front(),
@@ -1167,11 +1169,17 @@ namespace primec::ir_lowerer {
                                            subjectDropFlagLocal)) {
           return LoweredSumPickEmitResult::Error;
         }
-        for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {
+        const std::vector<const Expr *> armBody = pickArmBodyExprs(arm);
+        for (const Expr *bodyExprPtr : armBody) {
           if (!emitStatement(*bodyExprPtr, branchLocals)) {
             return LoweredSumPickEmitResult::Error;
           }
         }
+        // An arm that ends in a `return` has left through its exit already.
+        if (armBody.empty() || !isReturnCall(*armBody.back())) {
+          returnEmitStage.emitFileScopeCleanup(setupStage.fileScopeStack.back());
+        }
+        returnEmitStage.popFileScope();
         endJumps.push_back(function.instructions.size());
         function.instructions.push_back({IrOpcode::Jump, 0});
         function.instructions[nextArmJump].imm =

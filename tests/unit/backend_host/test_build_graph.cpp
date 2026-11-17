@@ -9,6 +9,7 @@
 
 #include <sys/wait.h>
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -97,6 +98,58 @@ TEST_CASE("the build graph export matches the golden file through optexe") {
   const int failed = run(shellQuote(exe) + " > " + shellQuote(out));
   CHECK_MESSAGE(failed == 0,
                 "build_graph case " << failed << " failed (100 and 101 are heap leaks)");
+  CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
+}
+
+// The original form of the fixture, `run_checks` with the graphs and the seven checks in one body
+// (tests/fixtures/build/build_graph_one_body.prime): its early `return`s share one cleanup chain
+// (docs/spec/vm-design.md, Shared exit paths), so the body no longer holds a copy of the destruction of every live
+// graph per `return` (51,665 lines of `--emit=optcpp` C++ for `run_checks` became about 11,000).
+TEST_CASE("the one-body build graph fixture matches the golden file on the VM") {
+  const std::string out = scratch("one_body_vm_export.json");
+  const int failed = run(shellQuote(Primec) + " --emit=vm " +
+                         shellQuote(FixtureDir + "build_graph_one_body.prime") + " > " +
+                         shellQuote(out) + " 2> " + shellQuote(out + ".err"));
+  CHECK_MESSAGE(failed == 0,
+                "build_graph_one_body case " << failed << " failed (100 and 101 are heap leaks); "
+                                             << readFile(out + ".err"));
+  CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
+}
+
+TEST_CASE(
+    "an early return of a body that holds graphs does not repeat their destruction in optcpp") {
+  const std::string cpp = scratch("one_body.cpp");
+  const int status = run(shellQuote(Primec) + " --emit=optcpp " +
+                         shellQuote(FixtureDir + "build_graph_one_body.prime") + " -o " +
+                         shellQuote(cpp) + " > " + shellQuote(cpp + ".log") + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(cpp + ".log"));
+  const std::string text = readFile(cpp);
+  // The function of `run_checks` is the one that ends in its missing-return fault.
+  const size_t fault = text.find("missing return in IR function /run_checks");
+  REQUIRE(fault != std::string::npos);
+  const size_t begin = text.rfind("\nuint64_t ps_f", fault);
+  const size_t end = text.find("\n}\n", fault);
+  REQUIRE(begin != std::string::npos);
+  REQUIRE(end != std::string::npos);
+  const long lines = static_cast<long>(std::count(
+      text.begin() + static_cast<long>(begin), text.begin() + static_cast<long>(end), '\n'));
+  CHECK_MESSAGE(lines < 15000, "run_checks has " << lines << " lines of C++");
+}
+
+// The host C++ compiler takes a few seconds on this program, so the case is a CTest entry of its own
+// (PrimeStruct_build_graph_one_body_optexe), beside the two-definition fixture's.
+TEST_CASE("the one-body build graph fixture runs under optexe with balanced heaps") {
+  const std::string exe = scratch("build_graph_one_body");
+  const std::string log = exe + ".log";
+  // -O0: the host compile takes 2.8 s instead of 4.2 s, and the golden output and the heap checks are the point.
+  const int status = run(shellQuote(Primec) + " --emit=optexe -O0 " +
+                         shellQuote(FixtureDir + "build_graph_one_body.prime") + " -o " +
+                         shellQuote(exe) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  const std::string out = exe + ".json";
+  const int failed = run(shellQuote(exe) + " > " + shellQuote(out));
+  CHECK_MESSAGE(failed == 0,
+                "build_graph_one_body case " << failed << " failed (100 and 101 are heap leaks)");
   CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
 }
 

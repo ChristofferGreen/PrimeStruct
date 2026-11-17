@@ -138,6 +138,47 @@
       emitFileScopeCleanup(scope);
     }
   };
+  // The live scope entries, outermost scope first and each scope in declaration order.
+  const auto liveScopeEntries = [&]() {
+    std::vector<int32_t> entries;
+    for (const std::vector<int32_t> &scope : fileScopeStack) {
+      entries.insert(entries.end(), scope.begin(), scope.end());
+    }
+    return entries;
+  };
+  auto &sharedReturnExits = stateOut.sharedReturnExits;
+  stateOut.beginSharedReturnExits = [&](bool enabled) { sharedReturnExits.begin(enabled); };
+  // `valueLocal >= 0`: the value to return is that local, not on the operand stack yet.
+  stateOut.emitSharedReturn = [&](IrOpcode returnOp, int32_t valueLocal) -> bool {
+    const std::vector<int32_t> entries = liveScopeEntries();
+    if (!sharedReturnExits.shouldShare(entries)) {
+      return false;
+    }
+    if (valueLocal >= 0) {
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+    }
+    sharedReturnExits.emitExit(
+        function.instructions, returnOp, entries, [&]() { return allocTempLocal(); });
+    return true;
+  };
+  stateOut.endsWithSharedReturnExit = [&]() {
+    return sharedReturnExits.endsWithSharedExit(function.instructions.size());
+  };
+  stateOut.finishSharedReturnExits = [&]() {
+    // Destroy helpers lower inline calls, which push scopes of their own: give them a scope to push onto.
+    fileScopeStack.emplace_back();
+    const bool finished = sharedReturnExits.finish(function.instructions, [&](int32_t scopeEntry) {
+      if (scopeEntry >= 0) {
+        ir_lowerer::emitFileScopeCleanup(function.instructions, std::vector<int32_t>{scopeEntry});
+        return true;
+      }
+      const LowerSetupStageState::DropEntry entry =
+          setupStage.dropEntries[static_cast<size_t>(-scopeEntry - 1)];
+      return emitDropEntryCleanup(entry);
+    });
+    fileScopeStack.pop_back();
+    return finished;
+  };
   pushFileScope = [&]() { fileScopeStack.emplace_back(); };
   popFileScope = [&]() { fileScopeStack.pop_back(); };
 

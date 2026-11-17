@@ -912,9 +912,11 @@
         }
         return true;
       }
-      emitFileScopeCleanupAll();
-      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-      function.instructions.push_back({IrOpcode::ReturnI64, 0});
+      if (!stateOut.emitSharedReturn(IrOpcode::ReturnI64, ptrLocal)) {
+        emitFileScopeCleanupAll();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+        function.instructions.push_back({IrOpcode::ReturnI64, 0});
+      }
       sawReturn = true;
       return true;
     };
@@ -1157,7 +1159,8 @@
           return inferArrayElementKind(valueExpr, valueLocals);
         },
         [&]() { emitFileScopeCleanupAll(); },
-        error);
+        error,
+        stateOut.emitSharedReturn);
     if (returnResult == ir_lowerer::ReturnStatementEmitResult::Error) {
       return false;
     }

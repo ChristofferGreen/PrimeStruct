@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/ir_lowerer/IrLowererSharedReturnExits.h"
+
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -110,20 +112,21 @@ bool buildCallableDefinitionCallContext(
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<bool(const Expr &, const LocalMap &, LocalInfo &, std::string &)> &inferParameterLocalInfo,
     std::string &error);
-EntryCallableExecutionResult emitEntryCallableExecutionWithCleanup(
-    const Definition &entryDef,
-    bool definitionReturnsVoid,
-    bool &sawReturn,
-    std::optional<OnErrorHandler> &currentOnError,
-    const std::optional<OnErrorHandler> &entryOnError,
-    std::optional<ResultReturnInfo> &currentReturnResult,
-    const std::optional<ResultReturnInfo> &entryResult,
-    const ExprPredicateFn &emitStatement,
-    const ActionFn &pushFileScope,
-    const ActionFn &emitCurrentFileScopeCleanup,
-    const ActionFn &popFileScope,
-    std::vector<IrInstruction> &instructions,
-    std::string &error);
+EntryCallableExecutionResult
+emitEntryCallableExecutionWithCleanup(const Definition &entryDef,
+                                      bool definitionReturnsVoid,
+                                      bool &sawReturn,
+                                      std::optional<OnErrorHandler> &currentOnError,
+                                      const std::optional<OnErrorHandler> &entryOnError,
+                                      std::optional<ResultReturnInfo> &currentReturnResult,
+                                      const std::optional<ResultReturnInfo> &entryResult,
+                                      const ExprPredicateFn &emitStatement,
+                                      const ActionFn &pushFileScope,
+                                      const ActionFn &emitCurrentFileScopeCleanup,
+                                      const ActionFn &popFileScope,
+                                      std::vector<IrInstruction> &instructions,
+                                      std::string &error,
+                                      const SharedReturnExitHooks &sharedReturnExits = {});
 // Makes the entry function 0 of the module's function table.
 void finalizeEntryFunctionTable(IrFunction &entryFunction,
                                 std::vector<IrFunction> &outFunctions,

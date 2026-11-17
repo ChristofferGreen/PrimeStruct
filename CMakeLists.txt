@@ -524,6 +524,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererFlowLoopHelpers.cpp
   src/ir_lowerer/IrLowererFlowVectorHelpers.cpp
   src/ir_lowerer/IrLowererFlowHelpers.cpp
+  src/ir_lowerer/IrLowererSharedReturnExits.cpp
   src/ir_lowerer/IrLowererBuiltinNameHelpers.cpp
   src/ir_lowerer/IrLowererHelpers.cpp
   src/ir_lowerer/IrLowererIndexKindHelpers.cpp
@@ -1076,6 +1077,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_closures.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
+    tests/unit/program_matrix/test_program_matrix_early_returns.cpp
     tests/unit/program_matrix/test_program_matrix_element_assign.cpp
     tests/unit/program_matrix/test_program_matrix_element_copies.cpp
     tests/unit/program_matrix/test_program_matrix_element_receivers.cpp
@@ -1575,6 +1577,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_build_graph_vm
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_graph_optcpp
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*in optcpp*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_graph_optcpp
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_graph_one_body_optexe
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*under optexe*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_graph_one_body_optexe
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   add_test(
     NAME PrimeStruct_build_graph_optexe
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
@@ -3935,6 +3955,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.closures_routers
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
+    primestruct.program_matrix.early_returns
     primestruct.program_matrix.element_assign
     primestruct.program_matrix.element_copies
     primestruct.program_matrix.element_receivers
@@ -3960,7 +3981,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
-    control=37 element_assign=4 element_copies=10 element_receivers=6 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 recursion=4 results=12 shared_programs=17
+    control=37 early_returns=10 element_assign=4 element_copies=10 element_receivers=6 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 recursion=4 results=12 shared_programs=17
     shared_strings=5 struct_methods=11 sum_owners=6 tasks=22 text_views=6 vector_owners=48)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

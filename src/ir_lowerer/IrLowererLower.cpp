@@ -351,6 +351,12 @@ bool IrLowerer::lower(const Program &program,
                             .pushFileScope = [&]() { pushFileScope(); },
                             .emitCurrentFileScopeCleanup =
                                 [&]() { emitFileScopeCleanup(fileScopeStack.back()); },
+                            .sharedReturnExits =
+                                {
+                                    .begin = activeReturnEmitStage.beginSharedReturnExits,
+                                    .endsWithExit = activeReturnEmitStage.endsWithSharedReturnExit,
+                                    .finish = activeReturnEmitStage.finishSharedReturnExits,
+                                },
                             .popFileScope = [&]() { popFileScope(); },
                             .resolveExprPath =
                                 [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },

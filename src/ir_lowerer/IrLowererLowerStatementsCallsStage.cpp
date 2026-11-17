@@ -102,6 +102,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
                 .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
                 .popFileScope = input.popFileScope,
                 .instructions = &body.targetFunction->instructions,
+                .sharedReturnExits = input.sharedReturnExits,
             },
             errorOut)) {
       if (errorOut.empty()) {
@@ -428,6 +429,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
               .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
               .popFileScope = input.popFileScope,
               .instructions = &input.function->instructions,
+              .sharedReturnExits = input.sharedReturnExits,
           },
           errorOut);
       if (!ownedParametersError.empty()) {

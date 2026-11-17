@@ -29,6 +29,7 @@ struct LowerStatementsEntryExecutionStepInput {
   ActionFn popFileScope;
 
   std::vector<IrInstruction> *instructions = nullptr;
+  SharedReturnExitHooks sharedReturnExits;
 };
 
 bool runLowerStatementsEntryExecutionStep(const LowerStatementsEntryExecutionStepInput &input,

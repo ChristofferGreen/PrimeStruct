@@ -60,20 +60,21 @@ bool runLowerStatementsEntryExecutionStep(const LowerStatementsEntryExecutionSte
     entryResult = *input.entryResultInfo;
   }
 
-  const auto entryExecutionResult = emitEntryCallableExecutionWithCleanup(
-      *input.entryDef,
-      input.returnsVoid,
-      *input.sawReturn,
-      *input.currentOnError,
-      entryOnError,
-      *input.currentReturnResult,
-      entryResult,
-      input.emitEntryStatement,
-      input.pushFileScope,
-      input.emitCurrentFileScopeCleanup,
-      input.popFileScope,
-      *input.instructions,
-      errorOut);
+  const auto entryExecutionResult =
+      emitEntryCallableExecutionWithCleanup(*input.entryDef,
+                                            input.returnsVoid,
+                                            *input.sawReturn,
+                                            *input.currentOnError,
+                                            entryOnError,
+                                            *input.currentReturnResult,
+                                            entryResult,
+                                            input.emitEntryStatement,
+                                            input.pushFileScope,
+                                            input.emitCurrentFileScopeCleanup,
+                                            input.popFileScope,
+                                            *input.instructions,
+                                            errorOut,
+                                            input.sharedReturnExits);
   return entryExecutionResult == EntryCallableExecutionResult::Emitted;
 }
 

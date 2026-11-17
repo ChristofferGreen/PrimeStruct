@@ -1,5 +1,7 @@
 #pragma once
 
+#include "primec/ir_lowerer/IrLowererSharedReturnExits.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -215,7 +217,9 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
     const ExprLocalsValueKindFn &inferArrayElementKind,
     const ActionFn &emitFileScopeCleanupAll,
-    std::string &error);
+    std::string &error,
+    // Emits the exit of a `return` that shares its cleanup chain (IrLowererSharedReturnExits.h), or returns false.
+    const SharedReturnExitFn &emitSharedReturn = {});
 ReturnStatementEmitResult tryEmitReturnStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

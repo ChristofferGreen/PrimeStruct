@@ -200,7 +200,8 @@
   field, an element. An owning local (a struct with `Destroy`, `DestroyStack` or a field that has one, including containers) is
   destroyed when its scope ends on every exit path (fall-through, `return`, including from nested blocks of an inlined
   callee), last declared first, unless its value was moved out (`move(x)`, a `move` parameter) or named in the returned
-  value; a per-local drop flag tracks this at run time. A builtin `vector<T>` local initialized by a constructor or a
+  value; a per-local drop flag tracks this at run time (the lowering shares the destruction between the `return`s
+  of one body instead of repeating it at each one: docs/spec/vm-design.md, Shared exit paths). A builtin `vector<T>` local initialized by a constructor or a
   call returning a vector owns it the same way: its elements are destroyed and its buffer freed when its scope ends,
   a `mut` binding initialized from another vector binding owns its copy the same way, and a read-only one is a view
   and destroys nothing. A builtin `vector<T>` field of a struct (including a closure's by-value capture and the

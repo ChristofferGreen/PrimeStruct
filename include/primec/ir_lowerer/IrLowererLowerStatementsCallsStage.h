@@ -51,6 +51,8 @@ struct LowerStatementsCallsStageInput {
 
   ActionFn pushFileScope;
   ActionFn emitCurrentFileScopeCleanup;
+  // The shared exit path of a body (IrLowererSharedReturnExits.h); empty: bodies keep their inline cleanups.
+  SharedReturnExitHooks sharedReturnExits;
   ActionFn popFileScope;
 
   ExprStringFn resolveExprPath;

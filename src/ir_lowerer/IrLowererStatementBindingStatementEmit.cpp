@@ -392,21 +392,23 @@ StatementPrintPathSpaceEmitResult tryEmitPrintPathSpaceStatementBuiltin(
   return StatementPrintPathSpaceEmitResult::NotMatched;
 }
 
-ReturnStatementEmitResult tryEmitReturnStatement(
-    const Expr &stmt,
-    const LocalMap &localsIn,
-    std::vector<IrInstruction> &instructions,
-    const std::optional<ReturnStatementInlineContext> &inlineContext,
-    bool declaredReturnIsReferenceHandle,
-    const std::optional<ResultReturnInfo> &resultReturnInfo,
-    bool definitionReturnsVoid,
-    bool &sawReturn,
-    const ExprLocalsPredicateFn &emitExpr,
-    const ExprLocalsValueKindFn &inferExprKind,
-    const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
-    const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferArrayElementKind,
-    const std::function<void()> &emitFileScopeCleanupAll,
-    std::string &error) {
+ReturnStatementEmitResult
+tryEmitReturnStatement(const Expr &stmt,
+                       const LocalMap &localsIn,
+                       std::vector<IrInstruction> &instructions,
+                       const std::optional<ReturnStatementInlineContext> &inlineContext,
+                       bool declaredReturnIsReferenceHandle,
+                       const std::optional<ResultReturnInfo> &resultReturnInfo,
+                       bool definitionReturnsVoid,
+                       bool &sawReturn,
+                       const ExprLocalsPredicateFn &emitExpr,
+                       const ExprLocalsValueKindFn &inferExprKind,
+                       const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+                       const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)>
+                           &inferArrayElementKind,
+                       const std::function<void()> &emitFileScopeCleanupAll,
+                       std::string &error,
+                       const SharedReturnExitFn &emitSharedReturn) {
   if (!isReturnCall(stmt)) {
     return ReturnStatementEmitResult::NotMatched;
   }
@@ -586,10 +588,12 @@ ReturnStatementEmitResult tryEmitReturnStatement(
       error = "return requires exactly one argument";
       return ReturnStatementEmitResult::Error;
     }
-    if (emitFileScopeCleanupAll) {
-      emitFileScopeCleanupAll();
+    if (!emitSharedReturn || !emitSharedReturn(IrOpcode::ReturnVoid, -1)) {
+      if (emitFileScopeCleanupAll) {
+        emitFileScopeCleanupAll();
+      }
+      instructions.push_back({IrOpcode::ReturnVoid, 0});
     }
-    instructions.push_back({IrOpcode::ReturnVoid, 0});
     sawReturn = true;
     return ReturnStatementEmitResult::Emitted;
   }
@@ -637,33 +641,32 @@ ReturnStatementEmitResult tryEmitReturnStatement(
   if (shouldPackResultErrorReturn(valueExpr)) {
     emitPackedResultErrorReturn();
   }
-  if (emitFileScopeCleanupAll) {
-    emitFileScopeCleanupAll();
-  }
-
+  // The opcode first: an exit that shares its cleanup (SharedReturnExits) stores the value and jumps instead.
+  IrOpcode returnOp = IrOpcode::ReturnI64;
   const LocalInfo::ValueKind arrayKind = inferArrayElementKind(valueExpr, localsIn);
   if (arrayKind != LocalInfo::ValueKind::Unknown) {
     if (arrayKind == LocalInfo::ValueKind::String) {
+      if (emitFileScopeCleanupAll) {
+        emitFileScopeCleanupAll();
+      }
       error = "native backend does not support string array return types";
       return ReturnStatementEmitResult::Error;
     }
-    instructions.push_back({IrOpcode::ReturnI64, 0});
-    sawReturn = true;
-    return ReturnStatementEmitResult::Emitted;
-  }
-
-  const LocalInfo::ValueKind returnKind = inferExprKind(valueExpr, localsIn);
-  if (returnKind == LocalInfo::ValueKind::Int64 || (returnKind == LocalInfo::ValueKind::UInt64 || returnKind == LocalInfo::ValueKind::UInt8) ||
-      returnKind == LocalInfo::ValueKind::String) {
-    instructions.push_back({IrOpcode::ReturnI64, 0});
-  } else if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
-    instructions.push_back({IrOpcode::ReturnI32, 0});
-  } else if (returnKind == LocalInfo::ValueKind::Float32) {
-    instructions.push_back({IrOpcode::ReturnF32, 0});
-  } else if (returnKind == LocalInfo::ValueKind::Float64) {
-    instructions.push_back({IrOpcode::ReturnF64, 0});
   } else {
-    instructions.push_back({IrOpcode::ReturnI64, 0});
+    const LocalInfo::ValueKind returnKind = inferExprKind(valueExpr, localsIn);
+    if (returnKind == LocalInfo::ValueKind::Int32 || returnKind == LocalInfo::ValueKind::Bool) {
+      returnOp = IrOpcode::ReturnI32;
+    } else if (returnKind == LocalInfo::ValueKind::Float32) {
+      returnOp = IrOpcode::ReturnF32;
+    } else if (returnKind == LocalInfo::ValueKind::Float64) {
+      returnOp = IrOpcode::ReturnF64;
+    }
+  }
+  if (!emitSharedReturn || !emitSharedReturn(returnOp, -1)) {
+    if (emitFileScopeCleanupAll) {
+      emitFileScopeCleanupAll();
+    }
+    instructions.push_back({returnOp, 0});
   }
 
   sawReturn = true;

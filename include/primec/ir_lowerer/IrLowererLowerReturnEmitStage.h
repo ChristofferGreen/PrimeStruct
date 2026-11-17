@@ -85,6 +85,15 @@ struct LowerReturnEmitStageState {
   LowerReturnEmitStructCopyFn emitStructCopySlots;
   LowerReturnEmitFileScopeCleanupFn emitFileScopeCleanup;
   ActionFn emitFileScopeCleanupAll;
+  // The shared exit path of the body being lowered (IrLowererSharedReturnExits.h): `beginSharedReturnExits` starts a
+  // body, `emitSharedReturn` is the exit of a `return` that shares its cleanup (false: keep the inline cleanup),
+  // `endsWithSharedReturnExit` says whether the last instruction is such an
+  // exit, and `finishSharedReturnExits` emits the cleanup chains after the body.
+  SharedReturnExits sharedReturnExits;
+  std::function<void(bool)> beginSharedReturnExits;
+  SharedReturnExitFn emitSharedReturn;
+  std::function<bool()> endsWithSharedReturnExit;
+  std::function<bool()> finishSharedReturnExits;
   ActionFn pushFileScope;
   ActionFn popFileScope;
   LowerReturnEmitEmitBlockFn emitBlock;

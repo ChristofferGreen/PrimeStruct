@@ -168,7 +168,7 @@ of sync with them.
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | ready | build-graph-defects |
-| TODO-6021 | An early `return` repeats the destruction of every live local in optimized C++ | ready | build-graph-defects |
+| TODO-6023 | The arms of a value `pick` leave their owning locals in the enclosing scope | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
 | TODO-6018 | A compile step leaves no generated C++ next to its executable | ready | build-dogfood |
@@ -209,9 +209,9 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019, TODO-6021
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022, TODO-6023
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -292,20 +292,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [~] TODO-6021: An early `return` repeats the destruction of every live local in optimized C++
-  - owner: ai
-  - status: in_progress
-  - claimed_by: exits-a (worktree-agent-ad166147012dc6e3c), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Build system (found by TODO-6020: the optexe build entries of the build graph and glob)
-  - parallel_track: build-graph-defects
-  - scope: The lowering expands the destruction of every live struct local at every `return` of a body, so a body that holds a `Graph` (a `vector<Node>` of nodes with `String` fields) and has seven `if(...) { return(n) }` checks holds eight copies of the destruction. Measured 2026-11-17 on `tests/fixtures/build/build_graph.prime` under `--emit=optcpp`: each such check added about 5,600 lines of C++ to `run_checks` (51,667 lines for the body; the host compiler took 5 s on the program), where the checks moved into a definition that owns no graph add a small fraction of that. The fixtures now work around it (TODO-6020), and `/std/glob` merged call sites for the same reason. Emit each live set's destruction once per scope (a shared cleanup block that the exits jump to, with the drop flags deciding what it destroys) in the IR lowerer, so the optimized backends, the VM and the arm64 backend all shrink; real calls already keep a callee's destruction in one place per exit.
-  - acceptance:
-    - the `run_checks` of the original `build_graph.prime` (graph and seven checks in one body, kept as a test fixture) lowers to under 15,000 lines of `--emit=optcpp` C++, and its output and heap statistics are unchanged on the VM and optexe
-    - `--dump-stage ir` of programs with one `return` per body is unchanged; the dumps of programs with several exits differ only in the shared cleanup
-    - full release gate green
-  - stop_rule: destruction at early `return`; not `break`/`continue` exits and not real-call selection.
-
 - [ ] TODO-6022: A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call
   - owner: ai
   - status: ready
@@ -317,6 +303,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a recursive definition with a `[vector<i32> copy]` and a `[vector<String> move]` parameter runs on the VM and optexe with balanced heap and string-heap statistics, a copy argument from a place (the caller keeps its vector) and from a fresh vector or `move(x)` (the callee takes it over)
     - full release gate green
   - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
+
+- [ ] TODO-6023: The arms of a value `pick` leave their owning locals in the enclosing scope
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Language defects found by TODO-6021 (shared exits of early `return`)
+  - parallel_track: build-graph-defects
+  - scope: A `pick` statement lowers each arm as a scope of its own since TODO-6021 (`SumHelpersContext`, `src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp`, the statement form), but the value form (`name = pick(...) { ... }`, `return(pick(...) { ... })`, the arms of `emitPickArmPrefixStatements`) still emits an arm's bindings into the enclosing scope. The drop flag of an arm's owning local is set only when that arm runs, so a cleanup of the enclosing scope (its end, or an exit of a later arm or of the body) reads the flag of an arm that never ran: zero on the VM (frames are zeroed) and stale stack memory on the arm64 native backend, which does not zero a frame (the symptom that TODO-6021 hit in `pick_returns`: a segmentation fault in `pick_return_owned_values` on native). Give each value arm its own scope too: the arm's value is computed first, the value a local ends the arm with is taken over (`releasedDropFlagLocal`), and the rest of the arm's locals are destroyed before the jump to the end of the `pick`. Write the failing program first (an owning `String` or struct local in a value arm, a body that returns after the `pick`, run on native).
+  - acceptance:
+    - a program with owning locals in the arms of a value `pick` runs on the VM, optexe and native with the same output and balanced heap statistics (VM and optexe), the locals destroyed where their arm ends
+    - the arm-local value that ends the arm is still taken over, not copied or destroyed twice
+    - full release gate green
+  - stop_rule: value-form `pick` arms; not the statement form and not `match`.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai

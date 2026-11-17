@@ -429,6 +429,25 @@
   function there too instead of a copy of its body at every call site.
   Measured for the web examples under `--emit=optcpp` in docs/OptimizingBackendsPlan.md (section 9, Real calls for web
   apps): `examples/apps/todo_web` went from 12.7 MB of C++ to under 1.4 MB.
+- Shared exit paths: a body (the entry or a real call's function) that holds two or more `return` statements (counted
+  syntactically, nested blocks included) shares the destruction of its owning locals between them. A `return` whose
+  live scope entries include a drop entry (an owning struct, sum or builtin vector local) stores its value in a local
+  of the body (one per return opcode), jumps to a cleanup chain and does not expand the destruction itself. The chains
+  are emitted once, after the body (`SharedReturnExits`, `include/primec/ir_lowerer/IrLowererSharedReturnExits.h`): the
+  chain of one exit is its live entries last declared first, so an exit shares the chain of every exit whose live
+  entries are a prefix of its own, and each chain node is the destruction of one entry (the same drop-flag check, flag
+  clear and destroy helpers that a scope's own exit emits) followed by its parent, ending in the load of the stored value
+  and the return. The drop flags still decide at run time what each node destroys, so every exit destroys exactly the
+  locals live at it, in the same order, once. A body with one `return`, an exit with no drop entry live (nothing but
+  file handles, or nothing), the exits of an inlined callee (they already jump to the call's exit), `break` and
+  `continue`, and the `?` exit keep the inline cleanup, so their IR is unchanged. Measured on the one-body form of
+  `tests/fixtures/build/build_graph_one_body.prime` (a `Graph` and seven checks in one `run_checks`): 51,665 lines of
+  `--emit=optcpp` C++ for `run_checks` became 10,967, with the same output and heap statistics on the VM and optexe.
+  A drop flag is only set where its local is declared, so a scope entry must be live (on the scope stack) only on
+  the paths that ran the declaration: each arm of a `pick` statement is a scope of its own (its owning locals are
+  destroyed where the arm ends), because arm locals left in the enclosing scope were read at the exits of the arms
+  after it, an uninitialized flag on the native backend, which does not zero its frames (the value form of `pick`
+  still does this: docs/todo.md).
 - Struct copies: a struct of fewer than 16 slots is copied by one load/store sequence per slot. A struct of 16 slots
   or more (a `Request` is about 23) is copied by a loop over chunks of 8 slots through advancing copies of the two
   addresses, then the remaining slots in line (`emitStructCopyFromPtrs`, `StructCopyLoopMinSlots` and
