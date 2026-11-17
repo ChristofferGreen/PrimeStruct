@@ -288,9 +288,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: read-only element access through `this.<vector field>[i]`.
 
-- [ ] TODO-6004: A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
+- [~] TODO-6004: A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
   - owner: ai
   - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
   - parallel_track: build-graph-defects
