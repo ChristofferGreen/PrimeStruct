@@ -167,8 +167,8 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
+| TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
 | TODO-6014 | A `primec build` spends 2.7 s compiling make.prime before it runs anything | ready | build-graph-defects |
-| TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | ready | build-graph-defects |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5918 | A script can run its graph in stages | ready | build-stages |
@@ -212,7 +212,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6012, TODO-6014
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6014, TODO-6015
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -267,18 +267,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the compile of make.prime; not the step runner.
 
-- [~] TODO-6012: A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM
+- [ ] TODO-6015: A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call
   - owner: ai
   - status: ready
-  - claimed_by: glob-defects (worktree-agent-adf9187b22d22091d), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; found while finishing TODO-5907)
+  - phase: Language defects found by glob (split from which made the diagnostic name the parameter)
   - parallel_track: build-graph-defects
-  - scope: `visit([StringView] base, [StringView] rel, [Reference<vector<DirEntry>>] entries, [Reference<vector<String>>] segments, ..., [vector<String> mut] matches)` that calls `walk`, which calls `visit` again, stops at lowering with `vm backend does not support recursive calls: /std/glob/visit` (2026-11-17). `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) rejects a `Reference<vector<T>>` (the target text contains `<`) and a `StringView`-by-value mix, so the definition is inlined and the recursion is rejected. Either lower such definitions as real calls or make the diagnostic name the parameter that kept the definition inline. glob walks with an explicit stack instead.
+  - scope: `isAddressAbiParameter` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes a builtin `vector<T>` parameter only for a spawned call (`allowCollections`), and rejects a `Reference<vector<T>>` because the target text contains `<`; a direct call keeps such a definition inline, where recursion is rejected. A direct call needs the vector's element metadata (`LocalInfo::vectorElementLifecyclePath`, `vectorStructElementSlotCount`) in the callee's parameter local, which a real-call body does not rebuild from the address it receives. Pass the vector record's address for a `mut` parameter and a `Reference` of a vector (no copy, the callee writes the caller's record), give the callee parameter local the element metadata from the parameter type, and let a `copy` parameter copy as a spawn does. Start with `[vector<i32> mut]` and `[vector<String> mut]`.
   - acceptance:
-    - a recursive definition with `[vector<i32> mut]` and `[Reference<vector<String>>]` parameters runs on the VM and optexe, or the diagnostic names the parameter and the rule
+    - a recursive definition with `[vector<i32> mut]` and `[Reference<vector<String>>]` parameters pushes and reads through the recursion on the VM and optexe, with balanced heap and string-heap statistics
+    - the diagnostics of the recursion program matrix suite (`primestruct.program_matrix.recursion`) become runnable programs
     - full release gate green
-  - stop_rule: the address-ABI parameter check for vectors and references to vectors.
+  - stop_rule: builtin vector parameters of a real call; not stdlib `Vector`, `Map` or sum parameters.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai

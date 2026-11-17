@@ -989,4 +989,55 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
   return eligible;
 }
 
+std::string realCallBlockerReason(const Definition &def, const RealCallShapeContext &context) {
+  if (context.definitionsByPath == nullptr || context.structNames == nullptr ||
+      !context.allowStructs) {
+    return {};
+  }
+  const auto &byPath = *context.definitionsByPath;
+  const auto &structNames = *context.structNames;
+  for (const Expr &param : def.parameters) {
+    if (isAddressAbiParameter(
+            def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
+      continue;
+    }
+    const std::string subject = "parameter `" + param.name + "` ";
+    if (isArgsPackBinding(param) || param.args.size() > 1) {
+      return subject + "is an argument pack";
+    }
+    const Transform *type = taskParameterTypeTransform(param);
+    if (type == nullptr) {
+      return subject + "has no type the address ABI passes";
+    }
+    if (type->name == "vector" && !type->templateArgs.empty()) {
+      return subject + "is a `vector<" + trimTemplateTypeText(type->templateArgs.front()) +
+             ">`: only a spawned call passes a builtin vector, a direct call keeps its definition "
+             "inline";
+    }
+    if ((type->name == "Reference" || type->name == "Pointer") && type->templateArgs.size() == 1 &&
+        trimTemplateTypeText(type->templateArgs.front()).find('<') != std::string::npos) {
+      return subject + "is a `" + type->name + "<" +
+             trimTemplateTypeText(type->templateArgs.front()) +
+             ">`: the address ABI passes a reference or pointer to a scalar or a struct, not to a "
+             "templated type" +
+             " such as a vector";
+    }
+    if (type->name == "string") {
+      return subject + "is a `string` used by more than `count()` or `__pstext_literal`";
+    }
+    if (isSumDefinitionPath(resolveStructTypeName(type->name, def.namespacePrefix, structNames),
+                            byPath)) {
+      return subject + "is a sum, whose owned parameters stay inline";
+    }
+    return subject + "has a type (`" + type->name +
+           "`) the address ABI does not pass: a scalar, a struct outside the collections, or a "
+           "reference or pointer " +
+           "to one";
+  }
+  if (!isRealCallShapeEligible(def, context)) {
+    return "its result, receiver or body shape is not one a real call takes";
+  }
+  return {};
+}
+
 } // namespace primec::ir_lowerer

@@ -2379,6 +2379,7 @@ are left unarchived.
 | TODO-6009 | A build step whose glob listing changes runs again | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6010 | Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6013 | The glob VM CTest entry runs about 25 s under gate load, above the 5 s guardrail | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 
 <!-- INDEX-END -->

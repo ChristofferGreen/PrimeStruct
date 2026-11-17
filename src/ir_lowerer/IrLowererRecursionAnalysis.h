@@ -93,6 +93,11 @@ struct RealCallShapeContext {
 // leaving aside how often it is called. A call site whose callee passes this and is not a tiny leaf reserves it.
 bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &context);
 
+// Why `def` is not eligible as a real call, as text that names the first parameter (or the result or body shape) the
+// address ABI does not take; empty when it is eligible or the context is the scalar ABI. Used to explain a recursive
+// definition that stays inline.
+std::string realCallBlockerReason(const Definition &def, const RealCallShapeContext &context);
+
 // How a spawned call's parameters and result cross to its task on the address ABI targets (IrLowererTaskSpawn.h): a
 // scalar is passed as its value; a struct is copied (or moved) into a heap block by the spawner, since a local
 // address does not cross to another call stack, and the task gets the block's address; a struct result is written to

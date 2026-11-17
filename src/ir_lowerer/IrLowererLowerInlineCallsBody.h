@@ -307,6 +307,20 @@
             onErrorByDef,
             callSetup,
             error)) {
+      // A recursive definition that a real call would take is lowered as a function; one that stays inline reaches
+      // here, so name what kept it inline.
+      if (error.rfind("native backend does not support recursive calls: ", 0) == 0) {
+        const std::string blocker = ir_lowerer::realCallBlockerReason(
+            callee,
+            ir_lowerer::RealCallShapeContext{&setupStage.defMap,
+                                             &structNames,
+                                             setupStage.realCallAllowStructs,
+                                             false,
+                                             setupStage.realCallAllowStrings});
+        if (!blocker.empty()) {
+          error += " (it stays inline because " + blocker + ")";
+        }
+      }
       return false;
     }
     const ReturnInfo &returnInfo = callSetup.returnInfo;
