@@ -929,9 +929,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
 
-- [ ] TODO-5922: `primevm --link` merges two serialized IR modules
+- [~] TODO-5922: `primevm --link` merges two serialized IR modules
   - owner: ai
   - status: ready
+  - claimed_by: ir-link (worktree-agent-aefa610ed77eb0734), 2026-11-17
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 9 and 16)
   - parallel_track: lib-ir-link
