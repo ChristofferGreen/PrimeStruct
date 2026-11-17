@@ -7,6 +7,7 @@
 #include "primec/pipeline/CliDriver.h"
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/support/Options.h"
+#include "../pipeline/EmitDeps.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -60,6 +61,10 @@ void ScriptEngine::addImportPath(std::string path) { importPaths_.push_back(std:
 void ScriptEngine::setEntryPath(std::string entryPath) { entryPath_ = std::move(entryPath); }
 
 void ScriptEngine::setStdlibPath(std::string path) { stdlibPath_ = std::move(path); }
+
+void ScriptEngine::setAllowEffects(std::vector<std::string> effects) {
+  allowEffects_ = std::move(effects);
+}
 
 void ScriptEngine::exportFunction(std::string name, std::vector<HostType> parameters, HostType returnType) {
   for (ExportDecl &decl : exports_) {
@@ -145,13 +150,15 @@ bool ScriptEngine::compileEntry(const std::string &path,
                                 const std::string &text,
                                 const std::string &entryPath,
                                 std::shared_ptr<Script::Module> &module,
-                                std::string &diagnostics) const {
+                                std::string &diagnostics,
+                                std::vector<std::string> *sourceFiles) const {
   Options options;
   options.emitKind = "vm";
   options.inputPath = path;
   options.entryPath = entryPath;
   options.importPaths = importPaths_;
   options.inMemorySource = text;
+  options.allowEffects = allowEffects_;
   // An explicit stdlib wins; the checkout the script's path happens to sit in would add the same modules a second time.
   if (const std::string stdlibDir = resolveStdlibDir(stdlibPath_); !stdlibDir.empty()) {
     options.importPaths.push_back(stdlibDir);
@@ -168,6 +175,9 @@ bool ScriptEngine::compileEntry(const std::string &path,
     return false;
   }
   CompilePipelineOutput output = std::move(std::get<CompilePipelineSuccessResult>(result).output);
+  if (sourceFiles != nullptr) {
+    *sourceFiles = collectSourceDependencies(output.expandedSource);
+  }
 
   module = std::make_shared<Script::Module>();
   IrPreparationFailure irFailure;
@@ -194,7 +204,8 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
 
   std::shared_ptr<Script::Module> mainModule;
   std::string diagnostics;
-  const bool mainOk = compileEntry(path, source, entryPath_, mainModule, diagnostics);
+  const bool mainOk =
+      compileEntry(path, source, entryPath_, mainModule, diagnostics, &script.sourceFiles_);
   const bool missingMain = !mainOk && diagnostics.find("missing entry definition " + entryPath_) != std::string::npos;
   if (!mainOk && !(missingMain && !exports_.empty())) {
     script.diagnostics_ = diagnostics;

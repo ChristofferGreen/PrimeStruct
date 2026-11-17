@@ -274,6 +274,11 @@ public:
   // False when compilation failed; `diagnostics()` then says why.
   bool valid() const { return module_ != nullptr || exports_ != nullptr; }
   const std::string &diagnostics() const { return diagnostics_; }
+  // The source files the compile of the entry read (the script, its imports and the stdlib files it included):
+  // absolute, sorted, without duplicates. Empty for a script loaded from bytecode.
+  const std::vector<std::string> &sourceFiles() const {
+    return sourceFiles_;
+  }
 
   // Runs the entry definition. `args` become the script's argv after the
   // leading program name.
@@ -298,6 +303,20 @@ public:
   // a matching signature before `run`; otherwise `run` fails with a diagnostic
   // and executes nothing.
   template <class F> void bind(std::string name, F callable) { hostBindings_.bind(std::move(name), std::move(callable)); }
+  // Registers a host function that reads its arguments as raw slots and can fail a run with a message of its own:
+  // `invoke` returns false with `error` set and the run stops with "VM error: <error>". Text arguments are read with
+  // `detail::fromSlot<HostTextView>`. `bindRawString` is the form for a function that returns text.
+  void bindRaw(std::string name,
+               std::vector<HostType> parameters,
+               HostType returnType,
+               HostBindings::RawInvoke invoke) {
+    hostBindings_.bindRaw(std::move(name), std::move(parameters), returnType, std::move(invoke));
+  }
+  void bindRawString(std::string name,
+                     std::vector<HostType> parameters,
+                     HostBindings::RawStringInvoke invoke) {
+    hostBindings_.bindRawString(std::move(name), std::move(parameters), std::move(invoke));
+  }
   // Registers how an already bound host function runs when tasks run on threads (HostThreading above); false when
   // `name` is not bound.
   bool setHostThreading(const std::string &name, HostThreading threading) {
@@ -345,6 +364,7 @@ private:
   std::shared_ptr<const ExportTable> exports_;
   std::string name_;
   std::string diagnostics_;
+  std::vector<std::string> sourceFiles_;
   HostBindings hostBindings_;
 };
 

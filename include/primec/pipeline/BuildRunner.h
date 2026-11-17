@@ -9,6 +9,8 @@
 
 namespace primec {
 
+class BuildFunctionStepRunner;
+
 struct BuildRunSettings {
   // The compiler to start for each step (the running `primec`).
   std::string primecPath;
@@ -22,6 +24,8 @@ struct BuildRunSettings {
   std::string cacheDir;
   // At most this many steps run at once; values below 1 mean 1.
   int jobs = 1;
+  // Compiles and runs the function steps of the graph (BuildFunctionStep.h); null: a graph with one is refused.
+  BuildFunctionStepRunner *functionSteps = nullptr;
 };
 
 // The command line of one compile step, starting with the compiler path.
@@ -42,7 +46,8 @@ int runBuildGraph(const BuildGraphData &graph,
 int runBuildCommand(const BuildCommandPlan &plan,
                     const std::string &selfPath,
                     std::ostream &out,
-                    std::ostream &err);
+                    std::ostream &err,
+                    BuildFunctionStepRunner *functionSteps = nullptr);
 
 // The path of the running executable, or `argv0` when the system does not say.
 std::string selfExecutablePath(const std::string &argv0);

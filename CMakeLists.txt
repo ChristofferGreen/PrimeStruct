@@ -472,6 +472,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
   src/pipeline/BuildCache.cpp
   src/pipeline/BuildCopyStep.cpp
+  src/pipeline/BuildFunctionSteps.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildSubprojects.cpp
   src/pipeline/BuildGraphJson.cpp
@@ -927,8 +928,15 @@ target_include_directories(primec_lib INTERFACE include)
 target_link_libraries(primec_lib INTERFACE primec_backend_lib primec_frontend_lib primec_support_lib)
 
 if(NOT PRIMESTRUCT_EMBED_ONLY)
+# The function steps of `primec build` (src/pipeline/BuildFunctionStepEmbed.cpp, TODO-5919) compile and run a PrimeStruct
+# file in the process with the embedding library, which sits above the IR library that holds the build runner.
+add_library(primec_build_function_steps_lib src/pipeline/BuildFunctionStepEmbed.cpp)
+target_include_directories(primec_build_function_steps_lib PUBLIC include)
+target_link_libraries(primec_build_function_steps_lib PUBLIC primec_embed_lib primec_ir_lib)
+primestructEnableWarnings(primec_build_function_steps_lib)
+
 add_executable(primec src/bin/main.cpp)
-target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib)
+target_link_libraries(primec PRIVATE primec_backend_registry_lib primec_ir_lib primec_build_function_steps_lib)
 if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primec PRIVATE mimalloc)
 endif()
@@ -1465,6 +1473,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_build_copy.cpp
+    tests/unit/backend_host/test_build_function_steps.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_options.cpp
@@ -1728,6 +1737,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
               "--order-by=file"
     )
     set_tests_properties(PrimeStruct_build_copy_${copy_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
+  # Function steps run in-process on a VM thread (tests/unit/backend_host/test_build_function_steps.cpp, TODO-5919).
+  foreach(function_case
+          "generator function step" "two function steps both" "writes outside the output directory faults"
+          "writes an absolute path" "cannot use the file_write" "does not write its declared output"
+          "runs again when a declared input" "runs again when its file or" "dry run marks a graph" "stays self-contained" "declares no outputs"
+          "path check of a function step" "merge of subproject graphs moves")
+    string(MAKE_C_IDENTIFIER "${function_case}" function_id)
+    add_test(
+      NAME PrimeStruct_build_function_steps_${function_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_function_steps"
+              "--test-case=*${function_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_function_steps_${function_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # The compiled make.prime is cached in the project (tests/unit/backend_host/test_build_script_cache.cpp).

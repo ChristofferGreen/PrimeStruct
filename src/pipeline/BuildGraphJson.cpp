@@ -390,6 +390,9 @@ void moveNodeIntoParent(const std::string &directory,
     output->text = rebasePath(directory, output->text);
   }
   rebaseStringList(directory, mutableField(node, "inputDirs"));
+  // A function step: the files it reads move to the project's view. The files it writes stay as declared, because the
+  // definition writes them by name and cannot know the folder it was included from.
+  rebaseStringList(directory, mutableField(node, "inputs"));
   JsonValue *compiler = mutableField(node, "compiler");
   if (compiler == nullptr || compiler->kind != JsonValue::Kind::Object) {
     return;
@@ -524,6 +527,23 @@ bool mergeBuildGraphJson(const std::string &parentText,
       }
     }
   }
+  // A function step in any script makes the merged graph not self-contained, as in a single export (after `problems`).
+  const bool anyFunction =
+      std::any_of(nodes->items.begin(), nodes->items.end(), [](const JsonValue &node) {
+        return node.kind == JsonValue::Kind::Object && node.find("kind") != nullptr &&
+               node.find("kind")->text == "function";
+      });
+  if (anyFunction && parent.find("selfContained") == nullptr) {
+    JsonValue flag;
+    flag.kind = JsonValue::Kind::Bool;
+    flag.boolean = false;
+    auto position = std::find_if(parent.members.begin(),
+                                 parent.members.end(),
+                                 [](const auto &member) { return member.first == "problems"; });
+    parent.members.insert(position == parent.members.end() ? position : position + 1,
+                          std::make_pair(std::string("selfContained"), std::move(flag)));
+    nodes = mutableField(parent, "nodes");
+  }
   // The export order: by id, then by the text of the node.
   std::vector<std::pair<std::string, std::string>> keyed;
   for (const JsonValue &node : nodes->items) {
@@ -549,6 +569,46 @@ bool mergeBuildGraphJson(const std::string &parentText,
   return true;
 }
 
+bool addBuildClosures(const std::string &graphText,
+                      const std::map<std::string, std::vector<std::string>> &closures,
+                      std::string &annotated,
+                      std::string &error) {
+  JsonValue root;
+  if (!JsonReader(graphText).parse(root, error)) {
+    error = "the graph is not valid JSON: " + error;
+    return false;
+  }
+  JsonValue *nodes = root.kind == JsonValue::Kind::Object ? mutableField(root, "nodes") : nullptr;
+  if (nodes == nullptr || nodes->kind != JsonValue::Kind::Array) {
+    error = "the graph has no \"nodes\" array";
+    return false;
+  }
+  for (JsonValue &node : nodes->items) {
+    const JsonValue *id = node.kind == JsonValue::Kind::Object ? node.find("id") : nullptr;
+    const auto found = id != nullptr ? closures.find(id->text) : closures.end();
+    if (found == closures.end()) {
+      continue;
+    }
+    JsonValue list;
+    list.kind = JsonValue::Kind::Array;
+    for (const std::string &file : found->second) {
+      JsonValue item;
+      item.kind = JsonValue::Kind::String;
+      item.text = file;
+      list.items.push_back(std::move(item));
+    }
+    auto position = std::find_if(node.members.begin(), node.members.end(), [](const auto &member) {
+      return member.first == "outputs";
+    });
+    node.members.insert(position == node.members.end() ? position : position + 1,
+                        std::make_pair(std::string("closure"), std::move(list)));
+  }
+  annotated.clear();
+  writeJson(root, annotated);
+  annotated += "\n";
+  return true;
+}
+
 bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::string &error) {
   graph = {};
   JsonValue root;
@@ -568,7 +628,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     }
     const std::string kind = stringField(node, "kind");
     const std::string id = stringField(node, "id");
-    if (kind != "compile" && kind != "executable" && kind != "copy") {
+    if (kind != "compile" && kind != "executable" && kind != "copy" && kind != "function") {
       graph.unsupportedNodes.push_back(id);
       continue;
     }
@@ -579,6 +639,14 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.source = stringField(node, "source");
     step.output = stringField(node, "output");
     step.inputDirs = stringList(node, "inputDirs");
+    if (kind == "function") {
+      // A function step has no compiler either: the definition `function` of the file `source` runs in the runner.
+      step.function = stringField(node, "function");
+      step.inputs = stringList(node, "inputs");
+      step.outputs = stringList(node, "outputs");
+      graph.steps.push_back(std::move(step));
+      continue;
+    }
     if (kind == "copy") {
       // A copy step has no compiler: `source` is the file and `output` its place in the output directory.
       graph.steps.push_back(std::move(step));
@@ -620,6 +688,9 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
   const JsonValue *incomplete = root.find("incomplete");
   graph.incomplete =
       incomplete != nullptr && incomplete->kind == JsonValue::Kind::Bool && incomplete->boolean;
+  const JsonValue *selfContained = root.find("selfContained");
+  graph.selfContained = !(selfContained != nullptr &&
+                          selfContained->kind == JsonValue::Kind::Bool && !selfContained->boolean);
   graph.subprojects = stringList(root, "subprojects");
   const JsonValue *problems = root.find("problems");
   if (problems != nullptr && problems->kind == JsonValue::Kind::Array) {

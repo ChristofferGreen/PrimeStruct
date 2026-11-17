@@ -16,4 +16,13 @@ bool resolveCopyDestination(const std::string &output,
 // `source` is not a regular file or the copy fails.
 bool copyBuildFile(const std::string &source, const std::string &destination, std::string &error);
 
+// The place of a file that a function step writes: `path` (relative to the output directory) as an absolute, normalized
+// path inside `outDir`. False, with `writes outside the output directory: <path>` (or `writes an empty path`) in `error`,
+// when `path` is empty or absolute, leaves the output directory (`..`), reaches outside it through a symbolic link of a
+// folder on the way, or names a symbolic link (a write through it would land elsewhere). Nothing is created.
+bool resolveStepOutputPath(const std::string &path,
+                           const std::string &outDir,
+                           std::string &resolved,
+                           std::string &error);
+
 } // namespace primec

@@ -165,10 +165,20 @@ namespace build {
     [public String mut] compilerJson{String{}}
     // The directories whose listings the target depends on (`Build.watch`), sorted bytewise and without duplicates.
     [public vector<String> mut] inputDirs{vector<String>{}}
+    // A function step (`Build.step`): the path of the definition the runner runs (the file is `source`), the files it
+    // reads (relative to the project) and the files it writes (relative to the output directory).
+    [public String mut] functionPath{String{}}
+    [public vector<String> mut] inputs{vector<String>{}}
+    [public vector<String> mut] outputs{vector<String>{}}
 
     [return<bool>]
     isLink() {
       return(this.kind.equalsText("link"))
+    }
+
+    [return<bool>]
+    isFunction() {
+      return(this.kind.equalsText("function"))
     }
 
     [effects(heap_alloc)]
@@ -188,8 +198,17 @@ namespace build {
         json.stringValue(this.name.view())
         json.key("source")
         json.stringValue(this.source.view())
-        json.key("output")
-        json.stringValue(this.output.view())
+        if(this.isFunction()) {
+          json.key("function")
+          json.stringValue(this.functionPath.view())
+          json.key("inputs")
+          this.writeInputs(json)
+          json.key("outputs")
+          this.writeOutputs(json)
+        } else {
+          json.key("output")
+          json.stringValue(this.output.view())
+        }
         if(this.compilerJson.count() > 0i32) {
           json.key("compiler")
           json.rawValue(this.compilerJson.view())
@@ -206,6 +225,24 @@ namespace build {
         json.stringValue("static libraries are not supported by this compiler yet")
       }
       json.endObject()
+    }
+
+    [effects(heap_alloc)]
+    writeInputs([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.inputs.count(), i++) {
+      json.stringValue(this.inputs[i].view())
+    }
+    json.endArray()
+    }
+
+    [effects(heap_alloc)]
+    writeOutputs([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.outputs.count(), i++) {
+      json.stringValue(this.outputs[i].view())
+    }
+    json.endArray()
     }
 
     [effects(heap_alloc)]
@@ -442,6 +479,17 @@ namespace build {
       return(this.nodes.count())
     }
 
+    // True when some node is a function step: only the runner can execute the graph (the export says so).
+    [return<bool>]
+    hasFunctionStep() {
+      for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+        if(this.nodes[i].isFunction()) {
+          return(true)
+        }
+      }
+      return(false)
+    }
+
     [mut effects(heap_alloc)]
     add([Node copy] node) {
       this.nodes.push(node)
@@ -575,6 +623,10 @@ namespace build {
         json.stringValue(this.buildProblems[i].view())
       }
       json.endArray()
+      if(this.hasFunctionStep()) {
+        json.key("selfContained")
+        json.boolValue(false)
+      }
       if(this.subprojectDirs.count() > 0i32) {
         json.key("subprojects")
         this.writeSubprojects(json)
@@ -668,6 +720,34 @@ namespace build {
       node.name = name.toOwned()
       node.source = from.toOwned()
       node.output = to.toOwned()
+      this.collected.add(node)
+    }
+
+    // A function step (id "step:<name>", docs/BuildSystemPlan.md section 4): the runner compiles the file `source` (relative
+    // to the project) and runs the definition `function` (a path such as "/generate", taking no arguments and returning
+    // i32; 0 is success) in its own process on a VM thread, next to the other steps. `inputs` are the files of the project it
+    // reads and `outputs` the files it writes, relative to the output directory; the step writes them with
+    // `/std/build_step` `write_output`, which refuses a path outside that directory. The graph is no longer
+    // self-contained (the export says `"selfContained":false`): a plain program cannot run it.
+    [mut effects(heap_alloc)]
+    step([StringView] name, [vector<String>] inputs, [vector<String>] outputs, [StringView] source, [StringView] function) {
+      [Node mut] node{Node{}}
+      node.id = derive_id("step:", name)
+      node.kind = stringFrom("function")
+      node.name = name.toOwned()
+      node.source = source.toOwned()
+      node.functionPath = function.toOwned()
+      for([i32 mut] i{0i32}, i < inputs.count(), i++) {
+        [String] item{inputs[i]}
+        node.inputs.push(item)
+      }
+      for([i32 mut] i{0i32}, i < outputs.count(), i++) {
+        [String] item{outputs[i]}
+        node.outputs.push(item)
+      }
+      if(outputs.count() == 0i32) {
+        this.collected.buildProblems.push(problem_text("step ", name, " declares no outputs", ""))
+      }
       this.collected.add(node)
     }
 
