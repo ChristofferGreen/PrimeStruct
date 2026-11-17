@@ -273,9 +273,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the element read of a builtin vector; the other defects of the build graph list have their own leaves.
 
-- [ ] TODO-6003: A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
+- [~] TODO-6003: A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
   - owner: ai
   - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
   - parallel_track: build-graph-defects
