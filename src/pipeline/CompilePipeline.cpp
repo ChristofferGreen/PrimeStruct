@@ -38,6 +38,7 @@
 #include <unordered_set>
 #include "primec/support/BenchmarkSink.h"
 #include "CompilePipelineInternal.h"
+#include "EmitDeps.h"
 
 namespace primec {
 using namespace compile_pipeline_detail;
@@ -158,6 +159,14 @@ CompilePipelineResult runCompilePipelineResult(
     CompilePipelineDiagnosticInfo *diagnosticInfo) {
   CompilePipelineOutput output;
   if (runCompilePipeline(options, runConfig, output, errorStage, error, diagnosticInfo)) {
+    if (!options.emitDepsPath.empty() &&
+        !writeEmitDepsFile(options.emitDepsPath, output.expandedSource, error)) {
+      errorStage = CompilePipelineErrorStage::Import;
+      output.failure.stage = errorStage;
+      output.failure.message = error;
+      output.hasFailure = true;
+      return makeCompilePipelineFailureResult(std::move(output), errorStage, error, diagnosticInfo);
+    }
     return CompilePipelineSuccessResult{std::move(output)};
   }
   return makeCompilePipelineFailureResult(

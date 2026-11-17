@@ -41,6 +41,22 @@ main() {
 /std/collections`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
 `[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc`.
 
+### Dependency List
+`primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds
+the source files the compile read, one absolute, normalized path per line, sorted bytewise, without duplicates: the
+primary input, every import (project files and stdlib imports), and the stdlib files that lazy imports included. Only
+files that were read appear, so a program that imports nothing lists itself alone. It is the file-path list of the
+expanded-source provenance ledger (docs/spec/source-pipeline.md, step 1). The flag changes no other output, including
+`--dump-stage` text; a file that cannot be written is a diagnostic and exit code 2. A failed compile writes no list.
+```
+[return<i32>]
+main() {
+  return(4i32)
+}
+```
+`primevm main.prime --emit-deps main.deps` exits 4 and `main.deps` holds the absolute path of `main.prime` and
+nothing else. The cache of `primec build` (docs/BuildSystemPlan.md) hashes these files.
+
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a
 build script (docs/BuildSystemPlan.md). It is the ordinary compile of that file with `--profile build --emit=vm`, so

@@ -943,6 +943,10 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
         return false;
       }
       out.allowImport = std::move(allowed);
+    } else if (arg == "--emit-deps" && i + 1 < argc) {
+      out.emitDepsPath = argv[++i];
+    } else if (arg.rfind("--emit-deps=", 0) == 0) {
+      out.emitDepsPath = arg.substr(std::string("--emit-deps=").size());
     } else if (arg == "--benchmark-force-semantic-product" && i + 1 < argc) {
       if (!parseBenchmarkForceSemanticProduct(argv[++i], out.benchmarkForceSemanticProduct, error)) {
         return false;
