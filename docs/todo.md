@@ -169,7 +169,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | ready | file-listing |
 | TODO-5907 | `/std/file` expands glob patterns | blocked | build-glob |
-| TODO-5913 | `primec build` runs the graph | blocked | build-runner |
+| TODO-5913 | `primec build` runs the graph | ready | build-runner |
 | TODO-5914 | `--emit-deps` writes the files a compile read | ready | build-deps |
 | TODO-5915 | `primec build` skips steps whose inputs did not change | blocked | build-cache |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
@@ -1032,9 +1032,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5913: `primec build` runs the graph
+- [~] TODO-5913: `primec build` runs the graph
   - owner: ai
   - status: ready
+  - claimed_by: build-runner agent (worktree agent-a6e360d4ea673943b), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
   - parallel_track: build-runner
