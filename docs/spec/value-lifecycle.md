@@ -100,7 +100,9 @@
   field is read (a `String` or struct field, `make().text` or `items.at(i).text` on a `Vector<T>` local, stays a place
   inside the receiver, which lives to the end of the statement that reads it and is destroyed there). A fresh builtin vector that is only read (`make_values().count()`, `capacity()`,
   `make_values()[0i32]`, `at`, `at_unsafe`, and a scalar field of an element such as `make_rows()[1i32].id`) is
-  destroyed, elements and buffer, once the scalar result is loaded. An element of a vector temporary read as a
+  destroyed, elements and buffer, once the scalar result is loaded. A method call on an element of a named builtin vector (`names[i].view()`, `this.nodes[i].id()`) reads the element in
+  place, whatever the module of the collections library the program imports: the vector keeps owning it and the call
+  copies and destroys nothing. An element of a vector temporary read as a
   struct, a `String` or a vector (`[Row] copy{make_rows()[1i32]}`, `first_byte(make_rows()[1i32].text)`,
   `use(make_rows()[0i32])`) is a place like an element of a named vector, so the reader copies it; the vector
   lives to the end of the statement that reads it and is destroyed there, after a returned element is copied

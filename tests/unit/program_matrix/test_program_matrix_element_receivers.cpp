@@ -248,4 +248,87 @@ sum_nodes([Reference<vector<Node>>] nodes) {
                     "50\n51\n321\n321\n315\n50\n49\n2\n");
 }
 
+TEST_CASE(
+    "a struct holding vectors of strings keeps them when it is pushed into a vector of structs") {
+  // Pushed from a local, a `copy` parameter, a temporary, a local built in a method, `move(...)` and past the
+  // capacity (the elements move to a new buffer), then read back and copied with the whole graph.
+  runElementProgram("element_receiver_push_struct_with_vectors",
+                    R"(
+[struct]
+Node() {
+  [String] id{String{}}
+  [vector<String> mut] deps{vector<String>{}}
+  [vector<String> mut] args{vector<String>{}}
+
+  [effects(heap_alloc), return<i32>]
+  sum() {
+    [i32 mut] total{convert<i32>(this.id.byteAt(0i32))}
+    for([i32 mut] i{0i32}, i < this.deps.count(), i++) {
+      total = total + convert<i32>(this.deps[i].byteAt(0i32))
+    }
+    for([i32 mut] i{0i32}, i < this.args.count(), i++) {
+      total = total + convert<i32>(this.args[i].byteAt(0i32))
+    }
+    return(total)
+  }
+}
+
+[struct]
+Graph() {
+  [vector<Node> mut] nodes{vector<Node>{}}
+
+  [mut effects(heap_alloc)]
+  add([Node copy] node) {
+    this.nodes.push(node)
+  }
+
+  [mut effects(heap_alloc)]
+  addNew([i32] id) {
+    [Node mut] made{Node{label(id)}}
+    made.deps.push(label(id + 1i32))
+    made.args.push(label(id + 2i32))
+    this.nodes.push(made)
+  }
+
+  [mut effects(heap_alloc)]
+  addMoved([i32] id) {
+    [Node mut] made{Node{label(id)}}
+    made.deps.push(label(id + 1i32))
+    this.nodes.push(move(made))
+  }
+
+  [effects(heap_alloc), return<i32>]
+  total() {
+    [i32 mut] sum{0i32}
+    for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+      sum = sum + this.nodes[i].sum()
+    }
+    return(sum)
+  }
+}
+)",
+                    R"(
+    [Graph mut] graph{Graph{}}
+    [Node mut] node{Node{label(1i32)}}
+    node.deps.push(label(2i32))
+    graph.add(node)
+    print_line(graph.total())
+    graph.add(Node{label(3i32)})
+    graph.addNew(1i32)
+    graph.addMoved(2i32)
+    for([i32 mut] k{0i32}, k < 12i32, k++) {
+      graph.addNew(k)
+    }
+    print_line(graph.nodes.count())
+    print_line(graph.total())
+    print_line(node.sum())
+    [Graph mut] other{graph}
+    print_line(other.total())
+    other.addNew(1i32)
+    print_line(graph.total())
+    print_line(other.total())
+)",
+                    "99\n16\n2363\n99\n2363\n2363\n2513\n");
+}
+
 TEST_SUITE_END();
