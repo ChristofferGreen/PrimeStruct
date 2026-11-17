@@ -196,7 +196,7 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5907 (build-glob): `/std/file` expands glob patterns
+- TODO-5907 (build-glob): `/std/glob` expands glob patterns
 
 ### Immediate Next 10
 
@@ -998,9 +998,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5907: `/std/file` expands glob patterns
+- [~] TODO-5907: `/std/glob` expands glob patterns (split: the cache inputs are TODO-6009)
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: build-agent (worktree-agent-a86f43f9ea1ce15ab), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
   - parallel_track: build-glob
@@ -1011,6 +1012,25 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/stdlib-reference.md documents it
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
+  - notes: split on 2026-11-17. This leaf is the `glob` function in `/std/glob` (a module of its own, like `/std/dir`)
+    that returns the matches and the directories it listed; TODO-6009 makes the build cache treat those directories as
+    inputs.
+
+- [ ] TODO-6009: A build step whose glob listing changes runs again
+  - owner: ai
+  - status: blocked
+  - depends_on: TODO-5907
+  - created_at: 2026-11-17
+  - phase: Build system (docs/BuildSystemPlan.md, section 8)
+  - parallel_track: build-glob
+  - scope: A graph node may carry `inputDirs`, the directories its glob read (`Build.watch(id, dirs)`; written to the export only when non-empty). The cache entry of a step stores a hash of each such directory's listing (entry names and kinds, sorted); a step whose directory gained, lost or renamed an entry is not up to date. The listing hash is computed in C++ by the runner.
+  - acceptance:
+    - a graph with `inputDirs` exports them and `primec build` parses them
+    - adding, removing and renaming a matched file re-runs the step; touching an unrelated directory does not
+    - a missing watched directory is a change, not a crash
+    - docs/spec/integration-and-tooling.md and docs/BuildSystemPlan.md state it
+    - full release gate green
+  - stop_rule: names and kinds of one directory level; no content hashing of matches (compile steps already hash what they read).
 
 - [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
   - owner: ai
