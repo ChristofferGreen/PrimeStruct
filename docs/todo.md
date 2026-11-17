@@ -872,9 +872,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5900: The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer
+- [~] TODO-5900: The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: vmthreads-d (worktree-agent-a525f6f25a76c86f6), 2026-11-17
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
