@@ -3771,7 +3771,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
-    control=37 element_copies=10 element_receivers=4 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 results=12 shared_programs=17
+    control=37 element_copies=10 element_receivers=5 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 results=12 shared_programs=17
     shared_strings=5 struct_methods=10 sum_owners=6 tasks=22 text_views=6 vector_owners=47)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

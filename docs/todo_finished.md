@@ -2365,6 +2365,7 @@ are left unarchived.
 | TODO-6000 | A `vector<T>` a stdlib-imported function returns is freed by its caller | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6001 | A vector a method call returns is freed by its caller | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6002 | A method call on an element of a builtin vector of Strings frees the element twice | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6003 | A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

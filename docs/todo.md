@@ -203,7 +203,6 @@ of sync with them.
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
 - TODO-5912 (build-cli): `primec build --dry-run` prints the graph of `make.prime`
-- TODO-6003 (build-graph-defects): a read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
 - TODO-6004 (build-graph-defects): a struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
 - TODO-6005 (build-graph-defects): a view of an indexed element dangles after the expression that made it
 
@@ -213,9 +212,8 @@ of sync with them.
 2. TODO-5535
 3. TODO-5906
 4. TODO-5912
-5. TODO-6003
-6. TODO-6004
-7. TODO-6005
+5. TODO-6004
+6. TODO-6005
 
 ### Priority Lanes
 
@@ -226,7 +224,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6003, TODO-6004, TODO-6005, TODO-6006, TODO-6007
+- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6004, TODO-6005, TODO-6006, TODO-6007
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -255,21 +253,6 @@ Language defects found by the build graph: TODO-6002 (an element's method call f
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
-
-- [~] TODO-6003: A read-only method that indexes `this.<vector field>[i]` and calls a method on the element damages it
-  - owner: ai
-  - status: ready
-  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
-  - parallel_track: build-graph-defects
-  - depends_on: TODO-6002
-  - scope: A non-mut struct method that evaluates `this.nodes[i].first()` (element of a `vector<Node>` field, then a method of `Node` that reads a String field) left the element damaged: a later read printed `array index out of bounds` on the VM and optexe (2026-11-17, `import /std/collections/vector/*`). It is probably the same element-copy defect as TODO-6002; verify it after that fix. If it persists, bind the receiver of the method call to the element place (not a copy that is destroyed), as the call-result receivers are bound to hidden locals (commits 43215eb06, dbda0e2f3, ea470d678).
-  - acceptance:
-    - program matrix cases: a non-mut method of a struct reads `this.nodes[i].method()` for a struct element holding a `String` and a `vector<String>`, twice and in a loop, then the graph is read again; balanced statistics on the VM and optexe
-    - negative: a mutating method on the element through a non-mut `this` is still diagnosed
-    - full release gate green
-  - stop_rule: read-only element access through `this.<vector field>[i]`.
 
 - [~] TODO-6004: A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings
   - owner: ai
