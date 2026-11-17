@@ -2,6 +2,7 @@
 
 #include "VmTaskHandle.h"
 #include "VmTaskScheduler.h"
+#include "VmThreadedSync.h"
 
 #include <pthread.h>
 
@@ -24,6 +25,8 @@ constexpr size_t TaskStackBytes = size_t{8} << 20;
 constexpr size_t MaxLiveTasks = size_t{1} << 20;
 // A task looks at the stop flag every this many steps (a power of two).
 constexpr uint32_t StopPollSteps = 256;
+// The task number of the main task; spawned tasks are numbered from 2. A lock slot holds its holder's number.
+constexpr uint64_t MainHolder = 1;
 
 class VmThreadedTasks;
 
@@ -32,6 +35,8 @@ class VmThreadedTasks;
 struct ThreadTask {
   VmThreadedTasks *owner = nullptr;
   size_t functionIndex = 0;
+  // The task number a lock slot holds while this task holds the lock (the main task is 1).
+  uint64_t holder = 0;
   std::vector<uint64_t> arguments;
   void *heap = nullptr;
   uint64_t result = 0;
@@ -51,22 +56,22 @@ public:
 
   bool run(uint64_t &result, std::string &error) {
     uint64_t value = 0;
-    const TaskEnd end = runGuarded(static_cast<size_t>(module_.entryIndex), {}, value);
+    const TaskEnd end = runGuarded(static_cast<size_t>(module_.entryIndex), MainHolder, {}, value);
     if (end != TaskEnd::Stopped) {
       finishWith(value);
     }
     {
       // Whatever ended the run, every thread stops and is gone before the run returns, so none reads a heap or a
       // host that no longer exists.
-      std::unique_lock<std::mutex> lock(mutex_);
+      std::unique_lock<std::mutex> lock(sync_.mutex);
       if (!ended_) {
         ended_ = true;
         failed_ = true;
         error_ = "execution stopped";
       }
-      stop_.store(true, std::memory_order_relaxed);
-      changed_.notify_all();
-      changed_.wait(lock, [this] { return running_ == 0; });
+      sync_.stop.store(true, std::memory_order_relaxed);
+      sync_.changed.notify_all();
+      sync_.changed.wait(lock, [this] { return sync_.spawned == 0; });
     }
     if (failed_) {
       error = error_;
@@ -85,30 +90,33 @@ private:
 
   // The program ends with `value` (the main task's return or a trap); the first end wins.
   void finishWith(uint64_t value) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(sync_.mutex);
     if (!ended_) {
       ended_ = true;
       result_ = value;
     }
-    stop_.store(true, std::memory_order_relaxed);
-    changed_.notify_all();
+    sync_.stop.store(true, std::memory_order_relaxed);
+    sync_.signalChange();
   }
 
   // The program ends with a fault; only the first one is reported.
   void fail(std::string message) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(sync_.mutex);
     if (!ended_) {
       ended_ = true;
       failed_ = true;
       error_ = std::move(message);
     }
-    stop_.store(true, std::memory_order_relaxed);
-    changed_.notify_all();
+    sync_.stop.store(true, std::memory_order_relaxed);
+    sync_.signalChange();
   }
 
-  TaskEnd runGuarded(size_t functionIndex, std::vector<uint64_t> arguments, uint64_t &value) {
+  TaskEnd runGuarded(size_t functionIndex,
+                     uint64_t holder,
+                     std::vector<uint64_t> arguments,
+                     uint64_t &value) {
     try {
-      return runTask(functionIndex, std::move(arguments), value);
+      return runTask(functionIndex, holder, std::move(arguments), value);
     } catch (const std::exception &exception) {
       fail(std::string("exception: ") + exception.what());
     } catch (...) {
@@ -119,7 +127,8 @@ private:
 
   // The step kernel on one call stack. Faults are reported through fail(); the answer is Stopped for them and for a
   // stop that another task started.
-  TaskEnd runTask(size_t functionIndex, std::vector<uint64_t> arguments, uint64_t &value) {
+  TaskEnd
+  runTask(size_t functionIndex, uint64_t holder, std::vector<uint64_t> arguments, uint64_t &value) {
     // The arguments are the task's operand stack, where the function's first instructions store its parameters.
     std::vector<uint64_t> stack = std::move(arguments);
     std::vector<VmKernelFrame> frames;
@@ -138,7 +147,7 @@ private:
     uint32_t steps = 0;
     while (true) {
       if ((++steps & (StopPollSteps - 1)) == 0) {
-        if (stop_.load(std::memory_order_relaxed)) {
+        if (sync_.stop.load(std::memory_order_relaxed)) {
           return TaskEnd::Stopped;
         }
         if (cancel != nullptr && cancel->load(std::memory_order_relaxed)) {
@@ -152,6 +161,18 @@ private:
         if (inst.op == IrOpcode::TaskSpawn) {
           if (!spawn(inst.imm, stack, error)) {
             fail(error);
+            return TaskEnd::Stopped;
+          }
+          top.ip += 1;
+          continue;
+        }
+        if (isVmSyncOpcode(inst.op)) {
+          const SyncOutcome synced =
+              stepThreadedSyncOpcode(inst, sync_, host_, stack, frames, holder, error);
+          if (synced == SyncOutcome::Fault) {
+            fail(error);
+          }
+          if (synced != SyncOutcome::Done) {
             return TaskEnd::Stopped;
           }
           top.ip += 1;
@@ -199,7 +220,7 @@ private:
       error = "IR stack underflow on task spawn";
       return false;
     }
-    if (stop_.load(std::memory_order_relaxed)) {
+    if (sync_.stop.load(std::memory_order_relaxed)) {
       return false;
     }
     auto task = std::make_unique<ThreadTask>();
@@ -217,7 +238,7 @@ private:
     size_t slot = 0;
     uint16_t generation = 0;
     {
-      std::lock_guard<std::mutex> lock(mutex_);
+      std::lock_guard<std::mutex> lock(sync_.mutex);
       if (slots_.size() - freeSlots_.size() >= MaxLiveTasks) {
         host_.releaseTaskHeap(raw->heap);
         error = "too many live tasks";
@@ -230,9 +251,10 @@ private:
         slot = slots_.size();
         slots_.emplace_back();
       }
+      raw->holder = nextHolder_++;
       slots_[slot].task = std::move(task);
       generation = slots_[slot].generation;
-      ++running_;
+      ++sync_.spawned;
     }
     pthread_attr_t attributes;
     int rc = pthread_attr_init(&attributes);
@@ -249,11 +271,11 @@ private:
     }
     if (rc != 0) {
       {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(sync_.mutex);
         slots_[slot].task.reset();
         freeSlots_.push_back(slot);
-        --running_;
-        changed_.notify_all();
+        --sync_.spawned;
+        sync_.signalChange();
       }
       host_.releaseTaskHeap(raw->heap);
       error = std::string("cannot start a task thread: ") + std::strerror(rc);
@@ -274,7 +296,7 @@ private:
     const uint64_t handle = stack.back();
     const size_t slot = static_cast<size_t>(handle & 0xFFFFFFFFull);
     const uint16_t generation = static_cast<uint16_t>((handle >> 32) & 0xFFFFull);
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::unique_lock<std::mutex> lock(sync_.mutex);
     if ((handle & TaskHandleTagMask) != TaskHandleTag || slot >= slots_.size()) {
       error = "invalid task handle in IR";
       return false;
@@ -287,7 +309,13 @@ private:
     std::unique_ptr<ThreadTask> task = std::move(entry.task);
     entry.generation = static_cast<uint16_t>(entry.generation + 1);
     freeSlots_.push_back(slot);
-    changed_.wait(lock, [&] { return task->done || stop_.load(std::memory_order_relaxed); });
+    // A wait that no live thread can end (every task waits) is the run's deadlock fault.
+    const WaitResult waited = waitForChange(sync_, lock, [&] { return task->done; });
+    if (waited == WaitResult::Deadlock) {
+      orphans_.push_back(std::move(task));
+      error = DeadlockMessage;
+      return false;
+    }
     if (!task->done || ended_) {
       // The run is over (this task may even have ended it with a trap, so its result is not an answer any more); a
       // thread may still hold the task, so it is freed when the run ends.
@@ -303,18 +331,19 @@ private:
     VmThreadedTasks &owner = *task->owner;
     owner.host_.enterTaskHeap(task->heap);
     uint64_t value = 0;
-    const TaskEnd end = owner.runGuarded(task->functionIndex, std::move(task->arguments), value);
+    const TaskEnd end =
+        owner.runGuarded(task->functionIndex, task->holder, std::move(task->arguments), value);
     if (end == TaskEnd::Trapped) {
       owner.finishWith(value);
     }
     // The arena's live blocks stay valid: a result the task allocated is freed by whoever holds it.
     owner.host_.releaseTaskHeap(task->heap);
     // The last use of the task and of the run: the waiter or the end of the run may free both once the lock is free.
-    std::lock_guard<std::mutex> lock(owner.mutex_);
+    std::lock_guard<std::mutex> lock(owner.sync_.mutex);
     task->result = value;
     task->done = true;
-    --owner.running_;
-    owner.changed_.notify_all();
+    --owner.sync_.spawned;
+    owner.sync_.signalChange();
     return nullptr;
   }
 
@@ -322,14 +351,13 @@ private:
   VmKernelHost &host_;
   const std::vector<size_t> localCounts_;
 
-  std::mutex mutex_;
-  std::condition_variable changed_;
-  std::atomic<bool> stop_{false};
-  // Guarded by mutex_.
+  // The mutex, condition variable, stop flag and wait counts every thread of the run shares.
+  ThreadedWaitState sync_;
+  // Guarded by sync_.mutex.
   std::vector<Slot> slots_;
   std::vector<size_t> freeSlots_;
   std::vector<std::unique_ptr<ThreadTask>> orphans_;
-  size_t running_ = 0;
+  uint64_t nextHolder_ = MainHolder + 1;
   bool ended_ = false;
   bool failed_ = false;
   uint64_t result_ = 0;
@@ -337,28 +365,6 @@ private:
 };
 
 } // namespace
-
-bool moduleUsesSyncPrimitives(const IrModule &module) {
-  for (const IrFunction &function : module.functions) {
-    for (const IrInstruction &inst : function.instructions) {
-      switch (inst.op) {
-      case IrOpcode::AtomicLoad:
-      case IrOpcode::AtomicStore:
-      case IrOpcode::AtomicAdd:
-      case IrOpcode::AtomicExchange:
-      case IrOpcode::AtomicCompareExchange:
-      case IrOpcode::MutexLock:
-      case IrOpcode::MutexUnlock:
-      case IrOpcode::ConditionWait:
-      case IrOpcode::ConditionNotify:
-        return true;
-      default:
-        break;
-      }
-    }
-  }
-  return false;
-}
 
 bool runVmThreadedTasks(const IrModule &module,
                         VmKernelHost &host,

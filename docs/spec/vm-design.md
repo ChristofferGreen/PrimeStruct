@@ -129,7 +129,8 @@
   occupies a multiple of 8 bytes of the heap (it is exactly as long as it was asked to be, and the rest is not
   addressable).
 
-  A 32-bit operation works on the low half of the slot's value and leaves the slot sign-extended, like every `i32`.
+  A 32-bit operation works on the low half of the slot's value and leaves the slot sign-extended, like every `i32`. Under `--vm-threads`
+  they are real sequentially consistent atomics across the task threads (Tasks on threads, below).
   The source of these opcodes is `/std/sync` (docs/spec/stdlib-reference.md, Shared state): its `[host]`
   definitions named `/std/sync/__psatomic_*` are not host imports; the lowerer turns a call of one into its opcode,
   so `hits.add(1i64)` on an `Atomic<i64>` is
@@ -156,7 +157,9 @@
 - **Mutexes (PSIR v36):** `MutexLock` and `MutexUnlock` each pop the address of one heap slot, the lock, and push
   nothing (immediate 0). The slot holds 0 while the lock is free. `MutexLock` takes a free lock, waits for a held
   one, and faults with `mutex locked again by the task that holds it` when the caller holds it; `MutexUnlock`
-  frees it and faults with `mutex unlocked by a task that does not hold it` otherwise. Their source is
+  frees it and faults with `mutex unlocked by a task that does not hold it` otherwise. Under
+  `--vm-threads` the lock blocks the OS thread and a wait that can never finish is the deadlock fault (Tasks on
+  threads, below). Their source is
   `Mutex<T>.locked` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state), through the `[host]`
   definitions `/std/sync/__psmutex_lock` and `__psmutex_unlock`, which the lowerer turns into the opcodes as it
   does for atomics: `locked` is
@@ -209,7 +212,8 @@
   writes the runtime error `send on a closed channel` (a line on `stderr` and exit code 3, as for an array index
   out of bounds). On the VM a waiting task is blocked on the condition's address, and a notify makes the tasks
   blocked on it runnable; the slot's value is not used. A wait and a notify are switch points under a schedule
-  seed, and a task that waits counts for `deadlock: every task is waiting`. Where one call stack runs (a module
+  seed, and a task that waits counts for `deadlock: every task is waiting`. Under `--vm-threads` a wait sleeps the
+  OS thread until a notify that comes after it (Tasks on threads, below). Where one call stack runs (a module
   without tasks) a notify does nothing and a wait is that deadlock. The flat loop hands a task to the scheduler at each
   condition opcode (Tasks). On `optexe` the slot counts the notifies: a wait reads the count and
   frees the lock with the program's wait gate held, then sleeps on the program's condition variable until the
@@ -246,11 +250,25 @@
   message, or the trap's or the return's value), and the run returns once every task thread ended, so the process
   survives and a task never hangs the run (a thread inside a blocking host call ends when that call returns). A task
   nobody waited for is stopped when the main task returns. `Vm::setCancelFlag` is polled too. The mode does not use
-  the schedule seed, takes no JIT (`primevm` skips the native tier), and has no deadlock check yet, since tasks and
-  handles alone cannot deadlock. A module with an atomic, mutex or condition opcode (so `Atomic`, `Mutex`,
-  `Channel<T>` and `SharedString`) is refused before it runs: `--vm-threads does not support atomics, mutexes or
-  channels yet` (TODO-5897), and the embed API does not offer the mode until TODO-5899. Tasks run in parallel, so the
+  the schedule seed, takes no JIT (`primevm` skips the native tier). The embed API does not offer the mode until TODO-5899. Tasks run in parallel, so the
   order of what two live tasks print is not fixed.
+  **Atomics, mutexes, conditions and deadlock (TODO-5897):** the atomic opcodes run on the slot through `std::atomic_ref`,
+  sequentially consistent (a 32-bit add or compare-exchange is a compare-exchange loop on the sign-extended slot), so
+  `Atomic<T>` and the owner count of a `SharedString` are real atomics across tasks. A lock slot holds 0 while free
+  and the holder's task number otherwise (the main task is 1, spawned tasks count up from 2); a free lock is taken
+  with one compare-exchange and a held one parks the thread on the run's one condition variable until an unlock wakes
+  it (an unlock with nobody parked is one compare-exchange and takes no mutex). A condition is only an address: the run
+  keeps a notify count for each condition some task waits on, a wait registers and frees its lock with the run's mutex
+  held and sleeps until the count changes, and a notify with nobody waiting does nothing, so no wake-up is lost and the
+  slot is never written. `Channel<T>`, `Mutex<T>` and `SharedString` work unchanged on these. The faults of the
+  deterministic scheduler are the same (`mutex locked again by the task that holds it`, `mutex unlocked by a task
+  that does not hold it`, `condition wait by a task that does not hold the lock`). Every thread that waits (in
+  `TaskWait`, for a lock or for a notify) counts itself waiting; every lock release, notify and task end clears the
+  count and wakes the waiters, which count themselves again only if they still have to wait. The thread that makes
+  the count reach the number of live threads (the spawned tasks that have not returned, plus the main task) is the
+  last that could have changed anything, so the run faults with `deadlock: every task is waiting` (exit code 3), as
+  `optexe` does; a thread in a host call or spinning on an atomic counts as running, so a program that waits for a
+  host function or an atomic is never reported as deadlocked. The fault stops and joins every thread like any other.
 - **Tasks on threads (arm64 native, PSIR v34):** the direct Mach-O emitter runs each `TaskSpawn` on a pthread
   (TODO-5942; `src/native_emitter/NativeEmitterInternalsArm64Tasks.h`). The spawner allocates a task block on the
   heap (result, `pthread_t`, argc, argv, then the parameters; the handle is its address), fills it from the value

@@ -585,7 +585,7 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 
 Classification: **design direction**, decided 2026-11-11. `--vm-threads` with tasks, heap arenas and the one host lock
 is implemented (TODO-5896; docs/spec/vm-design.md, Tasks on threads); the rest is the VM threads lane of
-`docs/todo.md` (TODO-5897 to TODO-5904). The VM scheduler above describes what the VM does today and stays
+`docs/todo.md` (TODO-5898 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, landed). The VM scheduler above describes what the VM does today and stays
 true of the default until TODO-5904.
 
 The VM gets a second way to run tasks: each on its own OS thread, in parallel, with the semantics `optexe` already

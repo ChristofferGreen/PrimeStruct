@@ -410,7 +410,7 @@ TEST_CASE("handle faults read as in the default schedule") {
   }
 }
 
-TEST_CASE("atomic, mutex and condition opcodes are refused in threads mode only") {
+TEST_CASE("atomic, mutex and condition opcodes run in threads mode (TODO-5897)") {
   const IrModule atomic = moduleOf({functionOf("/main",
                                                0,
                                                {{IrOpcode::PushI64, 2},
@@ -434,10 +434,10 @@ TEST_CASE("atomic, mutex and condition opcodes are refused in threads mode only"
                                                    {IrOpcode::ReturnI32, 0}})});
   for (const IrModule *module : {&atomic, &mutex, &condition}) {
     const Run threaded = run(*module, true);
-    CHECK_FALSE(threaded.ok);
-    CHECK(threaded.error == "--vm-threads does not support atomics, mutexes or channels yet");
     const Run serial = run(*module, false);
-    CHECK(serial.error.find("--vm-threads") == std::string::npos);
+    CHECK(threaded.ok == serial.ok);
+    CHECK(threaded.error == serial.error);
+    CHECK(threaded.raw == serial.raw);
   }
 }
 

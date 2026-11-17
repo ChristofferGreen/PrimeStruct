@@ -379,10 +379,6 @@ bool executeVmModule(const IrModule &module,
                      const std::atomic<bool> *cancel,
                      std::optional<uint64_t> scheduleSeed,
                      bool taskThreads) {
-  if (taskThreads && moduleUsesSyncPrimitives(module)) {
-    error = "--vm-threads does not support atomics, mutexes or channels yet";
-    return false;
-  }
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;

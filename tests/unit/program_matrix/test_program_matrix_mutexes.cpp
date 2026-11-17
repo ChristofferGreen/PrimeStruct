@@ -27,6 +27,7 @@ void runMutexProgram(program_matrix::ProgramCase program) {
     config.vmFlags = {"--vm-schedule-seed", std::to_string(seed)};
     configs.push_back(std::move(config));
   }
+  configs.push_back(program_matrix::vmThreadsConfig());
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
   }

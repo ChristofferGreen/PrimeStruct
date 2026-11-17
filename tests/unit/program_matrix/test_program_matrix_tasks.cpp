@@ -128,9 +128,7 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "1500\n1623\n";
-  // The tasks count in an Atomic so the output does not depend on their order. --vm-threads refuses atomics until
-  // TODO-5897.
-  program.skipConfigs.push_back("vm-O2-threads");
+  // The tasks count in an Atomic so the output does not depend on their order.
   runTaskProgram(program);
 }
 

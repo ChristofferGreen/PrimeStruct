@@ -76,6 +76,13 @@ inline bool nativeSupported() {
 #endif
 }
 
+// The VM with each task on an OS thread of its own (--vm-threads; docs/spec/vm-design.md, Tasks on threads).
+inline ExecutionConfig vmThreadsConfig() {
+  ExecutionConfig config{"vm-O2-threads", Backend::Vm, 2, false};
+  config.vmFlags = {"--vm-threads"};
+  return config;
+}
+
 inline std::vector<ExecutionConfig> allConfigs() {
   std::vector<ExecutionConfig> configs = {
       {"vm-step-O0", Backend::VmStep, 0, false},

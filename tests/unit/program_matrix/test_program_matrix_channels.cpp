@@ -44,6 +44,7 @@ void runChannelProgram(program_matrix::ProgramCase program) {
   for (program_matrix::ExecutionConfig &config : seedConfigs()) {
     configs.push_back(std::move(config));
   }
+  configs.push_back(program_matrix::vmThreadsConfig());
   runOn(std::move(program), std::move(configs));
 }
 

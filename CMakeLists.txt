@@ -669,6 +669,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/runtime/VmExecutionKernel.cpp
   src/runtime/VmTaskScheduler.cpp
   src/runtime/VmThreadedTasks.cpp
+  src/runtime/VmThreadedSync.cpp
   src/runtime/VmFastKernel.cpp
   src/runtime/VmFastKernelPrepare.cpp
   src/runtime/VmHeapHelpers.cpp
@@ -1100,6 +1101,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_tasks.cpp
     tests/unit/program_matrix/test_program_matrix_text_views.cpp
     tests/unit/program_matrix/test_program_matrix_vector_owners.cpp
+    tests/unit/program_matrix/test_program_matrix_vm_threads.cpp
   )
   target_include_directories(PrimeStruct_program_matrix_tests PRIVATE third_party ${CMAKE_SOURCE_DIR}
                              tests/unit/program_matrix)
@@ -1332,6 +1334,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_text_heap.cpp
     tests/unit/runtime/test_vm_tasks.cpp
     tests/unit/runtime/test_vm_threads.cpp
+    tests/unit/runtime/test_vm_threads_sync.cpp
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
     tests/unit/runtime/test_vm_conditions.cpp
@@ -1355,6 +1358,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_threads
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # Atomics, mutexes and conditions under --vm-threads, each program run 100 times (no sleeps, no timing).
+  add_test(
+    NAME PrimeStruct_vm_threads_sync
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads_sync"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_vm_threads_sync
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The per-thread heap arenas of generated programs (VmHeapArenas.h), driven by std::threads.
   add_test(
@@ -4015,6 +4027,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.tasks
     primestruct.program_matrix.text_views
     primestruct.program_matrix.vector_owners
+    primestruct.program_matrix.vm_threads
   )
   # Every program runs through each execution config (several compiles per case), so a whole suite took 60 to 110 s
   # in loaded gates (load 40 to 140). Each suite is shards of one case (primestructAddDoctestShards); the number
@@ -4022,7 +4035,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
     control=37 early_returns=10 element_assign=4 element_copies=10 element_receivers=8 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=20 pick_values=24 recursion=6 results=12 shared_programs=17
-    shared_strings=5 struct_methods=11 sum_owners=6 tasks=22 text_views=6 vector_owners=48)
+    shared_strings=5 struct_methods=11 sum_owners=6 tasks=22 text_views=6 vector_owners=48 vm_threads=4)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
