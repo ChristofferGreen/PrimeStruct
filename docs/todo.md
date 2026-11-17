@@ -168,7 +168,6 @@ of sync with them.
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | ready | build-graph-defects |
-| TODO-6024 | A unit arm with a local and a `vector<T>` result fails to lower in a value `pick` | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
 | TODO-6018 | A compile step leaves no generated C++ next to its executable | ready | build-dogfood |
@@ -211,7 +210,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022, TODO-6024
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -305,19 +304,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a recursive definition with a `[vector<i32> copy]` and a `[vector<String> move]` parameter runs on the VM and optexe with balanced heap and string-heap statistics, a copy argument from a place (the caller keeps its vector) and from a fresh vector or `move(x)` (the callee takes it over)
     - full release gate green
   - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
-
-- [~] TODO-6024: A unit arm with a local and a `vector<T>` result fails to lower in a value `pick`
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-agent-a4d1aa8fc9d587d98 (worktree-agent-a4d1aa8fc9d587d98), 2026-11-17
-  - created_at: 2026-11-17
-  - phase: Language defects found by TODO-6023 (value `pick` arm scopes)
-  - parallel_track: build-graph-defects
-  - scope: `[vector<i32>] r{pick(m) { none { [vector<i32>] a{make_values(1i32)} a } some(v) { make_values(v) } }}` (a unit arm that declares a local, in a value `pick` whose result is a `vector<T>`) is rejected by the VM and optexe lowering: `missing semantic-product local-auto fact: /f -> local none` (the unit arm's block is read as a binding named `none`). The same arm with a `String` result, and a payload arm with locals and a `vector<T>` result, lower fine. Found writing `tests/unit/program_matrix/test_program_matrix_pick_value_arms.cpp` (the vector case keeps its locals in the `some` arm); it fails before TODO-6023 as well. Find why the unit arm is parsed or typed as a binding when its result is a vector and fix it where the fact is produced.
-  - acceptance:
-    - the program above runs on the VM, optexe and native with the same output and balanced heap statistics; a matrix case covers a unit arm with owning locals and a `vector<T>` result
-    - full release gate green
-  - stop_rule: the unit-arm/vector-result shape of a value `pick`; not other arm shapes.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
@@ -417,7 +403,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/stdlib-reference.md updated
     - full release gate green
   - stop_rule: repeated values and decoded path segments only; no typed parameters, no multipart.
-
 
 - [ ] TODO-5676: Lambdas can state their return type
   - owner: ai

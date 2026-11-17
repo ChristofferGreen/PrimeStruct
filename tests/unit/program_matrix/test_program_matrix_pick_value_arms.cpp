@@ -239,3 +239,71 @@ vector_arms([Maybe<i32>] m, [i32] extra) {
 )",
                  "3\n22\n6\n22\n");
 }
+
+TEST_CASE("a unit arm with owning locals ends with a vector, balanced") {
+  // The unit arm `none { ... }` is read as a binding whose initializer is a block: its type is the type of the
+  // vector local the block ends with (TODO-6024), and the result takes that local over.
+  runHeapProgram("pick_value_unit_arm_vectors",
+                 R"(
+[effects(heap_alloc), return<i32>]
+unit_arm_vectors([Maybe<i32>] m, [i32] extra) {
+  [vector<i32>] outer{make_values(20i32)}
+  [vector<i32>] r{pick(m) {
+    none {
+      [vector<i32> mut] a{make_values(1i32)}
+      [vector<i32>] spare{make_values(2i32)}
+      [String] text{label(3i32)}
+      a
+    }
+    some(v) {
+      make_values(v)
+    }
+  }}
+  if(extra > 0i32) {
+    return(r.count() + outer[0i32])
+  }
+  return(r.count() + r[0i32])
+}
+)",
+                 R"(
+    [Maybe<i32>] e{}
+    [Maybe<i32>] s{[some] 4i32}
+    print_line(unit_arm_vectors(e, 0i32))
+    print_line(unit_arm_vectors(e, 1i32))
+    print_line(unit_arm_vectors(s, 0i32))
+    print_line(unit_arm_vectors(s, 1i32))
+)",
+                 "3\n22\n6\n22\n");
+}
+
+TEST_CASE("a unit arm with a vector local runs on every config") {
+  program_matrix::ProgramCase program;
+  program.name = "pick_value_unit_arm_vector_native";
+  program.source = NoisyPrelude + R"(
+[effects(heap_alloc), return<i32>]
+unit_arm([Maybe<i32>] m) {
+  [vector<i32>] r{pick(m) {
+    none {
+      [vector<i32>] a{make_values(1i32)}
+      a
+    }
+    some(v) {
+      make_values(v)
+    }
+  }}
+  return(r.count() + r[0i32])
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Maybe<i32>] e{}
+  [Maybe<i32>] s{[some] 4i32}
+  print_line(unit_arm(e))
+  print_line(unit_arm(s))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n6\n";
+  program_matrix::runProgramMatrix(program);
+}

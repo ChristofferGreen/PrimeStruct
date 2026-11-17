@@ -513,9 +513,20 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
                   const Expr &expr,
                   ActiveLocalBindings &activeLocals) {
     if (expr.isBinding) {
-      for (const auto &arg : expr.args) {
-        ActiveLocalBindings::Scope argScope(activeLocals);
-        visitExpr(def, defParams, arg, activeLocals);
+      // The value of a binding that is initialized by a block (a unit arm of a value `pick`) is a local of that
+      // block, so the block's scope stays open until the binding's type is inferred.
+      const bool blockInitializer = expr.args.size() == 1 &&
+                                    isBuiltinBlockCall(expr.args.front()) &&
+                                    expr.args.front().hasBodyArguments;
+      std::optional<ActiveLocalBindings::Scope> initializerBlockScope;
+      if (blockInitializer) {
+        initializerBlockScope.emplace(activeLocals);
+        visitExprSequence(def, defParams, expr.args.front().bodyArguments, activeLocals);
+      } else {
+        for (const auto &arg : expr.args) {
+          ActiveLocalBindings::Scope argScope(activeLocals);
+          visitExpr(def, defParams, arg, activeLocals);
+        }
       }
       if (!expr.bodyArguments.empty()) {
         ActiveLocalBindings::Scope bodyScope(activeLocals);
@@ -689,6 +700,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
           fact.tryValue = LocalAutoTrySnapshotData{};
         }
       }
+      initializerBlockScope.reset();
       activeLocals.addBinding(expr.name, std::move(binding));
       return;
     }
