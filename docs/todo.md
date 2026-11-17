@@ -1031,9 +1031,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5914: `--emit-deps` writes the files a compile read
+- [~] TODO-5914: `--emit-deps` writes the files a compile read
   - owner: ai
   - status: ready
+  - claimed_by: build-deps agent (worktree agent-ac2e1b2b50a1cec74), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 8)
   - parallel_track: build-deps
