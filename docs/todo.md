@@ -873,9 +873,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5899: A fault or a cancel stops every thread of a `--vm-threads` run without ending the process
+- [~] TODO-5899: A fault or a cancel stops every thread of a `--vm-threads` run without ending the process
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: vmthreads-c (worktree-agent-afff65df57bab1f35), 2026-11-17
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
