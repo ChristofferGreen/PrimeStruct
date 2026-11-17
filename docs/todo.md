@@ -255,9 +255,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
 
-- [ ] TODO-6014: A `primec build` spends 2.7 s compiling make.prime before it runs anything
+- [~] TODO-6014: A `primec build` spends 2.7 s compiling make.prime before it runs anything
   - owner: ai
   - status: ready
+  - claimed_by: build-script-cache (worktree agent-a8956bc0a875207d3), 2026-11-17
   - created_at: 2026-11-17
   - phase: Build system (found while splitting the build_glob_cache tests, TODO-6013)
   - parallel_track: build-graph-defects
