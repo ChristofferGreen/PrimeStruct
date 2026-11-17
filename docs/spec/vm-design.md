@@ -32,8 +32,15 @@
   so its recursion is rejected with the parameter named.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v37 (v24 to v37 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log; v37 appends `ConditionWait` and `ConditionNotify` (see Conditions) and the
+- **PSIR versioning:** current portable IR is PSIR v38 (v24 to v38 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log). v38 (TODO-5922, the IR link) appends one section after the host imports: a
+  count and, for each function that is an import (`IrFunction::isImport`: a name and a parameter count, no
+  instructions, the name of the library that defines it), its index and library name; and an entry index of
+  `0xFFFFFFFF` means no entry point (a library has none). Migration: a v33 to v37 module has no such section, so the
+  loader reads it as a module with every function defined and an entry index in range, and a writer always writes
+  v38, so a loaded older module is written back with an empty import section; the opcodes are unchanged. A module
+  that still has an import fails validation (`IR function <name> is an import of library <lib> that was not
+  linked`). v37 appends `ConditionWait` and `ConditionNotify` (see Conditions) and the
   effect mask bit of `channel`. Migration: the module layout is unchanged, so a v33 to v36 module still loads and
   is written back as v37; the loader refuses an opcode newer than the module's version, and a v37 module does not
   load in an older build. v36 appends `MutexLock` and `MutexUnlock` (see Mutexes) and the effect mask bit of
@@ -277,6 +284,26 @@
   on a fresh VM; the runs' output follows one another and the exit code is the runs' common one, and a run that exits
   otherwise ends the process with exit code 1 and a `vm-repeat: run <k> exited <x> but run 0 exited <y>` line. The
   concurrent corpus of `tests/vm_threads_corpus.txt` uses it so the front end is paid once per program (TODO-6030).
+- **IR link (`primevm --link`; TODO-5922; docs/ModulesAndLibrariesPlan.md, section 9):** `primevm <program> --link
+  <module.psir>` (repeatable; `--link=<path>` too) runs a program merged with serialized IR modules. The program is a
+  source file or a `.psir` file; a `.psir` input is loaded and run without compiling. `linkIrModule`
+  (`primec/ir/IrLinker.h`) merges each module into the one before it and keeps the program's entry. Functions merge by
+  name: an import (`IrFunction::isImport`) resolves to the definition, an import nobody defines yet stays one, and a
+  name defined twice is `duplicate definition of <name>`; a name declared with two parameter counts is an error too.
+  Struct layouts merge by name and must be equal (`struct layout of <name> differs between the modules`); host imports
+  merge by name and signature (`host import <name> has two signatures`). The library's string table is appended and
+  its `Call`, `CallVoid`, `TaskSpawn`, `CallHost` and string operands are rewritten by the operand classes of
+  `primec/ir/IrOperandTable.h` (one row per opcode, checked by `scripts/check_ir_opcode_table.py`: an opcode without a
+  class fails the check and a `static_assert`). Debug ids of the library shift past the program's. After the last
+  module, an import that is left is `undefined symbol <name> (library <lib>)` and the result is validated for the VM;
+  any link error is a VM error with exit code 3 and the program does not run. Limit: a string literal is a `PushI32`
+  or `PushI64` the IR cannot tell from an integer, so the linker follows a pushed string index only to the instruction
+  that consumes it when nothing but single-slot pushes lie between (`PrintStringDynamic`, `LoadStringLength`,
+  `LoadStringByteDynamic`, `FileOpen*Dynamic`, `FileWriteStringDynamic`, the `String` arguments of a `CallHost`). A
+  library function that has strings to move and a consumer fed any other way (through a local, a parameter or a
+  return value) is refused with `cannot relocate the string operand of <opcode> in <function>`; a string that
+  reaches no such consumer, such as one a library function returns, is not found and is not moved. Lowering marking
+  string literal pushes lifts the limit (a follow-up of the plan).
 - **Synchronization record and replay (the VM, `--vm-record-sync`, `--vm-replay-sync`; TODO-5901):** a `--vm-threads`
   run is not repeatable by itself, so `primevm --vm-threads --vm-record-sync <path>` (also `primec --emit=vm`, the
   embedder's `Vm::setSyncRecordPath` and `RunOptions::syncRecord`) writes the order in which the run's tasks

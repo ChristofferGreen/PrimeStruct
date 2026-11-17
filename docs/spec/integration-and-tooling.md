@@ -59,6 +59,15 @@ main() {
 `primevm main.prime --emit-deps main.deps` exits 4 and `main.deps` holds the absolute path of `main.prime` and
 nothing else. The cache of `primec build` (docs/BuildSystemPlan.md) hashes these files.
 
+### IR Link
+`primevm <program> --link <module.psir>` (repeatable) merges serialized IR modules into the program before it runs, and a
+`.psir` program is loaded and run without compiling. A function that a library defines is an import in the program
+(`IrFunction::isImport`, PSIR v38); the merge resolves it by name and every operand that names a function, a host import
+or a string is rewritten. Errors: `duplicate definition of <name>`, `struct layout of <name> differs between the
+modules`, `host import <name> has two signatures`, `undefined symbol <name> (library <lib>)`; each is a VM error with
+exit code 3. The rules and the limit on strings are in docs/spec/vm-design.md (IR link). There is no archive and no
+compiler front end for libraries yet (docs/ModulesAndLibrariesPlan.md).
+
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a
 build script (docs/BuildSystemPlan.md). It is the ordinary compile of that file with `--profile build --emit=vm`, so

@@ -76,6 +76,9 @@ void printEffectsAndIrSection(std::ostream &err) {
   flagLine(err, "--vm-record-sync <path>", "With --vm-threads, write the order of the sync events");
   flagLine(
       err, "--vm-replay-sync <path>", "Run on the deterministic scheduler in a recorded order");
+  flagLine(err,
+           "--link <module.psir>",
+           "primevm: merge a serialized IR module into the program (repeatable)");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
   flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
   flagLine(err, "", "ir-lowered, ir-optimized");

@@ -1021,6 +1021,14 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.benchmarkSemanticDefinitionValidationWorkerCount = workerCount;
     } else if (arg == "--benchmark-ir-lowerer-legacy-collection-branch-counters") {
       out.benchmarkIrLowererLegacyCollectionBranchCounters = true;
+    } else if (!isPrimecMode && arg == "--link") {
+      if (i + 1 >= argc) {
+        error = "--link requires a module path";
+        return false;
+      }
+      out.linkModulePaths.push_back(argv[++i]);
+    } else if (!isPrimecMode && arg.rfind("--link=", 0) == 0) {
+      out.linkModulePaths.push_back(arg.substr(std::string("--link=").size()));
     } else if (arg == "--link-arg" && i + 1 < argc) {
       out.linkArgs.push_back(argv[++i]);
     } else if (arg == "--link-arg") {

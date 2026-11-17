@@ -7,10 +7,13 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 37u;
+constexpr uint32_t IrSchemaVersion = 38u;
 // v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes, v36 only MutexLock and MutexUnlock and v37
 // only ConditionWait and ConditionNotify, so a v33 to v36 module loads unchanged (it cannot hold the opcodes added
-// after it).
+// after it). v38 appends a section after the host imports (the functions that are imports of a library) and
+// allows the entry index -1 (a library has no entry point); a v33 to v37 module has no such section and loads with
+// every function defined and an entry index in range. Migration: a loader reads a module of any supported version; a
+// writer always writes v38, so a loaded older module is rewritten as v38 with an empty import section.
 constexpr uint32_t IrSchemaMinimumSupportedVersion = 33u;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -328,6 +331,11 @@ struct IrFunction {
   uint32_t parameterCount = 0;
   std::vector<IrLocalDebugSlot> localDebugSlots;
   std::vector<IrInstruction> instructions;
+  // An import is a declaration of a function that a library defines (docs/ModulesAndLibrariesPlan.md, section 9): it
+  // has a name and a parameter count, no instructions, and `importLibrary` names the library. Linking
+  // (primec/ir/IrLinker.h) replaces it with the definition; a module that still has one is not runnable.
+  bool isImport = false;
+  std::string importLibrary;
 };
 
 // Primitive value kinds that can cross the host boundary of a CallHost.

@@ -38,6 +38,17 @@ def main() -> int:
     expect(extended != ir, "test setup: enumerator inserted")
     expect(module.check(module.enum_opcodes(extended), module.table_opcodes(table)) != [], "a new opcode without a row fails")
 
+    operands = (repo / "include/primec/ir/IrOperandTable.h").read_text(encoding="utf-8")
+    rows = module.operand_rows(operands)
+    expect(len(rows) == len(module.enum_opcodes(ir)), "the operand table parses with one row per opcode")
+    expect(module.check(module.enum_opcodes(ir), [name for name, _ in rows]) == [], "the operand table matches the enum")
+    expect(module.check_operand_classes(rows) == [], "every opcode has an operand class")
+    expect(module.check(module.enum_opcodes(extended), [name for name, _ in rows]) != [], "a new opcode without an operand row fails")
+    expect(module.check_operand_classes([("A", "None"), ("B", "Unclassified")]) != [], "an Unclassified operand class fails")
+    unclassified = re.sub(r"X\(PushI32, Constant\)", "X(PushI32, Unclassified)", operands, count=1)
+    expect(unclassified != operands, "test setup: row made Unclassified")
+    expect(module.check_operand_classes(module.operand_rows(unclassified)) != [], "the real table with an Unclassified row fails")
+
     if failures:
         for failure in failures:
             print(f"FAIL: {failure}", file=sys.stderr)

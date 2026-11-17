@@ -77,6 +77,9 @@ struct Options {
   // --link-arg: extra arguments for the host C++ compiler when it links an exe or optexe output,
   // such as a host library the program's `[host]` functions come from.
   std::vector<std::string> linkArgs;
+  // primevm --link <module.psir> (repeatable): serialized IR modules merged into the program before it runs
+  // (primec/ir/IrLinker.h); the program is a source file or a serialized module (a `.psir` input).
+  std::vector<std::string> linkModulePaths;
   // --vm-schedule-seed (or PRIMESTRUCT_VM_SCHEDULE_SEED): the VM's task schedule; none is the eager default
   // (docs/spec/vm-design.md, Tasks).
   std::optional<uint64_t> vmScheduleSeed;

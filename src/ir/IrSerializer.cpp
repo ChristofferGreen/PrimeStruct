@@ -8,6 +8,9 @@
 
 namespace primec {
 namespace {
+// The entry index of a module with no entry point (v38), as written.
+constexpr uint32_t NoEntryIndex = 0xFFFFFFFFu;
+
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
   out.push_back(static_cast<uint8_t>((value >> 8) & 0xFF));
@@ -115,14 +118,22 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
             ".." + std::to_string(IrSchemaVersion) + ")";
     return false;
   }
-  if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
+  // v38: a library has no entry point, which is written as NoEntryIndex.
+  if (module.entryIndex < -1 || (module.entryIndex >= 0 && static_cast<size_t>(module.entryIndex) >=
+                                                               module.functions.size())) {
     error = "invalid IR entry index";
     return false;
+  }
+  for (const auto &fn : module.functions) {
+    if (fn.isImport && !fn.instructions.empty()) {
+      error = "IR import " + fn.name + " has instructions";
+      return false;
+    }
   }
   appendU32(out, IrSchemaMagic);
   appendU32(out, IrSchemaVersion);
   appendU32(out, static_cast<uint32_t>(module.functions.size()));
-  appendU32(out, static_cast<uint32_t>(module.entryIndex));
+  appendU32(out, module.entryIndex < 0 ? NoEntryIndex : static_cast<uint32_t>(module.entryIndex));
   if (module.stringTable.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     error = "too many strings for IR serialization";
     return false;
@@ -231,6 +242,20 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
       out.push_back(static_cast<uint8_t>(kind));
     }
     out.push_back(static_cast<uint8_t>(import.returnKind));
+  }
+  // v38: the functions that are imports of a library, by index, in index order.
+  uint32_t importedCount = 0;
+  for (const auto &fn : module.functions) {
+    importedCount += fn.isImport ? 1u : 0u;
+  }
+  appendU32(out, importedCount);
+  for (size_t index = 0; index < module.functions.size(); ++index) {
+    if (module.functions[index].isImport) {
+      appendU32(out, static_cast<uint32_t>(index));
+      if (!appendString(out, module.functions[index].importLibrary, "import library name", error)) {
+        return false;
+      }
+    }
   }
   return true;
 }
@@ -553,6 +578,39 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     }
     import.returnKind = static_cast<IrHostValueKind>(returnKind);
     out.hostImports.push_back(std::move(import));
+  }
+  if (version >= 38u) {
+    uint32_t importedCount = 0;
+    if (!readU32(data, offset, importedCount) || !countFitsRemaining(data, offset, importedCount)) {
+      error = "truncated IR import section";
+      return false;
+    }
+    for (uint32_t i = 0; i < importedCount; ++i) {
+      uint32_t functionIndex = 0;
+      if (!readU32(data, offset, functionIndex)) {
+        error = "truncated IR import section";
+        return false;
+      }
+      if (functionIndex >= out.functions.size() || out.functions[functionIndex].isImport ||
+          !out.functions[functionIndex].instructions.empty()) {
+        error = "invalid IR import function index";
+        return false;
+      }
+      IrFunction &imported = out.functions[functionIndex];
+      if (!readString(data,
+                      offset,
+                      imported.importLibrary,
+                      "truncated IR import library name",
+                      "truncated IR import library name",
+                      error)) {
+        return false;
+      }
+      imported.isImport = true;
+    }
+  }
+  if (version >= 38u && entryIndex == NoEntryIndex) {
+    out.entryIndex = -1;
+    return true;
   }
   if (entryIndex >= out.functions.size()) {
     error = "invalid IR entry index";

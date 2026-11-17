@@ -730,7 +730,7 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLinkFiles.cpp src/ir/IrLinkStrings.cpp src/ir/IrLinker.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp
             src/ir/IrVirtualRegisterLowering.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -1369,9 +1369,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
     tests/unit/runtime/test_vm_conditions.cpp
+    tests/unit/runtime/test_ir_link.cpp
+    tests/unit/runtime/test_ir_link_strings.cpp
+    tests/unit/runtime/test_ir_link_cli.cpp
   )
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
+  # The IR link CLI tests (TODO-5922) run `primevm <program.psir> --link <module.psir>`.
+  add_dependencies(PrimeStruct_vm_byte_tests primevm)
+  target_compile_definitions(PrimeStruct_vm_byte_tests PRIVATE
+    PRIMESTRUCT_TEST_PRIMEVM_PATH="$<TARGET_FILE:primevm>")
   primestructEnableWarnings(PrimeStruct_vm_byte_tests)
   add_test(
     NAME PrimeStruct_vm_byte_regions
@@ -1381,6 +1388,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_vm_byte_regions
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The IR link (TODO-5922) of hand-built serialized modules: functions, layouts, host imports, strings; and the
+  # primevm --link command line with the schema version 38.
+  add_test(
+    NAME PrimeStruct_ir_link
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.ir_link,primestruct.runtime.ir_link_strings"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_ir_link PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_ir_link_cli
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.ir_link_cli"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_ir_link_cli PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The VM's threads mode (--vm-threads), with hand-built IR.
   add_test(
     NAME PrimeStruct_vm_threads

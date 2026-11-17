@@ -179,8 +179,11 @@ std::string formatIrFunction(const IrModule &module, size_t functionIndex) {
       << " parameters=" << function.parameterCount
       << " effects=" << hex(function.metadata.effectMask, 1)
       << " capabilities=" << hex(function.metadata.capabilityMask, 1)
-      << " locals=" << escape.localCount << " instructions=" << function.instructions.size()
-      << "\n";
+      << " locals=" << escape.localCount << " instructions=" << function.instructions.size();
+  if (function.isImport) {
+    out << " import=" << function.importLibrary;
+  }
+  out << "\n";
   for (size_t index = 0; index < function.instructions.size(); ++index) {
     std::string label = std::to_string(index);
     if (label.size() < 4) {

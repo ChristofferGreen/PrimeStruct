@@ -214,7 +214,7 @@ TEST_CASE("deserialization rejects invalid host kinds and old versions") {
   std::string error;
   REQUIRE(serializeIr(module, bytes, error));
   auto badKind = bytes;
-  badKind.back() = 0x7f;  // return kind is the final byte
+  badKind[badKind.size() - 5] = 0x7f; // return kind, before the 4-byte import count (schema 38)
   IrModule decoded;
   CHECK_FALSE(deserializeIr(badKind, decoded, error));
   CHECK(error.find("host import return kind") != std::string::npos);

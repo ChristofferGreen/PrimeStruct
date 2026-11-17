@@ -147,6 +147,15 @@ no separate linker tool exists for the first version.
 7. Resolve every imported function to its definition; an unresolved one is `undefined symbol /ui/draw (library ui)`.
 8. Validate the merged module (`IrValidation`), take the entry from the consumer, and continue as today.
 
+Status of step 1 to 8 for the IR link (TODO-5922; the merge itself is `primec/ir/IrLinker.h`, driven by
+`primevm <program> --link <module.psir>`, and documented in docs/spec/vm-design.md, IR link): it covers steps 2 to 8
+except the interface hashes and the manifest of step 1, and the generic merge of step 2, which wait for the leaves
+that write them (TODO-5924, TODO-5926). The operand table of step 5 is `primec/ir/IrOperandTable.h`. Writing it
+showed one thing the plan did not say: a string literal is a `PushI32` or `PushI64`, so no opcode says that its
+operand is a string index. The linker finds those pushes by the instruction that consumes them (a fixed pattern) and
+refuses a library whose strings it would have to move but cannot follow. Lowering recording its string literal pushes
+(for example as a marker on the instruction) is the way to lift that limit before the stdlib is linked as a library.
+
 ## 10. Generics, helpers and other hard parts
 
 - **Instantiations in both places.** A library instantiates `Vector<i32>` for its own code and the consumer may do the

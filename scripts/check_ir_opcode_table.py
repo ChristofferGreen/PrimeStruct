@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Check that include/primec/ir/IrOpcodeTable.h has one row per IrOpcode (TODO-5361).
+"""Check the IR opcode tables against `enum class IrOpcode` in Ir.h (TODO-5361, TODO-5922).
 
-Fails when an enumerator of `enum class IrOpcode` in Ir.h has no row, a row has
-no enumerator, or the rows are not in enum order.
+include/primec/ir/IrOpcodeTable.h has one row per opcode; include/primec/ir/IrOperandTable.h has one row per
+opcode saying what its immediate operand names (so the IR linker knows how to rewrite it). Fails when an
+enumerator has no row in either table, a row has no enumerator, the rows are not in enum order, or an operand row
+is `Unclassified`.
 """
 
 from __future__ import annotations
@@ -24,6 +26,18 @@ def table_opcodes(table_header: str) -> list[str]:
     return re.findall(r"^\s+X\((\w+), \w+, \w+, \w+, [01], [01], [01]\)", table_header, re.M)
 
 
+def operand_rows(operand_header: str) -> list[tuple[str, str]]:
+    return re.findall(r"^\s+X\((\w+), (\w+)\)", operand_header, re.M)
+
+
+def check_operand_classes(rows: list[tuple[str, str]]) -> list[str]:
+    return [
+        f"IrOpcode::{name} has no operand class (Unclassified) in IrOperandTable.h"
+        for name, operand_class in rows
+        if operand_class == "Unclassified"
+    ]
+
+
 def check(enum_names: list[str], table_names: list[str]) -> list[str]:
     problems = []
     for name in enum_names:
@@ -41,10 +55,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     root = parser.parse_args().root.resolve()
+    enum_names = enum_opcodes((root / "include/primec/ir/Ir.h").read_text(encoding="utf-8"))
     problems = check(
-        enum_opcodes((root / "include/primec/ir/Ir.h").read_text(encoding="utf-8")),
+        enum_names,
         table_opcodes((root / "include/primec/ir/IrOpcodeTable.h").read_text(encoding="utf-8")),
     )
+    rows = operand_rows((root / "include/primec/ir/IrOperandTable.h").read_text(encoding="utf-8"))
+    problems += [f"operand table: {p}" for p in check(enum_names, [name for name, _ in rows])]
+    problems += check_operand_classes(rows)
     if problems:
         print("IR opcode table check failed:")
         for problem in problems:

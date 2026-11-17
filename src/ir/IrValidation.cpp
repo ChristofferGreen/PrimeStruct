@@ -826,6 +826,12 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
       error = "duplicate IR function name: " + function.name;
       return false;
     }
+    if (function.isImport) {
+      // An import has no body; linking (primec/ir/IrLinker.h) replaces it, and nothing runs a module that has one.
+      error = "IR function " + function.name + " is an import of library " +
+              function.importLibrary + " that was not linked";
+      return false;
+    }
     if (!validateFunction(module, functionIndex, function, target, error)) {
       return false;
     }

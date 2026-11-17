@@ -5,6 +5,7 @@
 #include "primec/support/Diagnostics.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/backend/NativeJit.h"
+#include "primec/ir/IrLinkFiles.h"
 #include "primec/ir/IrPreparation.h"
 #include "primec/pipeline/CliUsage.h"
 #include "primec/support/Options.h"
@@ -711,7 +712,11 @@ int main(int argc, char **argv) {
     return runDebugReplay(options, vmDiagnostics);
   }
   std::string error;
-  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+  const bool serializedProgram =
+      options.inputPath.size() > 5 && options.inputPath.ends_with(".psir");
+  if (!serializedProgram) {
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+  }
 
   // TODO-5233/TODO-5234: see the matching comment in src/bin/main.cpp. primevm
   // is a one-shot compile-then-run process, so a single scope spanning the
@@ -719,8 +724,18 @@ int main(int argc, char **argv) {
   // loop to reset between iterations of here.
   primec::ScopedCompileArena compileArenaScope;
   primec::IrModule ir;
-  if (const std::optional<int> exitCode = compileToVmIr(options, vmDiagnostics, ir)) {
+  if (serializedProgram) {
+    // A serialized module runs as it is; nothing is compiled.
+    if (!primec::loadIrModuleFile(options.inputPath, ir, error)) {
+      return emitVmRuntimeFailure(options, vmDiagnostics, error, "load");
+    }
+  } else if (const std::optional<int> exitCode = compileToVmIr(options, vmDiagnostics, ir)) {
     return *exitCode;
+  }
+  // A serialized program is checked like a linked one: it may hold imports, and nothing runs a module that does.
+  if ((serializedProgram || !options.linkModulePaths.empty()) &&
+      !primec::linkIrModuleFiles(ir, options.linkModulePaths, error)) {
+    return emitVmRuntimeFailure(options, vmDiagnostics, error, "link");
   }
 
   primec::Vm vm;
