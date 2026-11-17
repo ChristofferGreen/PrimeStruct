@@ -522,3 +522,21 @@
     - full release gate green
   - stop_rule: return lowering in pick arms.
   - completed: 2026-11-16. The parser read a unit arm `none { ... return(x) }` as a value block and replaced its `return` by the value, so a statement `pick` fell through. A unit arm of a `pick` now keeps the `return` (and allows a single-branch `if`), like a payload arm, so a statement `pick` returns from the function and a value `pick` still yields the arm value. Tests: program matrix `pick_returns` (unit, payload, Result ok arm, nested, loop, owned payloads balanced, type mismatch), parser and semantics cases.
+
+- [x] TODO-5912: `primec build --dry-run` prints the graph of `make.prime`
+  - owner: ai
+  - status: done
+  - completed_at: 2026-11-17
+  - depends_on: TODO-5911
+  - created_at: 2026-11-11
+  - phase: Build system (docs/BuildSystemPlan.md)
+  - parallel_track: build-cli
+  - scope: `primec build [--dry-run] [dir]` finds `make.prime` in `dir` (default: the working directory), runs it on the VM under `--profile build` through a stdlib wrapper entry that constructs `Build`, calls the script's `build`, and hands the returned graph to the runner. With `--dry-run` the runner prints the export. Without it the command reports `running a graph is not supported yet` until TODO-5913. Diagnostics point at positions in `make.prime`. The subcommand is parsed in src/pipeline/CliDriver.cpp.
+  - acceptance:
+    - a fixture `make.prime` prints its graph; the output equals what the same graph prints from a plain program
+    - a script with a type error, a missing `make.prime`, and a script that declares an effect outside the ceiling each fail with a diagnostic that names `make.prime`
+    - `primec` without the `build` subcommand behaves exactly as before
+    - docs/spec/integration-and-tooling.md documents `primec build`
+    - full release gate green
+  - stop_rule: finding, running and printing; no execution of steps.
+  - result: `primec build` runs make.prime on the VM under `--profile build` through `/std/build_runner/run` (stdlib/std/build_runner/build_runner.prime) with the runner import appended to the script text; the effect ceiling now trusts definitions whose source is a stdlib unit (stdlib types such as /File live outside /std).

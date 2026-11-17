@@ -468,6 +468,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 
 set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
+  src/pipeline/BuildCommand.cpp
   src/pipeline/CliDriver.cpp
   src/pipeline/CliUsage.cpp
   src/pipeline/CompilePipeline.cpp
@@ -1527,6 +1528,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_build_graph_profile
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  add_test(
+    NAME PrimeStruct_build_command
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_graph"
+            "--test-case=*primec build*"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_command
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).

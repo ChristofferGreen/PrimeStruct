@@ -82,7 +82,9 @@ void printPassThroughNote(std::ostream &err) {
 }
 
 void printPrimecUsage(std::ostream &err) {
-  err << "Usage: primec [options] <input.prime> [-- <program args...>]\n\n";
+  err << "Usage: primec [options] <input.prime> [-- <program args...>]\n";
+  err << "       primec build [--dry-run] [dir] [options]   (prints the graph of "
+         "dir/make.prime)\n\n";
 
   err << "Output:\n";
   flagLine(err,

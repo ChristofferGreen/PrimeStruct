@@ -76,4 +76,61 @@ TEST_CASE("a build script runs under the build profile with heap_alloc only") {
   CHECK_MESSAGE(nodes == 4, readFile(log));
 }
 
+namespace {
+// Runs `primec build <arguments>` from `workingDir` (empty: the current directory); the standard output goes to
+// `out`, the diagnostics to `out + ".err"`.
+int primecBuild(const std::string &arguments,
+                const std::string &out,
+                const std::string &workingDir = "") {
+  const std::string cd =
+      workingDir.empty() ? std::string() : "cd " + shellQuote(workingDir) + " && ";
+  return run(cd + shellQuote(Primec) + " build " + arguments + " > " + shellQuote(out) + " 2> " +
+             shellQuote(out + ".err"));
+}
+} // namespace
+
+TEST_CASE("primec build --dry-run prints the graph of make.prime") {
+  const std::string out = scratch("dry_run.json");
+  const int status = primecBuild("--dry-run " + shellQuote(FixtureDir + "project"), out);
+  CHECK_MESSAGE(status == 0, readFile(out + ".err"));
+  // The graph of a plain program that builds the same nodes prints the same text.
+  CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
+}
+
+TEST_CASE("primec build --dry-run finds make.prime in the working directory") {
+  const std::string out = scratch("dry_run_cwd.json");
+  const int status = primecBuild("--dry-run", out, FixtureDir + "project");
+  CHECK_MESSAGE(status == 0, readFile(out + ".err"));
+  CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
+}
+
+TEST_CASE("primec build without --dry-run says a graph cannot run yet") {
+  const std::string out = scratch("no_dry_run.json");
+  CHECK(primecBuild(shellQuote(FixtureDir + "project"), out) != 0);
+  CHECK(readFile(out).empty());
+  CHECK(readFile(out + ".err").find("running a graph is not supported yet") != std::string::npos);
+}
+
+TEST_CASE("primec build names make.prime when the directory has none") {
+  const std::string out = scratch("missing.json");
+  CHECK(primecBuild("--dry-run " + shellQuote(FixtureDir), out) != 0);
+  CHECK(readFile(out + ".err").find("no make.prime in") != std::string::npos);
+}
+
+TEST_CASE("primec build names make.prime for a script with a type error") {
+  const std::string out = scratch("type_error.json");
+  CHECK(primecBuild("--dry-run " + shellQuote(FixtureDir + "project_type_error"), out) != 0);
+  const std::string diagnostics = readFile(out + ".err");
+  CHECK_MESSAGE(diagnostics.find("project_type_error/make.prime:6") != std::string::npos,
+                diagnostics);
+}
+
+TEST_CASE("primec build rejects an effect outside the ceiling and names make.prime") {
+  const std::string out = scratch("effects.json");
+  CHECK(primecBuild("--dry-run " + shellQuote(FixtureDir + "project_effects"), out) != 0);
+  const std::string diagnostics = readFile(out + ".err");
+  CHECK_MESSAGE(diagnostics.find("project_effects/make.prime") != std::string::npos, diagnostics);
+  CHECK_MESSAGE(diagnostics.find("io_out") != std::string::npos, diagnostics);
+}
+
 TEST_SUITE_END();

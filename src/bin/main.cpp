@@ -1,3 +1,4 @@
+#include "primec/pipeline/BuildCommand.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/CompileArena.h"
 #include "primec/pipeline/CompilePipeline.h"
@@ -416,8 +417,36 @@ static int emitCompiledProgram(primec::Options &options,
 int main(int argc, char **argv) {
   primec::Options options;
   std::string argError;
+  // `primec build`: the compile of make.prime under the build profile (include/primec/pipeline/BuildCommand.h).
+  primec::BuildCommandPlan buildPlan;
+  const bool isBuildCommand = argc >= 2 && std::string_view(argv[1]) == "build";
+  std::vector<char *> buildArgv;
+  if (isBuildCommand) {
+    if (!primec::planBuildCommand(
+            std::vector<std::string>(argv + 2, argv + argc), buildPlan, argError)) {
+      std::cerr << "primec build: " << argError << "\n";
+      return 2;
+    }
+    if (!buildPlan.dryRun) {
+      std::cerr
+          << "primec build: running a graph is not supported yet; use --dry-run to print it\n";
+      return 2;
+    }
+    for (std::string &argument : buildPlan.arguments) {
+      buildArgv.push_back(argument.data());
+    }
+    argc = static_cast<int>(buildArgv.size());
+    argv = buildArgv.data();
+  }
   if (!primec::parseOptions(argc, argv, primec::OptionsParserMode::Primec, options, argError)) {
     return primec::reportArgumentError(std::cerr, options, argError, primec::OptionsParserMode::Primec);
+  }
+  if (isBuildCommand) {
+    options.inMemorySource = buildPlan.source;
+    // The appended runner import is the command's own, not the script's: allow it whatever the allowlist is.
+    if (options.allowImport.has_value()) {
+      options.allowImport->push_back("/std/build_runner");
+    }
   }
   primec::ir_lowerer::setLegacyCollectionBranchCountersEnabled(
       options.benchmarkIrLowererLegacyCollectionBranchCounters);

@@ -1,0 +1,7 @@
+// A script that declares an effect outside the ceiling of the build profile: `primec build --dry-run` names this file.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc, io_out)]
+build([Build mut] b) {
+  return(b.graph())
+}

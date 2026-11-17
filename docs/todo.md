@@ -169,7 +169,6 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | ready | file-listing |
 | TODO-5907 | `/std/file` expands glob patterns | blocked | build-glob |
-| TODO-5912 | `primec build --dry-run` prints the graph of `make.prime` | ready | build-cli |
 | TODO-5913 | `primec build` runs the graph | blocked | build-runner |
 | TODO-5914 | `--emit-deps` writes the files a compile read | ready | build-deps |
 | TODO-5915 | `primec build` skips steps whose inputs did not change | blocked | build-cache |
@@ -202,14 +201,12 @@ of sync with them.
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 - TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
-- TODO-5912 (build-cli): `primec build --dry-run` prints the graph of `make.prime`
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-5535
 3. TODO-5906
-4. TODO-5912
 
 ### Priority Lanes
 
@@ -218,7 +215,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Language defects found by the build graph (stdlib/std/build/build.prime): TODO-6008
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -242,7 +239,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5912 (`primec build --dry-run`, on the finished graph value) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5913 (running the graph, on the finished `primec build --dry-run`) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Language defects found by the build graph (all closed but one): TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) is `ready` outside `Ready Now`.
 
@@ -1035,27 +1032,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [~] TODO-5912: `primec build --dry-run` prints the graph of `make.prime`
-  - owner: ai
-  - status: ready
-  - claimed_by: build-dry-run agent (worktree agent-a20095dddc8e3381a), 2026-11-17
-  - depends_on: TODO-5911
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md)
-  - parallel_track: build-cli
-  - scope: `primec build [--dry-run] [dir]` finds `make.prime` in `dir` (default: the working directory), runs it on the VM under `--profile build` through a stdlib wrapper entry that constructs `Build`, calls the script's `build`, and hands the returned graph to the runner. With `--dry-run` the runner prints the export. Without it the command reports `running a graph is not supported yet` until TODO-5913. Diagnostics point at positions in `make.prime`. The subcommand is parsed in src/pipeline/CliDriver.cpp.
-  - acceptance:
-    - a fixture `make.prime` prints its graph; the output equals what the same graph prints from a plain program
-    - a script with a type error, a missing `make.prime`, and a script that declares an effect outside the ceiling each fail with a diagnostic that names `make.prime`
-    - `primec` without the `build` subcommand behaves exactly as before
-    - docs/spec/integration-and-tooling.md documents `primec build`
-    - full release gate green
-  - stop_rule: finding, running and printing; no execution of steps.
-
 - [ ] TODO-5913: `primec build` runs the graph
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5912
+  - status: ready
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
   - parallel_track: build-runner
@@ -1102,8 +1081,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-5916: `b.subproject` merges the graph of a subfolder's `make.prime`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5912
+  - status: ready
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 7)
   - parallel_track: build-subprojects
@@ -1118,8 +1096,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-5917: Build options: `b.option` and `primec build --option`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5912
+  - status: ready
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 5)
   - parallel_track: build-options

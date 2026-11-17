@@ -1,0 +1,8 @@
+// A script with a type error (line 6): `primec build --dry-run` names this file and that line.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [i32] count{"two"utf8}
+  return(b.graph())
+}

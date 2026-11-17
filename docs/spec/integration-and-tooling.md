@@ -41,6 +41,29 @@ main() {
 /std/collections`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
 `[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc`.
 
+### Build Command
+`primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a
+build script (docs/BuildSystemPlan.md). It is the ordinary compile of that file with `--profile build --emit=vm`, so
+the sandbox of the profile applies and a flag after `dir` such as `-I <dir>` or `--allow-effects` is passed on. The
+entry is the stdlib function `/std/build_runner/run` (`stdlib/std/build_runner/build_runner.prime`): it constructs a `Build`, calls
+the script's `build`, and writes the export of the returned graph to standard output. `primec` makes it reachable by
+appending `import /std/build_runner/*` (a module of its own, because `import /std/build/*` takes every file of that folder, which `primec build` adds to the import allowlist) after the last line of the script, so line numbers in a diagnostic are lines of
+`make.prime`, and the script's own `main`, if it has one, is not run.
+
+```
+primec build --dry-run tests/fixtures/build/project
+```
+prints the deterministic JSON of `tests/fixtures/build/build_graph.golden.json`, the same text the graph prints from a
+plain program that builds those nodes. Without `--dry-run` the command exits with 2 and
+`running a graph is not supported yet` until the runner executes steps. A directory without `make.prime` exits with 2
+and `no make.prime in <dir>`; a type error, an effect outside the ceiling (`io_out` is one) or an import outside the
+allowlist fails like any compile, with the position in `make.prime`. `primec` without `build` as its first argument
+behaves as before.
+
+The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
+stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can
+write to standard output under a ceiling of `file_read,heap_alloc` while `make.prime` cannot declare `file_write`.
+
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
   canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export

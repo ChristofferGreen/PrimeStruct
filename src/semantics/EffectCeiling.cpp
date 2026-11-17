@@ -84,11 +84,13 @@ findEffectCeilingViolations(const Program &program,
                             const std::string &entryPath,
                             const std::vector<std::string> &allowedEffects,
                             const std::vector<std::string> &defaultEffects,
-                            const std::vector<std::string> &entryDefaultEffects) {
+                            const std::vector<std::string> &entryDefaultEffects,
+                            const std::function<bool(int, int)> &isTrustedLocation) {
   std::vector<EffectCeilingViolation> violations;
   const CeilingInputs inputs{allowedEffects, violations};
   for (const auto &def : program.definitions) {
-    if (is_stdlib_path(def.fullPath)) {
+    if (is_stdlib_path(def.fullPath) ||
+        (isTrustedLocation && isTrustedLocation(def.sourceLine, def.sourceColumn))) {
       continue;
     }
     const bool isEntry = def.fullPath == entryPath;
@@ -102,7 +104,8 @@ findEffectCeilingViolations(const Program &program,
                       def.sourceColumn);
   }
   for (const auto &exec : program.executions) {
-    if (is_stdlib_path(exec.fullPath)) {
+    if (is_stdlib_path(exec.fullPath) ||
+        (isTrustedLocation && isTrustedLocation(exec.sourceLine, exec.sourceColumn))) {
       continue;
     }
     check_declaration(inputs,

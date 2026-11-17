@@ -1,0 +1,44 @@
+// A build script for `primec build --dry-run` (tests/unit/backend_host/test_build_graph.cpp): the graph of
+// tests/fixtures/build/build_graph.prime, so the dry run prints tests/fixtures/build/build_graph.golden.json.
+import /std/build/*
+
+// The settings of the optimized program: native code, level 2, one import path and one native source to link.
+[return<Compiler> effects(heap_alloc)]
+optimized([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  cc.optimize(2i32)
+  cc.importPath("stdlib")
+  cc.defaultEffect("heap_alloc")
+  cc.linkArg("native/host.cpp")
+  return(cc)
+}
+
+// The same program as a second configuration: a copy of the settings with another emit kind and no optimization.
+[return<Compiler> effects(heap_alloc)]
+debuggable([Compiler] cc) {
+  [Compiler mut] vm{cc}
+  vm.emit("vm")
+  vm.optimize(0i32)
+  return(vm)
+}
+
+[return<Compiler> effects(heap_alloc)]
+library_settings([Build mut] b) {
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("lib")
+  cc.importPath("stdlib")
+  cc.entry("/core/start")
+  return(cc)
+}
+
+// Two configurations of one program, a library and the link edge between them.
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler] cc{optimized(b)}
+  b.executable("app", cc, "src/main.prime")
+  b.compile("app_vm", debuggable(cc), "src/main.prime")
+  b.library("core", library_settings(b), "src/core.prime")
+  b.link("app", "core")
+  return(b.graph())
+}

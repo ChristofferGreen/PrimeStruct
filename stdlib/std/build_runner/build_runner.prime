@@ -1,0 +1,48 @@
+// The entry of `primec build` (docs/BuildSystemPlan.md section 6). `primec build` appends `import /std/build_runner/*`
+// to the text of `make.prime` and runs `/std/build_runner/run` on the VM under `--profile build`: it constructs a
+// `Build`, calls the script's `build` and writes the export of the returned graph to standard output. Only `primec
+// build` uses this module; it calls `/build`, which a plain program does not define. The runner is stdlib code, so the
+// effect ceiling of the profile does not apply to it (it writes a file); the script it calls is user code and is held
+// to the ceiling.
+import /std/build/*
+import /std/file/*
+import /std/text/*
+import /std/text/view/*
+
+namespace std {
+namespace build_runner {
+
+  [effects(io_err)]
+  log_file_error([FileError] err) {
+    print_line_error(FileError.why(err))
+  }
+
+  // Writes `text` and a newline to standard output.
+  [return<Result<FileError>> effects(file_write) on_error<FileError, /std/build_runner/log_file_error>]
+  write_stdout([String] text) {
+    [File<Write>] out{File<Write>("/dev/stdout"utf8)?}
+    for([i32 mut] i{0i32}, i < text.count(), i++) {
+      [Result<FileError>] wrote{out.write_byte(convert<i32>(text.byteAt(i)))}
+      if(Result.error(wrote)) {
+        return(wrote)
+      }
+    }
+    out.write_byte(10i32)?
+    out.close()?
+    return(Result.ok())
+  }
+
+  // Runs the script's `build` and prints the graph it returns; the exit code is 0, or 1 when printing failed.
+  [public return<i32> effects(heap_alloc, file_write)]
+  run() {
+    [Build mut] b{Build{}}
+    [Graph] graph{/build(b)}
+    [Result<FileError>] written{write_stdout(graph.export())}
+    if(Result.error(written)) {
+      return(1i32)
+    }
+    return(0i32)
+  }
+
+}
+}

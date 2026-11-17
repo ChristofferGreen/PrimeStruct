@@ -74,8 +74,9 @@ the one dangerous call in plain sight.
 
 This is `tests/fixtures/build/build_script.prime`, compiled and run under `--profile build` on the VM and as an `optexe`
 executable (`primec --profile build --emit=vm tests/fixtures/build/build_script.prime` exits with 4, the number of nodes it
-made). `build` is the script; the `main` below it only stands in for the runner, which `primec build` replaces (the
-loader is a later slice).
+made). `build` is the script; the `main` below it only stands in for the runner, which `primec build --dry-run` replaces: it
+runs `build` through the stdlib entry `/std/build_runner/run` and prints the export (docs/spec/integration-and-tooling.md,
+Build Command).
 
 ```
 import /std/build/*
@@ -103,7 +104,7 @@ build([Build mut] b) {
   return(b.graph())
 }
 
-// Until `primec build` loads this file, a main runs the script and returns how many nodes it made.
+// `primec build --dry-run` ignores this main; as a plain program, it runs the script and returns how many nodes it made.
 [return<int> effects(heap_alloc)]
 main() {
   [Build mut] b{Build{}}

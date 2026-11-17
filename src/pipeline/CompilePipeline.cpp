@@ -312,11 +312,16 @@ bool runCompilePipeline(const Options &options,
   }
 
   if (options.allowEffects.has_value()) {
-    const auto violations = findEffectCeilingViolations(output.program,
-                                                        options.entryPath,
-                                                        *options.allowEffects,
-                                                        options.defaultEffects,
-                                                        options.entryDefaultEffects);
+    const auto violations = findEffectCeilingViolations(
+        output.program,
+        options.entryPath,
+        *options.allowEffects,
+        options.defaultEffects,
+        options.entryDefaultEffects,
+        [&](int line, int column) {
+          const auto location = mapExpandedSourceLocation(importStage.expandedSource, line, column);
+          return location.has_value() && location->unitKind == SourceUnitKind::Stdlib;
+        });
     if (!violations.empty()) {
       error = violations.front().message;
       SemanticDiagnosticInfo ceilingInfo;
