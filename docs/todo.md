@@ -1036,9 +1036,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: function steps with declared inputs and outputs; no command steps, no network.
 
-- [ ] TODO-5920: PrimeScroll builds with `make.prime`
+- [~] TODO-5920: PrimeScroll builds with `make.prime`
   - owner: ai
   - status: ready
+  - claimed_by: dogfood-a (worktree-agent-a9e59996ccb8535c8), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 10)
   - parallel_track: build-dogfood
