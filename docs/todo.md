@@ -1030,9 +1030,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three pattern forms; no bracket expressions, no negation.
 
-- [ ] TODO-5915: `primec build` skips steps whose inputs did not change
+- [~] TODO-5915: `primec build` skips steps whose inputs did not change
   - owner: ai
   - status: ready
+  - claimed_by: build-cache-agent (worktree-agent-af8a60b2fa50f1746), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 8)
   - parallel_track: build-cache
