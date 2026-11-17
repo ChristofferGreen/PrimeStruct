@@ -8348,7 +8348,7 @@ Total: 10773 test cases across 612 files.
 ### test_program_matrix_recursion.cpp
 
 - a recursive definition with a vector parameter says the vector kept it inline
-- a recursive definition with a reference to a vector says the templated target kept it inline
+- a recursive definition with a reference to a vector says the templated target kept it 
 
 ### test_program_matrix_results.cpp
 
