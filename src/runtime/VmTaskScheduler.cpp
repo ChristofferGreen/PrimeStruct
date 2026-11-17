@@ -2,6 +2,7 @@
 
 #include "VmFastKernel.h"
 #include "VmKernelLocalize.h"
+#include "VmSyncLog.h"
 #include "VmTaskHandle.h"
 
 #include <algorithm>
@@ -23,7 +24,9 @@ bool isAtomicOpcode(IrOpcode op) {
 // share the heap. A task switch happens only at a spawn, a wait and a task's end. The default schedule is eager: a
 // spawn runs the new task until it ends or blocks, then its spawner continues, so a program prints what it prints
 // with every spawned call run inline; a blocked task yields to the lowest-numbered runnable task. A seed picks the
-// next task at every switch point with a splitmix64 generator, so the same seed gives the same run.
+// next task at every switch point with a splitmix64 generator, so the same seed gives the same run. A replay
+// (docs/spec/vm-design.md, Synchronization record and replay) lets a task run its next scheduler opcode only when the
+// record says it is that task's turn; a task that reaches one out of turn is parked until the record gets to it.
 class VmTaskScheduler {
 public:
   // With `fastFunctions` every task runs on the fast loop between switch points (docs/spec/vm-design.md, Tasks);
@@ -32,9 +35,10 @@ public:
                   VmKernelHost &host,
                   const std::vector<size_t> &localCounts,
                   std::optional<uint64_t> seed,
-                  const std::vector<FastFunction> *fastFunctions)
+                  const std::vector<FastFunction> *fastFunctions,
+                  const std::vector<SyncEvent> *replay)
       : module_(module), host_(host), localCounts_(localCounts), seeded_(seed.has_value()),
-        rng_(seed.value_or(0)), fast_(fastFunctions) {
+        rng_(seed.value_or(0)), fast_(fastFunctions), replay_(replay) {
   }
 
   bool run(uint64_t &result, std::string &error) {
@@ -55,6 +59,15 @@ public:
       const VmKernelFrame &top = task.frames.back();
       if (top.ip < top.function->instructions.size()) {
         const IrOpcode op = top.function->instructions[top.ip].op;
+        if (replay_ != nullptr && syncEventKindOf(op) != SyncEventKind::End) {
+          bool turn = false;
+          if (!replayGate(op, turn, error)) {
+            return false;
+          }
+          if (!turn) {
+            continue;
+          }
+        }
         if (op == IrOpcode::TaskSpawn) {
           if (!spawn(top.function->instructions[top.ip].imm, error)) {
             return false;
@@ -83,12 +96,18 @@ public:
       // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
       const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
                               isAtomicOpcode(top.function->instructions[top.ip].op);
+      // Under a replay the atomic operation the step kernel runs next is an event of the record.
+      const bool replayAtomic = replay_ != nullptr && top.ip < top.function->instructions.size() &&
+                                isAtomicOpcode(top.function->instructions[top.ip].op);
       uint64_t value = 0;
       switch (stepVmKernelUntracked(
           module_, host_, task.stack, task.frames, localCounts_, value, event, error)) {
       case VmKernelStepOutcome::Continue:
         if (atomicStep) {
           pickSeeded();
+        }
+        if (replayAtomic) {
+          completeReplayEvent();
         }
         continue;
       case VmKernelStepOutcome::Fault:
@@ -113,7 +132,8 @@ public:
 private:
   static constexpr size_t NoTask = static_cast<size_t>(-1);
   static constexpr size_t MaxLiveTasks = size_t{1} << 20;
-  enum class TaskState : uint8_t { Runnable, Waiting, Done, Free };
+  // Parked: a replay holds the task at a scheduler opcode until the record reaches its turn.
+  enum class TaskState : uint8_t { Runnable, Waiting, Parked, Done, Free };
   struct Task {
     std::vector<uint64_t> stack;
     std::vector<VmKernelFrame> frames;
@@ -188,6 +208,56 @@ private:
     }
   }
 
+  // The diagnostic of a replay that cannot follow its record: the event it is at, and what is in the way.
+  std::string divergence(const std::string &what) const {
+    std::string text = "sync replay diverged at event " + std::to_string(cursor_ + 1) + " of " +
+                       std::to_string(replay_->size());
+    if (cursor_ < replay_->size()) {
+      text += " (task " + std::to_string((*replay_)[cursor_].task) + " " +
+              syncEventKindName((*replay_)[cursor_].kind) + ")";
+    }
+    return text + ": " + what;
+  }
+
+  // Replay (docs/spec/vm-design.md, Synchronization record and replay): `turn` is set when the current task's next
+  // scheduler opcode is the record's next event. Otherwise the task is parked and another one picked. False with
+  // `error` set when the task does what the record does not have.
+  bool replayGate(IrOpcode op, bool &turn, std::string &error) {
+    turn = false;
+    const uint64_t holder = tasks_[current_].number + 1;
+    if (cursor_ < replay_->size() && (*replay_)[cursor_].task == holder) {
+      const SyncEventKind kind = syncEventKindOf(op);
+      if ((*replay_)[cursor_].kind != kind) {
+        error = divergence(std::string("task ") + std::to_string(holder) + " does " +
+                           syncEventKindName(kind));
+        return false;
+      }
+      turn = true;
+      return true;
+    }
+    tasks_[current_].state = TaskState::Parked;
+    removeRunnable(current_);
+    return pickAfterStop(NoTask, error);
+  }
+
+  // A scheduler opcode completed (it moved its task on): it was the record's next event, so the record advances and
+  // the task whose turn it is now is released if it was parked. This runs before the task that completed it blocks
+  // or yields, so the next task is runnable when one is picked.
+  void completeReplayEvent() {
+    ++cursor_;
+    if (cursor_ >= replay_->size()) {
+      return;
+    }
+    const uint64_t next = (*replay_)[cursor_].task;
+    for (size_t slot = 0; slot < tasks_.size(); ++slot) {
+      if (tasks_[slot].state == TaskState::Parked && tasks_[slot].number + 1 == next) {
+        tasks_[slot].state = TaskState::Runnable;
+        addRunnable(slot);
+        return;
+      }
+    }
+  }
+
   // A switch point of a seeded schedule: any runnable task may run next.
   void pickSeeded() {
     current_ = runnable_[static_cast<size_t>(nextRandom() % runnable_.size())].second;
@@ -197,7 +267,9 @@ private:
   // can, else the lowest-numbered runnable task.
   bool pickAfterStop(size_t preferred, std::string &error) {
     if (runnable_.empty()) {
-      error = "deadlock: every task is waiting";
+      error = replay_ != nullptr && cursor_ < replay_->size()
+                  ? divergence("no task can run the next event")
+                  : "deadlock: every task is waiting";
       return false;
     }
     if (seeded_) {
@@ -405,6 +477,9 @@ private:
     } else {
       task.frames.back().ip += 1;
     }
+    if (replay_ != nullptr) {
+      completeReplayEvent();
+    }
   }
 
   // The slot an address of `task`'s call stack names (a local of one of its frames, or heap).
@@ -520,6 +595,15 @@ private:
         continue;
       }
       const IrInstruction &inst = *tasks_[current_].fast.ip->source;
+      if (replay_ != nullptr) {
+        bool turn = false;
+        if (!replayGate(inst.op, turn, error)) {
+          return false;
+        }
+        if (!turn) {
+          continue;
+        }
+      }
       bool ok = false;
       switch (inst.op) {
       case IrOpcode::TaskSpawn:
@@ -572,6 +656,9 @@ private:
   uint64_t nextNumber_ = 0;
   size_t current_ = 0;
   const std::vector<FastFunction> *fast_ = nullptr;
+  // The record a replay follows (null: not a replay) and the next event in it.
+  const std::vector<SyncEvent> *replay_ = nullptr;
+  size_t cursor_ = 0;
 };
 
 } // namespace
@@ -595,6 +682,23 @@ bool runVmTaskScheduler(const IrModule &module,
   for (size_t i = 0; i < module.functions.size(); ++i) {
     localCounts[i] = computeVmKernelLocalCount(module.functions[i]);
   }
+  // A replay reads its record first: a record of another program is refused before anything runs.
+  std::vector<SyncEvent> replay;
+  bool replaying = false;
+  if (const VmSyncLogPaths *paths = host.syncLogPaths(); paths != nullptr) {
+    if (!paths->record.empty()) {
+      error = "a sync record needs task threads (--vm-threads)";
+      return false;
+    }
+    if (!paths->replay.empty()) {
+      uint64_t fingerprint = 0;
+      if (!fingerprintIrModule(module, fingerprint, error) ||
+          !readSyncLog(paths->replay, fingerprint, replay, error)) {
+        return false;
+      }
+      replaying = true;
+    }
+  }
   // Every task runs on the fast loop between switch points when the loop takes the whole module.
   std::vector<FastFunction> fastFunctions;
   const bool fast = vmFastKernelEnabled() && host.cancelFlag() == nullptr &&
@@ -602,8 +706,13 @@ bool runVmTaskScheduler(const IrModule &module,
   if (fast) {
     noteVmFastTaskRun();
   }
-  VmTaskScheduler scheduler(
-      module, host, localCounts, host.scheduleSeed(), fast ? &fastFunctions : nullptr);
+  // A replay follows its record, not a seed.
+  VmTaskScheduler scheduler(module,
+                            host,
+                            localCounts,
+                            replaying ? std::nullopt : host.scheduleSeed(),
+                            fast ? &fastFunctions : nullptr,
+                            replaying ? &replay : nullptr);
   return scheduler.run(result, error);
 }
 

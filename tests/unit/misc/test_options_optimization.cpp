@@ -237,3 +237,50 @@ TEST_CASE("the vm schedule seed takes a number for primec and primevm") {
     CHECK(badError == bad.expected);
   }
 }
+
+TEST_CASE("the vm sync record and replay flags take a path and keep to their modes") {
+  std::string error;
+  primec::Options record;
+  REQUIRE(parsePrimec({"primec",
+                       "--emit=vm",
+                       "--vm-threads",
+                       "--vm-record-sync",
+                       "/tmp/run.sync",
+                       "/tmp/input.prime"},
+                      record,
+                      error));
+  CHECK(record.vmRecordSyncPath == "/tmp/run.sync");
+  CHECK(record.vmReplaySyncPath.empty());
+  primec::Options replay;
+  REQUIRE(parsePrimevm(
+      {"primevm", "--vm-replay-sync=/tmp/run.sync", "/tmp/input.prime"}, replay, error));
+  CHECK(replay.vmReplaySyncPath == "/tmp/run.sync");
+  primec::Options defaults;
+  REQUIRE(parsePrimevm({"primevm", "/tmp/input.prime"}, defaults, error));
+  CHECK(defaults.vmRecordSyncPath.empty());
+  CHECK(defaults.vmReplaySyncPath.empty());
+
+  struct Bad {
+    std::vector<std::string> args;
+    std::string expected;
+  };
+  const std::vector<Bad> cases = {
+      {{"primevm", "/tmp/input.prime", "--vm-record-sync"},
+       "--vm-record-sync requires a file path"},
+      {{"primevm", "/tmp/input.prime", "--vm-replay-sync"},
+       "--vm-replay-sync requires a file path"},
+      {{"primevm", "--vm-record-sync=/tmp/run.sync", "/tmp/input.prime"},
+       "--vm-record-sync records a --vm-threads run and needs --vm-threads"},
+      {{"primevm", "--vm-threads", "--vm-replay-sync=/tmp/run.sync", "/tmp/input.prime"},
+       "--vm-replay-sync runs on the deterministic scheduler and cannot be combined with "
+       "--vm-threads or "
+       "--vm-record-sync"},
+  };
+  for (const Bad &bad : cases) {
+    CAPTURE(bad.expected);
+    primec::Options badOptions;
+    std::string badError;
+    CHECK_FALSE(parsePrimevm(bad.args, badOptions, badError));
+    CHECK(badError == bad.expected);
+  }
+}

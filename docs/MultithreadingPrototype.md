@@ -631,7 +631,8 @@ has. The deterministic scheduler stays; it is not replaced.
   threads mode giving each task's `VmFastTask` an OS thread and the scheduler opcodes real primitives.
 - **Replay:** the language has no shared mutable state outside `Mutex`, `Atomic` and `Channel`, so the recorded order
   of synchronization events is enough to reproduce a threaded run, apart from host input and output. A threads run
-  records that order and the deterministic scheduler replays it (TODO-5901). This is also what lets the inspector
+  records that order (`--vm-record-sync`) and the deterministic scheduler replays it (`--vm-replay-sync`; TODO-5901,
+  landed; format and ordering point in docs/spec/vm-design.md). This is also what lets the inspector
   (`docs/VmInspectorPlan.md`) show a threaded run.
 - **Debug sessions** run programs with tasks on the deterministic scheduler, one DAP thread per task, so stopping every
   thread is trivial (TODO-5903). They fault on task opcodes today.

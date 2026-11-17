@@ -20,6 +20,7 @@ build script (docs/BuildSystemPlan.md, section 6):
 | Optimization | `-O2` on the VM | `-O0` |
 | `--vm-schedule-seed` | eager schedule | `0`, a fixed deterministic schedule |
 | `--vm-threads` | off | off (the seed applies) |
+| `--vm-record-sync`, `--vm-replay-sync` | none | none |
 
 Override rule: a flag given explicitly always wins over the profile's value of the same setting, whether it comes
 before or after `--profile`; the order of arguments never changes the result. `PRIMESTRUCT_VM_SCHEDULE_SEED` also

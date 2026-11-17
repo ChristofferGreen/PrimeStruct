@@ -224,6 +224,18 @@ public:
     taskThreads_ = enabled;
   }
 
+  // Synchronization record and replay (docs/spec/vm-design.md; `--vm-record-sync`, `--vm-replay-sync`). A run with
+  // task threads and a record path writes the order of its synchronization events there; a run with a replay path
+  // follows that order on the deterministic scheduler and fails with a diagnostic when the file belongs to another
+  // program or the run does not follow it. The two are exclusive, and a record needs task threads (an empty path
+  // turns either off).
+  void setSyncRecordPath(std::string path) {
+    syncLog_.record = std::move(path);
+  }
+  void setSyncReplayPath(std::string path) {
+    syncLog_.replay = std::move(path);
+  }
+
   bool execute(const IrModule &module, uint64_t &result, std::string &error, uint64_t argCount = 0) const;
   bool execute(const IrModule &module,
                uint64_t &result,
@@ -239,10 +251,13 @@ public:
                const VmHostFunctions &hostFunctions) const;
 
 private:
+  const vm_detail::VmSyncLogPaths *syncLogOrNull() const;
+
   VmOutputSink outputSink_{};
   const std::atomic<bool> *cancelFlag_ = nullptr;
   std::optional<uint64_t> scheduleSeed_;
   bool taskThreads_ = false;
+  vm_detail::VmSyncLogPaths syncLog_;
 };
 
 class VmDebugSession {

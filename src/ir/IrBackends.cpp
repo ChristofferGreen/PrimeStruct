@@ -168,6 +168,8 @@ public:
     }
     vm.setScheduleSeed(options.vmScheduleSeed);
     vm.setTaskThreads(options.vmThreads);
+    vm.setSyncRecordPath(options.vmRecordSyncPath);
+    vm.setSyncReplayPath(options.vmReplaySyncPath);
     uint64_t vmResult = 0;
     if (!vm.execute(module, vmResult, error, args)) {
       return false;

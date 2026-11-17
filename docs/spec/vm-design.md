@@ -273,6 +273,49 @@
   last that could have changed anything, so the run faults with `deadlock: every task is waiting` (exit code 3), as
   `optexe` does; a thread in a host call or spinning on an atomic counts as running, so a program that waits for a
   host function or an atomic is never reported as deadlocked. The fault stops and joins every thread like any other.
+- **Synchronization record and replay (the VM, `--vm-record-sync`, `--vm-replay-sync`; TODO-5901):** a `--vm-threads`
+  run is not repeatable by itself, so `primevm --vm-threads --vm-record-sync <path>` (also `primec --emit=vm`, the
+  embedder's `Vm::setSyncRecordPath` and `RunOptions::syncRecord`) writes the order in which the run's tasks
+  synchronized, and `primevm --vm-replay-sync <path>` (`Vm::setSyncReplayPath`, `RunOptions::syncReplay`) runs the same
+  program on the deterministic scheduler in that order, so a threaded run can be repeated, stepped and inspected. A
+  record needs `--vm-threads` (`--vm-record-sync records a --vm-threads run and needs --vm-threads`), a replay cannot be
+  combined with `--vm-threads` or a record, and a replay ignores `--vm-schedule-seed`. Without either flag nothing
+  changes: the recorder is a null pointer that the threaded primitives test, and the scheduler's replay check is one
+  null test per scheduler opcode. **What is recorded:** one event for each `TaskSpawn`, `TaskWait` (when it completes),
+  `MutexLock` (when the lock is taken), `MutexUnlock`, `ConditionWait` (when it registers and frees its lock),
+  `ConditionNotify` and every atomic operation (load, store, add, exchange, compare-exchange), each with the number of
+  the task that did it (the main task is 1, spawned tasks count up from 2 in the order of their spawn events, as lock
+  slots hold them). `Channel<T>` and `Mutex<T>` are stdlib code over these opcodes, so a channel operation is the lock,
+  condition and atomic events it is made of. Host input and output, string and heap operations and plain loads and
+  stores are not recorded; a program that reads from the outside is replayed only if the host calls return the same
+  bytes. **Ordering point:** the events are appended to one buffer under one mutex (`SyncLogRecorder`,
+  `src/runtime/VmSyncLog.h`). A lock event is appended after the lock was taken and an unlock event before it is
+  released, so the log has the unlock before the next holder's lock; a condition wait is appended with the run's mutex
+  held before its lock is freed and a notify with the mutex held, a spawn with the task numbered and a wait when the
+  task has ended. An atomic operation is the one place the recorder serializes tasks: it holds the record mutex across
+  the operation itself, so the log orders atomic operations as they ran (a recorded run therefore does not exhibit the
+  races between two atomic operations that an unrecorded one does; a race between a lock and an atomic, or between
+  plain accesses, is not hidden). The buffer is written in 64 KiB blocks and a faulted run still writes the events up
+  to its fault. A module without task opcodes records a log with no events. **Format (version 1, little-endian):** a
+  24-byte header (the bytes `PSSYNCLG`, the `u32` format version 1, a `u32` of 0, and a `u64` fingerprint), the events
+  as 8-byte records (`u32` task number, `u8` kind, three zero bytes), and a trailer (a record of kind 0, then a `u64`
+  count of the events). Kinds: 1 spawn, 2 wait, 3 lock, 4 unlock, 5 condition wait, 6 condition notify, 7 atomic load,
+  8 atomic store, 9 atomic add, 10 atomic exchange, 11 atomic compare-exchange. The fingerprint is the FNV-1a hash of the
+  serialized IR of the module (`serializeIr`), so a record is refused for another program and for the same program
+  compiled with other options (another `-O` level changes the IR): `the sync record <path> was recorded from a
+  different program (or the same program compiled with other options)`. A file that is not a record (`is not a sync
+  record`), has another format version (`has format version <n> (this VM reads version 1)`), is cut short (`is truncated`)
+  or holds a kind that is not an event (`holds an unknown event kind <n>`) is refused the same way, before the program
+  starts. A change of the format raises the version, and a reader refuses a version it does not know. **Replay:** the
+  deterministic scheduler lets a task run a scheduler opcode (spawn, wait, lock, unlock, condition wait, notify or an
+  atomic operation) only when the next event of the record is that task's and has that kind; a task that reaches one
+  out of turn is parked until the record gets to it, and the task whose turn it becomes is released after each event.
+  Between two events a task runs on, so what a task prints between its own events appears in the order the tasks run,
+  not in the order of the threaded run: output is reproduced when it is ordered by the synchronization (inside a lock,
+  or after a channel receive), not when two tasks print without any. A replay that does what the record does not have
+  fails with `sync replay diverged at event <n> of <total> (task <t> <kind>): <what>`; when no task can run and the
+  record has events left, the same diagnostic, and when the record is used up and every task waits, the deadlock fault
+  of the run that was recorded.
 - **Tasks on threads (arm64 native, PSIR v34):** the direct Mach-O emitter runs each `TaskSpawn` on a pthread
   (TODO-5942; `src/native_emitter/NativeEmitterInternalsArm64Tasks.h`). The spawner allocates a task block on the
   heap (result, `pthread_t`, argc, argv, then the parameters; the handle is its address), fills it from the value

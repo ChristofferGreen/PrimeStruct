@@ -695,6 +695,8 @@ int main(int argc, char **argv) {
   primec::Vm vm;
   vm.setScheduleSeed(options.vmScheduleSeed);
   vm.setTaskThreads(options.vmThreads);
+  vm.setSyncRecordPath(options.vmRecordSyncPath);
+  vm.setSyncReplayPath(options.vmReplaySyncPath);
   std::vector<std::string_view> args;
   args.reserve(1 + options.programArgs.size());
   args.push_back(options.inputPath);
@@ -722,6 +724,7 @@ int main(int argc, char **argv) {
   const char *jitSetting = std::getenv("PRIMEVM_JIT");
   const char *kernelSetting = std::getenv("PRIMEVM_KERNEL");
   const bool jitAllowed = options.optimization.level >= 2 && !options.vmThreads &&
+                          options.vmRecordSyncPath.empty() && options.vmReplaySyncPath.empty() &&
                           (jitSetting == nullptr || std::string_view(jitSetting) != "0") &&
                           (kernelSetting == nullptr || std::string_view(kernelSetting) != "step");
   if (jitAllowed) {

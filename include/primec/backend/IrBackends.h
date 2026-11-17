@@ -43,6 +43,9 @@ struct IrBackendEmitOptions {
   std::optional<uint64_t> vmScheduleSeed;
   // --vm-threads: each VM task runs on an OS thread of its own (docs/spec/vm-design.md, Tasks on threads).
   bool vmThreads = false;
+  // --vm-record-sync and --vm-replay-sync: the files of the run's sync-order log (docs/spec/vm-design.md).
+  std::string vmRecordSyncPath;
+  std::string vmReplaySyncPath;
 };
 
 struct IrBackendEmitResult {

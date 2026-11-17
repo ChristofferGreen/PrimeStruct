@@ -83,6 +83,11 @@ struct Options {
   // --vm-threads: the VM runs each task on an OS thread of its own (docs/spec/vm-design.md, Tasks on threads); the
   // schedule seed does not apply then. Off by default.
   bool vmThreads = false;
+  // --vm-record-sync <path> (needs --vm-threads) writes the order of the run's synchronization events;
+  // --vm-replay-sync <path> runs the program on the deterministic scheduler following such a record, and ignores a
+  // schedule seed (docs/spec/vm-design.md, Synchronization record and replay). The two are exclusive.
+  std::string vmRecordSyncPath;
+  std::string vmReplaySyncPath;
   bool skipSemanticProductForNonConsumingPath = false;
   std::optional<bool> benchmarkForceSemanticProduct;
   bool benchmarkSemanticNoFactEmission = false;

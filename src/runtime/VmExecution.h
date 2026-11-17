@@ -33,7 +33,8 @@ bool executeVmModule(const IrModule &module,
                      const VmOutputSink *outputSink = nullptr,
                      const std::atomic<bool> *cancel = nullptr,
                      std::optional<uint64_t> scheduleSeed = std::nullopt,
-                     bool taskThreads = false);
+                     bool taskThreads = false,
+                     const VmSyncLogPaths *syncLog = nullptr);
 
 // Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
 // pops the import's parameters, invokes the binding and pushes its result. `hostLock`, when set, is held while a

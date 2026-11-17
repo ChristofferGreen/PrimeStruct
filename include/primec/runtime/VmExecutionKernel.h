@@ -11,6 +11,14 @@
 
 namespace primec::vm_detail {
 
+// The files of a run's synchronization-order log (docs/spec/vm-design.md, Synchronization record and replay): a
+// non-empty `record` is written by a `--vm-threads` run, a non-empty `replay` is read by a run on the deterministic
+// scheduler. The two are never both set.
+struct VmSyncLogPaths {
+  std::string record;
+  std::string replay;
+};
+
 class VmKernelHost {
 public:
   virtual ~VmKernelHost() = default;
@@ -24,6 +32,11 @@ public:
   // next task at every switch point with a generator seeded by it.
   virtual std::optional<uint64_t> scheduleSeed() const {
     return std::nullopt;
+  }
+
+  // The sync-order log files of the run (null: none).
+  virtual const VmSyncLogPaths *syncLogPaths() const {
+    return nullptr;
   }
 
   // Threads mode (--vm-threads; docs/spec/vm-design.md, Tasks on threads): a host that answers true runs each task on

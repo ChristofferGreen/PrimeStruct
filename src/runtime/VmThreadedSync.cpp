@@ -28,6 +28,8 @@ SyncOutcome stepAtomic(const IrInstruction &inst,
                        VmKernelHost &host,
                        std::vector<uint64_t> &stack,
                        std::vector<VmKernelFrame> &frames,
+                       SyncLogRecorder *recorder,
+                       uint64_t holder,
                        std::string &error) {
   const size_t operandCount = inst.op == IrOpcode::AtomicLoad              ? 1u
                               : inst.op == IrOpcode::AtomicCompareExchange ? 3u
@@ -52,6 +54,12 @@ SyncOutcome stepAtomic(const IrInstruction &inst,
   uint64_t *slot = nullptr;
   if (!resolveSlot(host, frames, address, true, slot, error)) {
     return SyncOutcome::Fault;
+  }
+  // A recorded run holds the record's ordering point across the operation, so the log orders atomic operations as
+  // they ran (docs/spec/vm-design.md, Synchronization record and replay).
+  std::unique_lock<std::mutex> order;
+  if (recorder != nullptr) {
+    order = std::unique_lock<std::mutex>(recorder->orderMutex());
   }
   Cell cell(*slot);
   switch (inst.op) {
@@ -85,6 +93,9 @@ SyncOutcome stepAtomic(const IrInstruction &inst,
     break;
   }
   }
+  if (recorder != nullptr) {
+    recorder->noteLocked(holder, syncEventKindOf(inst.op));
+  }
   return SyncOutcome::Done;
 }
 
@@ -116,8 +127,15 @@ SyncOutcome deadlockOrStop(WaitResult result, std::string &error) {
 SyncOutcome
 lockMutex(ThreadedWaitState &state, uint64_t *slot, uint64_t holder, std::string &error) {
   Cell cell(*slot);
+  // The event is noted once the lock is taken, so the log has it after the unlock it waited for.
+  const auto noteLock = [&] {
+    if (state.recorder != nullptr) {
+      state.recorder->note(holder, SyncEventKind::Lock);
+    }
+  };
   uint64_t expected = 0;
   if (cell.compare_exchange_strong(expected, holder)) {
+    noteLock();
     return SyncOutcome::Done;
   }
   if (expected == holder) {
@@ -129,7 +147,11 @@ lockMutex(ThreadedWaitState &state, uint64_t *slot, uint64_t holder, std::string
   std::unique_lock<std::mutex> lock(state.mutex);
   const WaitResult result = waitForChange(state, lock, [&] {
     uint64_t free = 0;
-    return cell.compare_exchange_strong(free, holder);
+    if (!cell.compare_exchange_strong(free, holder)) {
+      return false;
+    }
+    noteLock();
+    return true;
   });
   return result == WaitResult::Ready ? SyncOutcome::Done : deadlockOrStop(result, error);
 }
@@ -137,11 +159,15 @@ lockMutex(ThreadedWaitState &state, uint64_t *slot, uint64_t holder, std::string
 SyncOutcome
 unlockMutex(ThreadedWaitState &state, uint64_t *slot, uint64_t holder, std::string &error) {
   Cell cell(*slot);
-  uint64_t expected = holder;
-  if (!cell.compare_exchange_strong(expected, 0)) {
+  if (cell.load() != holder) {
     error = "mutex unlocked by a task that does not hold it";
     return SyncOutcome::Fault;
   }
+  // The event is noted before the lock is released, so the log has it before the next holder's lock event.
+  if (state.recorder != nullptr) {
+    state.recorder->note(holder, SyncEventKind::Unlock);
+  }
+  cell.store(0);
   if (state.sleepers.load() > 0) {
     std::lock_guard<std::mutex> lock(state.mutex);
     state.signalChange();
@@ -167,6 +193,9 @@ SyncOutcome waitCondition(ThreadedWaitState &state,
   ThreadedWaitState::Condition &condition = state.conditions[conditionSlot];
   ++condition.waiters;
   const uint64_t seen = condition.notifies;
+  if (state.recorder != nullptr) {
+    state.recorder->note(holder, SyncEventKind::ConditionWait);
+  }
   lockCell.store(0);
   state.signalChange();
   const WaitResult result = waitForChange(state, lock, [&] { return condition.notifies != seen; });
@@ -176,8 +205,11 @@ SyncOutcome waitCondition(ThreadedWaitState &state,
   return result == WaitResult::Ready ? SyncOutcome::Done : deadlockOrStop(result, error);
 }
 
-void notifyCondition(ThreadedWaitState &state, uint64_t *conditionSlot) {
+void notifyCondition(ThreadedWaitState &state, uint64_t *conditionSlot, uint64_t holder) {
   std::lock_guard<std::mutex> lock(state.mutex);
+  if (state.recorder != nullptr) {
+    state.recorder->note(holder, SyncEventKind::ConditionNotify);
+  }
   const auto found = state.conditions.find(conditionSlot);
   if (found == state.conditions.end()) {
     return;
@@ -246,13 +278,13 @@ SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
     }
     stack.resize(stack.size() - operandCount);
     if (!wait) {
-      notifyCondition(state, conditionSlot);
+      notifyCondition(state, conditionSlot, holder);
       return SyncOutcome::Done;
     }
     return waitCondition(state, lockSlot, conditionSlot, holder, error);
   }
   default:
-    return stepAtomic(inst, host, stack, frames, error);
+    return stepAtomic(inst, host, stack, frames, state.recorder, holder, error);
   }
 }
 

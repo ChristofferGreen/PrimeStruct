@@ -50,8 +50,12 @@ struct ThreadTask {
 // faults, whichever comes first; the stop flag then ends every other task at its next poll.
 class VmThreadedTasks {
 public:
-  VmThreadedTasks(const IrModule &module, VmKernelHost &host, std::vector<size_t> localCounts)
+  VmThreadedTasks(const IrModule &module,
+                  VmKernelHost &host,
+                  std::vector<size_t> localCounts,
+                  SyncLogRecorder *recorder)
       : module_(module), host_(host), localCounts_(std::move(localCounts)) {
+    sync_.recorder = recorder;
   }
 
   bool run(uint64_t &result, std::string &error) {
@@ -159,7 +163,7 @@ private:
       if (top.ip < top.function->instructions.size()) {
         const IrInstruction &inst = top.function->instructions[top.ip];
         if (inst.op == IrOpcode::TaskSpawn) {
-          if (!spawn(inst.imm, stack, error)) {
+          if (!spawn(inst.imm, holder, stack, error)) {
             fail(error);
             return TaskEnd::Stopped;
           }
@@ -179,7 +183,7 @@ private:
           continue;
         }
         if (inst.op == IrOpcode::TaskWait) {
-          if (!wait(stack, error)) {
+          if (!wait(holder, stack, error)) {
             if (!error.empty()) {
               fail(error);
             }
@@ -208,7 +212,8 @@ private:
 
   // TaskSpawn: pops the callee's arguments, gives the task a heap and a thread, and pushes its handle. False with
   // `error` set for a fault; false with it empty when the run is already stopping.
-  bool spawn(uint64_t functionImm, std::vector<uint64_t> &stack, std::string &error) {
+  bool
+  spawn(uint64_t functionImm, uint64_t spawner, std::vector<uint64_t> &stack, std::string &error) {
     error.clear();
     if (functionImm >= module_.functions.size()) {
       error = "invalid task function in IR";
@@ -252,6 +257,10 @@ private:
         slots_.emplace_back();
       }
       raw->holder = nextHolder_++;
+      // Noted with the task numbered, so the log's spawn events come in the order of the task numbers.
+      if (sync_.recorder != nullptr) {
+        sync_.recorder->note(spawner, SyncEventKind::Spawn);
+      }
       slots_[slot].task = std::move(task);
       generation = slots_[slot].generation;
       ++sync_.spawned;
@@ -287,7 +296,7 @@ private:
 
   // TaskWait: consumes the handle on top of the stack, sleeps until the task's function has returned and replaces
   // the handle by its result. False with `error` set for a fault; false with it empty when the run stopped.
-  bool wait(std::vector<uint64_t> &stack, std::string &error) {
+  bool wait(uint64_t waiter, std::vector<uint64_t> &stack, std::string &error) {
     error.clear();
     if (stack.empty()) {
       error = "IR stack underflow on task wait";
@@ -321,6 +330,9 @@ private:
       // thread may still hold the task, so it is freed when the run ends.
       orphans_.push_back(std::move(task));
       return false;
+    }
+    if (sync_.recorder != nullptr) {
+      sync_.recorder->note(waiter, SyncEventKind::Wait);
     }
     stack.back() = task->result;
     return true;
@@ -374,8 +386,27 @@ bool runVmThreadedTasks(const IrModule &module,
   for (size_t i = 0; i < module.functions.size(); ++i) {
     localCounts[i] = computeVmKernelLocalCount(module.functions[i]);
   }
-  VmThreadedTasks tasks(module, host, std::move(localCounts));
-  return tasks.run(result, error);
+  const VmSyncLogPaths *logPaths = host.syncLogPaths();
+  std::unique_ptr<SyncLogRecorder> recorder;
+  if (logPaths != nullptr && !logPaths->record.empty()) {
+    uint64_t fingerprint = 0;
+    if (!fingerprintIrModule(module, fingerprint, error)) {
+      return false;
+    }
+    recorder = SyncLogRecorder::open(logPaths->record, fingerprint, error);
+    if (recorder == nullptr) {
+      return false;
+    }
+  }
+  VmThreadedTasks tasks(module, host, std::move(localCounts), recorder.get());
+  const bool ran = tasks.run(result, error);
+  // Every task thread ended, so the log is complete; a run that faulted keeps the events up to its fault.
+  std::string recordError;
+  if (recorder != nullptr && !recorder->finish(recordError) && ran) {
+    error = recordError;
+    return false;
+  }
+  return ran;
 }
 
 } // namespace primec::vm_detail

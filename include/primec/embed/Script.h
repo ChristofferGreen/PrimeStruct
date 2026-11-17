@@ -256,6 +256,13 @@ struct RunOptions {
   // thread; `run` returns after all of them are joined, so the process and the next `run` are unaffected. A script
   // without tasks starts no thread and runs as it does without this option.
   bool threads = false;
+  // Synchronization record and replay (`--vm-record-sync`, `--vm-replay-sync`; docs/spec/vm-design.md). With
+  // `threads`, a non-empty `syncRecord` writes the order of the run's synchronization events to that file; without
+  // `threads`, a non-empty `syncReplay` runs the script on the deterministic scheduler in the order that file has,
+  // and `run` fails with a diagnostic when the file belongs to another script or the run cannot follow it. Host calls
+  // are not recorded: a script that reads from the outside is replayed only if the host answers the same.
+  std::string syncRecord;
+  std::string syncReplay;
 };
 
 // A compiled script. Cheap to copy (shares the compiled module); `run` may be

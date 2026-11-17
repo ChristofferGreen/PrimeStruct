@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "VmSyncLog.h"
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmExecutionKernel.h"
 
@@ -35,6 +36,8 @@ struct ThreadedWaitState {
     size_t waiters = 0;
   };
   std::unordered_map<const uint64_t *, Condition> conditions;
+  // The run's sync-order record (docs/spec/vm-design.md, Synchronization record and replay), or null.
+  SyncLogRecorder *recorder = nullptr;
 
   // Something a waiter may wait for happened (a lock freed, a notify, a task ended): every waiter looks again and
   // counts itself waiting again only if it still has to wait. Call with `mutex` held.

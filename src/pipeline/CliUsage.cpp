@@ -71,6 +71,9 @@ void printEffectsAndIrSection(std::ostream &err) {
   flagLine(err, "--ir-inline", "Inline eligible calls during IR lowering");
   flagLine(err, "--vm-schedule-seed <n>", "Run VM tasks under the schedule seed n picks");
   flagLine(err, "--vm-threads", "Run each VM task on an OS thread of its own");
+  flagLine(err, "--vm-record-sync <path>", "With --vm-threads, write the order of the sync events");
+  flagLine(
+      err, "--vm-replay-sync <path>", "Run on the deterministic scheduler in a recorded order");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
   flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
   flagLine(err, "", "ir-lowered, ir-optimized");

@@ -172,7 +172,7 @@ while IFS='|' read -r kind suite source extra; do
 done <"$CORPUS_LIST"
 
 if [[ "$ALSO_RUNTIME" -eq 1 ]]; then
-  for suite in vm_threads vm_threads_sync vm_threads_host heap_arenas tasks atomics mutexes conditions; do
+  for suite in vm_threads vm_threads_sync vm_threads_host vm_sync_replay heap_arenas tasks atomics mutexes conditions; do
     suite="primestruct.runtime.$suite"
     run_corpus "$suite" "$BUILD_DIR/PrimeStruct_vm_byte_tests" "--test-suite=$suite"
   done

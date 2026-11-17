@@ -231,9 +231,10 @@ public:
                       const VmOutputSink *outputSink,
                       const std::atomic<bool> *cancel,
                       std::optional<uint64_t> scheduleSeed,
-                      bool taskThreads)
+                      bool taskThreads,
+                      const VmSyncLogPaths *syncLog)
       : argCount_(argCount), hostFunctions_(hostFunctions), args_(args), outputSink_(outputSink),
-        cancel_(cancel), scheduleSeed_(scheduleSeed) {
+        cancel_(cancel), scheduleSeed_(scheduleSeed), syncLog_(syncLog) {
     if (taskThreads) {
       arenas_ = std::make_unique<VmHeapArenas>();
     }
@@ -242,6 +243,10 @@ public:
   const std::atomic<bool> *cancelFlag() const override { return cancel_; }
   std::optional<uint64_t> scheduleSeed() const override {
     return scheduleSeed_;
+  }
+
+  const VmSyncLogPaths *syncLogPaths() const override {
+    return syncLog_;
   }
 
   uint64_t argumentCount() const override { return argCount_; }
@@ -375,6 +380,7 @@ private:
   const VmOutputSink *outputSink_ = nullptr;
   const std::atomic<bool> *cancel_ = nullptr;
   std::optional<uint64_t> scheduleSeed_;
+  const VmSyncLogPaths *syncLog_ = nullptr;
   VmHeapCore heap_;
   VmTextHeap textHeap_;
   // Threads mode only: one arena per task thread (arena 0 is the main task's), and the host lock.
@@ -395,7 +401,8 @@ bool executeVmModule(const IrModule &module,
                      const VmOutputSink *outputSink,
                      const std::atomic<bool> *cancel,
                      std::optional<uint64_t> scheduleSeed,
-                     bool taskThreads) {
+                     bool taskThreads,
+                     const VmSyncLogPaths *syncLog) {
   if (!module.hostImports.empty()) {
     // Not a function-local static: statics must not hold arena-allocated state.
     const VmHostFunctions noBindings;
@@ -404,7 +411,7 @@ bool executeVmModule(const IrModule &module,
     }
   }
   RuntimeVmKernelHost host(
-      argCount, args, hostFunctions, outputSink, cancel, scheduleSeed, taskThreads);
+      argCount, args, hostFunctions, outputSink, cancel, scheduleSeed, taskThreads, syncLog);
   return executeVmKernel(module, host, result, error);
 }
 

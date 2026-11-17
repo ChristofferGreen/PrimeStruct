@@ -20,7 +20,8 @@ bool Vm::execute(const IrModule &module, uint64_t &result, std::string &error, u
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
                                     scheduleSeed_,
-                                    taskThreads_);
+                                    taskThreads_,
+                                    syncLogOrNull());
 }
 
 bool Vm::execute(const IrModule &module,
@@ -36,7 +37,8 @@ bool Vm::execute(const IrModule &module,
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
                                     scheduleSeed_,
-                                    taskThreads_);
+                                    taskThreads_,
+                                    syncLogOrNull());
 }
 
 bool Vm::execute(const IrModule &module,
@@ -53,7 +55,12 @@ bool Vm::execute(const IrModule &module,
                                     sinkOrNull(outputSink_),
                                     cancelFlag_,
                                     scheduleSeed_,
-                                    taskThreads_);
+                                    taskThreads_,
+                                    syncLogOrNull());
+}
+
+const vm_detail::VmSyncLogPaths *Vm::syncLogOrNull() const {
+  return syncLog_.record.empty() && syncLog_.replay.empty() ? nullptr : &syncLog_;
 }
 
 } // namespace primec

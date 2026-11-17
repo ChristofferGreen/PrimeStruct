@@ -268,3 +268,15 @@ open-work-only scope rule as `docs/todo.md` itself.
 ## TODO-5902
 
 - 2026-11-17 (from TODO-5896): four tasks that each sum 10^8 integers in a `while` loop of i64 adds: default schedule (flat loop) 1.14 s real; `--vm-threads` (step kernel per task) 12.5 s real, 46.3 s user on an 11-core machine. The threads are about 3.7 times parallel and each task is about 10 times slower than on the flat loop, so the fast kernel per task is what makes the mode faster than the default for CPU-bound tasks.
+
+## TODO-5901
+
+- 2026-11-17 (release build, macOS arm64): startup of `primevm -O2` on a task-free program (a `print_line("hello")` main; compile, run and
+  exit, 40 runs per sample, `bash` loop timed with `perf_counter`): 15.9, 11.8 and 12.8 ms per run in three samples (the spread is the machine,
+  not the change). The only code a run without `--vm-record-sync` and `--vm-replay-sync` meets is one pointer on the VM host (null), one
+  null test in `executeVmKernel` for a module without tasks, and the same test per scheduler opcode of a module with tasks; `VmSyncLog` has no
+  static state and the flags add no work to option parsing beyond four string compares. No before/after binary was built for an A/B.
+- 2026-11-17 (TODO-5901): 30 `primevm --vm-threads --vm-record-sync` runs of a two-producer Mutex and Channel program, each replayed with
+  `--vm-replay-sync`: all 30 replays printed what their record printed, and the records covered three different arrival orders (17, 2 and 11
+  runs), so replay follows the record and not the eager order; the same with `PRIMEVM_KERNEL=step` (15 runs, no difference). A record is 193
+  events (about 1.6 KB) for that program.

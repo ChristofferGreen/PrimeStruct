@@ -3,6 +3,7 @@
 #include "VmControlFlowOpcodeShared.h"
 #include "VmFastKernel.h"
 #include "VmKernelLocalize.h"
+#include "VmSyncLog.h"
 #include "VmTaskScheduler.h"
 #include "VmThreadedTasks.h"
 #include "primec/ir/IrPureSemantics.h"
@@ -611,7 +612,12 @@ bool executeVmKernel(const IrModule &module,
     return false;
   }
 
-  if (moduleUsesTasks(module)) {
+  if (!moduleUsesTasks(module)) {
+    if (host.syncLogPaths() != nullptr &&
+        !handleTaskFreeSyncLog(module, host.syncLogPaths(), error)) {
+      return false;
+    }
+  } else {
     if (host.runsTasksOnThreads()) {
       return runVmThreadedTasks(module, host, result, error);
     }

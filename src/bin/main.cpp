@@ -252,6 +252,8 @@ bool runIrBackend(const primec::IrBackend &backend,
   emitOptions.collectReport = options.optimization.report;
   emitOptions.vmScheduleSeed = options.vmScheduleSeed;
   emitOptions.vmThreads = options.vmThreads;
+  emitOptions.vmRecordSyncPath = options.vmRecordSyncPath;
+  emitOptions.vmReplaySyncPath = options.vmReplaySyncPath;
   const bool emitted = backend.emit(ir, emitOptions, result, error);
   if (options.optimization.report && !result.report.empty()) {
     std::cerr << result.report;
@@ -541,6 +543,8 @@ int main(int argc, char **argv) {
       emitOptions.programArgs = options.programArgs;
       emitOptions.vmScheduleSeed = options.vmScheduleSeed;
       emitOptions.vmThreads = options.vmThreads;
+      emitOptions.vmRecordSyncPath = options.vmRecordSyncPath;
+      emitOptions.vmReplaySyncPath = options.vmReplaySyncPath;
       primec::IrBackendEmitResult cachedResult;
       std::string cachedError;
       if (irBackend->emit(cachedModule, emitOptions, cachedResult, cachedError)) {

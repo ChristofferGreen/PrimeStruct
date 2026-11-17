@@ -120,6 +120,12 @@ whose function is thread safe and may block (a socket `recv`) registers it with
 task; `HostThreading::MainThreadOnly` (a UI call) makes the call fault with `<name> called off the main thread`
 when a spawned task makes it. A run without threads ignores the setting.
 
+A threaded run can write the order of its synchronization events (`RunOptions::syncRecord`, with `threads`), and a
+later run on the deterministic scheduler can follow that file (`RunOptions::syncReplay`, without `threads`), so the
+script prints what the threaded run printed when its output is ordered by locks, channels and atomics. The file is
+refused with a diagnostic for another script. Host calls are not recorded; see docs/spec/vm-design.md,
+Synchronization record and replay.
+
 Scripts declare the host functions they call with `[host]` definitions (see
 "Host functions (embedding)" in `docs/spec/host-and-core-library.md`):
 

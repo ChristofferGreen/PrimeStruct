@@ -258,6 +258,8 @@ ScriptResult Script::run(const std::vector<std::string> &args, const RunOptions 
   }
   vm.setCancelFlag(options.cancel);
   vm.setTaskThreads(options.threads);
+  vm.setSyncRecordPath(options.syncRecord);
+  vm.setSyncReplayPath(options.syncReplay);
   uint64_t value = 0;
   std::string error;
   const VmHostFunctions hostFunctions = toVmHostFunctions(hostBindings_);
