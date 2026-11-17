@@ -913,9 +913,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5919: A build step can be a PrimeStruct function that runs on a VM thread
+- [~] TODO-5919: A build step can be a PrimeStruct function that runs on a VM thread
   - owner: ai
   - status: ready
+  - claimed_by: build-fn-steps (worktree-agent-ada7eb1e78b54589e), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md, section 4)
   - parallel_track: build-function-steps
