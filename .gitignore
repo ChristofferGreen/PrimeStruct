@@ -25,3 +25,4 @@ __pycache__/
 *.pyc
 !stdlib/std/build/
 !tests/fixtures/build/
+.ps/cache/

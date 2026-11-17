@@ -88,7 +88,22 @@ finished step prints `built <id>` to standard output, in id order. A failed step
 `primec build: step <name> (<id>) failed` and the compiler's diagnostics to standard error, steps that had not started
 print `... skipped after a failure`, and the exit code is 1. A graph with a library or link node, or with a problem
 (duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
-compiler yet` or the problem. There is no cache, no command or function step yet.
+compiler yet` or the problem. There is no command or function step yet.
+
+Incremental builds. Each step has a cache file in `<dir>/.ps/cache/` (not committed; `.ps/cache/` is in `.gitignore`),
+named after its id. A step is skipped, and prints `up to date <id>` instead of `built <id>`, when its output exists and
+nothing it depends on changed. The file is text: the line `primestruct-build-cache 1`, `hash sha256` (the scheme; a
+file of another scheme is ignored), `key <hex>`, `output <hex>` and one `dep <hex> <path>` line per input. The key is
+the SHA-256 of the hash scheme, the SHA-256 of the running `primec` executable (the compiler version) and the compiler
+arguments of the step (emit kind, optimization, entry, import paths, transforms, effects, link arguments, output
+directory, output name, source). The inputs are the files `--emit-deps` listed for the step's last run (the primary
+file, its imports and the stdlib files it included; `/std/math` is builtin and never listed) and every link argument
+that names an existing file. A step is current when the key is equal, the output has the recorded content hash, and
+every input still has its recorded content hash; file times play no part. A step that fails, or whose inputs cannot be
+hashed, leaves no cache file. Deleting `.ps/` or a damaged cache file makes the steps run again and produce the same
+bytes. Not covered: a file that appears earlier on an import path than the one a step read (the compiler lists only
+files it read), environment variables a host toolchain reads, and the directory listings of a glob (TODO-5907 adds
+them as inputs). There is no early cutoff on interface hashes (TODO-5929) and no shared cache.
 
 The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can

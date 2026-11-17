@@ -1,5 +1,8 @@
 #include "primec/pipeline/BuildRunner.h"
 
+#include "primec/pipeline/BuildCache.h"
+#include "primec/support/Sha256.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
@@ -46,6 +49,50 @@ void drain(int fd, std::string &into) {
   if (got > 0) {
     into.append(buffer, static_cast<size_t>(got));
   }
+}
+
+std::string absoluteAgainst(const std::string &path, const std::string &base) {
+  const std::filesystem::path given(path);
+  if (given.is_absolute() || base.empty()) {
+    return given.lexically_normal().string();
+  }
+  return (std::filesystem::path(base) / given).lexically_normal().string();
+}
+
+// Where `primec` puts the output of `step`: the output name inside the output directory.
+std::string buildStepOutputPath(const BuildStep &step, const BuildRunSettings &settings) {
+  const std::string outDir = absoluteAgainst(settings.outDir, settings.projectDir);
+  return absoluteAgainst(step.output, outDir);
+}
+
+// Records what the finished step read, so the next run can tell whether anything changed. The compiler's own list
+// (`--emit-deps`) is joined by the files named by link arguments, which the compiler hands to the toolchain.
+// A step whose inputs cannot all be hashed gets no entry and runs again next time.
+void storeBuildCacheEntry(const BuildStep &step,
+                          const BuildRunSettings &settings,
+                          const std::string &cacheFile,
+                          const std::string &key,
+                          const std::string &outputPath) {
+  std::vector<std::string> paths;
+  if (!readDependencyList(cacheFile + ".deps", paths)) {
+    return;
+  }
+  for (const std::string &arg : step.linkArgs) {
+    if (arg.empty() || arg[0] == '-') {
+      continue;
+    }
+    const std::string candidate = absoluteAgainst(arg, settings.projectDir);
+    std::error_code ec;
+    if (std::filesystem::is_regular_file(candidate, ec)) {
+      paths.push_back(candidate);
+    }
+  }
+  BuildCacheEntry entry;
+  entry.key = key;
+  if (!sha256FileHex(outputPath, entry.outputHash) || !hashBuildDependencies(paths, entry.deps)) {
+    return;
+  }
+  writeBuildCacheEntry(cacheFile, entry);
 }
 
 } // namespace
@@ -221,12 +268,18 @@ int runBuildGraph(const BuildGraphData &graph,
     return 1;
   }
 
-  enum class State { Pending, Built, Failed };
+  enum class State { Pending, Built, UpToDate, Failed };
   struct Result {
     State state = State::Pending;
     std::string diagnostics;
   };
   std::vector<Result> results(graph.steps.size());
+
+  // The compiler executable stands for the compiler version; without a readable one nothing is cached.
+  std::string compilerHash;
+  const bool caching =
+      !settings.cacheDir.empty() && sha256FileHex(settings.primecPath, compilerHash);
+
   std::atomic<size_t> next{0};
   std::atomic<bool> stop{false};
   auto worker = [&]() {
@@ -235,14 +288,43 @@ int runBuildGraph(const BuildGraphData &graph,
       if (index >= graph.steps.size()) {
         return;
       }
+      const BuildStep &step = graph.steps[index];
+      Result &result = results[index];
+      std::vector<std::string> arguments = buildStepArguments(step, settings);
+
+      std::string cacheFile;
+      std::string key;
+      const std::string outputPath = buildStepOutputPath(step, settings);
+      if (caching) {
+        cacheFile = buildCacheFilePath(settings.cacheDir, step.id);
+        key = buildStepKey(compilerHash,
+                           std::vector<std::string>(arguments.begin() + 1, arguments.end()));
+        BuildCacheEntry entry;
+        if (readBuildCacheEntry(cacheFile, entry) &&
+            buildCacheEntryIsCurrent(entry, key, outputPath)) {
+          result.state = State::UpToDate;
+          continue;
+        }
+        // The previous run no longer describes the output; a failed or interrupted run must not leave it valid.
+        std::error_code ec;
+        std::filesystem::remove(cacheFile, ec);
+        std::filesystem::create_directories(settings.cacheDir, ec);
+        // Before the source, the last argument.
+        arguments.insert(arguments.end() - 1, {"--emit-deps", cacheFile + ".deps"});
+      }
+
       std::string capturedOut;
       std::string capturedErr;
-      const int status = runProgramCaptured(buildStepArguments(graph.steps[index], settings),
-                                            settings.projectDir,
-                                            capturedOut,
-                                            capturedErr);
-      Result &result = results[index];
+      const int status =
+          runProgramCaptured(arguments, settings.projectDir, capturedOut, capturedErr);
       result.diagnostics = capturedErr + capturedOut;
+      if (caching && status == 0) {
+        storeBuildCacheEntry(step, settings, cacheFile, key, outputPath);
+      }
+      if (caching) {
+        std::error_code ec;
+        std::filesystem::remove(cacheFile + ".deps", ec);
+      }
       if (status == 0) {
         result.state = State::Built;
       } else {
@@ -273,6 +355,9 @@ int runBuildGraph(const BuildGraphData &graph,
     switch (results[i].state) {
     case State::Built:
       out << "built " << step.id << "\n";
+      break;
+    case State::UpToDate:
+      out << "up to date " << step.id << "\n";
       break;
     case State::Failed:
       err << "primec build: step " << step.name << " (" << step.id << ") failed\n"
@@ -320,6 +405,9 @@ int runBuildCommand(const BuildCommandPlan &plan,
   const std::filesystem::path outDir = std::filesystem::absolute(plan.outDir, ec);
   settings.outDir = ec ? plan.outDir : outDir.lexically_normal().string();
   const unsigned cores = std::thread::hardware_concurrency();
+  settings.cacheDir = (std::filesystem::absolute(plan.projectDir, ec) / ".ps" / "cache")
+                          .lexically_normal()
+                          .string();
   settings.jobs = plan.jobs > 0 ? plan.jobs : static_cast<int>(cores > 0 ? cores : 1);
   return runBuildGraph(graph, settings, out, err);
 }

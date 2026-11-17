@@ -17,6 +17,9 @@ struct BuildRunSettings {
   std::string projectDir;
   // Where the outputs go (an absolute path, or relative to the project directory).
   std::string outDir;
+  // Where the cache files of the steps live (`ProjectRoot/.ps/cache`, an absolute path). A step whose output
+  // exists and whose key and input hashes are unchanged is not run (see BuildCache.h). Empty: no cache.
+  std::string cacheDir;
   // At most this many steps run at once; values below 1 mean 1.
   int jobs = 1;
 };
@@ -26,7 +29,7 @@ std::vector<std::string> buildStepArguments(const BuildStep &step,
                                             const BuildRunSettings &settings);
 
 // Runs every compile step of `graph`, in parallel up to `settings.jobs`. Prints one `built <id>` line per finished
-// step to `out` and, for a failed step, its name and the diagnostics of the compiler to `err`. A failure stops the
+// step (`up to date <id>` for a step the cache skipped) to `out` and, for a failed step, its name and the diagnostics of the compiler to `err`. A failure stops the
 // steps that have not started. A graph with a problem, or with a library or link node, runs nothing. Returns 0 when
 // every step succeeded and 1 otherwise.
 int runBuildGraph(const BuildGraphData &graph,

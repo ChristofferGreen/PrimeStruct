@@ -105,6 +105,15 @@ TEST_CASE("primec build --dry-run finds make.prime in the working directory") {
 }
 
 namespace {
+// A copy of a fixture project in the scratch directory: a run writes its cache (`.ps/cache`) into the project, and the
+// checked-in fixtures stay as they are.
+std::string projectCopy(const std::string &name) {
+  const std::string dir = scratch("project_" + name);
+  std::filesystem::remove_all(dir);
+  std::filesystem::copy(FixtureDir + name, dir, std::filesystem::copy_options::recursive);
+  return dir;
+}
+
 // A fresh output directory for one `primec build` run.
 std::string freshOutDir(const std::string &name) {
   const std::string dir = scratch(name);
@@ -117,7 +126,7 @@ TEST_CASE("primec build runs two independent steps with --jobs 2") {
   const std::string outDir = freshOutDir("jobs_out");
   const std::string out = scratch("jobs.txt");
   const int status = primecBuild(
-      shellQuote(FixtureDir + "project_jobs") + " --jobs 2 --out-dir " + shellQuote(outDir), out);
+      shellQuote(projectCopy("project_jobs")) + " --jobs 2 --out-dir " + shellQuote(outDir), out);
   CHECK_MESSAGE(status == 0, readFile(out + ".err"));
   CHECK(readFile(out) == "built compile:first\nbuilt compile:second\n");
   CHECK(std::filesystem::exists(outDir + "/first"));
@@ -128,7 +137,7 @@ TEST_CASE("primec build names a failing step and stops the steps after it") {
   const std::string outDir = freshOutDir("fail_out");
   const std::string out = scratch("fail.txt");
   const int status = primecBuild(
-      shellQuote(FixtureDir + "project_fail") + " --jobs 1 --out-dir " + shellQuote(outDir), out);
+      shellQuote(projectCopy("project_fail")) + " --jobs 1 --out-dir " + shellQuote(outDir), out);
   CHECK(status != 0);
   const std::string diagnostics = readFile(out + ".err");
   CHECK_MESSAGE(diagnostics.find("step alpha_bad (compile:alpha_bad) failed") != std::string::npos,
@@ -167,7 +176,7 @@ TEST_CASE("building a make.prime with exe and optexe steps gives programs that r
   const std::string outDir = freshOutDir("run_out");
   const std::string out = scratch("run.txt");
   const int status = primecBuild(
-      shellQuote(FixtureDir + "project_run") + " --jobs 2 --out-dir " + shellQuote(outDir), out);
+      shellQuote(projectCopy("project_run")) + " --jobs 2 --out-dir " + shellQuote(outDir), out);
   REQUIRE_MESSAGE(status == 0, readFile(out + ".err"));
   CHECK(readFile(out) == "built exe:exit_five\nbuilt exe:exit_three\n");
   CHECK(run(shellQuote(outDir + "/exit_three")) == 3);

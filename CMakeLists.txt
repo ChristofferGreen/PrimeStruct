@@ -161,6 +161,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/MathNames.cpp
   src/support/OptionsParser.cpp
   src/support/ProcessRunner.cpp
+  src/support/Sha256.cpp
   src/support/BenchmarkSink.cpp
   src/support/ReceiverElementFamilyClassifier.cpp
   src/support/SourceLocationMapper.cpp
@@ -468,6 +469,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 
 set(PRIMESTRUCT_IR_SOURCES
   src/ast/AstMemory.cpp
+  src/pipeline/BuildCache.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildGraphJson.cpp
   src/pipeline/BuildRunner.cpp
@@ -1384,6 +1386,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_http.cpp
     tests/unit/backend_host/test_path.cpp
     tests/unit/backend_host/test_build_graph.cpp
+    tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
   )
@@ -1541,6 +1544,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_build_command
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # `primec build` skips steps whose inputs did not change (tests/unit/backend_host/test_build_cache.cpp).
+  add_test(
+    NAME PrimeStruct_build_cache
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_cache"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_cache
+                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
   add_test(
     NAME PrimeStruct_build_command_native
