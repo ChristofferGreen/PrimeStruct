@@ -999,9 +999,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5906: `/std/file` lists a directory and reports kind, size and modification time
+- [~] TODO-5906: `/std/file` lists a directory and reports kind, size and modification time
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: build-agent (worktree-agent-a17757792d6e69b30), 2026-11-17
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md); also needed by "Open PrimeStruct Project" (docs/AiWorkflowPlan.md, section 4.1)
   - parallel_track: file-listing
