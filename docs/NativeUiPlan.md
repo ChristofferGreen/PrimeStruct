@@ -448,7 +448,7 @@ Status: the build path exists. `scripts/build_native_app.sh app.prime out` compi
 `primec --emit=optexe` and links the AppKit backend (`--backend headless` links the scripted test backend), so the
 result is a native executable with no VM or compiler in it; `PrimeStruct_cpp_native_ui_*` replays hello_window and the
 editor's scenarios on the VM and as compiled programs with identical call logs, and
-`PrimeStruct_native_ui_compiled_app` snapshots the compiled AppKit builds. Every scenario of the editor gate
+`PrimeStruct_native_ui_compiled_app_<part>` snapshots the compiled AppKit builds. Every scenario of the editor gate
 (section 13: the `primestruct.ui.editor` and `primestruct.ui.editor_acceptance` suites, highlight samples included)
 also runs on the compiled editor linked with the headless backend (`tests/unit/ui/CompiledEditorMirror.h`), and the
 call log, exit code and files must equal the VM run's.
@@ -458,7 +458,7 @@ path/libps_ui_appkit.dylib` writes the Mach-O itself, with no C++ compiler and n
 `libps_ui_appkit.dylib` (target `primec_ui_appkit_dylib`), the image loads it (`LC_LOAD_DYLIB`), binds the program's
 `[host]` functions to it by flat lookup at launch, and declares the SDK it was built with (`LC_BUILD_VERSION`,
 `LC_UUID`) so AppKit draws the current look. `scripts/build_native_app.sh --direct` copies the dylib next to the output
-and loads it through `@executable_path`; `PrimeStruct_native_ui_compiled_app` builds hello_window this way and checks
+and loads it through `@executable_path`; `PrimeStruct_native_ui_compiled_app_<part>` builds hello_window this way and checks
 that it draws a window of the same size as the C++ build. The editor compiles this way too and opens a highlighted
 Unicode file in snapshot mode. Every editor scenario (section 13) also runs on the editor built this way, linked with
 `libps_ui_headless.dylib` (the headless backend and the call-log fixture), and must leave the VM's call log, exit code
@@ -572,7 +572,7 @@ holds the window's first responder; a text view gets the key first, and the prog
 had no use for it: its delegate sees `noop:` (an unbound combination), `cancelOperation:` (Escape) or a command the
 view does not implement while the key is handed to it. Snapshot runs drive it through `PRIMESTRUCT_UI_CLICK`
 (`enter:H:X:Y`, `leave:H:X:Y`, `press:H:X:Y` hit-tested but not handed to the control, `key:H:K:M` sent to a window
-that is not key, so nothing takes focus); `PrimeStruct_native_ui_compiled_app` runs
+that is not key, so nothing takes focus); `PrimeStruct_native_ui_compiled_app_<part>` runs
 `tests/fixtures/ui/input_handlers.prime` that way.
 
 Smoke checklist (macOS 27, arm64, 2026-10-08): window and title, text view with preset text, bundle launch from
@@ -594,7 +594,7 @@ page follows the text as it is edited. It is done when the installed native Prim
   preview cannot run scripts. `PrimeStruct_native_ui_markdown` pins its output.
 - **The web view is loaded only when needed.** The AppKit backend creates the `WKWebView` the first time a preview
   turns on (WebKit is `dlopen`ed then and its classes are used by name, so neither the compiled editor nor the AppKit
-  dylib lists WebKit, which `PrimeStruct_native_ui_compiled_app` checks with `otool -L`), and destroys it when the
+  dylib lists WebKit, which `PrimeStruct_native_ui_compiled_app_<part>` checks with `otool -L`), and destroys it when the
   preview turns off, so a session that never previews has the launch time and memory it has today (the installed
   PrimeScroll peaks at about 118 MB resident; with a preview on, the main process is about 25 to 30 MB larger, and the
   WebKit processes are separate).

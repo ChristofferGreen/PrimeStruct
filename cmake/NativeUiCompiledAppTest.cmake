@@ -4,12 +4,25 @@
 # is also built with --direct, by primec's own native backend and the AppKit dylib, and must draw the
 # same picture.
 #
-#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> -P NativeUiCompiledAppTest.cmake
+#   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DPART=<part>] -P NativeUiCompiledAppTest.cmake
+#
+# PART runs one of hello (the C++ build and the direct build of the hello example), handlers (the pointer, key and
+# preview-pane programs), editor (the compiled editor's pictures and session launches) or bundle (the native bundle);
+# each is a CTest entry (PrimeStruct_native_ui_compiled_app_<part>) of its own, so none takes long on a loaded
+# machine (TODO-6026: the whole driver took 32 s alone and was killed after 531 s in a gate); the default, all, runs
+# them all.
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
   if(NOT DEFINED ${var})
     message(FATAL_ERROR "NativeUiCompiledAppTest: ${var} is required")
   endif()
 endforeach()
+
+if(NOT DEFINED PART)
+  set(PART all)
+endif()
+if(NOT PART MATCHES "^(all|hello|handlers|editor|bundle)$")
+  message(FATAL_ERROR "NativeUiCompiledAppTest: unknown PART '${PART}' (one of: all hello handlers editor bundle)")
+endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
 if(PRIMESTRUCT_UI_SKIP)
@@ -44,6 +57,7 @@ function(check_png path minimum)
   message(STATUS "${path} ok (${size} bytes)")
 endfunction()
 
+if(PART MATCHES "^(all|hello)$")
 build_app("${SOURCE_DIR}/examples/native_ui/hello_window.prime" HelloNative)
 set(ENV{PRIMESTRUCT_UI_SNAPSHOT} "${WORK_DIR}/hello.png")
 execute_process(COMMAND "${WORK_DIR}/HelloNative" RESULT_VARIABLE rc OUTPUT_VARIABLE out ERROR_VARIABLE err)
@@ -75,6 +89,9 @@ if(NOT helloHeader STREQUAL helloDirectHeader)
                       "(${helloDirectHeader} against ${helloHeader})")
 endif()
 
+endif()
+
+if(PART MATCHES "^(all|handlers)$")
 # Pointer and key handlers (TODO-5725, tests/fixtures/ui/input_handlers.prime): the harness moves the pointer onto
 # button 4 (its tracking area's owner hears of it), presses and releases it at (10, 5) (found by hit testing, not
 # handed to the button) and clicks it, then types "a" and Escape into text view 2, which types the first itself and
@@ -99,6 +116,9 @@ if(NOT rc EQUAL 0)
                       "the preview did not turn on): ${out}${err}")
 endif()
 
+endif()
+
+if(PART MATCHES "^(all|editor)$")
 build_app("${SOURCE_DIR}/examples/apps/text_editor/main.prime" EditorNative)
 
 # WebKit is loaded when a preview turns on, never linked: neither the compiled editor nor the AppKit dylib
@@ -194,6 +214,9 @@ check_session_tabs(launch
   "first_frame=1\nwindows_at_first_frame=1\nrestoration=0 completion=0 predictions=0 writing_tools=0\ntab=*${launchDocument} toolbar=yes page=none\ntab=${sessionText} toolbar=none page=none\ntab=${sessionScript} toolbar=waiting page=none\ntab=${sessionNote} toolbar=waiting page=waiting\n")
 unset(ENV{PRIMESTRUCT_UI_OPEN_FILE_EVENT})
 
+endif()
+
+if(PART MATCHES "^(all|bundle)$")
 # The native bundle: Name.app holds the compiled executable (no runtime, no bytecode) and launches. Bundling ends with
 # the Gatekeeper warm-up launch (scripts/warm_macos_app.sh), which the other drivers skip.
 unset(ENV{PS_NO_WARMUP})
@@ -236,3 +259,4 @@ if(NOT rc EQUAL 0)
 endif()
 check_png("${WORK_DIR}/bundle_preview.png" 50000)
 unset(ENV{PRIMESTRUCT_UI_COMMANDS})
+endif()

@@ -6,9 +6,10 @@
 #   cmake -DSOURCE_DIR=<repo> -DBUILD_DIR=<build> -DWORK_DIR=<scratch> [-DEDITOR_DIR=<dir>] [-DPART=<mode>]
 #         -P NativeUiAppKitScrollTest.cmake
 #
-# PART runs the scenarios of one mode (independent, linear, blocks, cursor), one CTest entry each
-# (PrimeStruct_native_ui_appkit_scroll_<mode>), so each entry stays short on a loaded machine; the default, all, runs
-# them all. EDITOR_DIR names a directory with the editor already bundled (EditorSmoke.app, built once by the
+# PART runs the scenarios of one mode (independent, linear, blocks, cursor), or half of the two modes that have
+# seven and six of them (blocks_follow and blocks_ends, cursor_moves and cursor_edits), one CTest entry each
+# (PrimeStruct_native_ui_appkit_scroll_<part>), so each entry is at most four launches of the editor and stays short
+# on a loaded machine (TODO-6026); the default, all, runs them all. EDITOR_DIR names a directory with the editor already bundled (EditorSmoke.app, built once by the
 # PrimeStruct_native_ui_appkit_editor_bundle fixture of NativeUiAppKitSmokeTest.cmake); without it the driver bundles
 # its own copy.
 foreach(var SOURCE_DIR BUILD_DIR WORK_DIR)
@@ -19,8 +20,8 @@ endforeach()
 if(NOT DEFINED PART)
   set(PART all)
 endif()
-if(NOT PART MATCHES "^(all|independent|linear|blocks|cursor)$")
-  message(FATAL_ERROR "NativeUiAppKitScrollTest: unknown PART '${PART}' (one of: all independent linear blocks cursor)")
+if(NOT PART MATCHES "^(all|independent|linear|blocks|blocks_follow|blocks_ends|cursor|cursor_moves|cursor_edits)$")
+  message(FATAL_ERROR "NativeUiAppKitScrollTest: unknown PART '${PART}' (one of: all independent linear blocks blocks_follow blocks_ends cursor cursor_moves cursor_edits)")
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/NativeUiTestGuards.cmake")
@@ -135,7 +136,7 @@ expect(linear_type "after the reload the page is back at the source's fraction"
 endif()
 
 # By block: the same source line.
-if(PART MATCHES "^(all|blocks)$")
+if(PART MATCHES "^(all|blocks|blocks_follow)$")
 run(blocks_text 2 "${Long}" SCROLL text:0.5)
 expect(blocks_text "the source scrolled" "text_line > 40")
 expect(blocks_text "the page is at the same line" "abs(web_line - text_line) < 3")
@@ -146,6 +147,8 @@ run(blocks_uneven_text 2 "${Uneven}" SCROLL text:0.5)
 expect(blocks_uneven_text "the page is at the same line in a page of tall blocks" "text_line > 20 and abs(web_line - text_line) < 4")
 run(blocks_uneven_page 2 "${Uneven}" SCROLL preview:0.5)
 expect(blocks_uneven_page "the source is at the same line in a page of tall blocks" "text_line > 20 and abs(web_line - text_line) < 4")
+endif()
+if(PART MATCHES "^(all|blocks|blocks_ends)$")
 run(blocks_text_end 2 "${Long}" SCROLL text:1)
 expect(blocks_text_end "the end of the source is the end of the page" "web_max > 0 and web_max - web_y < 2")
 run(blocks_page_end 2 "${Long}" SCROLL preview:1)
@@ -156,7 +159,7 @@ expect(blocks_type "after the reload the page is back at the source's line (not 
 endif()
 
 # With the cursor: the page follows the cursor; scrolling a view alone moves nothing.
-if(PART MATCHES "^(all|cursor)$")
+if(PART MATCHES "^(all|cursor|cursor_moves)$")
 run(cursor_caret 3 "${Long}" CARET 150)
 expect(cursor_caret "the cursor is on line 150" "caret_line == 150")
 expect(cursor_caret "the page shows the cursor's line" "web_y > 100 and web_line <= 150 and 150 - web_line < 60")
@@ -165,6 +168,8 @@ run(cursor_text 3 "${Long}" SCROLL text:0.5)
 expect(cursor_text "scrolling the source leaves the page" "web_y == 0")
 run(cursor_page 3 "${Long}" SCROLL preview:0.5)
 expect(cursor_page "scrolling the page leaves the source" "text_line < 1 and web_y > 100")
+endif()
+if(PART MATCHES "^(all|cursor|cursor_edits)$")
 run(cursor_type 3 "${Long}" CARET 150 TYPE x)
 expect(cursor_type "an edit does not send the page to the top" "web_y > 100 and web_line <= 151 and 151 - web_line < 60")
 expect(cursor_type "the source's top line is believable" "text_line > 100 and text_line < 200")

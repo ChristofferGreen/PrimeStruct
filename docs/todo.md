@@ -111,7 +111,8 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6026 | Release-gate tests finish well inside their CTest timeouts under load | ready | gate-timeouts |
+| TODO-6027 | No release-gate entry takes more than 10 s alone | ready | gate-timeouts |
+| TODO-6028 | A gate at `nice -n 10` is not starved by other jobs until its tests time out | deferred | gate-timeouts |
 | TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
@@ -234,19 +235,30 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [~] TODO-6026: Release-gate tests finish well inside their CTest timeouts under load
+- [ ] TODO-6027: No release-gate entry takes more than 10 s alone
   - owner: ai
   - status: ready
-  - claimed_by: agent-a9dd34d7d82b96967 (worktree-agent-a9dd34d7d82b96967), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Test infrastructure (flaky timeouts seen in the TODO-5896, TODO-5897 and TODO-6021 gates)
+  - phase: Test infrastructure (leftover of TODO-6026; data in docs/todo_log.md)
   - parallel_track: gate-timeouts
-  - scope: Full release gates on a loaded machine (load 40 to 100) time out tests that pass alone: 66 at 300 s, `native_ui_compiled_app`, `native_ui_appkit_scroll_independent`, `native_ui_appkit_scroll_blocks`, and the compile-run example shards `native_window_launcher_and_preflight_56_56` and `language_level_examples_80_80`. Measure each entry alone, find every entry above 5 s alone or with a timeout under 10x its alone time, find the root cause (serial compile-run shells, per-case `primec` spawns, host C++ compiles, sleeps or polls, shared resources), and fix it by splitting shards, event-driven waits, cheaper fixtures or deleting; never by raising a timeout.
+  - scope: Quiet-machine serial times of the release gate (docs/todo_log.md, TODO-6027) leave these entries above 10 s alone: `program_matrix_tasks_14_14` and `_15_15` (10 and 18 s: one program run on about 20 configs, the eight scheduler seeds, `--vm-threads`, native and optexe), `native_ui_startup_guard` (15 s), `native_ui_compiled_app_editor` (15 s) and `_handlers` (11 s), `compile_run_benchmark_harness` (13 s), `test_registration` (12 s: `--list-test-cases` of every doctest binary), `native_ui_editor` (11 s), `ir_native_codegen` (11 s), `ir_optexe_8_8` (11 s), `native_ui_appkit_smoke_toolbar` (11 s) and `compile_run_native_backend_collections_apple_collections_221_230` (11 s: ten cases; the disabled-shard list in CMakeLists.txt is keyed by shard name, so a finer split renames it). Cut each to 10 s or less by giving a part of its work an entry of its own (a program matrix case keeps one config family per entry only if every program states its expected output, because a case without `exitCode` compares each config with the first one it runs), by one shared build instead of one per case, or by a smaller program; never by a longer timeout.
   - acceptance:
-    - docs/todo_log.md records per-entry alone times and the entries still above 5 s with a justification each
-    - no entry has a timeout below 10x its alone time unless listed with a leaf that fixes it
-    - fixed entries pass the full release gate; remaining work is filed as ready leaves
-  - stop_rule: measurement, the fixes this task names, and leaves for the rest; no timeout is raised.
+    - every entry named in scope is at most 10 s alone on a quiet machine in a release `ctest --parallel 1` run, or is deleted with the reason in its commit
+    - `scripts/check_test_registration.py` and the inventory are current and the full release gate is green
+    - the leaves' measured times replace the table in docs/todo_log.md
+  - stop_rule: the entries named in scope; entries that were 5 to 10 s stay.
+
+- [ ] TODO-6028: A gate at `nice -n 10` is not starved by other jobs until its tests time out
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-17
+  - phase: Test infrastructure (found by TODO-6026; needs a decision on `scripts/compile.sh`)
+  - parallel_track: gate-timeouts
+  - scope: `scripts/compile.sh` runs `ctest` at `nice -n 10` (TODO-5757), so on a machine with other jobs at normal priority the gate's tests get a small share of the CPUs. TODO-6026 measured the same five entries alone and with 44 and 60 busy-loop processes at normal priority (11 cores): at `nice -n 10` they took 5 to 15 times their quiet time, at normal priority 2 to 5 times, so a 300 s timeout is about 20 to 60 times a quiet entry but at a load of 100 and nice 10 only 10 to 20. Timeouts of 300 s that were reached by entries of 2 to 40 s need something beyond load (memory pressure with several 2 GB compilers at once, or a stalled Gatekeeper or disk), which no loaded repro in TODO-6026 produced. Decide with the owner whether the gate should run at normal priority when the load is high, then, if so, implement it in `scripts/compile.sh` (the stability rule there forbids changing it without the owner asking) and measure a loaded gate before and after.
+  - acceptance:
+    - the owner has said whether `compile.sh` may change; if so, a loaded full gate (load above 40) is recorded with and without the change and no entry times out in the change's run
+    - if the owner declines, this leaf is deleted with the numbers kept in docs/todo_log.md
+  - stop_rule: the priority of the gate only; no timeout changes.
 
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai

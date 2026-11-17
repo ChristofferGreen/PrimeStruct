@@ -1391,8 +1391,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_link_libraries(PrimeStruct_u8_scalar_tests PRIVATE primec_embed_lib)
   primestructEnableWarnings(PrimeStruct_u8_scalar_tests)
   # One ctest entry per suite: together they ran long enough to hit the timeout under load.
-  # string_owned (46 cases, 171 s in a loaded gate) and slices (21 cases, 67 s) are shards of ten cases.
-  primestructAddDoctestShards(PrimeStruct_u8_scalar_string_owned PrimeStruct_u8_scalar_tests 46 10 300
+  # string_owned (46 cases, 171 s in a loaded gate) is shards of five cases (up to 15 s alone at ten, TODO-6026) and
+  # slices (21 cases, 67 s) of ten.
+  primestructAddDoctestShards(PrimeStruct_u8_scalar_string_owned PrimeStruct_u8_scalar_tests 46 5 300
                               "--test-suite=primestruct.language.string_owned")
   primestructAddDoctestShards(PrimeStruct_u8_scalar_slices PrimeStruct_u8_scalar_tests 21 10 300
                               "--test-suite=primestruct.language.slices")
@@ -1443,16 +1444,17 @@ if(PRIMESTRUCT_BUILD_TESTS)
   primestructEnableWarnings(PrimeStruct_cpp_host_call_tests)
   # The entries below are shards of the cases each filter selects (primestructAddDoctestShards), sized to stay short
   # under a loaded gate: in one gate (load up to 40) host calls took 185 s for 20 cases, the VM string conformance
-  # cases 419 s for 50, the optexe ones 458 s for 37 and the native UI cases 310 s for 9.
-  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 23 5 600
+  # cases 419 s for 50, the optexe ones 458 s for 37 and the native UI cases 310 s for 9. TODO-6026: on a quiet machine
+  # no shard takes more than about 8 s alone (host calls 2 cases, VM string conformance 3, optexe string conformance 2).
+  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 23 2 600
                               "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings")
   # The String / StringView differential suite (tests/unit/backend_host/test_string_conformance.cpp). Most of its time is
   # the host C++ compiler building optexe programs, so the cases that go through optexe are entries of their own and
   # run beside the VM ones.
-  primestructAddDoctestShards(PrimeStruct_string_conformance_vm PrimeStruct_cpp_host_call_tests 50 5 600
+  primestructAddDoctestShards(PrimeStruct_string_conformance_vm PrimeStruct_cpp_host_call_tests 50 3 600
                               "--test-suite=primestruct.backend.string_conformance"
                               "--test-case-exclude=*through optexe*")
-  primestructAddDoctestShards(PrimeStruct_string_conformance_optexe PrimeStruct_cpp_host_call_tests 38 4 600
+  primestructAddDoctestShards(PrimeStruct_string_conformance_optexe PrimeStruct_cpp_host_call_tests 38 2 600
                               "--test-suite=primestruct.backend.string_conformance"
                               "--test-case=*through optexe*")
   primestructAddDoctestShards(PrimeStruct_cpp_native_ui PrimeStruct_cpp_host_call_tests 9 1 600
@@ -1971,7 +1973,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endforeach()
     # The preview's scroll modes (independent, linear, by block, with the cursor): scroll a view, move the
     # cursor, type, and assert where both views end up (docs/PreviewScrollTests.md). One entry per mode.
-    foreach(scrollMode independent linear blocks cursor)
+    foreach(scrollMode independent linear blocks_follow blocks_ends cursor_moves cursor_edits)
       add_test(
         NAME PrimeStruct_native_ui_appkit_scroll_${scrollMode}
         COMMAND ${CMAKE_COMMAND}
@@ -1987,18 +1989,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
                            FIXTURES_REQUIRED native_ui_appkit_editor
                            SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
     endforeach()
-    # The same programs compiled to native executables (no VM, no bytecode).
-    add_test(
-      NAME PrimeStruct_native_ui_compiled_app
-      COMMAND ${CMAKE_COMMAND}
-              -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-              -DBUILD_DIR=${CMAKE_BINARY_DIR}
-              -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_compiled_app
-              -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiCompiledAppTest.cmake
-    )
-    set_tests_properties(PrimeStruct_native_ui_compiled_app
-                         PROPERTIES TIMEOUT 900 RESOURCE_LOCK native_ui_appkit
-                         SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    # The same programs compiled to native executables (no VM, no bytecode). One entry per part (TODO-6026): together
+    # they took 32 s alone and were killed after 531 s in a loaded gate (the compiled editor is built in only one).
+    foreach(compiledAppPart hello handlers editor bundle)
+      add_test(
+        NAME PrimeStruct_native_ui_compiled_app_${compiledAppPart}
+        COMMAND ${CMAKE_COMMAND}
+                -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+                -DBUILD_DIR=${CMAKE_BINARY_DIR}
+                -DWORK_DIR=${CMAKE_BINARY_DIR}/native_ui_compiled_app/${compiledAppPart}
+                -DPART=${compiledAppPart}
+                -P ${CMAKE_SOURCE_DIR}/cmake/NativeUiCompiledAppTest.cmake
+      )
+      set_tests_properties(PrimeStruct_native_ui_compiled_app_${compiledAppPart}
+                           PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
+                           SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+    endforeach()
   endif()
   # The launch guard (TODO-5603): hello_window and PrimeScroll, built natively, may load only a few images more than
   # a plain AppKit program (cmake/NativeUiStartupGuardTest.cmake). Snapshot mode: nothing shows on screen.
