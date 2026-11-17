@@ -871,9 +871,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5901: A threaded VM run records its synchronization order and replays it on the deterministic scheduler
+- [~] TODO-5901: A threaded VM run records its synchronization order and replays it on the deterministic scheduler
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: vm-sync-log (worktree-agent-ac512d9848be2c777), 2026-11-17
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
