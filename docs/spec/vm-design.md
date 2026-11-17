@@ -444,10 +444,10 @@
   `tests/fixtures/build/build_graph_one_body.prime` (a `Graph` and seven checks in one `run_checks`): 51,665 lines of
   `--emit=optcpp` C++ for `run_checks` became 10,967, with the same output and heap statistics on the VM and optexe.
   A drop flag is only set where its local is declared, so a scope entry must be live (on the scope stack) only on
-  the paths that ran the declaration: each arm of a `pick` statement is a scope of its own (its owning locals are
-  destroyed where the arm ends), because arm locals left in the enclosing scope were read at the exits of the arms
-  after it, an uninitialized flag on the native backend, which does not zero its frames (the value form of `pick`
-  still does this: docs/todo.md).
+  the paths that ran the declaration: each arm of a `pick` statement and of a `pick` expression is a scope of its own (its owning locals are
+  destroyed where the arm ends; in the expression form, after the arm's value is computed or copied into the
+  result and the local the arm ends with has been taken over), because arm locals left in the enclosing scope were read at the exits of the arms
+  after it, an uninitialized flag on the native backend, which does not zero its frames.
 - Struct copies: a struct of fewer than 16 slots is copied by one load/store sequence per slot. A struct of 16 slots
   or more (a `Request` is about 23) is copied by a loop over chunks of 8 slots through advancing copies of the two
   addresses, then the remaining slots in line (`emitStructCopyFromPtrs`, `StructCopyLoopMinSlots` and

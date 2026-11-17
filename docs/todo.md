@@ -168,7 +168,7 @@ of sync with them.
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6022 | A builtin `vector<T>` parameter taken by `copy` or `move` lowers as a real call at a direct call | ready | build-graph-defects |
-| TODO-6023 | The arms of a value `pick` leave their owning locals in the enclosing scope | ready | build-graph-defects |
+| TODO-6024 | A unit arm with a local and a `vector<T>` result fails to lower in a value `pick` | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
 | TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
 | TODO-6018 | A compile step leaves no generated C++ next to its executable | ready | build-dogfood |
@@ -211,7 +211,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022, TODO-6023
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6022, TODO-6024
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -304,19 +304,17 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: builtin vector parameters taken by `copy` or `move`; not stdlib `Vector`, `Map` or sum parameters.
 
-- [~] TODO-6023: The arms of a value `pick` leave their owning locals in the enclosing scope
+- [ ] TODO-6024: A unit arm with a local and a `vector<T>` result fails to lower in a value `pick`
   - owner: ai
-  - status: in_progress
-  - claimed_by: picks-a (worktree-agent-a510a3c620e7c9a42), 2026-11-17
+  - status: ready
   - created_at: 2026-11-17
-  - phase: Language defects found by TODO-6021 (shared exits of early `return`)
+  - phase: Language defects found by TODO-6023 (value `pick` arm scopes)
   - parallel_track: build-graph-defects
-  - scope: A `pick` statement lowers each arm as a scope of its own since TODO-6021 (`SumHelpersContext`, `src/ir_lowerer/IrLowererLowerSumHelpersPickAndDiagnostics.cpp`, the statement form), but the value form (`name = pick(...) { ... }`, `return(pick(...) { ... })`, the arms of `emitPickArmPrefixStatements`) still emits an arm's bindings into the enclosing scope. The drop flag of an arm's owning local is set only when that arm runs, so a cleanup of the enclosing scope (its end, or an exit of a later arm or of the body) reads the flag of an arm that never ran: zero on the VM (frames are zeroed) and stale stack memory on the arm64 native backend, which does not zero a frame (the symptom that TODO-6021 hit in `pick_returns`: a segmentation fault in `pick_return_owned_values` on native). Give each value arm its own scope too: the arm's value is computed first, the value a local ends the arm with is taken over (`releasedDropFlagLocal`), and the rest of the arm's locals are destroyed before the jump to the end of the `pick`. Write the failing program first (an owning `String` or struct local in a value arm, a body that returns after the `pick`, run on native).
+  - scope: `[vector<i32>] r{pick(m) { none { [vector<i32>] a{make_values(1i32)} a } some(v) { make_values(v) } }}` (a unit arm that declares a local, in a value `pick` whose result is a `vector<T>`) is rejected by the VM and optexe lowering: `missing semantic-product local-auto fact: /f -> local none` (the unit arm's block is read as a binding named `none`). The same arm with a `String` result, and a payload arm with locals and a `vector<T>` result, lower fine. Found writing `tests/unit/program_matrix/test_program_matrix_pick_value_arms.cpp` (the vector case keeps its locals in the `some` arm); it fails before TODO-6023 as well. Find why the unit arm is parsed or typed as a binding when its result is a vector and fix it where the fact is produced.
   - acceptance:
-    - a program with owning locals in the arms of a value `pick` runs on the VM, optexe and native with the same output and balanced heap statistics (VM and optexe), the locals destroyed where their arm ends
-    - the arm-local value that ends the arm is still taken over, not copied or destroyed twice
+    - the program above runs on the VM, optexe and native with the same output and balanced heap statistics; a matrix case covers a unit arm with owning locals and a `vector<T>` result
     - full release gate green
-  - stop_rule: value-form `pick` arms; not the statement form and not `match`.
+  - stop_rule: the unit-arm/vector-result shape of a value `pick`; not other arm shapes.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai

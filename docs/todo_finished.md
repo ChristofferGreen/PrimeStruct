@@ -2390,6 +2390,7 @@ are left unarchived.
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6020 | The optexe CTest entries of the build graph and of glob take 6 to 7 s alone, above the 5 s guardrail | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6021 | An early `return` repeats the destruction of every live local in optimized C++ | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6023 | The arms of a value `pick` leave their owning locals in the enclosing scope | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 
 <!-- INDEX-END -->
 
