@@ -118,6 +118,16 @@ const Definition * TailDispatchContext::resolveTailDispatchDirectHelperDefinitio
               callee != nullptr) {
             return callee;
           }
+          // A method call is the call of the definition the semantic product names for it, never one found by
+          // the call's lexical path: written inside `Bag`, `this.nodes.count()` is the builtin vector count, not
+          // `/Bag/count`.
+          if (candidate.isMethodCall) {
+            const std::string semanticTarget =
+                findSemanticProductMethodCallTarget(semanticProgram, candidate);
+            if (!semanticTarget.empty()) {
+              return findDirectHelperDefinition(semanticTarget);
+            }
+          }
           const std::string rawPath =
               resolveTailDispatchDirectHelperPath(candidate);
           if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
@@ -130,13 +140,6 @@ const Definition * TailDispatchContext::resolveTailDispatchDirectHelperDefinitio
                     findDirectHelperDefinition(resolvedPath);
                 resolvedDef != nullptr) {
               return resolvedDef;
-            }
-          }
-          if (candidate.isMethodCall) {
-            const std::string semanticTarget =
-                findSemanticProductMethodCallTarget(semanticProgram, candidate);
-            if (!semanticTarget.empty()) {
-              return findDirectHelperDefinition(semanticTarget);
             }
           }
           return nullptr;

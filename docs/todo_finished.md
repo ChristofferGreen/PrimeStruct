@@ -2369,6 +2369,7 @@ are left unarchived.
 | TODO-6004 | A struct holding a `vector<String>` pushed into a `vector<Node>` keeps its strings | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6005 | A view of an indexed element dangles after the expression that made it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6006 | The diagnostic for storing a read-only struct parameter says how to fix it | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6007 | `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

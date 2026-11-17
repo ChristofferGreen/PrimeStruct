@@ -225,6 +225,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     struct body counts its implicit `this`, one declared outside as `/Type/name([Type] self, ...)` counts `self`, and
     a method call counts the value before the dot, so `response.redirect("/")` selects `redirect([StringView]
     location)` next to `redirect([i32] status, [StringView] location)`.
+    A method call resolves through the type of the value before the dot, never through the struct it is written in: in a
+    struct that defines `count`, `this.count()` is that method and `this.nodes.count()` of a `vector` field is the vector's
+    count; a method the receiver's type lacks is `unknown method`, even when the enclosing struct has one of that name.
     Same-path same-arity definitions may also coexist when their parameter-type signatures are pairwise distinct
     (an unbound template parameter counts as one generic marker); the call site then selects the candidate whose
     parameter types match the argument types exactly, with a specificity tie-break when several candidates remain

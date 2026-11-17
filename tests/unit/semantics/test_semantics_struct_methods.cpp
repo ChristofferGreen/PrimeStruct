@@ -300,4 +300,35 @@ main() {
   CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
+TEST_CASE("a struct method is not found for a call on a vector field that has no such method") {
+  // `size` is a method of `Bag`, not of the `vector` in its field: the call is on the field's type.
+  const std::string source = R"(
+import /std/collections/vector/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] nodes{vector<i32>{}}
+
+  [return<i32>]
+  size() {
+    return(7i32)
+  }
+
+  [return<i32>]
+  total() {
+    return(this.nodes.size())
+  }
+}
+
+[return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  return(bag.total())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method") != std::string::npos);
+}
+
 TEST_SUITE_END();

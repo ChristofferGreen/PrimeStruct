@@ -456,3 +456,78 @@ main() {
 )",
                    0);
 }
+
+TEST_CASE("a struct with its own count, capacity and push still calls them on a vector field") {
+  // `this.nodes.count()` is the vector's count whatever the enclosing struct defines; `bag.count()` is the struct's.
+  runMethodProgram("struct_methods_own_count_with_vector_field",
+                   R"(
+import /std/text/*
+import /std/collections/vector/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] nodes{vector<i32>{}}
+  [String] label{String{}}
+
+  [return<i32>]
+  count() {
+    return(70i32)
+  }
+
+  [return<i32>]
+  capacity() {
+    return(71i32)
+  }
+
+  [mut effects(heap_alloc)]
+  push([i32] value) {
+    this.nodes.push(value)
+    this.nodes.push(value)
+  }
+
+  [return<i32>]
+  total() {
+    [i32] local{this.nodes.count()}
+    if(this.nodes.count() > 1i32) {
+      return(local + this.nodes.count() + this.nodes[0i32])
+    }
+    return(local)
+  }
+
+  [return<i32>]
+  labelSize() {
+    return(this.label.count())
+  }
+
+  [mut effects(heap_alloc)]
+  grow() {
+    this.nodes.push(5i32)
+    this.nodes.clear()
+    this.nodes.push(6i32)
+  }
+
+  [return<i32>]
+  both() {
+    return(this.count() + this.nodes.count())
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.push(3i32)
+  [i32 mut] sum{0i32}
+  sum = sum + bag.count()
+  sum = sum + bag.capacity()
+  sum = sum + bag.total()
+  sum = sum + bag.nodes.count()
+  sum = sum + bag.labelSize()
+  bag.grow()
+  sum = sum + bag.nodes.count()
+  sum = sum + bag.both()
+  return(sum - 150i32)
+}
+)",
+                   // 70 + 71 + 7 + 2 + 0 + 1 + 71 = 222, less 150
+                   72);
+}

@@ -220,7 +220,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5912, TODO-5913, TODO-5914, TODO-5915, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime; one at a time, in this order): TODO-6007
+- Language defects found by the build graph (stdlib/std/build/build.prime): TODO-6008
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -244,24 +244,24 @@ VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane
 
 Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other are TODO-5906 (directory listing and file metadata), TODO-5912 (`primec build --dry-run`, on the finished graph value) and TODO-5914 (`--emit-deps`). Then TODO-5907 (glob), TODO-5913 (running the graph), TODO-5915 (incremental builds), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
-Language defects found by the build graph: TODO-6002 (an element's method call frees the element twice, the root of the reported by-value `vector<String>` parameter defect), then TODO-6003 (`this.nodes[i].method()`), TODO-6004 (push of a struct holding a `vector<String>`), TODO-6005 (a view of an indexed element); TODO-6006 (message for storing a read-only struct parameter) and TODO-6007 (`this.nodes.count()` next to a struct `count`) are `ready` outside `Ready Now`.
+Language defects found by the build graph (all closed but one): TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) is `ready` outside `Ready Now`.
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
 
-- [~] TODO-6007: `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method
+- [ ] TODO-6008: A call of a user method named `at` that returns a `String` leaks the result when it is a receiver
   - owner: ai
   - status: ready
-  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
+  - phase: Language defects found by the build graph (stdlib/std/build/build.prime; found while finishing TODO-6002)
   - parallel_track: build-graph-defects
-  - scope: In `Bag() { [vector<i32> mut] nodes{...} count() { return(7i32) } total() { return(this.nodes.count()) } }` the call `this.nodes.count()` fails in lowering with `struct parameter type mismatch: expected /Bag, got /std/collections/vector/Vector__...` on the VM and optexe (2026-11-17): a method call on an explicit receiver whose type is a builtin vector must resolve through the receiver's type, never through the enclosing struct. Fix the resolution at its root; a call on a receiver of the struct's own type still reaches the struct's method.
+  - scope: `bag.at(0i32).view().count()` and `bag.at(1i32).byteAt(0i32)`, with `at([i32] index)` a method of `Bag` that returns `this.names[index]` as a `String`, leave the returned `String` alive: 32 bytes of string heap per call on the VM and optexe (2026-11-17). The element-access predicates (`isElementAccessCopySourceExpr`, `shouldDisarmStructCopySourceExpr`) match any two-argument call named `at`, so the receiver-temporary rule that binds an owning call result to a hidden local (`ownedTemporaryStructPath`) never sees a user `at` that returns a copy. A user `at` that resolves to a definition is a call result, not an element place: decide it from the resolved definition (as `isTemporaryStructCopySourceExpr` already does for bindings), at every site that asks.
   - acceptance:
-    - program matrix cases: a struct with its own `count` and a builtin vector field, `this.nodes.count()`, `b.count()` and `b.nodes.count()`, on the VM and optexe; a negative case where the receiver has no such method
+    - a program matrix case with a user `at` returning a `String` and a struct, read through `.view()`, `.byteAt(0i32)` and a field, ends with balanced heap and string-heap statistics on the VM and optexe
+    - the builtin vector element reads of TODO-6002 stay places (the element_receivers suite stays green)
     - full release gate green
-  - stop_rule: method resolution on a builtin vector receiver inside a struct.
+  - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
 
 - [ ] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
