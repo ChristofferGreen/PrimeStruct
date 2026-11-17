@@ -167,6 +167,7 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
+| TODO-6013 | The glob VM CTest entry runs about 25 s under gate load, above the 5 s guardrail | ready | build-graph-defects |
 | TODO-6010 | Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM | ready | build-graph-defects |
 | TODO-6011 | A name bound in one loop body and moved there is reported as moved in a sibling loop body | ready | build-graph-defects |
 | TODO-6012 | A recursive definition with a vector or `Reference<vector<T>>` parameter does not lower on the VM | ready | build-graph-defects |
@@ -213,7 +214,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6010, TODO-6011, TODO-6012
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6010, TODO-6011, TODO-6012, TODO-6013
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -255,6 +256,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the builtin vector element reads of TODO-6002 stay places (the element_receivers suite stays green)
     - full release gate green
   - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
+
+- [~] TODO-6013: The glob VM CTest entry runs about 25 s under gate load, above the 5 s guardrail
+  - owner: ai
+  - status: ready
+  - claimed_by: glob-defects (worktree-agent-adf9187b22d22091d), 2026-11-17
+  - created_at: 2026-11-17
+  - phase: Language defects found by glob (stdlib/std/glob/glob.prime; test hygiene)
+  - parallel_track: build-graph-defects
+  - scope: `PrimeStruct_glob_vm` (tests/unit/backend_host/test_glob.cpp) took about 25 s under gate load, and `PrimeStruct_build_glob_cache` (test_build_glob_cache.cpp) must be checked the same way. Split each into focused CTest entries or cases, or make them cheaper (one compile of a shared program instead of one per case); do not raise a timeout (AGENTS.md doctest runtime guardrail).
+  - acceptance:
+    - every glob and build-glob-cache CTest entry runs in 5 s or less in release validation
+    - the same cases still run, each under a CTest entry
+    - full release gate green
+  - stop_rule: the glob and build_glob_cache CTest entries.
 
 - [ ] TODO-6010: Shifting `vector<String>` elements with `items[at] = items[at - 1]` frees a string twice on the VM
   - owner: ai
