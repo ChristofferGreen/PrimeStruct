@@ -75,18 +75,34 @@ contains([String] text, [string] part) {
   return(text.view().contains(part))
 }
 
-// The check of every build, and its export for the golden file.
-[return<i32> effects(heap_alloc)]
-run_checks() {
-  [Build mut] first{Build{}}
-  [Graph] graph{build_graph(first)}
-  [Build mut] second{Build{}}
-  [Graph] reversed{build_graph_reversed(second)}
-  [String] text{graph.export()}
-  if(graph.nodeCount() != 4i32) {
-    return(1i32)
+// The graph of a variant: 0 is `build_graph`, 1 `build_graph_reversed` and 2 `build_broken_graph`.
+[return<Graph> effects(heap_alloc)]
+build_variant([Build mut] b, [i32] variant) {
+  if(variant == 1i32) {
+    return(build_graph_reversed(b))
   }
-  [String] other{reversed.export()}
+  if(variant == 2i32) {
+    return(build_broken_graph(b))
+  }
+  return(build_graph(b))
+}
+
+// The export of the graph of a variant, and its number of nodes in `nodes`. One definition owns the graph for every
+// variant: the destruction of a graph is large once it is expanded in an optimized program (about 3,000 lines of C++
+// each), and so is the destruction on every early `return` of a body that holds one, so no body holds a graph and
+// checks it (the C++ of this program took the host compiler 5 s to build).
+[return<String> effects(heap_alloc)]
+export_of([i32] variant, [i32 mut] nodes) {
+  [Build mut] b{Build{}}
+  [Graph] graph{build_variant(b, variant)}
+  nodes = graph.nodeCount()
+  return(graph.export())
+}
+
+// The number of the first check that fails over the exports, or 0. It owns no graph, so a failing check destroys
+// nothing but the temporaries of its own condition.
+[return<i32> effects(heap_alloc)]
+check_exports([String] text, [String] other, [String] broken) {
   [bool] same{text.view().equals(other.view())}
   if(!same) {
     return(2i32)
@@ -103,12 +119,23 @@ run_checks() {
   if(contains(text, "hash")) {
     return(6i32)
   }
-  [Build mut] third{Build{}}
-  [String] broken{build_broken_graph(third).export()}
   if(!contains(broken, "\"problems\":[\"duplicate id exe:app\",\"link link:app>missing names a missing library lib:missing\"]")) {
     return(7i32)
   }
   return(0i32)
+}
+
+// The check of every build.
+[return<i32> effects(heap_alloc)]
+run_checks() {
+  [i32 mut] nodes{0i32}
+  [String] text{export_of(0i32, nodes)}
+  if(nodes != 4i32) {
+    return(1i32)
+  }
+  [String] other{export_of(1i32, nodes)}
+  [String] broken{export_of(2i32, nodes)}
+  return(check_exports(text, other, broken))
 }
 
 // Writes `text` and a newline to standard output.
@@ -131,6 +158,18 @@ write_stdout([String] text) {
   return(Result.ok())
 }
 
+// Writes the export of the graph to standard output: 0, or 102 when the write fails.
+[return<i32> effects(heap_alloc, file_write)]
+print_graph() {
+  [i32 mut] nodes{0i32}
+  [String] exported{export_of(0i32, nodes)}
+  [Result<FileError>] written{write_stdout(exported)}
+  if(Result.error(written)) {
+    return(102i32)
+  }
+  return(0i32)
+}
+
 [return<int> effects(heap_alloc, file_write)]
 main() {
   // The first run also makes the byte region of every string literal it meets (made once, kept for the whole run), so
@@ -151,11 +190,5 @@ main() {
   if(stringHeapBytesInUse() != bytesBefore) {
     return(101i32)
   }
-  [Build mut] printed{Build{}}
-  [String] exported{build_graph(printed).export()}
-  [Result<FileError>] written{write_stdout(exported)}
-  if(Result.error(written)) {
-    return(102i32)
-  }
-  return(0i32)
+  return(print_graph())
 }

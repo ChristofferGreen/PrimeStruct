@@ -111,37 +111,37 @@ std::vector<Case> cases() {
 // Prints "# pattern", then "m <name>" per match and "l <name>" per listed directory, each name as its byte codes
 // (print_line takes no String), or "error <why>".
 std::string program(const std::filesystem::path &root, const std::vector<Case> &list) {
-  std::string source =
-      "import /std/glob/*\n"
-      "import /std/file/*\n"
-      "import /std/collections/vector/*\n"
-      "import /std/text/*\n"
-      "import /std/text/view/*\n\n"
-      "[return<void> effects(io_out)]\n"
-      "show_name([String] name) {\n"
-      "  for([i32 mut] at{0i32}, at < name.count(), at++) {\n"
-      "    print(name.byteAt(at))\n    print(\",\")\n  }\n"
-      "  print_line(\"\")\n"
-      "}\n\n"
-      "[return<void> effects(io_out, file_read, heap_alloc)]\n"
-      "show([String] base, [String] pattern) {\n"
-      "  [vector<String> mut] matches{vector<String>{}}\n"
-      "  [vector<String> mut] listed{vector<String>{}}\n"
-      "  [Result<FileError>] done{glob(base.view(), pattern.view(), matches, listed)}\n"
-      "  if(Result.error(done)) {\n"
-      "    print_line(Result.why(done))\n"
-      "    return()\n"
-      "  }\n"
-      "  for([i32 mut] i{0i32}, i < matches.count(), i++) {\n"
-      "    print(\"m \")\n    show_name(matches[i])\n  }\n"
-      "  for([i32 mut] i{0i32}, i < listed.count(), i++) {\n"
-      "    print(\"l \")\n    show_name(listed[i])\n  }\n"
-      "}\n\n"
-      "[return<int> effects(io_out, file_read, heap_alloc)]\n"
-      "main() {\n";
+  std::string source = "import /std/glob/*\n"
+                       "import /std/file/*\n"
+                       "import /std/collections/vector/*\n"
+                       "import /std/text/*\n"
+                       "import /std/text/view/*\n\n"
+                       "[return<void> effects(io_out)]\n"
+                       "show_name([String] name) {\n"
+                       "  for([i32 mut] at{0i32}, at < name.count(), at++) {\n"
+                       "    print(name.byteAt(at))\n    print(\",\")\n  }\n"
+                       "  print_line(\"\")\n"
+                       "}\n\n"
+                       "[return<void> effects(io_out, file_read, heap_alloc)]\n"
+                       "show([StringView] base, [StringView] pattern) {\n"
+                       "  [vector<String> mut] matches{vector<String>{}}\n"
+                       "  [vector<String> mut] listed{vector<String>{}}\n"
+                       "  [Result<FileError>] done{glob(base, pattern, matches, listed)}\n"
+                       "  if(Result.error(done)) {\n"
+                       "    print_line(Result.why(done))\n"
+                       "    return()\n"
+                       "  }\n"
+                       "  for([i32 mut] i{0i32}, i < matches.count(), i++) {\n"
+                       "    print(\"m \")\n    show_name(matches[i])\n  }\n"
+                       "  for([i32 mut] i{0i32}, i < listed.count(), i++) {\n"
+                       "    print(\"l \")\n    show_name(listed[i])\n  }\n"
+                       "}\n\n"
+                       "[return<int> effects(io_out, file_read, heap_alloc)]\n"
+                       "main() {\n";
   for (const Case &c : list) {
     source += "  print_line(\"# " + c.base + " | " + c.pattern + "\")\n";
-    source += "  show(stringFrom(\"" + joinPath(root.string(), c.base) + "\"), stringFrom(\"" + c.pattern + "\"))\n";
+    source += "  show(textOf(\"" + joinPath(root.string(), c.base) + "\"), textOf(\"" + c.pattern +
+              "\"))\n";
   }
   source += "  return(0i32)\n}\n";
   return source;

@@ -179,63 +179,35 @@ namespace glob {
     [public i32 mut] depth{0i32}
   }
 
-  // Applies the ordinary (not "**") segment `index` to the entries of the directory `rel`: a hit is a match when the
-  // segment is the last one, and a directory hit is read next with the segment after it.
+  // Applies one segment to the entries of the directory `rel`. For an ordinary segment (`deep` false, the segment
+  // `index`) a hit is an entry whose name matches it: a match when the segment is the last one, and a directory hit is
+  // read next with the segment after it. For "**" (`deep` true, `index` is its segment) every entry that does not begin
+  // with a dot is a match when "**" is the last segment, and every such directory is read next with "**" again.
   [effects(heap_alloc)]
-  apply_plain([StringView] base,
-              [StringView] rel,
-              [Reference<vector<DirEntry>>] entries,
-              [Reference<vector<String>>] segments,
-              [i32] index,
-              [i32] depth,
-              [vector<String> mut] matches,
-              [vector<GlobTask> mut] tasks) {
+  apply_entries([StringView] base,
+                [StringView] rel,
+                [Reference<vector<DirEntry>>] entries,
+                [Reference<vector<String>>] segments,
+                [i32] index,
+                [i32] depth,
+                [bool] deep,
+                [vector<String> mut] matches,
+                [vector<GlobTask> mut] tasks) {
     [String] seg{segments[index]}
     [bool] last{index == segments.count() - 1i32}
     for([i32 mut] i{0i32}, i < entries.count(), i++) {
       [String] name{entries[i].name}
-      if(name_matches(name.view(), seg.view())) {
-        [String] childRel{join(rel, name.view())}
-        if(last) {
-          [String] full{join(base, childRel.view())}
-          insert_sorted(matches, full)
-        } else {
-          if(entries[i].isDirectory()) {
-            [GlobTask mut] next{GlobTask{}}
-            next.rel = childRel
-            next.index = index + 1i32
-            next.depth = depth + 1i32
-            tasks.push(next)
-          }
-        }
-      }
-    }
-  }
-
-  // Applies the "**" segment `index` to the entries of the directory `rel`: every entry that does not begin with a dot
-  // is a match when "**" is the last segment, and every such directory is read next with "**" again.
-  [effects(heap_alloc)]
-  apply_deep([StringView] base,
-             [StringView] rel,
-             [Reference<vector<DirEntry>>] entries,
-             [Reference<vector<String>>] segments,
-             [i32] index,
-             [i32] depth,
-             [vector<String> mut] matches,
-             [vector<GlobTask> mut] tasks) {
-    [bool] last{index == segments.count() - 1i32}
-    for([i32 mut] i{0i32}, i < entries.count(), i++) {
-      [String] name{entries[i].name}
-      if(!is_hidden(name.view())) {
+      [bool] hit{if(deep, then() { !is_hidden(name.view()) }, else() { name_matches(name.view(), seg.view()) })}
+      if(hit) {
         [String] childRel{join(rel, name.view())}
         if(last) {
           [String] full{join(base, childRel.view())}
           insert_sorted(matches, full)
         }
-        if(entries[i].isDirectory()) {
+        if((deep || !last) && entries[i].isDirectory()) {
           [GlobTask mut] next{GlobTask{}}
           next.rel = childRel
-          next.index = index
+          next.index = if(deep, then() { index }, else() { index + 1i32 })
           next.depth = depth + 1i32
           tasks.push(next)
         }
@@ -245,7 +217,8 @@ namespace glob {
 
   // Applies the segment `index` of the pattern to the entries of the directory `rel`. "**" that is not the last segment
   // stands for no directory as well as for any number of them, so the segment after it applies to these entries too
-  // (`split_pattern` leaves no "**" next to another).
+  // (`split_pattern` leaves no "**" next to another). The two passes are one loop, because a definition that takes
+  // vectors is inlined at every call site and `apply_entries` is large.
   [effects(heap_alloc)]
   apply_segment([StringView] base,
                 [StringView] rel,
@@ -256,13 +229,15 @@ namespace glob {
                 [vector<String> mut] matches,
                 [vector<GlobTask> mut] tasks) {
     [String] seg{segments[index]}
-    if(seg.equalsText("**")) {
-      if(index < segments.count() - 1i32) {
-        apply_plain(base, rel, entries, segments, index + 1i32, depth, matches, tasks)
+    [bool] deepSegment{seg.equalsText("**")}
+    for([i32 mut] pass{0i32}, pass < 2i32, pass++) {
+      [bool] deepPass{pass == 1i32}
+      // Pass 0 is the ordinary one: the segment after "**" for a "**" (none when "**" is last); pass 1 is "**" itself.
+      [bool] runs{if(deepPass, then() { deepSegment }, else() { !deepSegment || index < segments.count() - 1i32 })}
+      if(runs) {
+        [i32] applied{if(deepSegment && !deepPass, then() { index + 1i32 }, else() { index })}
+        apply_entries(base, rel, entries, segments, applied, depth, deepPass, matches, tasks)
       }
-      apply_deep(base, rel, entries, segments, index, depth, matches, tasks)
-    } else {
-      apply_plain(base, rel, entries, segments, index, depth, matches, tasks)
     }
   }
 
