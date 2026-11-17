@@ -2306,6 +2306,7 @@ are left unarchived.
 | TODO-5895 | A spawned call with a `copy` or `move` scalar or struct parameter runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5896 | `--vm-threads` runs each spawned task on its own OS thread | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5897 | Atomic, Mutex and Channel run on real primitives under `--vm-threads` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-5898 | Host calls under `--vm-threads` serialize by default and block only their own task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5905 | `/std/path` joins, splits and normalizes paths | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5907 | `/std/glob` expands glob patterns (split: the cache inputs are TODO-6009) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |

@@ -114,6 +114,12 @@ script.bind("host_add", [](int32_t a, int32_t b) { return a + b; });
 engine.bind("log_value", [](int32_t v) { /* ... */ });   // applies to every compiled script
 ```
 
+A script run with tasks on threads (`--vm-threads`) calls host functions one at a time by default. An embedder
+whose function is thread safe and may block (a socket `recv`) registers it with
+`script.setHostThreading("name", primec::embed::HostThreading::Reentrant)`, so a blocked call blocks only its own
+task; `HostThreading::MainThreadOnly` (a UI call) makes the call fault with `<name> called off the main thread`
+when a spawned task makes it. A run without threads ignores the setting.
+
 Scripts declare the host functions they call with `[host]` definitions (see
 "Host functions (embedding)" in `docs/spec/host-and-core-library.md`):
 

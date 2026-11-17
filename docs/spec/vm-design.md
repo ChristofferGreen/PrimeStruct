@@ -243,8 +243,12 @@
   returns (a `String`, a vector, a struct) stays valid after the task ended and is freed by the waiter through the
   owning arena's remote-free queue. **Host calls:** a `print`, a file operation and every embedder host function take
   one global lock, so a line is written by one thread at a time (the output sink needs no lock of its own) and a host
-  function never runs twice at once; a host function that blocks therefore blocks every task's host calls until
-  TODO-5898 refines it. The `__pstext_*` functions the VM answers itself run without the lock, on the calling
+  function never runs twice at once; a host function that blocks therefore blocks every task's host calls. An
+  embedder refines this per function (`VmHostBinding::threading`, `Script::setHostThreading`): `Reentrant` runs
+  without the lock, so it may be entered by several threads at once and a blocking call blocks only its own task;
+  `MainThreadOnly` (the native UI) runs on the thread that started the run and faults with `<name> called off the
+  main thread` when a spawned task calls it; the default `Serialized` is the lock above. Without `--vm-threads` the
+  flag has no effect. The `__pstext_*` functions the VM answers itself run without the lock, on the calling
   thread's own string heap. **Faults and cancel:** a fault, a `Trap` or the main task's return sets a stop flag that
   every thread polls every 256 steps and that wakes every waiter; the first of them is the run's outcome (its fault
   message, or the trap's or the return's value), and the run returns once every task thread ended, so the process

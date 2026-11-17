@@ -22,7 +22,8 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       std::vector<uint64_t> &stack,
                       std::string &error,
                       TextHeapContext *text,
-                      std::mutex *hostLock) {
+                      std::mutex *hostLock,
+                      const std::thread::id *mainThread) {
   if (inst.imm >= module.hostImports.size()) {
     error = "invalid host import index in IR";
     return false;
@@ -82,16 +83,24 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
       return true;
     }
   }
-  // Threads mode: one host function runs at a time (the `__pstext_*` functions above work on the calling thread's
-  // own string heap and take no part in it).
-  std::unique_lock<std::mutex> hostGuard;
-  if (hostLock != nullptr) {
-    hostGuard = std::unique_lock<std::mutex>(*hostLock);
-  }
   const VmHostBinding *binding = hostFunctions != nullptr ? hostFunctions->find(import.name) : nullptr;
   if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
     error = "unbound host function: " + import.name;
     return false;
+  }
+  // Threads mode: a host function runs one at a time unless it is registered reentrant, and a main-thread-only one
+  // faults off the main thread (the `__pstext_*` functions above work on the calling thread's own string heap and
+  // take no part in it).
+  std::unique_lock<std::mutex> hostGuard;
+  if (hostLock != nullptr) {
+    if (binding->threading == VmHostThreading::MainThreadOnly) {
+      if (mainThread != nullptr && std::this_thread::get_id() != *mainThread) {
+        error = import.name + " called off the main thread";
+        return false;
+      }
+    } else if (binding->threading == VmHostThreading::Serialized) {
+      hostGuard = std::unique_lock<std::mutex>(*hostLock);
+    }
   }
   const size_t argCount = import.parameters.size();
   if (stack.size() < argCount) {
@@ -314,8 +323,14 @@ public:
                       std::vector<uint64_t> &stack,
                       std::string &error) override {
     TextHeapContext text{&core(), &textHeap(), args_};
-    return handleVmHostCall(
-        hostFunctions_, module, inst, stack, error, &text, arenas_ ? &hostLock_ : nullptr);
+    return handleVmHostCall(hostFunctions_,
+                            module,
+                            inst,
+                            stack,
+                            error,
+                            &text,
+                            arenas_ ? &hostLock_ : nullptr,
+                            &mainThread_);
   }
 
 private:
@@ -365,6 +380,8 @@ private:
   // Threads mode only: one arena per task thread (arena 0 is the main task's), and the host lock.
   std::unique_ptr<VmHeapArenas> arenas_;
   std::mutex hostLock_;
+  // The thread that started the run, which is the main task's: where a main-thread-only host function may run.
+  std::thread::id mainThread_ = std::this_thread::get_id();
 };
 
 } // namespace

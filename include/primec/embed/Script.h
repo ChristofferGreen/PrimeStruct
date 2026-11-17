@@ -17,6 +17,14 @@ namespace primec::embed {
 // Primitive types that can cross the host boundary.
 enum class HostType : uint8_t { Void, I32, I64, U64, F32, F64, Bool, String, U8, Text };
 
+// How a host function takes part in a run that puts tasks on threads (`--vm-threads`, docs/spec/vm-design.md, Tasks
+// on threads). `Serialized` (the default): never entered by two threads at once, behind one lock shared with prints
+// and file operations, so a call that blocks blocks every task's host calls. `Reentrant`: runs without the lock, may
+// be entered by several threads at once and a call that blocks blocks only its own task; the callable must be thread
+// safe. `MainThreadOnly`: runs on the thread that started the run (the native UI) and faults with `<name> called off
+// the main thread` when a spawned task calls it. A run without threads ignores it.
+enum class HostThreading : uint8_t { Serialized, Reentrant, MainThreadOnly };
+
 namespace detail {
 template <class T> struct HostTypeOf;
 template <> struct HostTypeOf<void> { static constexpr HostType value = HostType::Void; };
@@ -143,6 +151,7 @@ public:
     HostType returnType = HostType::Void;
     RawInvoke invoke;
     RawStringInvoke invokeString;
+    HostThreading threading = HostThreading::Serialized;
   };
 
   template <class F> void bind(std::string name, F callable) {
@@ -154,6 +163,9 @@ public:
   void bindRaw(std::string name, std::vector<HostType> parameters, HostType returnType, RawInvoke invoke);
   void bindRawString(std::string name, std::vector<HostType> parameters, RawStringInvoke invoke,
                      HostType returnType = HostType::Text);
+  // Sets how the bound function `name` runs under threads; false when nothing is bound under that name. A later
+  // `bind` of the same name resets it to the default.
+  bool setThreading(const std::string &name, HostThreading threading);
   const std::vector<Entry> &entries() const { return entries_; }
 
 private:
@@ -274,6 +286,11 @@ public:
   // a matching signature before `run`; otherwise `run` fails with a diagnostic
   // and executes nothing.
   template <class F> void bind(std::string name, F callable) { hostBindings_.bind(std::move(name), std::move(callable)); }
+  // Registers how an already bound host function runs when tasks run on threads (HostThreading above); false when
+  // `name` is not bound.
+  bool setHostThreading(const std::string &name, HostThreading threading) {
+    return hostBindings_.setThreading(name, threading);
+  }
   const HostBindings &hostBindings() const { return hostBindings_; }
 
   // Names the host functions this script declares, with their signatures

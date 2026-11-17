@@ -42,6 +42,16 @@ void HostBindings::bindRawString(std::string name, std::vector<HostType> paramet
   entries_.push_back(std::move(fresh));
 }
 
+bool HostBindings::setThreading(const std::string &name, HostThreading threading) {
+  for (Entry &entry : entries_) {
+    if (entry.name == name) {
+      entry.threading = threading;
+      return true;
+    }
+  }
+  return false;
+}
+
 namespace detail {
 const char *hostTypeSpelling(HostType type) {
   switch (type) {
@@ -111,6 +121,7 @@ VmHostFunctions toVmHostFunctions(const HostBindings &bindings) {
     }
     binding.returnKind = toIrKind(entry.returnType);
     binding.invoke = entry.invoke;
+    binding.threading = static_cast<VmHostThreading>(entry.threading);
     if (entry.invokeString) {
       binding.invokeString = [invoke = entry.invokeString](const uint64_t *args, std::string &result, std::string &error) {
         return invoke(args, result, error);

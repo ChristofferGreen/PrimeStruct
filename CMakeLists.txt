@@ -1335,6 +1335,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_tasks.cpp
     tests/unit/runtime/test_vm_threads.cpp
     tests/unit/runtime/test_vm_threads_sync.cpp
+    tests/unit/runtime/test_vm_threads_host.cpp
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
     tests/unit/runtime/test_vm_conditions.cpp
@@ -1367,6 +1368,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_vm_threads_sync
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # Host functions registered reentrant or main-thread only under --vm-threads, each program run 100 times.
+  add_test(
+    NAME PrimeStruct_vm_threads_host
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads_host"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_vm_threads_host
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The per-thread heap arenas of generated programs (VmHeapArenas.h), driven by std::threads.
   add_test(

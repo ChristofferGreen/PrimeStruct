@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include "primec/ir/Ir.h"
@@ -36,13 +37,15 @@ bool executeVmModule(const IrModule &module,
 
 // Executes IrOpcode::CallHost against `hostFunctions` (null = nothing bound):
 // pops the import's parameters, invokes the binding and pushes its result. `hostLock`, when set, is held while a
-// binding of the embedder runs (threads mode, docs/spec/vm-design.md, Tasks on threads).
+// binding of the embedder runs (threads mode, docs/spec/vm-design.md, Tasks on threads) unless the binding is
+// reentrant; `mainThread`, when set, is the thread a main-thread-only binding may run on.
 bool handleVmHostCall(const VmHostFunctions *hostFunctions,
                       const IrModule &module,
                       const IrInstruction &inst,
                       std::vector<uint64_t> &stack,
                       std::string &error,
                       TextHeapContext *text = nullptr,
-                      std::mutex *hostLock = nullptr);
+                      std::mutex *hostLock = nullptr,
+                      const std::thread::id *mainThread = nullptr);
 
 } // namespace primec::vm_detail

@@ -24,6 +24,13 @@ using VmHostInvoke = std::function<bool(const uint64_t *args, uint64_t &result, 
 // returns the text and the VM stores it as a run-time string.
 using VmHostStringInvoke = std::function<bool(const uint64_t *args, std::string &result, std::string &error)>;
 
+// How a host function takes part in `--vm-threads` runs (docs/spec/vm-design.md, Tasks on threads). The default
+// serializes it with every other host function behind one lock, so it is never entered twice at once. A reentrant
+// function runs without the lock: it may be entered by several threads at once and a call that blocks blocks only
+// its own task. A main-thread-only function (the native UI) runs on the thread that started the run and faults with
+// `<name> called off the main thread` when a spawned task calls it. Without `--vm-threads` the flag has no effect.
+enum class VmHostThreading : uint8_t { Serialized, Reentrant, MainThreadOnly };
+
 struct VmHostBinding {
   std::vector<IrHostValueKind> parameters;
   IrHostValueKind returnKind = IrHostValueKind::Void;
@@ -31,6 +38,7 @@ struct VmHostBinding {
   // text itself; `invoke` then stays empty.
   VmHostInvoke invoke;
   VmHostStringInvoke invokeString = nullptr;
+  VmHostThreading threading = VmHostThreading::Serialized;
 };
 
 class VmHostFunctions {

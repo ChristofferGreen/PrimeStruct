@@ -584,8 +584,9 @@ The VM runs tasks on its one OS thread, so conformance tests stay reproducible (
 ### VM Threads
 
 Classification: **design direction**, decided 2026-11-11. `--vm-threads` with tasks, heap arenas and the one host lock
-is implemented (TODO-5896; docs/spec/vm-design.md, Tasks on threads); the rest is the VM threads lane of
-`docs/todo.md` (TODO-5898 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, landed). The VM scheduler above describes what the VM does today and stays
+is implemented (TODO-5896; docs/spec/vm-design.md, Tasks on threads), with the per-function reentrant and
+main-thread-only registrations of host functions (TODO-5898); the rest is the VM threads lane of
+`docs/todo.md` (TODO-5899 to TODO-5904; TODO-5897, atomics, mutexes, channels and the deadlock fault, landed). The VM scheduler above describes what the VM does today and stays
 true of the default until TODO-5904.
 
 The VM gets a second way to run tasks: each on its own OS thread, in parallel, with the semantics `optexe` already
@@ -608,7 +609,9 @@ has. The deterministic scheduler stays; it is not replaced.
   `deadlock: every task is waiting`, as on `optexe` since TODO-5846.
 - **Host calls** take one global lock at first. A host function registered as reentrant runs without it, and a call
   that blocks (`poll`, `recv`) then blocks only its own task, which lifts the limit stated for the deterministic
-  scheduler. A host function registered as main-thread only (the native UI) faults when another thread calls it.
+  scheduler. A host function registered as main-thread only (the native UI) faults with `<name> called off the main
+  thread` when another thread calls it. Registration is `VmHostBinding::threading` (`VmHostThreading`) on the VM host
+  table and `Script::setHostThreading` (`HostThreading`) on the embed API; the default stays serialized (TODO-5898).
 - **Faults and cancel:** a fault or `Trap` on any task sets a stop flag that every thread polls at calls and loop
   back-edges; the run ends with exit code 3 after flushing, and the process survives, so the embed API
   (`Script::run`, `RunOptions::cancel`) can use the mode.
