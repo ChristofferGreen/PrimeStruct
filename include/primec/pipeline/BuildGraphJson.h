@@ -32,6 +32,8 @@ struct BuildGraphData {
   std::vector<std::string> unsupportedNodes;
   // The `problems` of the export (duplicate ids, links to missing targets).
   std::vector<std::string> problems;
+  // The export ended at a `run` of the script (`"incomplete":true`): later stages follow.
+  bool incomplete = false;
 };
 
 // Parses the JSON text of a graph export. Returns false and sets `error` when the text is not a graph export.

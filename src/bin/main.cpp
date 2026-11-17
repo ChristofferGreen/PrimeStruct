@@ -431,6 +431,8 @@ int main(int argc, char **argv) {
   primec::BuildCommandPlan buildPlan;
   const bool isBuildCommand = argc >= 2 && std::string_view(argv[1]) == "build";
   std::vector<char *> buildArgv;
+  std::string buildSeparator = "--";
+  std::string buildStageArgument;
   const std::string selfPath = isBuildCommand ? primec::selfExecutablePath(argv[0]) : std::string();
   if (isBuildCommand) {
     if (!primec::planBuildCommand(
@@ -444,6 +446,11 @@ int main(int argc, char **argv) {
     for (std::string &argument : buildPlan.arguments) {
       buildArgv.push_back(argument.data());
     }
+    // The stage the script runs to (`Graph.run`) is its first program argument. It is not part of `buildPlan.arguments`,
+    // so every stage shares one compiled script in the script cache.
+    buildStageArgument = std::to_string(buildPlan.stage);
+    buildArgv.push_back(buildSeparator.data());
+    buildArgv.push_back(buildStageArgument.data());
     argc = static_cast<int>(buildArgv.size());
     argv = buildArgv.data();
   }

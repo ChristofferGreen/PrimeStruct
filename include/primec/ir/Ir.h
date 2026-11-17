@@ -235,6 +235,8 @@ constexpr uint64_t EffectNetIo = 1ull << 12;
 constexpr uint64_t EffectAtomic = 1ull << 13;
 constexpr uint64_t EffectLock = 1ull << 14;
 constexpr uint64_t EffectChannel = 1ull << 15;
+// A build script runs its graph in stages (`Graph.run` of /std/build, docs/BuildSystemPlan.md section 3).
+constexpr uint64_t EffectBuildRun = 1ull << 16;
 constexpr uint32_t FileReadEofCode = 65536u;
 
 struct IrStructField {

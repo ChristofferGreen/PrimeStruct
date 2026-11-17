@@ -346,7 +346,8 @@ const std::vector<std::string> &knownEffectNames() {
                                                  "net_io",
                                                  "atomic",
                                                  "lock",
-                                                 "channel"};
+                                                 "channel",
+                                                 "build_run"};
   return names;
 }
 
@@ -423,7 +424,7 @@ void applyRunProfile(Options &out, bool defaultEffectsExplicit) {
     out.entryDefaultEffects.clear();
   }
   if (!out.allowEffects.has_value()) {
-    out.allowEffects = std::vector<std::string>{"file_read", "heap_alloc"};
+    out.allowEffects = std::vector<std::string>{"file_read", "heap_alloc", "build_run"};
   }
   if (!out.allowImport.has_value()) {
     out.allowImport = std::vector<std::string>{"/std/build",

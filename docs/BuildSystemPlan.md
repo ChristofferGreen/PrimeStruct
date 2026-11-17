@@ -135,7 +135,7 @@ sandbox, and a project that needs more is granted it in its configuration, where
 | --- | --- | --- |
 | Entry | `/main` | A stdlib wrapper that constructs `Build`, calls the script's `build`, and hands the graph to the runner |
 | Default effects | `io_out` | None; printing goes through a logging call |
-| Effect ceiling | None | A set the runner grants (`file_read`, `heap_alloc`); a larger declaration in user code is a diagnostic |
+| Effect ceiling | None | A set the runner grants (`file_read`, `heap_alloc`, and `build_run` to the root script); a larger declaration in user code is a diagnostic |
 | Imports | Anything | An allowlist (`/std/build`, `/std/path`, `/std/file`, collections); not `/std/net`, `/std/ui` or process control |
 | Optimization | `-O2` on the VM | `-O0`: the script runs once |
 | Environment | `/std/os` | Only a call that records the variable as an input |
@@ -216,7 +216,10 @@ Leaves in the Build system lane; the VM threads lane has its own list.
   diagnostics. `primec build` runs `primec` itself (found through the path of the running executable); the embed
   library stays free of process spawning because the runner lives in `primec`. In-process steps can replace this once
   the pipeline is re-entrant.
-- **The name of the run effect** (`build_run` here) and whether only the root script may hold it (proposed).
+- **The name of the run effect:** decided in TODO-5918: `build_run` (bit `1 << 16`), granted by the build profile to the
+  root script. Subprojects (TODO-5916) run under a ceiling without it, which makes `run` there a diagnostic.
+  Staging is done by running the script once per stage (`--stage <n>`) rather than suspending it: the VM has no
+  coroutines, the script is deterministic, and the runner cache makes the repeat of stage 1 cheap.
 - **Whether the ceiling applies to library code.** Proposed: user code only.
 - **How a subproject is loaded:** a separate VM run whose exported graph the runner merges, or one program that imports
   every script (needing one entry name per file). TODO-5916 decides and records it.

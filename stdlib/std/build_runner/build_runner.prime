@@ -33,7 +33,7 @@ namespace build_runner {
   }
 
   // Runs the script's `build` and prints the graph it returns; the exit code is 0, or 1 when printing failed.
-  [public return<i32> effects(heap_alloc, file_write)]
+  [public return<i32> effects(heap_alloc, file_write, build_run)]
   run() {
     [Build mut] b{Build{}}
     [Graph] graph{/build(b)}

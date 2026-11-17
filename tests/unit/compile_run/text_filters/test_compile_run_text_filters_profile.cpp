@@ -81,8 +81,8 @@ TEST_CASE("profile program and no flag print as before") {
 TEST_CASE("profile build rejects an effect outside the ceiling") {
   const ProfileRun run = runProfile("profile_build_effect", NetEffectSource, "--profile build");
   CHECK(run.exitCode == 2);
-  CHECK(run.err.find("definition /main declares effect net_io, outside the allowed effects: file_read,heap_alloc") !=
-        std::string::npos);
+  CHECK(run.err.find("definition /main declares effect net_io, outside the allowed effects: "
+                     "file_read,heap_alloc,build_run") != std::string::npos);
 }
 
 TEST_CASE("profile build rejects an import outside the allowlist") {

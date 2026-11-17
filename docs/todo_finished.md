@@ -2315,6 +2315,7 @@ are left unarchived.
 | TODO-5913 | `primec build` runs the graph | [undated.md](todo_archive/undated.md) | - |
 | TODO-5914 | `--emit-deps` writes the files a compile read | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5915 | `primec build` skips steps whose inputs did not change | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-5918 | A script can run its graph in stages | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5934 | A call that returns a `Reference` and is used as a value yields its referent | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5935 | A lambda parameter naming a struct of the enclosing namespace is resolved there | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5936 | A diagnostic in `main` of a program that imports `/std/http/server` reports a stdlib position | [2026-11.md](todo_archive/2026-11.md) | - |

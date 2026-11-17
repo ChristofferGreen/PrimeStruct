@@ -955,6 +955,32 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     result = listing.size();
     return true;
   }
+  // The two calls behind `Graph.run` of /std/build (docs/BuildSystemPlan.md section 3). `__pstext_stage_gate(target)`
+  // counts the calls of the process and returns 1 for the call whose zero-based index is `target` (the stage the runner
+  // asked for), 0 for an earlier one (that stage already ran) and 2 when `target` is negative (no stage was asked for).
+  // `__pstext_stage_stop(address, count)` writes the bytes and a line feed to standard output and ends the process with
+  // status 0, so a script is not continued past the stage it stopped at.
+  if (name == "__pstext_stage_gate") {
+    static uint32_t stageCalls = 0;
+    const int32_t target = static_cast<int32_t>(args[0]);
+    const uint32_t index = stageCalls++;
+    result = target < 0 ? 2 : (static_cast<uint32_t>(target) == index ? 1 : 0);
+    return true;
+  }
+  if (name == "__pstext_stage_stop") {
+    const uint64_t length = args[1];
+    if (length != 0) {
+      const uint8_t *first = core.byteSpan(args[0], length);
+      if (first == nullptr) {
+        error = "invalid text range: " + std::to_string(length) + " bytes at " + std::to_string(args[0]);
+        return false;
+      }
+      std::fwrite(first, 1, static_cast<size_t>(length), stdout);
+    }
+    std::fputc('\n', stdout);
+    std::fflush(nullptr);
+    std::_Exit(0);
+  }
   // Decimal text to double with the C library's correctly rounded conversion (the text is checked to be a plain
   // decimal number by the caller): `__pstext_f64_ok(address, count)` is 1 when the text converts to a finite value,
   // `__pstext_parse_f64(address, count)` is the value's bits.

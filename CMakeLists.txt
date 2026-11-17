@@ -1393,6 +1393,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
+    tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_script_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
@@ -1628,6 +1629,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
               "--order-by=file"
     )
     set_tests_properties(PrimeStruct_build_glob_cache_${glob_cache_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
+  # A script that runs its graph in stages (tests/unit/backend_host/test_build_stages.cpp).
+  foreach(stages_case
+          "builds a second graph" "dry run of a staged script" "without the build_run effect" "reads the incomplete marker")
+    string(MAKE_C_IDENTIFIER "${stages_case}" stages_id)
+    add_test(
+      NAME PrimeStruct_build_stages_${stages_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_stages"
+              "--test-case=*${stages_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_stages_${stages_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.

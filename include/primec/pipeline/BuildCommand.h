@@ -17,6 +17,9 @@ struct BuildCommandPlan {
   // once. Neither is passed on to the compile of the script.
   std::string outDir;
   int jobs = 0;
+  // `--stage <n>` (internal: the runner starts the dry run once per stage): the zero-based stage of `Graph.run` the
+  // script stops at. The script receives it as its first program argument. Default 0.
+  int stage = 0;
   // The options after the directory, except `--dry-run`, `--jobs` and `--out-dir`.
   std::vector<std::string> forwarded;
   // The path of the script, `<dir>/make.prime`.

@@ -1583,7 +1583,10 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   source)` and `library(name, cc, source)` add a target with the settings `cc` has at the call; `link(executableName,
   libraryName)` adds the dependency edge of an executable on a library; `graph()` returns the `Graph` built so far.
   Names and sources are `StringView`s.
-- `Graph`: `nodes` (a vector of `Node`), `nodeCount()` and `export()`.
+- `Graph`: `nodes` (a vector of `Node`), `nodeCount()` and `export()`; `run()` (`build_run`, `heap_alloc`) executes the
+  graph at that point and is the one call that is not a pure value: the runner starts the script once per stage, `run`
+  of an earlier stage returns, and the wanted one writes the export with `"incomplete":true` and ends the script
+  (docs/spec/integration-and-tooling.md, Build Command, Stages). `exportStage(incomplete)` is `export` with that marker.
 - Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `lib:<name>` and `link:<exe>><lib>`.
   A library's output is `<name>.psa`. Library and link nodes export with `"runnable":false` and a note, because the
   compiler cannot build static libraries yet; compile steps and executables are `"runnable":true`.

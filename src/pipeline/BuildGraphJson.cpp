@@ -322,6 +322,9 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.linkArgs = stringList(*compiler, "link_args");
     graph.steps.push_back(std::move(step));
   }
+  const JsonValue *incomplete = root.find("incomplete");
+  graph.incomplete =
+      incomplete != nullptr && incomplete->kind == JsonValue::Kind::Bool && incomplete->boolean;
   const JsonValue *problems = root.find("problems");
   if (problems != nullptr && problems->kind == JsonValue::Kind::Array) {
     for (const JsonValue &problem : problems->items) {

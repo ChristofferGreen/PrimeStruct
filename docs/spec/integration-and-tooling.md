@@ -15,7 +15,7 @@ build script (docs/BuildSystemPlan.md, section 6):
 | Setting | `program` | `build` |
 | --- | --- | --- |
 | Default effects | `io_out` | none, so a definition without `[effects]` cannot print |
-| `--allow-effects` | none | `file_read,heap_alloc` |
+| `--allow-effects` | none | `file_read,heap_alloc,build_run` |
 | `--allow-import` | none | `/std/build,/std/path,/std/file,/std/collections,/std/dir,/std/glob,/std/text` |
 | Optimization | `-O2` on the VM | `-O0` |
 | `--vm-schedule-seed` | eager schedule | `0`, a fixed deterministic schedule |
@@ -39,7 +39,7 @@ main() {
 `primevm sum.prime --profile build` and `primevm sum.prime` both exit 5. With `import /std/net/*` added,
 `--profile build` fails with `import /std/net/* is outside the allowed imports: /std/build,/std/path,/std/file,
 /std/collections,/std/dir,/std/glob,/std/text`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
-`[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc`.
+`[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc,build_run`.
 
 ### Dependency List
 `primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds
@@ -90,6 +90,22 @@ print `... skipped after a failure`, and the exit code is 1. A graph with a libr
 (duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
 compiler yet` or the problem. There is no command or function step yet.
 
+Stages. A script that must read what a step wrote (the files a generator produced) calls `graph.run()` on the graph it
+has built so far and then builds a second graph; `build` declares `effects(build_run, ...)`, which the profile grants
+(a definition that calls `run` without declaring it is the ordinary `requires build_run effect` diagnostic, and a
+subproject script will not be granted it: docs/BuildSystemPlan.md section 7). The command starts the dry run once per
+stage with the internal option `--stage <n>` (default 0), which reaches the script as its first program argument:
+the `run` that is call number `n` writes the export of the graph it was called on, with `"incomplete":true` after
+`problems`, and ends the script, so nothing after it executes; an earlier `run` returns at once. The command runs
+that graph and starts stage `n + 1`, until a dry run finishes without an incomplete export, which is the graph
+`build` returns. So `primec build --dry-run` shows the first stage and the marker, because the later stages depend on
+results that do not exist yet. Output: a build with more than one stage prints `stage <k>` before the steps of stage
+`k`; a failed stage stops the build. The stages share one cache, so a step that a later graph repeats is `up to
+date`; each stage reads the file system again, so a glob after a `run` sees the files the stage wrote. A script that
+is run as a plain program (no stage argument) treats `run` as a no-op. A script with more than 256 stages is an
+error. A step kind that writes PrimeStruct source does not exist yet (function steps, TODO-5919), so the first
+stage of a script today writes other files (`--emit=ir` output, executables).
+
 Glob inputs. A script that expands a pattern with `/std/glob` (docs/spec/stdlib-reference.md) passes the directories
 the glob listed to `b.watch("compile:app", listed)`, after the target is added. The graph export then carries
 `"inputDirs":[...]` on that node (sorted bytewise, without duplicates, written only when there are any), and a watch of a
@@ -119,7 +135,7 @@ The compiled `make.prime` has a cache entry of its own in the same directory (`m
 
 The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can
-write to standard output under a ceiling of `file_read,heap_alloc` while `make.prime` cannot declare `file_write`.
+write to standard output under a ceiling of `file_read,heap_alloc,build_run` while `make.prime` cannot declare `file_write`.
 
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include

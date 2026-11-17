@@ -330,7 +330,9 @@ module {
   (`1 << 14`) is the effect of `Mutex.locked` of `/std/sync`, with the same rule (`mutex operation requires lock
   effect`) and the same backends (docs/spec/vm-design.md, Mutexes). `channel` (`1 << 15`) is the effect of `send`,
   `receive` and `close` of a `Channel` of `/std/sync`, again with the same rule (`channel operation requires
-  channel effect`) and the same backends (docs/spec/vm-design.md, Conditions).
+  channel effect`) and the same backends (docs/spec/vm-design.md, Conditions). `build_run` (`1 << 16`) is the effect of
+  `Graph.run` of `/std/build`, which a build script uses to run its graph in stages (docs/spec/integration-and-tooling.md,
+  Build Command); the `build` run profile grants it with `file_read` and `heap_alloc`, so `make.prime` can declare it.
   `primec --allow-effects <list>` caps the effects of user code: a definition or top-level execution outside `/std/`
   whose `[effects(...)]` names an effect that is not in the comma-separated list, or that has no `[effects]` and
   receives a default effect outside the list (`--default-effects`, or `io_out`), is a diagnostic naming the

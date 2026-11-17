@@ -26,7 +26,8 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
     bool hasValue = false;
     const bool isJobs = argument == "--jobs" || argument.rfind("--jobs=", 0) == 0;
     const bool isOutDir = argument == "--out-dir" || argument.rfind("--out-dir=", 0) == 0;
-    if (isJobs || isOutDir) {
+    const bool isStage = argument == "--stage" || argument.rfind("--stage=", 0) == 0;
+    if (isJobs || isOutDir || isStage) {
       const size_t equals = argument.find('=');
       if (equals != std::string::npos) {
         value = argument.substr(equals + 1);
@@ -41,6 +42,16 @@ bool planBuildCommand(const std::vector<std::string> &buildArguments,
       }
       if (isOutDir) {
         outDir = value;
+        continue;
+      }
+      if (isStage) {
+        char *stageEnd = nullptr;
+        const long stage = std::strtol(value.c_str(), &stageEnd, 10);
+        if (value.empty() || *stageEnd != '\0' || stage < 0 || stage > 100000) {
+          error = "--stage expects a number";
+          return false;
+        }
+        plan.stage = static_cast<int>(stage);
         continue;
       }
       char *end = nullptr;

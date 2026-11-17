@@ -390,28 +390,17 @@ int runBuildGraph(const BuildGraphData &graph,
 
 namespace primec {
 
+namespace {
+
+// More stages than this are a script that never finishes (each `run` is one stage).
+constexpr int MaxBuildStages = 256;
+
+} // namespace
+
 int runBuildCommand(const BuildCommandPlan &plan,
                     const std::string &selfPath,
                     std::ostream &out,
                     std::ostream &err) {
-  std::vector<std::string> graphCommand = {selfPath, "build", "--dry-run", plan.projectDir};
-  for (const std::string &argument : plan.forwarded) {
-    graphCommand.push_back(argument);
-  }
-  std::string graphText;
-  std::string graphDiagnostics;
-  const int graphStatus = runProgramCaptured(graphCommand, "", graphText, graphDiagnostics);
-  if (graphStatus != 0) {
-    err << graphDiagnostics;
-    err << "primec build: the script " << plan.scriptPath << " did not produce a graph\n";
-    return graphStatus > 0 ? graphStatus : 1;
-  }
-  BuildGraphData graph;
-  std::string error;
-  if (!parseBuildGraphJson(graphText, graph, error)) {
-    err << "primec build: " << error << "\n";
-    return 1;
-  }
   BuildRunSettings settings;
   settings.primecPath = selfPath;
   settings.projectDir = plan.projectDir;
@@ -423,7 +412,40 @@ int runBuildCommand(const BuildCommandPlan &plan,
                           .lexically_normal()
                           .string();
   settings.jobs = plan.jobs > 0 ? plan.jobs : static_cast<int>(cores > 0 ? cores : 1);
-  return runBuildGraph(graph, settings, out, err);
+
+  // One dry run of the script per stage: stage N stops at the Nth `Graph.run` and exports the graph it ran; the stage
+  // after the last `run` is the graph the script returns. Every stage starts the script again, so the stages share
+  // the cache of the steps and a step a later graph repeats is up to date.
+  for (int stage = 0; stage < MaxBuildStages; ++stage) {
+    std::vector<std::string> graphCommand = {
+        selfPath, "build", "--dry-run", plan.projectDir, "--stage", std::to_string(stage)};
+    for (const std::string &argument : plan.forwarded) {
+      graphCommand.push_back(argument);
+    }
+    std::string graphText;
+    std::string graphDiagnostics;
+    const int graphStatus = runProgramCaptured(graphCommand, "", graphText, graphDiagnostics);
+    if (graphStatus != 0) {
+      err << graphDiagnostics;
+      err << "primec build: the script " << plan.scriptPath << " did not produce a graph\n";
+      return graphStatus > 0 ? graphStatus : 1;
+    }
+    BuildGraphData graph;
+    std::string error;
+    if (!parseBuildGraphJson(graphText, graph, error)) {
+      err << "primec build: " << error << "\n";
+      return 1;
+    }
+    if (graph.incomplete || stage > 0) {
+      out << "stage " << (stage + 1) << "\n";
+    }
+    const int status = runBuildGraph(graph, settings, out, err);
+    if (status != 0 || !graph.incomplete) {
+      return status;
+    }
+  }
+  err << "primec build: " << plan.scriptPath << " runs more than " << MaxBuildStages << " stages\n";
+  return 1;
 }
 
 } // namespace primec

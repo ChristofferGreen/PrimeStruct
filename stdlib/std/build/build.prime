@@ -8,6 +8,17 @@ import /std/text/view/*
 import /std/collections/vector/*
 import /std/json/*
 
+// The two host calls behind `Graph.run` (the VM and `--emit=optexe` answer them like the `__pstext_*` text calls): the gate
+// counts the calls of the process and says whether this one is the stage the runner asked for, and the stop prints the
+// text and ends the process.
+[host return<i32>]
+__pstext_stage_gate([i32] target) {
+}
+
+[host return<i32>]
+__pstext_stage_stop([Pointer<u8>] text, [u64] count) {
+}
+
 namespace std {
 namespace build {
 
@@ -324,6 +335,27 @@ namespace build {
     // graph with problems still exports, so a tool can show them. There are no hashes: those belong to the runner.
     [return<String> effects(heap_alloc)]
     export() {
+      return(this.exportStage(false))
+    }
+
+    // Runs this graph now (docs/BuildSystemPlan.md section 3): the build stage that the script has reached. The runner
+    // starts the script once per stage, giving the number of the stage it wants. A `run` before that stage returns at
+    // once, because the runner built it already; the call of the wanted stage writes the export of this graph with
+    // `"incomplete":true` and ends the script, so nothing after it runs (a `--dry-run` shows exactly that). Without a
+    // stage number (the script runs as a plain program) it does nothing. A script that calls it must declare the
+    // effect `build_run`, which the build profile grants to the root script.
+    [effects(build_run, heap_alloc)]
+    run() {
+      [i32] decision{__pstext_stage_gate(stage_target())}
+      if(decision == 1i32) {
+        [String] text{this.exportStage(true)}
+        [i32] stopped{__pstext_stage_stop(text.data, convert<u64>(text.count()))}
+      }
+    }
+
+    // `export`, with `"incomplete":true` after the problems when `incomplete` is set: later stages follow.
+    [return<String> effects(heap_alloc)]
+    exportStage([bool] incomplete) {
       [vector<i32>] order{sorted_order(this.nodes)}
       [Writer mut] json{Writer{}}
       json.beginObject()
@@ -340,9 +372,27 @@ namespace build {
         json.stringValue(this.buildProblems[i].view())
       }
       json.endArray()
+      if(incomplete) {
+        json.key("incomplete")
+        json.boolValue(true)
+      }
       json.endObject()
       return(json.out.view().toOwned())
     }
+  }
+
+  // The stage the runner asked for: the first program argument as a number, or -1 when there is none.
+  [return<i32> effects(heap_alloc)]
+  stage_target() {
+    [String] text{argumentText(1i32)}
+    if(text.count() == 0i32) {
+      return(-1i32)
+    }
+    [i32 mut] value{0i32}
+    for([i32 mut] i{0i32}, i < text.count(), i++) {
+      value = value * 10i32 + convert<i32>(text.byteAt(i) - 48u8)
+    }
+    return(value)
   }
 
   // `prefix` and `name` as one id.

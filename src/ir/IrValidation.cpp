@@ -22,7 +22,7 @@ constexpr uint64_t KnownEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectPathSpaceNotify | EffectPathSpaceInsert |
     EffectPathSpaceTake | EffectFileWrite | EffectGpuDispatch | EffectPathSpaceBind |
     EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic |
-    EffectLock | EffectChannel;
+    EffectLock | EffectChannel | EffectBuildRun;
 constexpr uint64_t KnownWasmWasiEffectMask =
     EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
