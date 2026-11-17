@@ -168,7 +168,7 @@ of sync with them.
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
-| TODO-6014 | A `primec build` spends 2.7 s compiling make.prime before it runs anything | ready | build-graph-defects |
+| TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | ready | build-graph-defects |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5918 | A script can run its graph in stages | ready | build-stages |
@@ -212,7 +212,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
-- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6014, TODO-6015
+- Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6015, TODO-6016
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -255,18 +255,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
 
-- [~] TODO-6014: A `primec build` spends 2.7 s compiling make.prime before it runs anything
+- [ ] TODO-6016: A first `primec build` of a script still spends 1.9 s compiling make.prime
   - owner: ai
   - status: ready
-  - claimed_by: build-script-cache (worktree agent-a8956bc0a875207d3), 2026-11-17
   - created_at: 2026-11-17
-  - phase: Build system (found while splitting the build_glob_cache tests, TODO-6013)
+  - phase: Build system (split from TODO-6014, which cached the compiled script and fixed the IR validator)
   - parallel_track: build-graph-defects
-  - scope: `primec build` of a graph whose make.prime imports `/std/build/*` and builds one `ir` step takes 2.7 s of compile before the step runs (3.6 s with `/std/glob`, release, unloaded, 2026-11-17), and an up-to-date second run costs the same. Each build_glob_cache case needs two runs, so it takes about 7.7 s, above the 5 s doctest guardrail. Find where the time goes (import parsing, semantics of the build stdlib, lowering) and cut it, for example by making the build stdlib imports lazy or caching the compiled graph script.
+  - scope: A `primec build` with no stored script (a new project, a changed make.prime, a compiler rebuild) compiles make.prime with `/std/build`, `/std/json`, `/std/text`, `/std/collections/vector` and `/std/file`: about 1.9 s in release, of which the semantic product facts are 55% (`SemanticsValidator::collectPilotRoutingSemanticProductFacts`, 19,089 facts for a graph script of 3,586 calls, a flat profile of path and method-target resolution), validation 20% and lowering plus validation of the IR 15%. `/std/build/Graph/export` inlines to 33,737 instructions and 7,765 locals (about 20 times the rest of the module) because every JSON writer call is inlined at each call site; real calls for those writers shrink lowering, validation and the cached IR. Measure each with `sample` on a build-release `primec build --dry-run`, and cut the largest: fewer facts for a VM-only consumer, or real calls for the stdlib writers.
   - acceptance:
-    - an up-to-date `primec build` of a one-step graph takes 1 s or less in release, so every build_glob_cache CTest entry runs in 5 s or less
+    - a cold `primec build --dry-run` of a one-step graph takes 1.2 s or less in release (1.9 s on 2026-11-17)
+    - `--dump-stage semantic-product` and `ir` dumps of existing programs are unchanged
     - full release gate green
-  - stop_rule: the compile of make.prime; not the step runner.
+  - stop_rule: the compile of make.prime; not the step runner and not the script cache.
 
 - [ ] TODO-6015: A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call
   - owner: ai

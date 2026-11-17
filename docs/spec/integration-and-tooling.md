@@ -115,6 +115,8 @@ no part. A step that fails, or whose inputs cannot be hashed, leaves no cache fi
 bytes. Not covered: a file that appears earlier on an import path than the one a step read (the compiler lists only
 files it read) and environment variables a host toolchain reads. There is no early cutoff on interface hashes (TODO-5929) and no shared cache.
 
+The compiled `make.prime` has a cache entry of its own in the same directory (`make-script-<digest>.cache` and `.cache.ir`): the serialized VM IR of the script, keyed by the compiler version, the compile arguments, the text of the script (with the appended runner import) and the import paths, with the content hashes of every file the compile read as dependencies. `primec build` (and `--dry-run`) loads a current entry instead of compiling the script and then runs it, so the script's globs and file reads happen on every run; a script that fails to compile stores nothing. The same limits apply (a file that appears earlier on an import path is not seen).
+
 The effect ceiling (`--allow-effects`) checks user code: definitions under `/std/` and definitions whose source is a
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can
 write to standard output under a ceiling of `file_read,heap_alloc` while `make.prime` cannot declare `file_write`.

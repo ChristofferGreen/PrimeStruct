@@ -166,8 +166,12 @@ TEST_CASE("a build with the cache deleted gives byte-identical outputs") {
   CHECK(rebuilt.out == BuiltBoth);
   CHECK(readFile((project.outDir() / "alpha").string()) == alpha);
   CHECK(readFile((project.outDir() / "beta").string()) == beta);
+}
 
-  // With the cache deleted but the outputs left in place the steps still run: nothing vouches for the outputs.
+TEST_CASE("with the cache deleted and the outputs left in place the steps still run") {
+  CacheProject project;
+  REQUIRE(project.build().status == 0);
+  // Nothing vouches for the outputs once the cache is gone.
   std::filesystem::remove_all(project.dir() / ".ps");
   CHECK(project.build().out == BuiltBoth);
 }

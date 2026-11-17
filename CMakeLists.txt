@@ -473,6 +473,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildGraphJson.cpp
   src/pipeline/BuildRunner.cpp
+  src/pipeline/BuildScriptCache.cpp
   src/pipeline/CliDriver.cpp
   src/pipeline/CliUsage.cpp
   src/pipeline/CompilePipeline.cpp
@@ -1392,6 +1393,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_graph.cpp
     tests/unit/backend_host/test_build_cache.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
+    tests/unit/backend_host/test_build_script_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
     tests/unit/backend_host/test_web.cpp
   )
@@ -1603,6 +1605,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_build_cache
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  # The compiled make.prime is cached in the project (tests/unit/backend_host/test_build_script_cache.cpp).
+  add_test(
+    NAME PrimeStruct_build_script_cache
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_script_cache"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_script_cache
+                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # A step whose glob listing changes runs again (tests/unit/backend_host/test_build_glob_cache.cpp).
   foreach(glob_cache_case
           "unchanged glob build" "appears in a listed directory" "appears in a listed subdirectory" "is renamed"

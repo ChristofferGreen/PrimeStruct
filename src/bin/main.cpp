@@ -1,5 +1,6 @@
 #include "primec/pipeline/BuildCommand.h"
 #include "primec/pipeline/BuildRunner.h"
+#include "primec/pipeline/BuildScriptCache.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/CompileArena.h"
 #include "primec/pipeline/CompilePipeline.h"
@@ -11,6 +12,7 @@
 #include "primec/pipeline/CliUsage.h"
 #include "primec/support/Options.h"
 #include "primec/support/OptionsParser.h"
+#include "primec/support/Sha256.h"
 
 #include <chrono>
 #include <cstdint>
@@ -199,6 +201,7 @@ bool runIrBackend(const primec::IrBackend &backend,
                   primec::SemanticProgram *semanticProgram,
                   const primec::ExpandedSource *expandedSource,
                   const primec::Options &options,
+                  const primec::BuildScriptCache *scriptCache,
                   primec::IrBackendEmitResult &result,
                   IrBackendRunFailure &failure) {
   failure = {};
@@ -222,6 +225,10 @@ bool runIrBackend(const primec::IrBackend &backend,
   if (!prepared) {
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
+  }
+  // The script of `primec build` is stored compiled, so the next run does not compile it again.
+  if (scriptCache != nullptr && expandedSource != nullptr) {
+    (void)scriptCache->store(ir, *expandedSource);
   }
   // IR preparation already released body-heavy AST storage. Drop the remaining
   // AST envelope and semantic-product payload before backend emission to cap RSS.
@@ -330,8 +337,9 @@ static std::optional<int> runCompileRepeats(primec::Options &options,
 
 // Writes the compiled program through the selected IR backend (or reports why it cannot).
 static int emitCompiledProgram(primec::Options &options,
-                        const primec::IrBackend *irBackend,
-                        primec::CompilePipelineOutput &pipelineOutput) {
+                               const primec::IrBackend *irBackend,
+                               const primec::BuildScriptCache *scriptCache,
+                               primec::CompilePipelineOutput &pipelineOutput) {
   std::string error;
   primec::Program &program = pipelineOutput.program;
   if (primec::isIrModuleDumpStage(options)) {
@@ -372,6 +380,7 @@ static int emitCompiledProgram(primec::Options &options,
                       semanticProgram,
                       &pipelineOutput.expandedSource,
                       options,
+                      scriptCache,
                       emitResult,
                       failure)) {
       if (failure.cliFailure.has_value()) {
@@ -422,6 +431,7 @@ int main(int argc, char **argv) {
   primec::BuildCommandPlan buildPlan;
   const bool isBuildCommand = argc >= 2 && std::string_view(argv[1]) == "build";
   std::vector<char *> buildArgv;
+  const std::string selfPath = isBuildCommand ? primec::selfExecutablePath(argv[0]) : std::string();
   if (isBuildCommand) {
     if (!primec::planBuildCommand(
             std::vector<std::string>(argv + 2, argv + argc), buildPlan, argError)) {
@@ -429,8 +439,7 @@ int main(int argc, char **argv) {
       return 2;
     }
     if (!buildPlan.dryRun) {
-      return primec::runBuildCommand(
-          buildPlan, primec::selfExecutablePath(argv[0]), std::cout, std::cerr);
+      return primec::runBuildCommand(buildPlan, selfPath, std::cout, std::cerr);
     }
     for (std::string &argument : buildPlan.arguments) {
       buildArgv.push_back(argument.data());
@@ -465,6 +474,35 @@ int main(int argc, char **argv) {
   }
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
+  // The compiled script of `primec build --dry-run` is cached in the project (include/primec/pipeline/BuildScriptCache.h):
+  // a current entry runs on the VM without compiling. A script that fails to run falls through to the compile, so its
+  // diagnostics are the ones of an ordinary run.
+  std::optional<primec::BuildScriptCache> scriptCache;
+  if (isBuildCommand && irBackend != nullptr && options.dumpStage.empty() &&
+      !options.benchmarkSemanticRepeatCompileCount.has_value()) {
+    std::string compilerHash;
+    if (!primec::sha256FileHex(selfPath, compilerHash)) {
+      compilerHash.clear();
+    }
+    scriptCache.emplace(primec::BuildScriptCache::cacheDirFor(buildPlan.projectDir),
+                        compilerHash,
+                        buildPlan.arguments,
+                        buildPlan.source,
+                        options.importPaths);
+    primec::IrModule cachedModule;
+    if (scriptCache->load(cachedModule)) {
+      primec::IrBackendEmitOptions emitOptions;
+      emitOptions.inputPath = options.inputPath;
+      emitOptions.programArgs = options.programArgs;
+      emitOptions.vmScheduleSeed = options.vmScheduleSeed;
+      primec::IrBackendEmitResult cachedResult;
+      std::string cachedError;
+      if (irBackend->emit(cachedModule, emitOptions, cachedResult, cachedError)) {
+        return cachedResult.exitCode;
+      }
+    }
+  }
+
   // TODO-5233/TODO-5234: one process-lifetime ScopedCompileArena, entered
   // once here and never reset - see docs/CompilerArenaAllocator.md for why
   // it's never reset. For --benchmark-semantic-repeat-count > 1 (a
@@ -489,5 +527,6 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  return emitCompiledProgram(options, irBackend, pipelineOutput);
+  return emitCompiledProgram(
+      options, irBackend, scriptCache ? &*scriptCache : nullptr, pipelineOutput);
 }

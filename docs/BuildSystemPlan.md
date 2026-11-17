@@ -165,6 +165,13 @@ are what bounds it, as with the embed API.
 - A glob is an input of a step too: `b.watch(id, listed)` records the directories a `/std/glob` call listed on the
   node, and the cache hashes each directory's listing (names and kinds). A directory that gains or loses an entry runs
   the step again (TODO-6009).
+- The compiled `make.prime` is cached too (TODO-6014): compiling the script with the build stdlib took 2.6 s of every
+  `primec build`, up to date or not. `primec build --dry-run` stores the script's VM IR as `make-script-*.cache.ir`
+  beside a cache entry whose key is the compiler version, the compile arguments, the script text and the import paths,
+  and whose deps are the content hashes of every file the compile read (`--emit-deps`, stdlib included). A run with a
+  current entry loads the IR and runs it; the script's own globs and file reads always run. An up-to-date build of a
+  one-step graph went from 2.64 s to 0.21 s; a build with no entry still compiles (1.9 s since the IR validator's
+  frame-address analysis stopped copying one bit per local at every edge).
 - The cache lives in `ProjectRoot/.ps/cache/` and is not committed; `.ps/metadata.json` of the AI workflow plan is.
 - This is one mechanism with the cross-invocation symbol cache of `docs/LibrarySymbolManifestLazyImports.md` (its
   Phase 5), at a different granularity; it should not become a second cache.

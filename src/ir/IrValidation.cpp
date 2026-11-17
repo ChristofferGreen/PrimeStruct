@@ -411,6 +411,54 @@ bool validateFunction(const IrModule &module,
 // meet at a block must arrive with the same operand-stack depth. The shared CFG
 // (IrCfg.h) propagates the depth from the entry, which starts at the function's
 // parameter count; unreachable code is not analyzed.
+// One bit per local slot, 64 to a word: the frame-address and task-handle analyses merge whole local sets at every CFG
+// edge, and a function inlined from a long body has thousands of locals and blocks.
+class LocalBits {
+public:
+  void assign(size_t count) {
+    words_.assign((count + 63) / 64, 0);
+    size_ = count;
+  }
+  size_t size() const {
+    return size_;
+  }
+  bool test(size_t index) const {
+    return ((words_[index >> 6] >> (index & 63)) & 1u) != 0;
+  }
+  void set(size_t index, bool value) {
+    const uint64_t mask = uint64_t{1} << (index & 63);
+    if (value) {
+      words_[index >> 6] |= mask;
+    } else {
+      words_[index >> 6] &= ~mask;
+    }
+  }
+  // this |= other; true when a bit turned on.
+  bool orWith(const LocalBits &other) {
+    uint64_t added = 0;
+    for (size_t w = 0; w < words_.size(); ++w) {
+      const uint64_t next = words_[w] | other.words_[w];
+      added |= next ^ words_[w];
+      words_[w] = next;
+    }
+    return added != 0;
+  }
+  // this &= other; true when a bit turned off.
+  bool andWith(const LocalBits &other) {
+    uint64_t removed = 0;
+    for (size_t w = 0; w < words_.size(); ++w) {
+      const uint64_t next = words_[w] & other.words_[w];
+      removed |= next ^ words_[w];
+      words_[w] = next;
+    }
+    return removed != 0;
+  }
+
+private:
+  std::vector<uint64_t> words_;
+  size_t size_ = 0;
+};
+
 bool validateStackBalance(const IrModule &module,
                           size_t functionIndex,
                           const IrFunction &function,
@@ -473,7 +521,7 @@ bool validateNoOwnFrameAddressReturn(const IrModule &module,
     return true; // validateStackBalance reports it
   }
   struct State {
-    std::vector<bool> locals;
+    LocalBits locals;
     std::vector<bool> stack;
   };
   std::vector<State> entry(cfg.blocks.size());
@@ -481,7 +529,7 @@ bool validateNoOwnFrameAddressReturn(const IrModule &module,
   if (cfg.blocks.empty()) {
     return true;
   }
-  entry[0].locals.assign(static_cast<size_t>(frameSlots), false);
+  entry[0].locals.assign(static_cast<size_t>(frameSlots));
   entry[0].stack.assign(function.parameterCount, false);
   seen[0] = true;
   std::vector<size_t> worklist = {0};
@@ -498,10 +546,10 @@ bool validateNoOwnFrameAddressReturn(const IrModule &module,
         stack.push_back(true);
         continue;
       case IrOpcode::LoadLocal:
-        stack.push_back(state.locals[static_cast<size_t>(inst.imm)]);
+        stack.push_back(state.locals.test(static_cast<size_t>(inst.imm)));
         continue;
       case IrOpcode::StoreLocal:
-        state.locals[static_cast<size_t>(inst.imm)] = stack.back();
+        state.locals.set(static_cast<size_t>(inst.imm), stack.back());
         stack.pop_back();
         continue;
       case IrOpcode::Dup:
@@ -545,12 +593,7 @@ bool validateNoOwnFrameAddressReturn(const IrModule &module,
       }
       State &into = entry[successor];
       bool changed = false;
-      for (size_t k = 0; k < into.locals.size(); ++k) {
-        if (state.locals[k] && !into.locals[k]) {
-          into.locals[k] = true;
-          changed = true;
-        }
-      }
+      changed = into.locals.orWith(state.locals);
       for (size_t k = 0; k < into.stack.size() && k < state.stack.size(); ++k) {
         if (state.stack[k] && !into.stack[k]) {
           into.stack[k] = true;
@@ -590,12 +633,12 @@ bool validateTaskWaitOperands(const IrModule &module,
     return true; // validateStackBalance reports it
   }
   struct State {
-    std::vector<bool> locals;
+    LocalBits locals;
     std::vector<bool> stack;
   };
   std::vector<State> entry(cfg.blocks.size());
   std::vector<bool> seen(cfg.blocks.size(), false);
-  entry[0].locals.assign(static_cast<size_t>(frameSlots), false);
+  entry[0].locals.assign(static_cast<size_t>(frameSlots));
   entry[0].stack.assign(function.parameterCount, false);
   seen[0] = true;
   std::vector<size_t> worklist = {0};
@@ -609,10 +652,10 @@ bool validateTaskWaitOperands(const IrModule &module,
       auto &stack = state.stack;
       switch (inst.op) {
       case IrOpcode::LoadLocal:
-        stack.push_back(state.locals[static_cast<size_t>(inst.imm)]);
+        stack.push_back(state.locals.test(static_cast<size_t>(inst.imm)));
         continue;
       case IrOpcode::StoreLocal:
-        state.locals[static_cast<size_t>(inst.imm)] = stack.back();
+        state.locals.set(static_cast<size_t>(inst.imm), stack.back());
         stack.pop_back();
         continue;
       case IrOpcode::Dup:
@@ -645,12 +688,7 @@ bool validateTaskWaitOperands(const IrModule &module,
       // A value is a handle at a join only when it is one on every path into it.
       State &into = entry[successor];
       bool changed = false;
-      for (size_t k = 0; k < into.locals.size(); ++k) {
-        if (into.locals[k] && !state.locals[k]) {
-          into.locals[k] = false;
-          changed = true;
-        }
-      }
+      changed = into.locals.andWith(state.locals);
       for (size_t k = 0; k < into.stack.size() && k < state.stack.size(); ++k) {
         if (into.stack[k] && !state.stack[k]) {
           into.stack[k] = false;
