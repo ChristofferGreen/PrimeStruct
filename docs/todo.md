@@ -252,9 +252,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6005: A view of an indexed element dangles after the expression that made it
+- [~] TODO-6005: A view of an indexed element dangles after the expression that made it
   - owner: ai
   - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
   - parallel_track: build-graph-defects
@@ -264,9 +265,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: views of vector elements and of their fields.
 
-- [ ] TODO-6006: The diagnostic for storing a read-only struct parameter says how to fix it
+- [~] TODO-6006: The diagnostic for storing a read-only struct parameter says how to fix it
   - owner: ai
   - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
   - parallel_track: build-graph-defects
@@ -276,9 +278,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: this message; the borrow rules stay as they are.
 
-- [ ] TODO-6007: `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method
+- [~] TODO-6007: `this.nodes.count()` inside a struct that has its own `count` method calls the struct's method
   - owner: ai
   - status: ready
+  - claimed_by: owner-fixes (worktree-agent-aae5f2ee5c789cf7f), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by the build graph (stdlib/std/build/build.prime)
   - parallel_track: build-graph-defects
