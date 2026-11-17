@@ -53,6 +53,39 @@ TEST_CASE("the build graph export matches the golden file on the VM") {
   CHECK(readFile(out) == readFile(FixtureDir + "build_graph.golden.json"));
 }
 
+// The helpers of the export take no vector parameter (a real call cannot), so they are functions of the module
+// and `Graph/exportStage` stays small; inlined, it was 40,188 instructions and every `primec build` paid for lowering,
+// validating and caching them.
+TEST_CASE("the graph export is lowered to real calls on the VM") {
+  const std::string out = scratch("vm_lowered.txt");
+  const int status = run(shellQuote(Primec) + " --emit=vm --dump-stage ir-lowered " +
+                         shellQuote(FixtureDir + "build_graph.prime") + " > " + shellQuote(out) +
+                         " 2> " + shellQuote(out + ".err"));
+  REQUIRE_MESSAGE(status == 0, readFile(out + ".err"));
+  const std::string listing = readFile(out);
+  const auto instructionsOf = [&](const std::string &path) -> long {
+    const size_t at = listing.find(" " + path + " parameters=");
+    if (at == std::string::npos) {
+      return -1;
+    }
+    const size_t eol = listing.find('\n', at);
+    const size_t count = listing.find("instructions=", at);
+    if (count == std::string::npos || count > eol) {
+      return -1;
+    }
+    return std::strtol(listing.c_str() + count + std::string("instructions=").size(), nullptr, 10);
+  };
+  for (const char *helper : {"/std/build/Graph/writeNodes",
+                             "/std/build/Graph/writeProblems",
+                             "/std/build/Graph/sortNodes",
+                             "/std/build/Compiler/writeImportPaths"}) {
+    CHECK_MESSAGE(instructionsOf(helper) > 0, helper << " is not a function of the module");
+  }
+  const long exportStage = instructionsOf("/std/build/Graph/exportStage");
+  CHECK(exportStage > 0);
+  CHECK_MESSAGE(exportStage < 12000, "exportStage has " << exportStage << " instructions");
+}
+
 TEST_CASE("the build graph export matches the golden file through optexe") {
   const std::string exe = scratch("build_graph");
   const std::string log = exe + ".log";

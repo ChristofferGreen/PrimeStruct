@@ -1,8 +1,7 @@
 // examples/apps/text_editor/make.prime (TODO-5920) builds PrimeScroll the way scripts/build_native_app.sh does. The
 // case runs `primec build --dry-run` on a copy of that folder and compares the graph with
-// tests/fixtures/build/primescroll_dry_run.golden.json, then checks the headless backend's link arguments. The cold
-// compile of make.prime is the cost of the case (about 2.5 s); nothing is built, since linking the editor needs the
-// UI backend libraries and takes longer than the gate allows for one test.
+// tests/fixtures/build/primescroll_dry_run.golden.json, then checks the headless backend's link arguments. Nothing
+// is built: linking the editor needs the UI backend libraries.
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"

@@ -175,8 +175,11 @@ are what bounds it, as with the embed API.
   beside a cache entry whose key is the compiler version, the compile arguments, the script text and the import paths,
   and whose deps are the content hashes of every file the compile read (`--emit-deps`, stdlib included). A run with a
   current entry loads the IR and runs it; the script's own globs and file reads always run. An up-to-date build of a
-  one-step graph went from 2.64 s to 0.21 s; a build with no entry still compiles (1.9 s since the IR validator's
-  frame-address analysis stopped copying one bit per local at every edge).
+  one-step graph went from 2.64 s to 0.21 s; a build with no entry still compiles: 2.6 s, then 1.9 s once the IR validator's
+  frame-address analysis stopped copying one bit per local at every edge, then about 1.0 s (TODO-6016: the semantic product
+  memoizes the return binding of a definition and the type text of a receiver chain, and the export helpers of
+  `/std/build` are methods that read their own vector fields, so they are real calls and `Graph/exportStage` is 6,300
+  instructions, not 40,000).
 - The cache lives in `ProjectRoot/.ps/cache/` and is not committed; `.ps/metadata.json` of the AI workflow plan is.
 - This is one mechanism with the cross-invocation symbol cache of `docs/LibrarySymbolManifestLazyImports.md` (its
   Phase 5), at a different granularity; it should not become a second cache.

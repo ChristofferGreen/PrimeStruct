@@ -1,6 +1,6 @@
 // `b.subproject("dir")` of /std/build (docs/BuildSystemPlan.md section 7): `primec build` runs the make.prime of
 // each named folder in a VM run of its own and merges the graphs under the folder's name. A `primec build` compiles each
-// script with the build stdlib, about 2 s cold, and keeps the compiled script in the project, so every case keeps its
+// script with the build stdlib, about 1.2 s cold, and keeps the compiled script in the project, so every case keeps its
 // number of scripts and of levels (a level of scripts runs at once) small, and each case is a CTest entry of its own
 // (CMakeLists.txt).
 #include "primec/pipeline/BuildGraphJson.h"

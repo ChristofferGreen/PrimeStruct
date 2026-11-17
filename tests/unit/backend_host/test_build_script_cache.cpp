@@ -1,6 +1,6 @@
 // The compiled make.prime of `primec build` is cached in the project (include/primec/pipeline/BuildScriptCache.h,
 // docs/BuildSystemPlan.md section 8). The first cases drive the class with a tiny module and a scratch dependency file,
-// so they compile nothing; the last two run `primec build --dry-run` on a project, which compiles make.prime once (about 2 s); an edit of the
+// so they compile nothing; the last two run `primec build --dry-run` on a project, which compiles make.prime once (about 1.2 s); an edit of the
 // script is another key, which the key case covers without a second compile.
 #include "primec/pipeline/BuildScriptCache.h"
 #include "primec/testing/TestScratch.h"

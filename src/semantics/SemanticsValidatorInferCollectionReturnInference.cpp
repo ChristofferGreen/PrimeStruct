@@ -19,6 +19,29 @@ namespace primec::semantics {
 using namespace collectionReturnInferenceHelpers;
 
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
+  if (callSnapshotMemoDepth_ == 0) {
+    return inferDefinitionReturnBindingUncached(def, bindingOut);
+  }
+  if (const auto it = returnBindingMemo_.find(&def); it != returnBindingMemo_.end()) {
+    if (it->second.ok) {
+      bindingOut = it->second.binding;
+    }
+    return it->second.ok;
+  }
+  const uint64_t cycleHitsBefore = inferenceCycleHits_;
+  BindingInfo inferred = bindingOut;
+  const bool ok = inferDefinitionReturnBindingUncached(def, inferred);
+  if (ok) {
+    bindingOut = inferred;
+  }
+  if (cycleHitsBefore == inferenceCycleHits_) {
+    returnBindingMemo_.emplace(&def, ReturnBindingMemoEntry{ok, std::move(inferred)});
+  }
+  return ok;
+}
+
+bool SemanticsValidator::inferDefinitionReturnBindingUncached(const Definition &def,
+                                                              BindingInfo &bindingOut) {
   auto findDefParamBinding = [&](const std::vector<ParameterInfo> &defParams,
                                  const std::string &name) -> const BindingInfo * {
     for (const auto &param : defParams) {
@@ -200,6 +223,7 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
   }
 
   if (!returnBindingInferenceStack_.insert(def.fullPath).second) {
+    ++inferenceCycleHits_;
     return false;
   }
   struct ReturnBindingInferenceScopeGuard {

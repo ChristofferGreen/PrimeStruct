@@ -99,25 +99,53 @@ namespace build {
       json.key("entry")
       json.stringValue(this.entryPath.view())
       json.key("import_paths")
-      write_list(json, this.importPaths)
+      this.writeImportPaths(json)
       json.key("transforms")
-      write_list(json, this.transforms)
+      this.writeTransforms(json)
       json.key("default_effects")
-      write_list(json, this.defaultEffects)
+      this.writeDefaultEffects(json)
       json.key("link_args")
-      write_list(json, this.linkArgs)
+      this.writeLinkArgs(json)
       json.endObject()
     }
-  }
 
-  // `values` as a JSON array of strings, in order.
-  [effects(heap_alloc)]
-  write_list([Reference<Writer>] json, [Reference<vector<String>>] values) {
+    // Each list as a JSON array of strings, in order. They are methods of their own because a vector cannot be the
+    // parameter of a real call: one shared writer function would be inlined into every caller.
+    [effects(heap_alloc)]
+    writeImportPaths([Reference<Writer>] json) {
     json.beginArray()
-    for([i32 mut] i{0i32}, i < values.count(), i++) {
-      json.stringValue(values[i].view())
+    for([i32 mut] i{0i32}, i < this.importPaths.count(), i++) {
+      json.stringValue(this.importPaths[i].view())
     }
     json.endArray()
+    }
+
+    [effects(heap_alloc)]
+    writeTransforms([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.transforms.count(), i++) {
+      json.stringValue(this.transforms[i].view())
+    }
+    json.endArray()
+    }
+
+    [effects(heap_alloc)]
+    writeDefaultEffects([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.defaultEffects.count(), i++) {
+      json.stringValue(this.defaultEffects[i].view())
+    }
+    json.endArray()
+    }
+
+    [effects(heap_alloc)]
+    writeLinkArgs([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.linkArgs.count(), i++) {
+      json.stringValue(this.linkArgs[i].view())
+    }
+    json.endArray()
+    }
   }
 
   // One node of the graph. `kind` is "compile", "executable", "library" or "link". A compile step, an executable and
@@ -166,7 +194,7 @@ namespace build {
         json.rawValue(this.compilerJson.view())
         if(this.inputDirs.count() > 0i32) {
           json.key("inputDirs")
-          write_list(json, this.inputDirs)
+          this.writeInputDirs(json)
         }
       }
       json.key("runnable")
@@ -178,6 +206,15 @@ namespace build {
       json.endObject()
     }
 
+    [effects(heap_alloc)]
+    writeInputDirs([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.inputDirs.count(), i++) {
+      json.stringValue(this.inputDirs[i].view())
+    }
+    json.endArray()
+    }
+
     // This node alone as JSON text (the order of nodes with the same id is decided by it).
     [return<String> effects(heap_alloc)]
     render() {
@@ -185,45 +222,6 @@ namespace build {
       this.write(json)
       return(json.out.view().toOwned())
     }
-  }
-
-  // True when node `left` sorts before node `right`: by id, then by their JSON text, so even a graph with two nodes of
-  // one id (which the export reports) exports the same whatever the order of the calls.
-  [return<bool> effects(heap_alloc)]
-  sorts_before([Node] left, [Node] right) {
-    [i32] order{left.id.view().compare(right.id.view())}
-    if(order != 0i32) {
-      return(order < 0i32)
-    }
-    return(left.render().view().compare(right.render().view()) < 0i32)
-  }
-
-  // The indices of `nodes` in export order.
-  [return<vector<i32>> effects(heap_alloc)]
-  sorted_order([Reference<vector<Node>>] nodes) {
-    [vector<i32> mut] order{vector<i32>{}}
-    for([i32 mut] i{0i32}, i < nodes.count(), i++) {
-      [i32 mut] slot{order.count()}
-      order.push(i)
-      while(slot > 0i32 && sorts_before(nodes[i], nodes[order[slot - 1i32]])) {
-        order[slot] = order[slot - 1i32]
-        slot = slot - 1i32
-      }
-      order[slot] = i
-    }
-    return(order)
-  }
-
-  // True when some node of `nodes` has the id `id`.
-  [return<bool>]
-  has_node([Reference<vector<Node>>] nodes, [StringView] id) {
-    for([i32 mut] i{0i32}, i < nodes.count(), i++) {
-      [String] candidate{nodes[i].id}
-      if(candidate.view().equals(id)) {
-        return(true)
-      }
-    }
-    return(false)
   }
 
   // The four parts as one text.
@@ -234,43 +232,6 @@ namespace build {
     text.appendBytes(middle.data, middle.count())
     text.appendBytes(second.data, second.count())
     return(text)
-  }
-
-  // The nodes in export order, as the elements of a JSON array.
-  [effects(heap_alloc)]
-  write_nodes([Reference<vector<Node>>] nodes, [Reference<vector<i32>>] order, [Reference<Writer>] json) {
-    for([i32 mut] i{0i32}, i < order.count(), i++) {
-      nodes[order[i]].write(json)
-    }
-  }
-
-  // The problems of a graph, in node order: every id that two nodes share and every link edge that names a target that
-  // is not in the graph. `order` is the export order of `nodes`.
-  [effects(heap_alloc)]
-  write_problems([Reference<vector<Node>>] nodes, [Reference<vector<i32>>] order, [Reference<Writer>] json) {
-    for([i32 mut] i{0i32}, i < order.count(), i++) {
-      // The ids are copied into locals: a view of a vector element would not outlive the expression that made it.
-      [String] id{nodes[order[i]].id}
-      if(i > 0i32) {
-        [String] previous{nodes[order[i - 1i32]].id}
-        [bool] repeated{previous.view().equals(id.view())}
-        if(repeated) {
-          json.stringValue(problem_text("duplicate id ", id.view(), "", "").view())
-        }
-      }
-      if(nodes[order[i]].isLink()) {
-        [String] fromId{nodes[order[i]].fromId}
-        [String] toId{nodes[order[i]].toId}
-        [bool] hasExecutable{has_node(nodes, fromId.view())}
-        if(!hasExecutable) {
-          json.stringValue(problem_text("link ", id.view(), " names a missing executable ", fromId.view()).view())
-        }
-        [bool] hasLibrary{has_node(nodes, toId.view())}
-        if(!hasLibrary) {
-          json.stringValue(problem_text("link ", id.view(), " names a missing library ", toId.view()).view())
-        }
-      }
-    }
   }
 
   // Inserts `item` into the sorted `items`, bytewise, unless it is there already (the vector is rebuilt: see TODO-6010).
@@ -454,6 +415,8 @@ namespace build {
     [public vector<String> mut] subprojectDirs{vector<String>{}}
     // The options `Build.option` declared, with the values of this run; exported sorted by name.
     [public vector<OptionDecl> mut] options{vector<OptionDecl>{}}
+    // The indices of `nodes` in export order, filled by `sortNodes`.
+    [vector<i32> mut] order{vector<i32>{}}
 
     // Records an option. Declaring a name again with the same type and default is one declaration; with another type or
     // default it is a problem of the export.
@@ -482,6 +445,92 @@ namespace build {
       this.nodes.push(node)
     }
 
+    // True when the node at `left` sorts before the node at `right`: by id, then by their JSON text, so even a graph with
+    // two nodes of one id (which the export reports) exports the same whatever the order of the calls.
+    [return<bool> effects(heap_alloc)]
+    sortsBefore([i32] left, [i32] right) {
+      [i32] byId{this.nodes[left].id.view().compare(this.nodes[right].id.view())}
+      if(byId != 0i32) {
+        return(byId < 0i32)
+      }
+      [String] leftText{this.nodes[left].render()}
+      [String] rightText{this.nodes[right].render()}
+      return(leftText.view().compare(rightText.view()) < 0i32)
+    }
+
+    // Fills `order` with the indices of `nodes` in export order.
+    [mut effects(heap_alloc)]
+    sortNodes() {
+      this.order.clear()
+      for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+        [i32 mut] slot{this.order.count()}
+        this.order.push(i)
+        while(slot > 0i32 && this.sortsBefore(i, this.order[slot - 1i32])) {
+          this.order[slot] = this.order[slot - 1i32]
+          slot = slot - 1i32
+        }
+        this.order[slot] = i
+      }
+    }
+
+    [effects(heap_alloc)]
+    writeSubprojects([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.subprojectDirs.count(), i++) {
+      json.stringValue(this.subprojectDirs[i].view())
+    }
+    json.endArray()
+    }
+
+    // True when some node has the id `id`.
+    [return<bool>]
+    hasNode([StringView] id) {
+      for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+        [String] candidate{this.nodes[i].id}
+        if(candidate.view().equals(id)) {
+          return(true)
+        }
+      }
+      return(false)
+    }
+
+    // The nodes in export order, as the elements of a JSON array.
+    [effects(heap_alloc)]
+    writeNodes([Reference<Writer>] json) {
+      for([i32 mut] i{0i32}, i < this.order.count(), i++) {
+        this.nodes[this.order[i]].write(json)
+      }
+    }
+
+    // The problems of a graph, in node order: every id that two nodes share and every link edge that names a target that
+    // is not in the graph. `order` is the export order of `nodes`.
+    [effects(heap_alloc)]
+    writeProblems([Reference<Writer>] json) {
+      for([i32 mut] i{0i32}, i < this.order.count(), i++) {
+        // The ids are copied into locals: a view of a vector element would not outlive the expression that made it.
+        [String] id{this.nodes[this.order[i]].id}
+        if(i > 0i32) {
+          [String] previous{this.nodes[this.order[i - 1i32]].id}
+          [bool] repeated{previous.view().equals(id.view())}
+          if(repeated) {
+            json.stringValue(problem_text("duplicate id ", id.view(), "", "").view())
+          }
+        }
+        if(this.nodes[this.order[i]].isLink()) {
+          [String] fromId{this.nodes[this.order[i]].fromId}
+          [String] toId{this.nodes[this.order[i]].toId}
+          [bool] hasExecutable{this.hasNode(fromId.view())}
+          if(!hasExecutable) {
+            json.stringValue(problem_text("link ", id.view(), " names a missing executable ", fromId.view()).view())
+          }
+          [bool] hasLibrary{this.hasNode(toId.view())}
+          if(!hasLibrary) {
+            json.stringValue(problem_text("link ", id.view(), " names a missing library ", toId.view()).view())
+          }
+        }
+      }
+    }
+
     // The graph as JSON: {"version":1,"nodes":[...],"problems":[...]}. Nodes are sorted by id. `problems` lists, in
     // that order, every id that two nodes share and every link edge that names a target that is not in the graph; a
     // graph with problems still exports, so a tool can show them. There are no hashes: those belong to the runner.
@@ -508,25 +557,25 @@ namespace build {
     // `export`, with `"incomplete":true` after the problems when `incomplete` is set: later stages follow.
     [return<String> effects(heap_alloc)]
     exportStage([bool] incomplete) {
-      [vector<i32>] order{sorted_order(this.nodes)}
+      this.sortNodes()
       [Writer mut] json{Writer{}}
       json.beginObject()
       json.key("version")
       json.i64Value(convert<i64>(export_version()))
       json.key("nodes")
       json.beginArray()
-      write_nodes(this.nodes, order, json)
+      this.writeNodes(json)
       json.endArray()
       json.key("problems")
       json.beginArray()
-      write_problems(this.nodes, order, json)
+      this.writeProblems(json)
       for([i32 mut] i{0i32}, i < this.buildProblems.count(), i++) {
         json.stringValue(this.buildProblems[i].view())
       }
       json.endArray()
       if(this.subprojectDirs.count() > 0i32) {
         json.key("subprojects")
-        write_list(json, this.subprojectDirs)
+        this.writeSubprojects(json)
       }
       if(this.options.count() > 0i32) {
         [vector<i32>] optionOrder{sorted_option_order(this.options)}

@@ -1,5 +1,5 @@
 // `b.option` of /std/build and `primec build --option` / `--list-options` (docs/BuildSystemPlan.md section 5). A `primec
-// build` compiles each script with the build stdlib, about 2 s cold, and keeps the compiled script in the project, so
+// build` compiles each script with the build stdlib, about 1.2 s cold, and keeps the compiled script in the project, so
 // each case that runs scripts has one project with as few scripts as it can, and each case is a CTest entry of its own
 // (CMakeLists.txt). The options reach the script as program arguments, so they are not part of the script cache key.
 #include "primec/pipeline/BuildCommand.h"
@@ -140,8 +140,6 @@ TEST_CASE("options reach the root script and the list matches the golden file") 
   CHECK(list.out == readFile(FixtureDir + "options/list_options.golden.txt"));
 }
 
-// Two scripts compile cold here (about 2.5 s of CPU each, at once), which is the cost of the case; nothing else in it
-// compiles or builds.
 TEST_CASE("an option reaches the scripts of a subproject and is listed once") {
   Project project("build_options_sub");
   project.write(

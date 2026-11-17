@@ -1593,24 +1593,38 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_build_graph_profile
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_build_command
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.build_graph"
-            "--test-case=*primec build*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_build_command
-                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  # Each case compiles make.prime cold (about 1.2 s), so each is a CTest entry of its own.
+  foreach(command_case
+          "--dry-run prints" "--dry-run finds" "two independent steps" "stops the steps after it" "rejects a graph with a library"
+          "rejects a bad --jobs" "reports the diagnostics of a broken" "when the directory has none" "for a script with a type error"
+          "rejects an effect outside")
+    string(MAKE_C_IDENTIFIER "${command_case}" command_id)
+    add_test(
+      NAME PrimeStruct_build_command_${command_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_graph"
+              "--test-case=*${command_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_command_${command_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
   # `primec build` skips steps whose inputs did not change (tests/unit/backend_host/test_build_cache.cpp).
-  add_test(
-    NAME PrimeStruct_build_cache
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.build_cache"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_build_cache
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  foreach(cache_case
+          "second run of an unchanged" "touching an unrelated file" "changing an imported file" "changing a compiler setting"
+          "deleting or replacing an output" "gives byte-identical outputs" "outputs left in place" "failed step leaves no cache"
+          "damaged cache file" "names its hash scheme" "sha256 matches")
+    string(MAKE_C_IDENTIFIER "${cache_case}" cache_id)
+    add_test(
+      NAME PrimeStruct_build_cache_${cache_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_cache"
+              "--test-case=*${cache_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_cache_${cache_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
   # The compiled make.prime is cached in the project (tests/unit/backend_host/test_build_script_cache.cpp).
   add_test(
     NAME PrimeStruct_build_script_cache

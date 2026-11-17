@@ -1,6 +1,7 @@
 #pragma once
 
   bool inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut);
+  bool inferDefinitionReturnBindingUncached(const Definition &def, BindingInfo &bindingOut);
   bool inferQueryExprTypeText(const Expr &expr,
                               const std::vector<ParameterInfo> &params,
                               const std::unordered_map<std::string, BindingInfo> &locals,

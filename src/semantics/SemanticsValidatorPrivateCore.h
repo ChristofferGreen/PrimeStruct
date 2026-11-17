@@ -187,6 +187,9 @@
                               const std::unordered_map<std::string, BindingInfo> &activeLocals,
                               const Expr &expr,
                               QuerySnapshotData &out);
+  uint64_t
+  snapshotEnvironmentHash(const std::vector<ParameterInfo> &defParams,
+                          const std::unordered_map<std::string, BindingInfo> &activeLocals) const;
   bool inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
                              const std::unordered_map<std::string, BindingInfo> &activeLocals,
                              const Expr &expr,

@@ -111,9 +111,11 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
   const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
   std::function<bool(const Expr &, std::string &)> inferExprTypeText;
-  inferExprTypeText = [&](const Expr &candidate, std::string &currentTypeTextOut) -> bool {
+  std::function<bool(const Expr &, std::string &)> inferExprTypeTextUncached;
+  inferExprTypeTextUncached = [&](const Expr &candidate, std::string &currentTypeTextOut) -> bool {
     currentTypeTextOut.clear();
     if (!queryTypeInferenceExprStack_.insert(&candidate).second) {
+      ++inferenceCycleHits_;
       return false;
     }
     struct ExprTypeScopeGuard {
@@ -967,6 +969,32 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     return !currentTypeTextOut.empty();
   };
 
+  // inside a CallSnapshotMemoScope (AST stable) the type text of an expression is a function of the expression
+  // and its environment, so the receiver chain `a.b.c` infers `a.b` and `a` once for every call that asks for them.
+  std::optional<uint64_t> environmentHash;
+  inferExprTypeText = [&](const Expr &candidate, std::string &currentTypeTextOut) -> bool {
+    if (callSnapshotMemoDepth_ == 0) {
+      return inferExprTypeTextUncached(candidate, currentTypeTextOut);
+    }
+    if (!environmentHash.has_value()) {
+      environmentHash = snapshotEnvironmentHash(params, locals);
+    }
+    QueryTextMemoKey key;
+    key.expr = &candidate;
+    key.definitionOwner = currentDefinitionContext_;
+    key.executionOwner = currentExecutionContext_;
+    key.environmentHash = *environmentHash;
+    if (const auto it = queryTextMemo_.find(key); it != queryTextMemo_.end()) {
+      currentTypeTextOut = it->second.typeText;
+      return it->second.ok;
+    }
+    const uint64_t cycleHitsBefore = inferenceCycleHits_;
+    const bool ok = inferExprTypeTextUncached(candidate, currentTypeTextOut);
+    if (cycleHitsBefore == inferenceCycleHits_ && error_.empty()) {
+      queryTextMemo_.emplace(key, QueryTextMemoEntry{ok, currentTypeTextOut});
+    }
+    return ok;
+  };
   return inferExprTypeText(expr, typeTextOut);
 }
 

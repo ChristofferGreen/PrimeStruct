@@ -1,7 +1,7 @@
 // A script that runs its graph in stages (docs/BuildSystemPlan.md section 3, `Graph.run` of /std/build). make.prime
 // builds a first graph with one step that writes `first.txt` (an `--emit=ir` step: no step kind writes PrimeStruct
 // source yet), runs it, lists the `*.txt` files in the output directory and builds a second graph with one step for each.
-// A `primec build` compiles make.prime with the build stdlib once, about 2 s, and keeps the compiled script in the
+// A `primec build` compiles make.prime with the build stdlib once, about 1.2 s, and keeps the compiled script in the
 // project, so the later runs of a case cost a fraction of that. Each case is a CTest entry of its own (CMakeLists.txt).
 #include "primec/pipeline/BuildCommand.h"
 #include "primec/pipeline/BuildGraphJson.h"

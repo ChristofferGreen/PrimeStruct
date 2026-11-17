@@ -112,21 +112,9 @@ uint64_t bindingFingerprint(const BindingInfo &binding) {
 
 } // namespace
 
-// TODO-5382: inside a CallSnapshotMemoScope (semantic-product publication, AST
-// stable) the answer is memoized per expression and environment fingerprint;
-// the same call is otherwise re-inferred once per enclosing call and per
-// snapshot pass.
-bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> &defParams,
-                                               const std::unordered_map<std::string, BindingInfo> &activeLocals,
-                                               const Expr &expr,
-                                               CallSnapshotData &out) {
-  if (callSnapshotMemoDepth_ == 0) {
-    return inferCallSnapshotDataUncached(defParams, activeLocals, expr, out);
-  }
-  CallSnapshotMemoKey key;
-  key.expr = &expr;
-  key.definitionOwner = currentDefinitionContext_;
-  key.executionOwner = currentExecutionContext_;
+uint64_t SemanticsValidator::snapshotEnvironmentHash(
+    const std::vector<ParameterInfo> &defParams,
+    const std::unordered_map<std::string, BindingInfo> &activeLocals) const {
   uint64_t environment = defParams.size();
   for (const ParameterInfo &param : defParams) {
     mixHash(environment, param.name);
@@ -143,7 +131,26 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     localsHash += entry * 0x9e3779b97f4a7c15ULL;
   }
   mixHash(environment, localsHash);
-  key.environmentHash = environment;
+  return environment;
+}
+
+// TODO-5382: inside a CallSnapshotMemoScope (semantic-product publication, AST
+// stable) the answer is memoized per expression and environment fingerprint;
+// the same call is otherwise re-inferred once per enclosing call and per
+// snapshot pass.
+bool SemanticsValidator::inferCallSnapshotData(
+    const std::vector<ParameterInfo> &defParams,
+    const std::unordered_map<std::string, BindingInfo> &activeLocals,
+    const Expr &expr,
+    CallSnapshotData &out) {
+  if (callSnapshotMemoDepth_ == 0) {
+    return inferCallSnapshotDataUncached(defParams, activeLocals, expr, out);
+  }
+  CallSnapshotMemoKey key;
+  key.expr = &expr;
+  key.definitionOwner = currentDefinitionContext_;
+  key.executionOwner = currentExecutionContext_;
+  key.environmentHash = snapshotEnvironmentHash(defParams, activeLocals);
   if (const auto it = callSnapshotMemo_.find(key); it != callSnapshotMemo_.end()) {
     out = it->second.data;
     return it->second.ok;

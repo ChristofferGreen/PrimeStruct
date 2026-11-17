@@ -558,6 +558,42 @@ private:
   ValidationState currentValidationState_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;
+  // inside a CallSnapshotMemoScope (AST stable) the result of
+  // inferDefinitionReturnBinding is a pure function of the definition, except
+  // for an answer that was cut short by a cycle (inferenceCycleHits_ counts
+  // those, and such an answer is not memoized).
+  struct ReturnBindingMemoEntry {
+    bool ok = false;
+    BindingInfo binding;
+  };
+  std::unordered_map<const Definition *, ReturnBindingMemoEntry> returnBindingMemo_;
+  uint64_t inferenceCycleHits_ = 0;
+  struct QueryTextMemoKey {
+    const Expr *expr = nullptr;
+    const Definition *definitionOwner = nullptr;
+    const Execution *executionOwner = nullptr;
+    uint64_t environmentHash = 0;
+    bool operator==(const QueryTextMemoKey &other) const {
+      return expr == other.expr && definitionOwner == other.definitionOwner &&
+             executionOwner == other.executionOwner && environmentHash == other.environmentHash;
+    }
+  };
+  struct QueryTextMemoKeyHash {
+    std::size_t operator()(const QueryTextMemoKey &key) const {
+      std::size_t hash = std::hash<const Expr *>{}(key.expr);
+      hash ^= std::hash<uint64_t>{}(key.environmentHash) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
+      hash ^= std::hash<const Definition *>{}(key.definitionOwner) + 0x9e3779b9 + (hash << 6) +
+              (hash >> 2);
+      hash ^= std::hash<const Execution *>{}(key.executionOwner) + 0x9e3779b9 + (hash << 6) +
+              (hash >> 2);
+      return hash;
+    }
+  };
+  struct QueryTextMemoEntry {
+    bool ok = false;
+    std::string typeText;
+  };
+  std::unordered_map<QueryTextMemoKey, QueryTextMemoEntry, QueryTextMemoKeyHash> queryTextMemo_;
   std::unordered_set<std::string> queryTypeInferenceDefinitionStack_;
   std::unordered_set<const Expr *> queryTypeInferenceExprStack_;
   std::unordered_map<std::string, std::string> directImportAliases_;
@@ -658,6 +694,8 @@ private:
     ~CallSnapshotMemoScope() {
       if (--validator_.callSnapshotMemoDepth_ == 0) {
         validator_.callSnapshotMemo_.clear();
+        validator_.returnBindingMemo_.clear();
+        validator_.queryTextMemo_.clear();
       }
     }
     CallSnapshotMemoScope(const CallSnapshotMemoScope &) = delete;

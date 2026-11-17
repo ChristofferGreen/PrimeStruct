@@ -3,7 +3,7 @@
 // imports none of the matches, so only the watched listing can make it stale. A run prints `built <id>` or
 // `up to date <id>`. No case depends on timestamps or sleeps: the cache compares content and listing hashes.
 // Each case is a CTest entry of its own (CMakeLists.txt). A `primec build` compiles make.prime with the build stdlib
-// once, about 2 s, and keeps the compiled script in the project (BuildScriptCache.h), so a run of an unchanged script
+// once, about 1.2 s, and keeps the compiled script in the project (BuildScriptCache.h), so a run of an unchanged script
 // is a fraction of that and only a case that rewrites make.prime compiles again.
 #include "primec/pipeline/BuildCache.h"
 #include "primec/testing/TestScratch.h"
