@@ -2,6 +2,9 @@
 // `src/*.prime` with /std/glob and hands the directories it listed to `b.watch`; the step compiles `main.prime`, which
 // imports none of the matches, so only the watched listing can make it stale. A run prints `built <id>` or
 // `up to date <id>`. No case depends on timestamps or sleeps: the cache compares content and listing hashes.
+// Each case is a CTest entry of its own (CMakeLists.txt). A `primec build` compiles make.prime with the build stdlib
+// and costs about 2.7 s before it runs anything (TODO-6014), so a case that needs two runs to see a cache decision
+// takes about 7 s unloaded; that floor is the reason for the cases having at most two runs, except the renamed case.
 #include "primec/pipeline/BuildCache.h"
 #include "primec/testing/TestScratch.h"
 
@@ -104,14 +107,13 @@ TEST_CASE("a second run of an unchanged glob build runs no step") {
   CHECK(second.out == UpToDate);
 }
 
-TEST_CASE("a file that appears in a listed directory runs the step again, once") {
+TEST_CASE("a file that appears in a listed directory runs the step again") {
   GlobProject project("build_glob_added");
   firstBuildAndCheck(project);
   writeFile(project.src() / "three.prime", "[return<i32>]\nthree() {\n  return(3i32)\n}\n");
   const BuildResult again = project.build();
   CHECK_MESSAGE(again.status == 0, again.err);
   CHECK(again.out == Built);
-  CHECK(project.build().out == UpToDate);
 }
 
 TEST_CASE("a file that appears in a listed subdirectory runs the step again") {
@@ -121,15 +123,19 @@ TEST_CASE("a file that appears in a listed subdirectory runs the step again") {
   CHECK(project.build().out == Built);
 }
 
-TEST_CASE("a matched file that is removed or renamed runs the step again") {
-  GlobProject project("build_glob_removed");
+TEST_CASE("a matched file that is renamed runs the step again, once") {
+  GlobProject project("build_glob_renamed");
   firstBuildAndCheck(project);
   std::filesystem::rename(project.src() / "one.prime", project.src() / "uno.prime");
   CHECK(project.build().out == Built);
   CHECK(project.build().out == UpToDate);
-  std::filesystem::remove(project.src() / "uno.prime");
+}
+
+TEST_CASE("a matched file that is removed runs the step again") {
+  GlobProject project("build_glob_removed");
+  firstBuildAndCheck(project);
+  std::filesystem::remove(project.src() / "one.prime");
   CHECK(project.build().out == Built);
-  CHECK(project.build().out == UpToDate);
 }
 
 TEST_CASE("rewriting a matched file in place and touching an unwatched directory run nothing") {
@@ -158,17 +164,19 @@ TEST_CASE("a pattern that starts to read another directory is another step even 
   // "*.prime" reads only src, so the key (which names the watched directories) differs from "**/*.prime".
   project.writeScript("*.prime", "compile:app");
   CHECK(project.build().out == Built);
-  CHECK(project.build().out == UpToDate);
 }
 
-TEST_CASE("the dry run exports the watched directories sorted, and a watch of a missing target is a problem") {
+TEST_CASE("the dry run exports the watched directories sorted") {
   GlobProject project("build_glob_export");
   const BuildResult dry = project.build("--dry-run");
   REQUIRE_MESSAGE(dry.status == 0, dry.err);
   const std::string src = project.src().string();
   CHECK(dry.out.find("\"inputDirs\":[\"" + src + "\",\"" + src + "/sub\"]") != std::string::npos);
   CHECK(dry.out.find("\"problems\":[]") != std::string::npos);
+}
 
+TEST_CASE("a watch of a missing target is a problem") {
+  GlobProject project("build_glob_missing");
   project.writeScript("**/*.prime", "compile:nothing");
   const BuildResult missing = project.build("--dry-run");
   CHECK(missing.out.find("watch names a missing target compile:nothing") != std::string::npos);

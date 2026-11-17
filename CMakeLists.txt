@@ -1532,15 +1532,18 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   # /std/glob: glob over a fixture tree (tests/unit/backend_host/test_glob.cpp). The VM cases and the optexe build are
   # CTest entries of their own.
-  add_test(
-    NAME PrimeStruct_glob_vm
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.glob"
-            "--test-case-exclude=*through optexe*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_glob_vm
-                       PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  foreach(glob_case "matches star" "lists exactly" "stops a walk")
+    string(MAKE_C_IDENTIFIER "${glob_case}" glob_case_id)
+    add_test(
+      NAME PrimeStruct_glob_vm_${glob_case_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.glob"
+              "--test-case=*${glob_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_glob_vm_${glob_case_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
   add_test(
     NAME PrimeStruct_glob_optexe
     COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
@@ -1599,14 +1602,21 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_build_cache
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
   # A step whose glob listing changes runs again (tests/unit/backend_host/test_build_glob_cache.cpp).
-  add_test(
-    NAME PrimeStruct_build_glob_cache
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.build_glob_cache"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_build_glob_cache
-                       PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
+  foreach(glob_cache_case
+          "unchanged glob build" "appears in a listed directory" "appears in a listed subdirectory" "is renamed"
+          "is removed runs" "rewriting a matched file" "does not match the pattern" "starts to read another"
+          "exports the watched" "missing target" "records the listing hash" "listing hash covers")
+    string(MAKE_C_IDENTIFIER "${glob_cache_case}" glob_cache_id)
+    add_test(
+      NAME PrimeStruct_build_glob_cache_${glob_cache_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_glob_cache"
+              "--test-case=*${glob_cache_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_glob_cache_${glob_cache_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
   add_test(
     NAME PrimeStruct_build_command_native
