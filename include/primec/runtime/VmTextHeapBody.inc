@@ -891,6 +891,70 @@ inline bool callTextHostFunction(VmTextHeap &heap,
     }
     return true;
   }
+  // A directory listing: `__pstext_dir_list(path, pathCount, destination, capacity)` writes one line per entry,
+  // sorted bytewise by name, "<kind> <size> <seconds> <name>\n", into a byte region and returns the size of the whole
+  // listing (nothing is written when it exceeds `capacity`, so a caller asks with a capacity of 0 first) or the negated
+  // errno. Kind is F (a regular file), D (a directory) or O (anything else, a dangling link included); a link is
+  // followed. Size is the byte size of a regular file and 0 otherwise; seconds is the modification time since the Unix
+  // epoch. "." and ".." are left out, and so is a name that contains a line feed.
+  if (name == "__pstext_dir_list") {
+    const uint64_t pathCount = args[1];
+    std::string path;
+    if (pathCount != 0) {
+      const uint8_t *first = core.byteSpan(args[0], pathCount);
+      if (first == nullptr) {
+        error = "invalid text range: " + std::to_string(pathCount) + " bytes at " + std::to_string(args[0]);
+        return false;
+      }
+      path.assign(reinterpret_cast<const char *>(first), static_cast<size_t>(pathCount));
+    }
+    errno = 0;
+    DIR *directory = opendir(path.c_str());
+    if (directory == nullptr) {
+      result = static_cast<uint64_t>(-static_cast<int64_t>(errno != 0 ? errno : EIO));
+      return true;
+    }
+    std::vector<std::string> names;
+    while (const struct dirent *entry = readdir(directory)) {
+      const std::string entryName = entry->d_name;
+      if (entryName != "." && entryName != ".." && entryName.find('\n') == std::string::npos) {
+        names.push_back(entryName);
+      }
+    }
+    closedir(directory);
+    std::sort(names.begin(), names.end());
+    const std::string prefix = path.empty() || path.back() == '/' ? path : path + "/";
+    std::string listing;
+    for (const std::string &entryName : names) {
+      struct stat info;
+      char kind = 'O';
+      long long size = 0;
+      long long seconds = 0;
+      if (stat((prefix + entryName).c_str(), &info) == 0) {
+        kind = S_ISREG(info.st_mode) ? 'F' : (S_ISDIR(info.st_mode) ? 'D' : 'O');
+        size = S_ISREG(info.st_mode) ? static_cast<long long>(info.st_size) : 0;
+        seconds = static_cast<long long>(info.st_mtime);
+      }
+      listing += kind;
+      listing += ' ';
+      listing += std::to_string(size);
+      listing += ' ';
+      listing += std::to_string(seconds);
+      listing += ' ';
+      listing += entryName;
+      listing += '\n';
+    }
+    if (!listing.empty() && args[3] >= listing.size()) {
+      uint8_t *destination = core.byteSpan(args[2], listing.size());
+      if (destination == nullptr) {
+        error = "invalid text range: " + std::to_string(listing.size()) + " bytes at " + std::to_string(args[2]);
+        return false;
+      }
+      std::copy(listing.begin(), listing.end(), reinterpret_cast<char *>(destination));
+    }
+    result = listing.size();
+    return true;
+  }
   // Decimal text to double with the C library's correctly rounded conversion (the text is checked to be a plain
   // decimal number by the caller): `__pstext_f64_ok(address, count)` is 1 when the text converts to a finite value,
   // `__pstext_parse_f64(address, count)` is the value's bits.

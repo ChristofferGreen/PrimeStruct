@@ -1420,6 +1420,47 @@ main() {
 }
 ```
 
+### Directory listing (`/std/dir`)
+
+`import /std/dir/*` lists one directory (it is a module of its own, not part of `/std/file`, so a program that imports
+`/std/file` does not parse it). The VM and `--emit=optexe` answer its `__pstext_dir_list` host
+function themselves, like the whole-file text functions of `/std/text/view`, so no shim is linked. A program that does
+not import the module declares no such host import and starts as before. The native backends do not answer it yet.
+
+- `DirEntry`: `name` (`String`), `kind`, `size` (`i64`) and `modifiedSeconds` (`i64`), with `isFile()` and
+  `isDirectory()`. `kind` is `dirKindFile()` (0), `dirKindDirectory()` (1) or `dirKindOther()` (2). A symbolic link is
+  followed, so it has the kind of its target and a dangling link is `other`. `size` is the byte size of a regular file
+  and 0 for anything else, `modifiedSeconds` the modification time in seconds since the Unix epoch (0 for an entry that
+  cannot be examined, such as a dangling link).
+- `listDirectory(path, out) -> Result<FileError>` (`file_read`, `heap_alloc`): replaces the `vector<DirEntry>` `out`
+  with the entries of the directory `path` (a `StringView`), sorted bytewise by name (so `Zed` comes before `alpha`
+  and a leading dot before both), with "." and ".." left out; one level only, no recursion. A missing or unreadable
+  directory returns the `errno` as a `FileError` (`Result.why` gives `ENOENT`, `ENOTDIR`, `EACCES`) and leaves `out`
+  alone. A name that contains a line feed is not listed. The listing is not a snapshot: a directory that changes while
+  it is read gives either state.
+
+```prime
+import /std/file/*
+import /std/dir/*
+import /std/collections/vector/*
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(io_out, file_read, heap_alloc)]
+main() {
+  [vector<DirEntry> mut] entries{vector<DirEntry>{}}
+  [Result<FileError>] listed{listDirectory(".", entries)}
+  if(Result.error(listed)) {
+    print_line(Result.why(listed))
+    return(1i32)
+  }
+  for([i32 mut] i{0i32}, i < entries.count(), i++) {
+    print_line(entries[i].size)
+  }
+  return(0i32)
+}
+```
+
 ### Paths (`/std/path`)
 
 `import /std/path/*` provides textual path functions for POSIX paths: the separator is `/`, and a path that starts with

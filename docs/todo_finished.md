@@ -2305,6 +2305,7 @@ are left unarchived.
 | TODO-5894 | Tuple destructuring works inside a nested block | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5895 | A spawned call with a `copy` or `move` scalar or struct parameter runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5905 | `/std/path` joins, splits and normalizes paths | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5908 | `--allow-effects` rejects declared effects outside a list in user code | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5909 | `--allow-import` rejects imports outside a list of prefixes | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5910 | `--profile build` sets the defaults of a build script | [2026-11.md](todo_archive/2026-11.md) | - |

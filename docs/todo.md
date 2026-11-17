@@ -167,8 +167,7 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5903 | A debug session runs programs that spawn tasks | ready | vm-debug-tasks |
 | TODO-5904 | The VM runs tasks on threads by default | blocked | vm-threads |
-| TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | ready | file-listing |
-| TODO-5907 | `/std/file` expands glob patterns | blocked | build-glob |
+| TODO-5907 | `/std/file` expands glob patterns | ready | build-glob |
 | TODO-5916 | `b.subproject` merges the graph of a subfolder's `make.prime` | blocked | build-subprojects |
 | TODO-5917 | Build options: `b.option` and `primec build --option` | blocked | build-options |
 | TODO-5918 | A script can run its graph in stages | ready | build-stages |
@@ -197,13 +196,13 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
-- TODO-5906 (file-listing): `/std/file` lists a directory and reports kind, size and modification time
+- TODO-5907 (build-glob): `/std/file` expands glob patterns
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-5535
-3. TODO-5906
+3. TODO-5907
 
 ### Priority Lanes
 
@@ -212,7 +211,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5906, TODO-5907, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5907, TODO-5916, TODO-5917, TODO-5918, TODO-5919, TODO-5920
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Language defects found by the build graph (stdlib/std/build/build.prime): TODO-6008
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -236,7 +235,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: ready and independent of each other is TODO-5906 (directory listing and file metadata); TODO-5915 (incremental builds) landed. Then TODO-5907 (glob), TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. Ready: TODO-5907 (glob, over `/std/dir`); then TODO-5916 (subprojects), TODO-5917 (options), TODO-5918 (staged builds), TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Language defects found by the build graph (all closed but one): TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) is `ready` outside `Ready Now`.
 
@@ -999,30 +998,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [~] TODO-5906: `/std/file` lists a directory and reports kind, size and modification time
-  - owner: ai
-  - status: in_progress
-  - claimed_by: build-agent (worktree-agent-a17757792d6e69b30), 2026-11-17
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md); also needed by "Open PrimeStruct Project" (docs/AiWorkflowPlan.md, section 4.1)
-  - parallel_track: file-listing
-  - scope: `/std/file` has no directory listing or file metadata. Add `[host]` functions on the pattern of `ps_os_*` (stdlib/std/os/os.prime, bound in the VM host table src/runtime/VmHost.cpp and in a `*_posix.cpp` linked for `--emit=optexe`) with the `file_read` effect: list a directory's entries sorted bytewise by name, each with kind (file, directory, other), size in bytes and modification time (seconds, `i64`). A missing or unreadable directory returns an error value in the style of stdlib/std/file/errors.prime. Which return shapes the host ABI allows for a list was not checked; one newline-separated `Text` that PrimeStruct splits is the fallback.
-  - acceptance:
-    - a fixture directory lists identically, sorted, on the VM and with `--emit=optexe`
-    - a missing directory returns the error value on both
-    - a program that does not call the new functions starts exactly as before (scripts/measure_startup.sh within noise)
-    - docs/spec/stdlib-reference.md documents the functions with a runnable example
-    - full release gate green
-  - stop_rule: listing and metadata only; no watching, no creating, removing or copying, no recursion (glob is TODO-5907).
-
 - [ ] TODO-5907: `/std/file` expands glob patterns
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5906
+  - status: ready
   - created_at: 2026-11-11
   - phase: Build system (docs/BuildSystemPlan.md)
   - parallel_track: build-glob
-  - scope: `glob(base, pattern)` returns the paths under `base` that match, sorted bytewise: `*` (within a segment), `**` (any number of segments), `?`. A name that begins with a dot matches only a pattern segment that begins with a dot. Written in PrimeStruct over the listing of TODO-5906 and the `/std/path` functions. The directory listings it read are what a build treats as inputs, so the function also returns them (or a second function does) for TODO-5915.
+  - scope: `glob(base, pattern)` returns the paths under `base` that match, sorted bytewise: `*` (within a segment), `**` (any number of segments), `?`. A name that begins with a dot matches only a pattern segment that begins with a dot. Written in PrimeStruct over the listing of TODO-5906 (`listDirectory` of `/std/dir`) and the `/std/path` functions. The directory listings it read are what a build treats as inputs, so the function also returns them (or a second function does) for TODO-5915.
   - acceptance:
     - tests over a fixture tree for `*.prime`, `**/*.prime`, `?`, a dotted file, and no match
     - results are identical on the VM and with `--emit=optexe`

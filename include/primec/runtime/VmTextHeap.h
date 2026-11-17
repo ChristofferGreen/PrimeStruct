@@ -1,5 +1,8 @@
 #pragma once
 
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <charconv>

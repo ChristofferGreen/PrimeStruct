@@ -20,6 +20,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <dirent.h>
 #include <fcntl.h>
 #include <string>
 #include <string_view>
@@ -30,6 +31,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <pthread.h>
 #include <set>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
