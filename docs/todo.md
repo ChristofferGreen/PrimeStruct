@@ -239,9 +239,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6025: A method call result passed by value to a read-only `String` or struct parameter leaks
+- [~] TODO-6025: A method call result passed by value to a read-only `String` or struct parameter leaks
   - owner: ai
   - status: ready
+  - claimed_by: claude-sonnet (worktree-agent-a8280ef4c563c11a5), 2026-11-17
   - created_at: 2026-11-17
   - phase: Language defects found by TODO-6008 (user method `at` as a receiver)
   - parallel_track: build-graph-defects
