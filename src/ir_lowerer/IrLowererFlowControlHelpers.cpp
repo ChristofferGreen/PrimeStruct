@@ -1063,13 +1063,23 @@ bool isElementAccessCopySourceExpr(const Expr &expr) {
 // rather than a reference or pointer), which the callee takes over instead of borrowing: not a
 // field, `dereference`/`location`, `move(x)` of a binding, a builtin element access or a method
 // call result.
+bool shouldDisarmStructCopySourceExpr(const Expr &expr,
+                                      const std::function<bool(const Expr &)> &isElementPlace) {
+  return !(isElementPlace && isElementPlace(expr)) && shouldDisarmStructCopySourceExpr(expr);
+}
+
 bool isOwnedTemporaryArgumentExpr(
     const Expr &expr,
-    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall) {
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &)> &isElementPlace) {
+  if (isElementPlace && isElementPlace(expr)) {
+    return false;
+  }
   // `block() { temporary }` yields that temporary: a lambda converted to a `Function` boxes
   // `block() { /closure_make(captures) }` (docs/spec/value-lifecycle.md, Lambdas).
   if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() == 1) {
-    return isOwnedTemporaryArgumentExpr(expr.bodyArguments.front(), resolveDefinitionCall);
+    return isOwnedTemporaryArgumentExpr(
+        expr.bodyArguments.front(), resolveDefinitionCall, isElementPlace);
   }
   // `block() { [String] e{...} e }` yields `e`, which the block hands over: nobody else owns it.
   if (isSimpleCallName(expr, "block") && expr.args.empty() && expr.bodyArguments.size() > 1) {

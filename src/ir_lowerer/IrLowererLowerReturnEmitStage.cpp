@@ -440,9 +440,24 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         error);
   };
 
+  // Whether `callExpr` reads an element of a builtin vector in place: the stdlib `at` a builtin vector's `items[i]`
+  // resolves to (`isBuiltinVectorElementHelperCall`). That element is a place the vector keeps owning, whatever
+  // `at` it was spelled as; every decision between a place and a temporary asks this one predicate.
+  stateOut.isBuiltinVectorElementPlace = [&](const Expr &callExpr, const LocalMap &locals) {
+    if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.args.size() != 2) {
+      return false;
+    }
+    const Definition *callee = callExpr.isMethodCall ? resolveMethodCallDefinition(callExpr, locals)
+                                                     : resolveDefinitionCall(callExpr);
+    return callee != nullptr && isBuiltinVectorElementHelperCall(callExpr, *callee, locals);
+  };
+
   // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
   // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
   auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
+    if (stateOut.isBuiltinVectorElementPlace(sourceExpr, locals)) {
+      return false;
+    }
     return ir_lowerer::isTemporaryStructCopySourceExpr(sourceExpr, [&](const Expr &callExpr) {
       return callExpr.isMethodCall ? resolveMethodCallDefinition(callExpr, locals)
                                    : resolveDefinitionCall(callExpr);

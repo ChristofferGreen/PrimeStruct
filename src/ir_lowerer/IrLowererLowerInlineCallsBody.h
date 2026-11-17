@@ -509,6 +509,10 @@
                                  const LocalMap &locals) { return inferExprKind(argExpr, locals); },
             .resolveDefinitionCall =
                 [&](const Expr &argExpr) { return resolveDefinitionCall(argExpr); },
+            .isBuiltinVectorElementPlace =
+                [&](const Expr &argExpr) {
+                  return stateOut.isBuiltinVectorElementPlace(argExpr, callerLocals);
+                },
             .resolveStructSlotLayout =
                 [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                   return resolveStructSlotLayout(structPath, layoutOut);
@@ -604,10 +608,14 @@
     for (size_t paramIndex = 0; paramIndex < callParams.size(); ++paramIndex) {
       const Expr &param = callParams[paramIndex];
       const Expr *argExpr = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
-      const bool temporaryArg = argExpr != nullptr && ir_lowerer::isOwnedTemporaryArgumentExpr(
-                                                          *argExpr, [&](const Expr &candidate) {
-                                                            return resolveDefinitionCall(candidate);
-                                                          });
+      const bool temporaryArg =
+          argExpr != nullptr &&
+          ir_lowerer::isOwnedTemporaryArgumentExpr(
+              *argExpr,
+              [&](const Expr &candidate) { return resolveDefinitionCall(candidate); },
+              [&](const Expr &candidate) {
+                return stateOut.isBuiltinVectorElementPlace(candidate, callerLocals);
+              });
       // A builtin `vector<T>` `copy` parameter gets a buffer of its own, except from a fresh vector
       // (a constructor or a call returning one) or `move(x)`, which the callee takes over; a fresh vector passed
       // to a read-only parameter belongs to the callee too. The callee's scope frees it

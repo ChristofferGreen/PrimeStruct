@@ -200,6 +200,12 @@ bool emitDisarmTemporaryStructAfterCopy(const EmitInstructionFn &emitInstruction
 // True for a call whose struct value is a temporary the copy takes over (and disarms); false for
 // a place: a name, field, `dereference`/`location`, or an element access.
 bool shouldDisarmStructCopySourceExpr(const Expr &expr);
+// shouldDisarmStructCopySourceExpr, except that an expression `isElementPlace` accepts is a place: an element of a
+// builtin vector read through the stdlib `at` helper, which a program that imports only the vector module of the
+// collections library gets as a call to the helper specialized for the element type. Which receivers are builtin
+// vectors is known to the lowerer's locals, not to the expression.
+bool shouldDisarmStructCopySourceExpr(const Expr &expr,
+                                      const std::function<bool(const Expr &)> &isElementPlace);
 // An element access with a receiver and an index (`at(v, i)`, `v.at(i)`, `at_unsafe(v, i)`).
 bool isElementAccessCopySourceExpr(const Expr &expr);
 // shouldDisarmStructCopySourceExpr, except that a call shaped like an element access is a
@@ -207,7 +213,9 @@ bool isElementAccessCopySourceExpr(const Expr &expr);
 bool isTemporaryStructCopySourceExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee);
 bool isOwnedTemporaryArgumentExpr(
-    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveDefinitionCall);
+    const Expr &expr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &)> &isElementPlace = {});
 // Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
 // user definition or method returning a vector, never a name, field, element or stdlib accessor
 // result. `resolveCallee` resolves a method call too (see makeCallOrMethodResolver).

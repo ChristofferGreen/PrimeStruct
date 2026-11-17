@@ -51,6 +51,8 @@ struct InlineDefinitionCallParameters {
   InferInlineParameterStructExprPathFn inferStructExprPath;
   InferInlineParameterExprKindFn inferExprKind;
   ResolveInlineParameterDefinitionCallFn resolveDefinitionCall = {};
+  // Whether an argument reads an element of a builtin vector in place: a place, not a temporary to take over.
+  ExprPredicateFn isBuiltinVectorElementPlace = {};
   ResolveInlineParameterStructSlotLayoutFn resolveStructSlotLayout;
   ExprLocalsPredicateFn emitExpr;
   EmitInlineParameterStructCopySlotsFn emitStructCopySlots;

@@ -337,6 +337,7 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
   const InferInlineParameterExprKindFn &inferExprKind = parameters.inferExprKind;
   const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall =
       parameters.resolveDefinitionCall;
+  const ExprPredicateFn &isBuiltinVectorElementPlace = parameters.isBuiltinVectorElementPlace;
   const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout =
       parameters.resolveStructSlotLayout;
   const ExprLocalsPredicateFn &emitExpr = parameters.emitExpr;
@@ -356,10 +357,12 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
     // `[T copy]` (docs/spec/value-lifecycle.md, Parameter Passing): the callee gets its own copy
     // instead of a borrow, except of a `move(x)` argument or a temporary, handed over as is.
-    const bool isCopyParam = parameterHasTransform(param, "copy") &&
-                             (orderedArg == nullptr ||
-                              (!isOwnedTemporaryArgumentExpr(*orderedArg, resolveDefinitionCall) &&
-                               !isSimpleCallName(*orderedArg, "move")));
+    const bool isCopyParam =
+        parameterHasTransform(param, "copy") &&
+        (orderedArg == nullptr ||
+         (!isOwnedTemporaryArgumentExpr(
+              *orderedArg, resolveDefinitionCall, isBuiltinVectorElementPlace) &&
+          !isSimpleCallName(*orderedArg, "move")));
     // A binding passed to a `move` parameter is the callee's now.
     if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&
         parameterHasTransform(param, "move")) {
@@ -749,7 +752,7 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
         }
       }
       if (!builtinSoaToAosStructBridge &&
-          shouldDisarmStructCopySourceExpr(*orderedArg)) {
+          shouldDisarmStructCopySourceExpr(*orderedArg, isBuiltinVectorElementPlace)) {
         emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, copiedParamInfo.structTypeName);
       }
       calleeLocals.emplace(param.name, copiedParamInfo);
