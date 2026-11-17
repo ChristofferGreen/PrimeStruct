@@ -26,3 +26,4 @@ __pycache__/
 !stdlib/std/build/
 !tests/fixtures/build/
 **/.ps/cache/
+examples/apps/text_editor/out/

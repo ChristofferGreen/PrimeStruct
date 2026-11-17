@@ -1397,6 +1397,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_options.cpp
+    tests/unit/backend_host/test_build_primescroll.cpp
     tests/unit/backend_host/test_build_subprojects.cpp
     tests/unit/backend_host/test_build_script_cache.cpp
     tests/unit/backend_host/test_ui_events.cpp
@@ -1680,6 +1681,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
     set_tests_properties(PrimeStruct_build_options_${options_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
+  # PrimeScroll's make.prime prints the graph of scripts/build_native_app.sh's optexe build (tests/unit/backend_host/test_build_primescroll.cpp).
+  add_test(
+    NAME PrimeStruct_build_primescroll
+    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_primescroll"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_build_primescroll PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
   add_test(
     NAME PrimeStruct_build_command_native

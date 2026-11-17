@@ -1,0 +1,48 @@
+// Builds PrimeScroll the way scripts/build_native_app.sh does (docs/BuildSystemPlan.md section 10, TODO-5920): the
+// program compiled to C++ by the optimized emitter (`--emit=optexe`) and linked with a UI backend, so the result needs
+// no VM and no compiler at run time.
+//
+//   primec build examples/apps/text_editor
+//   primec build examples/apps/text_editor --option backend=headless --option build_dir=build-release
+//
+// The backend libraries come from a CMake build directory (`cmake --build build-release --target
+// primec_ui_appkit_lib primec_ui_highlight_lib`); `build_dir` names it, relative to this folder. The executable is
+// `.ps/out/primescroll` (the script's `--direct` form needs a file copy that a graph cannot say yet; see TODO-5920 in
+// docs/todo_log.md).
+import /std/build/*
+
+// `<dir>/<name>`: one backend library inside the build directory.
+[return<String> effects(heap_alloc)]
+library_path([String] dir, [string] name) {
+  [String mut] path{dir}
+  path.append("/")
+  path.append(name)
+  return(path)
+}
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [String] buildDir{b.option("build_dir", "../../../build-release", "CMake build directory with the UI backend libraries, relative to this folder")}
+  [String] backend{b.option("backend", "appkit", "UI backend to link: appkit or headless")}
+
+  [Compiler mut] cc{b.compiler()}
+  cc.emit("optexe")
+  // The script passes no level, and `primec` optimizes a native program at level 2 then; the runner always passes one.
+  cc.optimize(2i32)
+  if(backend.equalsText("headless")) {
+    cc.linkArg("-I../../../include")
+    cc.linkArg(library_path(buildDir, "libprimec_ui_headless_lib.a").view())
+    cc.linkArg(library_path(buildDir, "libprimec_ui_highlight_lib.a").view())
+  } else {
+    cc.linkArg(library_path(buildDir, "libprimec_ui_appkit_lib.a").view())
+    cc.linkArg(library_path(buildDir, "libprimec_ui_highlight_lib.a").view())
+    cc.linkArg("-framework")
+    cc.linkArg("AppKit")
+    cc.linkArg("-framework")
+    cc.linkArg("Foundation")
+    cc.linkArg("-framework")
+    cc.linkArg("UniformTypeIdentifiers")
+  }
+  b.executable("primescroll", cc, "main.prime")
+  return(b.graph())
+}

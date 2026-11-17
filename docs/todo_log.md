@@ -7,6 +7,30 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-6019
+
+- 2026-11-17 (found by TODO-5920): `examples/apps/text_editor/make.prime`
+  against `scripts/build_native_app.sh` (appkit, release build
+  directory, one worktree, nothing launched). Same: the generated C++
+  (`primescroll.cpp`, 1,153,458 bytes, SHA-256 3b0b0cb3...) and the
+  `otool -L` library list of the executables. Differences: (1) the
+  runner always passes `-O<n>`; without one `primec` optimizes a native
+  program at level 2 (src/bin/main.cpp), so make.prime says
+  `cc.optimize(2i32)`; with the default 0 the executable is 1.8 MB
+  instead of 1.0 MB. (2) The executables differ in 8 bytes of size and
+  in content (1,015,336 and 1,015,344 bytes): paths in the object
+  files, not code, since the C++ is identical. (3) The executable is
+  `<project>/out/primescroll`, not a path the caller names. (4) The
+  runner leaves `out/primescroll.cpp`; the script deletes it
+  (TODO-6018). (5) No `--direct` form: no step copies
+  `libps_ui_appkit.dylib` (TODO-6017). (6) The backend libraries are
+  CMake products; the graph reads them through `--option build_dir`
+  and cannot build them (needs command steps, not planned yet). (7) Cold
+  `primec build` of the folder 3.4 s of which the script compile is
+  about 2.5 s (TODO-6016).
+- Startup was not measured: `scripts/measure_startup.sh` shows a window
+  and the agent may not open one. A person measures both (this leaf).
+
 ## TODO-5757
 
 - 2026-11-09: PrimeScroll master bundle (06268bdc7-era code, the same

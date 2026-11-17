@@ -170,7 +170,9 @@ of sync with them.
 | TODO-6015 | A recursive definition with a `[vector<T> mut]` or `[Reference<vector<T>>]` parameter lowers as a real call | ready | build-graph-defects |
 | TODO-6016 | A first `primec build` of a script still spends 1.9 s compiling make.prime | ready | build-graph-defects |
 | TODO-5919 | A build step can be a PrimeStruct function that runs on a VM thread | blocked | build-function-steps |
-| TODO-5920 | PrimeScroll builds with `make.prime` | ready | build-dogfood |
+| TODO-6017 | A build graph copies a file into the output directory | ready | build-dogfood |
+| TODO-6018 | A compile step leaves no generated C++ next to its executable | ready | build-dogfood |
+| TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5922 | `primevm --link` merges two serialized IR modules | ready | lib-ir-link |
 | TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | ready | lib-interface |
 | TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | blocked | lib-archive |
@@ -207,7 +209,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5896, TODO-5897, TODO-5898, TODO-5899, TODO-5900, TODO-5901, TODO-5902, TODO-5903, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-5920
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-5919, TODO-6017, TODO-6018, TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5922, TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Language defects found by the build graph (stdlib/std/build/build.prime) and by glob (stdlib/std/glob/glob.prime): TODO-6008, TODO-6015, TODO-6016
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
@@ -231,7 +233,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. In this order: TODO-5896 (`--vm-threads`, a thread and a heap arena per task) is ready; then TODO-5897 (Atomic, Mutex and Channel on real primitives), TODO-5898 (host-call locking), TODO-5899 (fault and cancel without ending the process), TODO-5900 (the concurrent corpus repeated and under ThreadSanitizer), TODO-5901 (record and replay of synchronization order), TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; ready: TODO-5919 (function steps, after TODO-5896), TODO-5920 (PrimeScroll builds with `make.prime`); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; ready: TODO-5919 (function steps, after TODO-5896), TODO-6017 (file copy step), TODO-6018 (no stray C++), TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) and TODO-5923 (`--emit=interface`) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 Language defects found by the build graph and by glob: TODO-6008 (a user method named `at` that returns a `String` leaks the result when it is a receiver) (shifting `vector<String>` elements frees a string twice) (a moved name in one loop body is reported in a sibling) and TODO-6012 (recursion with vector parameters does not lower on the VM) are `ready` outside `Ready Now`.
 
@@ -251,6 +253,44 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the builtin vector element reads of TODO-6002 stay places (the element_receivers suite stays green)
     - full release gate green
   - stop_rule: user methods and functions named `at` or `at_unsafe` whose result is read as a receiver.
+
+- [ ] TODO-6017: A build graph copies a file into the output directory
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Build system (found by TODO-5920; docs/BuildSystemPlan.md section 3)
+  - parallel_track: build-dogfood
+  - scope: scripts/build_native_app.sh `--direct` builds PrimeScroll with `primec --emit=native` and copies `libps_ui_appkit.dylib` next to the executable (the executable loads it through `@executable_path`, as a fresh file, so the kernel does not reuse the signature of an older one). A graph has no step that copies a file, so examples/apps/text_editor/make.prime has no `direct` form. Add a copy step kind (`b.copy(name, from, to)`: input a file, output a path in the output directory, runs in the runner, removes the target first, cached by content hash like a compile step), or, if TODO-5919 (function steps) lands first, express the copy as one and close this as superseded after adding the `direct` form to make.prime.
+  - acceptance:
+    - a graph with a copy step copies a file into the output directory and a second run with an unchanged source does not copy again
+    - make.prime in examples/apps/text_editor has `--option direct=true` that builds the `--direct` form (emit `native`, link argument `@executable_path/libps_ui_appkit.dylib`, the dylib copied next to the executable); its `--dry-run` graph is a golden
+    - full release gate green
+  - stop_rule: the copy step and the `direct` option; no command steps.
+
+- [ ] TODO-6018: A compile step leaves no generated C++ next to its executable
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Build system (found by TODO-5920)
+  - parallel_track: build-dogfood
+  - scope: `primec --emit=optexe prog -o out/name` writes the generated C++ to `out/name.cpp` and leaves it (1.2 MB for PrimeScroll); scripts/build_native_app.sh deletes it after the compile ("the executable is the result"). `primec build` leaves it in the output directory as a second output of an executable step that the step cache does not know. Make the runner delete `<output>.cpp` after an `optexe` executable step (or give `Compiler` a `keepSource(bool)` setting, default false for `executable` nodes) and keep the cache entry consistent.
+  - acceptance:
+    - after `primec build` of an `optexe` executable step the output directory holds the executable and no `.cpp`
+    - a second run reports the step as up to date
+    - full release gate green
+  - stop_rule: the leftover C++ of executable steps; no change to `--emit=optexe` itself.
+
+- [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-17
+  - phase: Build system (acceptance of TODO-5920 that needs a window; see docs/todo_log.md)
+  - parallel_track: build-dogfood
+  - scope: A person builds both executables (`./scripts/build_native_app.sh examples/apps/text_editor/main.prime /path/script_primescroll` and `primec build examples/apps/text_editor`, which writes `examples/apps/text_editor/out/primescroll`) from one commit and runs `scripts/measure_startup.sh` on each, which shows a window; the agent that wrote make.prime may not open windows. The generated C++ of the two is byte-identical and the dynamic library lists equal (docs/todo_log.md), so the expected result is "within noise".
+  - acceptance:
+    - the medians of both executables are recorded in docs/todo_log.md and are within noise
+    - the executable from `primec build` launches and opens a document
+  - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
 - [ ] TODO-6016: A first `primec build` of a script still spends 1.9 s compiling make.prime
   - owner: ai
@@ -1035,20 +1075,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the dry-run export marks the graph as not self-contained
     - full release gate green
   - stop_rule: function steps with declared inputs and outputs; no command steps, no network.
-
-- [~] TODO-5920: PrimeScroll builds with `make.prime`
-  - owner: ai
-  - status: ready
-  - claimed_by: dogfood-a (worktree-agent-a9e59996ccb8535c8), 2026-11-17
-  - created_at: 2026-11-11
-  - phase: Build system (docs/BuildSystemPlan.md, section 10)
-  - parallel_track: build-dogfood
-  - scope: Add a `make.prime` in examples/apps/text_editor that builds PrimeScroll the way scripts/build_native_app.sh does today (`--emit=optexe` with the UI backend's link arguments, or the `--direct` native form). Needs macOS for the AppKit backend. The script stays until the two produce the same program. The installed app and its install recipe are not touched.
-  - acceptance:
-    - `primec build` in that folder produces an executable that runs as the script's output does
-    - startup of the two executables, measured with scripts/measure_startup.sh, is within noise
-    - the differences, if any, are listed in docs/todo_log.md
-  - stop_rule: building only; the script is not deleted and the install recipe is not changed.
 
 - [ ] TODO-5922: `primevm --link` merges two serialized IR modules
   - owner: ai
