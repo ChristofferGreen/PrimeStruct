@@ -1073,6 +1073,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_closures.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
+    tests/unit/program_matrix/test_program_matrix_element_assign.cpp
     tests/unit/program_matrix/test_program_matrix_element_copies.cpp
     tests/unit/program_matrix/test_program_matrix_element_receivers.cpp
     tests/unit/program_matrix/test_program_matrix_lifecycle.cpp
@@ -3849,6 +3850,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.closures_routers
     primestruct.program_matrix.container_copies
     primestruct.program_matrix.control
+    primestruct.program_matrix.element_assign
     primestruct.program_matrix.element_copies
     primestruct.program_matrix.element_receivers
     primestruct.program_matrix.lifecycle
@@ -3872,7 +3874,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=9 container_copies=22
-    control=37 element_copies=10 element_receivers=6 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 results=12 shared_programs=17
+    control=37 element_assign=4 element_copies=10 element_receivers=6 lifecycle=26 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_subjects=20 pick_values=24 results=12 shared_programs=17
     shared_strings=5 struct_methods=11 sum_owners=6 tasks=22 text_views=6 vector_owners=47)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

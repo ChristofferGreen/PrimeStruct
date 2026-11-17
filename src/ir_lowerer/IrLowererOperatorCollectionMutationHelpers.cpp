@@ -671,6 +671,36 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         error = "native backend only supports assign to array/vector elements";
         return false;
       }
+      // The semantic fact names the element kind but not the size of a struct element: the local carries it.
+      if (targetInfo.isVectorTarget && !targetInfo.isSoaVector &&
+          targetInfo.elemKind == LocalInfo::ValueKind::Unknown && targetInfo.elemSlotCount <= 0) {
+        const ArrayVectorAccessTargetInfo localInfo =
+            resolveArrayVectorAccessTargetInfo(collectionTarget, localsIn);
+        if (localInfo.isVectorTarget && localInfo.elemSlotCount > 0) {
+          targetInfo.elemSlotCount = localInfo.elemSlotCount;
+          targetInfo.elementTypeText = localInfo.elementTypeText;
+        }
+      }
+      // A vector field (`this.names[i]`) has no local: the field binding names the element type.
+      if (targetInfo.isVectorTarget && !targetInfo.isSoaVector &&
+          targetInfo.elemKind == LocalInfo::ValueKind::Unknown &&
+          targetInfo.elementTypeText.empty() && collectionTarget.kind == Expr::Kind::Call &&
+          collectionTarget.isFieldAccess && collectionTarget.args.size() == 1) {
+        const std::string receiverStruct =
+            inferStructExprPath(collectionTarget.args.front(), localsIn);
+        LayoutFieldBinding fieldBinding;
+        if (!receiverStruct.empty() && resolveStructFieldBinding &&
+            resolveStructFieldBinding(receiverStruct, collectionTarget.name, fieldBinding)) {
+          targetInfo.elementTypeText = fieldBinding.typeTemplateArg;
+        }
+      }
+      // Size the element type when no local carried it.
+      if (targetInfo.isVectorTarget && !targetInfo.isSoaVector &&
+          targetInfo.elemKind == LocalInfo::ValueKind::Unknown && targetInfo.elemSlotCount <= 0 &&
+          !targetInfo.elementTypeText.empty()) {
+        targetInfo.elemSlotCount = vectorElementSlotCountFromTypeText(
+            targetInfo.elementTypeText, collectionTarget.namespacePrefix);
+      }
 
       const LocalInfo::ValueKind indexKind = normalizeIndexKind(inferExprKind(indexExpr, localsIn));
       if (!isSupportedIndexKind(indexKind)) {
@@ -733,16 +763,57 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(basePtrLocal)});
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(indexLocal)});
       const bool packedBytes = isPackedByteVectorTarget(targetInfo);
+      // A vector of structs stores each element inline in several slots (the read in emitBuiltinArrayAccess steps by
+      // the element size too): assigning one copies the new value over the old with ownership, so a `String` or
+      // vector element destroys what it held and a place on the right is copied, not moved.
+      const bool isInlineStructVectorElement =
+          targetInfo.isVectorTarget && !targetInfo.isSoaVector && !targetInfo.isArgsPackTarget &&
+          !targetInfo.isKeyValueTarget && !targetInfo.isWrappedKeyValueTarget &&
+          targetInfo.elemKind == LocalInfo::ValueKind::Unknown && targetInfo.elemSlotCount > 1;
       if (!targetInfo.isVectorTarget) {
         instructions.push_back({pushOneForIndex(indexKind), 1});
         instructions.push_back({addForIndex(indexKind), 0});
       }
       if (!packedBytes) {
-        instructions.push_back({pushOneForIndex(indexKind), IrSlotBytesI32});
+        instructions.push_back(
+            {pushOneForIndex(indexKind),
+             isInlineStructVectorElement
+                 ? static_cast<uint64_t>(targetInfo.elemSlotCount) * IrSlotBytesI32
+                 : static_cast<uint64_t>(IrSlotBytesI32)});
         instructions.push_back({mulForIndex(indexKind), 0});
       }
       instructions.push_back({IrOpcode::AddI64, 0});
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+
+      if (isInlineStructVectorElement) {
+        const Expr &rhsExpr = expr.args[1];
+        // The element's own struct path: what the vector local records for its elements, else what the value says.
+        std::string elementStruct;
+        if (collectionTarget.kind == Expr::Kind::Name) {
+          if (const auto localIt = localsIn.find(collectionTarget.name);
+              localIt != localsIn.end() && localIt->second.vectorElementLifecyclePath.has_value()) {
+            elementStruct = *localIt->second.vectorElementLifecyclePath;
+          }
+        }
+        if (elementStruct.empty()) {
+          elementStruct = inferStructExprPath(rhsExpr, localsIn);
+        }
+        if (elementStruct.empty()) {
+          error = "assign requires matching struct value";
+          return false;
+        }
+        if (!emitExpr(rhsExpr, localsIn)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        if (!emitAssignedStructCopy(
+                destPtrLocal, srcPtrLocal, targetInfo.elemSlotCount, elementStruct, rhsExpr, -1)) {
+          return false;
+        }
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+        return true;
+      }
 
       const int32_t valueLocal = allocTempLocal();
       if (!emitExpr(expr.args[1], localsIn)) {

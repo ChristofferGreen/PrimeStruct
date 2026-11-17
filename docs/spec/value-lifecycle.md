@@ -143,6 +143,10 @@
   (`rows.push(rows[0i32])`) works: the element is read where the buffer moved to when the push grows it, and like any
   struct or vector pushed from a place (an element, a field, a borrowed parameter) it is copied, so the vector and the
   place each own their own String and vector buffers.
+  Assigning to an element of a builtin vector of structs or `String`s (`items[at] = items[at - 1i32]`,
+  `this.names[i] = value`) steps by the element size, copies a place on the right (the source element stays readable)
+  or takes over a temporary, and destroys the element it replaces, so a shift loop over a `vector<String>` frees each
+  string once (`tests/unit/program_matrix/test_program_matrix_element_assign.cpp`).
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
   (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements
