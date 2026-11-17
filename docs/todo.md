@@ -231,9 +231,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6027: No release-gate entry takes more than 10 s alone
+- [~] TODO-6027: No release-gate entry takes more than 10 s alone
   - owner: ai
   - status: ready
+  - claimed_by: gate-10s (worktree-agent-ac4e0a9319952efc2), 2026-11-17
   - created_at: 2026-11-17
   - phase: Test infrastructure (leftover of TODO-6026; data in docs/todo_log.md)
   - parallel_track: gate-timeouts
