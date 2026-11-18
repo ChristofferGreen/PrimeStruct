@@ -164,8 +164,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
 | TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | ready | lib-interface |
-| TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | blocked | lib-archive |
+| TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | ready | lib-archive |
 | TODO-5925 | `--library` compiles a program against a library and links it | blocked | lib-consume |
 | TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
 | TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
@@ -200,7 +199,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019, TODO-6029
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -222,7 +221,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; ready: TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) is ready; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) is ready; then, TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -914,27 +913,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
 
-- [~] TODO-5923: `primec --emit=interface` prints a module's interface and symbol table
-  - owner: ai
-  - status: ready
-  - claimed_by: lib-interface (worktree-agent-a2035638ccbf6a08f), 2026-11-18
-  - created_at: 2026-11-11
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 5)
-  - parallel_track: lib-interface
-  - scope: For a module root (a `[namespace]` or a file whose public definitions are the library, with no `main`), print the interface text in canonical PrimeStruct syntax and the symbol table as JSON. The text holds public structs and enums in full (fields with types and visibility, static fields), public non-generic functions as declarations with resolved parameter and return types, `[effects]` and `[summary]` and no body, and the `[namespace]` envelopes. The symbol table has one entry per symbol: path, kind, hash of the signature, hash of the content, hash of the closure of referenced symbols; hashes are SHA-256 (the stdlib manifest's FNV-1a 64 bit in include/primec/frontend/StdlibSymbolManifest.h only detects drift); the interface hash is the hash of the sorted table. A declaration printer is written for this; `--dump-stage ast` is a debug rendering and is not reused. Generic definitions are not included in this leaf (TODO-5926). Whether the repository has a SHA-256 to use was not checked. The pipeline may demand `/main`; emitting an interface needs no entry point.
-  - acceptance:
-    - golden tests of the text and the table for a module with a struct, an enum, a function, a nested namespace and a private function (absent from the output)
-    - the printed text parses and validates as a program of declarations (parse-back test); if it does not, the printer is wrong
-    - the same module printed twice gives byte-identical output; changing a function body changes its content hash and not its signature hash or the interface hash
-    - inferred return types appear resolved (a function written without `return<...>` prints with its inferred one)
-    - docs/spec/integration-and-tooling.md documents the emit kind
-    - full release gate green
-  - stop_rule: non-generic interface and the table; no archive, no library loading, no generics.
-
 - [ ] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5923
+  - status: ready
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 6 and 7)
   - parallel_track: lib-archive
@@ -963,6 +944,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/source-pipeline.md and integration-and-tooling.md document the flag
     - full release gate green
   - stop_rule: non-generic code only; generics, namespace ownership and uses output are their own leaves.
+  - notes: `primec --emit=interface` (TODO-5923) prints a function declaration with an empty body `{}`, which parses only as a `host` definition and does not validate; the `[imported(<library>)]` marker of this leaf is what gives an interface file a grammar and validation for it (a declaration in an interface file has no body and no return statement), and its parse-back test should then validate a printed interface without the `host` workaround used in tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp.
 
 - [ ] TODO-5926: Generic definitions and synthesized helpers cross the library boundary
   - owner: ai

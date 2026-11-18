@@ -100,6 +100,10 @@ void printPrimecUsage(std::ostream &err) {
   flagLine(err,
            std::string("--emit=") + std::string(primecEmitKindsUsage()),
            "Output kind (default: native)");
+  flagLine(err,
+           "--emit=interface|symbols",
+           "Print a module's interface text, or its symbol table as JSON, to standard output; the "
+           "module needs no entry point");
   flagLine(err, "-o <output>", "Output file path");
   flagLine(err, "--out-dir <dir>", "Output directory");
   flagLine(err, "--entry /path", "Entry point definition path");

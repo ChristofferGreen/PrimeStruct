@@ -231,6 +231,9 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    hand-built modules, including the remap and every link error.
 2. **Interface and symbol table.** The declaration printer and `primec --emit=interface`: text plus symbol table with
    SHA-256 hashes, for a module root with no entry point.
+   Landed (TODO-5923): `primec --emit=interface` and `--emit=symbols`, documented in
+   `docs/spec/integration-and-tooling.md`, Module Interface. A function declaration is printed with an empty body `{}`
+   until the `imported` marker gives declarations a grammar (TODO-5925); the interface hash covers `path kind signature`.
 3. **Multiple-root lowering and `--emit=lib`.** Every public non-generic definition as a root; the archive writer and
    reader; deterministic output.
 4. **Compiling against a library.** `--library`, the resolver reading the interface, `[imported]` declarations,

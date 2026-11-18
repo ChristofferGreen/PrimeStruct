@@ -68,6 +68,72 @@ modules`, `host import <name> has two signatures`, `undefined symbol <name> (lib
 exit code 3. The rules and the limit on strings are in docs/spec/vm-design.md (IR link). There is no archive and no
 compiler front end for libraries yet (docs/ModulesAndLibrariesPlan.md).
 
+### Module Interface
+`primec --emit=interface <module.prime>` prints the interface of a module in canonical PrimeStruct syntax to standard
+output, and `primec --emit=symbols <module.prime>` prints its symbol table as JSON. A module is a file (with the files
+it imports) whose public definitions are the library; it needs no entry point. The compile runs through semantic
+validation, with a stub `return<int> /main() { return(0i32) }` standing in for a missing entry (the stub, and the
+entry path whatever it is, never appears in the output), so a module that does not validate is a diagnostic and exit
+code 2. Both kinds print only what the module's own sources define: stdlib definitions that an import pulled in are not
+part of it. Both are the first step of the library plan (docs/ModulesAndLibrariesPlan.md, section 5); they write no
+archive and load no library.
+
+The interface holds the public (`public`, and not `private`), non-generic definitions, sorted by path inside nested
+`[namespace]` envelopes (a namespace's `summary` is printed on its envelope):
+
+- a struct in full: its transforms that say layout (`pod`, `handle`, `no_padding`, `align_bytes(..)`, ...), every field
+  with its visibility, type and initializer, and its static fields;
+- an enum in its surface form (`Red = 0i32`, `enum<i64>` for another backing type). Validation rewrites an enum to a
+  struct with static entries and keeps no mark of it, so an enum is recognized by its shape (a `value` field and static
+  entries of the struct's own type built from integer literals); a struct of that shape prints as an enum, which
+  validates to the same struct;
+- a function as a declaration: `[public, effects(io_out), return<i32>, summary("...")] add([i32] a, [i32] b{2i32}) {}`.
+  The return type is the one validation resolved, so a function written without `return<...>` prints its inferred
+  type. The effects are the resolved ones (the program's default effects included), sorted. The body is empty: the
+  grammar has no declaration without one, and a `host` function is written the same way. Struct members, the lifecycle
+  helpers among them, are declarations beside the struct, spelled with their full path;
+- `summary` on structs, enums, functions and namespaces.
+
+Transform lists are separated by commas, because an absolute type path after a space (`[static /ui/Color]`) would be
+rewritten as a division by the operator filter. A private definition, an entry, a generic definition, a sum type and
+the stdlib are not printed; generics join the interface with TODO-5926.
+
+```
+[namespace summary("Drawing.")]
+ui {
+  [public enum] Color { Red  Green = 5 }
+  [public effects(io_out) return<i32> summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) { return(a + b) }
+  [return<i32>] hidden() { return(1i32) }
+}
+```
+prints
+```
+[namespace summary("Drawing.")] ui {
+  [public, enum] Color {
+    Red = 0i32
+    Green = 5i32
+  }
+
+  [public, effects(io_out), return<i32>, summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) {}
+}
+```
+Struct and enum text reads back: printing it again gives the same text. A function declaration parses (with `host` added
+until the library plan's `imported` marker gives declarations a grammar of their own and validation).
+
+The symbol table has one line per public symbol: `{"path":"/ui/add","kind":"function","signature":"..","content":"..",
+"closure":".."}` with `kind` `struct`, `enum` or `function`, sorted by path. Every hash is SHA-256 of the text it covers
+(the stdlib manifest's FNV-1a only detects drift):
+
+| Hash | Covers |
+| --- | --- |
+| `signature` | The declaration without its `summary`: a struct or enum in full, a function without a body, with the full path |
+| `content` | The whole definition after validation, body and `summary` included |
+| `closure` | One hash over the `content` hashes of the symbol and of every definition it refers to, directly or through others (private and stdlib definitions included). The references are found by name, so the closure may include more than it needs, never less |
+
+The table begins with `"interfaceHash"`: the SHA-256 of the sorted `path kind signature` lines. A change of a body or
+of a `summary` leaves it, and every `signature`, alone; a change of a signature, or an added or removed public symbol,
+moves it. Output is byte-identical for equal input.
+
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a
 build script (docs/BuildSystemPlan.md). It is the ordinary compile of that file with `--profile build --emit=vm`, so

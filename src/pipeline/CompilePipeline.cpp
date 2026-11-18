@@ -8,6 +8,8 @@
 #include "primec/frontend/ImportResolver.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/IrPrinter.h"
+#include "primec/pipeline/ModuleInterface.h"
+#include "primec/support/EmitKind.h"
 #include "primec/frontend/ImportAllowlist.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
@@ -278,6 +280,14 @@ bool runCompilePipeline(const Options &options,
   }
   output.program = std::move(parsedStage.program);
 
+  // --emit=interface and --emit=symbols print a module, which has no entry point.
+  const bool interfaceEmit =
+      dumpStage == DumpStage::None && isPrimecInterfaceEmitKind(options.emitKind);
+  if (interfaceEmit && !addInterfaceEntryStub(output.program, options.entryPath, error)) {
+    diagnosticSink.setSummary(error);
+    return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+  }
+
   if (benchmarkAstHeapEstimate) {
     emitProgramHeapEstimate(output.program, "post-parse-pre-semantics");
   }
@@ -526,6 +536,28 @@ bool runCompilePipeline(const Options &options,
   if (dumpStage == DumpStage::AstSemantic) {
     AstPrinter printer;
     output.dumpOutput = printer.print(output.program);
+    output.hasDumpOutput = true;
+    return true;
+  }
+
+  if (interfaceEmit) {
+    if (!output.hasSemanticProgram) {
+      error = "interface emit requested without semantic product";
+      diagnosticSink.setSummary(error);
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+    }
+    ModuleInterface moduleInterface;
+    if (!buildModuleInterface(output.program,
+                              output.semanticProgram,
+                              importStage.expandedSource,
+                              options.entryPath,
+                              moduleInterface,
+                              error)) {
+      diagnosticSink.setSummary(error);
+      return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+    }
+    output.dumpOutput = options.emitKind == "symbols" ? formatModuleSymbolTable(moduleInterface)
+                                                      : std::move(moduleInterface.text);
     output.hasDumpOutput = true;
     return true;
   }

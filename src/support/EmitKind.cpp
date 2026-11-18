@@ -38,6 +38,10 @@ bool isPrimecEmitKind(std::string_view emitKind) {
   return false;
 }
 
+bool isPrimecInterfaceEmitKind(std::string_view emitKind) {
+  return emitKind == "interface" || emitKind == "symbols";
+}
+
 std::string_view primecEmitKindsUsage() {
   return PrimecEmitKindsUsage;
 }

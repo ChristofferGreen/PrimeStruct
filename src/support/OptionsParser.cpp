@@ -688,7 +688,7 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
     }
     if (isPrimecMode && arg.rfind("--emit=", 0) == 0) {
       const std::string emitKind = arg.substr(std::string("--emit=").size());
-      if (!isPrimecEmitKind(emitKind)) {
+      if (!isPrimecEmitKind(emitKind) && !isPrimecInterfaceEmitKind(emitKind)) {
         error = "unknown option: " + arg;
         return false;
       }

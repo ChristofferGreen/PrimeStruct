@@ -538,7 +538,8 @@ int main(int argc, char **argv) {
   }
   const std::string_view irBackendKind = primec::resolveIrBackendEmitKind(options.emitKind);
   const primec::IrBackend *irBackend = primec::findIrBackend(irBackendKind);
-  if (irBackend == nullptr && options.dumpStage.empty()) {
+  if (irBackend == nullptr && options.dumpStage.empty() &&
+      !primec::isPrimecInterfaceEmitKind(options.emitKind)) {
     options.skipSemanticProductForNonConsumingPath = true;
   }
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
