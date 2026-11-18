@@ -1,0 +1,7 @@
+import</mid_value>
+import</base_value>
+
+[return<i32>]
+main() {
+  return(mid_value() + base_value())
+}

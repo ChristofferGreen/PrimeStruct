@@ -1,0 +1,6 @@
+import</broken_value>
+
+[public return<i32>]
+top_value() {
+  return(broken_value())
+}

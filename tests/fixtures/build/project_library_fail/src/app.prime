@@ -1,0 +1,6 @@
+import</top_value>
+
+[return<i32>]
+main() {
+  return(top_value())
+}

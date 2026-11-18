@@ -1,0 +1,4 @@
+[public return<i32>]
+base_value() {
+  return(7i32)
+}

@@ -1,0 +1,20 @@
+// A diamond for `primec build` (tests/unit/backend_host/test_build_library_graph.cpp): `left` and `right` link `shared`
+// and the executable links both, so `shared` builds once. The executable exits with 3.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] lib{b.compiler()}
+  lib.emit("lib")
+  [Compiler mut] exe{b.compiler()}
+  exe.emit("optexe")
+  b.library("shared", lib, "src/shared.prime")
+  b.library("left", lib, "src/left.prime")
+  b.library("right", lib, "src/right.prime")
+  b.linkLibrary("left", "shared")
+  b.linkLibrary("right", "shared")
+  b.executable("app", exe, "src/app.prime")
+  b.link("app", "left")
+  b.link("app", "right")
+  return(b.graph())
+}

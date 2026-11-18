@@ -235,17 +235,6 @@ TEST_CASE("primec build names a failing step and stops the steps after it") {
   CHECK_FALSE(std::filesystem::exists(outDir + "/beta_good"));
 }
 
-TEST_CASE("primec build rejects a graph with a library node") {
-  const std::string outDir = freshOutDir("library_out");
-  const std::string out = scratch("library.txt");
-  const int status =
-      primecBuild(shellQuote(FixtureDir + "project") + " --out-dir " + shellQuote(outDir), out);
-  CHECK(status != 0);
-  CHECK(readFile(out + ".err").find("static libraries are not supported by this compiler yet") !=
-        std::string::npos);
-  CHECK_FALSE(std::filesystem::exists(outDir));
-}
-
 TEST_CASE("primec build rejects a bad --jobs") {
   const std::string out = scratch("bad_jobs.txt");
   CHECK(primecBuild(shellQuote(FixtureDir + "project_jobs") + " --jobs zero", out) != 0);

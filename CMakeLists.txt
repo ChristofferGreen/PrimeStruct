@@ -474,6 +474,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/BuildCopyStep.cpp
   src/pipeline/BuildFunctionSteps.cpp
   src/pipeline/BuildLibraryCutoff.cpp
+  src/pipeline/BuildLibraryLinks.cpp
   src/pipeline/BuildStepScheduler.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildSubprojects.cpp
@@ -1523,6 +1524,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_function_steps.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
     tests/unit/backend_host/test_build_library_cutoff.cpp
+    tests/unit/backend_host/test_build_library_graph.cpp
     tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_options.cpp
     tests/unit/backend_host/test_build_primescroll.cpp
@@ -1742,7 +1744,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # Each case compiles make.prime cold (about 1.2 s), so each is a CTest entry of its own.
   foreach(command_case
-          "--dry-run prints" "--dry-run finds" "two independent steps" "stops the steps after it" "rejects a graph with a library"
+          "--dry-run prints" "--dry-run finds" "two independent steps" "stops the steps after it"
           "rejects a bad --jobs" "reports the diagnostics of a broken" "when the directory has none" "for a script with a type error"
           "rejects an effect outside")
     string(MAKE_C_IDENTIFIER "${command_case}" command_id)
@@ -1847,6 +1849,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
               "--order-by=file"
     )
     set_tests_properties(PrimeStruct_build_library_cutoff_${library_cutoff_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
+  # Library and link nodes run (tests/unit/backend_host/test_build_library_graph.cpp). Each end-to-end case compiles
+  # make.prime and several programs, so each is a CTest entry of its own; the link-resolution cases are one entry.
+  foreach(library_graph_case
+          "executables that link them run" "library build: a second run" "library build: a diamond"
+          "library build: a failed library" "library links:")
+    string(MAKE_C_IDENTIFIER "${library_graph_case}" library_graph_id)
+    add_test(
+      NAME PrimeStruct_build_library_graph_${library_graph_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_library_graph"
+              "--test-case=*${library_graph_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_library_graph_${library_graph_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # A script that runs its graph in stages (tests/unit/backend_host/test_build_stages.cpp).

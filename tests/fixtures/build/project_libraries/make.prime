@@ -1,0 +1,21 @@
+// A build script for `primec build` (tests/unit/backend_host/test_build_library_graph.cpp): the library `base`, the
+// library `mid` that links it, an executable that links only `mid` (the runner passes `base` as well) and one that
+// links both. `app` exits with 8 and `both` with 15.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] lib{b.compiler()}
+  lib.emit("lib")
+  [Compiler mut] exe{b.compiler()}
+  exe.emit("optexe")
+  b.library("base", lib, "src/base.prime")
+  b.library("mid", lib, "src/mid.prime")
+  b.linkLibrary("mid", "base")
+  b.executable("app", exe, "src/app.prime")
+  b.link("app", "mid")
+  b.executable("both", exe, "src/both.prime")
+  b.link("both", "mid")
+  b.link("both", "base")
+  return(b.graph())
+}

@@ -63,7 +63,7 @@ the one dangerous call in plain sight.
 | Copy step | `b.copy(name, from, to)`: a file of the project copied into the output directory by the runner (target removed first, cached by content hash; the destination must stay inside the output directory). PrimeScroll's `--option direct=true` copies `libps_ui_appkit.dylib` next to the executable | Yes (TODO-6017) |
 | Command step | An external command with declared inputs and outputs | Later, with the runner |
 | Function step | A PrimeStruct function that runs in the runner on a VM thread, with declared inputs and outputs: `b.step(name, inputs, outputs, source, function)` | Yes (TODO-5919) |
-| Static library, link edge | A library target and a dependency of an executable on it | Appears in the export; `run` rejects it until the compiler supports libraries (section 7) |
+| Static library, link edge | A library target and a dependency of an executable on it | `b.library(name, cc, source)` builds `<name>.psa` with `--emit=lib`; `b.link(exe, lib)` and `b.linkLibrary(lib, dep)` make the linking step compile against the library closure after it is built (TODO-5930, section 7) |
 
 - **Export** is deterministic JSON: a version, nodes sorted by id, ids derived from target names. Hashes are the
   runner's job (section 8), not the script's.
@@ -173,8 +173,8 @@ are what bounds it, as with the embed API.
   origin. Only the root script may call `run`. A file included twice is evaluated once; a cycle is a diagnostic.
   Landed in TODO-5916 (see section 11 for how it loads, and docs/spec/integration-and-tooling.md, Subprojects, for the
   merge rules).
-- **Libraries (reserved).** The language is moving toward static libraries that link into an executable. The graph
-  has the node kinds now, so the shape of a build does not change when the compiler catches up. The design is
+- **Libraries.** Static libraries link into an executable, and `primec build` builds and links them (TODO-5930; the graph
+  nodes are in section 2). The design is
   `docs/ModulesAndLibrariesPlan.md`: a library is the interface of a module as PrimeStruct text plus its unoptimized
   IR in one archive, linked at the IR level, with symbol-level hashes giving early cutoff. its leaves are TODO-5922 to
   TODO-5933.

@@ -1,0 +1,4 @@
+[public return<i32>]
+broken_value() {
+  return(missing_name)
+}

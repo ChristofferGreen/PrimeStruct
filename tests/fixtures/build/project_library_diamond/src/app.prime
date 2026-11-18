@@ -1,0 +1,7 @@
+import</left_value>
+import</right_value>
+
+[return<i32>]
+main() {
+  return(left_value() + right_value() - 40i32)
+}

@@ -7,7 +7,7 @@
 namespace primec {
 
 // One step of an exported build graph (docs/BuildSystemPlan.md section 4): the fields of a `compile`, `executable`,
-// `copy` or `function` node of the JSON that `graph.export()` writes. A `copy` step has a `source` and an `output` and
+// `library`, `copy` or `function` node of the JSON that `graph.export()` writes. A `copy` step has a `source` and an `output` and
 // no compiler settings. A `function` step has the file `source`, the definition `function` in it, the files `inputs`
 // it reads (relative to the project) and the files `outputs` it writes (relative to the output directory).
 struct BuildStep {
@@ -47,11 +47,20 @@ struct BuildOption {
   std::string error;
 };
 
+// One `link` node of the export: the executable or library `from` (a step id) is compiled against the library `to`.
+struct BuildLink {
+  std::string from;
+  std::string to;
+};
+
 // The part of an exported graph that `primec build` runs.
 struct BuildGraphData {
-  // The compile and executable nodes, in the order of the export (sorted by id).
+  // The compile, executable, library, copy and function nodes, in the order of the export (sorted by id). A library
+  // node is a step of kind `library` that compiles with `--emit=lib`.
   std::vector<BuildStep> steps;
-  // Library and link nodes, which cannot run yet: their ids.
+  // The link edges; `resolveBuildLibraryLinks` turns them into `libraries` and `after` of the steps.
+  std::vector<BuildLink> links;
+  // The ids of nodes of a kind this runner does not know.
   std::vector<std::string> unsupportedNodes;
   // The `problems` of the export (duplicate ids, links to missing targets).
   std::vector<std::string> problems;

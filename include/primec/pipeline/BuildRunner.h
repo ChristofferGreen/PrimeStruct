@@ -34,7 +34,7 @@ std::vector<std::string> buildStepArguments(const BuildStep &step,
 
 // Runs every compile step of `graph`, in parallel up to `settings.jobs`. Prints one `built <id>` line per finished
 // step (`up to date <id>` for a step the cache skipped) to `out` and, for a failed step, its name and the diagnostics of the compiler to `err`. A failure stops the
-// steps that have not started. A graph with a problem, or with a library or link node, runs nothing. Returns 0 when
+// steps that have not started. A graph with a problem runs nothing. Library nodes build like any step, and the steps that link them wait for them (BuildLibraryLinks.h). Returns 0 when
 // every step succeeded and 1 otherwise.
 int runBuildGraph(const BuildGraphData &graph,
                   const BuildRunSettings &settings,

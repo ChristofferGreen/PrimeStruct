@@ -303,9 +303,18 @@ project directory.
 steps that run at once. Both are options of the command and are not passed on to the compile of the script. Each
 finished step prints `built <id>` to standard output, in id order. A failed step prints
 `primec build: step <name> (<id>) failed` and the compiler's diagnostics to standard error, steps that had not started
-print `... skipped after a failure`, and the exit code is 1. A graph with a library or link node, or with a problem
-(duplicate id, link to a missing target), runs nothing and exits 1 with `static libraries are not supported by this
-compiler yet` or the problem. There is no command step.
+print `... skipped after a failure`, and the exit code is 1. A graph with a problem
+(duplicate id, link to a missing target, a cycle of libraries) runs nothing and exits 1 with the problem. There is no
+command step.
+
+Libraries in a graph. A `library` node is a compile step with `--emit=lib` (no `--entry`) whose output `<name>.psa` goes to
+the output directory. A `link` edge from an executable, a compile step or another library to a library makes the runner
+pass `--library <out-dir>/<name>.psa` for the whole transitive closure of the libraries the step links (an executable
+that links `mid`, which links `base`, is compiled with both, as a set must be complete) and start the step after them.
+Libraries build in parallel with each other; a library that several steps link is one node, so it builds once. A library
+that fails to build is reported by name, and the steps behind it are skipped. A cycle of libraries is a problem of the
+graph. The cache is the one of Library steps below: a step that links libraries is rebuilt only when a symbol it used
+changed.
 
 Function steps. `b.step(name, inputs, outputs, source, function)` (`/std/build`, TODO-5919) adds a step that is a
 PrimeStruct definition: `primec build` compiles the file `source` (relative to the project; the project directory is an

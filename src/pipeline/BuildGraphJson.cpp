@@ -638,7 +638,12 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     }
     const std::string kind = stringField(node, "kind");
     const std::string id = stringField(node, "id");
-    if (kind != "compile" && kind != "executable" && kind != "copy" && kind != "function") {
+    if (kind == "link") {
+      graph.links.push_back({stringField(node, "from"), stringField(node, "to")});
+      continue;
+    }
+    if (kind != "compile" && kind != "executable" && kind != "library" && kind != "copy" &&
+        kind != "function") {
       graph.unsupportedNodes.push_back(id);
       continue;
     }
@@ -668,7 +673,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
       error = "node " + id + " has no compiler settings";
       return false;
     }
-    step.emitKind = stringField(*compiler, "emit");
+    step.emitKind = kind == "library" ? "lib" : stringField(*compiler, "emit");
     const JsonValue *optimize = compiler->find("optimize");
     if (optimize != nullptr && optimize->kind == JsonValue::Kind::Number) {
       step.optimization = static_cast<int>(optimize->number);

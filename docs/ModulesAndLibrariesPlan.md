@@ -267,7 +267,8 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    dependencies. The compiler still links in the same run, so a step that stays up to date keeps an output that can
    differ from a fresh link by the dead code of unused library functions; a separate re-link is not made.
 8. **Build graph nodes run.** `b.library`, `exe.link`, transitive libraries, parallel builds (TODO-5913 and the
-   runner, then these).
+   runner, then these). Landed (TODO-5930): the runner resolves `link` edges into the closure of `--library` arguments
+   and `after` edges (`resolveBuildLibraryLinks`); `b.linkLibrary` links a library to another.
 9. **The differential harness** of section 15, which runs as part of every leaf above from the fourth on.
 10. **Later, deferred:** the stdlib as a library (measure first), libraries that carry back-end code (an object writer
     for the native backend, per-library C++), loading a library from the embed API.

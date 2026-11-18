@@ -1,0 +1,6 @@
+import</base_value>
+
+[public return<i32>]
+mid_value() {
+  return(base_value() + 1i32)
+}

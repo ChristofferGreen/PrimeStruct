@@ -1,0 +1,17 @@
+// A broken library for `primec build` (tests/unit/backend_host/test_build_library_graph.cpp): `broken` does not compile,
+// so `top` (which links it) and the executable (which links `top`) never start.
+import /std/build/*
+
+[return<Graph> effects(heap_alloc)]
+build([Build mut] b) {
+  [Compiler mut] lib{b.compiler()}
+  lib.emit("lib")
+  [Compiler mut] exe{b.compiler()}
+  exe.emit("optexe")
+  b.library("broken", lib, "src/broken.prime")
+  b.library("top", lib, "src/top.prime")
+  b.linkLibrary("top", "broken")
+  b.executable("app", exe, "src/app.prime")
+  b.link("app", "top")
+  return(b.graph())
+}

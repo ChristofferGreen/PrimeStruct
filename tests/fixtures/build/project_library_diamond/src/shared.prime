@@ -1,0 +1,4 @@
+[public return<i32>]
+shared_value() {
+  return(20i32)
+}

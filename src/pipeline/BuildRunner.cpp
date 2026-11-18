@@ -5,6 +5,7 @@
 #include "primec/pipeline/BuildFunctionStep.h"
 #include "primec/pipeline/BuildFunctionSteps.h"
 #include "primec/pipeline/BuildLibraryCutoff.h"
+#include "primec/pipeline/BuildLibraryLinks.h"
 #include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
@@ -211,7 +212,8 @@ std::vector<std::string> buildStepArguments(const BuildStep &step,
   arguments.push_back(settings.primecPath);
   arguments.push_back("--emit=" + step.emitKind);
   arguments.push_back("-O" + std::to_string(step.optimization));
-  if (!step.entry.empty()) {
+  // A library has no entry point (the compiler refuses one), whatever the compiler snapshot says.
+  if (!step.entry.empty() && step.emitKind != "lib") {
     arguments.push_back("--entry");
     arguments.push_back(step.entry);
   }
@@ -362,20 +364,30 @@ std::string selfExecutablePath(const std::string &argv0) {
   return argv0;
 }
 
-int runBuildGraph(const BuildGraphData &graph,
+int runBuildGraph(const BuildGraphData &given,
                   const BuildRunSettings &settings,
                   std::ostream &out,
                   std::ostream &err) {
-  if (!graph.problems.empty()) {
-    for (const std::string &problem : graph.problems) {
+  if (!given.problems.empty()) {
+    for (const std::string &problem : given.problems) {
       err << "primec build: " << problem << "\n";
     }
     return 1;
   }
-  if (!graph.unsupportedNodes.empty()) {
-    for (const std::string &id : graph.unsupportedNodes) {
-      err << "primec build: " << id
-          << ": static libraries are not supported by this compiler yet\n";
+  if (!given.unsupportedNodes.empty()) {
+    for (const std::string &id : given.unsupportedNodes) {
+      err << "primec build: " << id << ": this compiler does not know this kind of node\n";
+    }
+    return 1;
+  }
+  // The links of libraries become `--library` arguments and `after` edges (BuildLibraryLinks.h). The archives are
+  // written to the output directory, so that is where the compile steps find them.
+  BuildGraphData graph = given;
+  const std::vector<std::string> linkProblems =
+      resolveBuildLibraryLinks(graph, absoluteAgainst(settings.outDir, settings.projectDir));
+  if (!linkProblems.empty()) {
+    for (const std::string &problem : linkProblems) {
+      err << "primec build: " << problem << "\n";
     }
     return 1;
   }

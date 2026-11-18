@@ -1,0 +1,6 @@
+import</shared_value>
+
+[public return<i32>]
+right_value() {
+  return(shared_value() + 2i32)
+}

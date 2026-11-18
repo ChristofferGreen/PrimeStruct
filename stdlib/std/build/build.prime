@@ -150,7 +150,7 @@ namespace build {
 
   // One node of the graph. `kind` is "compile", "executable", "library" or "link". A compile step, an executable and
   // a library carry a compiler snapshot, a source file and an output name; a link edge names the executable and the
-  // library it links. `runnable` is false for the nodes a runner cannot execute yet.
+  // library it links. `runnable` is true for every node this runner executes.
   [public struct]
   Node() {
     [public String mut] id{String{}}
@@ -226,10 +226,6 @@ namespace build {
       }
       json.key("runnable")
       json.boolValue(this.runnable)
-      if(!this.runnable) {
-        json.key("note")
-        json.stringValue("static libraries are not supported by this compiler yet")
-      }
       json.endObject()
     }
 
@@ -825,9 +821,13 @@ namespace build {
       this.collected.add(node)
     }
 
-    // A static library target (id "lib:<name>", output "<name>.psa"). It exports, but a runner cannot build it yet.
+    // A static library target (id "lib:<name>", output "<name>.psa"): the runner compiles `source` with `--emit=lib`
+    // whatever `cc` says, into the output directory. An executable or another library that names it with `link` or
+    // `linkLibrary` is compiled against it, after it is built.
     [mut effects(heap_alloc)]
     library([StringView] name, [Compiler copy] cc, [StringView] source) {
+      [Compiler mut] settings{cc}
+      settings.emit("lib")
       [Node mut] node{Node{}}
       node.id = derive_id("lib:", name)
       node.kind = stringFrom("library")
@@ -835,8 +835,7 @@ namespace build {
       node.source = source.toOwned()
       node.output = name.toOwned()
       node.output.append(".psa")
-      node.compilerJson = cc.toJson()
-      node.runnable = false
+      node.compilerJson = settings.toJson()
       this.collected.add(node)
     }
 
@@ -849,7 +848,19 @@ namespace build {
       node.toId = derive_id("lib:", libraryName)
       node.id = problem_text("link:", executableName, ">", libraryName)
       node.kind = stringFrom("link")
-      node.runnable = false
+      this.collected.add(node)
+    }
+
+    // The dependency of the library `libraryName` on the library `dependencyName` (id "link:lib:<lib>><dependency>"): the
+    // library is compiled against the other (`--emit=lib --library`), which its manifest records, and everything that
+    // links the library links the dependency too. Libraries that link in a cycle are a problem of the build.
+    [mut effects(heap_alloc)]
+    linkLibrary([StringView] libraryName, [StringView] dependencyName) {
+      [Node mut] node{Node{}}
+      node.fromId = derive_id("lib:", libraryName)
+      node.toId = derive_id("lib:", dependencyName)
+      node.id = problem_text("link:lib:", libraryName, ">", dependencyName)
+      node.kind = stringFrom("link")
       this.collected.add(node)
     }
 

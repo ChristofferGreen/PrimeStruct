@@ -1581,7 +1581,8 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   `defaultEffect(name)`, `linkArg(arg)`. A copy is independent of the original. `toJson()` returns it as a JSON object.
 - `Build`: `compiler()` returns a `Compiler` with the defaults; `compile(name, cc, source)`, `executable(name, cc,
   source)` and `library(name, cc, source)` add a target with the settings `cc` has at the call; `link(executableName,
-  libraryName)` adds the dependency edge of an executable on a library; `subproject(dir)` includes the graph of
+  libraryName)` adds the dependency edge of an executable on a library and `linkLibrary(libraryName, dependencyName)` the
+  edge of a library on another (a library always compiles with `--emit=lib`, whatever `cc` says); `subproject(dir)` includes the graph of
   `<dir>/make.prime` (it records the folder; `primec build` runs that script and merges it, see Build Command,
   Subprojects; a folder named twice counts once); `option(name, default[, description])` declares a build option and returns its
   value (`--option name=value`, else the default; `bool`, `i32` or a `String` that is a literal, see Build Command,
@@ -1606,9 +1607,9 @@ directory or starts a process; the module needs only the `heap_alloc` effect (it
   applies, and its writes go through `/std/build_step`, described next.
 - `primec build` deletes the `<output>.cpp` that `--emit=optexe` leaves next to the executable of an `optexe` step; the
   executable is the result.
-- Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `copy:<name>`, `step:<name>`, `lib:<name>` and `link:<exe>><lib>`.
-  A library's output is `<name>.psa`. Library and link nodes export with `"runnable":false` and a note, because the
-  compiler cannot build static libraries yet; compile steps and executables are `"runnable":true`.
+- Node ids are derived from the target name: `compile:<name>`, `exe:<name>`, `copy:<name>`, `step:<name>`, `lib:<name>` and `link:<exe>><lib>` and `link:lib:<lib>><lib>`.
+  A library's output is `<name>.psa`. Every node exports with `"runnable":true`; the runner builds libraries and links them
+  (docs/spec/integration-and-tooling.md, Build Command, Libraries in a graph).
 - `export()` is deterministic and compact: `{"version":1,"nodes":[...],"problems":[...]}`. Nodes are sorted by id (bytewise,
   then by their JSON text), so the order of the calls that built the graph does not show. A node has `id`, `kind`
   (`compile`, `executable`, `copy`, `function`, `library` or `link`), `name`, `source`, `output`, a `compiler` object (`emit`, `optimize`,
