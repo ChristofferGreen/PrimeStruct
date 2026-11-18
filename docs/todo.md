@@ -931,9 +931,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: non-generic interface and the table; no archive, no library loading, no generics.
 
-- [ ] TODO-6031: Lowering marks string literal pushes so the IR link can always move a library's strings
+- [~] TODO-6031: Lowering marks string literal pushes so the IR link can always move a library's strings
   - owner: ai
   - status: ready
+  - claimed_by: lib-ir-strings (worktree-agent-a62dcecbd25613955), 2026-11-18
   - created_at: 2026-11-17
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 9; follow-up of TODO-5922)
   - parallel_track: lib-ir-link
