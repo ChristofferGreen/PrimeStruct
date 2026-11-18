@@ -165,7 +165,7 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
-| TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
+| TODO-6036 | The front end of the http web apps does less work per call | deferred | web-app-lowering-time |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
@@ -956,20 +956,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [~] TODO-5984: The http web apps lower in seconds, not minutes
+- [ ] TODO-6036: The front end of the http web apps does less work per call
   - owner: ai
-  - status: ready
-  - claimed_by: perf-lower (worktree-agent-ac19f7f2772a67c81), 2026-11-18
-  - created_at: 2026-11-12
+  - status: deferred
+  - created_at: 2026-11-18
   - phase: Performance
   - parallel_track: web-app-lowering-time
-  - scope: `primec --dump-stage ir-lowered` on examples/apps/hello_button/main.prime takes about 15 s of CPU (5 s for web_app, about the same for text_editor and todo_web) in a release build, measured 2026-11-12 with `/usr/bin/time -p`; under the gate's load a single example passes 60 s of wall time (rc=124). The four examples then end in an expected error for the native target (`native backend does not support recursive calls: /std/http/server/run_workers__t...` or `host calls are only supported by the vm target`), so the time is spent before the result is known. Profile the run (semantic validation of the /std/http and /std/ui imports versus monomorphization versus lowering), find the dominant cost and remove it.
+  - scope: After TODO-5984 the semantic front end (import expansion, monomorphization, validation, semantic-product publication) is 1.2 to 1.7 s of the 1.5 to 3.8 s that `primec --dump-stage ir-lowered` takes on examples/apps/*, and `text_editor` stays at 1.93 s CPU against the 1.67 s a third of its recorded 5 s allows. The profile (docs/todo_archive/2026-11.md under TODO-5984) shows no single cost: operator new through the arena is 13 percent of samples, `validateDefinitionsFromStableIndexResolver` 4 percent self, and per-call linear scans or per-call key strings remain in `SemanticsValidator::hasDeclaredDefinitionPath` (scans `program_.definitions`), `isSimpleCallName` (builds a key string per call) and `specializeTemplateDefinitionFamily` (hash walk). Re-profile on the examples, take the costliest few, and fix them without changing output.
   - acceptance:
-    - the profile and the dominant cost are recorded in docs/todo_log.md under this id
-    - `--dump-stage ir-lowered` on the four examples takes at most a third of the recorded CPU time, with output unchanged
+    - `--dump-stage ir-lowered` on examples/apps/text_editor takes at most 1.67 s of CPU in a release build on a quiet machine, with output unchanged
     - full release gate green
-  - stop_rule: the cost the profile names; no unrelated compiler speedups.
-  - notes: Found while checking the IR comparison of TODO-5963; the error text is the same before and after that change.
+  - stop_rule: the costs the new profile names; no unrelated compiler speedups.
+  - notes: deferred: not committed. Measure min of 3 runs; the machine's load moves a single run by 30 percent.
 
 - [ ] TODO-5987: The lowerer's include-only fragments become components
   - owner: ai

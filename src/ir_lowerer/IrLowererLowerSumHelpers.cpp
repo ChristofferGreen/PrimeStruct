@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "IrLowererCountAccessClassifiers.h"
+#include "primec/ir_lowerer/IrLowererDefinitionPathIndex.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
@@ -441,10 +442,7 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
 
       const std::string suffix = normalized.front() == '/' ? normalized : "/" + normalized;
       std::vector<std::string> suffixMatches;
-      for (const auto &[path, def] : defMap) {
-        if (def == nullptr || !isLowerableSumDefinition(*def)) {
-          continue;
-        }
+      for (const std::string &path : definitionPathIndexOf(setupStage).sumDefinitionPaths()) {
         if (path.size() >= suffix.size() &&
             path.compare(path.size() - suffix.size(), suffix.size(), suffix) == 0) {
           suffixMatches.push_back(path);

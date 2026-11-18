@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererDefinitionPathIndex.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSemanticProductTargetAdapters.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
@@ -65,28 +66,7 @@ const Definition * TailDispatchContext::resolveTailDispatchDirectHelperDefinitio
               if (defIt != defMap.end()) {
                 return defIt->second;
               }
-              auto matchesGeneratedLeafDefinition =
-                  [&](const std::string &candidatePath,
-                      const char *marker,
-                      size_t markerSize) {
-                    return candidatePath.rfind(lookupPath, 0) == 0 &&
-                           candidatePath.compare(
-                               lookupPath.size(), markerSize, marker) == 0 &&
-                           candidatePath.find('/',
-                                              lookupPath.size() + markerSize) ==
-                               std::string::npos;
-                  };
-              for (const auto &[candidatePath, def] : defMap) {
-                if (def == nullptr) {
-                  continue;
-                }
-                if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
-                    matchesGeneratedLeafDefinition(candidatePath, "__ov", 4) ||
-                    matchesGeneratedLeafDefinition(candidatePath, "<", 1)) {
-                  return def;
-                }
-              }
-              return nullptr;
+              return definitionPathIndexOf(setupStage).findGeneratedLeafDefinition(lookupPath);
             };
             if (const Definition *direct = findByPath(path);
                 direct != nullptr) {

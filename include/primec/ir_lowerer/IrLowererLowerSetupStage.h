@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -18,6 +19,8 @@
 #include "primec/ir/IrValidation.h"
 
 namespace primec::ir_lowerer {
+
+class DefinitionPathIndex;
 
 struct LowerSetupStageInput {
   const Program *program = nullptr;
@@ -38,6 +41,8 @@ struct LowerSetupStageState {
   bool allowDynamicStrings = false;
   const Definition *entryDef = nullptr;
   std::unordered_map<std::string, const Definition *> defMap;
+  // Lookups over `defMap` that avoid scanning it; built on first use (definitionPathIndexOf).
+  std::shared_ptr<const DefinitionPathIndex> definitionPathIndex;
   std::unordered_set<std::string> structNames;
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::vector<LayoutFieldBinding>> structFieldInfoByName;

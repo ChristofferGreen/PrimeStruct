@@ -28,6 +28,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
 
   stateOut.entryDef = nullptr;
   stateOut.defMap.clear();
+  stateOut.definitionPathIndex.reset();
   stateOut.structNames.clear();
   stateOut.importAliases.clear();
   stateOut.structFieldInfoByName.clear();
