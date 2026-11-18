@@ -852,9 +852,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: threads mode only; the default schedule is the single-threaded scheduler of TODO-5870.
   - notes: deferred: scope against the fast kernel's locals arena first.
 
-- [ ] TODO-5903: A debug session runs programs that spawn tasks
+- [~] TODO-5903: A debug session runs programs that spawn tasks
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: vm-debug (worktree-agent-a75680b97ed98e26d), 2026-11-18
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads); docs/VmInspectorPlan.md
   - parallel_track: vm-debug-tasks
