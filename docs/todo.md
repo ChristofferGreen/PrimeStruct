@@ -135,6 +135,7 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
+| TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -183,7 +184,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5525, TODO-5526
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -576,6 +577,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
+
+- [~] TODO-5523: A Result-returning main exits with its error code
+  - owner: ai
+  - status: ready
+  - claimed_by: result-main (worktree-agent-a843446ac27cda4fe), 2026-11-18
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-main
+  - scope: `[return<Result<i32, i32>>] main() { return(error<i32, i32>(3i32)) }` exits 0 on VM/C++ and 32 on native: the entry returns the raw sum pointer (or, without the import, the packed value whose low 32 bits are 0). Specify the exit code of a Result-returning entry (0 for ok, the error code or 1 otherwise) in docs/spec and decode the entry's return value on every backend.
+  - acceptance:
+    - spec states the rule; matrix cases for ok, int error and struct error agree on VM, native and C++
+    - full release gate green
+  - stop_rule: entry-point Result exit codes only.
+  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai

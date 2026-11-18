@@ -605,7 +605,6 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
-  src/ir_lowerer/IrLowererEntryResultExit.cpp
   src/ir_lowerer/IrLowererLibraryRoots.cpp
   src/ir_lowerer/IrLowererRecursionAnalysis.cpp
   src/ir_lowerer/IrLowererDefinitionPathIndex.cpp
@@ -2499,7 +2498,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_results_basic.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_results_structs.cpp
-    tests/unit/compile_run/vm/test_compile_run_vm_result_exit_codes.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_file_helpers.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_gfx_helpers.cpp
     tests/unit/compile_run/vm/test_compile_run_vm_core_variadics.cpp
