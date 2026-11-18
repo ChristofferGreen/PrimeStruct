@@ -13,6 +13,17 @@ struct BuildCacheDep {
   std::string hash;
 };
 
+// One library symbol a compile used (`--emit-uses`), with the hashes of the library's symbol table: the signature and
+// content hashes the compiler wrote and the closure hash of the same table, which also moves when a private definition
+// the symbol reaches changes.
+struct BuildLibraryUse {
+  std::string path;
+  std::string library;
+  std::string signatureHash;
+  std::string contentHash;
+  std::string closureHash;
+};
+
 // What a finished compile step leaves in `ProjectRoot/.ps/cache/`: the key it ran under, the hash of its output, the
 // content hashes of the files the compiler read (`--emit-deps`) plus the files named by its link arguments, and the
 // listing hashes of the directories its glob read (`Build.watch`).
@@ -22,6 +33,8 @@ struct BuildCacheEntry {
   std::vector<BuildCacheDep> deps;
   // `hash` is the listing hash of the directory `path` (see hashDirectoryListing).
   std::vector<BuildCacheDep> dirs;
+  // The library symbols the step used (a step that links libraries only; see BuildLibraryCutoff.h).
+  std::vector<BuildLibraryUse> uses;
 };
 
 // The key of one step: the hash of the compiler executable (its version), the hash scheme and the compiler

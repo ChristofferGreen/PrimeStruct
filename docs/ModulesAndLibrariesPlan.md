@@ -261,7 +261,11 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    (docs/spec/integration-and-tooling.md, Compiling Against a Library, Uses): it walks the validated program from its
    own definitions through the library definitions they reach, and needed no new symbol-table entry, because the
    consumer holds the generics' bodies and the private declarations and finds what they reach itself. The runner's
-   decision is still open.
+   decision has landed too (docs/spec/integration-and-tooling.md, Build Command, Library steps): the step's cache
+   entry records the used symbols, with their closure hashes read from the archive's symbol table (the use list has
+   no closure hash, and a private function a used function calls changes only that one), and the archives are not
+   dependencies. The compiler still links in the same run, so a step that stays up to date keeps an output that can
+   differ from a fresh link by the dead code of unused library functions; a separate re-link is not made.
 8. **Build graph nodes run.** `b.library`, `exe.link`, transitive libraries, parallel builds (TODO-5913 and the
    runner, then these).
 9. **The differential harness** of section 15, which runs as part of every leaf above from the fourth on.

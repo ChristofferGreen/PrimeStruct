@@ -23,6 +23,9 @@ struct BuildStep {
   std::vector<std::string> transforms;
   std::vector<std::string> defaultEffects;
   std::vector<std::string> linkArgs;
+  // The library archives (`.psa`) the step compiles against, relative to the project: one `--library` each. The step
+  // is rebuilt when a symbol it used changed, not when an archive does (BuildLibraryCutoff.h).
+  std::vector<std::string> libraries;
   // Directories whose listings the step depends on (`Build.watch`); relative paths are relative to the project.
   std::vector<std::string> inputDirs;
   // The ids of the steps this one waits for (`"after"`): it starts when they have finished successfully.

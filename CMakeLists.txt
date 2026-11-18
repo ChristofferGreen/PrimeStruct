@@ -473,6 +473,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/BuildCache.cpp
   src/pipeline/BuildCopyStep.cpp
   src/pipeline/BuildFunctionSteps.cpp
+  src/pipeline/BuildLibraryCutoff.cpp
   src/pipeline/BuildStepScheduler.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildSubprojects.cpp
@@ -1521,6 +1522,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/backend_host/test_build_copy.cpp
     tests/unit/backend_host/test_build_function_steps.cpp
     tests/unit/backend_host/test_build_glob_cache.cpp
+    tests/unit/backend_host/test_build_library_cutoff.cpp
     tests/unit/backend_host/test_build_stages.cpp
     tests/unit/backend_host/test_build_options.cpp
     tests/unit/backend_host/test_build_primescroll.cpp
@@ -1827,6 +1829,24 @@ if(PRIMESTRUCT_BUILD_TESTS)
               "--order-by=file"
     )
     set_tests_properties(PrimeStruct_build_glob_cache_${glob_cache_id}
+                         PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  endforeach()
+  # A step that links libraries is rebuilt when a symbol it used changed, not when a library did
+  # (tests/unit/backend_host/test_build_library_cutoff.cpp).
+  foreach(library_cutoff_case
+          "second run of a library step" "did not call does not rebuild" "a new function in the library"
+          "signature of a function the program called" "body of a function the program called" "private function a called"
+          "entry lists the used symbols" "cannot be read runs" "compare by name without overload" "round trips its uses"
+          "become one --library each")
+    string(MAKE_C_IDENTIFIER "${library_cutoff_case}" library_cutoff_id)
+    add_test(
+      NAME PrimeStruct_build_library_cutoff_${library_cutoff_id}
+      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+              "--test-suite=primestruct.backend.build_library_cutoff"
+              "--test-case=*${library_cutoff_case}*"
+              "--order-by=file"
+    )
+    set_tests_properties(PrimeStruct_build_library_cutoff_${library_cutoff_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # A script that runs its graph in stages (tests/unit/backend_host/test_build_stages.cpp).

@@ -4,6 +4,7 @@
 #include "primec/pipeline/BuildCopyStep.h"
 #include "primec/pipeline/BuildFunctionStep.h"
 #include "primec/pipeline/BuildFunctionSteps.h"
+#include "primec/pipeline/BuildLibraryCutoff.h"
 #include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
@@ -71,17 +72,67 @@ std::string buildStepOutputPath(const BuildStep &step, const BuildRunSettings &s
   return absoluteAgainst(step.output, outDir);
 }
 
+// The absolute paths of the library archives of `step`.
+std::vector<std::string> libraryArchivePaths(const BuildStep &step,
+                                             const BuildRunSettings &settings) {
+  std::vector<std::string> paths;
+  for (const std::string &library : step.libraries) {
+    std::error_code ec;
+    const std::filesystem::path absolute =
+        std::filesystem::absolute(absoluteAgainst(library, settings.projectDir), ec);
+    paths.push_back(ec ? library : absolute.lexically_normal().string());
+  }
+  return paths;
+}
+
+// A step that links libraries has no dependency on the archives: it depends on the library symbols it used. True when
+// the step has no library, or when every symbol it used still has the hashes recorded in `entry`. A library that
+// cannot be read is a change, so the compile runs and reports it.
+bool libraryUsesAreCurrent(const BuildStep &step,
+                           const BuildRunSettings &settings,
+                           const std::string &compilerHash,
+                           const BuildCacheEntry &entry) {
+  if (step.libraries.empty()) {
+    return true;
+  }
+  BuildLibrarySymbols symbols;
+  std::string error;
+  return loadBuildLibrarySymbols(
+             libraryArchivePaths(step, settings), compilerHash, symbols, error) &&
+         buildLibraryUsesUnchanged(entry.uses, symbols);
+}
+
 // Records what the finished step read, so the next run can tell whether anything changed. The compiler's own list
-// (`--emit-deps`) is joined by the files named by link arguments, which the compiler hands to the toolchain.
+// (`--emit-deps`) is joined by the files named by link arguments, which the compiler hands to the toolchain. The
+// archives of a library step are left out of it and the symbols the compile used (`--emit-uses`) are recorded instead.
 // A step whose inputs cannot all be hashed gets no entry and runs again next time.
 void storeBuildCacheEntry(const BuildStep &step,
                           const BuildRunSettings &settings,
+                          const std::string &compilerHash,
                           const std::string &cacheFile,
                           const std::string &key,
                           const std::string &outputPath) {
   std::vector<std::string> paths;
   if (!readDependencyList(cacheFile + ".deps", paths)) {
     return;
+  }
+  BuildCacheEntry entry;
+  if (!step.libraries.empty()) {
+    const std::vector<std::string> archives = libraryArchivePaths(step, settings);
+    paths.erase(std::remove_if(paths.begin(),
+                               paths.end(),
+                               [&](const std::string &path) {
+                                 return std::find(archives.begin(), archives.end(), path) !=
+                                        archives.end();
+                               }),
+                paths.end());
+    BuildLibrarySymbols symbols;
+    std::string error;
+    if (!readBuildUsesList(cacheFile + ".uses", entry.uses) ||
+        !loadBuildLibrarySymbols(archives, compilerHash, symbols, error) ||
+        !completeBuildLibraryUses(entry.uses, symbols)) {
+      return;
+    }
   }
   for (const std::string &arg : step.linkArgs) {
     if (arg.empty() || arg[0] == '-') {
@@ -93,7 +144,6 @@ void storeBuildCacheEntry(const BuildStep &step,
       paths.push_back(candidate);
     }
   }
-  BuildCacheEntry entry;
   entry.key = key;
   if (!sha256FileHex(outputPath, entry.outputHash) || !hashBuildDependencies(paths, entry.deps)) {
     return;
@@ -178,6 +228,10 @@ std::vector<std::string> buildStepArguments(const BuildStep &step,
   }
   for (const std::string &arg : step.linkArgs) {
     arguments.push_back("--link-arg=" + arg);
+  }
+  for (const std::string &library : step.libraries) {
+    arguments.push_back("--library");
+    arguments.push_back(library);
   }
   arguments.push_back("--out-dir");
   arguments.push_back(settings.outDir);
@@ -453,7 +507,8 @@ int runBuildGraph(const BuildGraphData &graph,
       key = buildStepKey(compilerHash, keyArguments);
       BuildCacheEntry entry;
       if (readBuildCacheEntry(cacheFile, entry) &&
-          buildCacheEntryIsCurrent(entry, key, outputPath)) {
+          buildCacheEntryIsCurrent(entry, key, outputPath) &&
+          libraryUsesAreCurrent(step, settings, compilerHash, entry)) {
         result.state = State::UpToDate;
         return;
       }
@@ -463,6 +518,9 @@ int runBuildGraph(const BuildGraphData &graph,
       std::filesystem::create_directories(settings.cacheDir, ec);
       // Before the source, the last argument.
       arguments.insert(arguments.end() - 1, {"--emit-deps", cacheFile + ".deps"});
+      if (!step.libraries.empty()) {
+        arguments.insert(arguments.end() - 1, {"--emit-uses", cacheFile + ".uses"});
+      }
     }
 
     std::string capturedOut;
@@ -470,11 +528,12 @@ int runBuildGraph(const BuildGraphData &graph,
     const int status = runProgramCaptured(arguments, settings.projectDir, capturedOut, capturedErr);
     result.diagnostics = capturedErr + capturedOut;
     if (caching && status == 0) {
-      storeBuildCacheEntry(step, settings, cacheFile, key, outputPath);
+      storeBuildCacheEntry(step, settings, compilerHash, cacheFile, key, outputPath);
     }
     if (caching) {
       std::error_code ec;
       std::filesystem::remove(cacheFile + ".deps", ec);
+      std::filesystem::remove(cacheFile + ".uses", ec);
     }
     if (status == 0) {
       // `--emit=optexe` leaves the generated C++ next to the executable; the executable is the result, and the cache

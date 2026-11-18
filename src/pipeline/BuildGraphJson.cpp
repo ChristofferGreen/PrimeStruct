@@ -407,6 +407,7 @@ void moveNodeIntoParent(const std::string &directory,
     return;
   }
   rebaseStringList(directory, mutableField(*compiler, "import_paths"));
+  rebaseStringList(directory, mutableField(*compiler, "libraries"));
   // A link argument names a file when it is not an option and the file exists in the subproject.
   JsonValue *linkArgs = mutableField(*compiler, "link_args");
   if (linkArgs != nullptr && linkArgs->kind == JsonValue::Kind::Array) {
@@ -677,6 +678,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.transforms = stringList(*compiler, "transforms");
     step.defaultEffects = stringList(*compiler, "default_effects");
     step.linkArgs = stringList(*compiler, "link_args");
+    step.libraries = stringList(*compiler, "libraries");
     graph.steps.push_back(std::move(step));
   }
   const JsonValue *options = root.find("options");

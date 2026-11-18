@@ -78,6 +78,28 @@ bool readBuildCacheEntry(const std::string &path, BuildCacheEntry &entry) {
         return false;
       }
       entry.dirs.push_back({line.substr(space + 1), line.substr(4, space - 4)});
+    } else if (line.rfind("use ", 0) == 0) {
+      // use <library> <signature> <content> <closure> <path>
+      BuildLibraryUse use;
+      size_t position = 4;
+      std::string *fields[] = {
+          &use.library, &use.signatureHash, &use.contentHash, &use.closureHash};
+      bool well = true;
+      for (std::string *field : fields) {
+        const size_t space = line.find(' ', position);
+        if (space == std::string::npos) {
+          well = false;
+          break;
+        }
+        *field = line.substr(position, space - position);
+        position = space + 1;
+      }
+      use.path = well ? line.substr(position) : std::string();
+      if (!well || use.path.empty()) {
+        entry = BuildCacheEntry{};
+        return false;
+      }
+      entry.uses.push_back(std::move(use));
     } else if (line.rfind("dep ", 0) == 0) {
       const size_t space = line.find(' ', 4);
       if (space == std::string::npos) {
@@ -120,6 +142,10 @@ bool writeBuildCacheEntry(const std::string &path, const BuildCacheEntry &entry)
     out << "key " << entry.key << '\n' << "output " << entry.outputHash << '\n';
     for (const BuildCacheDep &dep : entry.deps) {
       out << "dep " << dep.hash << ' ' << dep.path << '\n';
+    }
+    for (const BuildLibraryUse &use : entry.uses) {
+      out << "use " << use.library << ' ' << use.signatureHash << ' ' << use.contentHash << ' '
+          << use.closureHash << ' ' << use.path << '\n';
     }
     for (const BuildCacheDep &dir : entry.dirs) {
       out << "dir " << dir.hash << ' ' << dir.path << '\n';
