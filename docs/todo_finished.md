@@ -2315,6 +2315,7 @@ are left unarchived.
 | TODO-5900 | The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5901 | A threaded VM run records its synchronization order and replays it on the deterministic scheduler | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5903 | A debug session runs programs that spawn tasks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
+| TODO-5904 | The VM runs tasks on threads by default | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5905 | `/std/path` joins, splits and normalizes paths | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5907 | `/std/glob` expands glob patterns (split: the cache inputs are TODO-6009) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |

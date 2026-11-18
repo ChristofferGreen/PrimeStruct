@@ -255,7 +255,8 @@
   replaying such a trace (`--debug-replay`) is not covered.
 - **Tasks on threads (the VM, `--vm-threads`):** `primevm --vm-threads` and `primec --emit=vm --vm-threads` (the
   embedder's `Vm::setTaskThreads`) run each `TaskSpawn` on an OS thread of its own instead of under the deterministic
-  scheduler; without the flag nothing changes, and a program without tasks runs as before (its heap is the first
+  scheduler; the default stays the deterministic scheduler and threads are opt-in (decided 2026-11-18), so without the
+  flag nothing changes, and a program without tasks runs as before (its heap is the first
   arena, with today's addresses). The calling thread is the main task. A spawned task is a detached pthread with an
   8 MiB stack that runs the step kernel on a call stack of its own (`VmThreadedTasks` in
   `src/runtime/VmThreadedTasks.cpp`; the flat loop is not used until TODO-5902) and numbers its locals from 0, as
