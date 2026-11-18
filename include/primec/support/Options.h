@@ -77,6 +77,8 @@ struct Options {
   std::optional<std::vector<std::string>> allowImport;
   // --emit-deps: write the sorted source files the compile read, one path per line, to this file.
   std::string emitDepsPath;
+  // --emit-uses: write the library symbols the compile resolved, sorted, one per line, to this file.
+  std::string emitUsesPath;
   std::vector<std::string> programArgs;
   std::vector<std::string> importPaths;
   // --link-arg: extra arguments for the host C++ compiler when it links an exe or optexe output,

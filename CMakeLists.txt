@@ -486,6 +486,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/CompilePipelineSource.cpp
   src/pipeline/CompilePipelineStdlib.cpp
   src/pipeline/EmitDeps.cpp
+  src/pipeline/LibraryUses.cpp
   src/pipeline/DeclarationText.cpp
   src/pipeline/DefinitionReferences.cpp
   src/pipeline/ImportedDeclarations.cpp
@@ -2443,6 +2444,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_lib.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_consume.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_link.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_uses.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_corpus.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_profile.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp

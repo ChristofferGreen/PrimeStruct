@@ -925,6 +925,10 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.emitDepsPath = argv[++i];
     } else if (arg.rfind("--emit-deps=", 0) == 0) {
       out.emitDepsPath = arg.substr(std::string("--emit-deps=").size());
+    } else if (arg == "--emit-uses" && i + 1 < argc) {
+      out.emitUsesPath = argv[++i];
+    } else if (arg.rfind("--emit-uses=", 0) == 0) {
+      out.emitUsesPath = arg.substr(std::string("--emit-uses=").size());
     } else if (arg == "--benchmark-force-semantic-product" && i + 1 < argc) {
       if (!parseBenchmarkForceSemanticProduct(argv[++i], out.benchmarkForceSemanticProduct, error)) {
         return false;

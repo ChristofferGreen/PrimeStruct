@@ -252,6 +252,28 @@ hash differs from the recorded one, `library base is supplied twice`. The link a
 program was compiled against is the archive's (`library ui changed since this program was compiled; rebuild`). A
 program that uses no `--library` compiles as before.
 
+**Uses.** `--emit-uses <file>` (or `--emit-uses=<file>`, on `primec` and `primevm`) writes, after a successful compile,
+the library symbols the program resolved, one line each, `<path> <library> <signature hash> <content hash>`, sorted by
+path, without duplicates, with the hashes of the library's symbol table (`--emit=symbols`). The walk starts at every
+definition and execution of the program that is not a library's and follows names, resolved call targets and type
+arguments through the library definitions it reaches, so a generic the program instantiated is listed under the
+generic's path together with the private functions and types its body reaches (a function the library compiled is
+listed, what its body calls is not: that code is in the archive). An overload is listed with its siblings. A program
+that imports a library and refers to none of its symbols writes an empty file, and so does a compile with no
+`--library`. The flag changes no other output; a file that cannot be written is a diagnostic and exit code 2, and a
+failed compile writes no list. The build graph keys a step on this list (docs/ModulesAndLibrariesPlan.md, section 11).
+```
+import</ui>
+import /ui/*
+
+[return<i32>]
+main() {
+  return(add(1i32, 2i32) + sub(5i32, 1i32))
+}
+```
+With `ui.psa` built from a module of five public functions, `primec --emit=optcpp --library ui.psa --emit-uses main.uses
+main.prime -o main.cpp` leaves `main.uses` holding two lines, `/ui/add ui ...` and `/ui/sub ui ...`.
+
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a
 build script (docs/BuildSystemPlan.md). It is the ordinary compile of that file with `--profile build --emit=vm`, so

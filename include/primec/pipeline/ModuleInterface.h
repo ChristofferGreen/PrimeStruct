@@ -64,4 +64,10 @@ std::string libraryNameOfRootFile(const std::string &path);
 // "closure":...}]}`, one symbol per line, ending in a newline.
 std::string formatModuleSymbolTable(const ModuleInterface &moduleInterface);
 
+// The symbols of a table written by formatModuleSymbolTable, in the order of the table. Fails with `error` set when a
+// line is not one symbol.
+bool parseModuleSymbolTable(const std::string &text,
+                            std::vector<ModuleInterfaceSymbol> &symbols,
+                            std::string &error);
+
 } // namespace primec

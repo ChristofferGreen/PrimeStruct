@@ -42,6 +42,7 @@
 #include "CompilePipelineInternal.h"
 #include "EmitDeps.h"
 #include "ImportedDeclarations.h"
+#include "LibraryUses.h"
 
 namespace primec {
 using namespace compile_pipeline_detail;
@@ -164,6 +165,14 @@ CompilePipelineResult runCompilePipelineResult(
   if (runCompilePipeline(options, runConfig, output, errorStage, error, diagnosticInfo)) {
     if (!options.emitDepsPath.empty() &&
         !writeEmitDepsFile(options.emitDepsPath, output.expandedSource, error)) {
+      errorStage = CompilePipelineErrorStage::Import;
+      output.failure.stage = errorStage;
+      output.failure.message = error;
+      output.hasFailure = true;
+      return makeCompilePipelineFailureResult(std::move(output), errorStage, error, diagnosticInfo);
+    }
+    if (!options.emitUsesPath.empty() &&
+        !emitLibraryUses(options, output.program, output.expandedSource, error)) {
       errorStage = CompilePipelineErrorStage::Import;
       output.failure.stage = errorStage;
       output.failure.message = error;

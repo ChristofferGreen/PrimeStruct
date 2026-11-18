@@ -257,7 +257,11 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
 5. **Generics and helpers.** Generic definitions in the interface, instantiation merge, synthesized helpers owned by
    their library, the private declarations a public generic reaches.
 6. **Namespace ownership.** Owned roots in the manifest and the overlap and shadowing checks.
-7. **Uses and early cutoff.** `--emit-uses` and the runner's symbol-level rebuild decision.
+7. **Uses and early cutoff.** `--emit-uses` and the runner's symbol-level rebuild decision. `--emit-uses` has landed
+   (docs/spec/integration-and-tooling.md, Compiling Against a Library, Uses): it walks the validated program from its
+   own definitions through the library definitions they reach, and needed no new symbol-table entry, because the
+   consumer holds the generics' bodies and the private declarations and finds what they reach itself. The runner's
+   decision is still open.
 8. **Build graph nodes run.** `b.library`, `exe.link`, transitive libraries, parallel builds (TODO-5913 and the
    runner, then these).
 9. **The differential harness** of section 15, which runs as part of every leaf above from the fourth on.

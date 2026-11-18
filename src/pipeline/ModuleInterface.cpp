@@ -692,4 +692,57 @@ std::string formatModuleSymbolTable(const ModuleInterface &moduleInterface) {
   return out;
 }
 
+namespace {
+
+// The string value of `"key":"..."` in `line`, with `\"` and `\\` undone; false when the key is missing.
+bool symbolLineField(const std::string &line, const std::string &key, std::string &value) {
+  const std::string marker = "\"" + key + "\":\"";
+  const size_t start = line.find(marker);
+  if (start == std::string::npos) {
+    return false;
+  }
+  value.clear();
+  for (size_t i = start + marker.size(); i < line.size(); ++i) {
+    if (line[i] == '"') {
+      return true;
+    }
+    if (line[i] == '\\' && i + 1 < line.size()) {
+      ++i;
+    }
+    value += line[i];
+  }
+  return false;
+}
+
+} // namespace
+
+bool parseModuleSymbolTable(const std::string &text,
+                            std::vector<ModuleInterfaceSymbol> &symbols,
+                            std::string &error) {
+  symbols.clear();
+  size_t begin = 0;
+  while (begin < text.size()) {
+    size_t end = text.find('\n', begin);
+    if (end == std::string::npos) {
+      end = text.size();
+    }
+    const std::string line = text.substr(begin, end - begin);
+    begin = end + 1;
+    if (line.compare(0, 9, "{\"path\":\"") != 0) {
+      continue;
+    }
+    ModuleInterfaceSymbol symbol;
+    if (!symbolLineField(line, "path", symbol.path) ||
+        !symbolLineField(line, "kind", symbol.kind) ||
+        !symbolLineField(line, "signature", symbol.signatureHash) ||
+        !symbolLineField(line, "content", symbol.contentHash) ||
+        !symbolLineField(line, "closure", symbol.closureHash)) {
+      error = "malformed symbol table line: " + line;
+      return false;
+    }
+    symbols.push_back(std::move(symbol));
+  }
+  return true;
+}
+
 } // namespace primec
