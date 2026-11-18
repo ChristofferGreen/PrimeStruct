@@ -611,9 +611,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac; the `--open` runs need a person at the machine (they show a window and take focus).
 
-- [ ] TODO-5808: `ps_ui_*` entry points fault when called off the main thread
+- [~] TODO-5808: `ps_ui_*` entry points fault when called off the main thread
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: ui-threads (worktree-agent-a4fdebc89f4fd37e4), 2026-11-18
   - created_at: 2026-11-09
   - phase: Native UI (docs/NativeUiPlan.md, The C ABI; docs/MultithreadingPrototype.md, Sendable Values)
   - parallel_track: native-ui-threads
