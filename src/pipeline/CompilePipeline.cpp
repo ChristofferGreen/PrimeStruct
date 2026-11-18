@@ -540,7 +540,8 @@ bool runCompilePipeline(const Options &options,
     return true;
   }
 
-  if (interfaceEmit) {
+  // `--emit=lib` goes on to the library build of the driver (src/pipeline/LibraryBuild.cpp).
+  if (interfaceEmit && options.emitKind != "lib") {
     if (!output.hasSemanticProgram) {
       error = "interface emit requested without semantic product";
       diagnosticSink.setSummary(error);

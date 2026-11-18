@@ -28,6 +28,9 @@ struct LowerSetupStageInput {
   const std::vector<std::string> *entryDefaultEffects = nullptr;
   IrValidationTarget validationTarget = IrValidationTarget::Native;
   IrModule *outModule = nullptr;
+  // `--emit=lib`: the paths of the public functions that are roots of the library, each reserved as a real call
+  // Null for a program.
+  const std::vector<std::string> *libraryRoots = nullptr;
 };
 
 struct LowerSetupStageState {

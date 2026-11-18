@@ -27,8 +27,11 @@ std::unordered_set<std::string> findRecursiveDefinitionPaths(const Program &prog
 // `entryPath` by following the same `resolvedCallPath` call edges, plus
 // `entryPath` itself. Empty if `entryPath` doesn't name a definition in
 // `program`.
-std::unordered_set<std::string> findReachableDefinitionPaths(const Program &program,
-                                                              const std::string &entryPath);
+// `extraRoots` (a library's public functions) are reached too, with what they call.
+std::unordered_set<std::string>
+findReachableDefinitionPaths(const Program &program,
+                             const std::string &entryPath,
+                             const std::vector<std::string> *extraRoots = nullptr);
 
 // Returns the fullPaths of definitions that (a) are reachable from
 // `entryPath` but are not `entryPath` itself (the entry has its own
@@ -64,12 +67,15 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
 // optimizing C++ emitters, where a local address names the same slot in every frame.
 // `allowNeverResult` lets the scalar ABI call a `never` definition (panic): the targets where a runtime error in a
 // called function ends the program.
-std::unordered_set<std::string>
-computeRealCallEligibleDefinitionPaths(const Program &program,
-                                       const std::string &entryPath,
-                                       bool allowMutReceivers = false,
-                                       bool allowNeverResult = false,
-                                       bool allowStringParams = false);
+std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(
+    const Program &program,
+    const std::string &entryPath,
+    bool allowMutReceivers = false,
+    bool allowNeverResult = false,
+    bool allowStringParams = false,
+    // The public functions of a library (`--emit=lib`): reached and reserved as
+    // real calls whatever their call sites, when their shape allows it.
+    const std::vector<std::string> *libraryRoots = nullptr);
 
 // What the real-call shape check needs to know about the program.
 struct RealCallShapeContext {

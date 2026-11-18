@@ -6,6 +6,7 @@
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/CompileArena.h"
 #include "primec/pipeline/CompilePipeline.h"
+#include "primec/pipeline/LibraryBuild.h"
 #include "primec/support/Diagnostics.h"
 #include "primec/support/EmitKind.h"
 #include "primec/backend/IrBackends.h"
@@ -430,6 +431,34 @@ static int emitCompiledProgram(primec::Options &options,
   return primec::emitCliFailure(std::cerr, options, emitFailure);
 }
 
+// `--emit=lib`: writes the library archive of the validated module to the output path.
+static int emitLibraryArchive(primec::Options &options,
+                              const std::string &compilerPath,
+                              primec::CompilePipelineOutput &pipelineOutput) {
+  auto fail = [&](primec::DiagnosticCode code, const char *prefix, const std::string &message) {
+    primec::CliFailure failure;
+    failure.code = code;
+    failure.plainPrefix = prefix;
+    failure.message = message;
+    failure.exitCode = 2;
+    return primec::emitCliFailure(std::cerr, options, failure);
+  };
+  std::string error;
+  std::string buildId;
+  primec::LibraryArchiveContent content;
+  if (!primec::computeCompilerBuildId(compilerPath, buildId, error) ||
+      !primec::buildLibraryArchiveContent(pipelineOutput, options, buildId, content, error)) {
+    return fail(primec::DiagnosticCode::EmitError, "Emit error: ", error);
+  }
+  const std::filesystem::path resolved = resolveOutputPath(options);
+  options.outputPath = resolved.string();
+  if (!ensureOutputDirectory(resolved, error) ||
+      !primec::writeLibraryArchiveFile(options.outputPath, content, error)) {
+    return fail(primec::DiagnosticCode::OutputError, "Output error: ", error);
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   primec::Options options;
   std::string argError;
@@ -598,6 +627,10 @@ int main(int argc, char **argv) {
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
     return 0;
+  }
+
+  if (options.emitKind == "lib" && options.dumpStage.empty()) {
+    return emitLibraryArchive(options, primec::selfExecutablePath(argv[0]), pipelineOutput);
   }
 
   return emitCompiledProgram(

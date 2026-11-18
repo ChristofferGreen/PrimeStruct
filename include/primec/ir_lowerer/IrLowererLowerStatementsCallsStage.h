@@ -77,6 +77,9 @@ struct LowerStatementsCallsStageInput {
   // Null/empty when nothing is eligible (the common case today).
   const std::vector<std::string> *realCallEligibleOrder = nullptr;
   const std::unordered_map<std::string, uint64_t> *realCallReservationIndex = nullptr;
+  // `--emit=lib`: the roots of the library. Unreached functions are dropped from these as well as from the entry
+  // (a stub that the lowerer removes afterwards).
+  const std::vector<std::string> *libraryRoots = nullptr;
   // The address ABI (LowerSetupStageState::realCallAllowStructs): every parameter, and the receiver, arrives as one
   // slot holding what the inlined call would have bound - a scalar or an address.
   bool realCallAddressAbi = false;

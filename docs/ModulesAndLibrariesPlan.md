@@ -112,8 +112,10 @@ refused with a message that says to rebuild. There is no binary compatibility pr
   crosses library boundaries.
 - **Debug information.** Local debug slots and the instruction source map are stored; source units name files relative
   to the library, so a debugger finds them in `sources` or on disk.
-- **Command line:** `primec --emit=lib <root.prime> -o <name>.psa`, with the library name and roots from the root file.
-  `--emit=interface` prints the interface text and the symbol table without the code, for tests and for tools.
+- **Command line:** `primec --emit=lib <root.prime> -o <name>.psa`, with the library name and roots from the root file
+  (the name is the file's name without its extension; the roots are the first path segments of the public symbols);
+  `--with-sources` adds the `sources` section. `--emit=interface` prints the interface text and the symbol table
+  without the code, for tests and for tools.
 
 ## 8. Compiling against a library
 
@@ -236,6 +238,12 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    until the `imported` marker gives declarations a grammar (TODO-5925); the interface hash covers `path kind signature`.
 3. **Multiple-root lowering and `--emit=lib`.** Every public non-generic definition as a root; the archive writer and
    reader; deterministic output.
+   Landed (TODO-5924): `primec --emit=lib`, documented in `docs/spec/integration-and-tooling.md`, Library Archive.
+   Lowering takes the public functions as roots through `IrLowerer::lower(..., libraryRoots)`: each is reserved as a
+   real call with the VM target's address ABI, behind a stub entry that is removed afterwards. A root whose shape the
+   real-call ABI cannot take is a diagnostic (TODO-6032 for the shapes). The archive holds the stdlib functions its roots
+   reached as real calls, which slice 4 must merge or leave out. The compiler build id is the SHA-256 of the `primec`
+   executable, the manifest is lines of words, and the container is a table of sections with a SHA-256 each.
 4. **Compiling against a library.** `--library`, the resolver reading the interface, `[imported]` declarations,
    lowering of imported calls, the link in the pipeline, the version and interface-hash checks.
 5. **Generics and helpers.** Generic definitions in the interface, instantiation merge, synthesized helpers owned by

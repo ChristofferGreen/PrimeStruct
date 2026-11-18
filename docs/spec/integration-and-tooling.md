@@ -76,7 +76,7 @@ validation, with a stub `return<int> /main() { return(0i32) }` standing in for a
 entry path whatever it is, never appears in the output), so a module that does not validate is a diagnostic and exit
 code 2. Both kinds print only what the module's own sources define: stdlib definitions that an import pulled in are not
 part of it. Both are the first step of the library plan (docs/ModulesAndLibrariesPlan.md, section 5); they write no
-archive and load no library.
+archive and load no library (`--emit=lib`, below, writes one).
 
 The interface holds the public (`public`, and not `private`), non-generic definitions, sorted by path inside nested
 `[namespace]` envelopes (a namespace's `summary` is printed on its envelope):
@@ -133,6 +133,60 @@ The symbol table has one line per public symbol: `{"path":"/ui/add","kind":"func
 The table begins with `"interfaceHash"`: the SHA-256 of the sorted `path kind signature` lines. A change of a body or
 of a `summary` leaves it, and every `signature`, alone; a change of a signature, or an added or removed public symbol,
 moves it. Output is byte-identical for equal input.
+
+### Library Archive
+`primec --emit=lib <root.prime> -o <name>.psa` writes the library archive of a module (docs/ModulesAndLibrariesPlan.md,
+sections 6 and 7): its interface, its symbol table and the unoptimized IR of its public functions, in one file. The
+module is read as for `--emit=interface`: a file with the files it imports, no entry point needed (a stub stands in for
+a missing entry, and an entry the module defines is lowered as that stub and dropped). `--with-sources` adds the
+module's `.prime` files. Nothing consumes an archive yet: `--library` and the link are TODO-5925.
+
+**Code.** Lowering takes every public, non-generic function of the module's own sources as a root (`host` and
+`compute` functions have no IR body and are left out), whether or not another definition calls it, and lowers what the
+roots call with them: a callee with two call sites or more, or a recursive one, is a function of the archive (a stdlib
+one such as `/std/collections/slice/Read` too), and a callee with one call site is inlined into its caller as in any
+program. The IR is lowered for the VM target, which gives every function the address ABI (a struct, a `mut` parameter or
+a string is one slot that holds an address or an index; a consumer on another target must use the same convention,
+which TODO-5925 settles) and is not optimized or inlined: several passes are target-specific, so the link runs them on
+the merged module. The module has `entryIndex` -1, its struct layouts, host imports, string table, source map and debug
+slots; a stub entry that lowering needs stands in for `main` and is removed. A root the real-call ABI cannot take (an
+argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
+/packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file). The source map
+names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,
+the archive is `<root file name>.psa` in the output directory.
+
+**Layout.** A fixed mark `PSLIBAR` and a line feed, the container version (u32, 1), the number of sections (u32), a
+table with one entry per section (name length u32, name, size u64, SHA-256 of the payload as 64 hex digits) and then
+the payloads in table order. Integers are little-endian. Sections are sorted by name:
+
+| Section | Content |
+| --- | --- |
+| `code` | The serialized `IrModule` (`PSIR`, `serializeIr`) |
+| `interface` | The text of `primec --emit=interface` |
+| `manifest` | Lines of words: `primestruct-library 1`, `name <name>` (the root file's name without extension), `root <path>` (each owned namespace root, sorted: the first path segment of every public symbol), `compiler <id>`, `irschema <version>`, `hash sha256`, `interface <hash>`, `library <name> <interface hash>` (none yet) |
+| `sources` | Only with `--with-sources`: the number of files (u32), then for each, sorted by relative path: path length u32, path, size u64, text |
+| `symbols` | The text of `primec --emit=symbols` |
+
+`compiler` is the SHA-256 of the `primec` executable that wrote the archive. There is no timestamp, no absolute path
+and no host name in the file: two builds of one source, and builds from two checkouts, are byte-identical. A library is
+usable only by the compiler build and the IR schema version recorded in it; there is no binary compatibility promise.
+
+**Reading.** `primec::readLibraryArchiveFile` (`primec/pipeline/LibraryArchive.h`) loads and verifies an archive. Each
+case has its own message, and the ones about an archive that is stale or damaged end in `; rebuild the library`:
+
+| Case | Message begins |
+| --- | --- |
+| not an archive (no `PSLIBAR` mark) | `not a library archive` |
+| another container version | `library archive format version N is not the version this compiler reads (1)` |
+| cut short, trailing bytes, sections out of order, a manifest or code that does not load | `library archive is damaged (...)` |
+| a section whose SHA-256 differs from its table entry | `library section <name> changed since the library was built (its hash differs)` |
+| another compiler build | `library was built by another compiler build (<id>, this compiler is <id>)` |
+| another IR schema version | `library was built with IR schema version 38, this compiler uses version 39` |
+| another hash scheme | `library uses the hash scheme ..., which this compiler does not know` |
+| manifest and symbol table with different interface hashes | `library manifest and symbol table name different interface hashes` |
+
+The code must have no entry point. The checks run in this order: the container, the section hashes, the manifest, the
+compiler build, the schema version, the interface hash, the code.
 
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a

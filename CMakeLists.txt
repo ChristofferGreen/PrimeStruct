@@ -487,6 +487,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/EmitDeps.cpp
   src/pipeline/DeclarationText.cpp
   src/pipeline/DefinitionReferences.cpp
+  src/pipeline/LibraryArchive.cpp
+  src/pipeline/LibraryBuild.cpp
   src/pipeline/ModuleInterface.cpp
   src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
@@ -595,6 +597,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp
   src/ir_lowerer/IrLowererOperatorPowAbsSignHelpers.cpp
   src/ir_lowerer/IrLowererOperatorSaturateRoundingRootsHelpers.cpp
+  src/ir_lowerer/IrLowererLibraryRoots.cpp
   src/ir_lowerer/IrLowererRecursionAnalysis.cpp
   src/ir_lowerer/IrLowererTaskSpawn.cpp
   src/ir_lowerer/IrLowererReturnShapes.cpp
@@ -1376,6 +1379,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_ir_link.cpp
     tests/unit/runtime/test_ir_link_strings.cpp
     tests/unit/runtime/test_ir_link_cli.cpp
+    tests/unit/runtime/test_library_archive.cpp
   )
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
@@ -1408,6 +1412,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
             "--order-by=file"
   )
   set_tests_properties(PrimeStruct_ir_link_cli PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The container of the library archive: layout, determinism and every refusal of the reader.
+  add_test(
+    NAME PrimeStruct_library_archive
+    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.library_archive"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_library_archive PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The VM's threads mode (--vm-threads), with hand-built IR.
   add_test(
     NAME PrimeStruct_vm_threads
@@ -2419,6 +2431,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_allow_import.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_deps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_lib.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_profile.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp

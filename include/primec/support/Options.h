@@ -54,6 +54,8 @@ struct Options {
   std::string outDir = ".";
   std::string entryPath = "/main";
   bool inlineIrCalls = false;
+  // `--emit=lib --with-sources`: the archive also holds the module's `.prime` files.
+  bool libraryWithSources = false;
   OptimizationOptions optimization;
   std::string dumpStage;
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};

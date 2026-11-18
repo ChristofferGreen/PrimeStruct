@@ -78,7 +78,8 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                                                 *input.entryPath,
                                                 stateOut.realCallAllowStructs,
                                                 stateOut.runtimeErrorsTrap,
-                                                stateOut.realCallAllowStrings)) {
+                                                stateOut.realCallAllowStrings,
+                                                input.libraryRoots)) {
       ordered.push_back(path);
     }
     std::sort(ordered.begin(), ordered.end());
@@ -113,6 +114,28 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                                    stateOut.structFieldInfoByName,
                                    errorOut)) {
     return false;
+  }
+
+  if (input.libraryRoots != nullptr) {
+    const RealCallShapeContext shapeContext{&stateOut.defMap,
+                                            &stateOut.structNames,
+                                            stateOut.realCallAllowStructs,
+                                            stateOut.runtimeErrorsTrap,
+                                            stateOut.realCallAllowStrings};
+    for (const std::string &root : *input.libraryRoots) {
+      if (stateOut.realCallReservationIndex.count(root) != 0) {
+        continue;
+      }
+      std::string reason;
+      const auto defIt = stateOut.defMap.find(root);
+      if (defIt != stateOut.defMap.end() && defIt->second != nullptr) {
+        reason = realCallBlockerReason(*defIt->second, shapeContext);
+      }
+      errorOut = "public function " + root + " cannot be compiled into a library: " +
+                 (reason.empty() ? "its result, receiver or body shape is not one a real call takes"
+                                 : reason);
+      return false;
+    }
   }
 
   stateOut.functionSyntaxProvenanceByName.reserve(stateOut.defMap.size());

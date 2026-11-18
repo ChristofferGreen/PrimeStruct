@@ -468,6 +468,18 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
     std::vector<bool> reached(functions.size(), false);
     std::vector<size_t> pending = {entryIndex};
     reached[entryIndex] = true;
+    if (input.libraryRoots != nullptr) {
+      for (const std::string &root : *input.libraryRoots) {
+        const auto reservation = input.realCallReservationIndex->find(root);
+        if (reservation != input.realCallReservationIndex->end()) {
+          const size_t index = static_cast<size_t>(baseFunctionIndex + reservation->second);
+          if (index < reached.size() && !reached[index]) {
+            reached[index] = true;
+            pending.push_back(index);
+          }
+        }
+      }
+    }
     while (!pending.empty()) {
       const size_t caller = pending.back();
       pending.pop_back();

@@ -164,8 +164,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
 | TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | ready | lib-archive |
-| TODO-5925 | `--library` compiles a program against a library and links it | blocked | lib-consume |
+| TODO-5925 | `--library` compiles a program against a library and links it | ready | lib-consume |
 | TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
 | TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
 | TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
@@ -174,6 +173,7 @@ of sync with them.
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
+| TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5984 | The http web apps lower in seconds, not minutes | ready | web-app-lowering-time |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -199,7 +199,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019, TODO-6029
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -221,7 +221,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; ready: TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) is ready; then, TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) is ready; then, TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -913,26 +913,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
 
-- [~] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lib-archive (worktree-agent-a345c973f20d21a56), 2026-11-18
-  - created_at: 2026-11-11
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 6 and 7)
-  - parallel_track: lib-archive
-  - scope: Lowering takes every public non-generic definition under the module's roots as a root (today it takes one `entryPath`; whether it lowers only what the entry reaches was not checked), and what those roots reach is lowered with them. The IR is stored unoptimized, with an entry index of -1, struct layouts, host imports, source map and debug slots. `primec --emit=lib <root.prime> -o <name>.psa` writes the archive of docs/ModulesAndLibrariesPlan.md section 6: `manifest` (name, owned namespace roots, compiler build id, IR schema version, hash scheme, interface hash, linked libraries), `interface`, `symbols`, `code`, and optionally `sources` (`--with-sources`). The output is deterministic: sorted sections, no timestamps, no absolute paths. A reader loads and verifies an archive (hashes, versions) and reports a mismatch with a message that says to rebuild.
-  - acceptance:
-    - building a library twice, and on two checkouts of the repository, gives byte-identical archives
-    - the reader rejects an archive with a changed section, another compiler build id, or another schema version, each with its own message
-    - a public function no other definition calls is present in the archive's code
-    - docs/spec/integration-and-tooling.md documents `--emit=lib` and the archive layout
-    - full release gate green
-  - stop_rule: writing and reading the archive; nothing consumes it yet.
-
 - [ ] TODO-5925: `--library` compiles a program against a library and links it
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5924
+  - status: ready
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 9)
   - parallel_track: lib-consume
@@ -945,7 +928,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/source-pipeline.md and integration-and-tooling.md document the flag
     - full release gate green
   - stop_rule: non-generic code only; generics, namespace ownership and uses output are their own leaves.
-  - notes: `primec --emit=interface` (TODO-5923) prints a function declaration with an empty body `{}`, which parses only as a `host` definition and does not validate; the `[imported(<library>)]` marker of this leaf is what gives an interface file a grammar and validation for it (a declaration in an interface file has no body and no return statement), and its parse-back test should then validate a printed interface without the `host` workaround used in tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp.
+  - notes: `primec --emit=interface` (TODO-5923) prints a function declaration with an empty body `{}`, which parses only as a `host` definition and does not validate; the `[imported(<library>)]` marker of this leaf is what gives an interface file a grammar and validation for it (a declaration in an interface file has no body and no return statement), and its parse-back test should then validate a printed interface without the `host` workaround used in tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp. TODO-5924 landed `primec --emit=lib` (docs/spec/integration-and-tooling.md, Library Archive; read an archive with `readLibraryArchiveFile` in include/primec/pipeline/LibraryArchive.h, whose `code` is an `IrModule` with `entryIndex` -1). Two things it left for this leaf: (1) the library code is lowered for the VM target, so every function has the address ABI (a struct, `mut` or string parameter is one slot holding an address or an index); a consumer lowered for a target with the scalar ABI (x86_64 native) calls it differently, so decide here whether the call site of an imported function always uses the address ABI or the archive records the ABI and the consumer target is refused when it differs. (2) The code holds the stdlib functions the library reached as real calls (for example `/std/collections/slice/Read`), and the consumer lowers the same functions under the same names, so the link must merge identical definitions of one name or the library must not hold them; the generic case is TODO-5926.
 
 - [ ] TODO-5926: Generic definitions and synthesized helpers cross the library boundary
   - owner: ai
@@ -1066,6 +1049,21 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
+
+- [ ] TODO-6032: A public function of any shape is a function of a library
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-18
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 7)
+  - parallel_track: lib-shapes
+  - depends_on: TODO-5925
+  - scope: `primec --emit=lib` makes each public non-generic function a real call with the address ABI, and a function whose shape that ABI does not take (an argument pack, a builtin `vector<T>` result, a templated `Reference` parameter, a `string` parameter used by more than `count()`, a sum parameter; see `realCallBlockerReason` in src/ir_lowerer/IrLowererRecursionAnalysis.cpp) is a diagnostic: `public function /packed cannot be compiled into a library: parameter `values` is an argument pack`. A library of the stdlib's own collections cannot be built until those shapes are real calls too. Lowering has paths for some of them (a spawned call's shape takes a `vector` result and parameters, IrLowererTaskSpawn.cpp); decide which shapes the library ABI takes, and lower the rest through a wrapper.
+  - acceptance:
+    - a public function with an argument pack, one with a `vector<i32>` result and one with a sum parameter are functions of the archive and give the same results as the whole-program build when linked
+    - the diagnostic stays for a shape that is still not taken, and names it
+    - full release gate green
+  - stop_rule: function shapes in the library ABI; no change to generics or to the link.
+  - notes: deferred: not committed; follows when a real library needs a shape that is refused today.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

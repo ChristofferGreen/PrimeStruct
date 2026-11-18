@@ -104,6 +104,11 @@ void printPrimecUsage(std::ostream &err) {
            "--emit=interface|symbols",
            "Print a module's interface text, or its symbol table as JSON, to standard output; the "
            "module needs no entry point");
+  flagLine(err,
+           "--emit=lib",
+           "Write a library archive (-o <name>.psa) of every public definition of a module; "
+           "--with-sources adds the "
+           "module's .prime files");
   flagLine(err, "-o <output>", "Output file path");
   flagLine(err, "--out-dir <dir>", "Output directory");
   flagLine(err, "--entry /path", "Entry point definition path");

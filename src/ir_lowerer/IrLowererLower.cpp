@@ -15,6 +15,7 @@
 #include "primec/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 #include "primec/ir_lowerer/IrLowererCountAccessHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerEffects.h"
+#include "IrLowererLibraryRoots.h"
 #include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
 #include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
@@ -114,7 +115,8 @@ bool IrLowerer::lower(const Program &program,
                       DiagnosticSinkReport *diagnosticInfo,
                       IrValidationTarget validationTarget,
                       const ExpandedSource *expandedSource,
-                      std::vector<std::string> *loweringNotes) const {
+                      std::vector<std::string> *loweringNotes,
+                      const std::vector<std::string> *libraryRoots) const {
   out = IrModule{};
   error.clear();
   const SemanticProductIndexCacheScope semanticIndexCacheScope;
@@ -150,6 +152,7 @@ bool IrLowerer::lower(const Program &program,
               .entryDefaultEffects = &entryDefaultEffects,
               .validationTarget = validationTarget,
               .outModule = &out,
+              .libraryRoots = libraryRoots,
           },
           setupStage,
           error)) {
@@ -452,6 +455,7 @@ bool IrLowerer::lower(const Program &program,
                             .resetDefinitionLoweringState = [&]() { perBodyResetState.reset(); },
                             .realCallEligibleOrder = &setupStage.realCallEligibleOrder,
                             .realCallReservationIndex = &setupStage.realCallReservationIndex,
+                            .libraryRoots = libraryRoots,
                             .realCallAddressAbi = setupStage.realCallAllowStructs,
                             .registerOwnedParameters =
                                 [&](const Definition &def,
@@ -493,6 +497,10 @@ bool IrLowerer::lower(const Program &program,
     if (error.empty()) {
       error = "IR lowering failed without diagnostic";
     }
+    return false;
+  }
+
+  if (libraryRoots != nullptr && !ir_lowerer::removeLibraryEntryStub(out, error)) {
     return false;
   }
 

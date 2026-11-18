@@ -638,6 +638,8 @@ bool applyPrimecOutputDefaults(Options &out) {
       out.outputPath = stem + ".spv";
     } else if (out.emitKind == "wasm") {
       out.outputPath = stem + ".wasm";
+    } else if (out.emitKind == "lib") {
+      out.outputPath = stem + ".psa";
     } else {
       out.outputPath = stem;
     }
@@ -1043,6 +1045,8 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       }
     } else if (arg == "--ir-inline") {
       out.inlineIrCalls = true;
+    } else if (isPrimecMode && arg == "--with-sources") {
+      out.libraryWithSources = true;
     } else if (arg.rfind("-O", 0) == 0) {
       if (!parseOptimizationLevelFlag(arg, out.optimization, error)) {
         return false;

@@ -308,8 +308,10 @@ std::unordered_set<std::string> findRecursiveDefinitionPaths(const Program &prog
   return recursive;
 }
 
-std::unordered_set<std::string> findReachableDefinitionPaths(const Program &program,
-                                                              const std::string &entryPath) {
+std::unordered_set<std::string>
+findReachableDefinitionPaths(const Program &program,
+                             const std::string &entryPath,
+                             const std::vector<std::string> *extraRoots) {
   std::unordered_set<std::string> nodePaths;
   nodePaths.reserve(program.definitions.size());
   for (const Definition &def : program.definitions) {
@@ -325,6 +327,13 @@ std::unordered_set<std::string> findReachableDefinitionPaths(const Program &prog
   std::vector<std::string> worklist;
   reachable.insert(entryPath);
   worklist.push_back(entryPath);
+  if (extraRoots != nullptr) {
+    for (const std::string &root : *extraRoots) {
+      if (nodePaths.find(root) != nodePaths.end() && reachable.insert(root).second) {
+        worklist.push_back(root);
+      }
+    }
+  }
   while (!worklist.empty()) {
     const std::string current = std::move(worklist.back());
     worklist.pop_back();
@@ -965,14 +974,20 @@ bool isTinyInlineLeaf(const Definition &def) {
   return true;
 }
 
-std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Program &program,
-                                                                       const std::string &entryPath,
-                                                                       bool allowMutReceivers,
-                                                                       bool allowNeverResult,
-                                                                       bool allowStringParams) {
+std::unordered_set<std::string>
+computeRealCallEligibleDefinitionPaths(const Program &program,
+                                       const std::string &entryPath,
+                                       bool allowMutReceivers,
+                                       bool allowNeverResult,
+                                       bool allowStringParams,
+                                       const std::vector<std::string> *libraryRoots) {
   const std::unordered_set<std::string> recursive = findRecursiveDefinitionPaths(program);
   const std::unordered_set<std::string> reachable =
-      findReachableDefinitionPaths(program, entryPath);
+      findReachableDefinitionPaths(program, entryPath, libraryRoots);
+  const std::unordered_set<std::string> roots =
+      libraryRoots != nullptr
+          ? std::unordered_set<std::string>(libraryRoots->begin(), libraryRoots->end())
+          : std::unordered_set<std::string>();
   const std::unordered_map<std::string, size_t> callSiteCounts =
       countCallSitesByDefinitionPath(program);
 
@@ -999,7 +1014,8 @@ std::unordered_set<std::string> computeRealCallEligibleDefinitionPaths(const Pro
       continue;
     }
     const bool isRecursive = recursive.find(path) != recursive.end();
-    if (!isRecursive) {
+    // A root of a library is a function of the archive whatever its call sites.
+    if (!isRecursive && roots.find(path) == roots.end()) {
       const auto countIt = callSiteCounts.find(path);
       const size_t siteCount = countIt != callSiteCounts.end() ? countIt->second : 0;
       if (siteCount < kMinCallSitesForRealCall) {

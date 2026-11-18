@@ -2328,6 +2328,7 @@ are left unarchived.
 | TODO-5920 | PrimeScroll builds with `make.prime` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5922 | `primevm --link` merges two serialized IR modules | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
+| TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5934 | A call that returns a `Reference` and is used as a value yields its referent | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5935 | A lambda parameter naming a struct of the enclosing namespace is resolved there | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5936 | A diagnostic in `main` of a program that imports `/std/http/server` reports a stdlib position | [2026-11.md](todo_archive/2026-11.md) | - |
