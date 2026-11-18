@@ -410,6 +410,14 @@ public:
   // The byte a byte-region address names, or null when the address is not one, is outside every
   // live region, or comes from an earlier allocation of those bytes.
   uint8_t *byteAt(uint64_t address) {
+    if (uint8_t *byte = byteAtGranule(address)) {
+      return byte;
+    }
+    return byteAtBeyondGranule(address);
+  }
+
+  // The byte this arena's granule state answers with one load and compare (the region fills the whole granule), or null.
+  [[gnu::always_inline]] uint8_t *byteAtGranule(uint64_t address) {
     const uint64_t offset = (address & ByteOffsetMask) - byteBase_;
     const uint64_t granule = offset >> GranuleShift;
     if (granule < granuleBound_ &&
@@ -421,20 +429,20 @@ public:
       }
       return byte;
     }
-    // A granule of the last other arena read that its region fills (the common case of a long block another thread
-    // allocated), answered like byteAt's own check.
-    if (VmHeapCore *remote = __atomic_load_n(&remoteOwner_, __ATOMIC_RELAXED); remote != nullptr) {
-      const uint64_t remoteOffset = (address & ByteOffsetMask) - remote->byteBase_;
-      const uint64_t remoteGranule = remoteOffset >> GranuleShift;
-      if (remoteGranule < remote->granuleBound_ &&
-          (__atomic_load_n(remote->byteStates.data() + remoteGranule, __ATOMIC_RELAXED) |
-           GranuleStartBit) ==
-              ((static_cast<uint32_t>(address >> 47) << 15) | FullGranule | GranuleStartBit)) {
-        return remote->bytes.data() + remoteOffset;
-      }
-    }
-    return byteAtEdge(address);
+    return nullptr;
   }
+
+  // byteAt for a caller that keeps the check out of line (optexe's per-byte loads and stores): the one-compare answer
+  // of this arena's granule is inlined here, so a hit is a call, the check and a return with no taken branch between,
+  // and everything else (another arena's block, a granule a region only partly fills, a fault) is one tail call.
+  [[gnu::always_inline]] uint8_t *byteAtHit(uint64_t address) {
+    if (uint8_t *byte = byteAtGranule(address)) [[likely]] {
+      return byte;
+    }
+    return byteAtMiss(address);
+  }
+
+  [[gnu::noinline]] uint8_t *byteAtMiss(uint64_t address) { return byteAtBeyondGranule(address); }
 
   // The first of `count` bytes starting at a byte-region address, or null unless every one of them lies in the one
   // live region of that address. A short span is checked granule by granule; a long one asks the map once, which
@@ -781,6 +789,22 @@ private:
       return byteLive_.end();
     }
     return found;
+  }
+
+  // What byteAt does when this arena's granule did not answer: a granule of the last other arena read that its region
+  // fills (the common case of a long block another thread allocated), answered like byteAtGranule, then byteAtEdge.
+  [[gnu::always_inline]] uint8_t *byteAtBeyondGranule(uint64_t address) {
+    if (VmHeapCore *remote = __atomic_load_n(&remoteOwner_, __ATOMIC_RELAXED); remote != nullptr) {
+      const uint64_t remoteOffset = (address & ByteOffsetMask) - remote->byteBase_;
+      const uint64_t remoteGranule = remoteOffset >> GranuleShift;
+      if (remoteGranule < remote->granuleBound_ &&
+          (__atomic_load_n(remote->byteStates.data() + remoteGranule, __ATOMIC_RELAXED) |
+           GranuleStartBit) ==
+              ((static_cast<uint32_t>(address >> 47) << 15) | FullGranule | GranuleStartBit)) {
+        return remote->bytes.data() + remoteOffset;
+      }
+    }
+    return byteAtEdge(address);
   }
 
   // A byte access byteAt's one compare did not answer (a granule its region only partly fills, or a fault): the granule state answers while the bytes of one region alone lie in it, else the map does.

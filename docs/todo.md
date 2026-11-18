@@ -119,7 +119,6 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
 | TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
-| TODO-5938 | A byte loop over one large region on `optexe` takes the cycles it took before the granule table | ready | optexe-bytes |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
@@ -196,7 +195,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844, TODO-5938; real calls TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5854, TODO-5862
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 
@@ -415,20 +414,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the spawn binding inference only.
   - notes: deferred: no example needs it; `return<void>` is the workaround.
 
-- [~] TODO-5938: A byte loop over one large region on `optexe` takes the cycles it took before the granule table
-  - owner: ai
-  - status: ready
-  - claimed_by: bytes-a (worktree-agent-a5d8b88f9d1c75891), 2026-11-18
-  - created_at: 2026-11-11
-  - phase: Optimizing backends (residual of TODO-5840)
-  - parallel_track: optexe-bytes
-  - scope: TODO-5840 removed the per-byte loop from `String.append` of a literal (one bulk move), which took `append_chunks` from 234e6 to 93e6 cycles, but a loop that stores or loads every byte of one large region through `ps_byte_at` (`pushByte`, `textStore`, `byteAt` loops: `benchmarks/strings/append_bytes.prime`, 2.9e9 instructions, 480e6 cycles) still pays the granule-table check that TODO-5793 added (a dependent load and compare per byte, no write): the 10% cycles the predecessor measured on the byte loop of `append_chunks` before the bulk move (51.8 ms against 56.9 ms). Win it back for loops that remain per byte without a write on the read path, for example a loop that checks the region once per run of bytes (the bulk host functions already check once per call) or a `textStore` range form.
-  - implementation_notes: include/primec/runtime/VmHeapCoreBody.inc (`byteAt`, `byteAtEdge`), src/backend/IrToOptCppRuntime.h (`ps_byte_at`, `ps_load_u8`, `ps_store_u8`). The check inlined into the byte loops costs 8% more instructions on short_strings and made `append_chunks` slower, so `ps_byte_at` stays out of line (TODO-5794 notes). Compare instruction counts and cycles of the program itself (`proc_pid_rusage`), minimum of interleaved runs, on a quiet machine; the one before this change is the build before e8a547504.
-  - acceptance:
-    - `append_bytes` on `optexe` within 2% of the cycles of the build before e8a547504, averaged over several code layouts; no other string benchmark slower than now
-    - no write on the byte read path; full release gate green
-  - stop_rule: the `optexe` byte check of per-byte loops; the bulk host functions and the VM are unchanged.
-
 - [ ] TODO-5844: Short-string `optexe` benchmarks take the cycles they took before the heap arenas
   - owner: ai
   - status: ready
@@ -441,7 +426,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - request_heap, request_arena and short_strings on `optexe`: cycles within 3% of the e8a547504 build, averaged over five layouts; instructions no higher than now; the other string benchmarks no slower
     - full release gate green
   - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
-  - notes: TODO-5840 made `String.append` of a literal one bulk move, which cut these benchmarks (instructions and cycles, `proc_pid_rusage`, minimum of three on a machine at a load average of 27 to 64): `short_strings` 4.66e9 and 823e6 -> 3.90e9 and 748e6, `request_arena` 5.54e9 and 1115e6 -> 5.14e9 and 1039e6, `request_heap` 5.37e9 and 1073e6 -> 5.02e9 and 1049e6. That is a gain of 2 to 9% in cycles, the size of the 4 to 7% this task measured, but it does not show the cycles of the e8a547504 build: no build of that commit was made, so the acceptance (cycles within 3% of it, averaged over five layouts) is not checked and the task stays open; the first step is that baseline.
+  - notes: TODO-5840 made `String.append` of a literal one bulk move, which cut these benchmarks (instructions and cycles, `proc_pid_rusage`, minimum of three on a machine at a load average of 27 to 64): `short_strings` 4.66e9 and 823e6 -> 3.90e9 and 748e6, `request_arena` 5.54e9 and 1115e6 -> 5.14e9 and 1039e6, `request_heap` 5.37e9 and 1073e6 -> 5.02e9 and 1049e6. That is a gain of 2 to 9% in cycles, the size of the 4 to 7% this task measured, but it does not show the cycles of the e8a547504 build: no build of that commit was made, so the acceptance (cycles within 3% of it, averaged over five layouts) is not checked and the task stays open; the first step is that baseline. Baseline measured 2026-11-18 (build of e8a547504^, layout 0, minimum of 5, cycles): `short_strings` 551.5 to 575.0e6 against 605.8 to 624.6e6 on master (+9 to 10 percent), `request_heap` 761.6e6 against 802.2e6 (+5 percent), `request_arena` 761.0e6 against 805.4e6 (+6 percent), `copy_text` 93.8e6 against 109.3e6; the acceptance stays open.
 
 - [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
   - owner: ai

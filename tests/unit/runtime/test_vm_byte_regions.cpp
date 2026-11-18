@@ -545,3 +545,36 @@ TEST_CASE("byte accesses fault one past a region, after its free and after its r
   CHECK_FALSE(old.ok);
   CHECK(old.error.find("invalid byte address in IR: ") != std::string::npos);
 }
+
+TEST_CASE("byteAtHit answers every byte access exactly like byteAt") {
+  // optexe's loads and stores ask byteAtHit: a block that fills whole granules, regions that share a granule, one
+  // past a region, a freed region and a stale generation must get byteAt's answer.
+  VmHeapCore heap;
+  std::string error;
+  uint64_t big = 0;
+  uint64_t small = 0;
+  uint64_t other = 0;
+  REQUIRE(heap.allocateBytes(1000, big, error));
+  REQUIRE(heap.allocateBytes(5, small, error));
+  REQUIRE(heap.allocateBytes(9, other, error));
+  for (uint64_t i = 0; i <= 1000; ++i) {
+    CHECK(heap.byteAtHit(big + i) == heap.byteAt(big + i));
+  }
+  for (uint64_t i = 0; i <= 9; ++i) {
+    CHECK(heap.byteAtHit(small + i) == heap.byteAt(small + i));
+    CHECK(heap.byteAtHit(other + i) == heap.byteAt(other + i));
+  }
+  CHECK(heap.byteAtHit(big + 500) != nullptr);
+  CHECK(heap.byteAtHit(small + 5) == nullptr);
+  CHECK(heap.byteAtHit(0) == nullptr);
+  REQUIRE(heap.releaseBytes(big, error));
+  for (uint64_t i = 0; i < 1000; i += 37) {
+    CHECK(heap.byteAtHit(big + i) == nullptr);
+  }
+  uint64_t reused = 0;
+  REQUIRE(heap.allocateBytes(1000, reused, error));
+  for (uint64_t i = 0; i < 1000; i += 37) {
+    CHECK(heap.byteAtHit(reused + i) == heap.byteAt(reused + i));
+    CHECK(heap.byteAtHit(big + i) == heap.byteAt(big + i));
+  }
+}

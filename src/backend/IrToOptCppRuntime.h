@@ -271,9 +271,9 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frame
 // slot's low byte.
 // byteAt checks the tag bits itself, so a byte of a live region needs no other test.
 // The check stays out of line: inlined into the byte loops of a large function, strings/append_chunks took
-// 15% more CPU time.
+// 15% more CPU time. byteAtHit keeps a hit free of taken branches between the call and the return.
 [[gnu::noinline]] uint8_t *ps_byte_at(Rt &rt, uint64_t address) {
-  return rt.heap.byteAt(address);
+  return rt.heap.byteAtHit(address);
 }
 
 inline uint64_t ps_load_u8(Rt &rt, uint64_t *frame, uint64_t base, size_t frameCount, uint64_t address) {
