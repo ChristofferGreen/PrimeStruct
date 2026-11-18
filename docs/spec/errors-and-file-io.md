@@ -50,6 +50,12 @@
   `FileError.status(err)`) are converted to the sum when a stdlib-Result definition returns them. Without the import,
   the builtin `Result` keeps its packed representation (the error code in the high 32 bits, zero for ok), which
   cannot tell `ok` from an error code of `0`.
+- **Result-returning entry:** an entry declared to return `Result<T, E>` or `Result<E>` ends the process with an exit
+  code decoded from the value, the same on the VM, native and C++ backends. `ok` exits 0. An `error` exits with its
+  error code when that is an integer in 1..255, and with 1 otherwise: an error struct, a float or string error, an
+  integer error of 0 (which must not look like `ok`) or an integer outside 1..255 (which the operating system would
+  truncate). This holds for the stdlib sums (with `/std/result/*` imported) and for the builtin packed `Result`
+  (an error code of 0, the packed ok, exits 0).
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
