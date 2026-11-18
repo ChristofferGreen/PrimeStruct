@@ -41,7 +41,10 @@ bool addInterfaceEntryStub(Program &program, const std::string &entryPath, std::
 
 // Builds the interface of the definitions the module's own sources hold (not the stdlib's): the public structs, enums
 // and non-generic functions of a validated program. `semanticProgram` supplies resolved return types and effects.
-// `entryPath` is never part of the interface. A function is printed as a declaration `[..., imported(<libraryName>)]
+// `entryPath` is never part of the interface. `parsedDefinitions` (the program before validation) supplies the generics:
+// a public generic function or struct is printed in full, body included, with the private definitions its body refers to
+// (a private function or struct is printed as a declaration, a private generic in full), because the consumer
+// instantiates it. Without it generics are left out. A function is printed as a declaration `[..., imported(<libraryName>)]
 // name(parameters) {}`, and a method nested in a struct inside the struct. Returns false with `error` set when the
 // product lacks a fact.
 bool buildModuleInterface(const Program &program,
@@ -50,7 +53,8 @@ bool buildModuleInterface(const Program &program,
                           const std::string &entryPath,
                           const std::string &libraryName,
                           ModuleInterface &out,
-                          std::string &error);
+                          std::string &error,
+                          const std::vector<Definition> *parsedDefinitions = nullptr);
 
 // The library name of a root file: the file name without its extension, with every character that is not a letter, a
 // digit or `_` written as `_` (and `_` first when it starts with a digit), so `[imported(<name>)]` is one word.

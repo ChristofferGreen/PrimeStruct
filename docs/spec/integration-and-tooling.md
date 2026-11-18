@@ -78,7 +78,7 @@ code 2. Both kinds print only what the module's own sources define: stdlib defin
 part of it. Both are the first step of the library plan (docs/ModulesAndLibrariesPlan.md, section 5); they write no
 archive (`--emit=lib`, below, writes one) and read a library only when `--library` names it.
 
-The interface holds the public (`public`, and not `private`), non-generic definitions, sorted by path inside nested
+The interface holds the public (`public`, and not `private`) definitions, sorted by path inside nested
 `[namespace]` envelopes (a namespace's `summary` is printed on its envelope):
 
 - a struct in full: its transforms that say layout (`pod`, `handle`, `no_padding`, `align_bytes(..)`, ...), every field
@@ -95,11 +95,24 @@ The interface holds the public (`public`, and not `private`), non-generic defini
   extension, with every character that is not a letter, a digit or `_` written as `_`. A method nested in a struct is
   printed inside the struct, so its implicit `this` stays implicit; a lifecycle helper written beside the struct is
   a declaration with its full path;
+- a generic function or struct in full, with its template arguments and its body (a generic struct with its fields and
+  its methods, bodies included), as the source wrote it: validation replaces a generic by its instances, so the
+  interface is printed from the program as parsed. The consumer instantiates it, so one copy of `Box<i32>` per
+  program is made by the consumer and `Box<string>` and every other instance is made as in one program. The private
+  definitions a generic reaches (by name, through any depth) are printed too and stay private: a private function or
+  non-generic struct as a declaration (`[imported(ui)]`, the library lowers it and the consumer calls it), a private
+  generic in full;
+- a lifecycle helper (`Create`, `Destroy`, `Copy`, `Move`) of a struct in full, body included, in the struct. The
+  lowerer expands these at each use instead of calling them, so the library has no function for one (it is not a root)
+  and the consumer expands the printed body where a value is created, copied or destroyed. A private function such a
+  body calls is reached like the one a generic calls. A struct with no helper of its own is copied and destroyed
+  field by field, which the lowerer also expands at the use site, so the consumer synthesizes it from the struct's
+  layout and the helpers of its fields;
 - `summary` on structs, enums, functions and namespaces.
 
 Transform lists are separated by commas, because an absolute type path after a space (`[static /ui/Color]`) would be
-rewritten as a division by the operator filter. A private definition, an entry, a generic definition, a sum type and
-the stdlib are not printed; generics join the interface with TODO-5926.
+rewritten as a division by the operator filter. A private definition that no generic or lifecycle helper reaches, an
+entry, a sum type and the stdlib are not printed.
 
 ```
 [namespace summary("Drawing.")]
@@ -145,7 +158,7 @@ module is read as for `--emit=interface`: a file with the files it imports, no e
 a missing entry, and an entry the module defines is lowered as that stub and dropped). `--with-sources` adds the
 module's `.prime` files. `--library` consumes it (Compiling against a library, below).
 
-**Code.** Lowering takes every public, non-generic function of the module's own sources as a root (`host` and
+**Code.** Lowering takes every public, non-generic function (a lifecycle helper excepted: it is expanded where it is used, so the interface carries it) and every private function a generic or a lifecycle helper reaches of the module's own sources as a root (`host` and
 `compute` functions have no IR body and are left out), whether or not another definition calls it, and lowers what the
 roots call with them: a callee with two call sites or more, or a recursive one, is a function of the archive (a stdlib
 one such as `/std/collections/slice/Read` too, which the link shares with the program's own copy), and a callee with one call site is inlined into its caller as in any

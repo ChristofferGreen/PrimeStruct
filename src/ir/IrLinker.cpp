@@ -4,6 +4,7 @@
 #include "primec/ir/IrOperandTable.h"
 
 #include <algorithm>
+#include <cctype>
 #include <limits>
 #include <unordered_map>
 #include <utility>
@@ -98,6 +99,81 @@ bool isSharedFunction(const IrLinkOptions *options, const std::string &name) {
   return false;
 }
 
+// Whether `name` is the name of a generic instantiation: a path segment `<template>__t<hex digits>` that the compiler
+// derives from the template arguments, so two modules that instantiate a generic alike name it alike.
+bool isInstantiationName(const std::string &name) {
+  size_t at = name.find("__t");
+  while (at != std::string::npos) {
+    size_t end = at + 3;
+    while (end < name.size() && std::isxdigit(static_cast<unsigned char>(name[end])) != 0) {
+      ++end;
+    }
+    if (end - (at + 3) >= 8 && (end == name.size() || name[end] == '/')) {
+      return true;
+    }
+    at = name.find("__t", at + 3);
+  }
+  return false;
+}
+
+const std::string *stringOf(const IrModule &module, uint64_t index) {
+  return index < module.stringTable.size() ? &module.stringTable[static_cast<size_t>(index)]
+                                           : nullptr;
+}
+
+bool sameStringOperand(const IrModule &a, uint64_t left, const IrModule &b, uint64_t right) {
+  const std::string *first = stringOf(a, left);
+  const std::string *second = stringOf(b, right);
+  return first != nullptr && second != nullptr && *first == *second;
+}
+
+// Whether two instructions mean the same in their own modules: an operand that indexes a table of its module
+// (functions, host imports, strings) is compared by what it names, any other operand as it is.
+bool sameInstruction(const IrModule &moduleA,
+                     const IrInstruction &a,
+                     const IrModule &moduleB,
+                     const IrInstruction &b) {
+  if (a.op != b.op || a.isStringLiteral != b.isStringLiteral) {
+    return false;
+  }
+  switch (irOperandClass(a.op)) {
+  case IrOperandClass::Function:
+    return a.imm < moduleA.functions.size() && b.imm < moduleB.functions.size() &&
+           moduleA.functions[static_cast<size_t>(a.imm)].name ==
+               moduleB.functions[static_cast<size_t>(b.imm)].name;
+  case IrOperandClass::HostImport:
+    return a.imm < moduleA.hostImports.size() && b.imm < moduleB.hostImports.size() &&
+           moduleA.hostImports[static_cast<size_t>(a.imm)].name ==
+               moduleB.hostImports[static_cast<size_t>(b.imm)].name;
+  case IrOperandClass::String:
+    return sameStringOperand(moduleA, a.imm, moduleB, b.imm);
+  case IrOperandClass::PrintString:
+    return decodePrintFlags(a.imm) == decodePrintFlags(b.imm) &&
+           sameStringOperand(
+               moduleA, decodePrintStringIndex(a.imm), moduleB, decodePrintStringIndex(b.imm));
+  case IrOperandClass::Constant:
+    return a.isStringLiteral ? sameStringOperand(moduleA, a.imm, moduleB, b.imm) : a.imm == b.imm;
+  default:
+    return a.imm == b.imm;
+  }
+}
+
+// Whether two definitions of one name are the same code.
+bool sameFunction(const IrModule &moduleA,
+                  const IrFunction &a,
+                  const IrModule &moduleB,
+                  const IrFunction &b) {
+  if (a.parameterCount != b.parameterCount || a.instructions.size() != b.instructions.size()) {
+    return false;
+  }
+  for (size_t at = 0; at < a.instructions.size(); ++at) {
+    if (!sameInstruction(moduleA, a.instructions[at], moduleB, b.instructions[at])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Gives every function of the library a slot in the merged module: an import resolves to the definition of its name
 // (which may be the other module's import, kept as one), a definition fills the slot of an import of its name, and
 // two definitions of one name are an error. The bodies are copied later, once every index is known.
@@ -133,6 +209,16 @@ bool mergeFunctionSlots(IrModule &module,
     }
     if (!existing.isImport && !function.isImport) {
       if (isSharedFunction(options, function.name)) {
+        maps.functions.push_back(found->second);
+        maps.copyFunction.push_back(false);
+        continue;
+      }
+      if (isInstantiationName(function.name)) {
+        // Both modules instantiated one generic alike: one copy. A different body under one name is an error.
+        if (!sameFunction(module, existing, library, function)) {
+          error = "instantiation " + function.name + " differs between the modules";
+          return false;
+        }
         maps.functions.push_back(found->second);
         maps.copyFunction.push_back(false);
         continue;

@@ -491,6 +491,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/LibraryArchive.cpp
   src/pipeline/LibraryBuild.cpp
   src/pipeline/LibraryLink.cpp
+  src/pipeline/InterfaceGenerics.cpp
   src/pipeline/ModuleInterface.cpp
   src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
@@ -1380,6 +1381,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_conditions.cpp
     tests/unit/runtime/test_ir_link.cpp
     tests/unit/runtime/test_ir_link_strings.cpp
+    tests/unit/runtime/test_ir_link_instantiations.cpp
     tests/unit/runtime/test_ir_link_cli.cpp
     tests/unit/runtime/test_library_archive.cpp
   )

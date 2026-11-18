@@ -245,6 +245,22 @@ TEST_CASE("emit-interface prints structs and enums that read back unchanged") {
   CHECK(first.out.find("[public, enum<i64>] Shade {") != std::string::npos);
 }
 
+TEST_CASE("emit-interface prints a generic in full with the private definitions it reaches") {
+  const std::string source = "[namespace]\nui {\n"
+                             "  [return<i32>]\n  helper([i32] a) { return(a + 1i32) }\n"
+                             "  [return<i32>]\n  unused() { return(2i32) }\n"
+                             "  [public return<i32>]\n  bump<T>([T] a) { return(helper(3i32)) }\n"
+                             "}\n";
+  const InterfaceRun run = runEmit("emit_interface_generic", source, "interface");
+  REQUIRE(run.exitCode == 0);
+  CHECK(run.out.find("[public, return<i32>] bump<T>([T] a) {\n    return(helper(3i32))\n  }") !=
+        std::string::npos);
+  // What the generic reaches is declared, still private; what nothing reaches is not printed.
+  CHECK(run.out.find("[return<i32>, imported(emit_interface_generic)] helper([i32] a) {}") !=
+        std::string::npos);
+  CHECK(run.out.find("unused") == std::string::npos);
+}
+
 TEST_CASE("emit-interface reports a semantic error of the module") {
   const InterfaceRun run = runEmit("emit_interface_error",
                                    "[public return<i32>]\nvalue() {\n  return(missing_name)\n}\n",

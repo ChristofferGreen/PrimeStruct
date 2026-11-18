@@ -165,11 +165,15 @@ the pushes by their consumer is gone.
 
 - **Instantiations in both places.** A library instantiates `Vector<i32>` for its own code and the consumer may do the
   same. Merging by identical content is the rule of section 9 step 2 (the content-addressed model argued in the
-  manifest plan). Whether instantiated names are deterministic and content-derived was not checked; if they are not,
-  that is a prerequisite.
-- **Compiler-synthesized helpers.** Field-wise copy and destroy of a struct must come out the same in the library and
-  the consumer, or live only in the library and be declared in the interface. Whether they are functions or expanded
-  at each use site was not checked. The rule: a struct is lowered in the library that owns it.
+  manifest plan). Instantiated names are deterministic and content-derived (`/ui/Box__t<hex>`, from the template
+  arguments), so no prerequisite was needed; the linker (`primec/ir/IrLinker.h`) merges two definitions of such a name
+  when their code is the same and refuses them otherwise. Generics ship as parsed definitions (validation replaces a
+  generic by its instances, so the interface is printed from the program before it), together with the private
+  definitions they reach, which stay private; a private function is a declaration the library lowers.
+- **Compiler-synthesized helpers.** Field-wise copy and destroy of a struct are expanded at each use site, never
+  functions, and so is a user `Create`/`Destroy`/`Copy`/`Move`. The rule that came out: the interface prints the
+  user's lifecycle helpers in full (the library compiles no function for them), and the consumer expands them as in one
+  program.
 - **Inference across the boundary.** Implicit template inference needs the call sites of a generic. Because generics
   ship as definitions and are instantiated in the consumer, a library's generic API infers as it does in one program.
 - **Effects** come from the interface declaration; the archive hash ties the interface to the code it was built with.

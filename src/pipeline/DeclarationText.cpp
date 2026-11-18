@@ -31,7 +31,18 @@ void appendLiteral(std::string &out, const Expr &expr) {
 
 void appendExpr(std::string &out, const Expr &expr);
 
+// `T{}` parses to a constructor with one argument, an empty `block() {}`; printed as an argument it would be an
+// expression without a value, so the empty initializer is left out.
+bool isEmptyInitializer(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call && expr.name == "block" && expr.args.empty() &&
+         expr.bodyArguments.empty() && !expr.isLambda && !expr.isMethodCall;
+}
+
 void appendArgs(std::string &out, const Expr &expr, size_t first) {
+  if (expr.args.size() == first + 1 && isEmptyInitializer(expr.args[first]) &&
+      (expr.isBinding || expr.isBraceConstructor)) {
+    return;
+  }
   for (size_t i = first; i < expr.args.size(); ++i) {
     if (i > first) {
       out += ", ";

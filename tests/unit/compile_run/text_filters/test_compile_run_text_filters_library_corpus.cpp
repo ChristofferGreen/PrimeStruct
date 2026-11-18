@@ -311,6 +311,136 @@ import /ui/*
   }
   return(c.value())
 })"},
+    {"generic_box",
+     R"([namespace] ui {
+  [public struct]
+  Box<T>() {
+    [public T] value{}
+    [public return<T>] get() { return(this.value) }
+  }
+  [public return<i32>] inner() {
+    [Box<i32>] b{Box<i32>{3i32}}
+    return(b.get())
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32> effects(io_out)] main() {
+  [Box<string>] s{Box<string>{"hello"utf8}}
+  print_line(s.get())
+  [Box<i32>] b{Box<i32>{4i32}}
+  return(b.get() + inner())
+})"},
+    {"generic_private_reach",
+     R"([namespace] ui {
+  [return<i32>] helper([i32] a) { return(a + 1i32) }
+  [struct] Hidden() {
+    [i32] n{3i32}
+    [return<i32>] value() { return(this.n) }
+  }
+  [return<T>]
+  pass_through<T>([T] a) { return(a) }
+  [public struct]
+  Box<T>() {
+    [public T] value{}
+    [public return<T>] get() { return(pass_through<T>(this.value)) }
+    [public return<i32>] bumped() {
+      [Hidden] h{Hidden{}}
+      return(helper(h.value()))
+    }
+  }
+  [public return<i32>]
+  count_up<T>([T] a, [i32] n) {
+    [i32 mut] total{0i32}
+    [i32 mut] i{0i32}
+    while(i < n) {
+      if(i > 1i32) {
+        total = total + helper(i)
+      } else {
+        total = total + 1i32
+      }
+      i = i + 1i32
+    }
+    return(total)
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32>] main() {
+  [Box<i64>] b{Box<i64>{7i64}}
+  [Box<i32>] c{Box<i32>{1i32}}
+  return(convert<i32>(b.get()) + count_up<f64>(1.0f64, 6i32) + c.bumped())
+})"},
+    {"generic_instantiated_in_both",
+     R"([namespace] ui {
+  [return<i32>] helper([i32] a) { return(a * 2i32) }
+  [public struct]
+  Box<T>() {
+    [public T] value{}
+    [public return<T>] get() { return(this.value) }
+  }
+  [public return<i32>]
+  count_up<T>([T] a, [i32] n) {
+    [i32 mut] total{0i32}
+    [i32 mut] i{0i32}
+    while(i < n) {
+      total = total + helper(i)
+      i = i + 1i32
+    }
+    return(total)
+  }
+  [public return<i32>] inner() {
+    [Box<i32>] b{Box<i32>{3i32}}
+    return(b.get() + count_up<i64>(1i64, 4i32))
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32>] main() {
+  [Box<i32>] b{Box<i32>{5i32}}
+  return(b.get() + inner() + count_up<i64>(2i64, 3i32) + count_up<i32>(2i32, 2i32))
+})"},
+    {"struct_with_destroy",
+     R"([namespace] ui {
+  [public struct] Noisy() {
+    [public i32 mut] id{0i32}
+    [public effects(io_out)] Destroy() { print_line(this.id) }
+    [public effects(io_out) return<i32>] touch() { return(this.id + 1i32) }
+  }
+  [public effects(io_out) return<Noisy>] make([i32] id) { return(Noisy{id}) }
+  [public effects(io_out) return<void>] scoped([i32] id) {
+    [Noisy] n{Noisy{id}}
+    print_line(n.touch())
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32> effects(io_out)] main() {
+  scoped(1i32)
+  [Noisy] a{make(5i32)}
+  if(true) {
+    [Noisy] b{Noisy{6i32}}
+    print_line(b.touch())
+  }
+  print_line(99i32)
+  return(a.touch())
+})"},
+    {"destroy_reaches_private_helper",
+     R"([namespace] ui {
+  [effects(io_out) return<void>] shout([i32] id) { print_line(id * 10i32) }
+  [public struct] Guard() {
+    [public i32] id{0i32}
+    [public effects(io_out)] Create() { shout(1i32) }
+    [public effects(io_out)] Destroy() { shout(this.id) }
+  }
+  [public return<i32>] id_of([Guard] g) { return(g.id) }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32> effects(io_out)] main() {
+  [Guard] g{Guard{4i32}}
+  return(id_of(g))
+})"},
 };
 
 constexpr size_t CorpusSize = sizeof(Corpus) / sizeof(Corpus[0]);
@@ -424,7 +554,27 @@ TEST_CASE("library corpus on the vm: programs 18 to 20") {
 }
 
 TEST_CASE("library corpus on the vm: the rest") {
-  checkRange(21, CorpusSize, "vm");
+  checkRange(21, 23, "vm");
+}
+
+TEST_CASE("library corpus on the vm: generic struct") {
+  checkRange(23, 24, "vm");
+}
+
+TEST_CASE("library corpus on the vm: generic reaching private definitions") {
+  checkRange(24, 25, "vm");
+}
+
+TEST_CASE("library corpus on the vm: generic instantiated in both") {
+  checkRange(25, 26, "vm");
+}
+
+TEST_CASE("library corpus on the vm: struct with a Destroy helper") {
+  checkRange(26, 27, "vm");
+}
+
+TEST_CASE("library corpus on the vm: lifecycle helpers reaching a private function") {
+  checkRange(27, CorpusSize, "vm");
 }
 
 TEST_CASE("library corpus on optexe: structs and methods") {
@@ -453,6 +603,26 @@ TEST_CASE("library corpus on optexe: library and program share stdlib routines")
 
 TEST_CASE("library corpus on optexe: wrapped library struct") {
   checkRange(21, 22, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: generic struct") {
+  checkRange(23, 24, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: generic reaching private definitions") {
+  checkRange(24, 25, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: generic instantiated in both") {
+  checkRange(25, 26, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: struct with a Destroy helper") {
+  checkRange(26, 27, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: lifecycle helpers reaching a private function") {
+  checkRange(27, CorpusSize, "optexe");
 }
 
 TEST_SUITE_END();

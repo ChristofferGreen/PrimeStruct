@@ -292,6 +292,9 @@ bool runCompilePipeline(const Options &options,
     diagnosticSink.setSummary(error);
     return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
   }
+  if (interfaceEmit) {
+    output.parsedDefinitions = output.program.definitions;
+  }
 
   if (benchmarkAstHeapEstimate) {
     emitProgramHeapEstimate(output.program, "post-parse-pre-semantics");
@@ -559,7 +562,8 @@ bool runCompilePipeline(const Options &options,
                               options.entryPath,
                               libraryNameOfRootFile(options.inputPath),
                               moduleInterface,
-                              error)) {
+                              error,
+                              &output.parsedDefinitions)) {
       diagnosticSink.setSummary(error);
       return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
     }

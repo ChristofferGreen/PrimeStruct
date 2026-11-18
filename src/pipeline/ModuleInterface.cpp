@@ -2,6 +2,7 @@
 
 #include "DeclarationText.h"
 #include "DefinitionReferences.h"
+#include "InterfaceGenerics.h"
 
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
@@ -198,7 +199,15 @@ std::string structText(const Definition &definition,
     }
   }
   for (const std::string &method : methods) {
-    out += "  " + method + "\n";
+    // A lifecycle helper is several lines.
+    std::string indented;
+    for (const char c : method) {
+      indented += c;
+      if (c == '\n') {
+        indented += "  ";
+      }
+    }
+    out += "  " + indented + "\n";
   }
   return out + "}";
 }
@@ -473,7 +482,8 @@ bool buildModuleInterface(const Program &program,
                           const std::string &entryPath,
                           const std::string &libraryName,
                           ModuleInterface &out,
-                          std::string &error) {
+                          std::string &error,
+                          const std::vector<Definition> *parsedDefinitions) {
   out = {};
   const DefinitionFacts facts = collectFacts(semanticProgram);
   std::set<std::string> structPaths;
@@ -490,11 +500,75 @@ bool buildModuleInterface(const Program &program,
     definedPaths.insert(definition.fullPath);
   }
 
+  // The generics, as parsed, and what they reach: the consumer instantiates a generic, so its private helpers and
+  // types are part of the interface (a function or struct as a declaration, a generic in full).
+  std::unordered_map<std::string, const Definition *> parsed;
+  std::set<std::string> reachedPaths;
   std::vector<Item> items;
+  if (parsedDefinitions != nullptr) {
+    std::vector<std::string> seeds;
+    for (const Definition &definition : *parsedDefinitions) {
+      parsed.emplace(definition.fullPath, &definition);
+      if (isGenericDefinition(definition) && !definition.isNested && isPublic(definition) &&
+          definition.fullPath != entryPath && !hasTransform(definition.transforms, "namespace") &&
+          inModuleSources(source, definition)) {
+        seeds.push_back(definition.fullPath);
+      }
+      // A lifecycle helper of a public struct is expanded in the consumer, so what it calls is reached too.
+      if (isLifecycleHelper(definition) && definition.fullPath != entryPath &&
+          inModuleSources(source, definition)) {
+        const auto parent = std::find_if(
+            parsedDefinitions->begin(), parsedDefinitions->end(), [&](const Definition &candidate) {
+              return candidate.fullPath == parentDefinitionPath(definition.fullPath);
+            });
+        if (parent != parsedDefinitions->end() && isPublic(*parent)) {
+          seeds.push_back(definition.fullPath);
+        }
+      }
+    }
+    reachedPaths = reachedFromGenerics(parsed, seeds);
+    std::set<std::string> genericStructs;
+    for (const Definition &definition : *parsedDefinitions) {
+      if (isGenericDefinition(definition) && reachedPaths.count(definition.fullPath) != 0 &&
+          hasTransform(definition.transforms, "struct")) {
+        genericStructs.insert(definition.fullPath);
+        structPaths.insert(definition.fullPath);
+      }
+    }
+    for (const Definition &definition : *parsedDefinitions) {
+      if (!isGenericDefinition(definition) || reachedPaths.count(definition.fullPath) == 0 ||
+          definition.fullPath == entryPath || hasTransform(definition.transforms, "namespace") ||
+          genericStructs.count(parentDefinitionPath(definition.fullPath)) != 0 ||
+          !inModuleSources(source, definition)) {
+        continue;
+      }
+      std::vector<const Definition *> methods;
+      for (const Definition &nested : *parsedDefinitions) {
+        if (nested.isNested && parentDefinitionPath(nested.fullPath) == definition.fullPath) {
+          methods.push_back(&nested);
+        }
+      }
+      Item item;
+      item.definition = &definition;
+      item.kind = hasTransform(definition.transforms, "struct") ? "struct" : "function";
+      item.section = sectionOf(definition.fullPath, structPaths);
+      const std::string displayName = parentDefinitionPath(definition.fullPath) == item.section
+                                          ? lastSegment(definition.fullPath)
+                                          : definition.fullPath;
+      item.displayText = genericDefinitionText(definition, displayName, methods);
+      item.signatureText = genericDefinitionText(definition, definition.fullPath, methods);
+      items.push_back(std::move(item));
+    }
+  }
+  for (const auto &entry : parsed) {
+    definitions.emplace(entry.first, entry.second);
+    definedPaths.insert(entry.first);
+  }
   for (const Definition &definition : program.definitions) {
     if (definition.fullPath == entryPath || !definition.templateArgs.empty() ||
         !definition.instanceOfTemplate.empty() ||
-        hasTransform(definition.transforms, "namespace") || !isPublic(definition) ||
+        hasTransform(definition.transforms, "namespace") ||
+        (!isPublic(definition) && reachedPaths.count(definition.fullPath) == 0) ||
         !inModuleSources(source, definition)) {
       continue;
     }
@@ -506,6 +580,13 @@ bool buildModuleInterface(const Program &program,
     Item item;
     if (!buildItem(definition, facts, structPaths, {}, libraryName, item, error)) {
       return false;
+    }
+    // A lifecycle helper is printed in full: the consumer expands it where a value is created, copied or destroyed.
+    const auto parsedHelper = parsed.find(definition.fullPath);
+    if (item.nestedInStruct && isLifecycleHelper(definition) && parsedHelper != parsed.end()) {
+      item.displayText =
+          genericDefinitionText(*parsedHelper->second, lastSegment(definition.fullPath), {});
+      item.signatureText = genericDefinitionText(*parsedHelper->second, definition.fullPath, {});
     }
     items.push_back(std::move(item));
   }

@@ -63,6 +63,9 @@ struct CompilePipelineRunConfig {
 
 struct CompilePipelineOutput {
   Program program;
+  // `--emit=interface|symbols|lib` only: the definitions as parsed, before semantic validation replaces each generic by
+  // its instances. The interface prints the generics from here.
+  std::vector<Definition> parsedDefinitions;
   SemanticProgram semanticProgram;
   bool hasSemanticProgram = false;
   CompilePipelineSemanticProductDecision semanticProductDecision =

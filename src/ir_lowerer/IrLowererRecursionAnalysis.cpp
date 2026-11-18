@@ -9,6 +9,7 @@
 #include "primec/semantics/ImportedDefinitions.h"
 #include "primec/support/CollectionHelperNames.h"
 
+#include <algorithm>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -332,6 +333,25 @@ findReachableDefinitionPaths(const Program &program,
     for (const std::string &root : *extraRoots) {
       if (nodePaths.find(root) != nodePaths.end() && reachable.insert(root).second) {
         worklist.push_back(root);
+      }
+    }
+  }
+  // A lifecycle helper is expanded where a value is created, copied or destroyed, with no call to name it. The helpers
+  // a library's interface carries call the library's functions (imported declarations), which must stay calls, so in a
+  // program that links a library every lifecycle helper is a root.
+  const bool linksLibrary =
+      std::any_of(program.definitions.begin(),
+                  program.definitions.end(),
+                  [](const Definition &def) { return isImportedDefinition(def); });
+  if (linksLibrary) {
+    for (const Definition &def : program.definitions) {
+      const size_t slash = def.fullPath.find_last_of('/');
+      const std::string leaf =
+          slash == std::string::npos ? def.fullPath : def.fullPath.substr(slash + 1);
+      if (def.isNested &&
+          (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move") &&
+          reachable.insert(def.fullPath).second) {
+        worklist.push_back(def.fullPath);
       }
     }
   }

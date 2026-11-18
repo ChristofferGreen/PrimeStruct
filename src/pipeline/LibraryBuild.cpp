@@ -2,6 +2,7 @@
 
 #include "primec/ir/IrLowerer.h"
 #include "primec/ir/IrValidation.h"
+#include "InterfaceGenerics.h"
 #include "primec/pipeline/LibraryLink.h"
 #include "primec/pipeline/ModuleInterface.h"
 #include "primec/support/Sha256.h"
@@ -104,7 +105,8 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
                             options.entryPath,
                             libraryNameOfRootFile(options.inputPath),
                             moduleInterface,
-                            error)) {
+                            error,
+                            &output.parsedDefinitions)) {
     return false;
   }
 
@@ -122,7 +124,8 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
     const auto definition = definitions.find(symbol.path);
     // A host function has no body (it is a host import) and a compute function runs on a GPU: neither is IR code.
     if (definition == definitions.end() || hasTransformNamed(*definition->second, "host") ||
-        hasTransformNamed(*definition->second, "compute")) {
+        hasTransformNamed(*definition->second, "compute") ||
+        isLifecycleHelper(*definition->second)) {
       continue;
     }
     roots.push_back(symbol.path);

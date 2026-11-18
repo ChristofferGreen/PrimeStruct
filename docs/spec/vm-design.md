@@ -296,7 +296,11 @@
   source file or a `.psir` file; a `.psir` input is loaded and run without compiling. `linkIrModule`
   (`primec/ir/IrLinker.h`) merges each module into the one before it and keeps the program's entry. Functions merge by
   name: an import (`IrFunction::isImport`) resolves to the definition, an import nobody defines yet stays one, and a
-  name defined twice is `duplicate definition of <name>`; a name declared with two parameter counts is an error too.
+  name defined twice is `duplicate definition of <name>`, except a generic instantiation (a path segment
+  `<template>__t<hex digits>`, which the compiler derives from the template arguments): two definitions of one are one
+  copy when their instructions are the same (a function, host import or string operand compared by the name or text it
+  names, not by its index) and `instantiation <name> differs between the modules` otherwise; a name declared with two
+  parameter counts is an error too.
   Struct layouts merge by name and must be equal (`struct layout of <name> differs between the modules`); host imports
   merge by name and signature (`host import <name> has two signatures`). The library's string table is appended and
   its `Call`, `CallVoid`, `TaskSpawn`, `CallHost` and string operands are rewritten by the operand classes of
