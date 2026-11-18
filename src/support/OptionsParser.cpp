@@ -1089,6 +1089,10 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
   if (!validateVmFlags(out, error)) {
     return false;
   }
+  if (out.vmRepeat != 0 && mode != OptionsParserMode::Primevm) {
+    error = "--vm-repeat is a primevm flag";
+    return false;
+  }
 
   applyRunProfile(out, defaultEffectsExplicit);
   applyNoTransformFlags(out, noTransforms, noTextTransforms, noSemanticTransforms);

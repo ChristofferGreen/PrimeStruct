@@ -88,6 +88,10 @@ struct Options {
   // schedule seed (docs/spec/vm-design.md, Synchronization record and replay). The two are exclusive.
   std::string vmRecordSyncPath;
   std::string vmReplaySyncPath;
+  // --vm-repeat <n> (primevm only, needs --vm-threads) compiles the program once and runs the module n times, each
+  // run on a fresh VM; the runs' output follows one another and the exit code is the runs' common one (the
+  // concurrent corpus, tests/vm_threads_corpus.txt, pays the front end once per program with it). 0 = one run.
+  uint32_t vmRepeat = 0;
   bool skipSemanticProductForNonConsumingPath = false;
   std::optional<bool> benchmarkForceSemanticProduct;
   bool benchmarkSemanticNoFactEmission = false;

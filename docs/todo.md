@@ -111,7 +111,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6030 | The concurrent corpus runs in fewer, cheaper CTest entries | ready | gate-timeouts |
 | TODO-6028 | A gate at `nice -n 10` is not starved by other jobs until its tests time out | deferred | gate-timeouts |
 | TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
@@ -230,20 +229,6 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (direc
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
-
-- [~] TODO-6030: The concurrent corpus runs in fewer, cheaper CTest entries
-  - owner: ai
-  - status: ready
-  - claimed_by: corpus-cheap (worktree-agent-a873e75abc0da7a83), 2026-11-18
-  - created_at: 2026-11-17
-  - phase: Test infrastructure (leftover of TODO-6027)
-  - parallel_track: gate-timeouts
-  - scope: The corpus of TODO-5900 (tests/vm_threads_corpus.txt, the CMake generator in CMakeLists.txt) registers 382 `PrimeStruct_vm_threads_corpus_*` entries: one per program-matrix case and round (the eager run plus 2 or 5 `--vm-threads` runs, 20 in all per program), most of the time spent in the front end of each run (0.1 to 1.1 s). The slowest takes 2.9 s alone and about 12 s under gate load, so none is above the 10 s of TODO-6027, but the entries cost process starts and a full compile per run. Measure where an entry's time goes (docs/todo_log.md, TODO-5904 section has the numbers) and make them cheaper without lowering the 20 repeats of a program that has a race to find: for example compile each program once and run the produced IR 20 times, or give the cases of a suite one entry per round instead of one per case and round.
-  - acceptance:
-    - the corpus's total CTest time (sum of its entries, alone, serial) falls by at least a third, measured before and after in docs/todo_log.md
-    - every program still runs on the eager schedule once and under `--vm-threads` 20 times, and `scripts/check_vm_threads_corpus.py` and `scripts/tsan_vm_check.sh` still pass
-    - the full release gate is green
-  - stop_rule: the corpus generator and the matrix helper's corpus mode; no program leaves the corpus.
 
 - [ ] TODO-6028: A gate at `nice -n 10` is not starved by other jobs until its tests time out
   - owner: ai

@@ -4164,14 +4164,19 @@ if(PRIMESTRUCT_BUILD_TESTS)
   endforeach()
   # The concurrent corpus (TODO-5900, tests/vm_threads_corpus.txt): every concurrent program runs on the eager
   # schedule and under `primevm --vm-threads` PrimeStructVmThreadsCorpusRepeats times, each threads run printing what
-  # the eager run printed. A run of a program is 0.1 to 1.1 s (most of it is the front end), so the repeats are split
-  # over rounds: an entry is one case with the eager run and the `matrix` line's repeats per entry (2 for the programs
-  # that import much of the stdlib, 5 for the rest), and the entries of the other rounds are the same case again
-  # (entries stay below the 5 s guardrail; a loaded gate stretches them, so no entry is made longer). `matrix`
+  # the eager run printed. A `matrix` entry is one case: one primevm process compiles the program once and runs the
+  # module all 20 times (`--vm-repeat`, runThreadsCorpus in tests/unit/program_matrix/program_matrix.h), so the
+  # front end (0.1 to 1.1 s) is paid twice per program (the eager run and the threads run), not 21 times, and no
+  # entry takes more than a second or two alone. A `cases` entry runs a compile-run case whose runs are separate
+  # `primec --emit=vm` processes, a few per entry and the rest in further rounds (entries stay below the 5 s
+  # guardrail; a loaded gate stretches them, so no entry is made longer). `matrix`
   # lines are program-matrix suites, `cases` lines single doctest cases. scripts/check_vm_threads_corpus.py (a ctest
   # entry below) keeps the list complete; scripts/tsan_vm_check.sh runs the same list against a ThreadSanitizer build.
   set(PrimeStructVmThreadsCorpusRepeats 20)
-  set(PrimeStructVmThreadsCorpusCaseRepeatsPerEntry 5)
+  set(PrimeStructVmThreadsCorpusCaseRepeatsPerEntry 4)
+  # A program whose own run is long (not its front end) takes fewer threads runs per entry and more rounds:
+  # <suite>_<case index>=<runs per entry>. tasks_25 is task_heap_churn, about 1 s a run.
+  set(PrimeStructVmThreadsCorpusRunsPerEntry tasks_25=2)
   set(PrimeStructVmThreadsCorpusList "${CMAKE_SOURCE_DIR}/tests/vm_threads_corpus.txt")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PrimeStructVmThreadsCorpusList}")
   file(STRINGS "${PrimeStructVmThreadsCorpusList}" PrimeStructVmThreadsCorpusLines)
@@ -4207,7 +4212,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
         message(FATAL_ERROR "corpus suite ${corpusSuite} has no case count in PrimeStructProgramMatrixCaseCounts")
       endif()
       foreach(index RANGE 1 ${corpusCases})
-        primeStructAddCorpusRounds("PrimeStruct_vm_threads_corpus_${corpusShort}_${index}" ${corpusPerEntry}
+        set(corpusEntryRuns ${corpusPerEntry})
+        foreach(entry IN LISTS PrimeStructVmThreadsCorpusRunsPerEntry)
+          if(entry MATCHES "^${corpusShort}_${index}=([0-9]+)$")
+            set(corpusEntryRuns "${CMAKE_MATCH_1}")
+          endif()
+        endforeach()
+        primeStructAddCorpusRounds("PrimeStruct_vm_threads_corpus_${corpusShort}_${index}" ${corpusEntryRuns}
           $<TARGET_FILE:PrimeStruct_program_matrix_tests> "--test-suite=${corpusSuite}" "--order-by=file"
           "--first=${index}" "--last=${index}")
       endforeach()

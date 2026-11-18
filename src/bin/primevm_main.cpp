@@ -661,11 +661,42 @@ static std::optional<int> compileToVmIr(const primec::Options &options,
   return std::nullopt;
 }
 
+// --vm-repeat <n>: the module that just ran once (exit code `firstExit`) runs n - 1 more times, each on a fresh VM
+// with the same task options, so the front end is paid once. The output of the runs follows one another. A run that
+// exits otherwise than the first, or fails when the first did not, ends the process with the "vm-repeat:" line on
+// stderr and exit code 1; the corpus harness reads that line.
+static int repeatVmRun(const primec::Options &options,
+                       const primec::IrBackendDiagnostics &vmDiagnostics,
+                       const primec::IrModule &ir,
+                       const std::vector<std::string_view> &args,
+                       int firstExit) {
+  for (uint32_t run = 1; run < options.vmRepeat; ++run) {
+    primec::Vm vm;
+    vm.setScheduleSeed(options.vmScheduleSeed);
+    vm.setTaskThreads(options.vmThreads);
+    uint64_t result = 0;
+    std::string error;
+    int exitCode = 0;
+    if (!vm.execute(ir, result, error, args)) {
+      exitCode = emitVmRuntimeFailure(options, vmDiagnostics, error);
+    } else {
+      exitCode = static_cast<int>(static_cast<int32_t>(result));
+    }
+    if (exitCode != firstExit) {
+      std::cerr << "vm-repeat: run " << run << " exited " << exitCode << " but run 0 exited "
+                << firstExit << '\n';
+      return 1;
+    }
+  }
+  return firstExit;
+}
+
 int main(int argc, char **argv) {
   primec::Options options;
   std::string argError;
   if (!primec::parseOptions(argc, argv, primec::OptionsParserMode::Primevm, options, argError)) {
-    return primec::reportArgumentError(std::cerr, options, argError, primec::OptionsParserMode::Primevm);
+    return primec::reportArgumentError(
+        std::cerr, options, argError, primec::OptionsParserMode::Primevm);
   }
   if (options.listTransforms) {
     primec::printTransformList(std::cout);
@@ -746,9 +777,12 @@ int main(int argc, char **argv) {
     std::cerr << "execution_tier=interpreter\n";
   }
 
+  int firstExit = 0;
   if (!vm.execute(ir, result, error, args)) {
-    return emitVmRuntimeFailure(options, vmDiagnostics, error);
+    firstExit = emitVmRuntimeFailure(options, vmDiagnostics, error);
+  } else {
+    firstExit = static_cast<int>(static_cast<int32_t>(result));
   }
-
-  return static_cast<int>(static_cast<int32_t>(result));
+  return options.vmRepeat > 1 ? repeatVmRun(options, vmDiagnostics, ir, args, firstExit)
+                              : firstExit;
 }

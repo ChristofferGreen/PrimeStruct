@@ -10,16 +10,16 @@
 # scripts/check_vm_threads_corpus.py (ctest PrimeStruct_vm_threads_corpus_registration) fails when a test source that
 # names a task schedule (--vm-schedule-seed, --vm-threads, vmThreadsConfig, vmTaskScheduleFlags) is not listed.
 #
-#   matrix|<doctest suite>|<source file>|<n>         program-matrix suite in corpus mode, <n> threads runs per ctest entry
+#   matrix|<doctest suite>|<source file>|<n>         program-matrix suite in corpus mode, <n> threads runs per ctest entry (20: one entry per case)
 #   cases|<doctest suite>|<source file>|<case name>  doctest case run in corpus mode
 #   repeated|<doctest suite>|<source file>           already repeats under threads in its own ctest entry
 #   exclude|<source file>|<reason>                   names a marker but runs no concurrent program
 
-matrix|primestruct.program_matrix.tasks|tests/unit/program_matrix/test_program_matrix_tasks.cpp|2
-matrix|primestruct.program_matrix.atomics|tests/unit/program_matrix/test_program_matrix_atomics.cpp|5
-matrix|primestruct.program_matrix.mutexes|tests/unit/program_matrix/test_program_matrix_mutexes.cpp|5
-matrix|primestruct.program_matrix.channels|tests/unit/program_matrix/test_program_matrix_channels.cpp|5
-matrix|primestruct.program_matrix.shared_strings|tests/unit/program_matrix/test_program_matrix_shared_strings.cpp|2
+matrix|primestruct.program_matrix.tasks|tests/unit/program_matrix/test_program_matrix_tasks.cpp|20
+matrix|primestruct.program_matrix.atomics|tests/unit/program_matrix/test_program_matrix_atomics.cpp|20
+matrix|primestruct.program_matrix.mutexes|tests/unit/program_matrix/test_program_matrix_mutexes.cpp|20
+matrix|primestruct.program_matrix.channels|tests/unit/program_matrix/test_program_matrix_channels.cpp|20
+matrix|primestruct.program_matrix.shared_strings|tests/unit/program_matrix/test_program_matrix_shared_strings.cpp|20
 
 cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp|runs vm with single task spawn wait
 cases|primestruct.compile.run.vm.core|tests/unit/compile_run/vm/test_compile_run_vm_core_runtime.cpp|runs vm with multi task wait tuple

@@ -9,6 +9,18 @@ open-work-only scope rule as `docs/todo.md` itself.
 
 ## TODO-6030
 
+- 2026-11-18 (TODO-6030, release build, macOS arm64, `ctest -R PrimeStruct_vm_threads_corpus_ --parallel 1`, other agents'
+  jobs on the machine at load 17 to 20, so entry times are 1.0 to 1.5 times a quiet run): before, 432 corpus entries
+  (the program-matrix suites tasks 270, shared_strings 50, channels 44, mutexes 28, atomics 20, and the 20 `cases` entries) took
+  296.9 s in all and the slowest 5.45 s (`cases_4_r1`). The time was the front end of each of the 21 runs of a program. After
+  (one primevm process compiles a program once and runs the module n times: `primevm --vm-threads --vm-repeat <n>`;
+  `runThreadsCorpus` runs the eager schedule in one process and the 20 threads runs in a second): 89 entries took 70.0 s,
+  76 percent less, the slowest 3.2 s alone for each entry except `tasks_25` (task_heap_churn, about 0.9 s of real run per
+  threads run, so it keeps 10 rounds of 2 runs; its rounds took 3.0 to 4.7 s here, one 7.4 s under a load spike). Per
+  group, before then after: tasks 142.9 then 31.0 s (27 entries), shared_strings 87.7 then 12.6 s (5 entries, 2.3 to
+  2.8 s each), channels 20.9 then 3.2, mutexes 15.2 then 4.0, atomics 10.5 then 2.6, `cases` 19.8 then 12.3 s (25
+  entries of eager plus 4 runs in place of 5, because `cases_4_r1` was above 5 s; they run `primec --emit=vm` per run
+  and stay as they were). Every program still runs on the eager schedule once and under `--vm-threads` 20 times.
 - 2026-11-17 (TODO-6027): `scripts/tsan_vm_check.sh --also-runtime`
   (ThreadSanitizer build of primevm, primec and PrimeStruct_vm_byte_tests, 5 threads runs per
   program) ran the 19 corpus programs and the runtime suites vm_threads, vm_threads_sync,

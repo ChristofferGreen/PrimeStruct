@@ -259,16 +259,26 @@ inline void runThreadsCorpus(const ProgramCase &program, int repeats) {
   if (program.vmStderr.has_value()) {
     CHECK(eager.err == *program.vmStderr);
   }
-  const ExecutionConfig threads = vmThreadsConfig();
+  // One primevm process compiles the program once and runs the module `repeats` times under --vm-threads
+  // (--vm-repeat), so the front end is paid once, not per run. The runs' output follows one another and the exit
+  // code is the runs' common one; a run that exits otherwise ends the process with a "vm-repeat:" line.
+  ExecutionConfig threads = vmThreadsConfig();
+  threads.vmFlags.push_back("--vm-repeat");
+  threads.vmFlags.push_back(std::to_string(repeats));
+  INFO("program " << program.name << " under --vm-threads, " << repeats << " runs");
+  const Outcome outcome = runConfig(program, threads);
+  REQUIRE_MESSAGE(outcome.ran, outcome.note);
+  CHECK(outcome.err.find("vm-repeat:") == std::string::npos);
+  CHECK(outcome.exitCode == eager.exitCode);
+  std::string expectedOut;
+  std::string expectedErr;
   for (int repeat = 0; repeat < repeats; ++repeat) {
-    INFO("program " << program.name << " under --vm-threads, run " << repeat);
-    const Outcome outcome = runConfig(program, threads);
-    REQUIRE_MESSAGE(outcome.ran, outcome.note);
-    CHECK(outcome.exitCode == eager.exitCode);
-    CHECK(outcome.out == eager.out);
-    if (program.vmStderr.has_value()) {
-      CHECK(outcome.err == eager.err);
-    }
+    expectedOut += eager.out;
+    expectedErr += eager.err;
+  }
+  CHECK(outcome.out == expectedOut);
+  if (program.vmStderr.has_value()) {
+    CHECK(outcome.err == expectedErr);
   }
 }
 

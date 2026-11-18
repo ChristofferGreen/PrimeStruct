@@ -2406,6 +2406,7 @@ are left unarchived.
 | TODO-6025 | A method call result passed by value to a read-only `String` or struct parameter leaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-6026 | Release-gate tests finish well inside their CTest timeouts under load | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6027 | No release-gate entry takes more than 10 s alone | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6030 | The concurrent corpus runs in fewer, cheaper CTest entries | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

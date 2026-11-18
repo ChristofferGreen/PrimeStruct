@@ -86,6 +86,23 @@ VmFlagResult parseVmFlag(
     error = "--vm-schedule-seed requires a number";
     return result;
   }
+  result = takeValue(arg, "--vm-repeat", argc, argv, index, value);
+  if (result == VmFlagResult::Consumed) {
+    uint64_t repeat = 0;
+    if (!parseScheduleSeed(value, repeat, error, "--vm-repeat")) {
+      return VmFlagResult::Error;
+    }
+    if (repeat == 0 || repeat > 1000) {
+      error = "--vm-repeat requires a number from 1 to 1000";
+      return VmFlagResult::Error;
+    }
+    out.vmRepeat = static_cast<uint32_t>(repeat);
+    return result;
+  }
+  if (result == VmFlagResult::Error) {
+    error = "--vm-repeat requires a number";
+    return result;
+  }
   result = takeValue(arg, "--vm-record-sync", argc, argv, index, value);
   if (result == VmFlagResult::Consumed) {
     out.vmRecordSyncPath = value;
@@ -107,6 +124,14 @@ VmFlagResult parseVmFlag(
 bool validateVmFlags(Options &out, std::string &error) {
   if (!out.vmRecordSyncPath.empty() && !out.vmThreads) {
     error = "--vm-record-sync records a --vm-threads run and needs --vm-threads";
+    return false;
+  }
+  if (out.vmRepeat != 0 && !out.vmThreads) {
+    error = "--vm-repeat repeats a --vm-threads run and needs --vm-threads";
+    return false;
+  }
+  if (out.vmRepeat != 0 && (!out.vmRecordSyncPath.empty() || !out.vmReplaySyncPath.empty())) {
+    error = "--vm-repeat cannot be combined with --vm-record-sync or --vm-replay-sync";
     return false;
   }
   if (!out.vmReplaySyncPath.empty() && (out.vmThreads || !out.vmRecordSyncPath.empty())) {

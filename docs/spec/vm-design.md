@@ -273,6 +273,10 @@
   last that could have changed anything, so the run faults with `deadlock: every task is waiting` (exit code 3), as
   `optexe` does; a thread in a host call or spinning on an atomic counts as running, so a program that waits for a
   host function or an atomic is never reported as deadlocked. The fault stops and joins every thread like any other.
+  `primevm --vm-threads --vm-repeat <n>` (primevm only) compiles the program once and runs the module `n` times, each
+  on a fresh VM; the runs' output follows one another and the exit code is the runs' common one, and a run that exits
+  otherwise ends the process with exit code 1 and a `vm-repeat: run <k> exited <x> but run 0 exited <y>` line. The
+  concurrent corpus of `tests/vm_threads_corpus.txt` uses it so the front end is paid once per program (TODO-6030).
 - **Synchronization record and replay (the VM, `--vm-record-sync`, `--vm-replay-sync`; TODO-5901):** a `--vm-threads`
   run is not repeatable by itself, so `primevm --vm-threads --vm-record-sync <path>` (also `primec --emit=vm`, the
   embedder's `Vm::setSyncRecordPath` and `RunOptions::syncRecord`) writes the order in which the run's tasks

@@ -71,6 +71,8 @@ void printEffectsAndIrSection(std::ostream &err) {
   flagLine(err, "--ir-inline", "Inline eligible calls during IR lowering");
   flagLine(err, "--vm-schedule-seed <n>", "Run VM tasks under the schedule seed n picks");
   flagLine(err, "--vm-threads", "Run each VM task on an OS thread of its own");
+  flagLine(
+      err, "--vm-repeat <n>", "primevm, with --vm-threads: compile once, run the module n times");
   flagLine(err, "--vm-record-sync <path>", "With --vm-threads, write the order of the sync events");
   flagLine(
       err, "--vm-replay-sync <path>", "Run on the deterministic scheduler in a recorded order");

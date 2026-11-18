@@ -284,3 +284,48 @@ TEST_CASE("the vm sync record and replay flags take a path and keep to their mod
     CHECK(badError == bad.expected);
   }
 }
+
+TEST_CASE("the vm repeat flag is a primevm flag that repeats a vm-threads run") {
+  std::string error;
+  primec::Options repeat;
+  REQUIRE(parsePrimevm(
+      {"primevm", "--vm-threads", "--vm-repeat", "20", "/tmp/input.prime"}, repeat, error));
+  CHECK(repeat.vmRepeat == 20);
+  primec::Options defaults;
+  REQUIRE(parsePrimevm({"primevm", "/tmp/input.prime"}, defaults, error));
+  CHECK(defaults.vmRepeat == 0);
+
+  struct Bad {
+    std::vector<std::string> args;
+    std::string expected;
+  };
+  const std::vector<Bad> cases = {
+      {{"primevm", "--vm-threads", "/tmp/input.prime", "--vm-repeat"},
+       "--vm-repeat requires a number"},
+      {{"primevm", "--vm-threads", "--vm-repeat=x", "/tmp/input.prime"},
+       "invalid --vm-repeat value: x"},
+      {{"primevm", "--vm-threads", "--vm-repeat=0", "/tmp/input.prime"},
+       "--vm-repeat requires a number from 1 to 1000"},
+      {{"primevm", "--vm-repeat=3", "/tmp/input.prime"},
+       "--vm-repeat repeats a --vm-threads run and needs --vm-threads"},
+      {{"primevm",
+        "--vm-threads",
+        "--vm-repeat=3",
+        "--vm-record-sync=/tmp/run.sync",
+        "/tmp/input.prime"},
+       "--vm-repeat cannot be combined with --vm-record-sync or --vm-replay-sync"},
+  };
+  for (const Bad &bad : cases) {
+    CAPTURE(bad.expected);
+    primec::Options badOptions;
+    std::string badError;
+    CHECK_FALSE(parsePrimevm(bad.args, badOptions, badError));
+    CHECK(badError == bad.expected);
+  }
+  primec::Options primecRepeat;
+  CHECK_FALSE(
+      parsePrimec({"primec", "--emit=vm", "--vm-threads", "--vm-repeat=3", "/tmp/input.prime"},
+                  primecRepeat,
+                  error));
+  CHECK(error == "--vm-repeat is a primevm flag");
+}
