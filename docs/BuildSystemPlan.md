@@ -78,6 +78,13 @@ the one dangerous call in plain sight.
   path confinement: it is one function with a unit test, so it did not need a leaf of its own). The one argument that
   differs from the first sketch: `b.step` takes the file as well as the function path, because the runner cannot run a
   closure of the script, and a definition in `make.prime` itself would run under the profile's ceiling.
+- **Ordering inside a stage** (TODO-6029): steps of a stage run in parallel unless `b.after(stepId, dependencyId)` says
+  otherwise. The edge exports as `"after":[ids]` on the waiting node; the runner starts a step only when every step it
+  names has finished successfully (a scheduler hands steps to the workers, so one worker never waits on a step that it
+  would have to run itself), and a failure stops the build as before, leaving the steps behind it skipped. A missing id
+  and a cycle are problems of the export (and are checked again by the runner). The cache stays per step: a step that is
+  up to date counts as finished. A generator function step and the compile of its output therefore build in one stage
+  and one `primec build`; `graph.run()` stays for a script that must read the generated files itself (a glob).
 - The script runs once and quickly; it needs only `file_read` to list files. Executing steps is the runner's work.
 
 ## 5. The script (run)

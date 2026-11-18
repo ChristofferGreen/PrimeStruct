@@ -25,6 +25,8 @@ struct BuildStep {
   std::vector<std::string> linkArgs;
   // Directories whose listings the step depends on (`Build.watch`); relative paths are relative to the project.
   std::vector<std::string> inputDirs;
+  // The ids of the steps this one waits for (`"after"`): it starts when they have finished successfully.
+  std::vector<std::string> after;
   // A function step only.
   std::string function;
   std::vector<std::string> inputs;

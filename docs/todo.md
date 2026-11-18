@@ -159,7 +159,6 @@ of sync with them.
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
-| TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
 | TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
@@ -193,7 +192,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5904
-- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019, TODO-6029
+- Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
@@ -849,23 +848,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a program that does not spawn prints and starts exactly as before
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
-
-- [~] TODO-6029: Function steps can wait for other steps in one stage
-  - owner: ai
-  - status: in_progress
-  - claimed_by: build-after-worker (worktree-agent-a37abafd0c47e28b1), 2026-11-18
-  - created_at: 2026-11-17
-  - phase: Build system (docs/BuildSystemPlan.md, section 4)
-  - parallel_track: build-function-steps
-  - scope: A step runs in parallel with every other step of its stage, so a generator and the compile of what it writes need two stages (`graph.run()`). Add `b.after(stepName, dependencyName)` (or an `after` list on `step` and `compile`) that exports as `"after":[ids]` and makes the runner start a step only when the steps it names have finished successfully and fail it as skipped when one failed. A cycle and a name that is not in the graph are problems of the export. The cache stays per step.
-  - acceptance:
-    - a generator function step and the compile of its output build in one stage and one `primec build`, in that order, with no timing assertion
-    - a cycle and an unknown step are diagnostics naming the ids
-    - the export lists `after` and an unchanged graph prints as before
-    - docs/spec/integration-and-tooling.md and docs/BuildSystemPlan.md state the rule
-    - full release gate green
-  - stop_rule: ordering edges between steps of one graph; no new step kinds.
-
 
 - [ ] TODO-5927: A library owns its namespace roots
   - owner: ai

@@ -473,6 +473,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/BuildCache.cpp
   src/pipeline/BuildCopyStep.cpp
   src/pipeline/BuildFunctionSteps.cpp
+  src/pipeline/BuildStepScheduler.cpp
   src/pipeline/BuildCommand.cpp
   src/pipeline/BuildSubprojects.cpp
   src/pipeline/BuildGraphJson.cpp
@@ -1787,7 +1788,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "generator function step" "two function steps both" "writes outside the output directory faults"
           "writes an absolute path" "cannot use the file_write" "does not write its declared output"
           "runs again when a declared input" "runs again when its file or" "dry run marks a graph" "stays self-contained" "declares no outputs"
-          "path check of a function step" "merge of subproject graphs moves")
+          "path check of a function step" "merge of subproject graphs moves"
+          "after orders a compile" "after skips the waiting" "after names a cycle" "after is listed in the export"
+          "order check of a graph" "scheduler hands a step")
     string(MAKE_C_IDENTIFIER "${function_case}" function_id)
     add_test(
       NAME PrimeStruct_build_function_steps_${function_id}

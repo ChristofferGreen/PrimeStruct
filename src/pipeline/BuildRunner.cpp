@@ -4,6 +4,7 @@
 #include "primec/pipeline/BuildCopyStep.h"
 #include "primec/pipeline/BuildFunctionStep.h"
 #include "primec/pipeline/BuildFunctionSteps.h"
+#include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/support/Sha256.h"
 
@@ -325,6 +326,14 @@ int runBuildGraph(const BuildGraphData &graph,
     return 1;
   }
 
+  const std::vector<std::string> orderProblems = checkStepOrder(graph.steps);
+  if (!orderProblems.empty()) {
+    for (const std::string &problem : orderProblems) {
+      err << "primec build: " << problem << "\n";
+    }
+    return 1;
+  }
+
   enum class State { Pending, Built, UpToDate, Failed };
   struct Result {
     State state = State::Pending;
@@ -337,7 +346,6 @@ int runBuildGraph(const BuildGraphData &graph,
   const bool caching =
       !settings.cacheDir.empty() && sha256FileHex(settings.primecPath, compilerHash);
 
-  std::atomic<size_t> next{0};
   std::atomic<bool> stop{false};
 
   // Function steps are settled and compiled here, on the calling thread, one at a time: the compile pipeline keeps
@@ -383,103 +391,119 @@ int runBuildGraph(const BuildGraphData &graph,
     }
   }
 
-  auto worker = [&]() {
-    while (!stop.load()) {
-      const size_t index = next.fetch_add(1);
-      if (index >= graph.steps.size()) {
+  // A step starts when the steps it names in `after` have finished successfully; a step settled above (up to date) is
+  // finished. A failure stops everything, so the steps behind a failed one are reported as skipped.
+  std::vector<bool> settled(graph.steps.size(), false);
+  for (size_t i = 0; i < graph.steps.size(); ++i) {
+    settled[i] = results[i].state == State::UpToDate;
+  }
+  BuildStepScheduler scheduler(graph.steps, settled);
+  if (stop.load()) {
+    scheduler.stop();
+  }
+
+  auto execute = [&](size_t index) {
+    const BuildStep &step = graph.steps[index];
+    Result &result = results[index];
+    if (step.kind == "function") {
+      // Settled above (up to date) or compiled and waiting to run on this thread.
+      if (prepared[index] == nullptr) {
         return;
       }
-      const BuildStep &step = graph.steps[index];
-      Result &result = results[index];
-      if (step.kind == "function") {
-        // Settled above (up to date) or compiled and waiting to run on this thread.
-        if (prepared[index] == nullptr) {
-          continue;
-        }
-        const bool ran =
-            settings.functionSteps->run(*prepared[index], step, settings, result.diagnostics);
-        if (ran && finishFunctionStep(step,
-                                      settings,
-                                      caching,
-                                      functionCacheFiles[index],
-                                      functionKeys[index],
-                                      compiledFiles[index],
-                                      result.diagnostics)) {
-          result.state = State::Built;
-        } else {
-          result.state = State::Failed;
-          stop.store(true);
-        }
-        continue;
-      }
-      if (step.kind == "copy") {
-        const CopyOutcome outcome = runCopyStep(step, settings, caching, result.diagnostics);
-        if (outcome == CopyOutcome::Failed) {
-          result.state = State::Failed;
-          stop.store(true);
-        } else {
-          result.state = outcome == CopyOutcome::UpToDate ? State::UpToDate : State::Built;
-        }
-        continue;
-      }
-      std::vector<std::string> arguments = buildStepArguments(step, settings);
-
-      std::string cacheFile;
-      std::string key;
-      const std::string outputPath = buildStepOutputPath(step, settings);
-      if (caching) {
-        cacheFile = buildCacheFilePath(settings.cacheDir, step.id);
-        // The key also names the watched directories, so a script that starts to watch another one (a new pattern
-        // that reaches a directory the old one did not) is a different step even when no listing changed.
-        std::vector<std::string> keyArguments(arguments.begin() + 1, arguments.end());
-        std::vector<std::string> watched = step.inputDirs;
-        std::sort(watched.begin(), watched.end());
-        watched.erase(std::unique(watched.begin(), watched.end()), watched.end());
-        for (const std::string &dir : watched) {
-          keyArguments.push_back("input-dir:" + dir);
-        }
-        key = buildStepKey(compilerHash, keyArguments);
-        BuildCacheEntry entry;
-        if (readBuildCacheEntry(cacheFile, entry) &&
-            buildCacheEntryIsCurrent(entry, key, outputPath)) {
-          result.state = State::UpToDate;
-          continue;
-        }
-        // The previous run no longer describes the output; a failed or interrupted run must not leave it valid.
-        std::error_code ec;
-        std::filesystem::remove(cacheFile, ec);
-        std::filesystem::create_directories(settings.cacheDir, ec);
-        // Before the source, the last argument.
-        arguments.insert(arguments.end() - 1, {"--emit-deps", cacheFile + ".deps"});
-      }
-
-      std::string capturedOut;
-      std::string capturedErr;
-      const int status =
-          runProgramCaptured(arguments, settings.projectDir, capturedOut, capturedErr);
-      result.diagnostics = capturedErr + capturedOut;
-      if (caching && status == 0) {
-        storeBuildCacheEntry(step, settings, cacheFile, key, outputPath);
-      }
-      if (caching) {
-        std::error_code ec;
-        std::filesystem::remove(cacheFile + ".deps", ec);
-      }
-      if (status == 0) {
-        // `--emit=optexe` leaves the generated C++ next to the executable; the executable is the result, and the cache
-        // entry does not know the file (scripts/build_native_app.sh deletes it as well).
-        if (step.emitKind == "optexe") {
-          std::error_code ec;
-          std::filesystem::remove(outputPath + ".cpp", ec);
-        }
+      const bool ran =
+          settings.functionSteps->run(*prepared[index], step, settings, result.diagnostics);
+      if (ran && finishFunctionStep(step,
+                                    settings,
+                                    caching,
+                                    functionCacheFiles[index],
+                                    functionKeys[index],
+                                    compiledFiles[index],
+                                    result.diagnostics)) {
         result.state = State::Built;
       } else {
         result.state = State::Failed;
-        if (status < 0) {
-          result.diagnostics += "the compiler could not be run\n";
-        }
-        stop.store(true);
       }
+      return;
+    }
+    if (step.kind == "copy") {
+      const CopyOutcome outcome = runCopyStep(step, settings, caching, result.diagnostics);
+      if (outcome == CopyOutcome::Failed) {
+        result.state = State::Failed;
+      } else {
+        result.state = outcome == CopyOutcome::UpToDate ? State::UpToDate : State::Built;
+      }
+      return;
+    }
+    std::vector<std::string> arguments = buildStepArguments(step, settings);
+
+    std::string cacheFile;
+    std::string key;
+    const std::string outputPath = buildStepOutputPath(step, settings);
+    if (caching) {
+      cacheFile = buildCacheFilePath(settings.cacheDir, step.id);
+      // The key also names the watched directories, so a script that starts to watch another one (a new pattern
+      // that reaches a directory the old one did not) is a different step even when no listing changed.
+      std::vector<std::string> keyArguments(arguments.begin() + 1, arguments.end());
+      std::vector<std::string> watched = step.inputDirs;
+      std::sort(watched.begin(), watched.end());
+      watched.erase(std::unique(watched.begin(), watched.end()), watched.end());
+      for (const std::string &dir : watched) {
+        keyArguments.push_back("input-dir:" + dir);
+      }
+      key = buildStepKey(compilerHash, keyArguments);
+      BuildCacheEntry entry;
+      if (readBuildCacheEntry(cacheFile, entry) &&
+          buildCacheEntryIsCurrent(entry, key, outputPath)) {
+        result.state = State::UpToDate;
+        return;
+      }
+      // The previous run no longer describes the output; a failed or interrupted run must not leave it valid.
+      std::error_code ec;
+      std::filesystem::remove(cacheFile, ec);
+      std::filesystem::create_directories(settings.cacheDir, ec);
+      // Before the source, the last argument.
+      arguments.insert(arguments.end() - 1, {"--emit-deps", cacheFile + ".deps"});
+    }
+
+    std::string capturedOut;
+    std::string capturedErr;
+    const int status = runProgramCaptured(arguments, settings.projectDir, capturedOut, capturedErr);
+    result.diagnostics = capturedErr + capturedOut;
+    if (caching && status == 0) {
+      storeBuildCacheEntry(step, settings, cacheFile, key, outputPath);
+    }
+    if (caching) {
+      std::error_code ec;
+      std::filesystem::remove(cacheFile + ".deps", ec);
+    }
+    if (status == 0) {
+      // `--emit=optexe` leaves the generated C++ next to the executable; the executable is the result, and the cache
+      // entry does not know the file (scripts/build_native_app.sh deletes it as well).
+      if (step.emitKind == "optexe") {
+        std::error_code ec;
+        std::filesystem::remove(outputPath + ".cpp", ec);
+      }
+      result.state = State::Built;
+    } else {
+      result.state = State::Failed;
+      if (status < 0) {
+        result.diagnostics += "the compiler could not be run\n";
+      }
+    }
+  };
+  auto worker = [&]() {
+    while (true) {
+      const size_t index = scheduler.take();
+      if (index == BuildStepScheduler::None) {
+        return;
+      }
+      execute(index);
+      const State state = results[index].state;
+      const bool succeeded = state == State::Built || state == State::UpToDate;
+      if (!succeeded) {
+        scheduler.stop();
+      }
+      scheduler.finish(index, succeeded);
     }
   };
   const size_t workers =

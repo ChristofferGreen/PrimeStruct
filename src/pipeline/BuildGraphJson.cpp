@@ -390,6 +390,15 @@ void moveNodeIntoParent(const std::string &directory,
     output->text = rebasePath(directory, output->text);
   }
   rebaseStringList(directory, mutableField(node, "inputDirs"));
+  // The steps it waits for are ids of the same subproject, so they carry the folder as the node's own id does.
+  JsonValue *after = mutableField(node, "after");
+  if (after != nullptr && after->kind == JsonValue::Kind::Array) {
+    for (JsonValue &item : after->items) {
+      if (item.kind == JsonValue::Kind::String) {
+        item.text = directory + "/" + item.text;
+      }
+    }
+  }
   // A function step: the files it reads move to the project's view. The files it writes stay as declared, because the
   // definition writes them by name and cannot know the folder it was included from.
   rebaseStringList(directory, mutableField(node, "inputs"));
@@ -639,6 +648,7 @@ bool parseBuildGraphJson(const std::string &text, BuildGraphData &graph, std::st
     step.source = stringField(node, "source");
     step.output = stringField(node, "output");
     step.inputDirs = stringList(node, "inputDirs");
+    step.after = stringList(node, "after");
     if (kind == "function") {
       // A function step has no compiler either: the definition `function` of the file `source` runs in the runner.
       step.function = stringField(node, "function");

@@ -6,6 +6,7 @@
 // (CMakeLists.txt), because a build compiles make.prime with the build stdlib and a step file with the stdlib.
 #include "primec/pipeline/BuildCopyStep.h"
 #include "primec/pipeline/BuildGraphJson.h"
+#include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"
@@ -131,6 +132,145 @@ TEST_CASE("a generator function step writes a prime file that a compile step the
   const BuildResult second = project.build();
   CHECK_MESSAGE(second.status == 0, second.err);
   CHECK(second.out == "stage 1\nup to date step:gen\nstage 2\nup to date compile:generated\n");
+}
+
+namespace {
+// A generator step "gen" (writes generated.prime) and the compile of its output, in one graph, ordered by `after`.
+void writeGeneratorProject(StepProject &project, const std::string &generatorBody) {
+  writeFile(
+      project.dir() / "tools/gen.prime",
+      "import /std/build_step/*\n\n[return<i32> effects(heap_alloc)]\ngenerate_program() {\n" +
+          generatorBody + "}\n");
+}
+
+const std::string GeneratedProgram =
+    "  write_output(\"generated.prime\", \"[return<i32>]\\nmain() {\\n  "
+    "return(7i32)\\n}\\n\")\n  return(0i32)\n";
+} // namespace
+
+TEST_CASE("after orders a compile behind the function step that writes its source in one stage") {
+  StepProject project("build_fn_after_one_stage");
+  writeGeneratorProject(project, GeneratedProgram);
+  project.writeScript(
+      StepProject::stepLines("gen", "tools/gen.prime", "/generate_program", "generated.prime") +
+      "  b.compile(\"generated\", cc, \"out/generated.prime\")\n"
+      "  b.after(\"compile:generated\", \"step:gen\")\n  return(b.graph())\n");
+  // The compile is first in the graph order and there is one worker: it must wait for the generator, not block it.
+  const BuildResult first = project.build("--jobs 1");
+  REQUIRE_MESSAGE(first.status == 0, first.err);
+  CHECK(first.out == "built compile:generated\nbuilt step:gen\n");
+  CHECK(std::filesystem::exists(project.outDir() / "generated"));
+  const BuildResult second = project.build("--jobs 2");
+  CHECK_MESSAGE(second.status == 0, second.err);
+  CHECK(second.out == "up to date compile:generated\nup to date step:gen\n");
+}
+
+TEST_CASE("after skips the waiting step when the step it waits for fails") {
+  StepProject project("build_fn_after_failure");
+  writeGeneratorProject(project, "  return(1i32)\n");
+  project.writeScript(
+      StepProject::stepLines("gen", "tools/gen.prime", "/generate_program", "generated.prime") +
+      "  b.compile(\"generated\", cc, \"out/generated.prime\")\n"
+      "  b.after(\"compile:generated\", \"step:gen\")\n  return(b.graph())\n");
+  const BuildResult result = project.build("--jobs 2");
+  CHECK(result.status != 0);
+  CHECK(contains(result.err, "step gen (step:gen) failed"));
+  CHECK(contains(result.err, "step generated (compile:generated) skipped after a failure"));
+  CHECK_FALSE(std::filesystem::exists(project.outDir() / "generated"));
+}
+
+TEST_CASE("after names a cycle and an unknown step as diagnostics with their ids") {
+  StepProject project("build_fn_after_problems");
+  writeGeneratorProject(project, GeneratedProgram);
+  const std::string steps =
+      StepProject::stepLines("gen", "tools/gen.prime", "/generate_program", "generated.prime") +
+      "  b.compile(\"generated\", cc, \"out/generated.prime\")\n";
+  project.writeScript(steps +
+                      "  b.after(\"compile:generated\", \"step:gen\")\n"
+                      "  b.after(\"step:gen\", \"compile:generated\")\n  return(b.graph())\n");
+  const BuildResult cycle = project.build();
+  CHECK(cycle.status != 0);
+  CHECK(contains(cycle.err, "step compile:generated is in a cycle of after edges"));
+  CHECK(contains(cycle.err, "step step:gen is in a cycle of after edges"));
+  project.writeScript(steps + "  b.after(\"compile:generated\", \"step:nope\")\n"
+                              "  b.after(\"step:absent\", \"step:gen\")\n  return(b.graph())\n");
+  const BuildResult unknown = project.build();
+  CHECK(unknown.status != 0);
+  CHECK(contains(unknown.err, "step compile:generated waits for a missing step step:nope"));
+  CHECK(contains(unknown.err, "after names a missing target step:absent"));
+}
+
+TEST_CASE("after is listed in the export and a graph without it prints as before") {
+  StepProject project("build_fn_after_export");
+  writeGeneratorProject(project, GeneratedProgram);
+  project.writeScript(
+      StepProject::stepLines("gen", "tools/gen.prime", "/generate_program", "generated.prime") +
+      "  b.compile(\"generated\", cc, \"out/generated.prime\")\n"
+      "  b.after(\"compile:generated\", \"step:gen\")\n"
+      "  b.after(\"compile:generated\", \"step:gen\")\n  return(b.graph())\n");
+  const BuildResult dry = project.build("--dry-run");
+  REQUIRE_MESSAGE(dry.status == 0, dry.err);
+  CHECK(contains(dry.out, "\"after\":[\"step:gen\"],\"runnable\":true}"));
+  CHECK_FALSE(contains(dry.out, "\"after\":[\"step:gen\",\"step:gen\"]"));
+  CHECK(contains(dry.out, "\"problems\":[]"));
+
+  primec::BuildGraphData graph;
+  std::string error;
+  REQUIRE(primec::parseBuildGraphJson(dry.out, graph, error));
+  REQUIRE(graph.steps.size() == 2);
+  CHECK(graph.steps[0].after == std::vector<std::string>{"step:gen"});
+  CHECK(graph.steps[1].after.empty());
+  CHECK(primec::checkStepOrder(graph.steps).empty());
+}
+
+TEST_CASE("the order check of a graph finds a cycle, a self edge and an unknown id") {
+  auto stepWith = [](const std::string &id, std::vector<std::string> after) {
+    primec::BuildStep step;
+    step.id = id;
+    step.kind = "copy";
+    step.after = std::move(after);
+    return step;
+  };
+  CHECK(primec::checkStepOrder({stepWith("a", {}), stepWith("b", {"a"})}).empty());
+  const std::vector<std::string> cycle =
+      primec::checkStepOrder({stepWith("a", {"b"}), stepWith("b", {"a"}), stepWith("c", {"a"})});
+  REQUIRE(cycle.size() == 3);
+  CHECK(contains(cycle[0], "step a is in a cycle"));
+  CHECK(contains(cycle[2], "step c is in a cycle of after edges or waits behind one"));
+  CHECK(primec::checkStepOrder({stepWith("a", {"a"})}).size() == 1);
+  const std::vector<std::string> unknown = primec::checkStepOrder({stepWith("a", {"zzz"})});
+  REQUIRE(unknown.size() == 1);
+  CHECK(unknown[0] == "step a waits for zzz, which is not a step of the graph");
+}
+
+TEST_CASE("the scheduler hands a step out only after what it waits for succeeded") {
+  primec::BuildStep first;
+  first.id = "first";
+  primec::BuildStep second;
+  second.id = "second";
+  second.after = {"first"};
+  primec::BuildStep third;
+  third.id = "third";
+  third.after = {"first"};
+  const std::vector<primec::BuildStep> steps = {second, first, third};
+  primec::BuildStepScheduler scheduler(steps, {false, false, false});
+  CHECK(scheduler.take() == 1);
+  scheduler.finish(1, true);
+  CHECK(scheduler.take() == 0);
+  CHECK(scheduler.take() == 2);
+  scheduler.finish(0, true);
+  scheduler.finish(2, true);
+  CHECK(scheduler.take() == primec::BuildStepScheduler::None);
+
+  primec::BuildStepScheduler failing(steps, {false, false, false});
+  CHECK(failing.take() == 1);
+  failing.finish(1, false);
+  // Nothing runs that could make the waiting steps ready, so nothing is handed out.
+  CHECK(failing.take() == primec::BuildStepScheduler::None);
+
+  primec::BuildStepScheduler settled(steps, {false, true, false});
+  CHECK(settled.take() == 0);
+  CHECK(settled.take() == 2);
 }
 
 TEST_CASE("two function steps both produce their outputs") {

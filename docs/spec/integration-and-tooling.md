@@ -291,8 +291,17 @@ step fails and prints that. What the definition prints is kept and shown only wh
 input must be a file of the project (`the declared input <path> is not a file`), every output must be a place inside the
 output directory, and a step that returns 0 without writing a declared output fails (`the step did not write its
 declared output <path>`). Compiling is done one step at a time before the steps run, because the compile pipeline keeps
-process-wide state; running is parallel. Steps are not ordered with respect to each other: a step that needs the file
-another step wrote runs in a later stage (`graph.run()`), as the generator example below does.
+process-wide state; running is parallel. Steps are not ordered with respect to each other unless the script says so:
+`b.after(stepId, dependencyId)` (call it after `stepId` is added; the ids are the node ids, `"compile:generated"` and
+`"step:gen"`) makes `stepId` start only when `dependencyId` has finished successfully, so a generator and the compile of
+what it writes build in one stage. It works between any two steps (compile, copy, function), is exported as
+`"after":[ids]` (sorted, without duplicates; a node without edges has no `after` member, so an unchanged graph prints as
+before), and the cache stays per step. When a step fails, no further step starts: the steps behind it are reported as
+`skipped after a failure`. A dependency that is not in the graph (`step <id> waits for a missing step <dep>`) and a cycle
+(`step <id> is in a cycle of after edges or waits behind one`, for every step that never becomes ready) are problems of
+the export, and the runner checks the edges again before it starts anything. In a subproject the ids in `after` are
+prefixed with the folder like the node ids. A step that needs a file another step wrote can also run in a later stage
+(`graph.run()`), as the generator example below does.
 Cache: a function step is cached in `.ps/cache` like a compile step. Its key is the hash of the compiler, the file, the
 function, the inputs, the outputs and the output directory; its entry holds the hash of every file the compile read (the
 file, the files it imports, the stdlib) and of every declared input, and the hash of all outputs. The step is up to date

@@ -170,6 +170,8 @@ namespace build {
     [public String mut] functionPath{String{}}
     [public vector<String> mut] inputs{vector<String>{}}
     [public vector<String> mut] outputs{vector<String>{}}
+    // The ids of the steps this one waits for (`Build.after`), sorted bytewise and without duplicates.
+    [public vector<String> mut] afterIds{vector<String>{}}
 
     [return<bool>]
     isLink() {
@@ -217,6 +219,10 @@ namespace build {
           json.key("inputDirs")
           this.writeInputDirs(json)
         }
+        if(this.afterIds.count() > 0i32) {
+          json.key("after")
+          this.writeAfter(json)
+        }
       }
       json.key("runnable")
       json.boolValue(this.runnable)
@@ -250,6 +256,15 @@ namespace build {
     json.beginArray()
     for([i32 mut] i{0i32}, i < this.inputDirs.count(), i++) {
       json.stringValue(this.inputDirs[i].view())
+    }
+    json.endArray()
+    }
+
+    [effects(heap_alloc)]
+    writeAfter([Reference<Writer>] json) {
+    json.beginArray()
+    for([i32 mut] i{0i32}, i < this.afterIds.count(), i++) {
+      json.stringValue(this.afterIds[i].view())
     }
     json.endArray()
     }
@@ -552,6 +567,64 @@ namespace build {
       }
     }
 
+    // The index of the first node with the id `id`, or -1.
+    [return<i32>]
+    indexOfNode([StringView] id) {
+      for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+        [String] candidate{this.nodes[i].id}
+        if(candidate.view().equals(id)) {
+          return(i)
+        }
+      }
+      return(-1i32)
+    }
+
+    // True when every step that node `index` waits for and that exists is marked in `done`.
+    [return<bool>]
+    waitsOnlyForDone([i32] index, [Reference<vector<i32>>] done) {
+      for([i32 mut] i{0i32}, i < this.nodes[index].afterIds.count(), i++) {
+        [String] dependency{this.nodes[index].afterIds[i]}
+        [i32] found{this.indexOfNode(dependency.view())}
+        if(found >= 0i32 && done[found] == 0i32) {
+          return(false)
+        }
+      }
+      return(true)
+    }
+
+    // The problems of the `after` edges: a step that waits for an id that is not in the graph, and every step that is in
+    // a cycle of edges or waits behind one (a step is done when everything it waits for is; what never is done is named).
+    [effects(heap_alloc)]
+    writeAfterProblems([Reference<Writer>] json) {
+      [vector<i32> mut] done{vector<i32>{}}
+      for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+        done.push(0i32)
+      }
+      [bool mut] progress{true}
+      while(progress) {
+        progress = false
+        for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
+          if(done[i] == 0i32 && this.waitsOnlyForDone(i, done)) {
+            done[i] = 1i32
+            progress = true
+          }
+        }
+      }
+      for([i32 mut] i{0i32}, i < this.order.count(), i++) {
+        [i32] index{this.order[i]}
+        [String] id{this.nodes[index].id}
+        for([i32 mut] j{0i32}, j < this.nodes[index].afterIds.count(), j++) {
+          [String] dependency{this.nodes[index].afterIds[j]}
+          if(!this.hasNode(dependency.view())) {
+            json.stringValue(problem_text("step ", id.view(), " waits for a missing step ", dependency.view()).view())
+          }
+        }
+        if(done[index] == 0i32) {
+          json.stringValue(problem_text("step ", id.view(), " is in a cycle of after edges or waits behind one", "").view())
+        }
+      }
+    }
+
     // The problems of a graph, in node order: every id that two nodes share and every link edge that names a target that
     // is not in the graph. `order` is the export order of `nodes`.
     [effects(heap_alloc)]
@@ -619,6 +692,7 @@ namespace build {
       json.key("problems")
       json.beginArray()
       this.writeProblems(json)
+      this.writeAfterProblems(json)
       for([i32 mut] i{0i32}, i < this.buildProblems.count(), i++) {
         json.stringValue(this.buildProblems[i].view())
       }
@@ -777,6 +851,26 @@ namespace build {
       node.kind = stringFrom("link")
       node.runnable = false
       this.collected.add(node)
+    }
+
+    // Makes the step `targetId` ("compile:generated") start only when the step `dependencyId` ("step:gen") has finished
+    // successfully (docs/BuildSystemPlan.md section 4); two steps of one stage otherwise run in parallel. Call it after the
+    // target is added; a target that does not exist is a problem of the export, and so are a dependency that does not
+    // exist and a cycle. The edges are kept sorted and without duplicates.
+    [mut effects(heap_alloc)]
+    after([StringView] targetId, [StringView] dependencyId) {
+      [bool mut] found{false}
+      for([i32 mut] i{0i32}, i < this.collected.nodes.count(), i++) {
+        [String] nodeId{this.collected.nodes[i].id}
+        if(nodeId.view().equals(targetId)) {
+          found = true
+          [String] dependency{dependencyId.toOwned()}
+          insert_sorted_unique(this.collected.nodes[i].afterIds, dependency)
+        }
+      }
+      if(!found) {
+        this.collected.buildProblems.push(problem_text("after names a missing target ", targetId, "", ""))
+      }
     }
 
     // Declares that the target `targetId` ("compile:app") depends on the listings of the directories `dirs`: pass the
