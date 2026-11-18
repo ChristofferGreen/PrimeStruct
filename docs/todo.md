@@ -469,9 +469,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
   - notes: TODO-5840 made `String.append` of a literal one bulk move, which cut these benchmarks (instructions and cycles, `proc_pid_rusage`, minimum of three on a machine at a load average of 27 to 64): `short_strings` 4.66e9 and 823e6 -> 3.90e9 and 748e6, `request_arena` 5.54e9 and 1115e6 -> 5.14e9 and 1039e6, `request_heap` 5.37e9 and 1073e6 -> 5.02e9 and 1049e6. That is a gain of 2 to 9% in cycles, the size of the 4 to 7% this task measured, but it does not show the cycles of the e8a547504 build: no build of that commit was made, so the acceptance (cycles within 3% of it, averaged over five layouts) is not checked and the task stays open; the first step is that baseline.
 
-- [ ] TODO-5847: A spawned call with a builtin `map<K, V>` or an owned sum parameter or result runs as a task
+- [~] TODO-5847: A spawned call with a builtin `map<K, V>` or an owned sum parameter or result runs as a task
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: mt-tasks (worktree-agent-aaf015245f2d86a4e), 2026-11-18
   - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Runtime Model)
   - parallel_track: mt-vm-tasks
