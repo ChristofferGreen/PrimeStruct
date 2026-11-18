@@ -1,5 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsSourceMapStep.h"
 
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
+
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -121,7 +123,7 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
   }
 
   input.outModule->stringTable = std::move(*input.stringTable);
-  return true;
+  return resolveStringLiteralPushMarks(*input.outModule, errorOut);
 }
 
 } // namespace primec::ir_lowerer

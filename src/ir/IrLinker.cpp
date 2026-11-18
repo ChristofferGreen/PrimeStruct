@@ -1,6 +1,5 @@
 #include "primec/ir/IrLinker.h"
 
-#include "primec/ir/IrLinkStrings.h"
 #include "primec/ir/IrOpcodeTable.h"
 #include "primec/ir/IrOperandTable.h"
 
@@ -147,7 +146,6 @@ bool failRelocation(const IrFunction &function, const char *what, std::string &e
 
 // Rewrites the immediate of one instruction from the library's numbering to the merged module's.
 bool relocateInstruction(IrInstruction &inst,
-                         bool isStringPush,
                          const IrModule &library,
                          const IrFunction &function,
                          const LinkMaps &maps,
@@ -179,7 +177,10 @@ bool relocateInstruction(IrInstruction &inst,
                                     decodePrintFlags(inst.imm));
     return true;
   case IrOperandClass::Constant:
-    if (isStringPush) {
+    if (inst.isStringLiteral) {
+      if (inst.imm >= library.stringTable.size()) {
+        return failRelocation(function, "string index", error);
+      }
       inst.imm += maps.stringShift;
       if (inst.op == IrOpcode::PushI32 &&
           inst.imm > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
@@ -212,15 +213,9 @@ bool relocateFunction(const IrModule &library,
   if (function.isImport) {
     return true;
   }
-  const IrStringPushes pushes = findIrStringLiteralPushes(library, function);
-  if (maps.stringShift != 0 && !library.stringTable.empty() && !pushes.unprovenConsumer.empty()) {
-    error =
-        "cannot relocate the string operand of " + pushes.unprovenConsumer + " in " + function.name;
-    return false;
-  }
   for (size_t at = 0; at < out.instructions.size(); ++at) {
     IrInstruction &inst = out.instructions[at];
-    if (!relocateInstruction(inst, pushes.isStringPush[at], library, function, maps, error)) {
+    if (!relocateInstruction(inst, library, function, maps, error)) {
       return false;
     }
     if (inst.debugId != 0) {
@@ -234,6 +229,13 @@ bool relocateFunction(const IrModule &library,
 
 bool linkIrModule(IrModule &module, const IrModule &library, std::string &error) {
   error.clear();
+  // The strings of a library move by the size of the program's table, and which pushes hold a string index is known
+  // only for a module that marks them (IrInstruction::isStringLiteral, PSIR v39).
+  if (!library.stringPushesMarked) {
+    error = "the library was written before IR schema v39 and does not mark its string literals; "
+            "rebuild it";
+    return false;
+  }
   IrModule merged = module;
   LinkMaps maps;
   maps.stringShift = merged.stringTable.size();
@@ -266,6 +268,7 @@ bool linkIrModule(IrModule &module, const IrModule &library, std::string &error)
     merged.instructionSourceMap.push_back(std::move(entry));
   }
   merged.schemaVersion = IrSchemaVersion;
+  merged.stringPushesMarked = module.stringPushesMarked && library.stringPushesMarked;
   module = std::move(merged);
   return true;
 }

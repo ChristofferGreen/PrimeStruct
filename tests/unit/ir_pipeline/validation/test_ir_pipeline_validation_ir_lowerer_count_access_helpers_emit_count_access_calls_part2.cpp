@@ -891,7 +891,8 @@ TEST_CASE("ir lowerer runtime error helpers emit file-error why dispatch sequenc
   const uint64_t unknownIndex = static_cast<uint64_t>(std::distance(stringTable.begin(), unknownIt));
 
   REQUIRE_FALSE(function.instructions.empty());
-  CHECK(function.instructions.back().op == primec::IrOpcode::PushI64);
+  CHECK(function.instructions.back().op ==
+        primec::ir_lowerer::stringLiteralPushOp(primec::IrOpcode::PushI64));
   CHECK(function.instructions.back().imm == unknownIndex);
 
   CHECK(std::any_of(function.instructions.begin(),

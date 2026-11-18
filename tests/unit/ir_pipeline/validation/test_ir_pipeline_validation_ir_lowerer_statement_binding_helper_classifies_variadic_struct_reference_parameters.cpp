@@ -1713,7 +1713,7 @@ TEST_CASE("ir lowerer statement binding helper emits literal string bindings") {
   CHECK(it->second.stringSource == primec::ir_lowerer::LocalInfo::StringSource::TableIndex);
   CHECK(it->second.stringIndex == 17);
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::ir_lowerer::stringLiteralPushOp(primec::IrOpcode::PushI64));
   CHECK(instructions[0].imm == 17);
   CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[1].imm == 5);

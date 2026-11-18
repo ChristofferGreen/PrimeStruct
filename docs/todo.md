@@ -165,7 +165,6 @@ of sync with them.
 | TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | ready | lib-interface |
-| TODO-6031 | Lowering marks string literal pushes so the IR link can always move a library's strings | ready | lib-ir-link |
 | TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | blocked | lib-archive |
 | TODO-5925 | `--library` compiles a program against a library and links it | blocked | lib-consume |
 | TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
@@ -201,7 +200,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019, TODO-6029
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5923, TODO-6031, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5923, TODO-5924, TODO-5925, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -223,7 +222,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; ready: TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-5923 (`--emit=interface`) and TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) are ready and independent; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) is ready; then TODO-5924 (`--emit=lib`), TODO-5925 (`--library` and the link in the pipeline), TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -930,22 +929,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/integration-and-tooling.md documents the emit kind
     - full release gate green
   - stop_rule: non-generic interface and the table; no archive, no library loading, no generics.
-
-- [~] TODO-6031: Lowering marks string literal pushes so the IR link can always move a library's strings
-  - owner: ai
-  - status: ready
-  - claimed_by: lib-ir-strings (worktree-agent-a62dcecbd25613955), 2026-11-18
-  - created_at: 2026-11-17
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 9; follow-up of TODO-5922)
-  - parallel_track: lib-ir-link
-  - scope: A string literal is a `PushI32` or `PushI64` of an index into the string table, so the IR cannot say which pushes are strings; `linkIrModule` (src/ir/IrLinker.cpp, src/ir/IrLinkStrings.cpp) finds them by the instruction that consumes them and refuses a library function whose string reaches a consumer through a local, a parameter or a return value (`cannot relocate the string operand of <opcode> in <function>`), and does not see a string that reaches no consumer in the library. Mark each literal push where lowering emits it (the `internString` call sites of src/ir_lowerer), for example a new opcode `PushString` that is class `String` in IrOperandTable.h or a flag on the instruction; a schema bump with a migration note and a loader test for the previous version, and the VM, the emitters and the optimizer treat the new form as the push it replaces. The linker then shifts exactly the marked pushes and the pattern match goes away. Which of these two encodings costs less in the VM kernels (the fast kernel fuses `PushI32` sequences, src/runtime/VmFastKernelPrepare.cpp) was not measured; measure startup and a VM benchmark before choosing.
-  - acceptance:
-    - a library function that prints a string it received as a parameter, and one that returns a literal, link into a program that has strings and print the right text
-    - every backend that accepts the module before the change accepts it after (the corpus of the test suite), and the VM benchmark does not regress
-    - the `cannot relocate` error and the pattern match are gone
-    - docs/spec/vm-design.md (IR link) and docs/ModulesAndLibrariesPlan.md state the rule
-    - full release gate green
-  - stop_rule: marking literal pushes and removing the pattern match; no new link features.
 
 - [ ] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
   - owner: ai

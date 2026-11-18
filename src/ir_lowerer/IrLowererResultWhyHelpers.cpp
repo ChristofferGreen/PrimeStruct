@@ -1,4 +1,5 @@
 #include "IrLowererResultInternal.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
@@ -686,7 +687,7 @@ bool emitResultWhyEmptyString(
     const std::function<int32_t(const std::string &)> &internString,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
   const int32_t index = internString("");
-  emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(index));
+  emitInstruction(stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(index));
   return true;
 }
 

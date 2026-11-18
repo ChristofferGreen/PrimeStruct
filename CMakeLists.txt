@@ -620,6 +620,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererStatementCallEmission.cpp
   src/ir_lowerer/IrLowererStatementCallHelpers.cpp
   src/ir_lowerer/IrLowererStringCallHelpers.cpp
+  src/ir_lowerer/IrLowererStringPushMarks.cpp
   src/ir_lowerer/IrLowererStringLiteralHelpers.cpp
   src/ir_lowerer/IrLowererStructFieldBindingHelpers.cpp
   src/ir_lowerer/IrLowererStructLayoutHelpers.cpp
@@ -730,7 +731,7 @@ endif()
 
 # IR container pieces a runtime-only host needs: bytecode (de)serialization and
 # VM-target validation. Deliberately free of parser/semantics/lowerer code.
-add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLinkFiles.cpp src/ir/IrLinkStrings.cpp src/ir/IrLinker.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp
+add_library(primec_ir_core_lib src/ir/IrCfg.cpp src/ir/IrLinkFiles.cpp src/ir/IrLinker.cpp src/ir/IrLocalEscape.cpp src/ir/IrModulePrinter.cpp src/ir/IrSerializer.cpp src/ir/IrValidation.cpp
             src/ir/IrVirtualRegisterLowering.cpp)
 target_include_directories(primec_ir_core_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

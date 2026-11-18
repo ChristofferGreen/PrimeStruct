@@ -2,6 +2,8 @@
 #include <fstream>
 #include <iterator>
 
+#include "primec/ir/IrOpcodeTable.h"
+
 #include "test_ir_pipeline_validation_callback_factories.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
@@ -36,6 +38,40 @@ main() {
   CHECK(error.empty());
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
   CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer marks the pushes of string literals") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [string] greeting{"hello marks"utf8}
+  return(0i32)
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(module.stringPushesMarked);
+  CHECK(module.schemaVersion == primec::IrSchemaVersion);
+  size_t marked = 0;
+  for (const primec::IrFunction &function : module.functions) {
+    for (const primec::IrInstruction &instruction : function.instructions) {
+      const uint8_t opcode = static_cast<uint8_t>(instruction.op);
+      CHECK(opcode <= primec::IrOpcodeMax);
+      if (instruction.isStringLiteral) {
+        ++marked;
+        CHECK((instruction.op == primec::IrOpcode::PushI32 ||
+               instruction.op == primec::IrOpcode::PushI64));
+        CHECK(instruction.imm < module.stringTable.size());
+      }
+    }
+  }
+  CHECK(marked >= 1);
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
 }
 
 TEST_CASE("ir lowerer rejects non-eliminated reflection query paths") {

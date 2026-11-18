@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 
@@ -269,7 +270,8 @@ void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRunt
     function.instructions.push_back({IrOpcode::CmpEqI64, 0});
     size_t jumpNext = function.instructions.size();
     function.instructions.push_back({IrOpcode::JumpIfZero, 0});
-    function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(stringIndex)});
+    function.instructions.push_back(
+        {stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(stringIndex)});
     size_t jumpEnd = function.instructions.size();
     function.instructions.push_back({IrOpcode::Jump, 0});
     size_t nextIndex = function.instructions.size();
@@ -291,7 +293,8 @@ void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRunt
     emitMatch(static_cast<uint64_t>(mapping.code), stringIndex, jumpToEnd);
   }
   const int32_t unknownIndex = internString("Unknown file error");
-  function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(unknownIndex)});
+  function.instructions.push_back(
+      {stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(unknownIndex)});
   const size_t endIndex = function.instructions.size();
   for (size_t jumpIndex : jumpToEnd) {
     function.instructions[jumpIndex].imm = static_cast<int32_t>(endIndex);

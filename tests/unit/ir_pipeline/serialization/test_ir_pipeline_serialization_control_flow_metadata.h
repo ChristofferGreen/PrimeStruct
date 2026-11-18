@@ -85,7 +85,7 @@ TEST_CASE("ir serialization schema golden fixture stays stable") {
 
   // clang-format off
   const std::vector<uint8_t> expected = {
-      0x52, 0x49, 0x53, 0x50, 0x26, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+      0x52, 0x49, 0x53, 0x50, 0x27, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00,
       0x68, 0x65, 0x6c, 0x6c, 0x6f, 0x01, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00,
       0x00, 0x2f, 0x50, 0x61, 0x69, 0x72, 0x08, 0x00, 0x00, 0x00, 0x04, 0x00,
@@ -120,7 +120,9 @@ TEST_CASE("ir serialization schema golden fixture stays stable") {
       // host import count (none)
       0x00, 0x00, 0x00, 0x00,
       // import count (none, schema 38)
-      0x00, 0x00, 0x00, 0x00};
+      0x00, 0x00, 0x00, 0x00,
+      // every string literal push is marked (schema 39)
+      0x01};
   // clang-format on
 
   std::vector<uint8_t> data;
@@ -318,7 +320,8 @@ TEST_CASE("ir deserialization rejects malformed instruction source map metadata"
   REQUIRE(primec::serializeIr(module, data, error));
   REQUIRE(error.empty());
   REQUIRE(data.size() > 4);
-  data.resize(data.size() - 8); // drop the trailing host import count and import count
+  data.resize(data.size() -
+              9); // drop the trailing host import count, import count and string mark byte
   data.pop_back();
 
   primec::IrModule decoded;
@@ -340,8 +343,9 @@ TEST_CASE("ir deserialization rejects unsupported instruction source map provena
   std::string error;
   REQUIRE(primec::serializeIr(module, data, error));
   REQUIRE(error.empty());
-  REQUIRE(data.size() >= 13);
-  data[data.size() - 13] = 0xFF; // provenance byte, before the 4-byte host import and import counts
+  REQUIRE(data.size() >= 14);
+  data[data.size() - 14] =
+      0xFF; // provenance byte, before the host import and import counts and the mark byte
 
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));

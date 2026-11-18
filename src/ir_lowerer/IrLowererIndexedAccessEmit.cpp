@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include <limits>
 
@@ -170,7 +171,7 @@ DynamicStringAccessEmitResult tryEmitDynamicStringAccessLoad(
   jumpToEnd.reserve(stringTableCount);
   for (size_t stringIndex = 0; stringIndex < stringTableCount; ++stringIndex) {
     emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(stringLocal));
-    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(stringIndex));
+    emitInstruction(stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(stringIndex));
     emitInstruction(IrOpcode::CmpEqI64, 0);
     const size_t jumpNext = instructionCount();
     emitInstruction(IrOpcode::JumpIfZero, 0);

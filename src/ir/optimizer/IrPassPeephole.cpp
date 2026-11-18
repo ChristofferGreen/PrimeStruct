@@ -66,6 +66,9 @@ bool isDivision(IrOpcode op) {
 }
 
 bool isIntegerConstant(const IrInstruction &instruction, int64_t value) {
+  if (instruction.isStringLiteral) {
+    return false;
+  }
   if (instruction.op == IrOpcode::PushI32) {
     return static_cast<int32_t>(instruction.imm) == value;
   }

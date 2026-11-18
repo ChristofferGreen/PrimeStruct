@@ -8,7 +8,7 @@ namespace primec::ir_opt {
 namespace {
 
 bool isConstantPush(const IrInstruction &instruction) {
-  return irOpcodeCategory(instruction.op) == IrOpCategory::ConstInt;
+  return irOpcodeCategory(instruction.op) == IrOpCategory::ConstInt && !instruction.isStringLiteral;
 }
 
 // Value a JumpIfZero would test, for a constant integer push.

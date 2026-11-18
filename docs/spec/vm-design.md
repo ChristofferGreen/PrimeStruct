@@ -296,14 +296,17 @@
   `primec/ir/IrOperandTable.h` (one row per opcode, checked by `scripts/check_ir_opcode_table.py`: an opcode without a
   class fails the check and a `static_assert`). Debug ids of the library shift past the program's. After the last
   module, an import that is left is `undefined symbol <name> (library <lib>)` and the result is validated for the VM;
-  any link error is a VM error with exit code 3 and the program does not run. Limit: a string literal is a `PushI32`
-  or `PushI64` the IR cannot tell from an integer, so the linker follows a pushed string index only to the instruction
-  that consumes it when nothing but single-slot pushes lie between (`PrintStringDynamic`, `LoadStringLength`,
-  `LoadStringByteDynamic`, `FileOpen*Dynamic`, `FileWriteStringDynamic`, the `String` arguments of a `CallHost`). A
-  library function that has strings to move and a consumer fed any other way (through a local, a parameter or a
-  return value) is refused with `cannot relocate the string operand of <opcode> in <function>`; a string that
-  reaches no such consumer, such as one a library function returns, is not found and is not moved. Lowering marking
-  string literal pushes lifts the limit (a follow-up of the plan).
+  any link error is a VM error with exit code 3 and the program does not run. **String literals (TODO-6031):** a string
+  literal is a `PushI32` or `PushI64` of an index into the string table, and lowering marks each one
+  (`IrInstruction::isStringLiteral`; in the serialized form the opcode bytes `0xFE` and `0xFF` stand for a marked `PushI32` and `PushI64`, since the opcode table already uses values above 127; PSIR v39), so the linker
+  shifts exactly the marked pushes, wherever the string flows afterwards: a library function that prints a string it
+  received as a parameter, or returns a literal, links like any other. The mark is a field in the padding of the
+  24-byte `IrInstruction`, not an opcode, so the VM kernels, the fused `PushI32` sequences and every emitter see the
+  push they always saw and ignore the mark; passes that build a new instruction (`InstructionRewriter::replace`) drop
+  it and the constant folders do not treat a marked push as a constant. A byte after the import section of a v39
+  module (`IrModule::stringPushesMarked`) says that every string push is marked. A module of v33 to v38 has no marks:
+  it loads, runs and relinks as a program, but as a library with strings it is refused with `the library was written
+  before IR schema v39 and does not mark its string literals; rebuild it` (the file name leads the message).
 - **Synchronization record and replay (the VM, `--vm-record-sync`, `--vm-replay-sync`; TODO-5901):** a `--vm-threads`
   run is not repeatable by itself, so `primevm --vm-threads --vm-record-sync <path>` (also `primec --emit=vm`, the
   embedder's `Vm::setSyncRecordPath` and `RunOptions::syncRecord`) writes the order in which the run's tasks

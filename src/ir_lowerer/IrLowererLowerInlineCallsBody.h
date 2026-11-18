@@ -159,8 +159,8 @@
                   "be string literals or literal-backed bindings";
               return false;
             }
-            function.instructions.push_back(
-                {IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+            function.instructions.push_back({ir_lowerer::stringLiteralPushOp(IrOpcode::PushI32),
+                                             static_cast<uint64_t>(stringIndex)});
           } else {
             const LocalInfo::ValueKind argKind =
                 inferExprKind(argExpr, callerLocals);

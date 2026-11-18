@@ -99,10 +99,12 @@ std::string formatIrInstruction(const IrModule &module, const IrInstruction &ins
   const uint64_t imm = instruction.imm;
   switch (instruction.op) {
   case IrOpcode::PushI32:
-    text += " " + std::to_string(static_cast<int32_t>(imm));
+    text += " " + std::to_string(static_cast<int32_t>(imm)) +
+            (instruction.isStringLiteral ? " (string)" : "");
     break;
   case IrOpcode::PushI64:
-    text += " " + std::to_string(static_cast<int64_t>(imm));
+    text += " " + std::to_string(static_cast<int64_t>(imm)) +
+            (instruction.isStringLiteral ? " (string)" : "");
     break;
   case IrOpcode::PushF32: {
     const float value = std::bit_cast<float>(static_cast<uint32_t>(imm));

@@ -66,6 +66,12 @@ inline Run run(const IrModule &module) {
   return result;
 }
 
+// A PushI32 or PushI64 of an index into the string table, marked as lowering marks it (PSIR v39).
+inline IrInstruction stringPush(IrOpcode op, uint64_t index) {
+  IrInstruction instruction{op, index, 0, true};
+  return instruction;
+}
+
 inline constexpr uint64_t Newline = primec::PrintFlagNewline;
 
 // The program of most tests: main calls /lib/add_one on 20, which the library defines as `x + twice(0) + 1`,

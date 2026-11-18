@@ -152,9 +152,12 @@ Status of step 1 to 8 for the IR link (TODO-5922; the merge itself is `primec/ir
 except the interface hashes and the manifest of step 1, and the generic merge of step 2, which wait for the leaves
 that write them (TODO-5924, TODO-5926). The operand table of step 5 is `primec/ir/IrOperandTable.h`. Writing it
 showed one thing the plan did not say: a string literal is a `PushI32` or `PushI64`, so no opcode says that its
-operand is a string index. The linker finds those pushes by the instruction that consumes them (a fixed pattern) and
-refuses a library whose strings it would have to move but cannot follow. Lowering recording its string literal pushes
-(for example as a marker on the instruction) is the way to lift that limit before the stdlib is linked as a library.
+operand is a string index. TODO-6031 closed that gap: lowering marks each string literal push
+(`IrInstruction::isStringLiteral`, PSIR v39; a flag in the instruction's padding rather than a `PushString` opcode, so
+the VM kernels, the emitters and the optimizer needed no change), and the linker shifts exactly the marked pushes
+wherever the string flows, so a library function can take a string as a parameter or return a literal. A library
+written before v39 has no marks and is refused with a message that asks for a rebuild; the pattern match that found
+the pushes by their consumer is gone.
 
 ## 10. Generics, helpers and other hard parts
 

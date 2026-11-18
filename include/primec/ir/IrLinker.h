@@ -16,12 +16,10 @@ namespace primec {
 //   - host imports merge by name and signature.
 //   - the string table of `library` is appended and every operand that is a string index is shifted by the size
 //     `module`'s table had. The operand classes of primec/ir/IrOperandTable.h say which opcodes carry a function
-//     index, a host-import index or a string index. A string literal is pushed with PushI32 or PushI64, which the IR
-//     cannot tell from an integer, so the linker finds those pushes by the instruction that consumes them (see
-//     primec/ir/IrLinkStrings.h). A string that reaches a consumer any other way (through a local, a parameter or a
-//     return value) cannot be followed, so a library that has strings and such a consumer is refused when its
-//     strings would have to move (`cannot relocate the string operand of <opcode> in <function>`). Lowering does not
-//     mark string literal pushes yet; the plan lists that as the way to lift this limit.
+//     index, a host-import index or a string index. A string literal is pushed with PushI32 or PushI64, and lowering
+//     marks each such push (IrInstruction::isStringLiteral, PSIR v39), so the linker shifts exactly the marked pushes
+//     wherever the string flows afterwards (a local, a parameter, a return value). A library written before v39
+//     (IrModule::stringPushesMarked is false) has no marks and is refused with a message that asks for a rebuild.
 //   - instruction source maps are appended and the debug ids of `library` shifted past the ids of `module`.
 // `module` is unchanged when the link fails. The result is not validated here: the caller runs validateIrModule.
 bool linkIrModule(IrModule &module, const IrModule &library, std::string &error);

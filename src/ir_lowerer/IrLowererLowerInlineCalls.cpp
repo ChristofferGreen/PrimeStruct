@@ -1,4 +1,5 @@
 #include "IrLowererLowerInlineCalls.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "IrLowererCountAccessClassifiers.h"
 #include "IrLowererLowerSumHelpers.h"

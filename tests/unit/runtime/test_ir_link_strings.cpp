@@ -43,15 +43,15 @@ IrModule libraryWithStrings() {
   IrModule module = moduleOf({functionOf("/lib/greet",
                                          0,
                                          {{IrOpcode::PrintString, newlineString(0)},
-                                          {IrOpcode::PushI32, 1},
+                                          stringPush(IrOpcode::PushI32, 1),
                                           {IrOpcode::PrintStringDynamic, Newline},
-                                          {IrOpcode::PushI32, 2},
+                                          stringPush(IrOpcode::PushI32, 2),
                                           {IrOpcode::LoadStringLength, 0},
                                           {IrOpcode::PrintI32, Newline},
                                           {IrOpcode::PushI32, 1},
                                           {IrOpcode::LoadStringByte, 3},
                                           {IrOpcode::PrintI32, Newline},
-                                          {IrOpcode::PushI32, 3},
+                                          stringPush(IrOpcode::PushI32, 3),
                                           {IrOpcode::PushI32, 0},
                                           {IrOpcode::LoadStringByteDynamic, 0},
                                           {IrOpcode::PrintI32, Newline},
@@ -59,7 +59,7 @@ IrModule libraryWithStrings() {
                                           {IrOpcode::FileWriteString, 2},
                                           {IrOpcode::Pop, 0},
                                           {IrOpcode::PushI32, 1},
-                                          {IrOpcode::PushI32, 1},
+                                          stringPush(IrOpcode::PushI32, 1),
                                           {IrOpcode::FileWriteStringDynamic, 0},
                                           {IrOpcode::Pop, 0},
                                           {IrOpcode::PrintString, newlineString(0)},
@@ -118,10 +118,10 @@ TEST_CASE(
                             {IrOpcode::PrintString,
                              encodePrintStringImm(1, PrintFlagNewline | PrintFlagStderr)},
                             {IrOpcode::PushI32, 7},
-                            {IrOpcode::PushI32, 1},
+                            stringPush(IrOpcode::PushI32, 1),
                             {IrOpcode::PushI64, 0},
                             {IrOpcode::CallHost, 0},
-                            {IrOpcode::PushI64, 1},
+                            stringPush(IrOpcode::PushI64, 1),
                             {IrOpcode::PushI32, 0},
                             {IrOpcode::LoadStringByteDynamic, 0},
                             {IrOpcode::ReturnVoid, 0}})},
@@ -154,33 +154,90 @@ TEST_CASE(
   CHECK(code[11].imm == 0);
 }
 
-TEST_CASE("link strings: a string that cannot be followed is refused when the strings would move") {
+TEST_CASE(
+    "link strings: a library function prints a string it received and another returns a literal") {
+  // /lib/say prints the string index it gets as a parameter, through a local; /lib/name returns a literal of the
+  // library's table; main passes the returned one and then its own literal.
+  IrModule library = moduleOf(
+      {functionOf("/lib/say",
+                  1,
+                  {{IrOpcode::StoreLocal, 0},
+                   {IrOpcode::LoadLocal, 0},
+                   {IrOpcode::PrintStringDynamic, Newline},
+                   {IrOpcode::ReturnVoid, 0}}),
+       functionOf("/lib/name", 0, {stringPush(IrOpcode::PushI64, 1), {IrOpcode::ReturnI64, 0}})},
+      -1);
+  library.stringTable = {"unused", "gamma"};
+  IrModule program = moduleOf({functionOf("/main",
+                                          0,
+                                          {{IrOpcode::Call, 2},
+                                           {IrOpcode::CallVoid, 1},
+                                           stringPush(IrOpcode::PushI64, 0),
+                                           {IrOpcode::CallVoid, 1},
+                                           {IrOpcode::PrintString, newlineString(1)},
+                                           {IrOpcode::PushI32, 0},
+                                           {IrOpcode::ReturnI32, 0}}),
+                               importOf("/lib/say", 1, "lib"),
+                               importOf("/lib/name", 0, "lib")});
+  program.stringTable = {"alpha", "beta"};
+  std::string error;
+  REQUIRE_MESSAGE(linkIrModule(program, library, error), error);
+  REQUIRE_MESSAGE(checkIrImportsResolved(program, error), error);
+  REQUIRE_MESSAGE(validateIrModule(program, IrValidationTarget::Vm, error), error);
+  const Run result = run(program);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.out == "gamma\nalpha\nbeta\n");
+}
+
+TEST_CASE("link strings: a marked push no consumer follows still moves, an unmarked one stays") {
+  // The literal is stored and never printed in the library: only the mark says it is a string index.
+  IrModule library = moduleOf({functionOf("/lib/keep",
+                                          0,
+                                          {stringPush(IrOpcode::PushI32, 0),
+                                           {IrOpcode::StoreLocal, 0},
+                                           {IrOpcode::PushI32, 0},
+                                           {IrOpcode::StoreLocal, 1},
+                                           {IrOpcode::ReturnVoid, 0}})},
+                              -1);
+  library.stringTable = {"kept"};
+  IrModule program = programWithStrings();
+  std::string error;
+  REQUIRE_MESSAGE(linkIrModule(program, library, error), error);
+  REQUIRE(program.functions.size() == 3);
+  const std::vector<IrInstruction> &code = program.functions[2].instructions;
+  REQUIRE(code.size() == 5);
+  CHECK(code[0].imm == 2);
+  CHECK(code[0].isStringLiteral);
+  CHECK(code[2].imm == 0);
+  CHECK_FALSE(code[2].isStringLiteral);
+}
+
+TEST_CASE("link strings: a library that does not mark its string pushes is refused") {
   IrModule library = moduleOf({functionOf("/lib/greet",
                                           0,
                                           {{IrOpcode::PushI32, 0},
-                                           {IrOpcode::StoreLocal, 0},
-                                           {IrOpcode::LoadLocal, 0},
                                            {IrOpcode::PrintStringDynamic, Newline},
                                            {IrOpcode::ReturnVoid, 0}})},
                               -1);
   library.stringTable = {"gamma"};
+  library.stringPushesMarked = false;
   IrModule program = programWithStrings();
   const IrModule before = program;
   std::string error;
   CHECK_FALSE(linkIrModule(program, library, error));
-  CHECK(error == "cannot relocate the string operand of PrintStringDynamic in /lib/greet");
+  CHECK(error == "the library was written before IR schema v39 and does not mark its string "
+                 "literals; rebuild it");
   CHECK(program.stringTable == before.stringTable);
   CHECK(program.functions[1].isImport);
 
-  // With no strings in the program nothing moves, so the same library links.
-  IrModule plain = programWithStrings();
-  plain.stringTable.clear();
-  plain.functions[0].instructions = {
-      {IrOpcode::CallVoid, 1}, {IrOpcode::PushI32, 0}, {IrOpcode::ReturnI32, 0}};
-  REQUIRE_MESSAGE(linkIrModule(plain, library, error), error);
-  const Run result = run(plain);
-  REQUIRE_MESSAGE(result.ok, result.error);
-  CHECK(result.out == "gamma\n");
+  // The program side may be unmarked: its strings do not move.
+  IrModule marked = library;
+  marked.stringPushesMarked = true;
+  marked.functions[0].instructions[0].isStringLiteral = true;
+  IrModule unmarkedProgram = programWithStrings();
+  unmarkedProgram.stringPushesMarked = false;
+  REQUIRE_MESSAGE(linkIrModule(unmarkedProgram, marked, error), error);
+  CHECK_FALSE(unmarkedProgram.stringPushesMarked);
 }
 
 TEST_SUITE_END();

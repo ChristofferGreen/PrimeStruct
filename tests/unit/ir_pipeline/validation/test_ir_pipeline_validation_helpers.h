@@ -1,5 +1,6 @@
 #pragma once
 
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>

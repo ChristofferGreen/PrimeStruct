@@ -803,7 +803,7 @@ TEST_CASE("ir lowerer string call helpers emit literal and binding values") {
   CHECK(stringIndex == 7);
   CHECK(argvChecked);
   REQUIRE(instructions.size() == 1);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::ir_lowerer::stringLiteralPushOp(primec::IrOpcode::PushI64));
   CHECK(instructions[0].imm == 7);
 
   instructions.clear();

@@ -292,7 +292,7 @@ TEST_CASE("ir lowerer result helpers emit Result.why local expressions") {
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); }));
   CHECK(internCalls == 1);
   REQUIRE(instructions.size() == 1);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::ir_lowerer::stringLiteralPushOp(primec::IrOpcode::PushI64));
   CHECK(instructions[0].imm == 11);
 
   int allocCalls = 0;

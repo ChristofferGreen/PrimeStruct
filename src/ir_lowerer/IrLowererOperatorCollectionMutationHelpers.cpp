@@ -1,4 +1,5 @@
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
@@ -209,10 +210,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
                 instructions.push_back({IrOpcode::PushI32, offsetBytes});
                 instructions.push_back({IrOpcode::AddI32, 0});
               }
-              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              instructions.push_back(
+                  {stringLiteralPushOp(IrOpcode::PushI32), static_cast<uint64_t>(stringIndex)});
               instructions.push_back({IrOpcode::StoreIndirect, 0});
             } else {
-              instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)});
+              instructions.push_back(
+                  {stringLiteralPushOp(IrOpcode::PushI32), static_cast<uint64_t>(stringIndex)});
               instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(dataBaseLocal + static_cast<int32_t>(i))});
             }
             continue;

@@ -10,6 +10,8 @@ namespace primec {
 namespace {
 // The entry index of a module with no entry point (v38), as written.
 constexpr uint32_t NoEntryIndex = 0xFFFFFFFFu;
+static_assert(IrOpcodeMax < IrStringPushI32Code,
+              "the opcode bytes of marked string pushes must stay free");
 
 void appendU32(std::vector<uint8_t> &out, uint32_t value) {
   out.push_back(static_cast<uint8_t>(value & 0xFF));
@@ -205,7 +207,13 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     }
     appendU32(out, static_cast<uint32_t>(fn.instructions.size()));
     for (const auto &inst : fn.instructions) {
-      out.push_back(static_cast<uint8_t>(inst.op));
+      if (inst.isStringLiteral && inst.op != IrOpcode::PushI32 && inst.op != IrOpcode::PushI64) {
+        error = "IR string literal mark on an instruction that is not a push in " + fn.name;
+        return false;
+      }
+      out.push_back(!inst.isStringLiteral          ? static_cast<uint8_t>(inst.op)
+                    : inst.op == IrOpcode::PushI32 ? IrStringPushI32Code
+                                                   : IrStringPushI64Code);
       appendU64(out, inst.imm);
       appendU32(out, inst.debugId);
     }
@@ -257,6 +265,8 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
       }
     }
   }
+  // v39: whether the module marks every string literal push.
+  out.push_back(module.stringPushesMarked ? 1u : 0u);
   return true;
 }
 
@@ -476,7 +486,14 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
         return false;
       }
       IrInstruction inst;
-      const uint8_t opcodeValue = data[offset];
+      uint8_t opcodeValue = data[offset];
+      // v39: the opcode bytes 0xFE and 0xFF are a PushI32 and a PushI64 that hold a string index.
+      if (version >= 39u &&
+          (opcodeValue == IrStringPushI32Code || opcodeValue == IrStringPushI64Code)) {
+        inst.isStringLiteral = true;
+        opcodeValue = opcodeValue == IrStringPushI32Code ? static_cast<uint8_t>(IrOpcode::PushI32)
+                                                         : static_cast<uint8_t>(IrOpcode::PushI64);
+      }
       const uint8_t minOpcode = IrOpcodeMin;
       // A module of an older version can only hold the opcodes that version had: v34 appended the task opcodes,
       // v35 the atomic ones, v36 the mutex ones and v37 the condition ones.
@@ -607,6 +624,17 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
       }
       imported.isImport = true;
     }
+  }
+  // v39: whether the module marks every string literal push. An older module has no marks, so it is unmarked when it
+  // has strings.
+  out.stringPushesMarked = out.stringTable.empty();
+  if (version >= 39u) {
+    uint8_t marked = 0;
+    if (!readU8(data, offset, marked) || marked > 1) {
+      error = "truncated IR string mark flag";
+      return false;
+    }
+    out.stringPushesMarked = marked != 0;
   }
   if (version >= 38u && entryIndex == NoEntryIndex) {
     out.entryIndex = -1;

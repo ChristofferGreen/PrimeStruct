@@ -196,7 +196,7 @@ TEST_CASE("ir deserialization rejects unknown opcode") {
   // Previously this skipped the parameter count and so corrupted the
   // instruction count instead of the opcode; it only passed because an
   // oversized count happened to hit an unsupported opcode later.
-  data[offset] = 0xFF;
+  data[offset] = 0xFD; // 0xFE and 0xFF are the marked string pushes of schema 39
 
   primec::IrModule decoded;
   CHECK_FALSE(primec::deserializeIr(data, decoded, error));

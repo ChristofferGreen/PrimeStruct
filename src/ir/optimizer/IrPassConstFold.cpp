@@ -134,7 +134,8 @@ bool foldFunction(IrFunction &function, const IrModule &module) {
       window.clear();
     }
     const IrInstruction &instruction = function.instructions[i];
-    if (isConstantPush(instruction.op)) {
+    // A string literal push is an index into the string table, not a number to fold.
+    if (isConstantPush(instruction.op) && !instruction.isStringLiteral) {
       window.push_back({true, pushedSlot(instruction), i});
       continue;
     }

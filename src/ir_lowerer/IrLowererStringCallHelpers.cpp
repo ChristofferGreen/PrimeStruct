@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererStringCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "primec/frontend/StringLiteral.h"
 
@@ -28,7 +29,7 @@ StringCallEmitResult emitLiteralOrBindingStringCallValue(const Expr &arg,
       return StringCallEmitResult::Error;
     }
     const int32_t index = internString(parsed.decoded);
-    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(index));
+    emitInstruction(stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(index));
     sourceOut = StringCallSource::TableIndex;
     stringIndexOut = index;
     return StringCallEmitResult::Handled;

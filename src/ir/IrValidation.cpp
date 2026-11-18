@@ -227,6 +227,19 @@ bool validateFunction(const IrModule &module,
     if (opcodeValue < MinOpcode || opcodeValue > MaxOpcode) {
       return failInstruction(functionIndex, function.name, instructionIndex, "unsupported opcode", error);
     }
+    if (inst.isStringLiteral) {
+      if (inst.op != IrOpcode::PushI32 && inst.op != IrOpcode::PushI64) {
+        return failInstruction(functionIndex,
+                               function.name,
+                               instructionIndex,
+                               "string literal mark on a non-push",
+                               error);
+      }
+      if (inst.imm >= module.stringTable.size()) {
+        return failInstruction(
+            functionIndex, function.name, instructionIndex, "invalid string index", error);
+      }
+    }
     if (inst.op == IrOpcode::Trap && target != IrValidationTarget::Vm &&
         target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
         target != IrValidationTarget::Cpp && target != IrValidationTarget::Native) {

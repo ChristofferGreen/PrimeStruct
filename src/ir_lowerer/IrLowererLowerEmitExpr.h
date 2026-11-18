@@ -286,7 +286,8 @@
             return false;
           }
           int32_t index = internString(decoded);
-          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(index)});
+          function.instructions.push_back(
+              {ir_lowerer::stringLiteralPushOp(IrOpcode::PushI64), static_cast<uint64_t>(index)});
           return true;
         }
       case Expr::Kind::BoolLiteral: {

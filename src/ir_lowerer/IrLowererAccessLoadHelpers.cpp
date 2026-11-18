@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 
 #include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
@@ -270,8 +271,13 @@ bool emitKeyValueLookupAccess(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;
@@ -345,8 +351,13 @@ bool emitKeyValueLookupContains(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;
@@ -413,8 +424,13 @@ bool emitKeyValueLookupTryAt(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;

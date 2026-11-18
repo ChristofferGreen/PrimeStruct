@@ -170,7 +170,8 @@ TEST_CASE(
   // The import record names function 1; pointing it at function 7 is refused.
   std::vector<uint8_t> good = bytesOf(consumerModule());
   const std::string library = "lib";
-  const size_t recordOffset = good.size() - (4 + 4 + library.size());
+  // A version 39 module ends with the string mark byte after the import records.
+  const size_t recordOffset = good.size() - (1 + 4 + 4 + library.size());
   good[recordOffset] = 7;
   IrModule loaded;
   CHECK_FALSE(deserializeIr(good, loaded, error));
@@ -184,12 +185,14 @@ TEST_CASE(
   const IrModule plain =
       moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 12}, {IrOpcode::ReturnI32, 0}})});
   std::vector<uint8_t> old = bytesOf(plain);
-  // A version 37 file ends after the host imports, where version 38 adds the import count (zero here).
-  REQUIRE(old.size() > 4);
-  for (size_t i = old.size() - 4; i < old.size(); ++i) {
+  // A version 37 file ends after the host imports, where version 38 adds the import count (zero here) and version 39
+  // the string mark byte (one: the module has no strings).
+  REQUIRE(old.size() > 5);
+  for (size_t i = old.size() - 5; i < old.size() - 1; ++i) {
     CHECK(old[i] == 0);
   }
-  old.resize(old.size() - 4);
+  CHECK(old.back() == 1);
+  old.resize(old.size() - 5);
   setVersion(old, 37u);
   IrModule loaded;
   std::string error;
@@ -209,6 +212,142 @@ TEST_CASE(
   }
   CHECK_FALSE(deserializeIr(noEntry, loaded, error));
   CHECK(error == "invalid IR entry index");
+}
+
+namespace {
+
+// The bytes of `module` as a version 38 file: no mark byte at the end, and the module must have no marked pushes
+// (a version 38 loader would not know the opcode bit).
+std::vector<uint8_t> version38Bytes(const IrModule &module) {
+  std::vector<uint8_t> bytes = bytesOf(module);
+  REQUIRE(bytes.back() == 1);
+  bytes.pop_back();
+  setVersion(bytes, 38u);
+  return bytes;
+}
+
+IrModule moduleWithMarkedString() {
+  IrModule module = moduleOf({functionOf("/main",
+                                         0,
+                                         {stringPush(IrOpcode::PushI64, 0),
+                                          {IrOpcode::PrintStringDynamic, Newline},
+                                          {IrOpcode::PushI32, 0},
+                                          {IrOpcode::ReturnI32, 0}})});
+  module.stringTable = {"marked"};
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("schema 39: a string literal mark and the module flag round trip") {
+  const IrModule module = moduleWithMarkedString();
+  const std::vector<uint8_t> bytes = bytesOf(module);
+  CHECK(bytes.back() == 1);
+  IrModule back;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(bytes, back, error), error);
+  CHECK(back.schemaVersion == IrSchemaVersion);
+  CHECK(back.stringPushesMarked);
+  CHECK(back.functions[0].instructions[0].isStringLiteral);
+  CHECK(back.functions[0].instructions[0].op == IrOpcode::PushI64);
+  CHECK_FALSE(back.functions[0].instructions[2].isStringLiteral);
+  CHECK(bytesOf(back) == bytes);
+  const Run result = run(back);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.out == "marked\n");
+}
+
+TEST_CASE("schema 39: a mark on an instruction that is not a push is rejected") {
+  IrModule module = moduleWithMarkedString();
+  module.functions[0].instructions[1].isStringLiteral = true;
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(serializeIr(module, bytes, error));
+  CHECK(error == "IR string literal mark on an instruction that is not a push in /main");
+
+  // The same through the loader: the high bit on a PrintStringDynamic is not an opcode.
+  std::vector<uint8_t> good = bytesOf(moduleWithMarkedString());
+  const uint8_t printDynamic = static_cast<uint8_t>(IrOpcode::PrintStringDynamic);
+  bool patched = false;
+  for (size_t i = 0; i < good.size() && !patched; ++i) {
+    // The instruction record is the opcode byte, the 8-byte immediate and the 4-byte debug id; the print's
+    // immediate is the newline flag.
+    if (good[i] == printDynamic && i + 13 < good.size() && good[i + 1] == Newline) {
+      good[i] = static_cast<uint8_t>(printDynamic | 0x80u);
+      patched = true;
+    }
+  }
+  REQUIRE(patched);
+  IrModule loaded;
+  CHECK_FALSE(deserializeIr(good, loaded, error));
+  CHECK(error == "unsupported IR opcode");
+}
+
+TEST_CASE("schema 39: a version 38 module with strings loads unmarked and runs") {
+  IrModule plain = moduleWithMarkedString();
+  plain.functions[0].instructions[0].isStringLiteral = false;
+  const std::vector<uint8_t> old = version38Bytes(plain);
+  IrModule loaded;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(old, loaded, error), error);
+  CHECK(loaded.schemaVersion == 38u);
+  CHECK_FALSE(loaded.stringPushesMarked);
+  CHECK_FALSE(loaded.functions[0].instructions[0].isStringLiteral);
+  const Run result = run(loaded);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.out == "marked\n");
+  // Written back it is a version 39 file that still says the module is unmarked.
+  const std::vector<uint8_t> rewritten = bytesOf(loaded);
+  CHECK(rewritten[4] == static_cast<uint8_t>(IrSchemaVersion));
+  CHECK(rewritten.back() == 0);
+  IrModule again;
+  REQUIRE_MESSAGE(deserializeIr(rewritten, again, error), error);
+  CHECK_FALSE(again.stringPushesMarked);
+}
+
+TEST_CASE("schema 39: a version 38 module without strings loads marked") {
+  const IrModule plain =
+      moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 5}, {IrOpcode::ReturnI32, 0}})});
+  IrModule loaded;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(version38Bytes(plain), loaded, error), error);
+  CHECK(loaded.schemaVersion == 38u);
+  CHECK(loaded.stringPushesMarked);
+  CHECK(run(loaded).value == 5);
+}
+
+TEST_CASE("primevm --link refuses a version 38 library with strings and links one without") {
+  const auto dir = primec::testing::testScratchDir("ir_link_cli_v38_library");
+  IrModule program = moduleOf(
+      {functionOf(
+           "/main", 0, {{IrOpcode::CallVoid, 1}, {IrOpcode::PushI32, 0}, {IrOpcode::ReturnI32, 0}}),
+       importOf("/lib/greet", 0, "lib")});
+  IrModule library =
+      moduleOf({functionOf("/lib/greet",
+                           0,
+                           {{IrOpcode::PrintString, encodePrintStringImm(0, PrintFlagNewline)},
+                            {IrOpcode::ReturnVoid, 0}})},
+               -1);
+  library.stringTable = {"from the library"};
+  const auto oldLibrary = dir / "old_library.psir";
+  {
+    const std::vector<uint8_t> bytes = version38Bytes(library);
+    std::ofstream file(oldLibrary, std::ios::binary);
+    file.write(reinterpret_cast<const char *>(bytes.data()),
+               static_cast<std::streamsize>(bytes.size()));
+  }
+  const auto programPath = writeModule(dir / "program.psir", program);
+  const CliRun refused = runPrimevm(dir, quoted(programPath) + " --link " + quoted(oldLibrary));
+  CHECK(refused.exitCode == 3);
+  CHECK(refused.output.find("old_library.psir: the library was written before IR schema v39 and "
+                            "does not mark its string literals; rebuild it") != std::string::npos);
+
+  // A library without strings has nothing to move and links.
+  library.stringTable.clear();
+  library.functions[0].instructions = {{IrOpcode::ReturnVoid, 0}};
+  const CliRun quiet = runPrimevm(
+      dir, quoted(programPath) + " --link " + quoted(writeModule(dir / "quiet.psir", library)));
+  CHECK(quiet.exitCode == 0);
 }
 
 TEST_SUITE_END();

@@ -3,6 +3,7 @@
 // Helpers shared by the IrLowererAccessLoadHelpers*.cpp units (split out of
 // IrLowererAccessLoadHelpers.cpp without changes).
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
+#include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 #include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -156,8 +157,13 @@ inline bool emitExperimentalMapLookupAccess(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;
@@ -219,8 +225,13 @@ inline bool emitExperimentalMapLookupContains(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;
@@ -270,8 +281,13 @@ inline bool emitExperimentalMapLookupTryAt(
           resolveStringTableTarget,
           inferExprKind,
           emitExpr,
-          [&](int32_t stringIndex) { emitInstruction(IrOpcode::PushI32, static_cast<uint64_t>(stringIndex)); },
-          [&](int32_t localIndex) { emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)); },
+          [&](int32_t stringIndex) {
+            emitInstruction(stringLiteralPushOp(IrOpcode::PushI32),
+                            static_cast<uint64_t>(stringIndex));
+          },
+          [&](int32_t localIndex) {
+            emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex));
+          },
           keyLocal,
           error)) {
     return false;

@@ -7,13 +7,23 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 38u;
+constexpr uint32_t IrSchemaVersion = 39u;
 // v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes, v36 only MutexLock and MutexUnlock and v37
 // only ConditionWait and ConditionNotify, so a v33 to v36 module loads unchanged (it cannot hold the opcodes added
 // after it). v38 appends a section after the host imports (the functions that are imports of a library) and
 // allows the entry index -1 (a library has no entry point); a v33 to v37 module has no such section and loads with
 // every function defined and an entry index in range. Migration: a loader reads a module of any supported version; a
 // writer always writes v38, so a loaded older module is rewritten as v38 with an empty import section.
+// v39 marks the string literal pushes: the opcode bytes 0xFE and 0xFF stand for a PushI32 and a PushI64 whose immediate
+// is an index into the string table (IrInstruction::isStringLiteral), and a byte after the import section says whether the
+// module marks every such push (IrModule::stringPushesMarked). A v33 to v38 module has no marks: it loads with the
+// byte false when it has strings, and the IR link (primec/ir/IrLinker.h) refuses it as a library with a message that
+// asks for a rebuild, because the strings it would have to move are not known. Migration: a loader reads any
+// supported version; a writer always writes v39, so a loaded older module keeps its false byte and runs unchanged.
+// The opcode bytes of a marked PushI32 and PushI64 in a serialized module (v39); no opcode may take these values, and
+// lowering uses them for the same pushes until it resolves them into IrInstruction::isStringLiteral.
+constexpr uint8_t IrStringPushI32Code = 0xFEu;
+constexpr uint8_t IrStringPushI64Code = 0xFFu;
 constexpr uint32_t IrSchemaMinimumSupportedVersion = 33u;
 constexpr uint32_t IrSchemaMaximumSupportedVersion = IrSchemaVersion;
 
@@ -297,7 +307,15 @@ struct IrInstruction {
   IrOpcode op = IrOpcode::PushI32;
   uint64_t imm = 0;
   uint32_t debugId = 0;
+  // A PushI32 or PushI64 whose immediate is an index into the module's string table (a string literal). Lowering sets
+  // it where it emits the push; the IR link shifts exactly these pushes (and the string operands of the opcodes of
+  // class String and PrintString in IrOperandTable.h) when it appends a library's strings. Every other consumer
+  // ignores it, and a pass that builds a new instruction does not copy it. Added in PSIR v39.
+  bool isStringLiteral = false;
 };
+
+static_assert(sizeof(IrInstruction) == 24,
+              "the string literal mark must fit the padding of an instruction");
 
 struct IrLocalDebugSlot {
   uint32_t slotIndex = 0;
@@ -379,6 +397,10 @@ struct IrModule {
   std::vector<IrInstructionSourceMapEntry> instructionSourceMap;
   // Host functions a VM embedder must bind before running (see CallHost).
   std::vector<IrHostImport> hostImports;
+  // True when every PushI32 and PushI64 that holds a string index has IrInstruction::isStringLiteral set. A module
+  // lowered by this compiler is marked; a module loaded from a version before v39 has no marks, so it is false when
+  // the module has strings. The IR link moves the strings of a library only when this is true.
+  bool stringPushesMarked = true;
 };
 
 } // namespace primec

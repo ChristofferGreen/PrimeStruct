@@ -804,7 +804,7 @@ TEST_CASE("ir lowerer result helpers compose Result.why expression ops") {
   CHECK(exprOps.emitEmptyString());
   CHECK(internCalls == 1);
   REQUIRE(instructions.size() == 1);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::ir_lowerer::stringLiteralPushOp(primec::IrOpcode::PushI64));
   CHECK(instructions[0].imm == 23);
 
   primec::ir_lowerer::LocalMap locals;
