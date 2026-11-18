@@ -487,8 +487,10 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/EmitDeps.cpp
   src/pipeline/DeclarationText.cpp
   src/pipeline/DefinitionReferences.cpp
+  src/pipeline/ImportedDeclarations.cpp
   src/pipeline/LibraryArchive.cpp
   src/pipeline/LibraryBuild.cpp
+  src/pipeline/LibraryLink.cpp
   src/pipeline/ModuleInterface.cpp
   src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
@@ -2432,6 +2434,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_deps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_lib.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_consume.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_link.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_corpus.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_profile.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_namespace_definitions.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_runtime_if.cpp

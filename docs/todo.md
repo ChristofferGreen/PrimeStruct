@@ -164,10 +164,6 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
 | TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5925 | `--library` compiles a program against a library and links it | in progress (split) | lib-consume |
-| TODO-6033 | `[imported(<library>)]` declarations, `--library` and the import resolver | ready | lib-consume |
-| TODO-6034 | A call of an imported function lowers to an import and the pipeline links | blocked | lib-consume |
-| TODO-6035 | A corpus behaves the same built whole and as library plus consumer | blocked | lib-consume |
 | TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
 | TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
 | TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
@@ -202,7 +198,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5903, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019, TODO-6029
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5925, TODO-6033, TODO-6034, TODO-6035, TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5926, TODO-5927, TODO-5928, TODO-5929, TODO-5930, TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
@@ -224,7 +220,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; ready: TODO-5904 (threads by default); deferred TODO-5902 (the fast kernel per task). TODO-5903 (debug sessions run programs with tasks) is ready and independent; it is the first prerequisite of docs/VmInspectorPlan.md.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) is ready; then, TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) landed; then, TODO-5926 (generics and synthesized helpers), TODO-5927 (namespace ownership), TODO-5928 (`--emit-uses`), TODO-5929 (symbol-level rebuilds), TODO-5930 (the graph builds libraries); deferred TODO-5931 (the stdlib as a library, measure first), TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -915,74 +911,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/spec/integration-and-tooling.md and docs/BuildSystemPlan.md state the rule
     - full release gate green
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
-
-- [~] TODO-5925: `--library` compiles a program against a library and links it
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lib-consume (worktree-agent-a6c398c629a3f7ca7), 2026-11-18
-  - created_at: 2026-11-11
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 9)
-  - parallel_track: lib-consume
-  - scope: `--library <name>.psa` (repeatable) registers a library: the import resolver (src/frontend/ImportResolver.cpp) finds its modules in the archive's interface and treats the text as source; a declaration marked `[imported(<library>)]` has no body and the marker is a diagnostic in any file that is not an interface. Lowering turns a call of an imported function into a `Call` to an import function (TODO-5922); the pipeline links before `prepareIrModule` and checks, before linking, that each interface hash the program was compiled against equals the library's (`library ui changed since this program was compiled; rebuild`) and that the library's own libraries are supplied (`library ui needs library base`). Every backend then sees one merged module. A program built from a library and one built as a whole must behave the same, and that is tested here against a corpus (the differential standard of docs/LibrarySymbolManifestLazyImports.md): the first version covers programs with structs, functions, effects, strings and a task.
-  - acceptance:
-    - a small program with a library of a struct, helper methods and functions runs on the VM and with `--emit=optexe`, with the same output as the whole-program build of the same sources
-    - a corpus of at least 20 programs gives identical output and exit code built whole and built as library plus consumer, in a ctest entry
-    - a stale library, a missing transitive library and `[imported]` in a program source each give their diagnostic
-    - a program that uses no `--library` compiles exactly as before (outputs byte-identical)
-    - docs/spec/source-pipeline.md and integration-and-tooling.md document the flag
-    - full release gate green
-  - stop_rule: non-generic code only; generics, namespace ownership and uses output are their own leaves.
-  - notes: `primec --emit=interface` (TODO-5923) prints a function declaration with an empty body `{}`, which parses only as a `host` definition and does not validate; the `[imported(<library>)]` marker of this leaf is what gives an interface file a grammar and validation for it (a declaration in an interface file has no body and no return statement), and its parse-back test should then validate a printed interface without the `host` workaround used in tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp. TODO-5924 landed `primec --emit=lib` (docs/spec/integration-and-tooling.md, Library Archive; read an archive with `readLibraryArchiveFile` in include/primec/pipeline/LibraryArchive.h, whose `code` is an `IrModule` with `entryIndex` -1). Two things it left for this leaf: (1) the library code is lowered for the VM target, so every function has the address ABI (a struct, `mut` or string parameter is one slot holding an address or an index); a consumer lowered for a target with the scalar ABI (x86_64 native) calls it differently, so decide here whether the call site of an imported function always uses the address ABI or the archive records the ABI and the consumer target is refused when it differs. (2) The code holds the stdlib functions the library reached as real calls (for example `/std/collections/slice/Read`), and the consumer lowers the same functions under the same names, so the link must merge identical definitions of one name or the library must not hold them; the generic case is TODO-5926.
-  - split: the leaf is too large for one commit, so it lands as TODO-6033 (the `[imported]` marker, `--library` and the resolver), TODO-6034 (lowering of imported calls, the link in the pipeline, the stale and transitive checks) and TODO-6035 (the differential corpus and the docs); this block closes when the three are archived. Decisions: (a) the call site of an imported function always uses the address ABI, and a consumer target without it (x86_64 native, wasm, GLSL, the simple C++ emitters) is refused with `linking a library needs a target with the address ABI`; the first version runs on the VM, `optexe`, `optcpp` and arm64 native. (b) a function of the archive's code outside the roots the library owns (the stdlib routines its roots reached) is shared: when the consumer lowered the same name, the consumer's definition is kept and the library's copy dropped, so the link neither errors nor holds two copies; a name inside an owned root defined twice stays `duplicate definition`.
-
-- [~] TODO-6033: `[imported(<library>)]` declarations, `--library` and the import resolver
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lib-consume (worktree-agent-a6c398c629a3f7ca7), 2026-11-18
-  - created_at: 2026-11-18
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 8)
-  - parallel_track: lib-consume
-  - depends_on: TODO-5925
-  - scope: `--library <name>.psa` (repeatable, `Options::libraryPaths`) loads each archive (compiler build id, schema, section hashes) and gives the import resolver its interface: `import</ui>` (a logical path whose first segment is an owned root of a library) splices the interface text once as a source unit of a new kind (`SourceUnitKind::Library`, the interface hash in its module key). The parser accepts `[imported(<library>)]` on a definition with an empty body and no return, like `host`; semantics checks the declaration (explicit return type, empty body, not generic, one library name); the marker is a diagnostic in a source unit that is not a library interface (`imported is only valid in a library interface`). The interface printer writes the marker and prints a helper nested in a struct inside the struct, so the implicit `this` survives; the signature hash does not cover the library name. A library's manifest records the libraries it was compiled against, and loading checks that each is supplied with the same interface hash (`library mid needs library base`, `library base changed since library mid was compiled; rebuild`).
-  - acceptance:
-    - a program with `--library ui.psa` and `import</ui>` compiles and validates against the printed interface (checked with `--emit=interface` of the consumer and a call of a declared function, a struct and a helper method), without the `host` workaround in tests/unit/compile_run/text_filters/test_compile_run_text_filters_emit_interface.cpp
-    - `[imported(x)]` in a program source, an imported declaration with a body and one without a return type each give their diagnostic
-    - a missing transitive library and a stale one give their diagnostics
-    - a program that uses no `--library` compiles exactly as before
-    - full release gate green
-  - stop_rule: front end and loading only; no lowering of the calls and no link.
-
-- [ ] TODO-6034: A call of an imported function lowers to an import and the pipeline links before optimization
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6033
-  - created_at: 2026-11-18
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 9)
-  - parallel_track: lib-consume
-  - depends_on: TODO-5925
-  - scope: Lowering reserves each reachable imported definition as a real call with the address ABI (no call-site count, no inlining) and emits an `IrFunction` with `isImport` and the library name instead of a body; a consumer target without the address ABI is refused. `prepareIrModule` links every library into the lowered module before validation and the optimizer (`linkIrModule`, with the library's owned roots so a stdlib routine both modules lowered merges to the consumer's copy), checks that each interface hash the program was compiled against equals the archive's (`library ui changed since this program was compiled; rebuild`) and that no import is left (`undefined symbol`). A library compiled against another library keeps its imports in the archive code and records the dependency in its manifest.
-  - acceptance:
-    - a small program with a library of a struct, helper methods, functions, effects and a string runs on the VM and with `--emit=optexe` with the output of the whole-program build of the same sources
-    - the same program on a target without the address ABI is refused with the diagnostic
-    - a library built against another library links when both are supplied
-    - a program that uses no `--library` compiles exactly as before (outputs byte-identical)
-    - full release gate green
-  - stop_rule: non-generic code; the corpus of TODO-6035 is separate.
-
-- [ ] TODO-6035: A corpus of programs behaves the same built whole and as library plus consumer
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6034
-  - created_at: 2026-11-18
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 15)
-  - parallel_track: lib-consume
-  - depends_on: TODO-5925
-  - scope: At least 20 programs (structs, helper methods, functions, effects, strings and a task), each built as one whole program and as a library plus a consumer, on the VM and with `--emit=optexe`, with the same output and exit code, in ctest entries that each run within 5 s alone. docs/spec/source-pipeline.md and docs/spec/integration-and-tooling.md document `--library`, the import form, the diagnostics and the two decisions (the address ABI, shared routines); docs/ModulesAndLibrariesPlan.md records the status.
-  - acceptance:
-    - the corpus passes in the release gate, sharded so each ctest entry stays under 5 s alone
-    - the docs name the flag, the import form, every diagnostic and the target refusal
-    - full release gate green
-  - stop_rule: non-generic code only.
 
 
 - [ ] TODO-5926: Generic definitions and synthesized helpers cross the library boundary

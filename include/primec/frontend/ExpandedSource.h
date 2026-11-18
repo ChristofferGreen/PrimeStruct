@@ -15,6 +15,9 @@ enum class SourceUnitKind {
   Primary,
   Import,
   Stdlib,
+  // The interface text of a library archive (`--library`, docs/spec/integration-and-tooling.md): its displayPath is
+  // the archive and its moduleKey is `<library name>:<interface hash>`.
+  Library,
   Generated,
   Unknown,
 };
@@ -27,6 +30,8 @@ inline std::string_view sourceUnitKindName(SourceUnitKind kind) {
       return "import";
     case SourceUnitKind::Stdlib:
       return "stdlib";
+    case SourceUnitKind::Library:
+      return "library";
     case SourceUnitKind::Generated:
       return "generated";
     case SourceUnitKind::Unknown:

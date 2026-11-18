@@ -6,6 +6,7 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererSharedTypes.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "primec/semantics/ImportedDefinitions.h"
 #include "primec/support/CollectionHelperNames.h"
 
 #include <string_view>
@@ -1014,15 +1015,17 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
       continue;
     }
     const bool isRecursive = recursive.find(path) != recursive.end();
-    // A root of a library is a function of the archive whatever its call sites.
-    if (!isRecursive && roots.find(path) == roots.end()) {
+    const auto defIt = byPath.find(path);
+    // A root of a library is a function of the archive whatever its call sites, and a function a library defines
+    // (an imported declaration) is always a call: it has no body to inline.
+    const bool isImported = defIt != byPath.end() && isImportedDefinition(*defIt->second);
+    if (!isRecursive && !isImported && roots.find(path) == roots.end()) {
       const auto countIt = callSiteCounts.find(path);
       const size_t siteCount = countIt != callSiteCounts.end() ? countIt->second : 0;
       if (siteCount < kMinCallSitesForRealCall) {
         continue;
       }
     }
-    const auto defIt = byPath.find(path);
     if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, context)) {
       continue;
     }

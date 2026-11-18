@@ -2,6 +2,7 @@
 
 #include "SemanticsWorkerSymbolMerge.h"
 #include "primec/semantics/HostDefinitions.h"
+#include "primec/semantics/ImportedDefinitions.h"
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
 
 #include "primec/support/BenchmarkSink.h"
@@ -303,6 +304,37 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
           if (!lengthFollows) {
             return failHost("host definition Pointer<u8> parameter must be followed by its u64 length: " + param.name);
           }
+        }
+      }
+      return true;
+    }
+    if (isImportedDefinition(def)) {
+      // An imported declaration is a signature of a library function: no body to validate, an explicit return type.
+      auto failImported = [&](const std::string &detail) {
+        return failPassesDefinitionsDiagnostic(nullptr, detail + ": " + def.fullPath);
+      };
+      if (importedLibraryName(def).empty() || importedTransform(def)->templateArgs.size() != 0) {
+        return failImported("imported takes one library name, as in imported(ui)");
+      }
+      if (!def.templateArgs.empty()) {
+        return failImported("imported declaration cannot be generic");
+      }
+      if (!def.statements.empty() || def.returnExpr.has_value()) {
+        return failImported("imported declaration must have an empty body");
+      }
+      if (std::none_of(def.transforms.begin(),
+                       def.transforms.end(),
+                       [](const Transform &transform) { return transform.name == "return"; })) {
+        return failImported("imported declaration requires an explicit return type");
+      }
+      for (const auto &param : defParams) {
+        if (param.defaultExpr != nullptr &&
+            !validateExpr(defParams, definitionContext.locals, *param.defaultExpr)) {
+          if (error_.empty()) {
+            return failPassesDefinitionsDiagnostic(
+                param.defaultExpr, "default expression validation failed on " + def.fullPath);
+          }
+          return false;
         }
       }
       return true;

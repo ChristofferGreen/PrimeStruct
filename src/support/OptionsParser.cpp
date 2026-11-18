@@ -1047,6 +1047,13 @@ bool parseOptions(int argc, char **argv, OptionsParserMode mode, Options &out, s
       out.inlineIrCalls = true;
     } else if (isPrimecMode && arg == "--with-sources") {
       out.libraryWithSources = true;
+    } else if (isPrimecMode && arg == "--library" && i + 1 < argc) {
+      out.libraryPaths.push_back(argv[++i]);
+    } else if (isPrimecMode && arg == "--library") {
+      error = "--library requires a value";
+      return false;
+    } else if (isPrimecMode && arg.rfind("--library=", 0) == 0) {
+      out.libraryPaths.push_back(arg.substr(std::string("--library=").size()));
     } else if (arg.rfind("-O", 0) == 0) {
       if (!parseOptimizationLevelFlag(arg, out.optimization, error)) {
         return false;

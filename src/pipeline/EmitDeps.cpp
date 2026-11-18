@@ -10,7 +10,7 @@ std::vector<std::string> collectSourceDependencies(const ExpandedSource &source)
   std::vector<std::string> files;
   for (const SourceUnit &unit : source.units) {
     if (unit.kind != SourceUnitKind::Primary && unit.kind != SourceUnitKind::Import &&
-        unit.kind != SourceUnitKind::Stdlib) {
+        unit.kind != SourceUnitKind::Stdlib && unit.kind != SourceUnitKind::Library) {
       continue;
     }
     if (unit.displayPath.empty()) {

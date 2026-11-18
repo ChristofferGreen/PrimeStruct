@@ -24,7 +24,12 @@ enum class IrValidationTarget {
   OptCpp,
 };
 
-bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error);
+// A module that still has an import (primec/ir/IrLinker.h) is not runnable, and is refused unless `allowImports`: a
+// library archive keeps the imports of the libraries it was compiled against.
+bool validateIrModule(const IrModule &module,
+                      IrValidationTarget target,
+                      std::string &error,
+                      bool allowImports = false);
 
 inline bool validateIrModule(const IrModule &module, std::string &error) {
   return validateIrModule(module, IrValidationTarget::Any, error);

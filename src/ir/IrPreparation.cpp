@@ -6,6 +6,7 @@
 #include "primec/ir/IrInliner.h"
 #include "primec/ir/IrLowerer.h"
 #include "primec/ir/IrValidation.h"
+#include "primec/pipeline/LibraryLink.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -184,6 +185,14 @@ bool prepareIrModule(Program &program,
                                                    : nullptr)) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = std::move(error);
+    return false;
+  }
+
+  // `--library`: the program and the code of its libraries become one module before anything validates or optimizes it.
+  if (!options.libraryPaths.empty() && !linkProgramLibraries(ir, options, expandedSource, error)) {
+    failure.stage = IrPreparationFailureStage::Lowering;
+    failure.message = std::move(error);
+    diagnosticSink.setSummary(failure.message);
     return false;
   }
 

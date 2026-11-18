@@ -118,6 +118,10 @@ void printPrimecUsage(std::ostream &err) {
 
   err << "Imports:\n";
   flagLine(err, "--import-path <dir>, -I <dir>", "Add an import search directory");
+  flagLine(err,
+           "--library <name>.psa",
+           "Compile against a library archive (repeatable): import</root> reads its interface and "
+           "the program is linked with its code");
   blankLine(err);
 
   printTransformsSection(err);

@@ -2,6 +2,7 @@
 
 #include "primec/ir/IrLowerer.h"
 #include "primec/ir/IrValidation.h"
+#include "primec/pipeline/LibraryLink.h"
 #include "primec/pipeline/ModuleInterface.h"
 #include "primec/support/Sha256.h"
 
@@ -101,6 +102,7 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
                             output.semanticProgram,
                             output.expandedSource,
                             options.entryPath,
+                            libraryNameOfRootFile(options.inputPath),
                             moduleInterface,
                             error)) {
     return false;
@@ -149,7 +151,7 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
     // The validator wants an entry point; the library has none, so it checks a copy that names its first function.
     IrModule checked = code;
     checked.entryIndex = 0;
-    if (!validateIrModule(checked, IrValidationTarget::Vm, error)) {
+    if (!validateIrModule(checked, IrValidationTarget::Vm, error, true)) {
       error = "library code does not validate: " + error;
       return false;
     }
@@ -170,8 +172,9 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
   }
 
   content = {};
-  content.manifest.name = rootFile.stem().string();
+  content.manifest.name = libraryNameOfRootFile(options.inputPath);
   content.manifest.roots.assign(rootNames.begin(), rootNames.end());
+  content.manifest.libraries = importedLibraries(output.expandedSource);
   content.manifest.compilerBuildId = compilerBuildId;
   content.manifest.interfaceHash = moduleInterface.interfaceHash;
   content.interfaceText = std::move(moduleInterface.text);

@@ -1,5 +1,6 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
+#include "primec/semantics/ImportedDefinitions.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
@@ -388,6 +389,19 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
           stackSlots += static_cast<uint32_t>(slotCount);
         }
         input.function->parameterCount = stackSlots;
+      }
+
+      if (isImportedDefinition(def)) {
+        // A function a library defines: the call sites pass the parameters as for any real call, and the declaration
+        // has no body. The link replaces it with the library's code (primec/ir/IrLinker.h).
+        IrFunction declaration;
+        declaration.name = def.fullPath;
+        declaration.metadata = input.function->metadata;
+        declaration.parameterCount = input.function->parameterCount;
+        declaration.isImport = true;
+        declaration.importLibrary = importedLibraryName(def);
+        input.outModule->functions.push_back(std::move(declaration));
+        continue;
       }
 
       auto emitBodyStatement = [&](const Expr &stmt) -> bool {

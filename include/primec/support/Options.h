@@ -56,6 +56,9 @@ struct Options {
   bool inlineIrCalls = false;
   // `--emit=lib --with-sources`: the archive also holds the module's `.prime` files.
   bool libraryWithSources = false;
+  // `--library <name>.psa` (repeatable): the library archives the program is compiled against and linked with
+  // (docs/spec/integration-and-tooling.md, Compiling against a library).
+  std::vector<std::string> libraryPaths;
   OptimizationOptions optimization;
   std::string dumpStage;
   std::vector<std::string> textFilters = {"collections", "operators", "implicit-utf8", "implicit-i32"};

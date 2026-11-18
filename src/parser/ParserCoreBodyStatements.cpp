@@ -94,6 +94,10 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
         return fail("host definition cannot be generic");
       }
     }
+    if (transform.name == "imported") {
+      // A declaration in a library interface (`--library`): the body is empty, the code is in the archive.
+      allowNoReturn = true;
+    }
     if (transform.name == "return" && transform.templateArgs.size() == 1 &&
         (transform.templateArgs.front() == "void" ||
          transform.templateArgs.front() == "never")) {

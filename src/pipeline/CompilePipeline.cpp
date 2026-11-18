@@ -41,6 +41,7 @@
 #include "primec/support/BenchmarkSink.h"
 #include "CompilePipelineInternal.h"
 #include "EmitDeps.h"
+#include "ImportedDeclarations.h"
 
 namespace primec {
 using namespace compile_pipeline_detail;
@@ -279,6 +280,10 @@ bool runCompilePipeline(const Options &options,
     return failPipeline(CompilePipelineErrorStage::Parse, error, capturedDiagnosticInfo);
   }
   output.program = std::move(parsedStage.program);
+  if (!checkImportedDeclarationSites(output.program, importStage.expandedSource, error)) {
+    diagnosticSink.setSummary(error);
+    return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
+  }
 
   // --emit=interface and --emit=symbols print a module, which has no entry point.
   const bool interfaceEmit =
@@ -552,6 +557,7 @@ bool runCompilePipeline(const Options &options,
                               output.semanticProgram,
                               importStage.expandedSource,
                               options.entryPath,
+                              libraryNameOfRootFile(options.inputPath),
                               moduleInterface,
                               error)) {
       diagnosticSink.setSummary(error);

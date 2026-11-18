@@ -2329,6 +2329,7 @@ are left unarchived.
 | TODO-5922 | `primevm --link` merges two serialized IR modules | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5923 | `primec --emit=interface` prints a module's interface and symbol table | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5924 | `--emit=lib` writes a library archive from every public definition of a module | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
+| TODO-5925 | `--library` compiles a program against a library and links it | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5934 | A call that returns a `Reference` and is used as a value yields its referent | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5935 | A lambda parameter naming a struct of the enclosing namespace is resolved there | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5936 | A diagnostic in `main` of a program that imports `/std/http/server` reports a stdlib position | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2411,6 +2412,9 @@ are left unarchived.
 | TODO-6027 | No release-gate entry takes more than 10 s alone | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6030 | The concurrent corpus runs in fewer, cheaper CTest entries | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6031 | Lowering marks string literal pushes so the IR link can always move a library's strings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
+| TODO-6033 | `[imported(<library>)]` declarations, `--library` and the import resolver | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6034 | A call of an imported function lowers to an import and the pipeline links before optimization | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6035 | A corpus of programs behaves the same built whole and as library plus consumer | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

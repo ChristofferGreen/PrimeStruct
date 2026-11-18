@@ -118,8 +118,26 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "emit_interface"
                                   SOURCE_FILE "*test_compile_run_text_filters_emit_interface.cpp"
-                                  TOTAL_CASES 11
+                                  TOTAL_CASES 10
                                   CASES_PER_SHARD 4)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 300
+                                  SHARD_PREFIX "library_consume"
+                                  SOURCE_FILE "*test_compile_run_text_filters_library_consume.cpp"
+                                  TOTAL_CASES 8
+                                  CASES_PER_SHARD 2)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 300
+                                  SHARD_PREFIX "library_link"
+                                  SOURCE_FILE "*test_compile_run_text_filters_library_link.cpp"
+                                  TOTAL_CASES 5
+                                  CASES_PER_SHARD 1)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
+                                  TIMEOUT 300
+                                  SHARD_PREFIX "library_corpus"
+                                  SOURCE_FILE "*test_compile_run_text_filters_library_corpus.cpp"
+                                  TOTAL_CASES 16
+                                  CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "emit_lib"

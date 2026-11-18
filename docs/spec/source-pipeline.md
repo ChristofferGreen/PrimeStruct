@@ -7,6 +7,9 @@
    always works on a single flattened source stream. The compile pipeline also records an expanded-source provenance
    ledger for that stream: primary input, imported files, stdlib auto-included files, and generated separator text get
    stable source-unit ids plus flattened and original source ranges. Diagnostic remapping still remains a later stage.
+   With `--library <name>.psa`, an `import</root>` of a namespace root a library owns splices the interface text of the
+   archive instead of a file, as a source unit of its own (`library`); see Compiling Against a Library in
+   [integration-and-tooling.md](integration-and-tooling.md).
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection
    literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform
    list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same
@@ -15,7 +18,9 @@
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects)
    so the tree is fully resolved and contains only concrete envelopes.
 5. **IR lowering:** emit the shared SSA-style IR only after templates/semantics are resolved; the base-level tree
-   contains no templates or `auto`, and every backend consumes an identical canonical form.
+   contains no templates or `auto`, and every backend consumes an identical canonical form. With `--library`, a call of
+   an `[imported(<library>)]` declaration lowers to an import function, and the code of each library is linked into the
+   module right after lowering, before validation and optimization.
 
 - **Import allowlist:** `primec --allow-import <prefix>[,<prefix>...]` restricts which stdlib modules user source may
   import. An explicit `import /std/...` in the primary file or in an imported project file whose path is not at or

@@ -8,9 +8,11 @@
 #include "primec/ir_lowerer/IrLowererLowerLocalsSetup.h"
 #include "IrLowererRecursionAnalysis.h"
 #include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
+#include "primec/semantics/ImportedDefinitions.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace primec::ir_lowerer {
 
@@ -135,6 +137,48 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                  (reason.empty() ? "its result, receiver or body shape is not one a real call takes"
                                  : reason);
       return false;
+    }
+  }
+
+  // A function a library defines (an imported declaration) is called with the address ABI, as the library's code was
+  // lowered: refuse a target that has no such ABI, and a declaration whose shape a real call cannot take.
+  {
+    std::vector<std::string> importedPaths;
+    for (const auto &[path, definition] : stateOut.defMap) {
+      if (definition != nullptr && isImportedDefinition(*definition)) {
+        importedPaths.push_back(path);
+      }
+    }
+    if (!importedPaths.empty()) {
+      const std::unordered_set<std::string> reachable =
+          findReachableDefinitionPaths(*input.program, *input.entryPath);
+      std::sort(importedPaths.begin(), importedPaths.end());
+      const RealCallShapeContext shapeContext{&stateOut.defMap,
+                                              &stateOut.structNames,
+                                              stateOut.realCallAllowStructs,
+                                              stateOut.runtimeErrorsTrap,
+                                              stateOut.realCallAllowStrings};
+      for (const std::string &path : importedPaths) {
+        if (reachable.count(path) == 0) {
+          continue;
+        }
+        const Definition &definition = *stateOut.defMap.at(path);
+        if (!stateOut.realCallAllowStructs) {
+          errorOut = "linking a library needs a target with the address ABI (the vm, optexe, "
+                     "optcpp and arm64 "
+                     "native): " +
+                     path + " is imported from library " + importedLibraryName(definition);
+          return false;
+        }
+        if (stateOut.realCallReservationIndex.count(path) == 0) {
+          const std::string reason = realCallBlockerReason(definition, shapeContext);
+          errorOut =
+              "imported function " + path + " cannot be called on this target: " +
+              (reason.empty() ? "its result, receiver or body shape is not one a real call takes"
+                              : reason);
+          return false;
+        }
+      }
     }
   }
 

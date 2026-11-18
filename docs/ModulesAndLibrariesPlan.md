@@ -246,6 +246,10 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    executable, the manifest is lines of words, and the container is a table of sections with a SHA-256 each.
 4. **Compiling against a library.** `--library`, the resolver reading the interface, `[imported]` declarations,
    lowering of imported calls, the link in the pipeline, the version and interface-hash checks.
+   Landed (TODO-5925, in three parts, with a differential corpus of 23 programs on the VM and optexe): documented in `docs/spec/integration-and-tooling.md`,
+   Compiling Against a Library. `import</root>` splices the interface of the library that owns the root; a call of an
+   imported function always uses the address ABI, so a target without it is refused; the stdlib routines (`/std`) both
+   the archive and the program hold are one (the program's copy stays).
 5. **Generics and helpers.** Generic definitions in the interface, instantiation merge, synthesized helpers owned by
    their library, the private declarations a public generic reaches.
 6. **Namespace ownership.** Owned roots in the manifest and the overlap and shadowing checks.

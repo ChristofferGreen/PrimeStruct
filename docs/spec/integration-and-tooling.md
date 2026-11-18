@@ -76,7 +76,7 @@ validation, with a stub `return<int> /main() { return(0i32) }` standing in for a
 entry path whatever it is, never appears in the output), so a module that does not validate is a diagnostic and exit
 code 2. Both kinds print only what the module's own sources define: stdlib definitions that an import pulled in are not
 part of it. Both are the first step of the library plan (docs/ModulesAndLibrariesPlan.md, section 5); they write no
-archive and load no library (`--emit=lib`, below, writes one).
+archive (`--emit=lib`, below, writes one) and read a library only when `--library` names it.
 
 The interface holds the public (`public`, and not `private`), non-generic definitions, sorted by path inside nested
 `[namespace]` envelopes (a namespace's `summary` is printed on its envelope):
@@ -87,11 +87,14 @@ The interface holds the public (`public`, and not `private`), non-generic defini
   struct with static entries and keeps no mark of it, so an enum is recognized by its shape (a `value` field and static
   entries of the struct's own type built from integer literals); a struct of that shape prints as an enum, which
   validates to the same struct;
-- a function as a declaration: `[public, effects(io_out), return<i32>, summary("...")] add([i32] a, [i32] b{2i32}) {}`.
-  The return type is the one validation resolved, so a function written without `return<...>` prints its inferred
-  type. The effects are the resolved ones (the program's default effects included), sorted. The body is empty: the
-  grammar has no declaration without one, and a `host` function is written the same way. Struct members, the lifecycle
-  helpers among them, are declarations beside the struct, spelled with their full path;
+- a function as a declaration: `[public, effects(io_out), return<i32>, imported(ui), summary("...")] add([i32] a,
+  [i32] b{2i32}) {}`. The return type is the one validation resolved, so a function written without `return<...>`
+  prints its inferred type. The effects are the ones the definition declares, sorted: a caller needs the effects a callee declares, and a function that declares none needs nothing of its caller, whatever its body does under the default effects. `mut`
+  and `static` are kept, because they decide how a method is called. The body is empty, and `imported(<library>)`
+  marks it a declaration (see Compiling against a library); the library name is the root file's name without its
+  extension, with every character that is not a letter, a digit or `_` written as `_`. A method nested in a struct is
+  printed inside the struct, so its implicit `this` stays implicit; a lifecycle helper written beside the struct is
+  a declaration with its full path;
 - `summary` on structs, enums, functions and namespaces.
 
 Transform lists are separated by commas, because an absolute type path after a space (`[static /ui/Color]`) would be
@@ -114,11 +117,12 @@ prints
     Green = 5i32
   }
 
-  [public, effects(io_out), return<i32>, summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) {}
+  [public, effects(io_out), return<i32>, imported(ui), summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) {}
 }
 ```
-Struct and enum text reads back: printing it again gives the same text. A function declaration parses (with `host` added
-until the library plan's `imported` marker gives declarations a grammar of their own and validation).
+(the example's file is `ui.prime`). Struct and enum text reads back: printing it again gives the same text. A function
+declaration is valid only as the interface of a library (below), where it validates like any definition; the signature
+hash does not cover the library name.
 
 The symbol table has one line per public symbol: `{"path":"/ui/add","kind":"function","signature":"..","content":"..",
 "closure":".."}` with `kind` `struct`, `enum` or `function`, sorted by path. Every hash is SHA-256 of the text it covers
@@ -139,15 +143,15 @@ moves it. Output is byte-identical for equal input.
 sections 6 and 7): its interface, its symbol table and the unoptimized IR of its public functions, in one file. The
 module is read as for `--emit=interface`: a file with the files it imports, no entry point needed (a stub stands in for
 a missing entry, and an entry the module defines is lowered as that stub and dropped). `--with-sources` adds the
-module's `.prime` files. Nothing consumes an archive yet: `--library` and the link are TODO-5925.
+module's `.prime` files. `--library` consumes it (Compiling against a library, below).
 
 **Code.** Lowering takes every public, non-generic function of the module's own sources as a root (`host` and
 `compute` functions have no IR body and are left out), whether or not another definition calls it, and lowers what the
 roots call with them: a callee with two call sites or more, or a recursive one, is a function of the archive (a stdlib
-one such as `/std/collections/slice/Read` too), and a callee with one call site is inlined into its caller as in any
+one such as `/std/collections/slice/Read` too, which the link shares with the program's own copy), and a callee with one call site is inlined into its caller as in any
 program. The IR is lowered for the VM target, which gives every function the address ABI (a struct, a `mut` parameter or
-a string is one slot that holds an address or an index; a consumer on another target must use the same convention,
-which TODO-5925 settles) and is not optimized or inlined: several passes are target-specific, so the link runs them on
+a string is one slot that holds an address or an index; a consumer must call it with the same convention, so a
+consumer target without that ABI is refused) and is not optimized or inlined: several passes are target-specific, so the link runs them on
 the merged module. The module has `entryIndex` -1, its struct layouts, host imports, string table, source map and debug
 slots; a stub entry that lowering needs stands in for `main` and is removed. A root the real-call ABI cannot take (an
 argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
@@ -163,7 +167,7 @@ the payloads in table order. Integers are little-endian. Sections are sorted by 
 | --- | --- |
 | `code` | The serialized `IrModule` (`PSIR`, `serializeIr`) |
 | `interface` | The text of `primec --emit=interface` |
-| `manifest` | Lines of words: `primestruct-library 1`, `name <name>` (the root file's name without extension), `root <path>` (each owned namespace root, sorted: the first path segment of every public symbol), `compiler <id>`, `irschema <version>`, `hash sha256`, `interface <hash>`, `library <name> <interface hash>` (none yet) |
+| `manifest` | Lines of words: `primestruct-library 1`, `name <name>` (the root file's name without extension), `root <path>` (each owned namespace root, sorted: the first path segment of every public symbol), `compiler <id>`, `irschema <version>`, `hash sha256`, `interface <hash>`, `library <name> <interface hash>` (each library the module imported, sorted by name) |
 | `sources` | Only with `--with-sources`: the number of files (u32), then for each, sorted by relative path: path length u32, path, size u64, text |
 | `symbols` | The text of `primec --emit=symbols` |
 
@@ -187,6 +191,46 @@ case has its own message, and the ones about an archive that is stale or damaged
 
 The code must have no entry point. The checks run in this order: the container, the section hashes, the manifest, the
 compiler build, the schema version, the interface hash, the code.
+
+### Compiling Against a Library
+`primec [--emit=...] --library <name>.psa [--library ...] <program.prime>` compiles a program against library archives
+(docs/ModulesAndLibrariesPlan.md, sections 8 and 9) and links it with their code. Each archive is loaded and verified
+as in Library Archive, Reading, with the message prefixed `cannot use library <path>:`.
+
+**Import.** `import</ui>` (a logical import path whose first segment is a namespace root the library owns; `/ui/button`
+is in the root `/ui`) splices the library's interface text into the source once, as a source unit of its own
+(`SourceUnitKind::Library`, shown in diagnostics as the archive path, and listed by `--emit-deps`), however many imports
+name it. The text is then ordinary source: `import /ui/*` and full paths work as in a program that defines the module.
+An `import</root>` no library owns is `failed to read import`.
+
+**The marker.** `[imported(<library>)]` declares a function the library defines. The declaration has an empty body and
+an explicit return type, is not generic, and names exactly one library; each rule is a semantic diagnostic
+(`imported declaration must have an empty body: /f`, `imported declaration requires an explicit return type: /f`,
+`imported takes one library name, as in imported(ui): /f`). The marker is valid only in the interface of the library it
+names: in any other source it is `imported is only valid in a library interface: /f`, and in the interface of another
+library `imported(other) in the interface of library ui: /f`.
+
+**Lowering and link.** A call of an imported function is a call of an import function (`IrFunction::isImport`) that
+names the library. The link runs inside `prepareIrModule`, right after lowering and before validation and the
+optimizer, so every back end sees one module: each library is merged by name (docs/spec/vm-design.md, IR link),
+and `undefined symbol /ui/draw (library ui)` is reported for an import no library defines. Two decisions:
+
+- *ABI.* An imported function is always called with the address ABI the archive was lowered with (a struct, `mut`,
+  `this` or a string is one slot, a struct result goes through a block of the caller). A target without it (x86_64
+  native, wasm, GLSL, the simple C++ emitters) is refused: `linking a library needs a target with the address ABI (the
+  vm, optexe, optcpp and arm64 native): /ui/add is imported from library ui`. A declaration whose shape the ABI cannot
+  take is `imported function /f cannot be called on this target: <reason>`.
+- *Shared routines.* The archive holds the stdlib routines (`/std/...`) its roots reached as real calls, and the program
+  lowers the same routines under the same names. A routine under `/std` that both define is one: the program's copy
+  stays, the archive's is dropped, and the archive's callers use it. They are not compared; both come from the same
+  stdlib source. Any other name defined twice is `cannot link library ui: duplicate definition of /ui/f`.
+
+**Sets of libraries.** A library compiled against another (`--emit=lib --library base.psa`) keeps the calls of its
+functions as imports and records the library in its manifest. A set is checked when loaded: `library mid needs library
+base` when `base` is not supplied, `library base changed since library mid was compiled; rebuild` when its interface
+hash differs from the recorded one, `library base is supplied twice`. The link also checks that each interface the
+program was compiled against is the archive's (`library ui changed since this program was compiled; rebuild`). A
+program that uses no `--library` compiles as before.
 
 ### Build Command
 `primec build [--dry-run] [dir] [options]` finds `make.prime` in `dir` (default: the working directory) and runs it as a

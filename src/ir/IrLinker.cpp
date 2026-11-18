@@ -84,11 +84,26 @@ bool mergeHostImports(IrModule &module,
   return true;
 }
 
+// Whether `name` is under one of the shared roots of the options (`/std` holds `/std/math/abs`, not `/stdx`).
+bool isSharedFunction(const IrLinkOptions *options, const std::string &name) {
+  if (options == nullptr) {
+    return false;
+  }
+  for (const std::string &root : options->sharedRoots) {
+    if (name.size() > root.size() && name.compare(0, root.size(), root) == 0 &&
+        name[root.size()] == '/') {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Gives every function of the library a slot in the merged module: an import resolves to the definition of its name
 // (which may be the other module's import, kept as one), a definition fills the slot of an import of its name, and
 // two definitions of one name are an error. The bodies are copied later, once every index is known.
 bool mergeFunctionSlots(IrModule &module,
                         const IrModule &library,
+                        const IrLinkOptions *options,
                         LinkMaps &maps,
                         std::string &error) {
   std::unordered_map<std::string, size_t> byName;
@@ -117,6 +132,11 @@ bool mergeFunctionSlots(IrModule &module,
       return false;
     }
     if (!existing.isImport && !function.isImport) {
+      if (isSharedFunction(options, function.name)) {
+        maps.functions.push_back(found->second);
+        maps.copyFunction.push_back(false);
+        continue;
+      }
       error = "duplicate definition of " + function.name;
       return false;
     }
@@ -227,7 +247,10 @@ bool relocateFunction(const IrModule &library,
 
 } // namespace
 
-bool linkIrModule(IrModule &module, const IrModule &library, std::string &error) {
+bool linkIrModule(IrModule &module,
+                  const IrModule &library,
+                  std::string &error,
+                  const IrLinkOptions *options) {
   error.clear();
   // The strings of a library move by the size of the program's table, and which pushes hold a string index is known
   // only for a module that marks them (IrInstruction::isStringLiteral, PSIR v39).
@@ -246,7 +269,7 @@ bool linkIrModule(IrModule &module, const IrModule &library, std::string &error)
   }
   if (!mergeStructLayouts(merged, library, error) ||
       !mergeHostImports(merged, library, maps, error) ||
-      !mergeFunctionSlots(merged, library, maps, error)) {
+      !mergeFunctionSlots(merged, library, options, maps, error)) {
     return false;
   }
   for (size_t index = 0; index < library.functions.size(); ++index) {

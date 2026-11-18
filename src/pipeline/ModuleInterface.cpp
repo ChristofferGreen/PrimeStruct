@@ -10,6 +10,7 @@
 #include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -50,7 +51,6 @@ std::string lastSegment(const std::string &path) {
 // What the semantic product knows about a definition, by path.
 struct DefinitionFacts {
   std::unordered_map<std::string, std::string> returnTypes;
-  std::unordered_map<std::string, std::vector<std::string>> effects;
   std::unordered_map<std::string, std::string> categories;
   std::unordered_map<std::string, std::string> summaries;
 };
@@ -61,14 +61,6 @@ DefinitionFacts collectFacts(const SemanticProgram &semanticProgram) {
     const std::string path(semanticProgramReturnFactDefinitionPath(semanticProgram, fact));
     facts.returnTypes.emplace(
         path, fact.bindingTypeText.empty() ? fact.returnKind : fact.bindingTypeText);
-  }
-  for (const SemanticProgramCallableSummary &summary : semanticProgram.callableSummaries) {
-    std::vector<std::string> effects = summary.activeEffects;
-    std::sort(effects.begin(), effects.end());
-    effects.erase(std::unique(effects.begin(), effects.end()), effects.end());
-    facts.effects.emplace(
-        std::string(semanticProgramCallableSummaryFullPath(semanticProgram, summary)),
-        std::move(effects));
   }
   for (const SemanticProgramTypeMetadata &type : semanticProgram.typeMetadata) {
     facts.categories.emplace(type.fullPath, type.category);
@@ -92,6 +84,8 @@ struct Item {
   std::string displayText;
   // The declaration with the full path and no summary: what the signature hash covers.
   std::string signatureText;
+  // A method nested in a struct: printed inside the struct, not on its own.
+  bool nestedInStruct = false;
 };
 
 std::string joinWords(const std::vector<std::string> &words) {
@@ -132,14 +126,24 @@ bool functionHeader(const Definition &definition,
   if (hasTransform(definition.transforms, "public")) {
     words.push_back("public");
   }
-  for (const char *flag : {"compute", "unsafe"}) {
+  // `mut` and `static` decide how a method is called (a `mut` method needs a mutable receiver).
+  for (const char *flag : {"static", "mut", "compute", "unsafe"}) {
     if (hasTransform(definition.transforms, flag)) {
       words.push_back(flag);
     }
   }
-  const auto effects = facts.effects.find(definition.fullPath);
-  if (effects != facts.effects.end() && !effects->second.empty()) {
-    words.push_back(effectsWord(effects->second));
+  // The effects a caller must have are the ones the definition declares: a function that declares none needs nothing
+  // of its caller, whatever its body does under the default effects.
+  std::vector<std::string> declared;
+  for (const Transform &transform : definition.transforms) {
+    if (transform.name == "effects" && transform.templateArgs.empty()) {
+      declared.insert(declared.end(), transform.arguments.begin(), transform.arguments.end());
+    }
+  }
+  std::sort(declared.begin(), declared.end());
+  declared.erase(std::unique(declared.begin(), declared.end()), declared.end());
+  if (!declared.empty()) {
+    words.push_back(effectsWord(declared));
   }
   if (const Transform *capabilities = findTransform(definition.transforms, "capabilities")) {
     words.push_back(declarationTransformText(*capabilities));
@@ -181,14 +185,20 @@ std::string summaryWord(const std::string &summary) {
   return "summary(" + declarationQuotedString(summary) + ")";
 }
 
+// A struct with its fields and, in the printed interface, the declarations of its methods (a helper nested in the
+// struct has an implicit `this`, which only a declaration inside the struct body keeps).
 std::string structText(const Definition &definition,
                        const std::vector<std::string> &header,
-                       const std::string &name) {
+                       const std::string &name,
+                       const std::vector<std::string> &methods = {}) {
   std::string out = bracketed(header) + name + "(" + parametersText(definition) + ") {\n";
   for (const Expr &statement : definition.statements) {
     if (statement.isBinding) {
       out += "  " + declarationBindingText(statement) + "\n";
     }
+  }
+  for (const std::string &method : methods) {
+    out += "  " + method + "\n";
   }
   return out + "}";
 }
@@ -284,9 +294,16 @@ std::string sectionOf(const std::string &path, const std::set<std::string> &stru
   return section;
 }
 
+// What the printer adds to a function declaration: the library it is imported from.
+std::string importedWord(const std::string &libraryName) {
+  return "imported(" + libraryName + ")";
+}
+
 bool buildItem(const Definition &definition,
                const DefinitionFacts &facts,
                const std::set<std::string> &structPaths,
+               const std::map<std::string, std::vector<std::string>> &methodsByStruct,
+               const std::string &libraryName,
                Item &item,
                std::string &error) {
   item.definition = &definition;
@@ -309,7 +326,12 @@ bool buildItem(const Definition &definition,
     if (!item.summary.empty()) {
       header.push_back(summaryWord(item.summary));
     }
-    item.displayText = structText(definition, header, displayName);
+    const auto methods = methodsByStruct.find(definition.fullPath);
+    item.displayText =
+        structText(definition,
+                   header,
+                   displayName,
+                   methods == methodsByStruct.end() ? std::vector<std::string>() : methods->second);
     return true;
   }
   item.kind = "function";
@@ -317,10 +339,14 @@ bool buildItem(const Definition &definition,
     return false;
   }
   item.signatureText = functionText(definition, header, definition.fullPath);
+  header.push_back(importedWord(libraryName));
   if (!item.summary.empty()) {
     header.push_back(summaryWord(item.summary));
   }
-  item.displayText = functionText(definition, header, displayName);
+  item.nestedInStruct =
+      definition.isNested && structPaths.count(parentDefinitionPath(definition.fullPath)) != 0;
+  item.displayText = functionText(
+      definition, header, item.nestedInStruct ? lastSegment(definition.fullPath) : displayName);
   return true;
 }
 
@@ -445,6 +471,7 @@ bool buildModuleInterface(const Program &program,
                           const SemanticProgram &semanticProgram,
                           const ExpandedSource &source,
                           const std::string &entryPath,
+                          const std::string &libraryName,
                           ModuleInterface &out,
                           std::string &error) {
   out = {};
@@ -477,10 +504,41 @@ bool buildModuleInterface(const Program &program,
       continue;
     }
     Item item;
-    if (!buildItem(definition, facts, structPaths, item, error)) {
+    if (!buildItem(definition, facts, structPaths, {}, libraryName, item, error)) {
       return false;
     }
     items.push_back(std::move(item));
+  }
+  // The methods nested in a struct are printed inside it: collect their declarations, in path order, and build the
+  // struct items again with them.
+  std::map<std::string, std::vector<std::string>> methodsByStruct;
+  {
+    std::vector<const Item *> methods;
+    for (const Item &item : items) {
+      if (item.nestedInStruct) {
+        methods.push_back(&item);
+      }
+    }
+    std::sort(methods.begin(), methods.end(), [](const Item *left, const Item *right) {
+      return left->definition->fullPath < right->definition->fullPath;
+    });
+    for (const Item *method : methods) {
+      methodsByStruct[parentDefinitionPath(method->definition->fullPath)].push_back(
+          method->displayText);
+    }
+  }
+  if (!methodsByStruct.empty()) {
+    for (Item &item : items) {
+      if (item.kind != "struct" || methodsByStruct.count(item.definition->fullPath) == 0) {
+        continue;
+      }
+      Item rebuilt;
+      if (!buildItem(
+              *item.definition, facts, structPaths, methodsByStruct, libraryName, rebuilt, error)) {
+        return false;
+      }
+      item = std::move(rebuilt);
+    }
   }
   std::sort(items.begin(), items.end(), [](const Item &left, const Item &right) {
     if (left.definition->fullPath != right.definition->fullPath) {
@@ -491,7 +549,9 @@ bool buildModuleInterface(const Program &program,
 
   Node root;
   for (const Item &item : items) {
-    insertItem(root, item);
+    if (!item.nestedInStruct) {
+      insertItem(root, item);
+    }
   }
   bool first = true;
   printNode(out.text, root, "", facts, 0, first);
@@ -523,6 +583,19 @@ bool buildModuleInterface(const Program &program,
   }
   out.interfaceHash = sha256Hex(lines);
   return true;
+}
+
+std::string libraryNameOfRootFile(const std::string &path) {
+  std::string name = std::filesystem::path(path).stem().string();
+  for (char &c : name) {
+    const bool word =
+        (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+    c = word ? c : '_';
+  }
+  if (name.empty() || (name.front() >= '0' && name.front() <= '9')) {
+    name.insert(name.begin(), '_');
+  }
+  return name;
 }
 
 std::string formatModuleSymbolTable(const ModuleInterface &moduleInterface) {

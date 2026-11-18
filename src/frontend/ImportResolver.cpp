@@ -61,13 +61,50 @@ struct ImportEntry {
   bool isLogical = false;
 };
 
+// The library that owns the namespace root a logical import path starts with (`/ui` and `/ui/button` are in the root
+// `/ui`), or null.
+const LibraryInterfaceUnit *libraryOwning(const std::vector<LibraryInterfaceUnit> *libraries,
+                                          const std::string &path) {
+  if (libraries == nullptr) {
+    return nullptr;
+  }
+  for (const LibraryInterfaceUnit &library : *libraries) {
+    for (const std::string &root : library.roots) {
+      if (path == root || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 &&
+                           path[root.size()] == '/')) {
+        return &library;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Splices the interface of `library` once, as a unit of its own, however many imports name it.
+void spliceLibraryInterface(const LibraryInterfaceUnit &library,
+                            std::unordered_set<std::string> &expanded,
+                            ExpandedSourceBuilder &builder) {
+  if (!expanded.insert("library:" + library.name).second) {
+    return;
+  }
+  const std::size_t unitId = builder.addUnit(SourceUnitKind::Library,
+                                             library.displayPath,
+                                             library.name + ":" + library.interfaceHash,
+                                             1,
+                                             1);
+  builder.appendSegment(unitId, library.text, 1, 1);
+  if (!builder.textEndsWithNewline()) {
+    builder.appendGenerated("\n", "<import-separator>");
+  }
+}
+
 bool expandImportsInternal(const std::string &baseDir,
                            const std::string &source,
                            std::unordered_set<std::string> &expanded,
                            std::string &error,
                            const std::vector<std::filesystem::path> &importRoots,
                            ExpandedSourceBuilder &builder,
-                           std::size_t sourceUnitId) {
+                           std::size_t sourceUnitId,
+                           const std::vector<LibraryInterfaceUnit> *libraries) {
   size_t copyStart = 0;
   for (size_t i = 0; i < source.size();) {
     if (source[i] == '"' || source[i] == '\'') {
@@ -359,6 +396,12 @@ bool expandImportsInternal(const std::string &baseDir,
     std::optional<std::string> selectedVersion;
     std::vector<std::filesystem::path> allImportFiles;
     for (const auto &path : paths) {
+      if (path.isLogical && !requestedVersion) {
+        if (const LibraryInterfaceUnit *library = libraryOwning(libraries, path.path)) {
+          spliceLibraryInterface(*library, expanded, builder);
+          continue;
+        }
+      }
       std::filesystem::path resolved;
       std::optional<std::string> resolvedVersion;
       if (!resolveIncludePath(path, resolved, resolvedVersion)) {
@@ -404,7 +447,8 @@ bool expandImportsInternal(const std::string &baseDir,
                                  error,
                                  importRoots,
                                  builder,
-                                 importedUnitId)) {
+                                 importedUnitId,
+                                 libraries)) {
         return false;
       }
       const size_t afterSize = builder.textSize();
@@ -474,7 +518,8 @@ bool ImportResolver::expandImportsFromSource(const std::string &displayPath,
   const std::size_t primaryUnitId =
       builder.addUnit(SourceUnitKind::Primary, input.string(), {}, 1, 1);
   std::unordered_set<std::string> expanded;
-  return expandImportsInternal(baseDir, content, expanded, error, expandedRoots, builder, primaryUnitId);
+  return expandImportsInternal(
+      baseDir, content, expanded, error, expandedRoots, builder, primaryUnitId, libraries_);
 }
 
 } // namespace primec

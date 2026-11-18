@@ -770,7 +770,10 @@ bool findGlslRecursionCycle(const IrModule &module, std::string &error) {
 
 } // namespace
 
-bool validateIrModule(const IrModule &module, IrValidationTarget target, std::string &error) {
+bool validateIrModule(const IrModule &module,
+                      IrValidationTarget target,
+                      std::string &error,
+                      bool allowImports) {
   error.clear();
 
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {
@@ -838,6 +841,9 @@ bool validateIrModule(const IrModule &module, IrValidationTarget target, std::st
     if (!functionNames.insert(function.name).second) {
       error = "duplicate IR function name: " + function.name;
       return false;
+    }
+    if (function.isImport && allowImports) {
+      continue;
     }
     if (function.isImport) {
       // An import has no body; linking (primec/ir/IrLinker.h) replaces it, and nothing runs a module that has one.

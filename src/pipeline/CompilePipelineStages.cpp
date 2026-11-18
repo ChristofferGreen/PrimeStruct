@@ -6,6 +6,7 @@
 #include "primec/ast/AstMemory.h"
 #include "primec/ast/AstPrinter.h"
 #include "primec/frontend/ImportResolver.h"
+#include "primec/pipeline/LibraryLink.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/IrPrinter.h"
 #include "primec/frontend/Lexer.h"
@@ -85,6 +86,17 @@ bool runCompilePipelineImportStage(const Options &options,
                                    std::string &error,
                                    DiagnosticSink &diagnosticSink) {
   ImportResolver importResolver;
+  // `--library`: an `import</root>` of a root a library owns reads the interface of its archive.
+  std::vector<LoadedLibrary> libraries;
+  std::vector<LibraryInterfaceUnit> libraryInterfaces;
+  if (!options.libraryPaths.empty()) {
+    if (!loadLibraries(options.libraryPaths, libraries, error)) {
+      diagnosticSink.setSummary(error);
+      return false;
+    }
+    libraryInterfaces = libraryInterfaceUnits(libraries);
+    importResolver.setLibraryInterfaces(&libraryInterfaces);
+  }
   const bool imported =
       options.inMemorySource.has_value()
           ? importResolver.expandImportsFromSource(options.inputPath,

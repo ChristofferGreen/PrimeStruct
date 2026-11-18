@@ -59,28 +59,27 @@ const std::string ExpectedInterface = R"([namespace summary("Drawing.")] ui {
     [public, i32] x{1i32}
     [public, i32] y{2i32}
     [private, i32] secret{3i32}
+    [public, return<i32>, imported(emit_interface_golden)] sum([/ui/Point] self) {}
   }
 
-  [public, effects(io_out), return<i32>] /ui/Point/sum([/ui/Point] self) {}
+  [public, effects(io_out), return<i32>, imported(emit_interface_golden), summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) {}
 
-  [public, effects(io_out), return<i32>, summary("Adds two numbers.")] add([i32] a, [i32] b{2i32}) {}
-
-  [public, effects(io_out), return<i32>] inferred() {}
+  [public, return<i32>, imported(emit_interface_golden)] inferred() {}
 
   [namespace] inner {
-    [public, effects(io_out), return<bool>] deep() {}
+    [public, return<bool>, imported(emit_interface_golden)] deep() {}
   }
 }
 )";
 
 const std::string ExpectedSymbols =
-    R"({"interfaceHash":"8151fb12e46e25142da92e8c22165c4128b5965b08bb1240a3155eae35bbe67f","symbols":[
+    R"({"interfaceHash":"6a2272927b91f1ff25f664c916dbb465c96bd2c249e20d7e634fb06bcdff2971","symbols":[
 {"path":"/ui/Color","kind":"enum","signature":"1aab50e10f98c0c75e4c8c6604d78352d1764849df4fbc070640362355058a02","content":"fa6da5a05dae4b3ec71a6cd93def74862c30b5f852a61a02e4fdee386f835e1b","closure":"9ead24982a2d2d361883be611405d689bb42998d902cce5a161a301259b554b9"},
 {"path":"/ui/Point","kind":"struct","signature":"201683163b9940949f39f0c40219bb0c01e00fea87681f1c2aad96fe8b2351fd","content":"9e772ebaa89b5078d1fa2a8bb9185fbf300ecbf9156b9d78e02e2c94a05d3e9f","closure":"17d54cdea8e2cea093bfbf86702b479c91e825bf5011b5ce9ec2b289408154e7"},
-{"path":"/ui/Point/sum","kind":"function","signature":"2bbb1a1aae585f835ab4f8e84a381f51b65384612474ed9a041d4bbf283d46dd","content":"43edcd44d10417b873b376fc2cd1c59ded2d25a37d9de179c67710bf070b8a55","closure":"b1810f7cadd5afa8afc4f7a399414d9f0ed57afa13d95eb20dd432d2b2787405"},
+{"path":"/ui/Point/sum","kind":"function","signature":"78b4448ca0821f428e7299133ddb171568d40186fb1d40ddef89543a41c00d17","content":"43edcd44d10417b873b376fc2cd1c59ded2d25a37d9de179c67710bf070b8a55","closure":"b1810f7cadd5afa8afc4f7a399414d9f0ed57afa13d95eb20dd432d2b2787405"},
 {"path":"/ui/add","kind":"function","signature":"f6491b80d09e1dad813c08745de5ee8c8566d0f28996fab9e832d3a365e90f0f","content":"dd6317c0ac407da82b238d954159a4265b592843619e1242ccce7d57af93ebc3","closure":"4473b258040824a50395092c5230dcf4fd3a1cb480e9b26798695084121b11a7"},
-{"path":"/ui/inferred","kind":"function","signature":"3097d0395fe6d662863009d8b570795568765a1e2bc55d5888a18524e0150164","content":"ae34869427dc8676284d22793e36a4c015c9c7359c3f66e0605f90fcf10351c7","closure":"85073df034bb21db0c8bbd0bc3e2862706e103fd9de1799b95825baf3cefe71f"},
-{"path":"/ui/inner/deep","kind":"function","signature":"475e2b2181fc8b622ea6f249d3ebd95343a2f9c3586dd4ff4f71e914f7fadb48","content":"18cd5240b9c126b475d8d95cc3ea04326527a553ca5bd40f9ce1cee7cfb9126e","closure":"5d67bf60e66b6ae4a34d2c972f64d7450e4d3f9dd482b0cd39c1897020febdb2"}
+{"path":"/ui/inferred","kind":"function","signature":"44ae00e790fa2363e7be086f25e8fc01f2a9bc7ba39f885c6b664490d5f30a53","content":"ae34869427dc8676284d22793e36a4c015c9c7359c3f66e0605f90fcf10351c7","closure":"85073df034bb21db0c8bbd0bc3e2862706e103fd9de1799b95825baf3cefe71f"},
+{"path":"/ui/inner/deep","kind":"function","signature":"54d27e81b295d47e418ed5ac1d0947e3cc265efc9354532dd874d66f225af954","content":"18cd5240b9c126b475d8d95cc3ea04326527a553ca5bd40f9ce1cee7cfb9126e","closure":"5d67bf60e66b6ae4a34d2c972f64d7450e4d3f9dd482b0cd39c1897020febdb2"}
 ]}
 )";
 
@@ -157,7 +156,8 @@ TEST_CASE("emit-interface leaves out the entry point and the stdlib") {
               "[public return<int>]\nmain() {\n  return(0i32)\n}\n",
               "interface");
   CHECK(run.exitCode == 0);
-  CHECK(run.out == "[public, effects(heap_alloc), return<i32>] count_items() {}\n");
+  CHECK(run.out == "[public, effects(heap_alloc), return<i32>, imported(emit_interface_entry)] "
+                   "count_items() {}\n");
 }
 
 TEST_CASE("emit-interface prints inferred return types resolved") {
@@ -167,18 +167,20 @@ TEST_CASE("emit-interface prints inferred return types resolved") {
               "[public]\nsum([i32] a) {\n  return(a + 1i32)\n}\n",
               "interface");
   CHECK(run.exitCode == 0);
-  CHECK(run.out.find("[public, effects(io_out), return<bool>] flag() {}") != std::string::npos);
-  CHECK(run.out.find("[public, effects(io_out), return<i32>] sum([i32] a) {}") !=
+  CHECK(run.out.find("[public, return<bool>, imported(emit_interface_inferred)] flag() {}") !=
         std::string::npos);
-  CHECK(run.out.find("[public, effects(io_out), return<i64>] wide() {}") != std::string::npos);
+  CHECK(run.out.find("[public, return<i32>, imported(emit_interface_inferred)] "
+                     "sum([i32] a) {}") != std::string::npos);
+  CHECK(run.out.find("[public, return<i64>, imported(emit_interface_inferred)] wide() {}") !=
+        std::string::npos);
 }
 
 TEST_CASE("emit-interface printed twice is byte-identical") {
-  const InterfaceRun first = runEmit("emit_interface_twice_a", ModuleSource, "interface");
-  const InterfaceRun second = runEmit("emit_interface_twice_b", ModuleSource, "interface");
+  const InterfaceRun first = runEmit("emit_interface_twice", ModuleSource, "interface");
+  const InterfaceRun second = runEmit("emit_interface_twice", ModuleSource, "interface");
   CHECK(first.out == second.out);
-  const InterfaceRun firstTable = runEmit("emit_interface_twice_a", ModuleSource, "symbols");
-  const InterfaceRun secondTable = runEmit("emit_interface_twice_b", ModuleSource, "symbols");
+  const InterfaceRun firstTable = runEmit("emit_interface_twice", ModuleSource, "symbols");
+  const InterfaceRun secondTable = runEmit("emit_interface_twice", ModuleSource, "symbols");
   CHECK(firstTable.out == secondTable.out);
   CHECK(firstTable.out.size() > 100);
 }
@@ -241,43 +243,6 @@ TEST_CASE("emit-interface prints structs and enums that read back unchanged") {
   CHECK(second.exitCode == 0);
   CHECK(second.out == first.out);
   CHECK(first.out.find("[public, enum<i64>] Shade {") != std::string::npos);
-}
-
-TEST_CASE("emit-interface declarations parse back as definitions with an empty body") {
-  const InterfaceRun printed = runEmit("emit_interface_parse_back", ModuleSource, "interface");
-  REQUIRE(printed.exitCode == 0);
-  // The grammar has no declaration without a body yet (the `imported` marker of the library plan will add one), so the
-  // test marks each function declaration `host`, which the parser accepts with an empty body, and parses the text.
-  std::string hosted;
-  size_t start = 0;
-  while (start < printed.out.size()) {
-    size_t end = printed.out.find('\n', start);
-    if (end == std::string::npos) {
-      end = printed.out.size();
-    }
-    std::string line = printed.out.substr(start, end - start);
-    const size_t bracket = line.find("[public, effects");
-    if (bracket != std::string::npos) {
-      line.insert(bracket + 1, "host, ");
-    }
-    hosted += line + "\n";
-    start = end + 1;
-  }
-  const std::string srcPath = writeTemp("emit_interface_parse_back_hosted.prime", hosted);
-  const std::string outPath = (testScratchPath("") / "emit_interface_parse_back_ast.txt").string();
-  CHECK(runCommand("./primec --dump-stage ast " + quoteShellArg(srcPath) + " > " +
-                   quoteShellArg(outPath)) == 0);
-  const std::string ast = readFile(outPath);
-  for (const char *path : {"/ui/Color()",
-                           "/ui/Point()",
-                           "/ui/Point/sum(",
-                           "/ui/add(",
-                           "/ui/inferred(",
-                           "/ui/inner/deep("}) {
-    CAPTURE(path);
-    CHECK(ast.find(path) != std::string::npos);
-  }
-  CHECK(ast.find("hidden") == std::string::npos);
 }
 
 TEST_CASE("emit-interface reports a semantic error of the module") {
