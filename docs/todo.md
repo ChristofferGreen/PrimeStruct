@@ -913,9 +913,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
 
-- [ ] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
+- [~] TODO-5924: `--emit=lib` writes a library archive from every public definition of a module
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: lib-archive (worktree-agent-a345c973f20d21a56), 2026-11-18
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 6 and 7)
   - parallel_track: lib-archive
