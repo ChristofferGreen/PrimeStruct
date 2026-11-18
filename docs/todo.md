@@ -414,9 +414,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the spawn binding inference only.
   - notes: deferred: no example needs it; `return<void>` is the workaround.
 
-- [ ] TODO-5844: Short-string `optexe` benchmarks take the cycles they took before the heap arenas
+- [~] TODO-5844: Short-string `optexe` benchmarks take the cycles they took before the heap arenas
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: optexe-bytes (worktree-agent-a5b854954c33d0631), 2026-11-18
   - created_at: 2026-11-10
   - phase: Optimizing backends (found in TODO-5794)
   - parallel_track: optexe-bytes
