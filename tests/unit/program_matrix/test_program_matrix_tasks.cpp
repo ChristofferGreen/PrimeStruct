@@ -1196,6 +1196,218 @@ TEST_CASE("a task takes and returns a stdlib Map in built executables") {
   runTaskProgram(stdlibMapProgram(), TaskFamily::Compiled);
 }
 
+// The builtin `map<K, V>` is the stdlib `MapValue` storage struct, which crosses like any struct (TODO-5847): a map
+// argument is a borrowed value, a copy the task owns (`copy`) or the spawner's map handed over (`move`), and a map
+// result is moved to the waiter.
+namespace {
+program_matrix::ProgramCase builtinMapProgram() {
+  program_matrix::ProgramCase program;
+  program.name = "task_builtin_map_arguments";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[return<i32> effects(heap_alloc)]
+table_size([map<i32, i32>] table) {
+  return(table.count() * 10i32 + table.at(3i32))
+}
+
+[return<i32> effects(heap_alloc)]
+table_copy([map<i32, i32> copy] table) {
+  return(table.count() * 100i32 + table.at(1i32))
+}
+
+[return<i32> effects(heap_alloc)]
+table_eaten([map<i32, i32> move] table) {
+  return(table.count() * 1000i32 + table.at(1i32))
+}
+
+[return<map<i32, i32>> effects(heap_alloc)]
+make_table([i32] value) {
+  [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)}
+  return(out)
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [map<i32, i32>] table{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  [map<i32, i32>] other{map<i32, i32>(1i32, 6i32)}
+  [Task<i32>] a{[spawn] table_size(table)}
+  [Task<i32>] b{[spawn] table_copy(table)}
+  [Task<i32>] c{[spawn] table_eaten(other)}
+  [Task<map<i32, i32>>] d{[spawn] make_table(9i32)}
+  print_line(wait(a))
+  print_line(wait(b))
+  print_line(wait(c))
+  [map<i32, i32>] got{wait(d)}
+  print_line(got.count() * 10i32 + got.at(1i32))
+  print_line(table.count())
+  return(0i32)
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "24\n202\n1006\n29\n2\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
+  return program;
+}
+} // namespace
+
+TEST_CASE("a task takes and returns builtin maps") {
+  runTaskProgram(builtinMapProgram(), TaskFamily::VmEager);
+}
+
+TEST_CASE("a task takes and returns builtin maps on scheduler seeds 1 to 4") {
+  runTaskProgram(builtinMapProgram(), TaskFamily::VmSeedsLow);
+}
+
+TEST_CASE("a task takes and returns builtin maps on scheduler seeds 5 to 8 and on threads") {
+  runTaskProgram(builtinMapProgram(), TaskFamily::VmSeedsHigh);
+}
+
+TEST_CASE("a task takes and returns builtin maps in built executables") {
+  runTaskProgram(builtinMapProgram(), TaskFamily::Compiled);
+}
+
+// An owned sum crosses like a struct: the spawner binds a `copy` or `move` argument in a hidden local, clears its
+// drop flag, and the task's body destroys the payload; a sum result is moved to the waiter (TODO-5847).
+namespace {
+program_matrix::ProgramCase ownedSumProgram() {
+  program_matrix::ProgramCase program;
+  program.name = "task_owned_sum_arguments";
+  program.source = R"(
+import /std/text/*
+import /std/maybe/*
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32] id{0i32}
+  [String] label{String{}}
+}
+
+[sum]
+Shape {
+  [Item] circle
+  [i32] square
+}
+
+[return<i32> effects(heap_alloc)]
+weigh([Shape copy] s) {
+  return(pick(s) {
+    circle(c) { c.id + c.label.count() }
+    square(n) { n }
+  })
+}
+
+[return<i32> effects(heap_alloc)]
+look([Shape] s) {
+  return(pick(s) {
+    circle(c) { c.id }
+    square(n) { n }
+  })
+}
+
+[return<i32> effects(heap_alloc)]
+take([Maybe<Item> move] m) {
+  return(pick(m) {
+    none { -1i32 }
+    some(v) { v.id + v.label.count() }
+  })
+}
+
+[return<Shape> effects(heap_alloc)]
+make_shape([i32] id) {
+  [String mut] w{String{}}
+  w.append("a label long enough to live on the string heap")
+  [Shape] out{[circle] Item{id, w}}
+  return(out)
+}
+
+[return<Maybe<Item>> effects(heap_alloc)]
+make_maybe([i32] id) {
+  if(id < 0i32) {
+    return(none<Item>())
+  }
+  [String mut] w{String{}}
+  w.append("a label long enough to live on the string heap")
+  return(some<Item>(Item{id, w}))
+}
+
+[return<i32> effects(task, heap_alloc, io_out)]
+round() {
+  [String mut] label{String{}}
+  label.append("a label long enough to live on the string heap")
+  [Shape] s{[circle] Item{3i32, label}}
+  [Task<i32>] a{[spawn] weigh(s)}
+  [Task<i32>] b{[spawn] take(some<Item>(Item{4i32, String{}}))}
+  [Task<i32>] l{[spawn] look(s)}
+  [Task<Shape>] c{[spawn] make_shape(5i32)}
+  [Task<Maybe<Item>>] d{[spawn] make_maybe(6i32)}
+  [Task<Maybe<Item>>] e{[spawn] make_maybe(-1i32)}
+  print_line(wait(a))
+  print_line(wait(b))
+  print_line(wait(l))
+  [Shape] got{wait(c)}
+  print_line(weigh(got))
+  [Maybe<Item>] gm{wait(d)}
+  print_line(pick(gm) { none { 0i32 } some(v) { v.id } })
+  [Maybe<Item>] none_result{wait(e)}
+  print_line(pick(none_result) { none { 0i32 } some(v) { v.id } })
+  print_line(look(s))
+  return(0i32)
+}
+
+[return<i32> effects(heap_alloc)]
+probe() {
+  if(true) {
+    [String mut] scratch{String{}}
+    scratch.append("an allocation that makes this arena free what tasks freed")
+  }
+  return(heapLiveBlocks() * 1000i32 + convert<i32>(stringHeapBytesInUse()))
+}
+
+[return<int> effects(task, io_out, heap_alloc)]
+main() {
+  [i32] before{probe()}
+  print_line(round())
+  [i32] after{probe()}
+  print_line(after - before)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "49\n4\n3\n51\n6\n0\n3\n0\n0\n";
+  program.skipConfigs = {"native-O0", "native-O2"};
+  return program;
+}
+} // namespace
+
+TEST_CASE("a task takes and returns owned sums") {
+  runTaskProgram(ownedSumProgram(), TaskFamily::Vm);
+}
+
+TEST_CASE("a task takes and returns owned sums in built executables") {
+  runTaskProgram(ownedSumProgram(), TaskFamily::Compiled);
+}
+
 // A method or index read of a waited result (`wait(t).count()`, `wait(t)[i]`, `wait(t).weight()`) evaluates the wait
 // once and reads the result while it is alive; the heap is balanced afterwards (`probe`).
 TEST_CASE("a method call on a wait result waits once") {
@@ -1304,8 +1516,8 @@ main() {
   runTaskProgram(program);
 }
 
-// A spawn that still runs inline (a map parameter, a vector result that is not a local the task built) gives the
-// same values on every schedule.
+// A spawn that still runs inline (a `string` parameter, a vector result that is not a local the task built) gives
+// the same values on every schedule.
 TEST_CASE("a spawn that stays inline still returns its values") {
   program_matrix::ProgramCase program;
   program.name = "task_vector_inline_shapes";
@@ -1313,8 +1525,8 @@ TEST_CASE("a spawn that stays inline still returns its values") {
 import /std/collections/*
 
 [return<i32>]
-table_size([map<i32, i32>] table) {
-  return(table.count())
+label_size([string] label) {
+  return(label.count())
 }
 
 [return<vector<i32>> effects(heap_alloc)]
@@ -1325,8 +1537,7 @@ twice([i32] count) {
 
 [effects(task, io_out, heap_alloc) return<int>]
 main() {
-  [map<i32, i32> mut] table{map<i32, i32>(1i32, 2i32)}
-  [Task<i32>] sized{[spawn] table_size(table)}
+  [Task<i32>] sized{[spawn] label_size("four")}
   [Task<vector<i32>>] doubled{[spawn] twice(5i32)}
   print_line(wait(sized))
   [vector<i32>] pair{wait(doubled)}
@@ -1336,7 +1547,7 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "1\n2\n5\n";
+  program.stdoutText = "4\n2\n5\n";
   runTaskProgram(program);
 }
 

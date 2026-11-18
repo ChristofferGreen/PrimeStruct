@@ -143,6 +143,11 @@ std::string extractParameterTypeNameStatic(const Expr &paramExpr);
 // The struct a definition returns by value as a real call: the declared `return<T>` names a struct (not a sum, not a
 // collection record, not a packed error struct), or empty when the result is a scalar, void or not eligible. The
 // callee moves or copies the result into a heap block and the call site moves it into a block of its frame.
+// The storage struct (the stdlib struct declared with `key_value_type`, specialized for these type arguments) of a
+// builtin key/value collection, or empty when the program holds no such specialization.
+std::string
+builtinMapStoragePath(const std::vector<std::string> &templateArgs,
+                      const std::unordered_map<std::string, const Definition *> &definitionsByPath);
 std::string realCallStructReturnPath(const Definition &def,
                                      const std::unordered_set<std::string> &structNames,
                                      const std::unordered_map<std::string, const Definition *> &definitionsByPath);

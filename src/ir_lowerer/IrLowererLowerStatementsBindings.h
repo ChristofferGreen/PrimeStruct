@@ -89,27 +89,28 @@
         };
     canonicalizeExplicitBuiltinKeyValueHelpers(normalizedStmt);
     const Expr &stmt = normalizedStmt;
+    // The definition whose result a `return` statement here returns, and whether it is a real call that returns its
+    // result in a block of its caller.
+    const auto declaredReturnDefinition = [&]() -> const Definition * {
+      const auto defIt = defMap.find(activeInlineContext != nullptr ? activeInlineContext->defPath
+                                                                    : function.name);
+      return defIt == defMap.end() ? nullptr : defIt->second;
+    };
+    const bool realCallStructResult =
+        realCallStructReturnLocal >= 0 && activeInlineContext == nullptr;
     auto extractDeclaredStructReturnPath = [&]() {
-      const std::string &definitionPath =
-          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
-      auto defIt = defMap.find(definitionPath);
-      if (defIt == defMap.end() || defIt->second == nullptr) {
+      const Definition *returnDef = declaredReturnDefinition();
+      if (returnDef == nullptr) {
         return std::string{};
       }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        const std::string typeName = trimTemplateTypeText(transform.templateArgs.front());
-        if (!typeName.empty() && typeName.front() == '/') {
-          return typeName;
-        }
-        std::string resolvedStructPath;
-        if (resolveStructTypeName(typeName, defIt->second->namespacePrefix, resolvedStructPath)) {
-          return resolvedStructPath;
+      // A real call returns a builtin `map` (a spawned call's) as its storage struct.
+      if (realCallStructResult) {
+        if (std::string mapPath = ir_lowerer::declaredReturnMapStoragePath(*returnDef, defMap);
+            !mapPath.empty()) {
+          return mapPath;
         }
       }
-      return std::string{};
+      return ir_lowerer::declaredReturnStructPath(*returnDef, resolveStructTypeName);
     };
     // A builtin vector local owns its record only when the initializer makes a fresh vector (the
     // vector constructor or a user definition returning one), never when it aliases a name, field,
@@ -171,30 +172,14 @@
       }
       return nullptr;
     };
-    auto declaredReturnBase = [&]() {
-      const std::string &definitionPath =
-          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
-      auto defIt = defMap.find(definitionPath);
-      if (defIt == defMap.end() || defIt->second == nullptr) {
-        return std::string{};
-      }
-      for (const auto &transform : defIt->second->transforms) {
-        if (transform.name != "return" || transform.templateArgs.size() != 1) {
-          continue;
-        }
-        std::string base;
-        std::string arg;
-        if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg)) {
-          return std::string{};
-        }
-        return normalizeDeclaredCollectionTypeBase(base);
-      }
-      return std::string{};
-    }();
+    const Definition *declaredReturnDef = declaredReturnDefinition();
+    const std::string declaredReturnBase =
+        declaredReturnDef != nullptr ? ir_lowerer::declaredReturnTypeBase(*declaredReturnDef)
+                                     : std::string{};
     const bool declaredReturnIsReferenceHandle = declaredReturnBase == "Reference";
     const bool declaredReturnIsPointerLikeHandle =
         declaredReturnBase == "Reference" || declaredReturnBase == "Pointer" ||
-        declaredReturnBase == "map";
+        (declaredReturnBase == "map" && !realCallStructResult);
     if (!stmt.isBinding && stmt.kind == Expr::Kind::StringLiteral) {
       error = "native backend does not support string literal statements";
       return false;
@@ -523,6 +508,31 @@
             }
           }
           if (spawnAsTask) {
+            // A sum argument crosses as a hidden local of this scope that owns its payload: a copy of a named sum, the
+            // sum `move(name)` hands over, or a fresh value. Another place is not copied here, so the call stays inline.
+            for (size_t argIndex = 0;
+                 argIndex < taskArgs.size() && argIndex < taskShape.parameters.size();
+                 ++argIndex) {
+              const ir_lowerer::TaskSpawnParameterShape &parameter = taskShape.parameters[argIndex];
+              const Expr *sumArg = taskArgs[argIndex];
+              if (sumArg == nullptr || parameter.structPath.empty() ||
+                  sumHelpers.resolveSumDefinitionByPath(parameter.structPath) == nullptr) {
+                continue;
+              }
+              const bool sumCopyable =
+                  sumArg->kind == Expr::Kind::Name ||
+                  (isSimpleCallName(*sumArg, "move") && sumArg->args.size() == 1 &&
+                   sumArg->args.front().kind == Expr::Kind::Name) ||
+                  (sumArg->kind == Expr::Kind::Call && !sumArg->isFieldAccess &&
+                   isTemporaryStructCopySource(*sumArg, localsIn));
+              if (!sumCopyable) {
+                spawnAsTask = false;
+                inlineReason = "its sum argument is not a name, `move` of a name or a fresh value";
+                break;
+              }
+            }
+          }
+          if (spawnAsTask) {
             if (!taskPackedArgs.empty() || taskArgs.size() != spawnedCallee->parameters.size() ||
                 taskArgs.size() != taskShape.parameters.size()) {
               error = "internal error: unexpected arguments for spawned task " +
@@ -696,6 +706,28 @@
                 error = "internal error: struct argument of spawned task " +
                         spawnedCallee->fullPath + " is not a struct local";
                 return false;
+              }
+              if (taskArgs[argIndex]->kind == Expr::Kind::Name) {
+                // A sum bound from a place shares the place's payload after the slot copy; the hidden local gets
+                // one of its own (a struct's `Copy` helpers ran in the binding).
+                const auto sourceIt = localsIn.find(taskArgs[argIndex]->name);
+                if (const Definition *argumentSum =
+                        sumHelpers.resolveSumDefinitionByPath(parameter.structPath);
+                    argumentSum != nullptr && sourceIt != localsIn.end() &&
+                    sumHelpers.sumPayloadsNeedDestroy(*argumentSum)) {
+                  if (!sumHelpers.emitActiveSumPayloadCopyFromSumPtrs(*argumentSum,
+                                                                      argumentIt->second.index,
+                                                                      sourceIt->second.index,
+                                                                      localsIn)) {
+                    return false;
+                  }
+                  if (argumentIt->second.dropFlagLocal >= 0) {
+                    function.instructions.push_back({IrOpcode::PushI32, 1});
+                    function.instructions.push_back(
+                        {IrOpcode::StoreLocal,
+                         static_cast<uint64_t>(argumentIt->second.dropFlagLocal)});
+                  }
+                }
               }
               argument.local = argumentIt->second.index;
               argument.slots = argumentLayout.totalSlots;

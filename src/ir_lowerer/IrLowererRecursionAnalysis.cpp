@@ -382,6 +382,30 @@ std::string resolveStructTypeName(const std::string &typeName,
 
 } // namespace
 
+std::string builtinMapStoragePath(
+    const std::vector<std::string> &templateArgs,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+  if (templateArgs.size() != 2) {
+    return {};
+  }
+  // The storage of a builtin key/value collection is the struct the stdlib declares with the `key_value_type`
+  // transform: its two `Vector` fields have `Copy` and `Destroy` helpers that own the buffers, so it crosses like any
+  // struct. The specialization's name ends with the hash of its type arguments.
+  const std::string suffix = mangleTemplateTypeArgsSuffix(templateArgs);
+  std::string found;
+  for (const auto &[path, def] : definitionsByPath) {
+    if (def == nullptr || path.size() <= suffix.size() ||
+        path.compare(path.size() - suffix.size(), suffix.size(), suffix) != 0 ||
+        !definitionHasTransform(*def, "key_value_type")) {
+      continue;
+    }
+    if (found.empty() || path < found) {
+      found = path;
+    }
+  }
+  return found;
+}
+
 std::string realCallStructReturnPath(const Definition &def,
                                      const std::unordered_set<std::string> &structNames,
                                      const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
@@ -393,6 +417,13 @@ std::string realCallStructReturnPath(const Definition &def,
       return {};
     }
     const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+    std::string returnBase;
+    std::string returnArgText;
+    std::vector<std::string> returnArgs;
+    if (splitTemplateTypeName(returnType, returnBase, returnArgText) &&
+        trimTemplateTypeText(returnBase) == "map" && splitTemplateArgs(returnArgText, returnArgs)) {
+      return builtinMapStoragePath(returnArgs, definitionsByPath);
+    }
     if (returnType.empty() || returnType.find('<') != std::string::npos || isSupportedScalarTypeName(returnType) ||
         returnType == "void") {
       return {};
@@ -406,7 +437,6 @@ std::string realCallStructReturnPath(const Definition &def,
     }
     const auto defIt = definitionsByPath.find(path);
     if (defIt == definitionsByPath.end() || defIt->second == nullptr ||
-        definitionHasTransform(*defIt->second, "sum") ||
         definitionHasTransform(*defIt->second, "compute")) {
       return {};
     }
@@ -477,8 +507,9 @@ bool stringParameterUsedOnlyAsCountOrLiteral(const Definition &def, const std::s
          stringParameterUseIsCountOrLiteral(*def.returnExpr, name, nullptr);
 }
 
-// Whether `path` names a sum definition (`[sum]`), whose owned parameters stay inline: the call site's inline
-// binding destroys a sum temporary itself, and the real-call body would destroy the payload again.
+// Whether `path` names a sum definition (`[sum]`), whose owned parameters stay inline for a direct call: the call
+// site's inline binding destroys a sum temporary itself, and the real-call body would destroy the payload again. A
+// spawned call binds its arguments itself, in hidden locals, so it takes them.
 bool isSumDefinitionPath(
     const std::string &path,
     const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
@@ -566,6 +597,14 @@ bool isAddressAbiParameter(
     if (!ownedParam && isReferenceToBuiltinVector(transform, def.namespacePrefix, structNames)) {
       return true;
     }
+    if (transform.name == "map" && transform.templateArgs.size() == 2 &&
+        transform.arguments.empty()) {
+      // A builtin key/value collection is its storage struct (a spawned call's, `allowCollections`), borrowed, or owned
+      // like a struct.
+      return isAddressAbiStruct(builtinMapStoragePath(transform.templateArgs, definitionsByPath),
+                                structNames,
+                                allowCollections);
+    }
     if (ownedParam) {
       if (!transform.arguments.empty() || !transform.templateArgs.empty()) {
         return false;
@@ -575,8 +614,10 @@ bool isAddressAbiParameter(
       }
       const std::string path =
           resolveStructTypeName(transform.name, def.namespacePrefix, structNames);
+      // An owned sum is a spawned call's (`allowCollections`): the spawner binds it in a hidden local of its scope,
+      // whose flag it clears, and the task's body owns the copy.
       return isAddressAbiStruct(path, structNames, allowCollections) &&
-             !isSumDefinitionPath(path, definitionsByPath);
+             (allowCollections || !isSumDefinitionPath(path, definitionsByPath));
     }
     if (!transform.arguments.empty()) {
       return false;
@@ -726,7 +767,8 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
   const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath);
   if (!context.allowCollections &&
-      structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+      (structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 ||
+       isSumDefinitionPath(structResultPath, byPath))) {
     return false;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
@@ -812,6 +854,20 @@ bool resolveTaskSpawnShape(const Definition &def,
       shapeOut.parameters.push_back(std::move(parameter));
       continue;
     }
+    if (typeTransform->name == "map" && typeTransform->templateArgs.size() == 2 &&
+        typeTransform->arguments.empty()) {
+      TaskSpawnParameterShape parameter;
+      parameter.structPath =
+          builtinMapStoragePath(typeTransform->templateArgs, *context.definitionsByPath);
+      if (parameter.structPath.empty()) {
+        reasonOut = subject + "is a `map` whose storage struct the program does not hold";
+        return false;
+      }
+      parameter.kind = ownedParam ? TaskSpawnParameterShape::Kind::OwnedStruct
+                                  : TaskSpawnParameterShape::Kind::Struct;
+      shapeOut.parameters.push_back(std::move(parameter));
+      continue;
+    }
     if (!typeTransform->templateArgs.empty() || !typeTransform->arguments.empty() ||
         typeTransform->name.find('<') != std::string::npos) {
       reasonOut = subject + "is a collection or another template type";
@@ -829,10 +885,6 @@ bool resolveTaskSpawnShape(const Definition &def,
       }
       if (!isAddressAbiStruct(parameter.structPath, structNames, true)) {
         reasonOut = subject + "is a collection";
-        return false;
-      }
-      if (ownedParam && isSumDefinitionPath(parameter.structPath, *context.definitionsByPath)) {
-        reasonOut = subject + "is a `copy` or `move` sum, which no real call takes yet";
         return false;
       }
       parameter.kind = ownedParam ? TaskSpawnParameterShape::Kind::OwnedStruct

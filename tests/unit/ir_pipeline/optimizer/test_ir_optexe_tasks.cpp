@@ -737,14 +737,11 @@ main() {
                  "spawn_scalar_emit");
   REQUIRE_MESSAGE(emit.exitCode == 0, emit.err);
   const std::string cpp = readText(cppPath);
-  // twice and bump (`copy mut`, the task's own slot) run on threads; an owned sum keeps pick_item inline, and the
-  // report says so.
+  // twice, bump (`copy mut`, the task's own slot) and pick_item (an owned sum the task's body destroys, TODO-5847)
+  // run on threads, so the report has no inline note.
   CHECK(contains(cpp, "= ps_task_spawn(rt, ps_t"));
   CHECK(contains(cpp, "= ps_task_wait("));
-  CHECK(
-      contains(emit.err,
-               "lowering: spawn of /pick_item runs inline: parameter `item` is a `copy` or `move` "
-               "sum, which no real call takes yet\n"));
+  CHECK_FALSE(contains(emit.err, "/pick_item"));
   CHECK_FALSE(contains(emit.err, "/twice"));
   CHECK_FALSE(contains(emit.err, "/bump"));
 
@@ -761,9 +758,9 @@ main() {
 
 TEST_CASE("primec lowers a spawned call with String and struct values to a task") {
   // Positive: a `String` parameter, a `String` result, a struct result with a `String` field, a `vector<i32>`
-  // parameter and a `vector<i32>` result built in a local run as tasks, with no inline note. Negative: a map
-  // parameter, a vector result that is not a local the task built and a `string` parameter keep the call inline, and
-  // the report names the reason.
+  // parameter and a `vector<i32>` result built in a local run as tasks, with no inline note, and so does a builtin
+  // `map` parameter (TODO-5847). Negative: a vector result that is not a local the task built and a `string`
+  // parameter keep the call inline, and the report names the reason.
   const std::string source = R"(
 import /std/text/*
 import /std/collections/*
@@ -853,10 +850,7 @@ main() {
     CHECK_FALSE(contains(report, "/make_reply"));
     CHECK_FALSE(contains(report, "/total"));
     CHECK_FALSE(contains(report, "/numbers"));
-    CHECK(contains(
-        report,
-        "lowering: spawn of /table_size runs inline: parameter `table` is a collection or another "
-        "template type\n"));
+    CHECK_FALSE(contains(report, "/table_size"));
     CHECK(contains(report,
                    "lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
                    "which no real "
@@ -895,8 +889,9 @@ main() {
 
 TEST_CASE("primec lowers a spawned call with stdlib Vector values to a task") {
   // Positive: a borrowed, a `copy mut` and a `move` `Vector<i32>` parameter and a `Vector<i32>` result run as tasks,
-  // with no inline note. Negative: a `string` parameter and a builtin `map` parameter keep the call inline, and the
-  // report names the reason.
+  // with no inline note, as do a builtin `map` parameter and a `copy` sum parameter given a name (TODO-5847).
+  // Negative: a `string` parameter and a sum argument that is a vector element keep the call inline, and the report
+  // names the reason.
   const std::string source = R"(
 import /std/text/*
 import /std/collections/*
@@ -944,6 +939,20 @@ table_size([map<i32, i32>] table) {
   return(table.count())
 }
 
+[sum]
+Shape {
+  [i32] circle
+  [i32] square
+}
+
+[return<i32>]
+look([Shape copy] s) {
+  return(pick(s) {
+    circle(c) { c }
+    square(n) { n }
+  })
+}
+
 [return<int> effects(task, io_out, heap_alloc)]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>()}
@@ -966,13 +975,20 @@ main() {
   print_line(list[2i32])
   print_line(wait(l))
   print_line(wait(sized))
+  [Shape] shape{[circle] 3i32}
+  [vector<Shape> mut] shapes{vector<Shape>()}
+  shapes.push(shape)
+  [Task<i32>] seen{[spawn] look(shape)};
+  [Task<i32>] placed{[spawn] look(shapes[0i32])};
+  print_line(wait(seen))
+  print_line(wait(placed))
   print_line(values.count())
   return(0i32)
 }
 )";
   const std::filesystem::path sourcePath = scratch("spawn_stdlib_vector.prime");
   std::ofstream(sourcePath) << source;
-  const std::string expectedOut = "9\n307\n10\n3\n4\n4\n1\n2\n";
+  const std::string expectedOut = "9\n307\n10\n3\n4\n4\n1\n3\n3\n2\n";
   const auto checkNotes = [](const std::string &report) {
     CHECK_FALSE(contains(report, "/total"));
     CHECK_FALSE(contains(report, "/grow"));
@@ -981,10 +997,12 @@ main() {
     CHECK(contains(report,
                    "lowering: spawn of /label_size runs inline: parameter `label` is a `string`, "
                    "which no real call takes yet\n"));
+    CHECK_FALSE(contains(report, "/table_size"));
+    // A sum argument that is a place other than a name stays inline (the one in the vector); the named one is a task.
     CHECK(contains(
         report,
-        "lowering: spawn of /table_size runs inline: parameter `table` is a collection or another "
-        "template type\n"));
+        "lowering: spawn of /look runs inline: its sum argument is not a name, `move` of a "
+        "name or a fresh value\n"));
   };
 
   const ProgramRun vm =

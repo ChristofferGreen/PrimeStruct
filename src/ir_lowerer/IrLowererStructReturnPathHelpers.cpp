@@ -1,5 +1,7 @@
 #include "primec/ir_lowerer/IrLowererStructReturnPathHelpers.h"
 
+#include "IrLowererRecursionAnalysis.h"
+
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
@@ -623,6 +625,59 @@ std::string inferStructReturnPathFromExpr(
   std::unordered_set<std::string> visitedDefs;
   return inferStructReturnPathFromExprInternal(
       expr, knownFields, structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap, visitedDefs);
+}
+
+namespace {
+
+// The type text of the `return<T>` transform of `def`, trimmed, or empty.
+std::string declaredReturnTypeText(const Definition &def) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name == "return" && transform.templateArgs.size() == 1) {
+      return trimTemplateTypeText(transform.templateArgs.front());
+    }
+  }
+  return {};
+}
+
+} // namespace
+
+std::string declaredReturnTypeBase(const Definition &def) {
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(declaredReturnTypeText(def), base, arg)) {
+    return {};
+  }
+  return normalizeDeclaredCollectionTypeBase(base);
+}
+
+std::string declaredReturnStructPath(
+    const Definition &def,
+    const std::function<bool(const std::string &, const std::string &, std::string &)>
+        &resolveStructTypeName) {
+  const std::string typeName = declaredReturnTypeText(def);
+  if (typeName.empty()) {
+    return {};
+  }
+  if (typeName.front() == '/') {
+    return typeName;
+  }
+  std::string resolvedStructPath;
+  return resolveStructTypeName(typeName, def.namespacePrefix, resolvedStructPath)
+             ? resolvedStructPath
+             : std::string{};
+}
+
+std::string
+declaredReturnMapStoragePath(const Definition &def,
+                             const std::unordered_map<std::string, const Definition *> &defMap) {
+  std::string base;
+  std::string argText;
+  std::vector<std::string> args;
+  if (!splitTemplateTypeName(declaredReturnTypeText(def), base, argText) ||
+      trimTemplateTypeText(base) != "map" || !splitTemplateArgs(argText, args)) {
+    return {};
+  }
+  return builtinMapStoragePath(args, defMap);
 }
 
 } // namespace primec::ir_lowerer

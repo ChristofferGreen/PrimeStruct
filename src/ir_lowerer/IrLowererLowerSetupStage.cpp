@@ -301,6 +301,7 @@ bool registerRealCallOwnedParameters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const ResolveStructTypeNameFn &resolveStructTypeName,
+    const std::function<const Definition *(const std::string &)> &findOwnedSumDefinition,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::vector<LowerSetupStageState::DropEntry> &dropEntries,
@@ -389,6 +390,24 @@ bool registerRealCallOwnedParameters(
       continue;
     }
     auto ownedIt = bodyLocals.find(param.name);
+    // An owned sum (a spawned call's): the body owns its active payload and destroys it, unless it is moved on.
+    if (ownedIt != bodyLocals.end() && ownedIt->second.kind == LocalInfo::Kind::Value &&
+        !ownedIt->second.structTypeName.empty() && findOwnedSumDefinition) {
+      if (const Definition *sumDef = findOwnedSumDefinition(ownedIt->second.structTypeName);
+          sumDef != nullptr) {
+        LocalInfo &sumInfo = ownedIt->second;
+        sumInfo.dropFlagLocal = allocTempLocal();
+        instructions.push_back({IrOpcode::PushI32, 1});
+        instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(sumInfo.dropFlagLocal)});
+        LowerSetupStageState::DropEntry entry{
+            sumInfo.index, sumInfo.dropFlagLocal, sumDef->fullPath};
+        entry.sumDef = sumDef;
+        dropEntries.push_back(std::move(entry));
+        fileScopeStack.back().push_back(-static_cast<int32_t>(dropEntries.size()));
+        continue;
+      }
+    }
     if (ownedIt == bodyLocals.end() || ownedIt->second.structTypeName.empty() ||
         (ownedIt->second.kind != LocalInfo::Kind::Value &&
          ownedIt->second.kind != LocalInfo::Kind::Reference) ||

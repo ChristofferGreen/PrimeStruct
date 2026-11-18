@@ -141,6 +141,9 @@ bool registerRealCallOwnedParameters(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const ResolveStructTypeNameFn &resolveStructTypeName,
+    // The sum definition of a struct path whose payloads need destroying, or null: an owned sum parameter (a spawned
+    // call's) is destroyed by the body.
+    const std::function<const Definition *(const std::string &)> &findOwnedSumDefinition,
     const std::function<int32_t()> &allocTempLocal,
     std::vector<IrInstruction> &instructions,
     std::vector<LowerSetupStageState::DropEntry> &dropEntries,

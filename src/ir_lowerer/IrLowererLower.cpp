@@ -17,6 +17,7 @@
 #include "primec/ir_lowerer/IrLowererLowerEffects.h"
 #include "IrLowererLibraryRoots.h"
 #include "primec/ir_lowerer/IrLowererLowerSetupStage.h"
+#include "IrLowererLowerSumHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 #include "primec/ir_lowerer/IrLowererOnErrorHelpers.h"
@@ -475,6 +476,19 @@ bool IrLowerer::lower(const Program &program,
                                         return setupTypeAndStructTypeAdapters
                                             .structTypeResolutionAdapters.resolveStructTypeName(
                                                 typeName, namespacePrefix, pathOut);
+                                      },
+                                      [&](const std::string &structPath) -> const Definition * {
+                                        ir_lowerer::SumHelpersContext sumHelpers(
+                                            setupStage,
+                                            returnEmitStage,
+                                            callResolutionAdapters,
+                                            ownError);
+                                        const Definition *sumDef =
+                                            sumHelpers.resolveSumDefinitionByPath(structPath);
+                                        return sumDef != nullptr &&
+                                                       sumHelpers.sumPayloadsNeedDestroy(*sumDef)
+                                                   ? sumDef
+                                                   : nullptr;
                                       },
                                       [&]() { return allocTempLocal(); },
                                       function.instructions,

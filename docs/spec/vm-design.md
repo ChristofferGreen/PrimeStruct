@@ -113,9 +113,16 @@
   structs, so they cross like any struct: the spawner binds the argument in a hidden struct local (its `Copy` helper
   copies the buffer), copies the slots into the block, and the task owns the copy when the parameter is `copy` or
   `move` (a `copy mut` one is its own value, not a reference to a place of the spawner), and a result is moved to the
-  waiter as for a struct. Any other
-  spawned call (a `mut` parameter, a `copy` or `move` sum, a `string`, a builtin map parameter or result, a
-  vector result that is not a `mut` local the task built, a sum result, a callee with `on_error`, `require` or `try`, a method) runs inline, which is a legal schedule, and
+  waiter as for a struct. The builtin `map<K, V>` is the stdlib storage struct declared with `key_value_type` (two `Vector` fields whose
+  `Copy` and `Destroy` helpers own the buffers), so a map parameter (borrowed, `copy` or `move`) and a map result cross
+  the same way. A sum crosses like a struct too, with one owner decided: the hidden local the spawner binds is a
+  deep copy of a named sum (`emitActiveSumPayloadCopyFromSumPtrs`), the sum `move(name)` hands over, or a fresh value;
+  the spawner's flag for it is off while the task runs (a borrowed parameter, restored at the wait) or for good (a
+  `copy` or `move` parameter, whose body destroys the active payload through a drop entry with the sum definition,
+  `registerRealCallOwnedParameters`), and a sum result is moved to the waiter as for a struct (TODO-5847). Any other
+  spawned call (a `mut` parameter, a `string`, a vector result that is not a `mut` local the task built, a sum
+  argument that is not a name, `move` of a name or a fresh value, a callee with `on_error`, `require` or `try`, a
+  method) runs inline, which is a legal schedule, and
   `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
 - **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The
@@ -524,7 +531,7 @@
   address of a struct, of a `mut` place or of a referenced value; the receiver passes as its address, `mut` or not. A
   local address names the same slot in every frame (Frames & stack), so writes through these addresses reach the
   caller. A temporary argument is destroyed after the call, where an inlined call destroys it at the end of the callee's
-  body. A struct result (any struct but a sum or a collection record, with or without lifecycle helpers) is returned
+  body. A struct result (any struct but a sum or a collection record, with or without lifecycle helpers; a spawned call also returns a sum or a builtin `map`) is returned
   through a block of the caller's frame whose address is the last argument: the callee's `return` moves or copies the
   value there (as it would into the inlined call's result) and returns the address. A called function therefore never
   returns an address of its own frame, which is gone once it returns: what it returns came in as a parameter. IR
@@ -545,7 +552,8 @@
   the vector handed over; the call site binds it and registers no drop, and the body owns it like a struct `copy`
   parameter: a drop flag and a drop entry (`registerRealCallOwnedParameters`), so it is freed once, on every exit
   unless the body moves it on (a spawned call passes it owned the same way).
-  Shapes that stay inline: `copy` and `move` parameters of sums, args-pack, collection,
+  Shapes that stay inline for a direct call (a spawned call takes owned sums, sum results and builtin maps, above):
+  `copy` and `move` parameters of sums, args-pack, collection,
   `File` and template-typed parameters; sum results (`Result`, `Maybe`);
   definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
