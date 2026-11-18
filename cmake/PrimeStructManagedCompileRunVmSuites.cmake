@@ -121,6 +121,12 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
                                   RANGE_FIRST 84
                                   RANGE_LAST 102
                                   CASES_PER_SHARD 5)
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.core"
+                                  TIMEOUT 300
+                                  SHARD_PREFIX "result_exit_codes"
+                                  SOURCE_FILE "*test_compile_run_vm_result_exit_codes.cpp"
+                                  TOTAL_CASES 12
+                                  CASES_PER_SHARD 4)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
                                   TIMEOUT 300

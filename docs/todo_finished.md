@@ -2003,6 +2003,7 @@ are left unarchived.
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | [undated.md](todo_archive/undated.md) | - |
 | TODO-5514 | Native file I/O writes newlines and reports errno | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
+| TODO-5523 | A Result-returning main exits with its error code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5527 | Stdlib Result locals destroy their payload once | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
