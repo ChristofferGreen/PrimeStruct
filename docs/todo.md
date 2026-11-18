@@ -415,9 +415,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the spawn binding inference only.
   - notes: deferred: no example needs it; `return<void>` is the workaround.
 
-- [ ] TODO-5938: A byte loop over one large region on `optexe` takes the cycles it took before the granule table
+- [~] TODO-5938: A byte loop over one large region on `optexe` takes the cycles it took before the granule table
   - owner: ai
   - status: ready
+  - claimed_by: bytes-a (worktree-agent-a5d8b88f9d1c75891), 2026-11-18
   - created_at: 2026-11-11
   - phase: Optimizing backends (residual of TODO-5840)
   - parallel_track: optexe-bytes
