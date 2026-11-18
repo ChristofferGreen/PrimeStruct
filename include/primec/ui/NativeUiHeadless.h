@@ -9,6 +9,7 @@
 // single thread. Call `reset` before each scenario.
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,6 +19,11 @@ namespace primec::ui::headless {
 // Forgets all state (widgets, queued actions, the call log) and lets
 // ps_ui_init run again. Handles start again from 1.
 void reset();
+// Every ABI call from another thread than the one that called ps_ui_init faults with
+// "ui call off the main thread: <function>". The fault is reported to `hook` when one is set (the call then returns
+// its failure value, and `reset` keeps the hook); without one it prints the message to stderr and exits with code 3,
+// as the program's fault path does. An empty function removes the hook.
+void setFaultHook(std::function<void(const std::string &)> hook);
 // Every push since the last reset, as the text form `applyHeadlessScenario` replays
 // (tests/fixtures/host_calls/scenario.h): lets a test run the same scenario in a compiled program.
 std::string pushedScenario();

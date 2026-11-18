@@ -133,7 +133,6 @@ of sync with them.
 | TODO-5956 | Native string arenas and the remaining string heap statistics | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
-| TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | ready | native-ui-threads |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
@@ -185,7 +184,7 @@ of sync with them.
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
-- Native UI (docs/NativeUiPlan.md): TODO-5808, TODO-5536, TODO-5533
+- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-5904
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
@@ -610,21 +609,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: measurement tooling and the reference editor only.
   - notes: needs a Mac; the `--open` runs need a person at the machine (they show a window and take focus).
-
-- [~] TODO-5808: `ps_ui_*` entry points fault when called off the main thread
-  - owner: ai
-  - status: in_progress
-  - claimed_by: ui-threads (worktree-agent-a4fdebc89f4fd37e4), 2026-11-18
-  - created_at: 2026-11-09
-  - phase: Native UI (docs/NativeUiPlan.md, The C ABI; docs/MultithreadingPrototype.md, Sendable Values)
-  - parallel_track: native-ui-threads
-  - scope: The C ABI says every function is callable only on the thread that called `ps_ui_init` (AppKit objects belong to the main thread), but nothing checks it: a UI handle is a `u64` and sendable, so once tasks run on threads (TODO-5795, TODO-5799) a spawned task can call `ps_ui_window_add_tab` on a worker thread and corrupt AppKit state. The multithreading design has no type marker for UI handles; the check is at run time. The AppKit backend records the calling thread in `ps_ui_init` and every other entry point faults (exit code 3, through the program's fault path) with `ui call off the main thread: ps_ui_window_add_tab` when called from another thread; the headless backend does the same, so the rule is testable without a screen. Cost: one thread-id compare per call.
-  - implementation_notes: src/ui/appkit/NativeUiAppKit.mm (`ps_ui_init`; `pthread_main_np` or the recorded `pthread_self`), src/ui/headless/NativeUiHeadless*.cpp, the binding layer in src/ui/NativeUiBindings.cpp if the check is shared; tests in tests/unit/ui/test_native_ui_headless.cpp.
-  - acceptance:
-    - positive: a headless test initializes the UI and calls `ps_ui_window_create` and `ps_ui_window_add_tab` on the same thread and succeeds; the PrimeScroll scenarios are unchanged
-    - negative: a headless test initializes the UI on one `std::thread` and calls `ps_ui_window_add_tab` from another, and observes the fault with that message through a fault hook the headless backend gets for this (a callback the test installs; without one it exits 3 like the program's fault path); `ps_ui_init` itself called again from a second thread is the same fault
-    - full release gate green
-  - stop_rule: the thread check in the two backends; no marker in the type system.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

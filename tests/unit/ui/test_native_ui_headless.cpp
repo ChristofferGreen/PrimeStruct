@@ -166,13 +166,70 @@ TEST_CASE("headless backend starts once and rejects calls before init") {
   CHECK(ps_ui_window_create("Late", 100, 100) != 0);
 }
 
-TEST_CASE("headless backend calls from another thread fail") {
+namespace {
+// Installs a fault hook that records the messages, and removes it when the test ends.
+struct FaultRecorder {
+  std::vector<std::string> messages;
+  FaultRecorder() {
+    headless::setFaultHook([this](const std::string &message) { messages.push_back(message); });
+  }
+  ~FaultRecorder() { headless::setFaultHook({}); }
+};
+} // namespace
+
+TEST_CASE("headless backend calls on the init thread succeed without a fault") {
   startApp();
+  FaultRecorder faults;
+  const uint64_t window = ps_ui_window_create("Own", 100, 100);
+  CHECK(window != 0);
+  const uint64_t tab = ps_ui_window_create("Tab", 100, 100);
+  CHECK(ps_ui_window_add_tab(window, tab));
+  CHECK(ps_ui_window_show(window));
+  CHECK(faults.messages.empty());
+}
+
+TEST_CASE("headless backend faults a call from another thread") {
+  startApp();
+  const uint64_t window = ps_ui_window_create("Own", 100, 100);
+  const uint64_t tab = ps_ui_window_create("Tab", 100, 100);
+  REQUIRE(window != 0);
+  REQUIRE(tab != 0);
+  const size_t logged = headless::callLog().size();
+  FaultRecorder faults;
   uint64_t foreignWindow = 1;
-  std::thread other([&] { foreignWindow = ps_ui_window_create("Foreign", 100, 100); });
+  bool foreignAdd = true;
+  std::thread other([&] {
+    foreignWindow = ps_ui_window_create("Foreign", 100, 100);
+    foreignAdd = ps_ui_window_add_tab(window, tab);
+  });
   other.join();
   CHECK(foreignWindow == 0);
-  CHECK(ps_ui_window_create("Own", 100, 100) != 0);
+  CHECK_FALSE(foreignAdd);
+  REQUIRE(faults.messages.size() == 2);
+  CHECK(faults.messages[0] == "ui call off the main thread: ps_ui_window_create");
+  CHECK(faults.messages[1] == "ui call off the main thread: ps_ui_window_add_tab");
+  CHECK(headless::callLog().size() == logged);
+  CHECK(headless::tabGroup(window).empty());
+  CHECK(ps_ui_window_create("Own again", 100, 100) != 0);
+}
+
+TEST_CASE("headless backend faults ps_ui_init from a second thread") {
+  startApp();
+  FaultRecorder faults;
+  bool again = true;
+  std::thread other([&] { again = ps_ui_init("Second"); });
+  other.join();
+  CHECK_FALSE(again);
+  REQUIRE(faults.messages.size() == 1);
+  CHECK(faults.messages[0] == "ui call off the main thread: ps_ui_init");
+}
+
+TEST_CASE("headless backend faults a call before init on no thread") {
+  headless::reset();
+  FaultRecorder faults;
+  std::thread other([] { ps_ui_window_create("Early", 100, 100); });
+  other.join();
+  CHECK(faults.messages.empty());
 }
 
 TEST_CASE("headless windows hold a text view and track title and edited state") {

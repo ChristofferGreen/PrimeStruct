@@ -38,6 +38,12 @@ public:
   // still add or override bindings with `Script::bind`).
   template <class F> void bind(std::string name, F callable) { hostBindings_.bind(std::move(name), std::move(callable)); }
 
+  // Registers how an already bound host function runs when tasks run on threads (HostThreading in Script.h); false
+  // when nothing is bound under that name. A later `bind` of the same name resets it.
+  bool setHostThreading(const std::string &name, HostThreading threading) {
+    return hostBindings_.setThreading(name, threading);
+  }
+
   Script compileFile(const std::string &path) const;
   // Compiles in-memory text. `name` is used in diagnostics and as the base
   // for relative imports.

@@ -271,6 +271,19 @@ bool usable() {
   return s.initialized && s.owner == std::this_thread::get_id();
 }
 
+// Every entry point of the C ABI starts with this: once the app is initialized, a call from another thread than the one
+// that called ps_ui_init (AppKit objects belong to the main thread) faults as the program's fault path does, with the
+// message on stderr and exit code 3.
+void requireOwnerThread(const char *function) {
+  const State &s = state();
+  if (!s.initialized || s.owner == std::this_thread::get_id()) {
+    return;
+  }
+  std::fprintf(stderr, "ui call off the main thread: %s\n", function);
+  std::fflush(stderr);
+  std::_Exit(3);
+}
+
 void enqueue(int32_t kind, uint64_t window = 0, uint64_t widget = 0, int32_t command = 0,
              std::string text = std::string()) {
   PendingEvent event;
@@ -2458,9 +2471,10 @@ void guardSnapshotRun() {
 
 extern "C" {
 
-int32_t ps_ui_abi_version(void) { return PS_UI_ABI_VERSION; }
+int32_t ps_ui_abi_version(void) { requireOwnerThread("ps_ui_abi_version"); return PS_UI_ABI_VERSION; }
 
 bool ps_ui_init(const char *appName) {
+  requireOwnerThread("ps_ui_init");
   State &s = state();
   if (s.initialized) {
     return false;
@@ -2636,12 +2650,13 @@ bool ps_ui_init(const char *appName) {
 }
 
 void ps_ui_quit(void) {
+  requireOwnerThread("ps_ui_quit");
   if (usable()) {
     state().quitting = true;
   }
 }
 
-int32_t ps_ui_platform(void) { return PS_UI_PLATFORM_MACOS; }
+int32_t ps_ui_platform(void) { requireOwnerThread("ps_ui_platform"); return PS_UI_PLATFORM_MACOS; }
 
 namespace {
 bool attachPreviewWeb(uint64_t window);
@@ -2684,6 +2699,7 @@ void realizeShownTabs() {
 } // namespace
 
 int32_t ps_ui_wait_event(void) {
+  requireOwnerThread("ps_ui_wait_event");
   if (!usable()) {
     return PS_UI_EVENT_NONE;
   }
@@ -2886,11 +2902,12 @@ int32_t ps_ui_wait_event(void) {
   }
 }
 
-uint64_t ps_ui_event_window(void) { return usable() ? state().current.window : 0; }
-uint64_t ps_ui_event_widget(void) { return usable() ? state().current.widget : 0; }
-int32_t ps_ui_event_command(void) { return usable() ? state().current.command : 0; }
+uint64_t ps_ui_event_window(void) { requireOwnerThread("ps_ui_event_window"); return usable() ? state().current.window : 0; }
+uint64_t ps_ui_event_widget(void) { requireOwnerThread("ps_ui_event_widget"); return usable() ? state().current.widget : 0; }
+int32_t ps_ui_event_command(void) { requireOwnerThread("ps_ui_event_command"); return usable() ? state().current.command : 0; }
 
 bool ps_ui_supports(int32_t feature) {
+  requireOwnerThread("ps_ui_supports");
   return feature == PS_UI_FEATURE_INPUT_EVENTS || feature == PS_UI_FEATURE_FIRST_FRAME;
 }
 
@@ -2952,6 +2969,7 @@ void watchForFirstFrame() {
 } // namespace
 
 bool ps_ui_watch_first_frame(void) {
+  requireOwnerThread("ps_ui_watch_first_frame");
   State &s = state();
   if (!usable() || s.firstFrameDelivered) {
     return false;
@@ -2970,6 +2988,7 @@ bool ps_ui_watch_first_frame(void) {
 
 // Adds the tracking area of a hover watch, or removes it with the hover bit; keys and presses need nothing installed.
 bool ps_ui_widget_watch(uint64_t widget, int32_t mask) {
+  requireOwnerThread("ps_ui_widget_watch");
   NSView *frame = usable() ? watchedFrameView(widget) : nil;
   if (frame == nil || (mask & ~AllWatchBits) != 0) {
     return false;
@@ -2998,13 +3017,13 @@ bool ps_ui_widget_watch(uint64_t widget, int32_t mask) {
   return true;
 }
 
-int32_t ps_ui_event_button(void) { return usable() ? state().current.button : PS_UI_BUTTON_NONE; }
-int32_t ps_ui_event_x(void) { return usable() ? state().current.x : 0; }
-int32_t ps_ui_event_y(void) { return usable() ? state().current.y : 0; }
-int32_t ps_ui_event_modifiers(void) { return usable() ? state().current.modifiers : 0; }
-int32_t ps_ui_event_click_count(void) { return usable() ? state().current.clickCount : 0; }
-int32_t ps_ui_event_key(void) { return usable() ? state().current.key : 0; }
-bool ps_ui_event_repeat(void) { return usable() && state().current.repeat; }
+int32_t ps_ui_event_button(void) { requireOwnerThread("ps_ui_event_button"); return usable() ? state().current.button : PS_UI_BUTTON_NONE; }
+int32_t ps_ui_event_x(void) { requireOwnerThread("ps_ui_event_x"); return usable() ? state().current.x : 0; }
+int32_t ps_ui_event_y(void) { requireOwnerThread("ps_ui_event_y"); return usable() ? state().current.y : 0; }
+int32_t ps_ui_event_modifiers(void) { requireOwnerThread("ps_ui_event_modifiers"); return usable() ? state().current.modifiers : 0; }
+int32_t ps_ui_event_click_count(void) { requireOwnerThread("ps_ui_event_click_count"); return usable() ? state().current.clickCount : 0; }
+int32_t ps_ui_event_key(void) { requireOwnerThread("ps_ui_event_key"); return usable() ? state().current.key : 0; }
+bool ps_ui_event_repeat(void) { requireOwnerThread("ps_ui_event_repeat"); return usable() && state().current.repeat; }
 
 // A double click on the title bar of a window with a toolbar zooms it (maximizes or restores), as it does on any
 // window; the toolbar's own controls keep their clicks.
@@ -3037,6 +3056,7 @@ static void installTitleBarZoom() {
 }
 
 uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
+  requireOwnerThread("ps_ui_window_create");
   if (!usable() || width <= 0 || height <= 0) {
     return 0;
   }
@@ -3068,6 +3088,7 @@ uint64_t ps_ui_window_create(const char *title, int32_t width, int32_t height) {
 }
 
 bool ps_ui_window_set_title(uint64_t window, const char *title) {
+  requireOwnerThread("ps_ui_window_set_title");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -3079,6 +3100,7 @@ bool ps_ui_window_set_title(uint64_t window, const char *title) {
 }
 
 bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
+  requireOwnerThread("ps_ui_window_set_content");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   State &s = state();
   if (w != nil && usable() && controlInfo(widget) != nullptr) {
@@ -3114,6 +3136,7 @@ bool ps_ui_window_set_content(uint64_t window, uint64_t widget) {
 }
 
 bool ps_ui_window_set_edited(uint64_t window, bool edited) {
+  requireOwnerThread("ps_ui_window_set_edited");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -3141,6 +3164,7 @@ static void presentWindow(NSWindow *w) {
 }
 
 bool ps_ui_window_show(uint64_t window) {
+  requireOwnerThread("ps_ui_window_show");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -3164,6 +3188,7 @@ void hideOutputPane(uint64_t window);
 } // namespace
 
 bool ps_ui_window_close(uint64_t window) {
+  requireOwnerThread("ps_ui_window_close");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -3199,6 +3224,7 @@ void joinTabGroup(NSWindow *host, NSWindow *tab) {
 } // namespace
 
 bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
+  requireOwnerThread("ps_ui_window_add_tab");
   NSWindow *h = usable() ? liveWindow(host) : nil;
   NSWindow *t = usable() ? liveWindow(tab) : nil;
   if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1 ||
@@ -3212,6 +3238,7 @@ bool ps_ui_window_add_tab(uint64_t host, uint64_t tab) {
 }
 
 bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) {
+  requireOwnerThread("ps_ui_window_add_background_tab");
   NSWindow *h = usable() ? liveWindow(host) : nil;
   NSWindow *t = usable() ? liveWindow(tab) : nil;
   if (h == nil || t == nil || h == t || t.tabbedWindows.count > 1 ||
@@ -3226,6 +3253,7 @@ bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) {
 }
 
 uint64_t ps_ui_active_window(void) {
+  requireOwnerThread("ps_ui_active_window");
   if (!usable()) {
     return 0;
   }
@@ -3256,6 +3284,7 @@ uint64_t ps_ui_active_window(void) {
 }
 
 int32_t ps_ui_window_tab_count(uint64_t window) {
+  requireOwnerThread("ps_ui_window_tab_count");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return 0;
@@ -3264,6 +3293,7 @@ int32_t ps_ui_window_tab_count(uint64_t window) {
 }
 
 uint64_t ps_ui_window_tab_at(uint64_t window, int32_t index) {
+  requireOwnerThread("ps_ui_window_tab_at");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil || index < 0) {
     return 0;
@@ -3273,6 +3303,7 @@ uint64_t ps_ui_window_tab_at(uint64_t window, int32_t index) {
 }
 
 bool ps_ui_window_select(uint64_t window) {
+  requireOwnerThread("ps_ui_window_select");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -3286,14 +3317,16 @@ bool ps_ui_window_select(uint64_t window) {
 }
 
 uint64_t ps_ui_window_content(uint64_t window) {
+  requireOwnerThread("ps_ui_window_content");
   State &s = state();
   auto it = usable() && liveWindow(window) != nil ? s.windowContent.find(window) : s.windowContent.end();
   return it != s.windowContent.end() ? it->second : 0;
 }
 
-int32_t ps_ui_window_count(void) { return usable() ? static_cast<int32_t>(state().windows.size()) : 0; }
+int32_t ps_ui_window_count(void) { requireOwnerThread("ps_ui_window_count"); return usable() ? static_cast<int32_t>(state().windows.size()) : 0; }
 
 uint64_t ps_ui_window_at(int32_t index) {
+  requireOwnerThread("ps_ui_window_at");
   if (!usable() || index < 0) {
     return 0;
   }
@@ -3306,6 +3339,7 @@ uint64_t ps_ui_window_at(int32_t index) {
 }
 
 bool ps_ui_window_set_path(uint64_t window, const char *path) {
+  requireOwnerThread("ps_ui_window_set_path");
   if (!usable() || liveWindow(window) == nil) {
     return false;
   }
@@ -3315,6 +3349,7 @@ bool ps_ui_window_set_path(uint64_t window, const char *path) {
 }
 
 const char *ps_ui_window_path(uint64_t window) {
+  requireOwnerThread("ps_ui_window_path");
   State &s = state();
   auto it = usable() && liveWindow(window) != nil ? s.windowPaths.find(window) : s.windowPaths.end();
   s.returnedText = it != s.windowPaths.end() ? it->second : std::string();
@@ -3322,12 +3357,14 @@ const char *ps_ui_window_path(uint64_t window) {
 }
 
 bool ps_ui_window_has_path(uint64_t window) {
+  requireOwnerThread("ps_ui_window_has_path");
   State &s = state();
   auto it = usable() && liveWindow(window) != nil ? s.windowPaths.find(window) : s.windowPaths.end();
   return it != s.windowPaths.end() && !it->second.empty();
 }
 
 uint64_t ps_ui_text_view_create(void) {
+  requireOwnerThread("ps_ui_text_view_create");
   if (!usable()) {
     return 0;
   }
@@ -3384,6 +3421,7 @@ uint64_t ps_ui_text_view_create(void) {
 }
 
 const char *ps_ui_text_view_get_text(uint64_t view) {
+  requireOwnerThread("ps_ui_text_view_get_text");
   State &s = state();
   NSTextView *v = usable() ? textView(view) : nil;
   s.returnedText = v != nil ? std::string(v.string.UTF8String) : std::string();
@@ -3391,6 +3429,7 @@ const char *ps_ui_text_view_get_text(uint64_t view) {
 }
 
 bool ps_ui_text_view_set_text(uint64_t view, const char *text) {
+  requireOwnerThread("ps_ui_text_view_set_text");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3402,6 +3441,7 @@ bool ps_ui_text_view_set_text(uint64_t view, const char *text) {
 }
 
 bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
+  requireOwnerThread("ps_ui_text_view_set_monospace");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3415,6 +3455,7 @@ bool ps_ui_text_view_set_monospace(uint64_t view, bool monospace) {
 }
 
 bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
+  requireOwnerThread("ps_ui_text_view_set_line_numbers");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3431,6 +3472,7 @@ bool ps_ui_text_view_set_line_numbers(uint64_t view, bool visible) {
 }
 
 bool ps_ui_text_view_set_wrapping(uint64_t view, bool wrap) {
+  requireOwnerThread("ps_ui_text_view_set_wrapping");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3456,6 +3498,7 @@ bool ps_ui_text_view_set_wrapping(uint64_t view, bool wrap) {
 }
 
 bool ps_ui_text_view_clear_styles(uint64_t view) {
+  requireOwnerThread("ps_ui_text_view_clear_styles");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3478,6 +3521,7 @@ bool ps_ui_text_view_clear_styles(uint64_t view) {
 // overlap, so byte offsets become UTF-16 offsets in a single pass and the cost is
 // linear in the text, however many runs there are.
 bool ps_ui_text_view_highlight(uint64_t view, const char *path) {
+  requireOwnerThread("ps_ui_text_view_highlight");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
     return false;
@@ -3552,6 +3596,7 @@ bool ps_ui_text_view_highlight(uint64_t view, const char *path) {
 }
 
 bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte, int32_t rgb, int32_t flags) {
+  requireOwnerThread("ps_ui_text_view_add_style");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil || startByte < 0 || endByte <= startByte) {
     return false;
@@ -3602,10 +3647,12 @@ bool ps_ui_text_view_add_style(uint64_t view, int32_t startByte, int32_t endByte
 }
 
 bool ps_ui_text_view_is_modified(uint64_t view) {
+  requireOwnerThread("ps_ui_text_view_is_modified");
   return usable() && textView(view) != nil && state().modified[view];
 }
 
 bool ps_ui_text_view_clear_modified(uint64_t view) {
+  requireOwnerThread("ps_ui_text_view_clear_modified");
   if (!usable() || textView(view) == nil) {
     return false;
   }
@@ -3614,6 +3661,7 @@ bool ps_ui_text_view_clear_modified(uint64_t view) {
 }
 
 bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
+  requireOwnerThread("ps_ui_text_view_load_file");
   State &s = state();
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
@@ -3638,6 +3686,7 @@ bool ps_ui_text_view_load_file(uint64_t view, const char *path) {
 }
 
 bool ps_ui_text_view_save_file(uint64_t view, const char *path) {
+  requireOwnerThread("ps_ui_text_view_save_file");
   State &s = state();
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil) {
@@ -3655,9 +3704,10 @@ bool ps_ui_text_view_save_file(uint64_t view, const char *path) {
   }
 }
 
-const char *ps_ui_last_error(void) { return state().lastError.c_str(); }
+const char *ps_ui_last_error(void) { requireOwnerThread("ps_ui_last_error"); return state().lastError.c_str(); }
 
 uint64_t ps_ui_menu_create(const char *title) {
+  requireOwnerThread("ps_ui_menu_create");
   if (!usable()) {
     return 0;
   }
@@ -3671,6 +3721,7 @@ uint64_t ps_ui_menu_create(const char *title) {
 }
 
 bool ps_ui_menu_add_item(uint64_t menuHandle, const char *title, const char *shortcut, int32_t commandId) {
+  requireOwnerThread("ps_ui_menu_add_item");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -3683,6 +3734,7 @@ bool ps_ui_menu_add_item(uint64_t menuHandle, const char *title, const char *sho
 }
 
 bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked) {
+  requireOwnerThread("ps_ui_menu_set_checked");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -3698,6 +3750,7 @@ bool ps_ui_menu_set_checked(uint64_t menuHandle, int32_t commandId, bool checked
 }
 
 bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
+  requireOwnerThread("ps_ui_window_set_autosave_name");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil || name == nullptr || *name == '\0') {
     return false;
@@ -3711,6 +3764,7 @@ bool ps_ui_window_set_autosave_name(uint64_t window, const char *name) {
 // ---- toolbar, preview modes and markdown edits (docs/NativeUiPlan.md section 17) -------------------------
 
 uint64_t ps_ui_toolbar_create(void) {
+  requireOwnerThread("ps_ui_toolbar_create");
   if (!usable()) {
     return 0;
   }
@@ -3730,6 +3784,7 @@ ToolbarDesc *toolbarDesc(uint64_t handle) {
 } // namespace
 
 bool ps_ui_toolbar_add_button(uint64_t toolbar, const char *title, const char *symbol, int32_t commandId) {
+  requireOwnerThread("ps_ui_toolbar_add_button");
   ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
   if (desc == nullptr) {
     return false;
@@ -3743,6 +3798,7 @@ bool ps_ui_toolbar_add_button(uint64_t toolbar, const char *title, const char *s
 }
 
 bool ps_ui_toolbar_add_segments(uint64_t toolbar, const char *titles, int32_t firstCommandId) {
+  requireOwnerThread("ps_ui_toolbar_add_segments");
   ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
   if (desc == nullptr || titles == nullptr || *titles == '\0') {
     return false;
@@ -3765,6 +3821,7 @@ bool ps_ui_toolbar_add_segments(uint64_t toolbar, const char *titles, int32_t fi
 }
 
 bool ps_ui_toolbar_add_menu(uint64_t toolbar, const char *title, const char *symbol, uint64_t menu) {
+  requireOwnerThread("ps_ui_toolbar_add_menu");
   ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
   NSMenu *items = usable() ? menuFor(menu) : nil;
   if (desc == nullptr || items == nil || items.supermenu != nil) {
@@ -3780,6 +3837,7 @@ bool ps_ui_toolbar_add_menu(uint64_t toolbar, const char *title, const char *sym
 }
 
 bool ps_ui_toolbar_add_separator(uint64_t toolbar) {
+  requireOwnerThread("ps_ui_toolbar_add_separator");
   ToolbarDesc *desc = usable() ? toolbarDesc(toolbar) : nullptr;
   if (desc == nullptr) {
     return false;
@@ -3791,6 +3849,7 @@ bool ps_ui_toolbar_add_separator(uint64_t toolbar) {
 }
 
 bool ps_ui_window_set_toolbar(uint64_t window, uint64_t toolbar) {
+  requireOwnerThread("ps_ui_window_set_toolbar");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil || (toolbar != 0 && toolbarDesc(toolbar) == nullptr)) {
     return false;
@@ -3998,6 +4057,7 @@ void scriptFinished(int, int, void *user) {
 } // namespace
 
 bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32_t endCommand) {
+  requireOwnerThread("ps_ui_script_run");
   State &s = state();
   if (!usable() || liveWindow(window) == nil || s.scripts.count(window) != 0 || !showOutputPane(window)) {
     return false;
@@ -4032,6 +4092,7 @@ bool ps_ui_script_run(uint64_t window, const char *name, const char *text, int32
 }
 
 bool ps_ui_script_stop(uint64_t window) {
+  requireOwnerThread("ps_ui_script_stop");
   State &s = state();
   const auto it = usable() ? s.scripts.find(window) : s.scripts.end();
   if (it == s.scripts.end() || it->second.run == nullptr) {
@@ -4041,9 +4102,10 @@ bool ps_ui_script_stop(uint64_t window) {
   return true;
 }
 
-bool ps_ui_script_running(uint64_t window) { return usable() && state().scripts.count(window) != 0; }
+bool ps_ui_script_running(uint64_t window) { requireOwnerThread("ps_ui_script_running"); return usable() && state().scripts.count(window) != 0; }
 
 bool ps_ui_window_set_output_visible(uint64_t window, bool visible) {
+  requireOwnerThread("ps_ui_window_set_output_visible");
   if (!usable() || liveWindow(window) == nil) {
     return false;
   }
@@ -4055,10 +4117,12 @@ bool ps_ui_window_set_output_visible(uint64_t window, bool visible) {
 }
 
 bool ps_ui_window_output_visible(uint64_t window) {
+  requireOwnerThread("ps_ui_window_output_visible");
   return usable() && liveWindow(window) != nil && state().outputSplits.count(window) != 0;
 }
 
 bool ps_ui_window_toolbar_select(uint64_t window, int32_t commandId) {
+  requireOwnerThread("ps_ui_window_toolbar_select");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   const auto bar = state().windowToolbars.find(window);
   const auto pending = state().pendingToolbars.find(window);
@@ -4111,6 +4175,7 @@ NSUInteger utf16Offset(const std::string &utf8, size_t bytes) {
 } // namespace
 
 bool ps_ui_text_view_markdown_edit(uint64_t view, int32_t operation, int32_t a, int32_t b) {
+  requireOwnerThread("ps_ui_text_view_markdown_edit");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil || operation < PS_UI_MARKDOWN_BOLD || operation > PS_UI_MARKDOWN_TABLE_PREVIOUS_CELL) {
     return false;
@@ -4144,6 +4209,7 @@ bool ps_ui_text_view_markdown_edit(uint64_t view, int32_t operation, int32_t a, 
 }
 
 bool ps_ui_text_view_set_markdown_editing(uint64_t view, bool on) {
+  requireOwnerThread("ps_ui_text_view_set_markdown_editing");
   if (!usable() || textView(view) == nil) {
     return false;
   }
@@ -4157,6 +4223,7 @@ bool ps_ui_text_view_set_markdown_editing(uint64_t view, bool on) {
 
 // The text view's scroll view is hidden in the preview-only mode (the split view gives the page the whole window).
 bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode) {
+  requireOwnerThread("ps_ui_window_set_preview_mode");
   if (!usable() || liveWindow(window) == nil || mode < PS_UI_PREVIEW_TEXT || mode > PS_UI_PREVIEW_ONLY) {
     return false;
   }
@@ -4185,6 +4252,7 @@ bool ps_ui_window_set_preview_mode(uint64_t window, int32_t mode) {
 }
 
 int32_t ps_ui_window_preview_mode(uint64_t window) {
+  requireOwnerThread("ps_ui_window_preview_mode");
   if (!usable() || liveWindow(window) == nil || !previewOn(window)) {
     return PS_UI_PREVIEW_TEXT;
   }
@@ -4244,6 +4312,7 @@ bool attachPreviewWeb(uint64_t window) {
 } // namespace
 
 bool ps_ui_window_set_preview(uint64_t window, bool on) {
+  requireOwnerThread("ps_ui_window_set_preview");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil) {
     return false;
@@ -4308,11 +4377,13 @@ bool ps_ui_window_set_preview(uint64_t window, bool on) {
 }
 
 bool ps_ui_window_has_preview(uint64_t window) {
+  requireOwnerThread("ps_ui_window_has_preview");
   return usable() && liveWindow(window) != nil && previewOn(window);
 }
 
 // Refreshes that follow each other closely (every keystroke) become one page load per run-loop turn.
 bool ps_ui_window_refresh_preview(uint64_t window) {
+  requireOwnerThread("ps_ui_window_refresh_preview");
   if (!ps_ui_window_has_preview(window)) {
     return false;
   }
@@ -4333,6 +4404,7 @@ bool ps_ui_window_refresh_preview(uint64_t window) {
 }
 
 bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
+  requireOwnerThread("ps_ui_menu_follow_preview");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -4350,10 +4422,12 @@ bool ps_ui_menu_follow_preview(uint64_t menuHandle, int32_t commandId) {
 }
 
 uint64_t ps_ui_label_create(const char *text) {
+  requireOwnerThread("ps_ui_label_create");
   return usable() ? createControl(ControlInfo::Kind::Label, [NSTextField labelWithString:toNSString(text)]) : 0;
 }
 
 bool ps_ui_label_set_text(uint64_t label, const char *text) {
+  requireOwnerThread("ps_ui_label_set_text");
   ControlInfo *info = controlOfKind(label, ControlInfo::Kind::Label);
   if (info == nullptr || text == nullptr) {
     return false;
@@ -4363,6 +4437,7 @@ bool ps_ui_label_set_text(uint64_t label, const char *text) {
 }
 
 uint64_t ps_ui_checkbox_create(const char *title, bool checked) {
+  requireOwnerThread("ps_ui_checkbox_create");
   if (!usable()) {
     return 0;
   }
@@ -4375,6 +4450,7 @@ uint64_t ps_ui_checkbox_create(const char *title, bool checked) {
 }
 
 bool ps_ui_checkbox_set_checked(uint64_t checkbox, bool checked) {
+  requireOwnerThread("ps_ui_checkbox_set_checked");
   ControlInfo *info = controlOfKind(checkbox, ControlInfo::Kind::CheckBox);
   if (info == nullptr) {
     return false;
@@ -4384,11 +4460,13 @@ bool ps_ui_checkbox_set_checked(uint64_t checkbox, bool checked) {
 }
 
 bool ps_ui_checkbox_checked(uint64_t checkbox) {
+  requireOwnerThread("ps_ui_checkbox_checked");
   ControlInfo *info = controlOfKind(checkbox, ControlInfo::Kind::CheckBox);
   return info != nullptr && ((NSButton *)info->view).state == NSControlStateValueOn;
 }
 
 uint64_t ps_ui_popup_create(void) {
+  requireOwnerThread("ps_ui_popup_create");
   if (!usable()) {
     return 0;
   }
@@ -4400,6 +4478,7 @@ uint64_t ps_ui_popup_create(void) {
 }
 
 bool ps_ui_popup_add_item(uint64_t popup, const char *title) {
+  requireOwnerThread("ps_ui_popup_add_item");
   ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
   if (info == nullptr || title == nullptr) {
     return false;
@@ -4415,6 +4494,7 @@ bool ps_ui_popup_add_item(uint64_t popup, const char *title) {
 }
 
 bool ps_ui_popup_select(uint64_t popup, int32_t index) {
+  requireOwnerThread("ps_ui_popup_select");
   ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
   NSPopUpButton *button = info != nullptr ? (NSPopUpButton *)info->view : nil;
   if (button == nil || index < 0 || index >= button.numberOfItems) {
@@ -4425,11 +4505,13 @@ bool ps_ui_popup_select(uint64_t popup, int32_t index) {
 }
 
 int32_t ps_ui_popup_selected(uint64_t popup) {
+  requireOwnerThread("ps_ui_popup_selected");
   ControlInfo *info = controlOfKind(popup, ControlInfo::Kind::Popup);
   return info != nullptr ? static_cast<int32_t>(((NSPopUpButton *)info->view).indexOfSelectedItem) : -1;
 }
 
 uint64_t ps_ui_form_create(void) {
+  requireOwnerThread("ps_ui_form_create");
   if (!usable()) {
     return 0;
   }
@@ -4443,6 +4525,7 @@ uint64_t ps_ui_form_create(void) {
 }
 
 bool ps_ui_form_add_heading(uint64_t form, const char *title) {
+  requireOwnerThread("ps_ui_form_add_heading");
   ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
   if (info == nullptr || title == nullptr) {
     return false;
@@ -4460,6 +4543,7 @@ bool ps_ui_form_add_heading(uint64_t form, const char *title) {
 }
 
 bool ps_ui_form_add_row(uint64_t form, const char *label, uint64_t control) {
+  requireOwnerThread("ps_ui_form_add_row");
   ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
   ControlInfo *child = info != nullptr && control != form ? freeControl(control) : nullptr;
   if (child == nullptr || label == nullptr) {
@@ -4471,6 +4555,7 @@ bool ps_ui_form_add_row(uint64_t form, const char *label, uint64_t control) {
 }
 
 bool ps_ui_form_add_control(uint64_t form, uint64_t control) {
+  requireOwnerThread("ps_ui_form_add_control");
   ControlInfo *info = controlOfKind(form, ControlInfo::Kind::Form);
   ControlInfo *child = info != nullptr && control != form ? freeControl(control) : nullptr;
   if (child == nullptr) {
@@ -4484,6 +4569,7 @@ bool ps_ui_form_add_control(uint64_t form, uint64_t control) {
 }
 
 uint64_t ps_ui_tabs_create(void) {
+  requireOwnerThread("ps_ui_tabs_create");
   if (!usable()) {
     return 0;
   }
@@ -4491,6 +4577,7 @@ uint64_t ps_ui_tabs_create(void) {
 }
 
 bool ps_ui_tabs_add(uint64_t tabs, const char *title, uint64_t content) {
+  requireOwnerThread("ps_ui_tabs_add");
   ControlInfo *info = controlOfKind(tabs, ControlInfo::Kind::Tabs);
   ControlInfo *page = info != nullptr && content != tabs ? freeControl(content) : nullptr;
   if (page == nullptr || title == nullptr) {
@@ -4505,6 +4592,7 @@ bool ps_ui_tabs_add(uint64_t tabs, const char *title, uint64_t content) {
 }
 
 bool ps_ui_tabs_select(uint64_t tabs, int32_t index) {
+  requireOwnerThread("ps_ui_tabs_select");
   ControlInfo *info = controlOfKind(tabs, ControlInfo::Kind::Tabs);
   NSTabView *view = info != nullptr ? (NSTabView *)info->view : nil;
   if (view == nil || index < 0 || index >= view.numberOfTabViewItems) {
@@ -4517,6 +4605,7 @@ bool ps_ui_tabs_select(uint64_t tabs, int32_t index) {
 // A settings window is never a tab, is as large as its content needs, and has no minimize or zoom; a
 // document window is the default.
 bool ps_ui_window_set_style(uint64_t window, int32_t style) {
+  requireOwnerThread("ps_ui_window_set_style");
   NSWindow *w = usable() ? liveWindow(window) : nil;
   if (w == nil || (style != PS_UI_WINDOW_DOCUMENT && style != PS_UI_WINDOW_SETTINGS)) {
     return false;
@@ -4542,6 +4631,7 @@ bool ps_ui_window_set_style(uint64_t window, int32_t style) {
 // The text's size in points: the base font and every styled run keep their weight and slant at the new size,
 // so a highlighted document changes size at once.
 bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points) {
+  requireOwnerThread("ps_ui_text_view_set_font_size");
   NSTextView *v = usable() ? textView(view) : nil;
   if (v == nil || points < 6 || points > 96) {
     return false;
@@ -4575,6 +4665,7 @@ bool ps_ui_text_view_set_font_size(uint64_t view, int32_t points) {
 }
 
 bool ps_ui_preview_set_scroll_mode(int32_t mode) {
+  requireOwnerThread("ps_ui_preview_set_scroll_mode");
   if (!usable() || mode < PS_UI_SCROLL_OFF || mode > PS_UI_SCROLL_CURSOR) {
     return false;
   }
@@ -4584,12 +4675,14 @@ bool ps_ui_preview_set_scroll_mode(int32_t mode) {
 }
 
 const char *ps_ui_event_text(void) {
+  requireOwnerThread("ps_ui_event_text");
   State &s = state();
   s.returnedText = usable() ? s.current.text : std::string();
   return s.returnedText.c_str();
 }
 
 uint64_t ps_ui_button_create(const char *title) {
+  requireOwnerThread("ps_ui_button_create");
   if (!usable()) {
     return 0;
   }
@@ -4598,6 +4691,7 @@ uint64_t ps_ui_button_create(const char *title) {
 }
 
 bool ps_ui_button_set_title(uint64_t button, const char *title) {
+  requireOwnerThread("ps_ui_button_set_title");
   ControlInfo *info = controlOfKind(button, ControlInfo::Kind::Button);
   if (info == nullptr || title == nullptr) {
     return false;
@@ -4609,6 +4703,7 @@ bool ps_ui_button_set_title(uint64_t button, const char *title) {
 // ---- lists --------------------------------------------------------------------------------------------------
 
 uint64_t ps_ui_list_create(void) {
+  requireOwnerThread("ps_ui_list_create");
   if (!usable()) {
     return 0;
   }
@@ -4647,6 +4742,7 @@ PSListModel *listModel(uint64_t list) {
 } // namespace
 
 bool ps_ui_list_add_item(uint64_t list, const char *text) {
+  requireOwnerThread("ps_ui_list_add_item");
   PSListModel *model = listModel(list);
   if (model == nil || text == nullptr) {
     return false;
@@ -4659,6 +4755,7 @@ bool ps_ui_list_add_item(uint64_t list, const char *text) {
 }
 
 bool ps_ui_list_set_item(uint64_t list, int32_t index, const char *text) {
+  requireOwnerThread("ps_ui_list_set_item");
   PSListModel *model = listModel(list);
   if (model == nil || text == nullptr || index < 0 || static_cast<NSUInteger>(index) >= model.items.count) {
     return false;
@@ -4672,11 +4769,13 @@ bool ps_ui_list_set_item(uint64_t list, int32_t index, const char *text) {
 }
 
 int32_t ps_ui_list_item_count(uint64_t list) {
+  requireOwnerThread("ps_ui_list_item_count");
   PSListModel *model = listModel(list);
   return model != nil ? static_cast<int32_t>(model.items.count) : 0;
 }
 
 bool ps_ui_list_set_selected(uint64_t list, int32_t index, bool selected) {
+  requireOwnerThread("ps_ui_list_set_selected");
   PSListModel *model = listModel(list);
   if (model == nil || index < 0 || static_cast<NSUInteger>(index) >= model.items.count) {
     return false;
@@ -4692,6 +4791,7 @@ bool ps_ui_list_set_selected(uint64_t list, int32_t index, bool selected) {
 }
 
 bool ps_ui_list_is_selected(uint64_t list, int32_t index) {
+  requireOwnerThread("ps_ui_list_is_selected");
   PSListModel *model = listModel(list);
   return model != nil && index >= 0 && [model.table isRowSelected:index];
 }
@@ -4733,9 +4833,10 @@ UTType *typeOfExtension(NSString *extension) {
 } // namespace
 }
 
-int32_t ps_ui_document_type_count(void) { return static_cast<int32_t>(bundleDocumentTypes().size()); }
+int32_t ps_ui_document_type_count(void) { requireOwnerThread("ps_ui_document_type_count"); return static_cast<int32_t>(bundleDocumentTypes().size()); }
 
 const char *ps_ui_document_type_name(int32_t index) {
+  requireOwnerThread("ps_ui_document_type_name");
   State &s = state();
   const auto &types = bundleDocumentTypes();
   s.returnedText = index >= 0 && static_cast<size_t>(index) < types.size() ? types[static_cast<size_t>(index)].name : "";
@@ -4743,6 +4844,7 @@ const char *ps_ui_document_type_name(int32_t index) {
 }
 
 const char *ps_ui_document_type_extensions(int32_t index) {
+  requireOwnerThread("ps_ui_document_type_extensions");
   State &s = state();
   const auto &types = bundleDocumentTypes();
   s.returnedText =
@@ -4751,6 +4853,7 @@ const char *ps_ui_document_type_extensions(int32_t index) {
 }
 
 const char *ps_ui_app_path(void) {
+  requireOwnerThread("ps_ui_app_path");
   State &s = state();
   NSString *path = NSBundle.mainBundle.bundlePath;
   s.returnedText = [path hasSuffix:@".app"] ? path.UTF8String : "";
@@ -4758,6 +4861,7 @@ const char *ps_ui_app_path(void) {
 }
 
 const char *ps_ui_default_app(const char *extension) {
+  requireOwnerThread("ps_ui_default_app");
   State &s = state();
   s.returnedText.clear();
   @autoreleasepool {
@@ -4776,6 +4880,7 @@ const char *ps_ui_default_app(const char *extension) {
 // application already is the default of are left out. The answers are awaited with the run loop running.
 // PRIMESTRUCT_UI_DEFAULT_APP_PLAN=file only writes those content types to the file (tests): nothing is changed.
 bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
+  requireOwnerThread("ps_ui_set_default_app");
   if (!usable() || extensions == nullptr) {
     return false;
   }
@@ -4836,6 +4941,7 @@ bool ps_ui_set_default_app(const char *extensions, const char *appPath) {
 
 
 int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
+  requireOwnerThread("ps_ui_pref_get_int");
   if (!usable() || key == nullptr || *key == '\0') {
     return fallback;
   }
@@ -4852,6 +4958,7 @@ int32_t ps_ui_pref_get_int(const char *key, int32_t fallback) {
 }
 
 bool ps_ui_pref_set_int(const char *key, int32_t value) {
+  requireOwnerThread("ps_ui_pref_set_int");
   if (!usable() || key == nullptr || *key == '\0') {
     return false;
   }
@@ -4867,6 +4974,7 @@ bool ps_ui_pref_set_int(const char *key, int32_t value) {
 static NSString *listName(const char *key) { return [@"ps.list." stringByAppendingString:toNSString(key)]; }
 
 bool ps_ui_pref_list_clear(const char *key) {
+  requireOwnerThread("ps_ui_pref_list_clear");
   if (!usable() || key == nullptr || *key == '\0') {
     return false;
   }
@@ -4880,6 +4988,7 @@ bool ps_ui_pref_list_clear(const char *key) {
 }
 
 bool ps_ui_pref_list_add(const char *key, const char *text) {
+  requireOwnerThread("ps_ui_pref_list_add");
   if (!usable() || key == nullptr || *key == '\0' || text == nullptr) {
     return false;
   }
@@ -4896,6 +5005,7 @@ bool ps_ui_pref_list_add(const char *key, const char *text) {
 }
 
 int32_t ps_ui_pref_list_count(const char *key) {
+  requireOwnerThread("ps_ui_pref_list_count");
   if (!usable() || key == nullptr || *key == '\0') {
     return 0;
   }
@@ -4908,6 +5018,7 @@ int32_t ps_ui_pref_list_count(const char *key) {
 }
 
 const char *ps_ui_pref_list_get(const char *key, int32_t index) {
+  requireOwnerThread("ps_ui_pref_list_get");
   State &s = state();
   s.returnedText.clear();
   if (usable() && key != nullptr && *key != '\0' && index >= 0) {
@@ -4927,6 +5038,7 @@ const char *ps_ui_pref_list_get(const char *key, int32_t index) {
 }
 
 bool ps_ui_menu_add_submenu(uint64_t menuHandle, const char *title, uint64_t submenuHandle) {
+  requireOwnerThread("ps_ui_menu_add_submenu");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   NSMenu *child = usable() ? menuFor(submenuHandle) : nil;
   if (menu == nil || child == nil || menu == child || child.supermenu != nil) {
@@ -4940,6 +5052,7 @@ bool ps_ui_menu_add_submenu(uint64_t menuHandle, const char *title, uint64_t sub
 }
 
 bool ps_ui_menu_clear(uint64_t menuHandle) {
+  requireOwnerThread("ps_ui_menu_clear");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -4949,6 +5062,7 @@ bool ps_ui_menu_clear(uint64_t menuHandle) {
 }
 
 int32_t ps_ui_menu_add_recent_files(uint64_t menuHandle, int32_t firstCommandId, int32_t maxItems) {
+  requireOwnerThread("ps_ui_menu_add_recent_files");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil || maxItems <= 0) {
     return 0;
@@ -4964,6 +5078,7 @@ int32_t ps_ui_menu_add_recent_files(uint64_t menuHandle, int32_t firstCommandId,
 }
 
 bool ps_ui_recent_add(const char *path) {
+  requireOwnerThread("ps_ui_recent_add");
   if (!usable() || path == nullptr || *path == '\0') {
     return false;
   }
@@ -4996,6 +5111,7 @@ bool ps_ui_recent_add(const char *path) {
 }
 
 const char *ps_ui_recent_path(int32_t index) {
+  requireOwnerThread("ps_ui_recent_path");
   State &s = state();
   const std::vector<std::string> paths = usable() ? recentFilePaths() : std::vector<std::string>();
   s.returnedText = index >= 0 && static_cast<size_t>(index) < paths.size() ? paths[static_cast<size_t>(index)]
@@ -5004,6 +5120,7 @@ const char *ps_ui_recent_path(int32_t index) {
 }
 
 bool ps_ui_recent_clear(void) {
+  requireOwnerThread("ps_ui_recent_clear");
   if (!usable()) {
     return false;
   }
@@ -5018,6 +5135,7 @@ bool ps_ui_recent_clear(void) {
 }
 
 bool ps_ui_pref_get_bool(const char *key, bool fallback) {
+  requireOwnerThread("ps_ui_pref_get_bool");
   if (!usable() || key == nullptr || *key == '\0') {
     return fallback;
   }
@@ -5034,6 +5152,7 @@ bool ps_ui_pref_get_bool(const char *key, bool fallback) {
 }
 
 bool ps_ui_pref_set_bool(const char *key, bool value) {
+  requireOwnerThread("ps_ui_pref_set_bool");
   if (!usable() || key == nullptr || *key == '\0') {
     return false;
   }
@@ -5047,6 +5166,7 @@ bool ps_ui_pref_set_bool(const char *key, bool value) {
 }
 
 bool ps_ui_menu_add_separator(uint64_t menuHandle) {
+  requireOwnerThread("ps_ui_menu_add_separator");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -5056,6 +5176,7 @@ bool ps_ui_menu_add_separator(uint64_t menuHandle) {
 }
 
 bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
+  requireOwnerThread("ps_ui_menu_add_standard");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil) {
     return false;
@@ -5122,6 +5243,7 @@ bool ps_ui_menu_add_standard(uint64_t menuHandle, int32_t standardId) {
 }
 
 bool ps_ui_menu_bar_add_role(uint64_t menuHandle, int32_t role) {
+  requireOwnerThread("ps_ui_menu_bar_add_role");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil || menu.supermenu != nil || role < PS_UI_MENU_ROLE_APP || role > PS_UI_MENU_ROLE_HELP) {
     return false;
@@ -5145,6 +5267,7 @@ bool ps_ui_menu_bar_add_role(uint64_t menuHandle, int32_t role) {
 }
 
 bool ps_ui_menu_bar_add(uint64_t menuHandle) {
+  requireOwnerThread("ps_ui_menu_bar_add");
   NSMenu *menu = usable() ? menuFor(menuHandle) : nil;
   if (menu == nil || menu.supermenu != nil) {
     return false;
@@ -5156,6 +5279,7 @@ bool ps_ui_menu_bar_add(uint64_t menuHandle) {
 }
 
 const char *ps_ui_open_panel(const char *title) {
+  requireOwnerThread("ps_ui_open_panel");
   State &s = state();
   s.returnedText.clear();
   s.panelChosen = false;
@@ -5182,6 +5306,7 @@ const char *ps_ui_open_panel(const char *title) {
 }
 
 const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
+  requireOwnerThread("ps_ui_save_panel");
   State &s = state();
   s.returnedText.clear();
   s.panelChosen = false;
@@ -5208,9 +5333,10 @@ const char *ps_ui_save_panel(const char *title, const char *suggestedName) {
   return s.returnedText.c_str();
 }
 
-bool ps_ui_panel_chosen(void) { return state().panelChosen; }
+bool ps_ui_panel_chosen(void) { requireOwnerThread("ps_ui_panel_chosen"); return state().panelChosen; }
 
 int32_t ps_ui_alert(const char *message, const char *detail, const char *buttons) {
+  requireOwnerThread("ps_ui_alert");
   if (!usable()) {
     return -1;
   }

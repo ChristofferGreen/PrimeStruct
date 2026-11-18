@@ -209,7 +209,11 @@ editor with the same UI, installed editors for comparison) is TODO-5535.
 
 Handles are opaque non-zero `uint64_t`; `0` means none or failure. Text in and out is UTF-8; programs pass `string`
 or `String` and receive `String` ([Strings, Text and Slices](spec/strings-and-views.md)). Every function
-is callable only on the thread that called `ps_ui_init`, the main thread on macOS.
+is callable only on the thread that called `ps_ui_init`, the main thread on macOS. Once the app runs, a call from another
+thread (or `ps_ui_init` again from one) faults with `ui call off the main thread: <function>` and exit code 3, in the
+AppKit and the headless backend (the headless one reports to a hook a test installs with `headless::setFaultHook`
+instead, when there is one); a call before `ps_ui_init` still just fails. The VM binds every UI function main-thread-only,
+so under `--vm-threads` a spawned task faults at the call with `<function> called off the main thread`.
 
 | Group | Functions |
 | --- | --- |

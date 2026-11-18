@@ -725,8 +725,7 @@ user never writes it on a type. Decided 2026-11-09 after a review of what Rust's
 - **UI handles are not marked.** AppKit objects belong to the main thread, but a `Window` is a `u64` handle and so
   sendable. Instead of a type marker, every `ps_ui_*` entry point faults when called off the thread that called
   `ps_ui_init` (`docs/NativeUiPlan.md` already states the rule): `ui call off the main thread: ps_ui_window_add_tab`.
-  That is a runtime check of the native UI lane, TODO-5808, with a positive and a negative test on the headless
-  backend.
+  The check is in both backends and the VM marks the functions main-thread-only; the headless backend tests it.
 - A `String` made while a `StringArena` is open cannot be a spawn argument or be sent: `string escapes its arena
   via spawn` (or `via channel`), next to the existing return, outer-binding and container cases.
 

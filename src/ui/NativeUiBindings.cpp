@@ -281,12 +281,20 @@ const char *typeName(embed::HostType type) {
 
 } // namespace
 
+// Every UI function belongs to the thread that initialized the UI, so under VM threads a task on another thread
+// that calls one faults at the call ("<name> called off the main thread") before it reaches the backend.
 void bindNativeUi(embed::ScriptEngine &engine) {
-  forEachBinding([&engine](const char *name, auto callable) { engine.bind(name, std::move(callable)); });
+  forEachBinding([&engine](const char *name, auto callable) {
+    engine.bind(name, std::move(callable));
+    engine.setHostThreading(name, embed::HostThreading::MainThreadOnly);
+  });
 }
 
 void bindNativeUi(embed::Script &script) {
-  forEachBinding([&script](const char *name, auto callable) { script.bind(name, std::move(callable)); });
+  forEachBinding([&script](const char *name, auto callable) {
+    script.bind(name, std::move(callable));
+    script.setHostThreading(name, embed::HostThreading::MainThreadOnly);
+  });
 }
 
 std::vector<std::string> nativeUiBindingSignatures() {

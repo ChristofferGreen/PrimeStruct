@@ -12,7 +12,9 @@
 #include <cstdint>
 #include <algorithm>
 #include <cstdlib>
+#include <cstdio>
 #include <deque>
+#include <functional>
 #include <memory>
 #include <map>
 #include <set>
@@ -311,8 +313,38 @@ inline const char *eventName(int32_t kind) {
   }
 }
 
-// Logs one call and passes its result through.
+// The function a test installs to observe an off-thread call (setFaultHook); empty means exit 3.
+inline std::function<void(const std::string &)> &faultHook() {
+  static std::function<void(const std::string &)> hook;
+  return hook;
+}
+
+// True when the app runs and the call comes from another thread than the one that called ps_ui_init.
+inline bool calledOffOwnerThread() {
+  const State &s = state();
+  return s.initialized && s.owner != std::this_thread::get_id();
+}
+
+// Faults an off-thread call as the program's fault path does: the message on stderr and exit code 3, or the test's
+// hook when one is installed. `call` is a logged call text such as `ps_ui_window_add_tab(1, 2)`.
+inline void faultOffMainThread(const std::string &call) {
+  const std::string message = "ui call off the main thread: " + call.substr(0, call.find('('));
+  if (faultHook()) {
+    faultHook()(message);
+    return;
+  }
+  std::fprintf(stderr, "%s\n", message.c_str());
+  std::fflush(stderr);
+  std::_Exit(3);
+}
+
+// Logs one call and passes its result through. A call from another thread than the app's faults instead and leaves
+// the log alone.
 template <class T> T logged(const std::string &call, T result, const std::string &shown) {
+  if (calledOffOwnerThread()) {
+    faultOffMainThread(call);
+    return result;
+  }
   state().log.push_back(call + " -> " + shown);
   return result;
 }

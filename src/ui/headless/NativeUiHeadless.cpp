@@ -519,8 +519,7 @@ const char *ps_ui_recent_path(int32_t index) {
   s.returnedText = usable() && index >= 0 && static_cast<size_t>(index) < s.recents.size()
                        ? s.recents[static_cast<size_t>(index)]
                        : std::string();
-  s.log.push_back("ps_ui_recent_path(" + std::to_string(index) + ") -> " + quote(s.returnedText));
-  return s.returnedText.c_str();
+  return logged("ps_ui_recent_path(" + std::to_string(index) + ")", s.returnedText.c_str(), quote(s.returnedText));
 }
 
 bool ps_ui_recent_clear(void) {
@@ -636,8 +635,8 @@ const char *ps_ui_pref_list_get(const char *key, int32_t index) {
   s.returnedText = it != s.listPrefs.end() && index >= 0 && static_cast<size_t>(index) < it->second.size()
                        ? it->second[static_cast<size_t>(index)]
                        : std::string();
-  s.log.push_back("ps_ui_pref_list_get(" + quote(key) + ", " + std::to_string(index) + ") -> " + quote(s.returnedText));
-  return s.returnedText.c_str();
+  return logged("ps_ui_pref_list_get(" + quote(key) + ", " + std::to_string(index) + ")", s.returnedText.c_str(),
+                quote(s.returnedText));
 }
 
 bool ps_ui_pref_get_bool(const char *key, bool fallback) {

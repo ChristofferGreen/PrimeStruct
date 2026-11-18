@@ -35,6 +35,7 @@ void recordScenario(const std::string &entry) {
 }
 
 void reset() { state() = State{}; }
+void setFaultHook(std::function<void(const std::string &)> hook) { faultHook() = std::move(hook); }
 std::string pushedScenario() { return state().scenario; }
 void pushCommand(int32_t commandId) {
   Action a;

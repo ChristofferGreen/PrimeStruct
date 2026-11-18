@@ -2238,6 +2238,7 @@ are left unarchived.
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5803 | The web apps run on workers and their gain is measured | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5807 | `[left right] wait(a, b)` destructures the results of several tasks | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5820 | Snapshot runs and the UI tests show nothing on screen | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5822 | The std/os SIGTERM test does not race the program's start | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |
 | TODO-5823 | AppKit snapshot runs finish under an overloaded machine and never outlive their test | [2026-11.md](todo_archive/2026-11.md) | 2026-11-09 |

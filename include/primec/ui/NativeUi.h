@@ -4,8 +4,9 @@
  *
  * Plain C types only. Handles are opaque non-zero uint64_t values; 0 means
  * "none" or failure. Text in and out is UTF-8. Every function must be called on
- * the thread that called ps_ui_init (the main thread on macOS); a call from
- * another thread fails like any other bad call. Functions never abort: a bad
+ * the thread that called ps_ui_init (the main thread on macOS); once the app
+ * runs, a call from another thread faults ("ui call off the main thread:
+ * <function>", exit code 3). Otherwise functions never abort: a bad
  * handle, a call before ps_ui_init, or a call after the window closed returns
  * 0 / false / "" and changes nothing.
  *
