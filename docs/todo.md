@@ -847,9 +847,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5929: The runner rebuilds a dependent only when a symbol it used changed
+- [~] TODO-5929: The runner rebuilds a dependent only when a symbol it used changed
   - owner: ai
   - status: ready
+  - claimed_by: lib-cutoff (worktree-agent-a73357b4feda72cf0), 2026-11-18
   - depends_on: TODO-5915
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 11)
