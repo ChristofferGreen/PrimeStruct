@@ -164,7 +164,7 @@ of sync with them.
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
 | TODO-6029 | Function steps can wait for other steps in one stage | ready | build-function-steps |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | blocked | lib-generics |
+| TODO-5926 | Generic definitions and synthesized helpers cross the library boundary | ready | lib-generics |
 | TODO-5927 | A library owns its namespace roots | blocked | lib-ownership |
 | TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
 | TODO-5929 | The runner rebuilds a dependent only when a symbol it used changed | blocked | lib-cutoff |
@@ -913,10 +913,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: ordering edges between steps of one graph; no new step kinds.
 
 
-- [ ] TODO-5926: Generic definitions and synthesized helpers cross the library boundary
+- [~] TODO-5926: Generic definitions and synthesized helpers cross the library boundary
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5925
+  - status: ready
+  - claimed_by: lib-generics (worktree-agent-aa15238864d995a1b), 2026-11-18
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 5 and 10)
   - parallel_track: lib-generics
