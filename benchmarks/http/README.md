@@ -5,11 +5,17 @@ against `serveWorkers` (one polling thread and worker threads; docs/spec/stdlib-
 recorded numbers and what they mean are in docs/WebAppsPlan.md, Concurrency.
 
 These are measurements made by hand. Nothing in the test gate measures time or throughput; the gate only checks
-that the load generator reports failures (`tests/scripts/test_http_load.py`) and that the example apps work.
+that both load generators report failures (`tests/scripts/test_http_load.py`) and that the example apps work.
 
 ## Files
 
-- `scripts/http_load.py`: the load generator (Python standard library only). N concurrent clients, each a process,
+- `benchmarks/http/http_load.c`: the load generator `run_http_benchmarks.py` uses (built with `cc -O2 -pthread`).
+  Threads keep many connections in flight with non-blocking sockets and `poll`, and cost about 1.4 us of user
+  CPU per request. Same options, exit codes and JSON keys as `scripts/http_load.py`, plus `--threads` and
+  `cpu_us_per_request`. Even so, about 14,500 new loopback connections a second is the most this machine sets
+  up (system time in the kernel), whatever the generator.
+- `scripts/http_load.py`: the Python generator (standard library only), kept for the gate test and for
+  machines without a C compiler (`run_http_benchmarks.py --python-load`). N concurrent clients, each a process,
   send one request per connection for a fixed time and report requests per second and the p50 and p99 latency.
   It exits 1 when a response is not 2xx or 3xx and 2 when a client cannot connect.
 - `benchmarks/http/bench_server.prime`: a server with a route whose handler does little (`POST /form`) and a
@@ -43,7 +49,7 @@ One scenario by hand:
 
 ```bash
 PORT=8080 SERVER=workers WORKERS=4 build-release/benchmarks/http/bench_server &
-python3 scripts/http_load.py http://127.0.0.1:8080/form --form-bytes 32768 --connections 16 --seconds 10
+build-release/benchmarks/http/http_load http://127.0.0.1:8080/form --form-bytes 32768 --connections 16 --seconds 10
 kill %1
 ```
 

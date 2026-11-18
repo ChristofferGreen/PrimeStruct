@@ -4,7 +4,8 @@
     python3 benchmarks/http/run_http_benchmarks.py --build-dir build-release
 
 Builds examples/apps/todo_web, a copy of it that calls `serve`, and benchmarks/http/bench_server.prime with
-`primec --emit=optexe`, then runs scripts/http_load.py against each scenario on `serve`, 1 worker and --workers
+`primec --emit=optexe` and the compiled load generator benchmarks/http/http_load.c with `cc` (`--python-load` uses
+scripts/http_load.py instead), then runs the generator against each scenario on `serve`, 1 worker and --workers
 workers, back to back, and prints a Markdown table with the load average before each scenario.
 
 Run it by hand on an otherwise idle machine. It is not a test: nothing in the gate measures time or throughput.
@@ -31,6 +32,14 @@ def build(primec: Path, source: Path, exe: Path) -> None:
         command += ["--link-arg", str(Repo / shim)]
     print(f"building {exe.name}", file=sys.stderr)
     subprocess.run(command, check=True)
+
+
+def build_generator(exe: Path) -> None:
+    """benchmarks/http/http_load.c: non-blocking sockets and poll(), a few microseconds of CPU per request."""
+    compiler = os.environ.get("CC", "cc")
+    print(f"building {exe.name}", file=sys.stderr)
+    subprocess.run([compiler, "-O2", "-pthread", str(Repo / "benchmarks/http/http_load.c"), "-o", str(exe)],
+                   check=True)
 
 
 def serve_copy(out: Path) -> Path:
@@ -72,8 +81,11 @@ class Server:
             raise SystemExit(f"the server exited with {code} after SIGTERM; see {self.log}")
 
 
+Generator: list[str] = [sys.executable, str(Repo / "scripts/http_load.py")]
+
+
 def load(port: int, path: str, *options: str) -> dict:
-    command = [sys.executable, str(Repo / "scripts/http_load.py"), f"http://127.0.0.1:{port}{path}", "--json"]
+    command = [*Generator, f"http://127.0.0.1:{port}{path}", "--json"]
     done = subprocess.run(command + list(options), capture_output=True, text=True, check=False)
     if done.returncode != 0:
         raise SystemExit(f"http_load failed ({done.returncode}): {done.stderr}")
@@ -87,18 +99,24 @@ def main() -> int:
     parser.add_argument("--connections", type=int, default=16, help="concurrent clients (default 16)")
     parser.add_argument("--workers", type=int, default=4, help="the larger worker count (default 4)")
     parser.add_argument("--items", type=int, default=200, help="todos on the list page (default 200)")
+    parser.add_argument("--python-load", action="store_true", help="use scripts/http_load.py, not http_load.c")
     parser.add_argument("--skip-build", action="store_true", help="use the programs of an earlier run")
     options = parser.parse_args()
     build_dir = options.build_dir.resolve()
     out = build_dir / "benchmarks" / "http"
     out.mkdir(parents=True, exist_ok=True)
+    generator = out / "http_load"
     todo, todo_serve, bench = out / "todo_web", out / "todo_web_serve", out / "bench_server"
+    if not options.python_load:
+        build_generator(generator)
     if not options.skip_build:
         primec = build_dir / "primec"
         build(primec, Repo / "examples/apps/todo_web/main.prime", todo)
         build(primec, serve_copy(out), todo_serve)
         build(primec, Repo / "benchmarks/http/bench_server.prime", bench)
 
+    if not options.python_load:
+        Generator[:] = [str(generator)]
     workers = str(options.workers)
     servers = [
         ("serve", todo_serve, {"SERVER": "serve"}),

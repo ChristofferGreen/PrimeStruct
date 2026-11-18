@@ -2345,6 +2345,7 @@ are left unarchived.
 | TODO-5937 | A restored session keeps each tab's view mode and its active tab | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5938 | The preview's pending-script count stays exact, and turning an open preview on keeps the output pane | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5939 | Stopping a script never signals a reaped pid and reports a stop as stopped | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
+| TODO-5940 | The HTTP load generator costs less CPU per connection than the servers it measures | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5941 | Assigning to a struct local of one scalar kind copies it instead of aliasing the source | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5942 | arm64 native starts a task on a pthread and joins it, its heap behind a lock | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5943 | arm64 native tasks: the measured speedup and the heap stress | [2026-11.md](todo_archive/2026-11.md) | - |

@@ -202,6 +202,20 @@ What the numbers say:
   The generator costs about 200 us of CPU per request (71 us user, the rest system time in `connect`, `send` and
   `recv` of its 16 client processes) against 25 us for the C server. So the form's 2.41x is a measurement of the
   generator: a 2.5x target needs 13,900 requests per second from 4 workers, which is above what this generator
-  shows for any server, and measuring more needs a generator that costs less per connection (TODO-5940) or
-  connections that stay open (TODO-5805).
+  shows for any server, and measuring more needs a generator that costs less per connection or connections that
+  stay open (TODO-5805).
+- **A compiled generator does not move the ceiling: the kernel's loopback setup is it** (measured 2026-11-18, same
+  machine, load average 30 to 60 from other work). `benchmarks/http/http_load.c` (non-blocking sockets and `poll`,
+  one to four threads) costs 1.4 us of user CPU per request (0.084 s of user time for 58,239 requests) and about
+  60 us of system time in `connect`, `send`, `recv` and `close`, against about 200 us for the 16 Python processes. Against the
+  reference C server (4 threads, the 32 KB form) the Python generator reached 13,152 requests per second and the
+  compiled one 12,149 with 16 connections, 14,761 with 64 connections on 2 threads and 14,558 with 32 connections on
+  1 thread (`/ok`); 1 thread and 4 threads give the same 13,700 to 14,600. The rate stays at about 14,500 new
+  connections a second whatever the generator, its thread count or the server, so the 2x of TODO-5940 is not
+  reachable here: the limit is the system time of connecting and closing a loopback connection (about 60 us each,
+  not spread over threads), and only connections that stay open (TODO-5805) go past it. With the compiled
+  generator `run_http_benchmarks.py` (6 s runs, load average 28 to 45) gave 3878 requests per second for `serve`
+  and 12,408 for 4 workers on the 32 KB form (3.20x, the `serve` run being low in that run), 1036 and 1040 on
+  `GET /work`, and 232 and 187 on the list page. The 2.5x target is therefore met in ratio, with the new limit
+  measured: the work of a worker is no longer what is measured at the top, the connection setup is.
 - **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.
