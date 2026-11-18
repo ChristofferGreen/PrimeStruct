@@ -956,9 +956,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-5984: The http web apps lower in seconds, not minutes
+- [~] TODO-5984: The http web apps lower in seconds, not minutes
   - owner: ai
   - status: ready
+  - claimed_by: perf-lower (worktree-agent-ac19f7f2772a67c81), 2026-11-18
   - created_at: 2026-11-12
   - phase: Performance
   - parallel_track: web-app-lowering-time
