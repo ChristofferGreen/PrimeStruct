@@ -95,6 +95,7 @@ bool runCompilePipelineImportStage(const Options &options,
       return false;
     }
     libraryInterfaces = libraryInterfaceUnits(libraries);
+    out.libraryRoots = libraryRootOwners(libraries);
     importResolver.setLibraryInterfaces(&libraryInterfaces);
   }
   const bool imported =

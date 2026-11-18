@@ -4,6 +4,7 @@
 #include "primec/ir/IrLinker.h"
 #include "primec/pipeline/BuildRunner.h"
 #include "primec/pipeline/LibraryBuild.h"
+#include "LibraryOwnership.h"
 
 #include <algorithm>
 #include <map>
@@ -53,6 +54,9 @@ bool loadLibraries(const std::vector<std::string> &paths,
       error = "library " + library.content.manifest.name + " is supplied twice";
       return false;
     }
+  }
+  if (!checkLibraryRootsDisjoint(libraryRootOwners(out), error)) {
+    return false;
   }
   for (const LoadedLibrary &library : out) {
     for (const LibraryManifestDependency &dependency : library.content.manifest.libraries) {

@@ -492,6 +492,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/LibraryArchive.cpp
   src/pipeline/LibraryBuild.cpp
   src/pipeline/LibraryLink.cpp
+  src/pipeline/LibraryOwnership.cpp
   src/pipeline/InterfaceGenerics.cpp
   src/pipeline/ModuleInterface.cpp
   src/pipeline/CompilePipelineStages.cpp

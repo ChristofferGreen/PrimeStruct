@@ -216,6 +216,13 @@ is in the root `/ui`) splices the library's interface text into the source once,
 name it. The text is then ordinary source: `import /ui/*` and full paths work as in a program that defines the module.
 An `import</root>` no library owns is `failed to read import`.
 
+**Ownership.** A library owns the roots its manifest lists, and nothing else may define a path in them. Two libraries
+whose roots are the same, or one inside the other, are refused when the set is loaded
+(`library other and library ui both own /ui`). A definition in the program's own sources (the primary file and its
+imports, not a library interface or the stdlib) at or below a root a library owns is
+`/ui/draw is owned by library ui`, whether or not the program imports the library. A name that only starts like a root
+(`/ui2`, `/app`) is not owned. Without `--library` nothing is checked.
+
 **The marker.** `[imported(<library>)]` declares a function the library defines. The declaration has an empty body and
 an explicit return type, is not generic, and names exactly one library; each rule is a semantic diagnostic
 (`imported declaration must have an empty body: /f`, `imported declaration requires an explicit return type: /f`,

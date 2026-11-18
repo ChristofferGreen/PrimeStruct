@@ -21,6 +21,7 @@
 #include "primec/support/TextFilterPipeline.h"
 #include "primec/support/TransformRules.h"
 #include "../semantics/TypeResolutionGraph.h"
+#include "LibraryOwnership.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -267,6 +268,8 @@ struct CompilePipelineImportStageState {
   // "unknown import path" error that fires when literally nothing from a
   // wildcard-imported module ended up in the compiled buffer.
   std::unordered_set<std::string> lazyStdlibModuleKeys;
+  // `--library`: the namespace roots the libraries own.
+  std::vector<LibraryRootOwner> libraryRoots;
 };
 
 struct CompilePipelinePreParseStageState {

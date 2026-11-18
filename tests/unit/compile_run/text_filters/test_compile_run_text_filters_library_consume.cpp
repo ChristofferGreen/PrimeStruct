@@ -297,4 +297,52 @@ canvas {
   CHECK(interfaceText.find("[namespace] inner {") != std::string::npos);
 }
 
+namespace {
+
+const std::string MainSource = "[return<i32>]\nmain() {\n  return(0i32)\n}\n";
+
+const std::string DrawInUi =
+    "[namespace]\nui {\n  [return<i32>]\n  draw() {\n    return(1i32)\n  }\n}\n\n" + MainSource;
+
+} // namespace
+
+TEST_CASE("library: two libraries that own the same root are refused") {
+  const std::filesystem::path dir = testScratchPath("library_owner_overlap");
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  const std::string other = buildLibrary(
+      dir,
+      "other",
+      "[namespace]\nui {\n  [public return<i32>]\n  extra() {\n    return(2i32)\n  }\n}\n");
+  const Run run =
+      checkConsumer(dir, MainSource, libraryArgument(ui) + " " + libraryArgument(other));
+  CHECK(run.exitCode == 2);
+  CHECK(run.err.find("library other and library ui both own /ui") != std::string::npos);
+}
+
+TEST_CASE("library: a program defining below a library root is owned-path diagnostic") {
+  const std::filesystem::path dir = testScratchPath("library_owner_program_defines");
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  // Without importing the library, and with it.
+  const Run alone = checkConsumer(dir, DrawInUi, libraryArgument(ui));
+  CHECK(alone.exitCode == 2);
+  CHECK(alone.err.find("/ui/draw is owned by library ui") != std::string::npos);
+  const Run imported = checkConsumer(dir, "import</ui>\n" + DrawInUi, libraryArgument(ui));
+  CHECK(imported.exitCode == 2);
+  CHECK(imported.err.find("/ui/draw is owned by library ui") != std::string::npos);
+  // Without `--library` the same program compiles.
+  const Run without = checkConsumer(dir, DrawInUi, "");
+  CHECK_MESSAGE(without.exitCode == 0, without.err);
+}
+
+TEST_CASE("library: names next to a library root compile") {
+  const std::filesystem::path dir = testScratchPath("library_owner_neighbours");
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  const std::string source =
+      "[namespace]\nui2 {\n  [return<i32>]\n  draw() {\n    return(1i32)\n  }\n}\n\n"
+      "[namespace]\napp {\n  [return<i32>]\n  start() {\n    return(2i32)\n  }\n}\n\n" +
+      MainSource;
+  const Run run = checkConsumer(dir, source, libraryArgument(ui));
+  CHECK_MESSAGE(run.exitCode == 0, run.err);
+}
+
 TEST_SUITE_END();

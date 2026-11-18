@@ -280,7 +280,9 @@ bool runCompilePipeline(const Options &options,
     return failPipeline(CompilePipelineErrorStage::Parse, error, capturedDiagnosticInfo);
   }
   output.program = std::move(parsedStage.program);
-  if (!checkImportedDeclarationSites(output.program, importStage.expandedSource, error)) {
+  if (!checkImportedDeclarationSites(output.program, importStage.expandedSource, error) ||
+      !checkProgramDefinesNoOwnedPath(
+          output.program, importStage.expandedSource, importStage.libraryRoots, error)) {
     diagnosticSink.setSummary(error);
     return failPipeline(CompilePipelineErrorStage::Semantic, error, capturedDiagnosticInfo);
   }
