@@ -552,9 +552,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only; split lazy loading out if the size change is large.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path (the startup audit of TODO-5603 found the 0.79 MB executable's size makes no measurable difference warm). It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [ ] TODO-5535: Launch-time harness and reference Objective-C++ editor
+- [~] TODO-5535: Launch-time harness and reference Objective-C++ editor
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: launch-bench (worktree-agent-a72e58a6c3da913ca), 2026-11-18
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-launch
