@@ -160,7 +160,7 @@ of sync with them.
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-5904 | The VM runs tasks on threads by default | ready | vm-threads |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | blocked | lib-uses |
+| TODO-5928 | `--emit-uses` writes the library symbols a compile resolved | in_progress | lib-uses |
 | TODO-5929 | The runner rebuilds a dependent only when a symbol it used changed | blocked | lib-cutoff |
 | TODO-5930 | `primec build` builds libraries and links them | blocked | lib-build |
 | TODO-5931 | The stdlib builds as a library | deferred | lib-stdlib |
@@ -848,10 +848,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5928: `--emit-uses` writes the library symbols a compile resolved
+- [~] TODO-5928: `--emit-uses` writes the library symbols a compile resolved
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5925
+  - status: in_progress
+  - claimed_by: lib-uses (worktree-agent-a5ea242fb6964aba3), 2026-11-18
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, sections 8 and 11)
   - parallel_track: lib-uses
