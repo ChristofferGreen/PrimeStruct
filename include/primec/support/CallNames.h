@@ -32,10 +32,21 @@ struct SimpleCallPolicy {
   // Semantics: `vector__t<hash>` style generated suffixes are not part of the name.
   bool stripTemplateSuffix = false;
   // Decides names the layer reads as collection members or storage aliases. Receives the name with the leading `/`
-  // (and the gpu prefix) already dropped. Returns true when it decided, with the answer in `matches`; false lets the
-  // shared rule continue.
-  bool (*decide)(const std::string &name, std::string_view target, bool &matches) = nullptr;
+  // (and the gpu prefix) already dropped. Returns true when it decided: `hasSimpleName` says whether the spelling
+  // reads as a simple call at all and `simpleName` is that call's name; false lets the shared rule continue. A
+  // decision never depends on the target, so one resolution answers the match test for every target.
+  bool (*decide)(const std::string &name, std::string &simpleName, bool &hasSimpleName) = nullptr;
 };
+
+// The simple call a spelling reads as, or none: the name the spelling matches when it is a simple call.
+struct SimpleCallResolution {
+  bool hasSimpleName = false;
+  std::string simpleName;
+};
+
+SimpleCallResolution resolveSimpleCallName(std::string_view spelling,
+                                           std::string_view namespacePrefix,
+                                           const SimpleCallPolicy &policy);
 
 bool matchSimpleCallName(std::string_view spelling,
                          std::string_view namespacePrefix,

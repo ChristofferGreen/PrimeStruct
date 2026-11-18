@@ -1,14 +1,33 @@
 #pragma once
 
+#include <cstring>
+#include <functional>
+#include <initializer_list>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
+#include "primec/support/CallNames.h"
+#include "primec/support/CompileArena.h"
+
 namespace primec {
 
 struct StdlibSurfaceMetadata;
+
+struct TransparentStringHash {
+  using is_transparent = void;
+  size_t operator()(std::string_view text) const noexcept {
+    return std::hash<std::string_view>{}(text);
+  }
+};
+
+// Resolutions of call spellings (see resolveSimpleCallName), keyed by the spelling joined with whatever else the
+// resolution depends on, NUL separated. One entry answers the match test for every target name.
+using SimpleCallResolutionMemo =
+    std::unordered_map<std::string, SimpleCallResolution, TransparentStringHash, std::equal_to<>>;
 
 // State owned by one compilation (TODO-5359; design in
 // docs/CompilerArenaAllocator.md, "TODO-5358: compiler global state inventory
@@ -39,12 +58,20 @@ public:
   // getBuiltinArrayAccessName). Keys join every input with NUL separators; inserts
   // run under a SystemHeapScope like the other caches.
   struct NameClassifierCaches {
-    std::unordered_map<std::string, bool> simpleCallNames;
+    SimpleCallResolutionMemo simpleCallNames;
     std::unordered_map<std::string, bool> rootBuiltinNames;
     std::unordered_map<std::string, std::pair<bool, std::string>> builtinArrayAccessNames;
   };
 
   NameClassifierCaches nameClassifiers;
+
+  // Looks up `parts` joined by NUL in the memo without allocating (the key is built in a stack buffer when it fits);
+  // on a miss stores `compute()` under a SystemHeapScope so no entry points into compile-arena memory.
+  template <typename Compute>
+  static const SimpleCallResolution &
+  memoizedSimpleCall(SimpleCallResolutionMemo &memo,
+                     std::initializer_list<std::string_view> parts,
+                     Compute &&compute);
 
   // Memo of findStdlibSurfaceMetadataByResolvedPath: resolved path -> metadata of
   // the (process-wide, immutable) stdlib surface registry. Inserted under a
@@ -75,5 +102,40 @@ public:
     CompileContext *previous_;
   };
 };
+
+template <typename Compute>
+const SimpleCallResolution &
+CompileContext::memoizedSimpleCall(SimpleCallResolutionMemo &memo,
+                                   std::initializer_list<std::string_view> parts,
+                                   Compute &&compute) {
+  char buffer[256];
+  size_t length = 0;
+  bool fits = true;
+  for (const std::string_view part : parts) {
+    if (length + part.size() + 1 > sizeof(buffer)) {
+      fits = false;
+      break;
+    }
+    if (!part.empty()) {
+      std::memcpy(buffer + length, part.data(), part.size());
+    }
+    length += part.size();
+    buffer[length++] = '\0';
+  }
+  std::string longKey;
+  if (!fits) {
+    for (const std::string_view part : parts) {
+      longKey.append(part).push_back('\0');
+    }
+  }
+  const std::string_view key = fits ? std::string_view(buffer, length) : std::string_view(longKey);
+  if (const auto it = memo.find(key); it != memo.end()) {
+    return it->second;
+  }
+  SimpleCallResolution resolution = compute();
+  SystemHeapScope systemHeapGuard;
+  SimpleCallResolution stored{resolution.hasSimpleName, std::string(resolution.simpleName)};
+  return memo.emplace(std::string(key), std::move(stored)).first->second;
+}
 
 } // namespace primec

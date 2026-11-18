@@ -24,10 +24,9 @@ bool isSingleSegmentName(std::string_view spelling, std::string_view target) {
   return rest.find('/') == std::string_view::npos && rest == target;
 }
 
-bool matchSimpleCallName(std::string_view spelling,
-                         std::string_view namespacePrefix,
-                         std::string_view target,
-                         const SimpleCallPolicy &policy) {
+SimpleCallResolution resolveSimpleCallName(std::string_view spelling,
+                                           std::string_view namespacePrefix,
+                                           const SimpleCallPolicy &policy) {
   std::string name(spelling);
   if (policy.joinNamespacePrefix && !namespacePrefix.empty() &&
       name.find('/') == std::string::npos) {
@@ -41,14 +40,13 @@ bool matchSimpleCallName(std::string_view spelling,
   if (policy.stripGpuPrefix && name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
   }
-  if (policy.decide != nullptr) {
-    bool matches = false;
-    if (policy.decide(name, target, matches)) {
-      return matches;
-    }
+  SimpleCallResolution resolution;
+  if (policy.decide != nullptr &&
+      policy.decide(name, resolution.simpleName, resolution.hasSimpleName)) {
+    return resolution;
   }
   if (name.find('/') != std::string::npos) {
-    return false;
+    return resolution;
   }
   if (policy.stripTemplateSuffix) {
     const size_t suffix = name.find("__t");
@@ -56,7 +54,17 @@ bool matchSimpleCallName(std::string_view spelling,
       name.erase(suffix);
     }
   }
-  return name == target;
+  resolution.hasSimpleName = true;
+  resolution.simpleName = std::move(name);
+  return resolution;
+}
+
+bool matchSimpleCallName(std::string_view spelling,
+                         std::string_view namespacePrefix,
+                         std::string_view target,
+                         const SimpleCallPolicy &policy) {
+  const SimpleCallResolution resolution = resolveSimpleCallName(spelling, namespacePrefix, policy);
+  return resolution.hasSimpleName && resolution.simpleName == target;
 }
 
 ScalarTypeKind scalarTypeKindForName(std::string_view typeName) {

@@ -20,6 +20,10 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
     const BuiltinCollectionDispatchResolverAdapters &adapters) {
+  // The resolvers outlive this call (and a defaulted `adapters` argument does not), but many closures below need
+  // the adapters: they share one copy instead of each closure cloning the adapters' std::function members.
+  const std::shared_ptr<const BuiltinCollectionDispatchResolverAdapters> sharedAdapters =
+      std::make_shared<const BuiltinCollectionDispatchResolverAdapters>(adapters);
   auto extractWrappedPointeeType = [&](const std::string &typeText, std::string &pointeeTypeOut) -> bool {
     pointeeTypeOut.clear();
     std::string base;
@@ -176,8 +180,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         return true;
       }
     }
-    return adapters.resolveBindingTarget != nullptr &&
-           adapters.resolveBindingTarget(target, bindingOut);
+    return sharedAdapters->resolveBindingTarget != nullptr &&
+           sharedAdapters->resolveBindingTarget(target, bindingOut);
   };
   auto resolveMethodOwnerPath = [=, this](const std::string &typeText,
                                           const std::string &typeNamespace) -> std::string {
@@ -220,7 +224,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (target.kind != Expr::Kind::Call) {
       return false;
     }
-    if (adapters.inferCallBinding != nullptr && adapters.inferCallBinding(target, bindingOut)) {
+    if (sharedAdapters->inferCallBinding != nullptr &&
+        sharedAdapters->inferCallBinding(target, bindingOut)) {
       return true;
     }
     auto inferResolvedDefinitionBinding = [&](const std::string &resolvedPath) -> bool {
@@ -715,21 +720,29 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
       resolveBindingTarget,
       isDirectCanonicalVectorAccessCallOnBuiltinReceiver);
 
+  // The returned resolvers forward to the shared state's closures (kept alive by resolverStateKeepAlive) rather than
+  // cloning each of them: a forwarder holds two pointers, so it never allocates.
+  BuiltinCollectionDispatchResolvers *const rawState = state.get();
+  auto forward = [rawState](auto member) {
+    return [rawState, member](auto &&...callArgs) -> bool {
+      return (rawState->*member)(std::forward<decltype(callArgs)>(callArgs)...);
+    };
+  };
   BuiltinCollectionDispatchResolvers resolvers{
-      state->resolveIndexedArgsPackElementType,
-      state->resolveDereferencedIndexedArgsPackElementType,
-      state->resolveWrappedIndexedArgsPackElementType,
-      state->resolveArgsPackAccessTarget,
-      state->resolveArrayTarget,
-      state->resolveVectorTarget,
-      state->resolveCollectionVectorTarget,
-      state->resolveCollectionVectorValueTarget,
-      state->resolveSoaVectorTarget,
-      state->resolveBufferTarget,
-      state->resolveStringTarget,
-      state->resolveMapTarget,
-      state->resolveKeyValueTarget,
-      state->resolveDirectKeyValueTarget,
+      forward(&BuiltinCollectionDispatchResolvers::resolveIndexedArgsPackElementType),
+      forward(&BuiltinCollectionDispatchResolvers::resolveDereferencedIndexedArgsPackElementType),
+      forward(&BuiltinCollectionDispatchResolvers::resolveWrappedIndexedArgsPackElementType),
+      forward(&BuiltinCollectionDispatchResolvers::resolveArgsPackAccessTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveArrayTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveVectorTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveCollectionVectorTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveCollectionVectorValueTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveSoaVectorTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveBufferTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveStringTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveMapTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveKeyValueTarget),
+      forward(&BuiltinCollectionDispatchResolvers::resolveDirectKeyValueTarget),
       nullptr};
   resolvers.resolverStateKeepAlive = state;
   return resolvers;

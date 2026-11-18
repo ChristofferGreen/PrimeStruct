@@ -29,21 +29,27 @@ bool SemanticsValidator::isStaticHelperDefinition(const Definition &def) const {
 }
 
 bool SemanticsValidator::hasDeclaredDefinitionPath(const std::string &path) const {
+  if (!declaredDefinitionPathIndexValid_) {
+    declaredDefinitionPathIndex_.clear();
+    for (const auto &def : program_.definitions) {
+      declaredDefinitionPathIndex_.insert(def.fullPath);
+    }
+    declaredDefinitionPathIndexValid_ = true;
+  }
   std::string canonicalPath = path;
   const size_t generatedSuffix = canonicalPath.find("__");
   if (generatedSuffix != std::string::npos) {
     canonicalPath.erase(generatedSuffix);
   }
-  const std::string templatedPrefix = canonicalPath + "<";
-  const std::string specializedPrefix = canonicalPath + "__";
-  for (const auto &def : program_.definitions) {
-    if (def.fullPath == canonicalPath ||
-        def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-        def.fullPath.rfind(specializedPrefix, 0) == 0) {
-      return true;
-    }
-  }
-  return false;
+  // The paths starting with `canonicalPath` sort contiguously from lower_bound(canonicalPath): the path itself, then
+  // the `<` and `__` continuations among them. Other continuations ('/' children, longer names) sort in between,
+  // so each continuation is looked up on its own.
+  const auto startsWith = [&](const std::string &prefix) {
+    const auto it = declaredDefinitionPathIndex_.lower_bound(prefix);
+    return it != declaredDefinitionPathIndex_.end() && it->compare(0, prefix.size(), prefix) == 0;
+  };
+  return declaredDefinitionPathIndex_.count(canonicalPath) > 0 || startsWith(canonicalPath + "<") ||
+         startsWith(canonicalPath + "__");
 }
 
 bool SemanticsValidator::resolveExplicitOrCanonicalCollectionMethodTarget(

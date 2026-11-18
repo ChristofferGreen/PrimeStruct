@@ -533,6 +533,10 @@ private:
   // never mutated afterward for the lifetime of a validation pass.
   mutable std::set<std::string> definitionFamilyPathIndex_;
   mutable bool definitionFamilyPathIndexValid_ = false;
+  // Sorted program_.definitions fullPaths (namespaces included), for hasDeclaredDefinitionPath(); same lifetime
+  // rule as the index above.
+  mutable std::set<std::string> declaredDefinitionPathIndex_;
+  mutable bool declaredDefinitionPathIndexValid_ = false;
   // hasDefinitionFamilyPath()'s answer for a given resolved path depends only
   // on defMap_/definitionFamilyPathIndex_, both immutable for the lifetime of
   // a validation pass (see the comment above) - so the answer is valid for

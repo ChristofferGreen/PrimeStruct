@@ -114,4 +114,22 @@ TEST_CASE("the lowerer policy reads namespaces, collection aliases and SoA alias
   CHECK_FALSE(isSimpleCallName(callNamed("if"), "while"));
 }
 
+TEST_CASE("a spelling resolves to one simple name that every target is compared with") {
+  const primec::SimpleCallPolicy strict;
+  const primec::SimpleCallResolution plain = primec::resolveSimpleCallName("/if", {}, strict);
+  CHECK(plain.hasSimpleName);
+  CHECK(plain.simpleName == "if");
+  CHECK_FALSE(primec::resolveSimpleCallName("/a/if", {}, strict).hasSimpleName);
+
+  // Repeated and interleaved queries of the memoized classifier keep answering per target.
+  using primec::semantics::isSimpleCallName;
+  for (int round = 0; round < 2; ++round) {
+    CHECK(isSimpleCallName(callNamed("/std/collections/vector/count"), "count"));
+    CHECK_FALSE(isSimpleCallName(callNamed("/std/collections/vector/count"), "push"));
+    CHECK(isSimpleCallName(callNamed("if__t1f"), "if"));
+    CHECK_FALSE(isSimpleCallName(callNamed("if__t1f"), "while"));
+    CHECK_FALSE(isSimpleCallName(callNamed("if"), nullptr));
+  }
+}
+
 TEST_SUITE_END();

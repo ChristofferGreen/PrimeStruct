@@ -163,7 +163,6 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
-| TODO-6036 | The front end of the http web apps does less work per call | ready | web-app-lowering-time |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
@@ -926,20 +925,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-6036: The front end of the http web apps does less work per call
-  - owner: ai
-  - status: ready
-  - claimed_by: fe-perf (worktree-agent-abe865f9c007520e0), 2026-11-18
-  - created_at: 2026-11-18
-  - phase: Performance
-  - parallel_track: web-app-lowering-time
-  - scope: After TODO-5984 the semantic front end (import expansion, monomorphization, validation, semantic-product publication) is 1.2 to 1.7 s of the 1.5 to 3.8 s that `primec --dump-stage ir-lowered` takes on examples/apps/*, and `text_editor` stays at 1.93 s CPU against the 1.67 s a third of its recorded 5 s allows. The profile (docs/todo_archive/2026-11.md under TODO-5984) shows no single cost: operator new through the arena is 13 percent of samples, `validateDefinitionsFromStableIndexResolver` 4 percent self, and per-call linear scans or per-call key strings remain in `SemanticsValidator::hasDeclaredDefinitionPath` (scans `program_.definitions`), `isSimpleCallName` (builds a key string per call) and `specializeTemplateDefinitionFamily` (hash walk). Re-profile on the examples, take the costliest few, and fix them without changing output.
-  - acceptance:
-    - `--dump-stage ir-lowered` on examples/apps/text_editor takes at most 1.67 s of CPU in a release build on a quiet machine, with output unchanged
-    - full release gate green
-  - stop_rule: the costs the new profile names; no unrelated compiler speedups.
-  - notes: deferred: not committed. Measure min of 3 runs; the machine's load moves a single run by 30 percent.
 
 - [ ] TODO-5987: The lowerer's include-only fragments become components
   - owner: ai

@@ -217,7 +217,7 @@ static bool isInternalSoaStorageBareBuiltin(const std::string &name) {
 // Lowerer policy row: namespace-joined names, vector collection aliases, internal SoA storage aliases and scoped
 // builtin tails decide their own match.
 static bool
-decideLowererScopedBuiltin(const std::string &name, std::string_view target, bool &matches) {
+decideLowererScopedBuiltin(const std::string &name, std::string &simpleName, bool &hasSimpleName) {
   const std::string vectorCollectionPrefix = std::string("std/collections/") + "vector" + "/";
   if (name.rfind(vectorCollectionPrefix, 0) == 0) {
     const std::string alias = name.substr(vectorCollectionPrefix.size());
@@ -225,14 +225,16 @@ decideLowererScopedBuiltin(const std::string &name, std::string_view target, boo
         (alias == "count" || alias == "capacity" || alias == "at" || alias == "at_unsafe" || alias == "push" ||
          alias == "pop" || alias == "reserve" || alias == "clear" || alias == "remove_at" ||
          alias == "remove_swap")) {
-      matches = alias == target;
+      simpleName = alias;
+      hasSimpleName = true;
       return true;
     }
   }
   const std::string internalSoaAlias = normalizeInternalSoaStorageBuiltinAlias(name);
   if (internalSoaAlias.find('/') == std::string::npos &&
       isInternalSoaStorageBareBuiltin(internalSoaAlias)) {
-    matches = internalSoaAlias == target;
+    simpleName = internalSoaAlias;
+    hasSimpleName = true;
     return true;
   }
   if (name.find('/') == std::string::npos) {
@@ -240,46 +242,32 @@ decideLowererScopedBuiltin(const std::string &name, std::string_view target, boo
   }
   const size_t slash = name.find_last_of('/');
   const std::string tail = name.substr(slash + 1);
-  if (isInternalSoaStorageBareBuiltin(tail) && tail == target) {
+  if (isInternalSoaStorageBareBuiltin(tail)) {
     const bool removedScopedCollectionAlias = name.rfind(std::string("vector") + "/", 0) == 0 ||
                                               name.rfind("array/", 0) == 0 ||
                                               resolvesKeyValueHelperSurfacePath(name);
-    matches = !removedScopedCollectionAlias;
+    if (!removedScopedCollectionAlias) {
+      simpleName = tail;
+      hasSimpleName = true;
+    }
     return true;
   }
   return false;
-}
-
-static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
-  static const SimpleCallPolicy policy{true, true, false, decideLowererScopedBuiltin};
-  return matchSimpleCallName(expr.name,
-                             expr.namespacePrefix,
-                             nameToMatch == nullptr ? std::string_view()
-                                                    : std::string_view(nameToMatch),
-                             policy);
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  // A pure function of (name, namespace prefix, target); see the semantics twin.
-  std::string key;
-  key.reserve(expr.name.size() + expr.namespacePrefix.size() + 24);
-  key.push_back('l');
-  key.append(expr.name).push_back('\0');
-  key.append(expr.namespacePrefix).push_back('\0');
-  key.append(nameToMatch == nullptr ? "" : nameToMatch);
-  auto &cache = CompileContext::current().nameClassifiers.simpleCallNames;
-  if (const auto it = cache.find(key); it != cache.end()) {
-    return it->second;
-  }
-  const bool result = isSimpleCallNameUncached(expr, nameToMatch);
-  {
-    primec::SystemHeapScope systemHeapGuard;
-    cache.emplace(key, result);
-  }
-  return result;
+  // The resolution is a pure function of (name, namespace prefix); see the semantics twin.
+  static const SimpleCallPolicy policy{true, true, false, decideLowererScopedBuiltin};
+  const SimpleCallResolution &resolution = CompileContext::memoizedSimpleCall(
+      CompileContext::current().nameClassifiers.simpleCallNames,
+      {std::string_view("l", 1), expr.name, expr.namespacePrefix},
+      [&] { return resolveSimpleCallName(expr.name, expr.namespacePrefix, policy); });
+  return resolution.hasSimpleName &&
+         resolution.simpleName ==
+             (nameToMatch == nullptr ? std::string_view() : std::string_view(nameToMatch));
 }
 
 namespace {

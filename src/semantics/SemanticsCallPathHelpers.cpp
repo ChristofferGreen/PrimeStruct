@@ -77,47 +77,31 @@ bool isAssignCall(const Expr &expr) {
 }
 
 // Semantics policy row: collection helper member spellings decide their own match.
-static bool
-decideSemanticsCollectionMember(const std::string &name, std::string_view target, bool &matches) {
-  std::string member;
-  if (resolveCanonicalVectorHelperMemberName(name, member) ||
-      resolveKeyValueHelperMemberName(name, member)) {
-    matches = member == target;
+static bool decideSemanticsCollectionMember(const std::string &name,
+                                            std::string &simpleName,
+                                            bool &hasSimpleName) {
+  if (resolveCanonicalVectorHelperMemberName(name, simpleName) ||
+      resolveKeyValueHelperMemberName(name, simpleName)) {
+    hasSimpleName = true;
     return true;
   }
   return false;
-}
-
-static bool isSimpleCallNameUncached(const Expr &expr, const char *nameToMatch) {
-  static const SimpleCallPolicy policy{false, true, true, decideSemanticsCollectionMember};
-  return matchSimpleCallName(expr.name,
-                             {},
-                             nameToMatch == nullptr ? std::string_view()
-                                                    : std::string_view(nameToMatch),
-                             policy);
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  // A pure function of (name, target): memoized per compilation because the front end
-  // asks it for every expression against dozens of builtin names.
-  std::string key;
-  key.reserve(expr.name.size() + 24);
-  key.push_back('s');
-  key.append(expr.name).push_back('\0');
-  key.append(nameToMatch == nullptr ? "" : nameToMatch);
-  auto &cache = CompileContext::current().nameClassifiers.simpleCallNames;
-  if (const auto it = cache.find(key); it != cache.end()) {
-    return it->second;
-  }
-  const bool result = isSimpleCallNameUncached(expr, nameToMatch);
-  {
-    primec::SystemHeapScope systemHeapGuard;
-    cache.emplace(key, result);
-  }
-  return result;
+  // The spelling's resolution is a pure function of the name, memoized per compilation because the front end
+  // asks about every expression against dozens of builtin names.
+  static const SimpleCallPolicy policy{false, true, true, decideSemanticsCollectionMember};
+  const SimpleCallResolution &resolution = CompileContext::memoizedSimpleCall(
+      CompileContext::current().nameClassifiers.simpleCallNames,
+      {std::string_view("s", 1), expr.name},
+      [&] { return resolveSimpleCallName(expr.name, {}, policy); });
+  return resolution.hasSimpleName &&
+         resolution.simpleName ==
+             (nameToMatch == nullptr ? std::string_view() : std::string_view(nameToMatch));
 }
 
 bool isIfCall(const Expr &expr) {

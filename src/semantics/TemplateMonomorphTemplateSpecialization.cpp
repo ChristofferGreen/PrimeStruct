@@ -209,13 +209,15 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
   std::vector<bool> replaceExistingShells;
   replaceExistingShells.reserve(family.size());
 
-  for (const auto &def : family) {
-    const bool shouldOutputClone =
-        !isUnderNestedTemplateRoot(basePath, def.fullPath, nestedTemplates);
-    Definition clone = def;
-    clone.fullPath = replacePathPrefix(def.fullPath, basePath, specializedBasePath);
-    clone.namespacePrefix = replacePathPrefix(def.namespacePrefix, basePath, specializedBasePath);
-    if (def.fullPath == basePath) {
+  // `family` is a private copy: each definition becomes its clone in place.
+  for (Definition &def : family) {
+    const std::string defPath = def.fullPath;
+    const bool shouldOutputClone = !isUnderNestedTemplateRoot(basePath, defPath, nestedTemplates);
+    const std::string defNamespacePrefix = def.namespacePrefix;
+    Definition clone = std::move(def);
+    clone.fullPath = replacePathPrefix(defPath, basePath, specializedBasePath);
+    clone.namespacePrefix = replacePathPrefix(defNamespacePrefix, basePath, specializedBasePath);
+    if (defPath == basePath) {
       clone.name = specializedName;
       clone.namespacePrefix = parentPathForDefinition(specializedBasePath);
       clone.templateArgs.clear();
@@ -242,7 +244,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
     }
 
     const std::unordered_set<std::string> shadowedParams =
-        collectShadowedTemplateParams(def.fullPath, nestedTemplates);
+        collectShadowedTemplateParams(defPath, nestedTemplates);
     SubstMap mapping = templateBinding.mapping;
     for (const auto &param : shadowedParams) {
       mapping.erase(param);
@@ -251,7 +253,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       ctx.specializationCache.erase(cacheKey);
       return false;
     }
-    if (def.fullPath == basePath && isStructDefinition(clone) && !replaceExistingShell &&
+    if (defPath == basePath && isStructDefinition(clone) && !replaceExistingShell &&
         ctx.sourceDefs.count(clone.fullPath) == 0) {
       ctx.sourceDefs.emplace(clone.fullPath, clone);
       ctx.sourceDefsFamilyPathIndexValid = false;
@@ -275,11 +277,11 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
   }
 
   for (size_t cloneIndex = 0; cloneIndex < clones.size(); ++cloneIndex) {
-    const Definition &clone = clones[cloneIndex];
+    Definition &clone = clones[cloneIndex];
     if (replaceExistingShells[cloneIndex]) {
       ctx.sourceDefs[clone.fullPath] = clone;
     } else {
-      ctx.sourceDefs.emplace(clone.fullPath, clone);
+      ctx.sourceDefs.try_emplace(clone.fullPath, clone);
     }
     if (!clone.templateArgs.empty()) {
       ctx.templateDefs.insert(clone.fullPath);
@@ -289,7 +291,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
 
     if (cloneOutputs[cloneIndex] && clone.templateArgs.empty()) {
       if (ctx.outputPaths.insert(clone.fullPath).second) {
-        ctx.outputDefs.push_back(clone);
+        ctx.outputDefs.push_back(std::move(clone));
       }
     }
   }
