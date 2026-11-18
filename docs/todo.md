@@ -932,9 +932,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the merge and the table only; no frontend, no archive, no optimizer or backend change beyond reading the merged module.
   - notes: large; if the schema bump and the table need separate changes when it starts, split them with this id on the table.
 
-- [ ] TODO-5923: `primec --emit=interface` prints a module's interface and symbol table
+- [~] TODO-5923: `primec --emit=interface` prints a module's interface and symbol table
   - owner: ai
   - status: ready
+  - claimed_by: lib-interface (worktree-agent-a2035638ccbf6a08f), 2026-11-18
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 5)
   - parallel_track: lib-interface
