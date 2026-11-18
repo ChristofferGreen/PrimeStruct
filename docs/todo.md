@@ -502,9 +502,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `?` inside statement blocks with `on_error` on the enclosing definition.
 
-- [ ] TODO-5940: The HTTP load generator costs less CPU per connection than the servers it measures
+- [~] TODO-5940: The HTTP load generator costs less CPU per connection than the servers it measures
   - owner: ai
   - status: ready
+  - claimed_by: agent-http-load (worktree agent-af88536aeb6c4beeb), 2026-11-18
   - created_at: 2026-11-11
   - phase: Multithreading and Web apps (docs/WebAppsPlan.md, Concurrency; found by TODO-5871)
   - parallel_track: mt-server
