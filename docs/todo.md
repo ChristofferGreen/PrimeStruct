@@ -846,9 +846,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-5930: `primec build` builds libraries and links them
+- [~] TODO-5930: `primec build` builds libraries and links them
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: lib-build (worktree-agent-a6d284319ad9f892c), 2026-11-18
   - depends_on: TODO-5913
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 11); Build system (docs/BuildSystemPlan.md)
