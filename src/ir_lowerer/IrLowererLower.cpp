@@ -1,5 +1,4 @@
 #include "primec/ir/IrLowerer.h"
-#include "IrLowererEntryResultExit.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 #include "primec/frontend/StringLiteral.h"
@@ -513,11 +512,6 @@ bool IrLowerer::lower(const Program &program,
       error = "IR lowering failed without diagnostic";
     }
     return false;
-  }
-
-  if (out.entryIndex >= 0 && static_cast<size_t>(out.entryIndex) < out.functions.size()) {
-    ir_lowerer::applyEntryResultExitCode(
-        *entryDef, defMap, out.functions[static_cast<size_t>(out.entryIndex)]);
   }
 
   if (libraryRoots != nullptr && !ir_lowerer::removeLibraryEntryStub(out, error)) {
