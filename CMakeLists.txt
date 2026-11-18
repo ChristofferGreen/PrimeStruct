@@ -1555,7 +1555,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   primestructAddDoctestShards(PrimeStruct_string_conformance_vm PrimeStruct_cpp_host_call_tests 50 3 600
                               "--test-suite=primestruct.backend.string_conformance"
                               "--test-case-exclude=*through optexe*")
-  primestructAddDoctestShards(PrimeStruct_string_conformance_optexe PrimeStruct_cpp_host_call_tests 38 2 600
+  primestructAddDoctestShards(PrimeStruct_string_conformance_optexe PrimeStruct_cpp_host_call_tests 39 2 600
                               "--test-suite=primestruct.backend.string_conformance"
                               "--test-case=*through optexe*")
   primestructAddDoctestShards(PrimeStruct_cpp_native_ui PrimeStruct_cpp_host_call_tests 9 1 600

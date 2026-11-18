@@ -2260,6 +2260,7 @@ are left unarchived.
 | TODO-5841 | `[namespace] name { ... }` is a definition | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5842 | `summary("...")` is a checked transform on definitions | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5843 | `namespace name { ... }` is sugar for the `[namespace]` definition | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
+| TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5845 | A spawned call with a `String` or struct parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5846 | `optexe` faults when every task waits on another | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5847 | A spawned call with a builtin `map<K, V>` or an owned sum parameter or result runs as a task | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |

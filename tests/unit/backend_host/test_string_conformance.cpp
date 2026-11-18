@@ -382,6 +382,30 @@ TEST_CASE("a bulk move past the end of its region stops the program through opte
   CHECK(readFile(err).find("invalid text range") != std::string::npos);
 }
 
+// The optimizing C++ emitter calls the string heap's alloc, capacity and free directly (ps_text_alloc and friends),
+// not through the name dispatch of ps_text_call, and the program prints what it printed before.
+TEST_CASE("string heap calls are direct and keep their output through optexe") {
+  const std::string source =
+      "import /std/text/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
+      "  a.append(\" and a longer tail of text\")\n"
+      "  [String] b{a}\n"
+      "  print_line(b.count() + a.count())\n  return(0i32)\n}\n";
+  const std::string file = scratch("direct_text_calls.prime");
+  std::ofstream(file, std::ios::binary) << source;
+  const std::string cpp = scratch("direct_text_calls.cpp");
+  const std::string log = cpp + ".log";
+  REQUIRE(run(shellQuote(Primec) + " --emit=optcpp " + shellQuote(file) + " -o " + shellQuote(cpp) +
+              " > " + shellQuote(log) + " 2>&1") == 0);
+  const std::string text = readFile(cpp);
+  CHECK(text.find("ps_text_alloc(rt, ") != std::string::npos);
+  CHECK(text.find("ps_text_capacity(rt, ") != std::string::npos);
+  CHECK(text.find("ps_text_free(rt, ") != std::string::npos);
+  CHECK(text.find("ps_text_call(rt, \"__pstext_alloc\"") == std::string::npos);
+  CHECK(text.find("ps_text_call(rt, \"__pstext_free\"") == std::string::npos);
+  CHECK(optexeOutput("direct_text_calls", source) == "58\n");
+}
+
 // ---- StringView: a borrowed view of literals and Strings ---------------------------------------------
 
 namespace {

@@ -363,6 +363,33 @@ inline uint64_t ps_text_call(Rt &rt, const char *name, const uint64_t *args) {
   return result;
 }
 
+// `__pstext_alloc`, `__pstext_free` and `__pstext_capacity`, called directly where `ps_text_call` would compare the
+// name against the host functions before them (callTextHostFunction answers the same way: the heap's own call).
+inline uint64_t ps_text_alloc(Rt &rt, uint64_t size) {
+  uint64_t block = 0;
+  std::string error;
+  if (!rt.text.allocate(rt.heap, size, block, error)) {
+    ps_fault(error);
+  }
+  return block;
+}
+
+inline void ps_text_free(Rt &rt, uint64_t address) {
+  std::string error;
+  if (!rt.text.release(rt.heap, address, error)) {
+    ps_fault(error);
+  }
+}
+
+inline uint64_t ps_text_capacity(Rt &rt, uint64_t address) {
+  uint64_t size = 0;
+  std::string error;
+  if (!textBlockSize(rt.text, rt.heap, address, size, error)) {
+    ps_fault(error);
+  }
+  return size;
+}
+
 // `__pstext_move(destination, source, count)`: the bulk move of String.append and the byte containers, called
 // directly where `ps_text_call` would compare the name against every host function before it (callTextHostFunction
 // answers the same way: one range check, a count of 0 touches nothing, overlapping ranges are fine).

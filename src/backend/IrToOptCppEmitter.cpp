@@ -630,6 +630,18 @@ private:
           line("ps_text_move(rt, " + slot(base) + ", " + slot(base + 1) + ", " + slot(base + 2) +
                ");");
           return true;
+        } else if (textName == "__pstext_alloc" && import.parameters.size() == 1 &&
+                   import.returnKind != IrHostValueKind::Void) {
+          line(slot(base) + " = ps_text_alloc(rt, " + slot(base) + ");");
+          return true;
+        } else if (textName == "__pstext_capacity" && import.parameters.size() == 1 &&
+                   import.returnKind != IrHostValueKind::Void) {
+          line(slot(base) + " = ps_text_capacity(rt, " + slot(base) + ");");
+          return true;
+        } else if (textName == "__pstext_free" && import.parameters.size() == 1 &&
+                   import.returnKind == IrHostValueKind::Void) {
+          line("ps_text_free(rt, " + slot(base) + ");");
+          return true;
         } else if (textName == "__pstext_literal") {
           answer = "ps_text_literal(rt, ps_strings, PsStringCount, " + slot(base) + ")";
           if (import.returnKind == IrHostValueKind::Void) {

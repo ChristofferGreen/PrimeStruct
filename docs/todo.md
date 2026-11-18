@@ -118,7 +118,6 @@ of sync with them.
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
-| TODO-5844 | Short-string `optexe` benchmarks take the cycles they took before the heap arenas | ready | optexe-bytes |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5862 | `serveWorkers` serves on the VM with 2 workers | deferred | mt-server |
@@ -195,7 +194,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; optexe byte loops TODO-5844; real calls TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5854, TODO-5862
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 
@@ -413,21 +412,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the spawn binding inference only.
   - notes: deferred: no example needs it; `return<void>` is the workaround.
-
-- [~] TODO-5844: Short-string `optexe` benchmarks take the cycles they took before the heap arenas
-  - owner: ai
-  - status: in_progress
-  - claimed_by: optexe-bytes (worktree-agent-a5b854954c33d0631), 2026-11-18
-  - created_at: 2026-11-10
-  - phase: Optimizing backends (found in TODO-5794)
-  - parallel_track: optexe-bytes
-  - scope: After TODO-5794 (per-thread heap arenas) `benchmarks/strings/request_heap.prime`, `request_arena.prime` and `short_strings.prime` run 1.5% fewer to 0.3% more instructions on `optexe` but 4 to 7% more cycles (request_heap: +4.6% to +7.7% of the minimum over five code layouts, `-falign-functions`/`-falign-loops`; short_strings about +4% averaged over them), so the cost is in how the instructions run, not in how many there are. Ruled out by measurement: the `__pstext_*` host calls and `ps_heap_alloc`/`free`/`realloc` (timed with `mach_absolute_time`, equal before and after), the `Rt` members being references (a by-value variant is as slow), the remote-free check before an allocation, `slotAt` and `byteAt` themselves (the old bodies pasted into the new class change nothing), one read of the granule state instead of two, the arena base folded into the storage pointer. Not ruled out: the code around the out-of-line `ps_byte_at` and the inlined `ps_resolve` in the large generated functions (their fault paths, the order of blocks), `ZeroedAllocator` storage, and plain layout luck beyond what the alignment flags vary (the same source moves 15% with them). Find it with a sampling profiler on a quiet machine, and fix it without changing the argument list of `ps_resolve` or adding a local to every function (either stops clang inlining small functions: +19% instructions on append_chunks).
-  - implementation_notes: src/backend/IrToOptCppRuntime.h (`ps_byte_at`, `ps_resolve`, `ps_resolve_outer`), include/primec/runtime/VmHeapCoreBody.inc. Compare `primec --emit=optcpp` output of commit e8a547504 (before the arenas) and of master, both built with `clang++ -std=c++23 -O2 -ffp-contract=off`; count instructions and cycles with `proc_pid_rusage` (`ri_instructions`, `ri_cycles`) of the program itself, minimum of interleaved runs, under several alignment flags. CPU-time medians on a shared machine moved by 10% between sessions.
-  - acceptance:
-    - request_heap, request_arena and short_strings on `optexe`: cycles within 3% of the e8a547504 build, averaged over five layouts; instructions no higher than now; the other string benchmarks no slower
-    - full release gate green
-  - stop_rule: the generated program's single-threaded cost; the arenas' design stays.
-  - notes: TODO-5840 made `String.append` of a literal one bulk move, which cut these benchmarks (instructions and cycles, `proc_pid_rusage`, minimum of three on a machine at a load average of 27 to 64): `short_strings` 4.66e9 and 823e6 -> 3.90e9 and 748e6, `request_arena` 5.54e9 and 1115e6 -> 5.14e9 and 1039e6, `request_heap` 5.37e9 and 1073e6 -> 5.02e9 and 1049e6. That is a gain of 2 to 9% in cycles, the size of the 4 to 7% this task measured, but it does not show the cycles of the e8a547504 build: no build of that commit was made, so the acceptance (cycles within 3% of it, averaged over five layouts) is not checked and the task stays open; the first step is that baseline. Baseline measured 2026-11-18 (build of e8a547504^, layout 0, minimum of 5, cycles): `short_strings` 551.5 to 575.0e6 against 605.8 to 624.6e6 on master (+9 to 10 percent), `request_heap` 761.6e6 against 802.2e6 (+5 percent), `request_arena` 761.0e6 against 805.4e6 (+6 percent), `copy_text` 93.8e6 against 109.3e6; the acceptance stays open.
 
 - [ ] TODO-5853: A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed
   - owner: ai
