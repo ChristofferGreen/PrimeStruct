@@ -84,8 +84,8 @@
   is waiting` (exit code 3); the main task's return ends the program, and a `Trap` in any task ends it with its code.
   The vm and optimized C++ targets and serialized bytecode accept the task opcodes; validation also rejects a
   `TaskWait` whose operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs under that
-  scheduler with every task on the flat loop (Execution kernels), the native JIT declines it, and a debug session faults on them (`tasks run only in a
-  plain VM run, not in a debug session`, TODO-5837). Lowering for the vm target, serialized bytecode and the
+  scheduler with every task on the flat loop (Execution kernels), the native JIT declines it, and a debug session runs them on the same
+  scheduler one instruction at a time (below). Lowering for the vm target, serialized bytecode and the
   optimized C++ emitter turns
   `[Task<T>] t{[spawn] f(args)}` into the arguments, evaluated in the spawner, and `TaskSpawn f` stored in `t`, when
   every parameter of `f` is a plain scalar and its result a scalar or void (f becomes a real call even when it is a
@@ -238,6 +238,21 @@
   opcodes for the VM, serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL before it
   looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by the wasm
   backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `channel` is `1 << 15`.
+- **Tasks in a debug session (`VmDebugSession`, `--debug-json`, `--debug-dap`):** a program that spawns tasks runs in
+  a debug session on the deterministic scheduler above (eager, or the seed of `setScheduleSeed` / `--vm-schedule-seed`),
+  one instruction or one scheduler opcode per step, with the same results, output and exit code as a plain run. A debug
+  session never uses threads mode. Every task is a thread of the session: the main task is thread 1 and the task
+  numbered `n` is thread `n + 1`; `VmDebugSession::threads()` and DAP `threads` list the main task and every task that
+  has not ended (a task ends when its call returns, so an eager run lists a spawned task only while it is the one that
+  runs or is waiting), named `main` or `task <n>: <function>`. A stop (breakpoint, step, pause or fault) is in the
+  task that ran the instruction, `currentThreadId()` and the `threadId` of the DAP `stopped` event name it, and every
+  task is stopped with it. `stackTrace` takes a thread id and answers that task's call stack; a frame id and a
+  variables reference name their thread (the frame ids of thread 1 are the plain ordinals, as for a program without
+  tasks, and thread `t` adds `(t - 1) * 2^20`). A step runs one instruction of the task that runs next, so stepping a
+  `TaskSpawn` lands at the first instruction of the spawned task under the eager schedule. Breakpoints are by
+  instruction and apply to every task. A program without tasks takes none of this path, and its DAP and `--debug-json`
+  output is unchanged. `--debug-json` and `--debug-trace` record each step with the snapshot of the task that ran it;
+  replaying such a trace (`--debug-replay`) is not covered.
 - **Tasks on threads (the VM, `--vm-threads`):** `primevm --vm-threads` and `primec --emit=vm --vm-threads` (the
   embedder's `Vm::setTaskThreads`) run each `TaskSpawn` on an OS thread of its own instead of under the deterministic
   scheduler; without the flag nothing changes, and a program without tasks runs as before (its heap is the first

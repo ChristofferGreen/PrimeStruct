@@ -34,7 +34,7 @@ Checked in the sources on 2026-11-10.
 | Breakpoints | `VmDebugSession::addBreakpoint`, `VmDebugAdapter::setSourceBreakpoints` | By instruction and by source line; a line can resolve to several instructions |
 | Stepping | `VmDebugAdapter::step` | One step; DAP `next` maps to it. No step over, into or out |
 | Variables | `VmDebugAdapter::variables` | Two flat scopes per frame (locals, operand stack); a struct value does not expand into fields |
-| Tasks | `docs/spec/vm-design.md`, Tasks | The VM runs all tasks on one OS thread with one shared heap. **A debug session faults on task opcodes**, and DAP reports one thread |
+| Tasks | `docs/spec/vm-design.md`, Tasks | The VM runs all tasks on one OS thread with one shared heap. A debug session runs them on the deterministic scheduler and DAP reports one thread per task (landed 2026-11-18) |
 | Heap | `VmHeapCore` | Address is `bit 63 \| generation \| slot * 16`; a live allocation never moves; freed slots are zeroed and reused under a new generation; free runs are tracked; byte regions are tracked per 64-byte granule. A block has a size but no type |
 | Frames | `docs/spec/vm-design.md`, Frames & stack | Locals in 16-byte slots; a local address is numbered across the live frames of one call stack |
 | Writes | `StoreLocal`, `StoreIndirect`, `StoreU8` | Every write to a local or to memory goes through one of three opcodes |
@@ -261,7 +261,7 @@ A heap of hundreds of megabytes needs zoom: at the far level blocks merge into c
 | Struct values that expand into fields in `variables` | Objects | Small once the walk exists |
 | Step over, into and out | Stepping by call and line | Small |
 | The range in which each local is live, in `IrLocalDebugSlot` | "Not set yet" | Small; a PSIR format change |
-| Debug sessions for programs with tasks (they fault today) and one DAP thread per task | Tasks, stacks per task | Medium |
+| ~~Debug sessions for programs with tasks and one DAP thread per task~~ (landed 2026-11-18) | Tasks, stacks per task | Done |
 | A write log in the trace: address, old value, new value, instruction | Changes, history, inline values, backward watches | Large; the main cost of this plan |
 | Watched address ranges in the store opcodes, carried through `HeapRealloc` | Watches on an object | Medium |
 | Tags on the stores that assign a struct field | Watches on a struct's field | Medium; debug info only |
@@ -287,7 +287,7 @@ All of it is for unoptimized runs.
 6. **Watches on locals and on struct fields** (the two breakpoint-set kinds), then on one object.
 7. **Write log.** Changes view, history, inline values, backward stepping and backward watches.
 8. **Named events and the timeline.**
-9. **Tasks:** debug sessions with task opcodes, a stack per task.
+9. **Tasks:** debug sessions with task opcodes, a stack per task (landed 2026-11-18; the inspector window reads the threads).
 10. **Later:** conditions, a live-updating window, `optexe` arenas, zoom for large heaps, comparing two moments
     side by side.
 

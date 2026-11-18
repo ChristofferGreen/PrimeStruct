@@ -160,7 +160,7 @@ bool resolveSourceBreakpoints(const IrModule &module,
 }
 
 void VmDebugSession::appendMappedStackTrace(std::string &error) const {
-  if (!module_ || module_->instructionSourceMap.empty() || frames_.empty()) {
+  if (!module_ || module_->instructionSourceMap.empty() || currentFrames().empty()) {
     return;
   }
 
@@ -173,8 +173,9 @@ void VmDebugSession::appendMappedStackTrace(std::string &error) const {
   std::ostringstream trace;
   bool emittedAnyFrame = false;
   size_t frameOrdinal = 0;
-  for (size_t reverseIndex = 0; reverseIndex < frames_.size(); ++reverseIndex) {
-    const Frame &currentFrame = frames_[frames_.size() - reverseIndex - 1];
+  const std::vector<Frame> &frames = currentFrames();
+  for (size_t reverseIndex = 0; reverseIndex < frames.size(); ++reverseIndex) {
+    const Frame &currentFrame = frames[frames.size() - reverseIndex - 1];
     if (!currentFrame.function) {
       continue;
     }

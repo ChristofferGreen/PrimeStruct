@@ -392,6 +392,7 @@ static int runDebugTrace(const primec::Options &options,
                         const std::vector<std::string_view> &args) {
   std::string error;
   primec::VmDebugSession debugSession;
+  debugSession.setScheduleSeed(options.vmScheduleSeed);
   if (!debugSession.start(ir, error, args)) {
     return emitVmRuntimeFailure(options, vmDiagnostics, error);
   }
@@ -512,6 +513,7 @@ static int runDebugJson(const primec::Options &options,
                        const std::vector<std::string_view> &args) {
   std::string error;
   primec::VmDebugSession debugSession;
+  debugSession.setScheduleSeed(options.vmScheduleSeed);
   if (!debugSession.start(ir, error, args)) {
     return emitVmRuntimeFailure(options, vmDiagnostics, error);
   }

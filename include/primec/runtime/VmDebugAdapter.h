@@ -62,6 +62,8 @@ struct VmDebugAdapterStopEvent {
   VmDebugStopReason reason = VmDebugStopReason::Step;
   std::string dapReason;
   std::string message;
+  // The thread the program stopped in (1, the main task, unless it spawns tasks).
+  int64_t threadId = 1;
 };
 
 class VmDebugAdapter {

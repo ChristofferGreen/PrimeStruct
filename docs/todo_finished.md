@@ -2252,6 +2252,7 @@ are left unarchived.
 | TODO-5833 | A builtin vector pushes its own elements, and its views keep it from changing | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5834 | `pop`, `clear` and direct `push(v, x)` work on builtin vectors of structs and vectors | [2026-11.md](todo_archive/2026-11.md) | 2026-11-10 |
 | TODO-5835 | `[spawn]` lowers to `TaskSpawn`/`TaskWait` for the VM | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5837 | VM debug sessions step programs that spawn tasks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5838 | Three gate entries time out on a loaded machine | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5839 | A 17-field `SoaSchemaStorage` program builds as `exe` in under 5 s | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5840 | A byte loop over one large region on `optexe` runs as fast as before the granule table | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2311,6 +2312,7 @@ are left unarchived.
 | TODO-5899 | A fault or a cancel stops every thread of a `--vm-threads` run without ending the process | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5900 | The concurrent corpus runs repeatedly under `--vm-threads` and under ThreadSanitizer | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5901 | A threaded VM run records its synchronization order and replays it on the deterministic scheduler | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
+| TODO-5903 | A debug session runs programs that spawn tasks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5905 | `/std/path` joins, splits and normalizes paths | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5906 | `/std/file` lists a directory and reports kind, size and modification time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |
 | TODO-5907 | `/std/glob` expands glob patterns (split: the cache inputs are TODO-6009) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-17 |

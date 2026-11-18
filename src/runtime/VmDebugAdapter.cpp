@@ -42,6 +42,19 @@ const std::vector<uint64_t> *frameLocalsForOrdinal(const VmDebugSnapshotPayload 
   return nullptr;
 }
 
+// Frame ids and variable references name a frame by one number: the ordinal from the innermost frame of its thread, plus
+// the thread's index (thread id - 1) times FrameThreadStride. Thread 1, the only one of a program without tasks, keeps
+// the plain ordinal.
+constexpr uint64_t FrameThreadStride = uint64_t{1} << 20;
+
+uint64_t frameThreadId(size_t packedFrame) {
+  return static_cast<uint64_t>(packedFrame) / FrameThreadStride + 1;
+}
+
+size_t frameOrdinalOf(size_t packedFrame) {
+  return static_cast<size_t>(static_cast<uint64_t>(packedFrame) % FrameThreadStride);
+}
+
 } // namespace
 
 bool VmDebugAdapter::launch(const IrModule &module, std::string &error, uint64_t argCount) {
@@ -99,6 +112,7 @@ bool VmDebugAdapter::continueExecution(VmDebugAdapterStopEvent &stopEvent, std::
   stopEvent.reason = reason;
   stopEvent.dapReason = dapReason(reason);
   stopEvent.message = reason == VmDebugStopReason::Fault ? vmError : "";
+  stopEvent.threadId = static_cast<int64_t>(session_.currentThreadId());
   appendStoppedEvent(stopEvent);
   appendResponse("continue", true, std::string("\"reason\":\"") + jsonEscape(stopEvent.dapReason) + "\"");
   error.clear();
@@ -124,6 +138,7 @@ bool VmDebugAdapter::step(VmDebugAdapterStopEvent &stopEvent, std::string &error
   stopEvent.reason = reason;
   stopEvent.dapReason = dapReason(reason);
   stopEvent.message = reason == VmDebugStopReason::Fault ? vmError : "";
+  stopEvent.threadId = static_cast<int64_t>(session_.currentThreadId());
   appendStoppedEvent(stopEvent);
   appendResponse("next", true, std::string("\"reason\":\"") + jsonEscape(stopEvent.dapReason) + "\"");
   error.clear();
@@ -224,8 +239,11 @@ bool VmDebugAdapter::threads(std::vector<VmDebugAdapterThread> &outThreads, std:
     return false;
   }
 
-  outThreads = {{1, "main"}};
-  appendResponse("threads", true, "\"count\":1");
+  outThreads.clear();
+  for (const VmDebugThread &thread : session_.threads()) {
+    outThreads.push_back({static_cast<int64_t>(thread.id), thread.name});
+  }
+  appendResponse("threads", true, std::string("\"count\":") + std::to_string(outThreads.size()));
   error.clear();
   return true;
 }
@@ -236,13 +254,13 @@ bool VmDebugAdapter::stackTrace(int64_t threadId, std::vector<VmDebugAdapterStac
     appendResponse("stackTrace", false, {}, error);
     return false;
   }
-  if (threadId != 1) {
+  VmDebugSnapshotPayload payload;
+  if (threadId <= 0 || !session_.threadSnapshotPayload(static_cast<uint64_t>(threadId), payload)) {
     error = "invalid thread id";
     appendResponse("stackTrace", false, {}, error);
     return false;
   }
-
-  const VmDebugSnapshotPayload payload = session_.snapshotPayload();
+  const uint64_t frameIdBase = (static_cast<uint64_t>(threadId) - 1) * FrameThreadStride;
   outFrames.clear();
   outFrames.reserve(payload.callStack.size());
   for (size_t reverseIndex = 0; reverseIndex < payload.callStack.size(); ++reverseIndex) {
@@ -263,7 +281,7 @@ bool VmDebugAdapter::stackTrace(int64_t threadId, std::vector<VmDebugAdapterStac
     }
 
     VmDebugAdapterStackFrame frame;
-    frame.id = static_cast<int64_t>(reverseIndex + 1);
+    frame.id = static_cast<int64_t>(frameIdBase + reverseIndex + 1);
     frame.functionIndex = frameSnapshot.functionIndex;
     frame.instructionPointer = mappedIp;
     frame.name = function.name;
@@ -297,9 +315,11 @@ bool VmDebugAdapter::scopes(int64_t frameId, std::vector<VmDebugAdapterScope> &o
     return false;
   }
 
-  const VmDebugSnapshotPayload payload = session_.snapshotPayload();
-  const size_t frameOrdinal = static_cast<size_t>(frameId - 1);
-  if (frameOrdinal >= payload.callStack.size()) {
+  VmDebugSnapshotPayload payload;
+  const size_t packedFrame = static_cast<size_t>(frameId - 1);
+  const size_t frameOrdinal = frameOrdinalOf(packedFrame);
+  if (!session_.threadSnapshotPayload(frameThreadId(packedFrame), payload) ||
+      frameOrdinal >= payload.callStack.size()) {
     error = "invalid frame id";
     appendResponse("scopes", false, {}, error);
     return false;
@@ -318,9 +338,11 @@ bool VmDebugAdapter::scopes(int64_t frameId, std::vector<VmDebugAdapterScope> &o
 
   outScopes.clear();
   outScopes.push_back(
-      {encodeVariablesReference(frameOrdinal, ScopeKind::Locals), "Locals", localCount, false});
-  outScopes.push_back(
-      {encodeVariablesReference(frameOrdinal, ScopeKind::OperandStack), "Operand Stack", operandCount, false});
+      {encodeVariablesReference(packedFrame, ScopeKind::Locals), "Locals", localCount, false});
+  outScopes.push_back({encodeVariablesReference(packedFrame, ScopeKind::OperandStack),
+                       "Operand Stack",
+                       operandCount,
+                       false});
 
   appendResponse("scopes", true, std::string("\"scope_count\":") + std::to_string(outScopes.size()));
   error.clear();
@@ -336,16 +358,18 @@ bool VmDebugAdapter::variables(int64_t variablesReference,
     return false;
   }
 
-  size_t frameOrdinal = 0;
+  size_t packedFrame = 0;
   ScopeKind scopeKind = ScopeKind::Locals;
-  if (!decodeVariablesReference(variablesReference, frameOrdinal, scopeKind)) {
+  if (!decodeVariablesReference(variablesReference, packedFrame, scopeKind)) {
     error = "invalid variable reference";
     appendResponse("variables", false, {}, error);
     return false;
   }
 
-  const VmDebugSnapshotPayload payload = session_.snapshotPayload();
-  if (frameOrdinal >= payload.callStack.size()) {
+  VmDebugSnapshotPayload payload;
+  const size_t frameOrdinal = frameOrdinalOf(packedFrame);
+  if (!session_.threadSnapshotPayload(frameThreadId(packedFrame), payload) ||
+      frameOrdinal >= payload.callStack.size()) {
     error = "invalid variable reference";
     appendResponse("variables", false, {}, error);
     return false;

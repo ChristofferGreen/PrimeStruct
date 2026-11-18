@@ -238,6 +238,6 @@ addPrimeStructManagedDoctestSuite("primestruct.vm.debug.session"
   TARGET PrimeStruct_backend_runtime_tests
   LABEL "parallel-safe"
   TIMEOUT 300
-  TOTAL_CASES 26
+  TOTAL_CASES 32
   CASES_PER_SHARD 10
 )

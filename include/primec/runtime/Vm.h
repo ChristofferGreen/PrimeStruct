@@ -260,6 +260,15 @@ private:
   vm_detail::VmSyncLogPaths syncLog_;
 };
 
+// A thread of a debug session is a task of the program (docs/spec/vm-design.md, Tasks): the main task is thread 1 and
+// the task numbered n is thread n + 1.
+struct VmDebugThread {
+  uint64_t id = 1;
+  std::string name;
+};
+
+struct VmDebugTasks;
+
 class VmDebugSession {
 public:
   bool start(const IrModule &module, std::string &error, uint64_t argCount = 0);
@@ -286,6 +295,17 @@ public:
   void clearHooks();
   VmDebugSnapshot snapshot() const;
   VmDebugSnapshotPayload snapshotPayload() const;
+  // The tasks of the session that have not ended: just the main task unless the program spawns tasks. A debug
+  // session runs them on the deterministic scheduler, eager by default.
+  std::vector<VmDebugThread> threads() const;
+  // The thread that runs next, and so the one a stop is in.
+  uint64_t currentThreadId() const;
+  // The state of one thread; false when no such thread is alive.
+  bool threadSnapshotPayload(uint64_t threadId, VmDebugSnapshotPayload &out) const;
+  // The schedule seed of a program with tasks (see primevm --vm-schedule-seed); set before the first step.
+  void setScheduleSeed(std::optional<uint64_t> seed) {
+    scheduleSeed_ = seed;
+  }
 
 private:
   // The session steps the shared VM kernel (VmExecutionKernel.h), so its frames
@@ -297,6 +317,9 @@ private:
   bool initFromModule(const IrModule &module, uint64_t argCount, const std::vector<std::string_view> *args);
   void appendMappedStackTrace(std::string &error) const;
   StepOutcome stepInstruction(std::string &error);
+  // The frames and operand stack of the task that runs next (the only ones without tasks).
+  const std::vector<Frame> &currentFrames() const;
+  const std::vector<uint64_t> &currentStack() const;
 
   const IrModule *module_ = nullptr;
   uint64_t argCount_ = 0;
@@ -318,6 +341,10 @@ private:
   std::set<std::pair<size_t, size_t>> breakpoints_;
   uint64_t nextHookSequence_ = 0;
   VmDebugHooks hooks_;
+  // A program that spawns tasks steps through the task scheduler, made at the first step.
+  bool usesTasks_ = false;
+  std::optional<uint64_t> scheduleSeed_;
+  std::shared_ptr<VmDebugTasks> tasks_;
 };
 
 } // namespace primec

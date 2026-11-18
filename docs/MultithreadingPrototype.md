@@ -638,7 +638,7 @@ has. The deterministic scheduler stays; it is not replaced.
   landed; format and ordering point in docs/spec/vm-design.md). This is also what lets the inspector
   (`docs/VmInspectorPlan.md`) show a threaded run.
 - **Debug sessions** run programs with tasks on the deterministic scheduler, one DAP thread per task, so stopping every
-  thread is trivial (TODO-5903). They fault on task opcodes today.
+  thread is trivial (TODO-5903, landed; docs/spec/vm-design.md, Tasks in a debug session).
 
 ### Heaps
 

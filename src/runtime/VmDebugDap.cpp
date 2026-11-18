@@ -59,8 +59,9 @@ bool ensureLaunched(const VmDebugDapRuntime &runtime, std::string &error) {
   return false;
 }
 
-std::string stoppedBody(std::string_view reason, std::string_view text = {}) {
-  std::string body = std::string("{\"reason\":\"") + jsonEscape(reason) + "\",\"threadId\":1,\"allThreadsStopped\":true";
+std::string stoppedBody(std::string_view reason, std::string_view text = {}, int64_t threadId = 1) {
+  std::string body = std::string("{\"reason\":\"") + jsonEscape(reason) +
+                     "\",\"threadId\":" + std::to_string(threadId) + ",\"allThreadsStopped\":true";
   if (!text.empty()) {
     body += ",\"text\":\"" + jsonEscape(text) + "\"";
   }
@@ -280,7 +281,10 @@ void appendStopEvents(std::vector<std::string> &messages,
     appendEvent(messages, runtime, "terminated", "{}");
     return;
   }
-  appendEvent(messages, runtime, "stopped", stoppedBody(stopEvent.dapReason, stopEvent.message));
+  appendEvent(messages,
+              runtime,
+              "stopped",
+              stoppedBody(stopEvent.dapReason, stopEvent.message, stopEvent.threadId));
 }
 
 void appendFailure(std::vector<std::string> &messages,

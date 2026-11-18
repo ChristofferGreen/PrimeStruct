@@ -1073,5 +1073,6 @@ TEST_CASE("vm debug hook event ordering is deterministic and replayable") {
 }
 
 #include "test_vm_debug_session_breakpoints.h"
+#include "test_vm_debug_session_tasks.h"
 
 TEST_SUITE_END();

@@ -20,6 +20,8 @@ bool isAtomicOpcode(IrOpcode op) {
          op == IrOpcode::AtomicExchange || op == IrOpcode::AtomicCompareExchange;
 }
 
+} // namespace
+
 // The VM's tasks (docs/spec/vm-design.md, Tasks): each is a call stack of its own; all run on this one thread and
 // share the heap. A task switch happens only at a spawn, a wait and a task's end. The default schedule is eager: a
 // spawn runs the new task until it ends or blocks, then its spawner continues, so a program prints what it prints
@@ -42,10 +44,9 @@ public:
   }
 
   bool run(uint64_t &result, std::string &error) {
-    const size_t mainSlot = createTask(static_cast<size_t>(module_.entryIndex), {}, NoTask);
-    current_ = mainSlot;
+    start();
     if (fast_ != nullptr) {
-      return runFast(mainSlot, result, error);
+      return runFast(mainSlot_, result, error);
     }
     VmKernelStepEvent event;
     const std::atomic<bool> *cancel = host_.cancelFlag();
@@ -55,78 +56,122 @@ public:
         error = "execution stopped";
         return false;
       }
-      Task &task = tasks_[current_];
-      const VmKernelFrame &top = task.frames.back();
-      if (top.ip < top.function->instructions.size()) {
-        const IrOpcode op = top.function->instructions[top.ip].op;
-        if (replay_ != nullptr && syncEventKindOf(op) != SyncEventKind::End) {
-          bool turn = false;
-          if (!replayGate(op, turn, error)) {
-            return false;
-          }
-          if (!turn) {
-            continue;
-          }
-        }
-        if (op == IrOpcode::TaskSpawn) {
-          if (!spawn(top.function->instructions[top.ip].imm, error)) {
-            return false;
-          }
-          continue;
-        }
-        if (op == IrOpcode::TaskWait) {
-          if (!wait(error)) {
-            return false;
-          }
-          continue;
-        }
-        if (op == IrOpcode::MutexLock || op == IrOpcode::MutexUnlock) {
-          if (!lockStep(op == IrOpcode::MutexLock, error)) {
-            return false;
-          }
-          continue;
-        }
-        if (op == IrOpcode::ConditionWait || op == IrOpcode::ConditionNotify) {
-          if (!conditionStep(op == IrOpcode::ConditionWait, error)) {
-            return false;
-          }
-          continue;
-        }
-      }
-      // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
-      const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
-                              isAtomicOpcode(top.function->instructions[top.ip].op);
-      // Under a replay the atomic operation the step kernel runs next is an event of the record.
-      const bool replayAtomic = replay_ != nullptr && top.ip < top.function->instructions.size() &&
-                                isAtomicOpcode(top.function->instructions[top.ip].op);
-      uint64_t value = 0;
-      switch (stepVmKernelUntracked(
-          module_, host_, task.stack, task.frames, localCounts_, value, event, error)) {
+      switch (stepOne(false, event, result, error)) {
       case VmKernelStepOutcome::Continue:
-        if (atomicStep) {
-          pickSeeded();
-        }
-        if (replayAtomic) {
-          completeReplayEvent();
-        }
         continue;
       case VmKernelStepOutcome::Fault:
         return false;
       case VmKernelStepOutcome::Exit:
-        break;
-      }
-      // The main task's return, or a trap in any task, ends the program; another task's return ends that task.
-      const VmKernelFrame &exitFrame = tasks_[current_].frames.back();
-      const bool trapped = exitFrame.ip < exitFrame.function->instructions.size() &&
-                           exitFrame.function->instructions[exitFrame.ip].op == IrOpcode::Trap;
-      if (current_ == mainSlot || trapped) {
-        result = value;
         return true;
       }
-      if (!finishCurrent(value, error)) {
-        return false;
+    }
+  }
+
+  // Creates the main task; a stepped run (debug sessions) calls this once, then stepOne().
+  void start() {
+    mainSlot_ = createTask(static_cast<size_t>(module_.entryIndex), {}, NoTask);
+    current_ = mainSlot_;
+  }
+
+  // One instruction of the current task on the step kernel, or one scheduler opcode (spawn, wait, lock, condition),
+  // which may switch the current task. Exit: the main task returned or a task trapped, `result` is the program's.
+  // `event` describes the call-stack change of the step when `trackEvents` is set (a task's own end is an Exit
+  // event with the outcome Continue).
+  VmKernelStepOutcome
+  stepOne(bool trackEvents, VmKernelStepEvent &event, uint64_t &result, std::string &error) {
+    Task &task = tasks_[current_];
+    const VmKernelFrame &top = task.frames.back();
+    if (top.ip < top.function->instructions.size()) {
+      const IrOpcode op = top.function->instructions[top.ip].op;
+      if (replay_ != nullptr && syncEventKindOf(op) != SyncEventKind::End) {
+        bool turn = false;
+        if (!replayGate(op, turn, error)) {
+          return VmKernelStepOutcome::Fault;
+        }
+        if (!turn) {
+          return VmKernelStepOutcome::Continue;
+        }
+      }
+      bool scheduled = true;
+      bool ok = true;
+      if (op == IrOpcode::TaskSpawn) {
+        ok = spawn(top.function->instructions[top.ip].imm, error);
+      } else if (op == IrOpcode::TaskWait) {
+        ok = wait(error);
+      } else if (op == IrOpcode::MutexLock || op == IrOpcode::MutexUnlock) {
+        ok = lockStep(op == IrOpcode::MutexLock, error);
+      } else if (op == IrOpcode::ConditionWait || op == IrOpcode::ConditionNotify) {
+        ok = conditionStep(op == IrOpcode::ConditionWait, error);
+      } else {
+        scheduled = false;
+      }
+      if (scheduled) {
+        if (trackEvents) {
+          event = {};
+        }
+        return ok ? VmKernelStepOutcome::Continue : VmKernelStepOutcome::Fault;
       }
     }
+    // An atomic operation is a switch point of a seeded schedule: any runnable task may run after it.
+    const bool atomicStep = seeded_ && top.ip < top.function->instructions.size() &&
+                            isAtomicOpcode(top.function->instructions[top.ip].op);
+    // Under a replay the atomic operation the step kernel runs next is an event of the record.
+    const bool replayAtomic = replay_ != nullptr && top.ip < top.function->instructions.size() &&
+                              isAtomicOpcode(top.function->instructions[top.ip].op);
+    uint64_t value = 0;
+    const VmKernelStepOutcome outcome =
+        trackEvents
+            ? stepVmKernel(
+                  module_, host_, task.stack, task.frames, localCounts_, value, event, error)
+            : stepVmKernelUntracked(
+                  module_, host_, task.stack, task.frames, localCounts_, value, event, error);
+    switch (outcome) {
+    case VmKernelStepOutcome::Continue:
+      if (atomicStep) {
+        pickSeeded();
+      }
+      if (replayAtomic) {
+        completeReplayEvent();
+      }
+      return VmKernelStepOutcome::Continue;
+    case VmKernelStepOutcome::Fault:
+      return VmKernelStepOutcome::Fault;
+    case VmKernelStepOutcome::Exit:
+      break;
+    }
+    // The main task's return, or a trap in any task, ends the program; another task's return ends that task.
+    const VmKernelFrame &exitFrame = tasks_[current_].frames.back();
+    const bool trapped = exitFrame.ip < exitFrame.function->instructions.size() &&
+                         exitFrame.function->instructions[exitFrame.ip].op == IrOpcode::Trap;
+    if (current_ == mainSlot_ || trapped) {
+      result = value;
+      return VmKernelStepOutcome::Exit;
+    }
+    return finishCurrent(value, error) ? VmKernelStepOutcome::Continue : VmKernelStepOutcome::Fault;
+  }
+
+  VmSteppedTaskView currentView() const {
+    const Task &task = tasks_[current_];
+    return {task.number, &task.frames, &task.stack};
+  }
+
+  // The tasks that have not ended (runnable, waiting or parked), in number order.
+  void listLive(std::vector<VmSteppedTaskView> &out) const {
+    out.clear();
+    for (const Task &task : tasks_) {
+      if (task.state == TaskState::Runnable || task.state == TaskState::Waiting ||
+          task.state == TaskState::Parked) {
+        out.push_back({task.number, &task.frames, &task.stack});
+      }
+    }
+    std::sort(out.begin(), out.end(), [](const VmSteppedTaskView &a, const VmSteppedTaskView &b) {
+      return a.number < b.number;
+    });
+  }
+
+  // The program ended: the current task's frames go, as a plain debug session's do.
+  void endProgram() {
+    tasks_[current_].frames.clear();
   }
 
 private:
@@ -655,13 +700,39 @@ private:
   std::vector<std::pair<uint64_t, size_t>> runnable_;
   uint64_t nextNumber_ = 0;
   size_t current_ = 0;
+  size_t mainSlot_ = 0;
   const std::vector<FastFunction> *fast_ = nullptr;
   // The record a replay follows (null: not a replay) and the next event in it.
   const std::vector<SyncEvent> *replay_ = nullptr;
   size_t cursor_ = 0;
 };
 
-} // namespace
+VmSteppedTasks::VmSteppedTasks(const IrModule &module,
+                               VmKernelHost &host,
+                               const std::vector<size_t> &localCounts,
+                               std::optional<uint64_t> seed)
+    : impl_(std::make_unique<VmTaskScheduler>(module, host, localCounts, seed, nullptr, nullptr)) {
+  impl_->start();
+}
+
+VmSteppedTasks::~VmSteppedTasks() = default;
+
+VmKernelStepOutcome
+VmSteppedTasks::step(VmKernelStepEvent &event, uint64_t &result, std::string &error) {
+  const VmKernelStepOutcome outcome = impl_->stepOne(true, event, result, error);
+  if (outcome == VmKernelStepOutcome::Exit) {
+    impl_->endProgram();
+  }
+  return outcome;
+}
+
+VmSteppedTaskView VmSteppedTasks::currentView() const {
+  return impl_->currentView();
+}
+
+void VmSteppedTasks::listLive(std::vector<VmSteppedTaskView> &out) const {
+  impl_->listLive(out);
+}
 
 bool moduleUsesTasks(const IrModule &module) {
   for (const IrFunction &function : module.functions) {

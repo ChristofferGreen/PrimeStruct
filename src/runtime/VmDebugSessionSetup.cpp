@@ -1,5 +1,6 @@
 #include "primec/runtime/Vm.h"
 
+#include "VmTaskScheduler.h"
 
 #include <algorithm>
 
@@ -34,6 +35,8 @@ bool VmDebugSession::initFromModule(const IrModule &module,
   heap_ = VmHeapCore{};
   textHeap_ = std::make_shared<VmTextHeap>();
   frames_.clear();
+  tasks_.reset();
+  usesTasks_ = vm_detail::moduleUsesTasks(module);
   result_ = 0;
   pauseRequested_ = false;
   lastStopWasBreakpoint_ = false;
