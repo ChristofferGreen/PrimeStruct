@@ -50,6 +50,17 @@
   `FileError.status(err)`) are converted to the sum when a stdlib-Result definition returns them. Without the import,
   the builtin `Result` keeps its packed representation (the error code in the high 32 bits, zero for ok), which
   cannot tell `ok` from an error code of `0`.
+- **Result-returning entry:** an entry declared to return `Result<T, E>` or `Result<E>` ends the process with an exit
+  code decoded from the value, the same on the VM, native, C++ and optimized C++ backends. `ok` exits with its payload
+  when that is an integer (`i32`, `i64`, `u64`, `u8`, `int`); like any exit code it keeps the low 8 bits, so `0..255`
+  is exact and `300` exits 44. An `ok` with no payload (`Result<E>`) or a non-integer payload exits 0. An `error` exits
+  with its error code when that is an integer in 1..255, and with 1 otherwise: an error struct, a float or string
+  error, an integer error of 0 (which must not look like an ok that exits 0) or an integer outside 1..255. The rule is
+  the same for both representations: with `/std/result/*` imported the entry returns the stdlib sum (tag plus
+  payload storage; `Result.ok(x)` builds one too), and without the import the builtin packed `Result` (the error code
+  in the high 32 bits, the ok payload in the low 32 bits; `Result<E>` is the error code itself, 0 for ok). The
+  declared return type picks the decoder, so every return of one entry is decoded the same way. The wasm and GLSL
+  targets do not decode yet and keep the raw return value.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.

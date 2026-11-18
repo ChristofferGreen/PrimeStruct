@@ -1,4 +1,5 @@
 #include "primec/ir/IrLowerer.h"
+#include "IrLowererEntryResultExit.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 #include "primec/frontend/StringLiteral.h"
@@ -512,6 +513,16 @@ bool IrLowerer::lower(const Program &program,
       error = "IR lowering failed without diagnostic";
     }
     return false;
+  }
+
+  // The wasm and GLSL emitters take structured control flow only, so they keep the entry's raw return value.
+  const bool entryExitCodeTarget = validationTarget != IrValidationTarget::Wasm &&
+                                   validationTarget != IrValidationTarget::WasmBrowser &&
+                                   validationTarget != IrValidationTarget::Glsl;
+  if (entryExitCodeTarget && out.entryIndex >= 0 &&
+      static_cast<size_t>(out.entryIndex) < out.functions.size()) {
+    ir_lowerer::applyEntryResultExitCode(
+        *entryDef, defMap, out.functions[static_cast<size_t>(out.entryIndex)]);
   }
 
   if (libraryRoots != nullptr && !ir_lowerer::removeLibraryEntryStub(out, error)) {

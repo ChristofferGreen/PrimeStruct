@@ -135,7 +135,7 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5523 | A Result-returning main exits with its error code | in progress | result-main |
+| TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -184,7 +184,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5523, TODO-5525, TODO-5526
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5525, TODO-5526, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -578,19 +578,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [~] TODO-5523: A Result-returning main exits with its error code
+- [ ] TODO-6037: A Result-returning main exits with its decoded code on wasm
   - owner: ai
-  - status: in_progress
-  - claimed_by: result-main (worktree-agent-a71f041668f005104), 2026-11-18
-  - created_at: 2026-10-06
+  - status: deferred
+  - created_at: 2026-11-18
   - phase: Correctness audit 2026-10
-  - parallel_track: result-main
-  - scope: `[return<Result<i32, i32>>] main() { return(error<i32, i32>(3i32)) }` exits 0 on VM/C++ and 32 on native: the entry returns the raw sum pointer (or, without the import, the packed value whose low 32 bits are 0). Specify the exit code of a Result-returning entry (0 for ok, the error code or 1 otherwise) in docs/spec and decode the entry's return value on every backend.
+  - parallel_track: result-main-wasm
+  - scope: The entry exit code rule (docs/spec/errors-and-file-io.md, Result-returning entry) is decoded on the VM, native, C++ and optimized C++ backends. The wasm emitter rejects the jump to the appended decode block (`unsupported control-flow pattern`), so the wasm and GLSL targets keep the raw return value. Decode the value with structured control flow (branch-free arithmetic or an in-place `if` the wasm emitter accepts) and drop the target exclusion in `IrLowererLower.cpp`.
   - acceptance:
-    - spec states the rule; matrix cases for ok, int error and struct error agree on VM, native and C++
+    - the ok, error and packed cases of test_compile_run_vm_result_exit_codes.cpp also pass under wasmtime (or the wasm emitter's own run check)
     - full release gate green
-  - stop_rule: entry-point Result exit codes only.
-  - notes: deferred 2026-11-18: needs a language decision first (nothing landed). Findings: (1) with `/std/result/*` imported, `return(error<i32, i32>(3i32))` and `return(ok<i32, i32>(5i32))` in main return the address of a sum (tag at slot 1, payload at slot 2, slot = 16 bytes); a decode block appended to the entry (every `ReturnI64` jumps to it: tag == error variant index, then payload as 1..255 else 1) made VM, native, exe and optexe agree, and a ten-case matrix passed. (2) The release gate then failed 37 existing entries (the map conformance programs, `vm.collections` newly exposed, `imports.operations_and_collections_part2`, native apple collections): their mains are declared `[return<Result<int, ContainerError>>]` with `/std/collections/*` imported (so the type is the stdlib sum) but return `Result.ok(total)`, which lowers to the legacy packed value, and the tests expect the payload as the exit code (20, 17, 18, 33; a decoded sum read the packed integer as an address and the VM rejected the IR with different operand stack depths). So today a `Result<int, E>` main exits with the ok payload when it returns `Result.ok(x)`, and the spec says nothing about it. Decision needed: (a) ok exits 0 (this block's wording): change those expectations, and make `Result.ok(x)` in a sum-typed return build a sum (TODO-5525's lowering) so one decode serves all; (b) ok exits with its payload when it is an integer in 0..255 (the tested convention), error exits with the error code or 1, so `ok<i32, i32>(5i32)` exits 5; or (c) keep the packed form as is and decode only values built by `ok`/`error` helpers (an inconsistent rule). The decode block and the matrix are in the history of master as commit 635ee781b and its revert; the rule text for the spec is in that commit.
+  - stop_rule: entry exit codes on wasm only.
+  - notes: deferred: queued behind the Ready Now cap.
+
 - [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai
   - status: deferred
