@@ -135,7 +135,7 @@ of sync with them.
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
-| TODO-5523 | A Result-returning main exits with its error code | deferred | result-main |
+| TODO-5523 | A Result-returning main exits with its error code | ready | result-main |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | deferred | result-arguments |
 | TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -579,9 +579,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [ ] TODO-5523: A Result-returning main exits with its error code
+- [~] TODO-5523: A Result-returning main exits with its error code
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: result-main (worktree-agent-a843446ac27cda4fe), 2026-11-18
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-main
