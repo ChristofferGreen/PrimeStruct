@@ -163,7 +163,7 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
-| TODO-6036 | The front end of the http web apps does less work per call | deferred | web-app-lowering-time |
+| TODO-6036 | The front end of the http web apps does less work per call | ready | web-app-lowering-time |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
@@ -927,9 +927,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-6036: The front end of the http web apps does less work per call
+- [~] TODO-6036: The front end of the http web apps does less work per call
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: fe-perf (worktree-agent-abe865f9c007520e0), 2026-11-18
   - created_at: 2026-11-18
   - phase: Performance
   - parallel_track: web-app-lowering-time
