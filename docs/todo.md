@@ -850,9 +850,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - docs/MultithreadingPrototype.md and docs/spec/vm-design.md state the default
   - stop_rule: the default and the flag only.
 
-- [ ] TODO-6029: Function steps can wait for other steps in one stage
+- [~] TODO-6029: Function steps can wait for other steps in one stage
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: build-after-worker (worktree-agent-a37abafd0c47e28b1), 2026-11-18
   - created_at: 2026-11-17
   - phase: Build system (docs/BuildSystemPlan.md, section 4)
   - parallel_track: build-function-steps
