@@ -114,6 +114,7 @@ of sync with them.
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6074 | An args pack and `Result.map` destroy the `String`s of their temporaries | deferred | lifecycle-temporaries |
+| TODO-6075 | A host call may yield on the deterministic VM scheduler | deferred | vm-host-yield |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
@@ -171,7 +172,7 @@ of sync with them.
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
-- VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902
+- VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-6075
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
@@ -257,6 +258,23 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: needs a decision, not chosen yet (measured 2026-11-19 on the release VM and optexe, the two halves have different causes).
     - Args pack: `emitStructPackedValueToSlots` (src/ir_lowerer/IrLowererInlinePackedArgs.cpp) copies each element into the pack slots, disarms a temporary argument (the pack takes it over) and does a shallow slot copy of a named one (no `Copy` helper, no disarm), and the callee never destroys the pack. So the pack owns what a temporary gave it and borrows what a place gave it, with no per-element record of which. Option A: the pack owns every element (a named argument runs its `Copy` helper like a vector push) and the callee destroys all elements when its body ends; this changes a named argument's cost and its `Copy` side effects. Option B: keep the mixed ownership and give each element a drop flag, set only for a taken-over temporary; no `Copy` change, more state per call. Option C: the caller destroys the temporaries after the call (they are borrowed by the pack for the call's duration), like a read-only parameter; simplest, but `[spread]` forwarding of a pack then has to say who owns the elements.
     - `Result.map`: the leak does not happen for a typed local (`[Result<Box, i32>] r{...}` destroys the payload once, measured); it happens when the result is held by an `[auto]` local or read by `try` from one: the semantic product types `[auto] m{Result.map(...)}` and `[auto] r{Result.ok(Box{...})}` as `i64` (a packed legacy Result), the payload lives in untracked struct slots next to it, `try(m)` copies it out through `Copy` and nothing destroys the original (32 bytes: one `String`). Option A: infer the stdlib `Result<T, E>` sum for an `[auto]` local of `Result.ok`/`Result.map`/`Result.and_then`, so the existing sum drop applies (the binding type text changes from `i64`). Option B: keep the packed legacy local and register a drop entry for its struct payload when the init is a fresh legacy producer. Option C: refuse `[auto]` for a Result whose payload owns something (`declare the Result type`), a diagnostic instead of a fix.
+
+- [ ] TODO-6075: A host call may yield on the deterministic VM scheduler
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: VM threads (docs/spec/vm-design.md, Tasks; found by the worker of TODO-5862)
+  - parallel_track: vm-host-yield
+  - scope: A host `poll` cannot yield on the deterministic scheduler: a host call never switches tasks, and without a seed only a spawn, a wait, a block and a task's end do, so a poller (main) spins forever on the eager schedule and no worker runs. tests/unit/runtime/test_vm_serve_workers.cpp works around it by blocking its stop closure on a `Channel` the handler fills. Real sockets on the VM hit the same limit unless `--vm-threads` runs with a `Reentrant` host (`VmHostThreading`, include/primec/runtime/VmHost.h). Decide how a host call (or the program around it) gives the scheduler a switch point, then let a poller and its workers make progress on the deterministic scheduler.
+  - decision_needed: the scheduler and host-call yield semantics are a design choice (docs/spec/vm-design.md fixes today that the VM switches only at a spawn, a wait and a task's end, and that the default eager schedule prints what inline calls print), so this block stays deferred until the owner picks one. Options:
+    - option A, a yielding host binding: a new `VmHostThreading::Yielding` (or a `yields` flag on `VmHostBinding`) makes the call a switch point, so after it returns the scheduler hands over to the lowest-numbered runnable task (a seed picks any). Trade-off: smallest change and opt-in per host function, so existing embeddings keep today's order; but the eager schedule then depends on which functions a host marks, and a poller that calls it in a tight loop still yields every time.
+    - option B, a "would block" result of the host call: the call returns a status (for example the host sets `blocked` in the result slot or returns a distinct code) and the VM switches to another runnable task and retries the call when it comes back, a wait-like block that counts for `deadlock: every task is waiting` only while nothing else is runnable. Trade-off: the right semantics for real sockets (a poll with nothing ready), but a new host-call protocol on `VmHostInvoke`/`VmHostStringInvoke`, retry rules for calls with side effects, and a deadlock rule for a host that never becomes ready.
+    - option C, a program-level yield: a `yield` builtin or `/std/sync` function (a new task-switch opcode that is a no-op where one call stack runs, a pthread yield under `--vm-threads`, and a switch point on `optexe` and arm64 native), which a poller calls between polls. Trade-off: no host change and it also serves pure compute tasks, but every backend and the effect system get a new operation, and `serveWorkers` and every poller must call it.
+    - option D, no yield: keep the deterministic scheduler without host-call switch points and document that a poller and workers on the VM need `--vm-threads` with `Reentrant` host functions; scripted tests keep the blocking-closure form. Trade-off: no change and no new semantics, but real sockets cannot serve workers on the deterministic schedule and the debugger, seeds and the eager order cannot be used for them.
+  - implementation_notes: the scheduler is `VmTaskScheduler` (src/runtime/VmTaskScheduler.cpp), host calls are dispatched through `VmHostFunctions`/`VmHostBinding` (include/primec/runtime/VmHost.h) and the threaded mode is src/runtime/VmThreadedTasks.cpp. The test that works around the limit is in tests/unit/runtime/test_vm_serve_workers.cpp.
+  - acceptance:
+    - to be set when the leaf is un-deferred; at least: a poller that calls a host `poll` in a loop lets a spawned worker run on the deterministic scheduler (eager and seeded), with the outcome and output the same for a given seed, and a poll that can never be satisfied is `deadlock: every task is waiting`
+  - stop_rule: the scheduler and host-call yield semantics only.
 
 - [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
