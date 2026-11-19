@@ -653,8 +653,9 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
           emittedResultOkArgument = true;
         }
       }
-      std::string argStruct = emittedResultOkArgument ? paramInfo.structTypeName
-                                                      : inferStructExprPath(*orderedArg, callerLocals);
+      std::string argStruct = emittedResultOkArgument
+                                  ? paramInfo.structTypeName
+                                  : inferStructExprPath(*orderedArg, callerLocals);
       const bool builtinSoaToAosStructBridge =
           isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct);
       if (argStruct.empty() ||
