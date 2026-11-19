@@ -383,9 +383,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5513: Methods through a dereferenced vector pointer read the right fields
+- [~] TODO-5513: Methods through a dereferenced vector pointer read the right fields
   - owner: ai
   - status: deferred
+  - claimed_by: worker-5513 (worktree-agent-a3f9f97d756554a66), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: collections-access
