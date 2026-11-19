@@ -201,6 +201,20 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FmaF32:
+    case IrOpcode::FmaF64:
+      // GLSL's built-in fma(a, b, c) is a fused multiply-add. The narrowed f64 path computes it on f32 payloads, like
+      // the other f64 operations here.
+      if (instruction.op == IrOpcode::FmaF64) {
+        out << "        // Narrowed GLSL path lowers f64 fma through f32 payloads.\n";
+      }
+      out << "        float addend = intBitsToFloat(stack[--sp]);\n";
+      out << "        float right = intBitsToFloat(stack[--sp]);\n";
+      out << "        float left = intBitsToFloat(stack[--sp]);\n";
+      out << "        stack[sp++] = floatBitsToInt(fma(left, right, addend));\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::AddF32:
       emitBinaryF32("+");
       return true;

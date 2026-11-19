@@ -454,3 +454,45 @@ TEST_CASE("glsl-ir backend writes file-open-read stub source") {
   CHECK(source.find("stack[sp++] = -1;") != std::string::npos);
 }
 
+TEST_CASE("glsl-ir backend writes the built-in fma for the fused multiply-adds") {
+  const primec::IrBackend *backend = primec::findIrBackend("glsl-ir");
+  REQUIRE(backend != nullptr);
+
+  for (const bool isF64 : {false, true}) {
+    primec::IrModule module;
+    module.entryIndex = 0;
+    primec::IrFunction function;
+    function.name = "/main";
+    const primec::IrOpcode push = isF64 ? primec::IrOpcode::PushF64 : primec::IrOpcode::PushF32;
+    function.instructions.push_back({push, isF64 ? 0x3ff8000000000000ull : 0x3fc00000ull});
+    function.instructions.push_back({push, isF64 ? 0x4000000000000000ull : 0x40000000ull});
+    function.instructions.push_back({push, isF64 ? 0x3fe0000000000000ull : 0x3f000000ull});
+    function.instructions.push_back(
+        {isF64 ? primec::IrOpcode::FmaF64 : primec::IrOpcode::FmaF32, 0});
+    function.instructions.push_back(
+        {isF64 ? primec::IrOpcode::ReturnF64 : primec::IrOpcode::ReturnF32, 0});
+    module.functions.push_back(function);
+
+    const std::filesystem::path dir = std::filesystem::current_path() / "primec_tests";
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    CHECK_FALSE(static_cast<bool>(ec));
+    const std::filesystem::path outputPath =
+        dir / (isF64 ? "ir_backend_registry_fma_f64.glsl" : "ir_backend_registry_fma_f32.glsl");
+    std::filesystem::remove(outputPath, ec);
+
+    primec::IrBackendEmitOptions options;
+    options.outputPath = outputPath.string();
+    options.inputPath = "glsl_ir_backend_fma.prime";
+    primec::IrBackendEmitResult result;
+    std::string error;
+    REQUIRE(backend->emit(module, options, result, error));
+    CHECK(error.empty());
+
+    const std::string source = readTextFile(outputPath);
+    CHECK(source.find("stack[sp++] = floatBitsToInt(fma(left, right, addend));") !=
+          std::string::npos);
+    CHECK((source.find("// Narrowed GLSL path lowers f64 fma through f32 payloads.") !=
+           std::string::npos) == isF64);
+  }
+}
