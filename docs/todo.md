@@ -336,9 +336,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: lambda return types only.
 
-- [ ] TODO-5677: A `Function` whose closure holds a same-typed `Function` copies and destroys
+- [~] TODO-5677: A `Function` whose closure holds a same-typed `Function` copies and destroys
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: closures-a (worktree-agent-aa384eaf7df535914), 2026-11-19
   - created_at: 2026-11-06
   - phase: Closures follow-ups
   - parallel_track: closures-lifecycle
