@@ -140,7 +140,10 @@ of sync with them.
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
-| TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
+| TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | ready | runtime-faults |
+| TODO-6050 | Native arm64 division by zero is the VM's runtime fault | ready | runtime-faults |
+| TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
+| TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
@@ -165,10 +168,16 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-6049 (runtime-faults): the C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does
+- TODO-6050 (runtime-faults): native arm64 division by zero is the VM's runtime fault
+- TODO-6052 (runtime-faults): recursion limits of each backend are documented
 
 ### Immediate Next 10
 
 1. TODO-5603
+2. TODO-6049
+3. TODO-6050
+4. TODO-6052
 
 ### Priority Lanes
 
@@ -181,7 +190,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
-- Backend parity: TODO-5516, TODO-5517, TODO-5744
+- Backend parity: TODO-5516, TODO-6049, TODO-6050, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
@@ -597,20 +606,59 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - spec states the rule; matrix cases for narrowing and out-of-range conversions agree on VM, native, C++ and optexe
     - full release gate green
   - stop_rule: conversions only.
-  - notes: deferred: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, but needs TODO-5517 fault reporting first and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
+  - notes: deferred: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, but needs the fault reporting of TODO-6049 and TODO-6050 first and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
 
-- [ ] TODO-5517: Runtime faults exit the same way on every backend
+- [~] TODO-6049: The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does
+  - owner: ai
+  - status: ready
+  - claimed_by: faults-a (worktree-agent-a590be9f5e584c58a), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5517)
+  - parallel_track: runtime-faults
+  - scope: Reproduced in release mode on arm64: `10i32 / zero` (a `mut` zero) prints `before` then `0` and exits 0 on `--emit=exe` (the host compiler's division, undefined on zero; SIGFPE on x86_64, losing buffered stdout), where the VM prints `before`, writes `VM error: division by zero in IR` to stderr and exits 3 (`optexe` already does this through `ps_fault`). The simple emitter's runtime errors (`return 1` in the entry, 17 sites and the preamble helpers) also exit 1 instead of 3. Division fault: a zero divisor of `DivI32`/`DivI64`/`DivU64` flushes stdout, writes the VM's message and exits 3; `INT64_MIN / -1` wraps as on the VM. Exit code: every runtime error exits 3 with the `VM error: ` prefix. Float division keeps giving infinity or NaN.
+  - acceptance:
+    - a program matrix case (division by zero for i32, i64 and u64; stdout printed before the fault is kept; exit 3) agrees on the VM, `exe` and `optexe` (and native once TODO-6050 lands: list `native-O0`/`native-O2` in `skipConfigs` with that id until then)
+    - spec (vm-design.md Errors, runtime-model.md) states the exit code and message for the C++ emitters
+    - full release gate green
+  - stop_rule: the simple C++ emitter's fault reporting only.
+
+- [~] TODO-6050: Native arm64 division by zero is the VM's runtime fault
+  - owner: ai
+  - status: ready
+  - claimed_by: faults-a (worktree-agent-a590be9f5e584c58a), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5517)
+  - parallel_track: runtime-faults
+  - scope: Reproduced in release mode on arm64: `--emit=native` prints `0` for `10i32 / zero` and exits 0 (the `sdiv`/`udiv` instructions give 0 for a zero divisor), where the VM faults with exit 3. Emit a zero check before the division in the plain and register-allocated arm64 emitters that writes `VM error: division by zero in IR` to stderr (the existing `emitFaultMessage`) and exits 3.
+  - acceptance:
+    - the TODO-6049 matrix case passes on `native-O0` and `native-O2`; the division fast path keeps its register allocation (no slot-cache flush beyond the branch)
+    - full release gate green
+  - stop_rule: arm64 division only.
+
+- [ ] TODO-6051: Native x86_64 (ELF) division by zero is the VM's runtime fault
   - owner: ai
   - status: deferred
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5517)
   - parallel_track: runtime-faults
-  - scope: Integer division by zero exits 3 with a message on the VM but raises SIGFPE on native and C++ (losing buffered output on C++); C++ reports runtime errors with exit 1 instead of 3; native at 100000 recursion levels segfaults instead of reporting overflow. vm-design.md lists division by zero as a runtime fault with exit 3.
+  - scope: `X64Emitter::emitDiv`/`emitDivU` and the register-allocated `DivI32`/`DivI64`/`DivU64` emit `idiv`/`div` with no zero check, so a zero divisor raises SIGFPE (the Linux x86_64 JIT already reports the VM fault). Also `INT64_MIN / -1` raises SIGFPE from `idiv` instead of wrapping as the VM does. Same fix as TODO-6050 for x86_64 (the fault message and exit 3 through the existing x64 exit stubs).
   - acceptance:
-    - division by zero and the C++ runtime-error exit code match the VM (exit 3, message on stderr)
+    - the TODO-6049 matrix case passes on `native-O0` and `native-O2` on a Linux x86_64 machine
+    - full release gate green on Linux x86_64
+  - stop_rule: x86_64 division only.
+  - notes: deferred: needs a Linux x86_64 machine to run; the worker of TODO-6050 only has arm64 macOS, and an untested encoding is not landed.
+
+- [ ] TODO-6052: Recursion limits of each backend are documented
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5517)
+  - parallel_track: runtime-faults
+  - scope: The VM faults past 4096 frames (`call depth`), the optimizing C++ emitter has `PsMaxCallDepth`, and a native program at 100000 recursion levels segfaults on the stack instead of reporting an overflow. The limits stay backend-specific. State each limit and what happens past it in vm-design.md (one table), after measuring them with a recursion matrix case.
+  - acceptance:
+    - vm-design.md lists, per backend (VM, native, `exe`, `optexe`, Wasm), the depth limit and the outcome past it, each measured
     - full release gate green
-  - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
-  - notes: deferred: queued behind the Ready Now cap.
+  - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
 - [ ] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
   - owner: ai
