@@ -194,7 +194,8 @@
   a user `[sum]`) is owned by the vector like a struct element: `push` takes over a fresh sum or a named owner and
   copies any other place, a copy of the vector gives each element a payload of its own, and `pop`, `clear` and
   destroying the vector destroy the payload of each element's active variant. A `pick` expression whose arms yield a struct or a `vector<T>` makes a value of its own, which
-  the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once);
+  the binding or argument it initializes owns (an argument is destroyed after the call, a discarded result at once;
+  a statement that calls a definition returning a sum and binds nothing destroys the active payload the same way);
   `return(pick(...) { ... })` hands it to the caller and `name = pick(...) { ... }` replaces what a `mut` local held:
   an arm's fresh value is taken over, and so is a local that ends with the arm, which is a local declared in the arm
   or the payload binding of a fresh subject; any other place is copied with the type's `Copy` helpers and stays

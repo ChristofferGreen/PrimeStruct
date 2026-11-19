@@ -581,4 +581,106 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A statement that calls a definition returning a sum and binds nothing destroys the active payload at once.
+TEST_CASE("a discarded Maybe or Result with a String payload is destroyed") {
+  runSumOwnerProgram("sum_discarded_string_payloads",
+                     R"(
+import /std/result/*
+
+[effects(heap_alloc), return<Maybe<String>>]
+build([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(none<String>())
+  }
+  return(some<String>(label(id)))
+}
+
+[effects(heap_alloc), return<Result<String, i32>>]
+fetch([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(/std/result/error<String, i32>(id))
+  }
+  return(Result.ok(label(id)))
+}
+
+[effects(heap_alloc), return<Result<String, i32>>]
+fetch_inline([i32] id) {
+  if(id < 0i32) {
+    return(/std/result/error<String, i32>(id))
+  }
+  return(Result.ok(label(id)))
+}
+)",
+                     R"(
+    get(1i32)
+    get(-1i32)
+    build(2i32)
+    build(-2i32)
+    fetch(3i32)
+    fetch(-3i32)
+    fetch_inline(4i32)
+    fetch_inline(-4i32)
+)",
+                     "");
+}
+
+TEST_CASE("a discarded user sum with a Destroy payload destroys it once") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_discarded_destroy_payload";
+  program.source = R"(
+import /std/maybe/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[return<Maybe<Noisy>>]
+make([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(none<Noisy>())
+  }
+  return(some<Noisy>(Noisy{id}))
+}
+
+[return<Maybe<Noisy>>]
+make_inline([i32] id) {
+  if(id < 0i32) {
+    return(none<Noisy>())
+  }
+  return(some<Noisy>(Noisy{id}))
+}
+
+[effects(io_out), return<int>]
+main() {
+  make(1i32)
+  make(-1i32)
+  make_inline(2i32)
+  print_line(9i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  // some<Noisy>(Noisy{id}) prints the temporary's id when it is copied in, then the sum's payload is destroyed.
+  program.stdoutText = "1\n1\n2\n2\n9\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

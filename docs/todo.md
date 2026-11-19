@@ -114,7 +114,6 @@ of sync with them.
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | deferred | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
-| TODO-6054 | A discarded sum result with an owning payload is destroyed | deferred | lifecycle-temporaries |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
@@ -187,7 +186,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-6044, TODO-5520
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752; VM address checks TODO-5824
@@ -260,19 +259,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
     - full release gate green
   - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
-
-- [~] TODO-6054: A discarded sum result with an owning payload is destroyed
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lifecycle-worker (worktree agent-a91567da8e494f827), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Lifecycle (found while finishing TODO-5738)
-  - parallel_track: lifecycle-temporaries
-  - scope: A statement that calls a definition returning a sum (`Maybe<String>`, `Result<String, i32>`, a user `[sum]`) and binds nothing leaks the payload: `ownedTemporaryStructPath` (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp) returns no path for a sum, so `discardedTemporaryStructPath` never destroys it. Measured 2026-11-19 on the VM: `tiny(1i32)` as a statement of a two-statement `Maybe<String>` function leaves 32 bytes of the string heap in use (the same for an inlined call and, since TODO-5738, a real call). Destroy the active variant's payload of a discarded sum result at the end of the statement (docs/spec/value-lifecycle.md, Ownership).
-  - acceptance:
-    - a program-matrix case discards `Maybe<String>`, `Result<String, i32>` and a user sum with a `Destroy` payload from an inlined and a real call and ends with the heap statistics of the start (the cases in tests/unit/program_matrix/test_program_matrix_sum_owners.cpp avoid the discard)
-    - full release gate green
-  - stop_rule: discarded sum statement results only.
 
 - [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai

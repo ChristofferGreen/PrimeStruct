@@ -2453,6 +2453,7 @@ are left unarchived.
 | TODO-6048 | `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6054 | A discarded sum result with an owning payload is destroyed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | [2026-11.md](todo_archive/2026-11.md) | - |

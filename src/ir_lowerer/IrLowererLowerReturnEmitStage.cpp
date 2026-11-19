@@ -287,7 +287,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   // The struct path of the owning value a call produces when nobody binds it (a discarded
   // statement result, a field-access receiver): a definition returning a struct by value (not a
   // reference, pointer or constructor) that needs destroying.
-  auto ownedTemporaryStructPath = [&](const Expr &callExpr, const LocalMap &locals) {
+  // With `allowSum`, a sum result counts too when its payloads need destroying.
+  auto ownedTemporaryStructPath = [&](const Expr &callExpr,
+                                      const LocalMap &locals,
+                                      bool allowSum = false) {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isFieldAccess ||
         isReturnCall(callExpr)) {
       return std::string{};
@@ -316,6 +319,13 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
       }
     }
     std::string structPath = inferStructExprPath(callExpr, locals);
+    if (!structPath.empty() && allowSum) {
+      const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(structPath);
+      if (sumDef == nullptr || !sumHelpers.sumPayloadsNeedDestroy(*sumDef)) {
+        return std::string{};
+      }
+      return structPath;
+    }
     if (structPath.empty() || sumHelpers.resolveSumDefinitionByPath(structPath) != nullptr ||
         !ir_lowerer::structNeedsDestroyHelpers(
             structPath,
@@ -356,6 +366,12 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
       return std::string{};
     }
     return callee->fullPath;
+  };
+
+  // The sum path of a discarded call result whose active payload needs destroying (a
+  // `Maybe<String>`, a user `[sum]` holding a struct with `Destroy`); empty otherwise.
+  auto discardedTemporarySumPath = [&](const Expr &stmtExpr, const LocalMap &locals) {
+    return ownedTemporaryStructPath(stmtExpr, locals, true);
   };
 
   // Gives a builtin vector pushed onto a `vector<vector<T>>` from a place a buffer of its own.

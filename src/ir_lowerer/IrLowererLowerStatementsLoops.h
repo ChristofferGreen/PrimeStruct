@@ -426,6 +426,18 @@
             emitInlineDefinitionCall,
             error);
       }
+      // A discarded sum result destroys its active payload at the end of its statement.
+      if (const std::string discardedSum = discardedTemporarySumPath(stmt, localsIn);
+          !discardedSum.empty()) {
+        const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(discardedSum);
+        if (sumDef == nullptr || !emitExpr(stmt, localsIn)) {
+          return false;
+        }
+        const int32_t resultPtrLocal = allocTempLocal();
+        function.instructions.push_back(
+            {IrOpcode::StoreLocal, static_cast<uint64_t>(resultPtrLocal)});
+        return sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(*sumDef, resultPtrLocal, localsIn);
+      }
       // A discarded fresh builtin vector (`vector<T>(...)`, or a user definition or method
       // returning one) frees its buffer and destroys its elements at the end of its statement.
       const auto resolveDiscardedCallee = ir_lowerer::makeCallOrMethodResolver(
