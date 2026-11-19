@@ -335,7 +335,22 @@ bool emitConversionsAndCallsControlExprTail(
     const StatementBindingTypeInfo thenInfo = inferBranchValueTypeInfo(thenArg, localsIn);
     const StatementBindingTypeInfo elseInfo = inferBranchValueTypeInfo(elseArg, localsIn);
     LocalInfo::ValueKind resultKind = LocalInfo::ValueKind::Unknown;
-    if (branchTypeInfoCompatible(thenInfo, elseInfo)) {
+    // The struct a branch yields: its one value expression, when the block declares no locals of its own.
+    auto branchStructPath = [&](const Expr &candidate, const LocalMap &localsBase) -> std::string {
+      if (candidate.bodyArguments.size() != 1 || candidate.bodyArguments.front().isBinding) {
+        return {};
+      }
+      const Expr &valueExpr = candidate.bodyArguments.front();
+      return inferStructExprPath(isReturnCall(valueExpr) && valueExpr.args.size() == 1
+                                     ? valueExpr.args.front()
+                                     : valueExpr,
+                                 localsBase);
+    };
+    const std::string thenStruct = branchStructPath(thenArg, localsIn);
+    if (!thenStruct.empty() && thenStruct == branchStructPath(elseArg, localsIn)) {
+      // Branches of one struct type both leave the address of the value on the stack.
+      resultKind = LocalInfo::ValueKind::Int64;
+    } else if (branchTypeInfoCompatible(thenInfo, elseInfo)) {
       resultKind = thenInfo.valueKind;
     } else if (thenKind == elseKind) {
       resultKind = thenKind;

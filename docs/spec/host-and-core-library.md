@@ -197,6 +197,10 @@ main() {
   - 3) must be a definition envelope; its body yields the `if` result when the condition is `false`
   - Surface `if(condition) { ... }` is statement-only sugar and lowers to `if(condition, then() { ... }, else() { })`.
   - Evaluation is lazy: the condition is evaluated first, then exactly one of the two definition bodies is evaluated.
+  - The two bodies yield values of one type. Scalars follow the numeric promotion rules; two struct values must be of
+    the same struct (`[Point] p{if(flag) { Point{1i32, 2i32} } else { other }}`), whether a constructor or a local (a
+    block with locals of its own is not covered). Different struct types are rejected with `if branches must return
+    compatible types`.
 - **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`), and
   the body is required. Negative counts are errors.
 - **`while(condition) { ... }`:** statement-only loop helper. `condition` must evaluate to `bool` (or a function

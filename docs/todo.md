@@ -142,7 +142,6 @@ of sync with them.
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6038 | An `if` yields struct values | ready | frontend-accept-if |
 | TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
@@ -166,15 +165,13 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-6038 (frontend-accept-if): An `if` yields struct values
 - TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-6038
-3. TODO-6039
+2. TODO-6039
 
 ### Priority Lanes
 
@@ -188,7 +185,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6038, TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -617,19 +614,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-6038: An `if` yields struct values
-  - owner: ai
-  - status: ready
-  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-if
-  - scope: `[P] p{if(flag) { P{1i32} } else { P{2i32} }}` fails with `VM lowering error: if branches must return compatible types` (no location). Struct-valued `if` branches in a binding initializer, a `return` and an argument must type check and lower on the VM, native and C++.
-  - acceptance:
-    - the repro compiles and runs on the VM; semantics and compile-run tests (one positive with struct branches, one negative with branches of different struct types keeping the compatible-types diagnostic)
-    - full release gate green
-  - stop_rule: if-expressions yielding structs; sums and `Result` yielded by `if` only when the same change covers them for free.
 
 - [~] TODO-6039: A sum-typed struct field lowers
   - owner: ai

@@ -117,4 +117,102 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an if yields struct values in a binding, a return and an argument") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_if_yields_struct";
+  program.source = R"(
+[struct]
+Point {
+  [i32] x
+  [i32] y
+}
+
+[return<i32>]
+sum([Point] p) {
+  return(plus(p.x, p.y))
+}
+
+[return<Point>]
+pick_point([bool] flag) {
+  [Point] a{Point{1i32, 2i32}}
+  [Point] b{Point{10i32, 20i32}}
+  return(if(flag) { a } else { b })
+}
+
+[return<int> effects(io_out)]
+main() {
+  [bool] yes{true}
+  [bool] no{false}
+  [Point] p{if(yes) { Point{3i32, 4i32} } else { Point{5i32, 6i32} }}
+  [Point] q{if(no) { Point{3i32, 4i32} } else { Point{5i32, 6i32} }}
+  print_line(p.x)
+  print_line(q.y)
+  print_line(sum(if(no) { p } else { q }))
+  [Point] r{pick_point(no)}
+  print_line(r.y)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n6\n11\n20\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an if of struct temporaries with a Destroy helper destroys the chosen value once") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_if_struct_destroy";
+  program.source = R"(
+[struct]
+Res {
+  [i32] id
+
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [bool] yes{true}
+  [bool] no{false}
+  [Res] first{if(yes) { Res{1i32} } else { Res{2i32} }}
+  [Res] second{if(no) { Res{3i32} } else { Res{4i32} }}
+  print_line(100i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  // Locals are destroyed last declared first.
+  program.stdoutText = "100\n4\n1\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an if whose branches are different struct types is still rejected") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_if_struct_mismatch";
+  program.source = R"(
+[struct]
+Point {
+  [i32] x
+}
+
+[struct]
+Other {
+  [i32] x
+}
+
+[return<int>]
+main() {
+  [bool] yes{true}
+  [Point] p{if(yes) { Point{3i32} } else { Other{5i32} }}
+  return(p.x)
+}
+)";
+  program.exitCode = 2;
+  program.stdoutText = "";
+  program.vmStderr = "VM lowering error: if branches must return compatible types\n";
+  program.onlyConfigs = {"vm-step-O0"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
