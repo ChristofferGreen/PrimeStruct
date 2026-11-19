@@ -138,7 +138,6 @@ of sync with them.
 | TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | deferred | diagnostics-on-error-handler |
 | TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | deferred | diagnostics-internal-errors |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
-| TODO-6068 | Wasm computes `FmaF32` and `FmaF64` with one rounding | deferred | stdlib-math-fma |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
@@ -176,7 +175,7 @@ of sync with them.
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
-- Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
+- Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
@@ -576,21 +575,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - both members delegate to `primec/support/DiagnosticNames.h`; semantics diagnostics tests unchanged
     - full release gate green
   - stop_rule: semantics diagnostics builder only.
-
-- [~] TODO-6068: Wasm computes `FmaF32` and `FmaF64` with one rounding
-  - owner: ai
-  - status: in_progress
-  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10
-  - parallel_track: stdlib-math-fma
-  - depends_on: none
-  - scope: The owner asked for an exact emulation on Wasm; today Wasm computes `(a * b) + c`, which rounds twice; an emulation gives the fused bits and is slower. f32: the product of two f32 is exact in an f64, so add the addend in an f64 with a round-to-odd step (TwoSum error, force the last mantissa bit odd when the error is not zero) and demote; correct because 53 >= 2 * 24 + 2. f64: no wider type, so an exact soft-float fma on i64 bit patterns (an exact 128-bit product from 32-bit limbs, an aligned add with a sticky bit, one round to nearest even, subnormals, infinities, NaN, and a product that overflows while the addend is infinite) as helper functions of the module. Note that the Wasm emitter keeps every IR local an i32 today, so a program cannot hold a float in a local on Wasm and fma only appears in a pure expression; check that before sizing this.
-  - acceptance:
-    - the helpers agree with `std::fma` bit for bit on a grid of operands, run under node or wasmtime from a test that skips when neither exists
-    - a wasm test runs `fma` of the matrix inputs and gets the fused values (skipped when no runtime exists)
-    - full release gate green
-  - stop_rule: Wasm emitter only.
 
 - [ ] TODO-6067: x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss`
   - owner: ai

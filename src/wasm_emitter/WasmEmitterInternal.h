@@ -105,10 +105,6 @@ struct WasmLocalLayout {
   uint32_t fileDigitsNegLocal = 0;
   uint32_t fileDigitsValueLocal = 0;
   uint32_t fileDigitsRemLocal = 0;
-  // A function with a fused multiply-add holds the addend in an i64 local while it multiplies (docs/spec/vm-design.md,
-  // Fused multiply-add).
-  bool needsFmaTemp = false;
-  uint32_t fmaTempLocal = 0;
   uint32_t totalLocals = 0;
 };
 
@@ -120,6 +116,12 @@ struct WasmRuntimeContext {
   bool hasFileReadOps = false;
   bool hasFileWriteOps = false;
   uint32_t functionIndexOffset = 0;
+  // The helper functions appended after the IR functions that compute a fused multiply-add with one rounding
+  // (docs/spec/vm-design.md, Fused multiply-add); present only when the module has the opcode.
+  bool hasFma32 = false;
+  bool hasFma64 = false;
+  uint32_t fma32Function = 0;
+  uint32_t fma64Function = 0;
   uint32_t fdWriteImportIndex = 0;
   uint32_t fdReadImportIndex = 0;
   uint32_t argsSizesGetImportIndex = 0;
@@ -345,6 +347,9 @@ bool emitInstructionRange(const IrFunction &function,
                           std::vector<uint8_t> &out,
                           std::string &error,
                           bool *outDiverges = nullptr);
+
+// The code of the helper function behind `FmaF32` (`isF64` false; type (f32, f32, f32) -> f32) or `FmaF64`.
+WasmCodeBody buildWasmFmaHelperBody(bool isF64);
 
 // `irLocalTypes` are the inferred types of the function's IR locals (inferWasmLocalTypes).
 bool lowerFunctionCode(const IrFunction &function,

@@ -240,4 +240,41 @@ main() {
                      7);
 }
 
+// The inputs of the program matrix case "fma rounds once for f64 and f32": a multiply followed by an add rounds twice
+// and fails the first checks, the fused result passes them.
+TEST_CASE("wasm computes fma with one rounding like the vm") {
+  const std::vector<std::string> checks = {
+      "fma(1.0f64 + e, 1.0f64 - e, -1.0f64) == negate(tiny)",
+      "fma(1.0f64 - e, 1.0f64 + e, -1.0f64) == negate(tiny)",
+      "fma(1.0f64 + e, 1.0f64 + e, -1.0f64 - e - e) == tiny",
+      "fma(2.0f64, 3.0f64, 4.0f64) == 10.0f64",
+      "fma(0.1f64, 10.0f64, -1.0f64) == 0.000000000000000055511151231257827f64",
+      "fma(1.0f32 + e32, 1.0f32 - e32, -1.0f32) == negate(tiny32)",
+      "fma(2.0f32, 3.0f32, 4.0f32) == 10.0f32",
+      "fma(a, b, 1.0f32) == 1.0f32 + 0.00000011920928955078125f32",
+      "fma(b, a, 1.0f32) == 1.0f32 + 0.00000011920928955078125f32",
+      "fma(inf, 1.0f64, 2.0f64) == inf",
+      "fma(inf, 0.0f64, 1.0f64) != fma(inf, 0.0f64, 1.0f64)",
+      "fma(inf, 1.0f64, negate(inf)) != fma(inf, 1.0f64, negate(inf))",
+      "fma(1.0e200f64, 1.0e200f64, negate(inf)) == negate(inf)"};
+  std::string source = R"(
+import /std/math/*
+
+[return<int> effects(io_out)]
+main() {
+  [f64] inf{1.0f64 / 0.0f64}
+  [f64] e{1.0f64 / 1073741824.0f64}
+  [f64] tiny{e * e}
+  [f32] e32{1.0f32 / 8192.0f32}
+  [f32] tiny32{e32 * e32}
+  [f32] a{8391483.0f32 / 34359738368.0f32}
+  [f32] b{8385734.0f32 / 34359738368.0f32}
+)";
+  for (const std::string &check : checks) {
+    source += "  if(" + check + ", then() { print_line(1i32) }, else() { print_line(0i32) })\n";
+  }
+  source += "  return(0i32)\n}\n";
+  checkWasmMatchesVm("fma_fused", source, 0);
+}
+
 TEST_SUITE_END();

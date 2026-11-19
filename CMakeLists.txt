@@ -671,6 +671,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
+  src/wasm_emitter/WasmEmitterFma.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
   src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp
@@ -2420,6 +2421,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl_runtime.cpp
     tests/unit/ir_pipeline/wasm/test_ir_pipeline_wasm.cpp
+    tests/unit/ir_pipeline/wasm/test_ir_pipeline_wasm_fma.cpp
     tests/unit/ir_pipeline/wasm/test_ir_pipeline_wasm_wasi.cpp
     tests/unit/compile_run/test_compile_run_benchmark_harness.cpp
     tests/unit/compile_run/test_compile_run_benchmark_harness_part2.cpp

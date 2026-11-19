@@ -20,9 +20,6 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
       maxLocalIndex = std::max(maxLocalIndex, inst.imm);
       hasLocal = true;
     }
-    if (inst.op == IrOpcode::FmaF32 || inst.op == IrOpcode::FmaF64) {
-      layout.needsFmaTemp = true;
-    }
     if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       layout.hasArgvHelpers = true;
     }
@@ -98,11 +95,6 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
     layout.fileDigitsRemLocal = static_cast<uint32_t>(totalCount + 1);
     totalCount += 2;
     layout.localTypes.push_back(WasmTypeI64);
-    layout.localTypes.push_back(WasmTypeI64);
-  }
-  if (layout.needsFmaTemp) {
-    layout.fmaTempLocal = static_cast<uint32_t>(totalCount);
-    totalCount += 1;
     layout.localTypes.push_back(WasmTypeI64);
   }
   if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {

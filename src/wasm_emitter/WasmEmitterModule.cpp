@@ -124,6 +124,22 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     runtime.functionIndexOffset = 0;
   }
 
+  // A fused multiply-add is a helper function after the IR functions.
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      runtime.hasFma32 = runtime.hasFma32 || inst.op == IrOpcode::FmaF32;
+      runtime.hasFma64 = runtime.hasFma64 || inst.op == IrOpcode::FmaF64;
+    }
+  }
+  uint32_t nextHelperFunction =
+      runtime.functionIndexOffset + static_cast<uint32_t>(module.functions.size());
+  if (runtime.hasFma32) {
+    runtime.fma32Function = nextHelperFunction++;
+  }
+  if (runtime.hasFma64) {
+    runtime.fma64Function = nextHelperFunction++;
+  }
+
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
   std::vector<std::vector<uint8_t>> irLocalTypes;
   if (!inferWasmLocalTypes(module, functionTypes, runtime, irLocalTypes, error)) {
@@ -152,6 +168,19 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
       return false;
     }
     codeBodies.push_back(std::move(codeBody));
+  }
+
+  for (const bool isF64 : {false, true}) {
+    if (!(isF64 ? runtime.hasFma64 : runtime.hasFma32)) {
+      continue;
+    }
+    const uint8_t type = isF64 ? WasmValueTypeF64 : WasmValueTypeF32;
+    WasmFunctionType helperType;
+    helperType.params = {type, type, type};
+    helperType.results = {type};
+    functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+    types.push_back(std::move(helperType));
+    codeBodies.push_back(buildWasmFmaHelperBody(isF64));
   }
 
   std::vector<WasmExport> exports;

@@ -225,7 +225,7 @@
   | `optcpp`, `optexe`, `exe` (the C++ emitters) | `std::fma` (the host's fused instruction; the host compiler runs with `-ffp-contract=off`) | once |
   | arm64 native (Mach-O), stack and register-allocated functions | `FMADD`; a function that has the opcode keeps the stack path | once |
   | GLSL | `fma()` (the narrowed f64 path computes it on f32 payloads like the other f64 operations) | once |
-  | Wasm (WASI and browser profiles) | WebAssembly has no fused instruction: `(a * b) + c`, the addend held in an i64 local | twice, until an exact emulation lands (exactness only, slower) |
+  | Wasm (WASI and browser profiles) | WebAssembly has no fused instruction: a call of a helper function the module carries (`FmaF32`: the exact f64 product and a round-to-odd f64 sum, then one demotion; `FmaF64`: a soft-float on the bit patterns with an exact 128-bit product, an aligned add with a sticky bit and one round to nearest even, subnormals, infinities and NaN included) | once (slower than a fused instruction) |
   | x86_64 native (ELF) | the opcode becomes `StoreLocal t; Mul; LoadLocal t; Add` before emission (`expandFusedMultiplyAdd`, `primec/ir/IrFmaExpansion.h`) | twice, until FMA3 `vfmadd231` lands |
   | the Linux x86_64 JIT | not inline and not bridged, so a module with the opcode stays on the interpreter | once |
 

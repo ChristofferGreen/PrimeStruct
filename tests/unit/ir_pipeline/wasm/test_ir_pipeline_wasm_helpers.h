@@ -162,4 +162,8 @@ inline bool hasWasmtime() {
   return runCommand("wasmtime --version > /dev/null 2>&1") == 0;
 }
 
+inline bool hasNode() {
+  return runCommand("node --version > /dev/null 2>&1") == 0;
+}
+
 } // namespace ir_pipeline_wasm_test

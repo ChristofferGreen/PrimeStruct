@@ -373,9 +373,9 @@ TEST_CASE("wasm emitter lowers recursive call opcode in canonical IR") {
   CHECK(containsByteSequence(bytes, recursiveCallPattern));
 }
 
-// WebAssembly has no fused multiply-add: fma is (a * b) + c with the addend parked in an i64 local, which rounds twice
-// (docs/spec/vm-design.md, Fused multiply-add).
-TEST_CASE("wasm emitter lowers fused multiply-add as a multiply and an add") {
+// WebAssembly has no fused multiply-add: fma is a call of a helper function the module carries after the IR functions
+// (docs/spec/vm-design.md, Fused multiply-add); test_ir_pipeline_wasm_fma.cpp runs the helpers.
+TEST_CASE("wasm emitter lowers fused multiply-add to a call of a helper function") {
   for (const bool isF64 : {true, false}) {
     primec::WasmEmitter emitter;
     primec::IrModule module;
@@ -403,11 +403,12 @@ TEST_CASE("wasm emitter lowers fused multiply-add as a multiply and an add") {
     REQUIRE(emitter.emitModule(module, bytes, error));
     CHECK(error.empty());
 
-    // The only local is the i64 temp (index 0): set it from the reinterpreted addend, multiply, get it back, add.
-    const std::vector<uint8_t> f64Pattern = {0xbd, 0x21, 0x00, 0xa2, 0x20, 0x00, 0xbf, 0xa0};
-    const std::vector<uint8_t> f32Pattern = {
-        0xbc, 0xad, 0x21, 0x00, 0x94, 0x20, 0x00, 0xa7, 0xbe, 0x92};
-    CHECK(containsByteSequence(bytes, isF64 ? f64Pattern : f32Pattern));
+    // main is function 0 and the helper function 1: the three operands, call 1, return. The module has the helper's
+    // type, (f, f, f) -> f.
+    CHECK(containsByteSequence(bytes, {0x10, 0x01, 0x0f}));
+    const uint8_t floatType = isF64 ? 0x7c : 0x7d;
+    CHECK(containsByteSequence(bytes,
+                               {0x60, 0x03, floatType, floatType, floatType, 0x01, floatType}));
   }
 }
 
