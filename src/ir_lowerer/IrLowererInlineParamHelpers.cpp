@@ -352,6 +352,8 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
   const ActionFn &emitArrayIndexOutOfBounds = parameters.emitArrayIndexOutOfBounds;
   const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper =
       parameters.emitStructCopyHelper;
+  const EmitInlineParameterResultOkArgumentFn &emitResultOkArgument =
+      parameters.emitResultOkArgument;
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
@@ -640,7 +642,19 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
         error = "argument count mismatch";
         return false;
       }
-      std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      bool emittedResultOkArgument = false;
+      if (emitResultOkArgument && !isCopiedStructArray) {
+        const std::optional<bool> emitted =
+            emitResultOkArgument(*orderedArg, paramInfo.structTypeName, callerLocals);
+        if (emitted.has_value()) {
+          if (!*emitted) {
+            return false;
+          }
+          emittedResultOkArgument = true;
+        }
+      }
+      std::string argStruct = emittedResultOkArgument ? paramInfo.structTypeName
+                                                      : inferStructExprPath(*orderedArg, callerLocals);
       const bool builtinSoaToAosStructBridge =
           isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct);
       if (argStruct.empty() ||
@@ -729,7 +743,8 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
           emittedStructArgsPackAccessArg = true;
         }
       }
-      if (!emittedStructArgsPackAccessArg && !emitExpr(*orderedArg, callerLocals)) {
+      if (!emittedStructArgsPackAccessArg && !emittedResultOkArgument &&
+          !emitExpr(*orderedArg, callerLocals)) {
         return false;
       }
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
@@ -754,7 +769,7 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
           return false;
         }
       }
-      if (!builtinSoaToAosStructBridge &&
+      if (!builtinSoaToAosStructBridge && !emittedResultOkArgument &&
           shouldDisarmStructCopySourceExpr(*orderedArg, isBuiltinVectorElementPlace)) {
         emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, copiedParamInfo.structTypeName);
       }

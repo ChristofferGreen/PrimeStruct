@@ -1068,4 +1068,27 @@ SumHelpersContext::SumHelpersContext(LowerSetupStageState &setupStageIn,
       return true;
     }
 
+    std::optional<bool> SumHelpersContext::emitLegacyResultOkAsSumPointer(
+        const Expr &arg, const std::string &targetPath, const LocalMap &valueLocals) {
+      if (!isLegacyResultOkCall(arg)) {
+        return std::nullopt;
+      }
+      const Definition *sumDef = resolveSumDefinitionByPath(targetPath);
+      if (sumDef == nullptr || !isStdlibResultSumDefinition(*sumDef)) {
+        return std::nullopt;
+      }
+      int32_t totalSlots = 0;
+      if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+        return false;
+      }
+      const int32_t baseLocal = nextLocal;
+      nextLocal += totalSlots;
+      emitLoweredSumHeader(baseLocal, totalSlots);
+      if (!emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, arg, valueLocals)) {
+        return false;
+      }
+      function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+      return true;
+    }
+
 } // namespace primec::ir_lowerer

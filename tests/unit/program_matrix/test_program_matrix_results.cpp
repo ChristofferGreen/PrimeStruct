@@ -277,6 +277,44 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("Result.ok calls pass as stdlib Result arguments") {
+  program_matrix::ProgramCase program;
+  program.name = "result_ok_call_arguments";
+  program.source = R"(
+import /std/result/*
+
+[return<i32>]
+show([Result<i32, i32>] r) {
+  return(pick(r) {
+    ok(v) { v }
+    error(e) { 100i32 + e }
+  })
+}
+
+[return<bool>]
+failed([Result<i32, i32>] r) {
+  return(Result.error(r))
+}
+
+[return<i32>]
+twice([Result<i32, i32>] a, [Result<i32, i32>] b) {
+  return(show(a) + show(b))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(show(Result.ok(3i32)))
+  print_line(failed(Result.ok(4i32)))
+  print_line(twice(Result.ok(5i32), /std/result/error<i32, i32>(6i32)))
+  print_line(twice(Result.ok(7i32), Result.ok(8i32)))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n0\n111\n15\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("map tryAt with the Result import reads ok and missing keys") {
   program_matrix::ProgramCase program;
   program.name = "result_map_try_at";

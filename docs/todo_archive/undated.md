@@ -557,3 +557,17 @@
     - full release gate green
   - stop_rule: compile steps only; no cache (TODO-5915), no command or function steps, no `run` in the script.
   - result: `primec build` without `--dry-run` starts `primec build --dry-run` for the graph, parses the export (src/pipeline/BuildGraphJson.cpp) and runs each compile and executable node as one `primec` process (src/pipeline/BuildRunner.cpp), `--jobs N` at a time, writing under `--out-dir`. The in-process versus process-per-step decision (a process per step, because the compile pipeline has process-wide state) is recorded in docs/BuildSystemPlan.md section 11. Library and link nodes and graph problems run nothing and exit 1; a failed step names itself and prints the compiler diagnostics, steps not yet started are reported skipped. Tests: tests/unit/backend_host/test_build_graph.cpp.
+
+- [x] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-arguments
+  - scope: With `/std/result/*` imported, `show(Result.ok(3i32))` for `show([Result<i32, i32>] r)` fails to lower ("struct parameter type mismatch: expected /std/result/Result__..., got <unknown>") because `Result.ok` in argument position still produces the packed value; `/std/result/ok<i32, i32>(3i32)` works. Construct the sum when a legacy `Result.ok` call feeds a stdlib Result parameter (or any sum-typed slot).
+  - acceptance:
+    - matrix case passing `Result.ok(...)` to a stdlib Result parameter on VM, native and C++
+    - full release gate green
+  - stop_rule: `Result.ok` arguments only.
+  - notes: deferred: queued behind the Ready Now cap.
+  - done: the inline parameter binder builds a legacy `Result.ok(x)` argument as the parameter's stdlib Result sum (`emitLegacyResultOkAsSumPointer`); matrix case `Result.ok calls pass as stdlib Result arguments`.

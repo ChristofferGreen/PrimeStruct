@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -29,6 +30,12 @@ using TrackInlineParameterFileHandleFn = std::function<void(int32_t)>;
 // `destPtrLocal` from the value at `srcPtrLocal`; sets `ranHelper` to whether there was one.
 using EmitInlineParameterStructCopyHelperFn = std::function<bool(
     int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath, bool &ranHelper)>;
+
+// Builds a legacy `Result.ok(x)` argument as the stdlib Result sum of the parameter (`structPath`) and
+// pushes the address of that sum. Returns nullopt when the argument is not one, or the parameter is
+// not a stdlib Result sum.
+using EmitInlineParameterResultOkArgumentFn = std::function<std::optional<bool>(
+    const Expr &arg, const std::string &structPath, const LocalMap &callerLocals)>;
 
 // Whether `callee` is declared `return<Reference<T>>`; `referentTypeOut` is the text of T.
 bool definitionReturnsReference(const Definition &callee, std::string &referentTypeOut);
@@ -77,6 +84,8 @@ struct InlineDefinitionCallParameters {
   ActionFn emitArrayIndexOutOfBounds = {};
   // `[T copy]` parameters of a type with a `Copy` helper are filled through it.
   EmitInlineParameterStructCopyHelperFn emitStructCopyHelper = {};
+  // A `Result.ok(x)` argument of a stdlib Result parameter is constructed as that sum.
+  EmitInlineParameterResultOkArgumentFn emitResultOkArgument = {};
 };
 
 bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &parameters);

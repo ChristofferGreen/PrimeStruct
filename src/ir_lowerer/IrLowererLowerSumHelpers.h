@@ -97,6 +97,9 @@ public:
                                               int32_t baseLocal,
                                               const std::function<bool()> &emitPackedValue);
   bool emitLoweredSumConstructionIntoLocal(int32_t baseLocal, const Definition &sumDef, const Expr &initializer, const LocalMap &valueLocals);
+  // A legacy `Result.ok(x)` that feeds a parameter of the stdlib Result sum `targetPath`: builds the sum in
+  // fresh locals and pushes its address. nullopt when `arg` is no such call or the target no such sum.
+  std::optional<bool> emitLegacyResultOkAsSumPointer(const Expr &arg, const std::string &targetPath, const LocalMap &valueLocals);
   bool tryEmitLoweredSumConstructorExpr(const Expr &expr, const LocalMap &valueLocals);
   std::string describePickTargetName(const Expr &targetExpr);
   const Definition * resolveSemanticProductPickTargetSumDefinition(const Expr &targetExpr, const LocalMap &valueLocals);

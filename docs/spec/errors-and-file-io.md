@@ -50,6 +50,8 @@
   `FileError.status(err)`) are converted to the sum when a stdlib-Result definition returns them. Without the import,
   the builtin `Result` keeps its packed representation (the error code in the high 32 bits, zero for ok), which
   cannot tell `ok` from an error code of `0`.
+- **Result arguments:** with `/std/result/*` imported, a `Result.ok(x)` written as the argument of
+  a stdlib `Result` parameter builds the sum for that parameter, the same as `/std/result/ok<T, E>(x)` does.
 - **Result-returning entry:** an entry declared to return `Result<T, E>` or `Result<E>` ends the process with an exit
   code decoded from the value, the same on the VM, native, C++ and optimized C++ backends. `ok` exits with its payload
   when that is an integer (`i32`, `i64`, `u64`, `u8`, `int`); like any exit code it keeps the low 8 bits, so `0..255`

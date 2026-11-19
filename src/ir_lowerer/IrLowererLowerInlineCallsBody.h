@@ -603,6 +603,12 @@
                       stateOut.emitInlineDefinitionCall,
                       ranHelper,
                       error);
+                },
+            .emitResultOkArgument =
+                [&](const Expr &okArg, const std::string &structPath,
+                    const LocalMap &argLocals) -> std::optional<bool> {
+                  SumHelpersContext argSumHelpers(setupStage, stateOut, callResolutionAdapters, error);
+                  return argSumHelpers.emitLegacyResultOkAsSumPointer(okArg, structPath, argLocals);
                 }})) {
       if (std::string_view(error) == VariadicArgsReferenceForwardingDiagnosticMessage) {
         const Expr *diagnosticAnchor = &callExpr;
