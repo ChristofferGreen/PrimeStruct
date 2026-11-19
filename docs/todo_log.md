@@ -225,3 +225,8 @@ open-work-only scope rule as `docs/todo.md` itself.
   `--vm-replay-sync`: all 30 replays printed what their record printed, and the records covered three different arrival orders (17, 2 and 11
   runs), so replay follows the record and not the eager order; the same with `PRIMEVM_KERNEL=step` (15 runs, no difference). A record is 193
   events (about 1.6 KB) for that program.
+- 2026-11-19 (TODO-6028, closed by the owner): the gate keeps `nice -n 10` (TODO-5757). TODO-6026 measured the same five entries alone and with 44 and 60
+  busy-loop processes at normal priority (11 cores): at `nice -n 10` they took 5 to 15 times their quiet time, at normal priority 2 to 5 times; a load
+  average of 124 was seen on 2026-11-19 with several gates running at once, and a gate then advanced about 1% an hour. Timeouts of 300 s reached by
+  entries of 2 to 40 s are not explained by CPU load alone (memory pressure or a stalled disk are the suspects). The owner chose a liveness watchdog
+  (TODO-6053) over a priority change.

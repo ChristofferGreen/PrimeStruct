@@ -111,7 +111,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6028 | A gate at `nice -n 10` is not starved by other jobs until its tests time out | deferred | gate-timeouts |
+| TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | deferred | gate-timeouts |
 | TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
@@ -207,18 +207,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6028: A gate at `nice -n 10` is not starved by other jobs until its tests time out
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-17
-  - phase: Test infrastructure (found by TODO-6026; needs a decision on `scripts/compile.sh`)
-  - parallel_track: gate-timeouts
-  - scope: `scripts/compile.sh` runs `ctest` at `nice -n 10` (TODO-5757), so on a machine with other jobs at normal priority the gate's tests get a small share of the CPUs. TODO-6026 measured the same five entries alone and with 44 and 60 busy-loop processes at normal priority (11 cores): at `nice -n 10` they took 5 to 15 times their quiet time, at normal priority 2 to 5 times, so a 300 s timeout is about 20 to 60 times a quiet entry but at a load of 100 and nice 10 only 10 to 20. Timeouts of 300 s that were reached by entries of 2 to 40 s need something beyond load (memory pressure with several 2 GB compilers at once, or a stalled Gatekeeper or disk), which no loaded repro in TODO-6026 produced. Decide with the owner whether the gate should run at normal priority when the load is high, then, if so, implement it in `scripts/compile.sh` (the stability rule there forbids changing it without the owner asking) and measure a loaded gate before and after.
-  - acceptance:
-    - the owner has said whether `compile.sh` may change; if so, a loaded full gate (load above 40) is recorded with and without the change and no entry times out in the change's run
-    - if the owner declines, this leaf is deleted with the numbers kept in docs/todo_log.md
-  - stop_rule: the priority of the gate only; no timeout changes.
-
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai
   - status: ready
@@ -230,6 +218,22 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the medians of both executables are recorded in docs/todo_log.md and are within noise
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
+
+- [ ] TODO-6053: Tests report progress and a watchdog replaces wall-clock timeouts
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (replaces TODO-6028; owner decision 2026-11-19)
+  - parallel_track: gate-timeouts
+  - depends_on: none
+  - scope: a wall-clock timeout cannot tell a hung test from a slow one, so a loaded gate times out tests that are making progress (TODO-6026 measured 5 to 15 times the quiet time at `nice -n 10`). Replace it with liveness: every test that can run long reports that it is awake, and a watchdog kills a test only when no progress arrived for a stated time. Design: (1) a beat is emitted by the work loop, never by a timer thread, so a deadlocked main thread stops beating (per doctest case through a custom reporter, per compiled file or batch in compile-run, build and library cases); (2) the limit is "no beat for N seconds" with N covering one unit of work under heavy load, not the whole test; (3) a test that shells out to `primec` counts output on the child's pipe or a beat written by `primec` itself as progress; (4) a generous hard cap stays as a backstop against a test that beats forever; (5) `ctest` has no heartbeat, so a small wrapper around each test command watches for beats and kills the process tree. `scripts/compile.sh` is not changed (the stability rule); the wrapper goes in the CTest registration. `nice -n 10` stays as it is.
+  - acceptance:
+    - a short design in `docs/` states the beat format, the wrapper, the child-process rule and the hard cap, and names which test families beat
+    - a test that stops beating is killed with a message naming the last beat; a test that beats slowly under a load above 40 is not
+    - a loaded full gate (load above 40) is recorded before and after with no entry killed in the run that has the watchdog
+    - ctest `PrimeStruct_test_registration` still passes; no timing assertion is added to any test
+    - full release gate green
+  - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
 
 - [~] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
