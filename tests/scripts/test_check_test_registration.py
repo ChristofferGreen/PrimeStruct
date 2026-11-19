@@ -62,6 +62,14 @@ def main() -> int:
            "a wrong TOTAL_CASES (empty trailing shard) is reported")
     expect(reg.check_shards([doctest_test(1, 5)], counter) != [], "uncovered cases are reported")
 
+    # --- the test watchdog wrapper prefix (docs/TestWatchdog.md) ---------
+    wrapped = {"command": ["/usr/bin/python3", "/repo/scripts/test_watchdog.py", "--silence", "60", "--hard-cap", "290", "--",
+                           "/bin/bin_a", "--test-suite=s", "--order-by=file", "--first=1", "--last=5"]}
+    expect(reg.unwrap_watchdog(wrapped)["command"][0] == "/bin/bin_a", "the wrapper prefix is stripped")
+    expect(reg.unwrap_watchdog(doctest_test(1, 5)) == doctest_test(1, 5), "an unwrapped command is unchanged")
+    expect(reg.check_shards([reg.unwrap_watchdog(wrapped), doctest_test(6, 10)], counter) == [],
+           "wrapped shards tile like plain ones")
+
     # --- exact coverage ---------------------------------------------------
     cases = [("s", "a.cpp", f"case {i}") for i in range(4)] + [("other", "b.cpp", "stray")]
 

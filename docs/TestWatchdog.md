@@ -79,13 +79,20 @@ covers: a child that beats and goes silent is killed with its last beat named; a
 limit for five times the limit is not killed; a printing child with no beats is not killed; a beating child past the hard
 cap is killed; a grandchild dies with the group; exit code and output pass through.
 
-## Which families beat
+## Registration and families
 
-| Family | Beat | Registration |
+`primestructWatchedCommand(<out var> <timeout> <command...>)` in `CMakeLists.txt` puts the wrapper in front of a command.
+The hard cap is `timeout - 5` (the `TIMEOUT` of the entry, which is not changed, ends it five seconds later if the wrapper
+does not); the silence limit is `PRIMESTRUCT_TEST_SILENCE_SECONDS` (default 180, never above the hard cap).
+`-DPRIMESTRUCT_TEST_WATCHDOG=OFF` registers the plain commands, for a debugger. `scripts/check_test_registration.py` reads
+through the wrapper prefix.
+
+| Family | Beat | Wrapped |
 | --- | --- | --- |
-| every doctest binary (`tests/unit/test_main.cpp`) | each test case and subcase start | see the open leaves in `docs/todo.md` (track `gate-timeouts`) |
-| compile-run, build, library and embed tests | before each command, and `primec` stage beats | same |
-| Python checks, native UI entries, `PrimeStruct_vm_threads_corpus_*` | not yet | not wrapped; their `TIMEOUT` stays the only limit |
+| every doctest binary (`tests/unit/test_main.cpp`) | each test case and subcase start | the managed suites (`addPrimeStructDoctestSuite`) and `primestructAddDoctestShards` entries |
+| compile-run, build and library tests that shell out | `runCommand` and `primec` stage beats | with the doctest binary they run in |
+| `PrimeStruct_embed_host_calls`, `PrimeStruct_embed_runtime_only`, `PrimeStruct_build_function_steps_*` (the entries that hit timeouts) | doctest beat | yes |
+| the other direct `add_test` entries in `CMakeLists.txt`, Python checks, native UI entries, `PrimeStruct_vm_threads_corpus_*` | doctest beat where they are doctest binaries | no; their `TIMEOUT` is their only limit until the open leaf in `docs/todo.md` (track `gate-timeouts`) moves them |
 
 An entry that cannot beat (one long `primec` or VM run with no output) keeps its `TIMEOUT` alone and is listed in the
-open leaves.
+open leaf.

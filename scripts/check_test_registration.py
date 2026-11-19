@@ -47,6 +47,17 @@ INCLUDE_RE = re.compile(r'^\s*#\s*include\s+"([^"]+)"', re.MULTILINE)
 COUNT_RE = re.compile(r"unskipped test cases passing the current filters:\s*(\d+)")
 
 
+def unwrap_watchdog(test: dict) -> dict:
+    """The entry as the command it runs: strips the test watchdog wrapper prefix (docs/TestWatchdog.md).
+
+    A wrapped command is `python test_watchdog.py --silence N --hard-cap M -- <command>`.
+    """
+    command = test.get("command") or []
+    if len(command) > 2 and Path(command[1]).name == "test_watchdog.py" and "--" in command:
+        return {**test, "command": command[command.index("--") + 1 :]}
+    return test
+
+
 def is_corpus_entry(test: dict) -> bool:
     """True for a PrimeStruct_vm_threads_corpus_* entry: a repeated run of already registered cases."""
     for prop in test.get("properties", []):
@@ -283,7 +294,7 @@ def main() -> int:
         return 2
     # The corpus entries of tests/vm_threads_corpus.txt (TODO-5900) run cases that other entries already register,
     # once per round and under PRIMESTRUCT_VM_THREADS_CORPUS; they are not part of the shard tiling.
-    tests = [test for test in json.loads(ctest.stdout)["tests"] if not is_corpus_entry(test)]
+    tests = [unwrap_watchdog(test) for test in json.loads(ctest.stdout)["tests"] if not is_corpus_entry(test)]
 
     cache: dict = {}
     list_cache: dict = {}

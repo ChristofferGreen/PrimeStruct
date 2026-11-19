@@ -1004,6 +1004,31 @@ if(PRIMESTRUCT_BUILD_TESTS)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   enable_testing()
 
+  # primestructWatchedCommand(<out var> <timeout> <command...>) sets <out var> to the command behind the test watchdog
+  # (docs/TestWatchdog.md, scripts/test_watchdog.py): the entry is killed, with the last beat in the message, when it
+  # makes no progress for PRIMESTRUCT_TEST_SILENCE_SECONDS, and at a hard cap a few seconds under the entry's CTest
+  # TIMEOUT, which stays as it was. PRIMESTRUCT_TEST_WATCHDOG=OFF registers the plain command (for a debugger).
+  option(PRIMESTRUCT_TEST_WATCHDOG "Run wrapped CTest entries behind scripts/test_watchdog.py" ON)
+  set(PRIMESTRUCT_TEST_SILENCE_SECONDS 180 CACHE STRING "Seconds without a beat or output before the watchdog kills a test")
+  function(primestructWatchedCommand outVar timeout)
+    if(NOT PRIMESTRUCT_TEST_WATCHDOG)
+      set(${outVar} ${ARGN} PARENT_SCOPE)
+      return()
+    endif()
+    if(timeout GREATER 10)
+      math(EXPR hardCap "${timeout} - 5")
+    else()
+      set(hardCap ${timeout})
+    endif()
+    if(PRIMESTRUCT_TEST_SILENCE_SECONDS LESS hardCap)
+      set(silence ${PRIMESTRUCT_TEST_SILENCE_SECONDS})
+    else()
+      set(silence ${hardCap})
+    endif()
+    set(${outVar} "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/test_watchdog.py"
+        "--silence" "${silence}" "--hard-cap" "${hardCap}" "--" ${ARGN} PARENT_SCOPE)
+  endfunction()
+
   # primestructAddDoctestShards(<name> <target> <total> <per-shard> <timeout> <doctest filter args...>) registers
   # the cases a doctest filter selects as CTest entries <name>_<first>_<last> of at most <per-shard> cases each
   # (--order-by=file, --first/--last), labelled parallel-safe. A suite too slow for one entry under a loaded gate is
@@ -1017,8 +1042,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
       if(last GREATER total)
         set(last ${total})
       endif()
-      add_test(NAME ${name}_${first}_${last}
-               COMMAND $<TARGET_FILE:${target}> ${ARGN} "--order-by=file" "--first=${first}" "--last=${last}")
+      primestructWatchedCommand(shardCommand ${timeout}
+                                $<TARGET_FILE:${target}> ${ARGN} "--order-by=file" "--first=${first}" "--last=${last}")
+      add_test(NAME ${name}_${first}_${last} COMMAND ${shardCommand})
       set_tests_properties(${name}_${first}_${last} PROPERTIES TIMEOUT ${timeout} LABELS "parallel-safe")
     endforeach()
   endfunction()
@@ -1290,11 +1316,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_bytecode
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(PrimeStruct_embed_host_calls_command 300
+                            $<TARGET_FILE:PrimeStruct_embed_tests>
+                            "--test-suite=primestruct.embed.host_calls"
+                            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_host_calls
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.host_calls"
-            "--order-by=file"
+    COMMAND ${PrimeStruct_embed_host_calls_command}
   )
   set_tests_properties(PrimeStruct_embed_host_calls
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
@@ -1391,11 +1419,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_embed_runtime_tests PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
   target_link_libraries(PrimeStruct_embed_runtime_tests PRIVATE primec_embed_runtime_lib)
   primestructEnableWarnings(PrimeStruct_embed_runtime_tests)
+  primestructWatchedCommand(PrimeStruct_embed_runtime_only_command 300
+                            $<TARGET_FILE:PrimeStruct_embed_runtime_tests>
+                            "--test-suite=primestruct.embed.runtime_only"
+                            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_runtime_only
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_runtime_tests>
-            "--test-suite=primestruct.embed.runtime_only"
-            "--order-by=file"
+    COMMAND ${PrimeStruct_embed_runtime_only_command}
   )
   set_tests_properties(PrimeStruct_embed_runtime_only
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
@@ -1828,12 +1858,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "after orders a compile" "after skips the waiting" "after names a cycle" "after is listed in the export"
           "order check of a graph" "scheduler hands a step")
     string(MAKE_C_IDENTIFIER "${function_case}" function_id)
+    primestructWatchedCommand(functionStepCommand 600
+                              $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+                              "--test-suite=primestruct.backend.build_function_steps"
+                              "--test-case=*${function_case}*"
+                              "--order-by=file")
     add_test(
       NAME PrimeStruct_build_function_steps_${function_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-              "--test-suite=primestruct.backend.build_function_steps"
-              "--test-case=*${function_case}*"
-              "--order-by=file"
+      COMMAND ${functionStepCommand}
     )
     set_tests_properties(PrimeStruct_build_function_steps_${function_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
@@ -3043,8 +3075,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
-    add_test(NAME "${testName}"
-             COMMAND $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    primestructWatchedCommand(suiteCommand ${PrimeStructSuite_TIMEOUT}
+                              $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
+    add_test(NAME "${testName}" COMMAND ${suiteCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT "${PrimeStructSuite_TIMEOUT}")
     if (PrimeStructSuite_LABEL)
       set_tests_properties("${testName}" PROPERTIES LABELS "${PrimeStructSuite_LABEL}")

@@ -111,8 +111,7 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6072 | The managed doctest shards run under the watchdog | in_progress | gate-timeouts |
-| TODO-6073 | The remaining CTest families run under the watchdog | blocked | gate-timeouts |
+| TODO-6073 | The remaining CTest families run under the watchdog | ready | gate-timeouts |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
@@ -166,16 +165,19 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-6073 (gate-timeouts): the remaining CTest families run under the watchdog
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
+3. TODO-6073
 
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
+- Test liveness (docs/TestWatchdog.md): TODO-6073, TODO-6053
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -239,30 +241,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
 
-- [~] TODO-6072: The managed doctest shards run under the watchdog
-  - owner: ai
-  - status: in_progress
-  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Test infrastructure (split from TODO-6053)
-  - parallel_track: gate-timeouts
-  - depends_on: TODO-6071
-  - scope: `addPrimeStructManagedDoctestSuite` and `primestructAddDoctestShards` (CMakeLists.txt, cmake/PrimeStructManaged*.cmake) and the `PrimeStruct_build_function_steps` and `PrimeStruct_embed_*` entries that hit timeouts (docs/failing_tests.md) register their command behind `scripts/test_watchdog.py` with a silence limit and the existing TIMEOUT as the hard cap (the wrapper's cap is a few seconds below it so its message is the one printed). `scripts/compile.sh` is not touched.
-  - acceptance:
-    - ctest `PrimeStruct_test_registration` and `PrimeStruct_test_inventory` pass
-    - a shard that stops beating is killed with the last beat in the message (shown by one wrapped fake entry run by hand)
-    - no TIMEOUT is raised
-    - full release gate green
-  - stop_rule: the shard registration functions and the entries named; the other families stay as they are.
-
 - [ ] TODO-6073: The remaining CTest families run under the watchdog
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6072
+  - status: ready
   - created_at: 2026-11-19
   - phase: Test infrastructure (split from TODO-6053)
   - parallel_track: gate-timeouts
-  - scope: The CTest entries that are not doctest shards (the native UI entries, the `PrimeStruct_vm_threads_corpus_*` entries, `PrimeStruct_library_*`, `PrimeStruct_ir_link*`, the Python checks, and the rest of the `add_test` calls in CMakeLists.txt) move behind the wrapper family by family, each with a silence limit that covers one unit of work. Entries that cannot beat (a single long `primec` run with no output) keep their TIMEOUT alone and are listed in docs/TestWatchdog.md.
+  - scope: The CTest entries still registered with a plain command after TODO-6072 (the other direct `add_test` doctest entries, the native UI entries, the `PrimeStruct_vm_threads_corpus_*` entries, `PrimeStruct_library_*`, `PrimeStruct_ir_link*`, the Python checks, and the rest of the `add_test` calls in CMakeLists.txt) move behind the wrapper family by family, each with a silence limit that covers one unit of work. Entries that cannot beat (a single long `primec` run with no output) keep their TIMEOUT alone and are listed in docs/TestWatchdog.md.
   - acceptance:
     - every entry with a TIMEOUT of 300 s or more is either wrapped or listed with the reason it cannot beat
     - full release gate green

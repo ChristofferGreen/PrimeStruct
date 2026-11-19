@@ -2466,6 +2466,7 @@ are left unarchived.
 | TODO-6069 | The test watchdog wrapper and its design | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6070 | Every doctest binary beats at the start of each test case | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6071 | Tests that shell out count `primec` progress | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6072 | The managed doctest shards run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
