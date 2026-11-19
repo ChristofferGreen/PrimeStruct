@@ -1,6 +1,11 @@
+#include "primec/ast/Ast.h"
+#include "primec/ir_lowerer/IrLowererErrorLocator.h"
+#include "primec/support/DiagnosticNames.h"
 #include "primec/support/Diagnostics.h"
 
 #include "third_party/doctest.h"
+
+#include <optional>
 
 TEST_SUITE_BEGIN("primestruct.diagnostics.codes");
 
@@ -72,6 +77,115 @@ TEST_CASE("lowering variadic reference-pack diagnostics stay source locked") {
   CHECK(otherLoweringContract.message == primec::DiagnosticStabilityTier::Implementation);
   CHECK(otherLoweringContract.primarySpan == primec::DiagnosticStabilityTier::Implementation);
   CHECK(otherLoweringContract.notes == primec::DiagnosticStabilityTier::Implementation);
+}
+
+namespace {
+
+primec::TemplateInstanceLookup instanceLookup() {
+  return [](const std::string &path) -> std::optional<primec::TemplateInstanceName> {
+    if (path == "/std/result/Result__arity2__ta77c01") {
+      return primec::TemplateInstanceName{"/std/result/Result__arity2", {"i32", "/pkg/Oops"}};
+    }
+    if (path == "/std/collections/vector/Vector__t4f2a") {
+      return primec::TemplateInstanceName{"/std/collections/vector/Vector", {"i32"}};
+    }
+    if (path == "/std/collections/vector/Vector__t9b9b") {
+      return primec::TemplateInstanceName{"/std/collections/vector/Vector",
+                                          {"/std/result/Result__arity2__ta77c01"}};
+    }
+    return std::nullopt;
+  };
+}
+
+} // namespace
+
+TEST_CASE("a generated template instance reads as the type the program wrote") {
+  const primec::TemplateInstanceLookup lookup = instanceLookup();
+  CHECK(primec::userFacingDiagnosticText("/std/result/Result__arity2__ta77c01", lookup) ==
+        "Result<i32, Oops>");
+  CHECK(primec::userFacingDiagnosticText("/std/collections/vector/Vector__t4f2a", lookup) ==
+        "Vector<i32>");
+}
+
+TEST_CASE("a member of a generated template instance keeps its own name") {
+  const primec::TemplateInstanceLookup lookup = instanceLookup();
+  CHECK(primec::userFacingDiagnosticText("call=/std/collections/vector/Vector__t4f2a/push failed",
+                                         lookup) == "call=Vector<i32>/push failed");
+  CHECK(primec::userFacingDiagnosticText(
+            "no payload: /std/result/Result__arity2__ta77c01/Error (i32)", lookup) ==
+        "no payload: Result<i32, Oops>/Error (i32)");
+}
+
+TEST_CASE("a generated name inside the argument of an instance is spelled out in turn") {
+  const primec::TemplateInstanceLookup lookup = instanceLookup();
+  CHECK(primec::userFacingDiagnosticText("bad /std/collections/vector/Vector__t9b9b here",
+                                         lookup) == "bad Vector<Result<i32, Oops>> here");
+}
+
+TEST_CASE("text without a known generated name is unchanged") {
+  const primec::TemplateInstanceLookup lookup = instanceLookup();
+  CHECK(primec::userFacingDiagnosticText("unknown call target: /main", lookup) ==
+        "unknown call target: /main");
+  CHECK(primec::userFacingDiagnosticText("/pkg/Thing__tdeadbeef is not an instance", lookup) ==
+        "/pkg/Thing__tdeadbeef is not an instance");
+  CHECK(primec::userFacingDiagnosticText("a __t b and __tz", lookup) == "a __t b and __tz");
+  CHECK(primec::userFacingDiagnosticText("", lookup) == "");
+}
+
+TEST_CASE("a lowering failure is located at the innermost expression that has a position") {
+  primec::Expr call;
+  call.sourceLine = 9;
+  call.sourceColumn = 3;
+  primec::Expr argument;
+  argument.sourceLine = 9;
+  argument.sourceColumn = 8;
+  primec::Expr synthesized;
+
+  primec::ir_lowerer::LoweringErrorLocator locator;
+  // The innermost expression fails first; the expressions around it report the same message afterwards.
+  locator.noteFailure(synthesized, "boom");
+  CHECK_FALSE(locator.spanOf("boom").has_value());
+  locator.noteFailure(argument, "boom");
+  locator.noteFailure(call, "boom");
+  const std::optional<primec::DiagnosticSpan> span = locator.spanOf("boom");
+  REQUIRE(span.has_value());
+  CHECK(span->line == 9);
+  CHECK(span->column == 8);
+  CHECK_FALSE(locator.spanOf("another message").has_value());
+}
+
+TEST_CASE("a lowering failure that was dropped does not locate a later failure") {
+  primec::Expr dropped;
+  dropped.sourceLine = 2;
+  dropped.sourceColumn = 1;
+  primec::Expr later;
+  later.sourceLine = 30;
+  later.sourceColumn = 5;
+
+  primec::ir_lowerer::LoweringErrorLocator locator;
+  locator.noteFailure(dropped, "tried and dropped");
+  locator.noteFailure(later, "the real failure");
+  CHECK_FALSE(locator.spanOf("tried and dropped").has_value());
+  const std::optional<primec::DiagnosticSpan> span = locator.spanOf("the real failure");
+  REQUIRE(span.has_value());
+  CHECK(span->line == 30);
+  CHECK(span->column == 5);
+}
+
+TEST_CASE("a lowering error spells the template instances of the program as written") {
+  primec::Program program;
+  primec::Definition instance;
+  instance.fullPath = "/std/collections/vector/Vector__t4f2a";
+  instance.instanceOfTemplate = "/std/collections/vector/Vector";
+  instance.instanceTemplateArgs = {"i32"};
+  program.definitions.push_back(instance);
+
+  CHECK(primec::ir_lowerer::userFacingLoweringError(
+            "cannot push to /std/collections/vector/Vector__t4f2a", program) ==
+        "cannot push to Vector<i32>");
+  CHECK(primec::ir_lowerer::userFacingLoweringError(
+            "cannot push to /std/collections/vector/Vector__t77", program) ==
+        "cannot push to /std/collections/vector/Vector__t77");
 }
 
 TEST_SUITE_END();

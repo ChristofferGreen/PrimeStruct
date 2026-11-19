@@ -111,7 +111,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath) == "Native lowering error: native backend does not support recursive calls: /main\n");
+  CHECK(readFile(errPath) ==
+        srcPath + ":4:10: error: Native lowering error: native backend does not support "
+                  "recursive calls: /main [PSC2001]\nnote: backend: native\n");
 }
 
 TEST_CASE("native accepts string pointers") {

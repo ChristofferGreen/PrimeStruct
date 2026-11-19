@@ -173,7 +173,7 @@ inline Outcome runCaptured(const std::string &command, const std::filesystem::pa
   return outcome;
 }
 
-inline Outcome runConfig(const ProgramCase &program, const ExecutionConfig &config) {
+inline Outcome runConfigUnnormalized(const ProgramCase &program, const ExecutionConfig &config) {
   const std::filesystem::path dir =
       primec::testing::testScratchPath("program_matrix/" + program.name + "/x").parent_path();
   std::filesystem::create_directories(dir);
@@ -221,6 +221,24 @@ inline Outcome runConfig(const ProgramCase &program, const ExecutionConfig &conf
   }
   }
   return {};
+}
+
+// Where `runConfig` writes the source of a program.
+inline std::filesystem::path programSourcePath(const ProgramCase &program) {
+  return primec::testing::testScratchPath("program_matrix/" + program.name + "/x").parent_path() /
+         "program.prime";
+}
+
+// Runs the program. The scratch directory differs per session, so a diagnostic that names the source file (`file:line:column:
+// error: ...`) reads `{program}` in the captured stderr, and the expected text of a case is written with it.
+inline Outcome runConfig(const ProgramCase &program, const ExecutionConfig &config) {
+  Outcome outcome = runConfigUnnormalized(program, config);
+  const std::string path = programSourcePath(program).string();
+  for (size_t at = outcome.err.find(path); at != std::string::npos;
+       at = outcome.err.find(path, at)) {
+    outcome.err.replace(at, path.size(), "{program}");
+  }
+  return outcome;
 }
 
 inline bool isVmFamily(Backend backend) {

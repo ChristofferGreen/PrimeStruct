@@ -210,7 +210,9 @@ main() {
 )";
   program.exitCode = 2;
   program.stdoutText = "";
-  program.vmStderr = "VM lowering error: if branches must return compatible types\n";
+  program.vmStderr = "{program}:15:13: error: VM lowering error: if branches must return "
+                     "compatible types [PSC2001]\n"
+                     "note: backend: vm\n";
   program.onlyConfigs = {"vm-step-O0"};
   program_matrix::runProgramMatrix(program);
 }

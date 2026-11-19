@@ -125,17 +125,24 @@ bool IrLowerer::lower(const Program &program,
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
   bool loweringSucceeded = false;
+  ir_lowerer::LoweringErrorLocator errorLocator(expandedSource);
   struct LoweringDiagnosticScope {
     DiagnosticSink &diagnosticSink;
     std::string &error;
     bool &loweringSucceeded;
+    const ir_lowerer::LoweringErrorLocator &errorLocator;
+    const Program &program;
 
     ~LoweringDiagnosticScope() {
       if (!loweringSucceeded && !error.empty()) {
+        if (const std::optional<DiagnosticSpan> span = errorLocator.spanOf(error)) {
+          diagnosticSink.capturePrimarySpanIfUnset(*span);
+        }
+        error = ir_lowerer::userFacingLoweringError(error, program);
         diagnosticSink.setSummary(error);
       }
     }
-  } loweringDiagnosticScope{diagnosticSink, error, loweringSucceeded};
+  } loweringDiagnosticScope{diagnosticSink, error, loweringSucceeded, errorLocator, program};
 
   if (semanticProgram == nullptr) {
     error = "semantic product is required for IR lowering";
@@ -144,6 +151,7 @@ bool IrLowerer::lower(const Program &program,
 
   ir_lowerer::LowerSetupStageState setupStage{};
   setupStage.outModule = &out;
+  setupStage.errorLocator = &errorLocator;
   if (!ir_lowerer::runLowerSetupStage(
           {
               .program = &program,

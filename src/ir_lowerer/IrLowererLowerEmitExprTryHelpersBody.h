@@ -635,7 +635,9 @@
             auto emitLoadIntBackedErrorPayload = [&](int32_t sumPtrLocal) -> bool {
               if (!errorPayload.isAggregate) {
                 if (errorPayload.valueKind != LocalInfo::ValueKind::Int32) {
-                  error = "native backend requires int-backed stdlib Result error payloads";
+                  error =
+                      "native backend requires int-backed stdlib Result error payloads (try over " +
+                      sumDef->fullPath + ")";
                   return false;
                 }
                 sumHelpers.emitLoadSumSlotIndirect(sumPtrLocal, 2);
@@ -648,7 +650,9 @@
               if (layout.fields.size() != 1 || layout.fields.front().slotOffset < 0 ||
                   !layout.fields.front().structPath.empty() ||
                   layout.fields.front().valueKind != LocalInfo::ValueKind::Int32) {
-                error = "native backend requires int-backed stdlib Result error payloads";
+                error =
+                    "native backend requires int-backed stdlib Result error payloads (try over " +
+                    sumDef->fullPath + ")";
                 return false;
               }
               sumHelpers.emitLoadSumSlotIndirect(sumPtrLocal, 2 + layout.fields.front().slotOffset);

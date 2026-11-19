@@ -682,6 +682,27 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     return lowered;
   };
 
+  // Every failure names its expression, innermost first (the callers of `emitExpr` and `emitStatement` below reach
+  // the wrapped functions through these variables).
+  if (setupStage.errorLocator != nullptr) {
+    emitExpr = [&, emitExprBody = std::move(emitExpr)](const Expr &expr,
+                                                       const LocalMap &localsIn) -> bool {
+      const bool lowered = emitExprBody(expr, localsIn);
+      if (!lowered) {
+        setupStage.errorLocator->noteFailure(expr, error);
+      }
+      return lowered;
+    };
+    emitStatement = [&, emitStatementBody = std::move(emitStatement)](const Expr &stmt,
+                                                                      LocalMap &localsIn) -> bool {
+      const bool lowered = emitStatementBody(stmt, localsIn);
+      if (!lowered) {
+        setupStage.errorLocator->noteFailure(stmt, error);
+      }
+      return lowered;
+    };
+  }
+
   if (input.consumeStage) {
     return input.consumeStage(stateOut, error);
   }

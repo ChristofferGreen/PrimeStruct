@@ -156,6 +156,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/CollectionSpellingClassifier.cpp
   src/support/CompileArena.cpp
   src/support/CompileContext.cpp
+  src/support/DiagnosticNames.cpp
   src/support/Diagnostics.cpp
   src/support/EmitKind.cpp
   src/support/MathNames.cpp
@@ -591,6 +592,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLowerStatementsEntryStatementStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsFunctionTableStep.cpp
   src/ir_lowerer/IrLowererLowerStatementsSourceMapStep.cpp
+  src/ir_lowerer/IrLowererErrorLocator.cpp
   src/ir_lowerer/IrLowererOnErrorHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp
   src/ir_lowerer/IrLowererOperatorArcHyperbolicHelpers.cpp

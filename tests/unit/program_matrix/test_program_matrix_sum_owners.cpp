@@ -287,7 +287,9 @@ main() {
 )";
   program.exitCode = 2;
   program.stdoutText = "";
-  program.vmStderr = "VM lowering error: vm backend does not support recursive calls: /main\n";
+  program.vmStderr = "{program}:9:20: error: VM lowering error: vm backend does not support "
+                     "recursive calls: /main "
+                     "[PSC2001]\nnote: backend: vm\n";
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2"};
   program_matrix::runProgramMatrix(program);
 }

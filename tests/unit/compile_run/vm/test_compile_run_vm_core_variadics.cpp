@@ -15,7 +15,9 @@ main() {
   const std::string errPath = (std::filesystem::temp_directory_path() / "primec_vm_recursive_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath) == "VM lowering error: vm backend does not support recursive calls: /main\n");
+  CHECK(readFile(errPath) ==
+        srcPath + ":4:10: error: VM lowering error: vm backend does not support recursive calls: "
+                  "/main [PSC2001]\nnote: backend: vm\n");
 }
 
 TEST_CASE("vm accepts string pointers") {

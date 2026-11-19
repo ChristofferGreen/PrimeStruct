@@ -22,11 +22,15 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-19T13:39:17Z`
+- Last updated: `2026-11-19T18:54:05Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `795`: `PrimeStruct_primestruct_semantics_calls_flow_effects_calls_flow_effects_141_145`
+  - `1195`: `PrimeStruct_primestruct_compile_run_vm_core_core_newly_exposed_2026_07_16_89_93`
+  - `2055`: `PrimeStruct_vector_surface_traces`
+  - `2116`: `PrimeStruct_primestruct_compile_run_native_backend_core_apple_core_181_190`
+  - `2439`: `PrimeStruct_primestruct_program_matrix_frontend_accept_6_6`
+  - `2636`: `PrimeStruct_primestruct_program_matrix_sum_owners_6_6`
 <!-- compile.sh:failing-tests:end -->

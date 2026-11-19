@@ -458,6 +458,18 @@ A lowering error names the target that lowers, in the words of the emit kind: `v
 `GLSL backend`, `SPIR-V backend` and `IR backend` (`--emit=ir`). The registry names them in
 `IrBackendDiagnostics::loweringBackendName`.
 
+A lowering error is located at the code the user wrote: the primary span is the position, in the user's file, of the
+innermost expression whose lowering failed (`IrLowerer::lower` records it through `ir_lowerer::LoweringErrorLocator`).
+An expression of the standard library that was inlined into a call of the user's is passed over for that call. The text
+form prints it as `file:line:column`, and `--emit-diagnostics` as `primary_span`. A failure that no expression
+reported, for example one found while the lowerer sets up the program, has no span. The column is that of the
+text-filtered source when a text filter rewrote the line (an operator written as `a + b` is lowered as `plus(a, b)`).
+
+A generated name does not reach a message: a definition the compiler made for a template instance
+(`/std/result/Result__arity2__t...`, `/std/collections/vector/Vector__t...`) is spelled as the program writes the type
+(`Result<i32, Oops>`, `Vector<i32>`). `primec/support/DiagnosticNames.h` does the rewrite from the template and the
+arguments that the instance's `Definition` records (`instanceOfTemplate`, `instanceTemplateArgs`).
+
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
   canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export

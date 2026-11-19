@@ -137,8 +137,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6077 | Lowering errors carry the user location of the expression being lowered | ready | diagnostics-lowering-spans |
-| TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | ready | diagnostics-demangle |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | deferred | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
@@ -166,15 +164,11 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6077 (diagnostics-lowering-spans): lowering errors carry the user location
-- TODO-6079 (diagnostics-demangle): one demangle helper; generic names in the user's spelling
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6077
-4. TODO-6079
 
 ### Priority Lanes
 
@@ -189,7 +183,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics (split from TODO-5520): TODO-6077, TODO-6079; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
+- Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
@@ -579,34 +573,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - vm-design.md states the Wasm outcome past its limit and the Linux native and `exe` depths, each measured
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
-
-- [~] TODO-6077: Lowering errors carry the user location of the expression being lowered
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5520)
-  - parallel_track: diagnostics-lowering-spans
-  - scope: Lowering errors such as `missing on_error for ? usage`, `requires int-backed stdlib Result error payloads`, `missing semantic-product ...` and `argument count mismatch for /onErr` set only a message, so the CLI prints no file, line or column. A component in `primec/ir_lowerer` records the innermost expression whose lowering failed (wrapped around `emitExpr` and `emitStatement`) and `IrLowerer::lower` publishes its span, mapped to the user file through the expanded source, as the primary span of the failure. A span recorded for a failure that was dropped is not reused for a later, different failure.
-  - acceptance:
-    - `primec --emit=vm --emit-diagnostics` on a program whose `try` reaches `requires int-backed stdlib Result error payloads` reports the file, line and column of the `try` expression; the same for `argument count mismatch for /onErr`
-    - a doctest of the component pins the innermost-first and the dropped-failure rules
-    - full release gate green
-  - stop_rule: spans of lowering failures only; message wording and names are TODO-6078 and TODO-6079.
-
-- [~] TODO-6079: One demangle helper; lowering messages show the user's spelling of generic names
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5520)
-  - parallel_track: diagnostics-demangle
-  - scope: A generated definition path (`/std/result/Result__arity2__ta77c...`, `/std/collections/vector/Vector__t...`) reaches messages. A component (`primec/support/DiagnosticNames.h`) rewrites a text with explicit inputs (the text and a lookup from a generated path to its template and arguments, built from `Definition::instanceOfTemplate` and `instanceTemplateArgs`): `Result<i32, Oops>`, `Vector<i32>/push`. `IrLowerer::lower` applies it to its failure message. The `requires int-backed stdlib Result error payloads` message names the Result type. The semantics validator keeps its own copy until TODO-6085.
-  - acceptance:
-    - doctests of the helper for a template instance, a nested instance argument, a member path and a text without generated names
-    - `--emit=vm` on a `try` over `Result<i32, Oops>` (Oops has more than one int field) reports `Result<i32, Oops>`, with no `__t` hash in the message
-    - full release gate green
-  - stop_rule: diagnostic text of lowering only.
 
 - [ ] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
   - owner: ai

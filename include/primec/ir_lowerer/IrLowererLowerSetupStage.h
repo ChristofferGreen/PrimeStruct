@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "primec/ir_lowerer/IrLowererErrorLocator.h"
 #include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
@@ -56,6 +57,8 @@ struct LowerSetupStageState {
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
   const primec::ExpandedSource *expandedSource = nullptr;
+  // Remembers where a failing expression sits so `IrLowerer::lower` can locate the error; null when nothing locates.
+  LoweringErrorLocator *errorLocator = nullptr;
   // Per-scope cleanup: a non-negative entry is a file handle local to close, a negative entry
   // `-(i + 1)` is `dropEntries[i]`, an owning struct local to destroy if its drop flag is set.
   std::vector<std::vector<int32_t>> fileScopeStack;
