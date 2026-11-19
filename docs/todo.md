@@ -261,9 +261,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
 
-- [ ] TODO-6054: A discarded sum result with an owning payload is destroyed
+- [~] TODO-6054: A discarded sum result with an owning payload is destroyed
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: lifecycle-worker (worktree agent-a91567da8e494f827), 2026-11-19
   - created_at: 2026-11-19
   - phase: Lifecycle (found while finishing TODO-5738)
   - parallel_track: lifecycle-temporaries
