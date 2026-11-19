@@ -138,7 +138,12 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
-| TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
+| TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | ready | numeric-conversions |
+| TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | ready | numeric-conversions |
+| TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | ready | numeric-conversions |
+| TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | ready | numeric-conversions |
+| TODO-6058 | Wasm float to integer conversion saturates; GLSL gap documented | ready | numeric-conversions |
+| TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
@@ -165,11 +170,19 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
+- TODO-6055 (numeric-conversions): integer narrowing wraps modulo 2^N on every backend
+- TODO-6056 (numeric-conversions): float to integer conversion saturates on the VM and the C++ emitters
+- TODO-6057 (numeric-conversions): native arm64 float to i32 conversion saturates at 32 bits
+- TODO-6058 (numeric-conversions): Wasm float to integer conversion saturates; GLSL gap documented
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
+3. TODO-6055
+4. TODO-6056
+5. TODO-6057
+6. TODO-6058
 
 ### Priority Lanes
 
@@ -182,7 +195,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-5516, TODO-6051, TODO-6052, TODO-5744
+- Backend parity: TODO-6055, TODO-6056, TODO-6057, TODO-6058, TODO-6059, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
@@ -576,9 +589,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: covered by the convention chosen in TODO-5506 if possible.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5516: Integer narrowing and float-to-int conversion agree across backends
+- [~] TODO-5516: Integer narrowing and float-to-int conversion agree across backends
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: numeric-conversions
@@ -587,7 +601,79 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - spec states the rule; matrix cases for narrowing and out-of-range conversions agree on VM, native, C++ and optexe
     - full release gate green
   - stop_rule: conversions only.
-  - notes: deferred: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
+  - notes: split 2026-11-19 into TODO-6055, TODO-6056, TODO-6057, TODO-6058 and TODO-6059 after the owner decided: narrowing wraps modulo 2^N; float to integer truncates, saturates out of range and at the infinities, NaN is 0, convert<u8>(300.0) is 255. Closes when those leaves close. Earlier notes: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
+
+- [~] TODO-6055: Integer narrowing wraps modulo 2^N on every backend
+  - owner: ai
+  - status: ready
+  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5516)
+  - parallel_track: numeric-conversions
+  - scope: Owner decision: integer narrowing wraps modulo 2^N, like C++ unsigned. After `[i32] x{convert<i32>(4294967297i64)}`, `x` printed 1 but `x == 1i32` was false and `convert<i64>(x)` was 4294967297: the lowerer emitted no instruction for an i64 or u64 to i32 conversion, so the slot kept its high bits. Emit `SextI32` after it (the slot form of every i32 is the low 32 bits sign-extended); `convert<u8>` of an integer already ends in `ZextU8`. `convert<u8>(300)` is 44.
+  - acceptance:
+    - a matrix case covers every integer width pair (i32, i64, u64, u8) with boundary values and agrees on VM, native, optexe and exe
+    - type-system.md states the rule with examples
+    - full release gate green
+  - stop_rule: integer to integer conversions only.
+
+- [~] TODO-6056: Float to integer conversion saturates on the VM and the C++ emitters
+  - owner: ai
+  - status: ready
+  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5516)
+  - parallel_track: numeric-conversions
+  - depends_on: TODO-6055
+  - scope: Owner decision: float to integer truncates toward zero in range (like C++); out of range finite values and infinities saturate to the target's min and max; NaN becomes 0; a negative float to an unsigned type gives 0; `convert<u8>(300.0)` is 255. The `ConvertF32ToI32` family of IR opcodes has exactly these semantics on every backend (the lowerer no longer guards a non-finite value with a runtime fault, and a float to `u8` is a `ConvertFToU64` clamped at 255). This leaf does the VM (including constant folding) and `optcpp`/`optexe`/`exe`; the simple C++ emitter already saturates and gets the same matrix check. The optimized C++ emitter must not use `static_cast` of an out of range float (undefined behavior; it crashed one program).
+  - acceptance:
+    - a matrix case covers f32 and f64 to i32, i64, u64 and u8 at the boundaries, NaN, both infinities and negative to unsigned, and agrees on VM, optexe and exe (and native on i64 and u64)
+    - type-system.md states the rule with examples
+    - full release gate green
+  - stop_rule: the VM and C++ emitters; native, Wasm and GLSL are the leaves below.
+
+- [~] TODO-6057: Native arm64 float to i32 conversion saturates at 32 bits
+  - owner: ai
+  - status: ready
+  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5516)
+  - parallel_track: numeric-conversions
+  - depends_on: TODO-6056
+  - scope: arm64 `FCVTZS`/`FCVTZU` already truncate, saturate and map NaN to 0, but the I32 conversions use the 64-bit form, so `convert<i32>(3000000000.0)` keeps 3000000000. Use the 32-bit form and `SXTW` in the template emitter and the register-allocated emitter.
+  - acceptance:
+    - the TODO-6056 matrix case passes on `native-O0` and `native-O2`
+    - full release gate green
+  - stop_rule: arm64 float to i32 only.
+
+- [~] TODO-6058: Wasm float to integer conversion saturates; GLSL gap documented
+  - owner: ai
+  - status: ready
+  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5516)
+  - parallel_track: numeric-conversions
+  - depends_on: TODO-6056
+  - scope: Wasm has the saturating truncations (`i32.trunc_sat_f32_s` and the rest, prefix 0xFC), which have exactly the rule; use them instead of the trapping `trunc`. GLSL `int(x)` of an out of range or NaN value is undefined in the language; emit a clamp and a NaN check where GLSL can express them and document any gap.
+  - acceptance:
+    - an emitter test shows the `trunc_sat` opcodes in the Wasm output
+    - type-system.md states the Wasm and GLSL outcome
+    - full release gate green
+  - stop_rule: Wasm and GLSL emitters only; no Wasm runtime is available to run the output.
+
+- [ ] TODO-6059: Native x86_64 float to integer conversion saturates
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5516)
+  - parallel_track: numeric-conversions
+  - depends_on: TODO-6056
+  - scope: `CVTTSS2SI`/`CVTTSD2SI` return the integer indefinite value (0x8000000000000000) for NaN and out of range values, so x86_64 native differs from the rule (template, register-allocated and JIT emitters, and the u64 path that splits at 2^63). After the conversion, compare for the indefinite value and fix it up (NaN to 0, positive to the maximum, negative to the minimum), and narrow to the i32 range for the I32 forms.
+  - acceptance:
+    - the TODO-6056 matrix case passes on `native-O0` and `native-O2` on a Linux x86_64 machine
+    - full release gate green on Linux x86_64
+  - stop_rule: x86_64 float to integer only.
+  - notes: deferred: needs a Linux x86_64 machine to run; an untested encoding is not landed (as TODO-6051).
 
 - [ ] TODO-6051: Native x86_64 (ELF) division by zero is the VM's runtime fault
   - owner: ai
