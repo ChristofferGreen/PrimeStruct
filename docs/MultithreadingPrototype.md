@@ -1105,8 +1105,9 @@ main() {
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).
-- **Later, filed but deferred:** read-only handlers under `RwLock` (TODO-5804; the `RwLock` itself is done), keep-alive (TODO-5805), sessions
-  (TODO-5806).
+- **Later, filed but deferred:** read-only handlers under `RwLock` (TODO-5804; the `RwLock` itself is done), sessions
+  (TODO-5806). Keep-alive (TODO-5805) is done: a worker that answers a request with `keep-alive` hands the slot back
+  to the poller, which watches it until `keepAliveTimeoutMs` passes.
 
 ### Open Questions
 

@@ -679,7 +679,7 @@ main() {
 
 `import /std/http/*` parses HTTP/1.1 requests and builds responses. It is pure code over bytes that have already
 arrived, so it runs on the VM and every backend. The subset is deliberately small: bodies by `Content-Length` only,
-one request per connection (`Connection: close`), and no chunked encoding, keep-alive or TLS. Text parameters are
+no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored by the server (`/std/http/server`). Text parameters are
 `StringView`s, and a string literal passes to one as it is: `request.header("Host")`, `response.text("ok",
 "text/plain")` (docs/spec/strings-and-views.md, Current surface of the text view).
 
@@ -739,8 +739,12 @@ one request per connection (`Connection: close`), and no chunked encoding, keep-
   - `clear()` makes it an empty 200 again and keeps its buffers.
 
   `serialize()` gives the bytes to send: the status line with its reason phrase (`reasonPhrase(code)`, empty for codes
-  it does not know), the header lines, `Content-Length`, `Connection: close`, a blank line and the body. Statuses 1xx,
-  204 and 304 get neither a `Content-Length` nor a body. `statusResponse(code)` is the bare answer to a rejected
+  it does not know), the header lines, `Content-Length`, `Connection: close`, a blank line and the body.
+  `serializeConnection(true)` says `Connection: keep-alive` instead, for a connection that stays open (the
+  `Content-Length` is what lets the client find the end of the body). Statuses 1xx,
+  204 and 304 get neither a `Content-Length` nor a body. `request.allowsReuse()` says whether the client allows
+  another request on the connection: HTTP/1.1 does unless `Connection` lists `close`, HTTP/1.0 only when it lists
+  `keep-alive`. `statusResponse(code)` is the bare answer to a rejected
   request.
 - `Router` is a handler that dispatches to other handlers. Each route is a method, a pattern and a
   `RequestHandler`, the alias of `Function<void, Request, Reference<Response>>` that `/std/http` declares. A pattern is a prefix ending in `*`, which matches any path that
@@ -994,8 +998,17 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   3. Read what has arrived on a ready connection until `parseRequestBytes` says the request is complete or
      rejected. The whole request must arrive within `readTimeoutMs` of the accept, and a client that is closed,
      silent or too slow is dropped without an answer.
-  4. Call the handler with a cleared `Response`, write `serialize()` and close. Writing blocks the loop, for at most
+  4. Call the handler with a cleared `Response` and write the response. Writing blocks the loop, for at most
      `writeTimeoutMs`; a response that fits in the socket's send buffer, as most do, is written at once.
+  5. Keep the connection or close it (persistent connections). The response says `Connection: keep-alive` and the
+     slot goes back to waiting for the next request when `keepAlive` is set, the client allows it
+     (`request.allowsReuse()`), fewer than `maxRequestsPerConnection` requests have been answered on it and no byte
+     followed the request; otherwise it says `Connection: close` and the connection closes after it. A pipelined
+     request (bytes after the first request) is therefore not answered: the client sees the close and resends. A
+     kept connection waits at most `keepAliveTimeoutMs` for its next request (on `monotonicMs()`, so a test drives
+     it with a scripted clock) and is closed silently when that passes; once the first bytes of the next request
+     arrive, `readTimeoutMs` applies to the whole request again. An idle connection holds a slot of
+     `maxConnections`. A rejected request (400, 413, 501, 505) always closes.
 - **Rejected requests** get a bare status (`statusResponse`) and never reach the handler: 400, 413, 501 and 505, plus
   413 for a request that does not fit in `maxRequestBytes`. The connection keeps its slot and its input is read and
   discarded until it pauses for 50 ms (at most 8 rounds), so the client sees the answer rather than a reset.
@@ -1009,6 +1022,9 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
   - `loopbackOnly{false}`, which listens on 127.0.0.1 only;
   - `announce{true}`, which prints `listening on <port>` to stderr once listening;
   - `maxConnections{16}`, how many connections are open at once (a value below 1 means 1);
+  - `keepAlive{true}`, whether a connection may stay open for more requests; `maxRequestsPerConnection{1000}`, how many
+    requests one connection carries (0: no cap); `keepAliveTimeoutMs{5000}`, how long an answered connection waits
+    for its next request;
   - `workers{0}`, how many worker tasks `serveWorkers` starts: 0 means one per processor (`/std/os` `cpuCount()`),
     and at most 64 are started. `serve` ignores it.
 - **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
@@ -1058,7 +1074,9 @@ the `/std/net` and `/std/os` host functions runs the server on the VM's tasks (s
 - **A worker** reads what has arrived on the connection. A request that has not arrived yet or is incomplete goes
   back to the loop to be watched again, so a client that stalls in the middle of a request holds its slot and never a worker. A complete request is
   answered by that worker: it calls the handler, serializes the response, writes it (at most `writeTimeoutMs`) and
-  closes. Rejected requests get the same bare status as under `serve` and are drained by the loop.
+  then closes the connection or, when it is kept alive (step 5 of the `serve` loop), hands it back to the loop, which
+  watches it for the next request until `keepAliveTimeoutMs`; a worker also closes instead of keeping once the server
+  is stopping. Rejected requests get the same bare status as under `serve` and are drained by the loop.
 - **The handler runs inside a mutex.** The handler moves into a `Mutex` (`/std/sync`), and each request calls it
   inside `locked`, one request at a time. A `Router`, `AppRouter<State>` or `WebApp<State>` therefore keeps plain
   state with no locking of its own, and its handlers are written exactly as for `serve`. Receiving, parsing,
@@ -1082,7 +1100,8 @@ the `/std/net` and `/std/os` host functions runs the server on the VM's tasks (s
   byte pointer passed to host function`). `Script::bind` has no host type for a buffer, so a test or tool that
   answers `/std/net` binds `VmHostFunctions` directly. `tests/unit/runtime/test_vm_serve_workers.cpp` answers the
   calls the server makes from a scripted net (a fixed list of connections and their request bytes; it records what
-  the server sends; no ports, clock or sleeps) and serves five requests with 2 workers on the eager schedule,
+  the server sends; no ports, real clock or sleeps; its clock is a number that a `poll` finding nothing ready
+  advances by its timeout, which is how the idle timeout runs out) and serves five requests with 2 workers on the eager schedule,
   schedule seeds 1 to 3 and task threads, with the same responses and counter each time; a `/std/net` function it
   does not bind is reported as `unbound host function: <name>`. On the deterministic scheduler the loop must give a
   worker a chance to run, which a host `poll` cannot (a host call never yields, and without a seed only a spawn, a

@@ -4,7 +4,8 @@
 //     --link-arg <stdlib>/std/os/os_posix.cpp
 // `serve`: one thread waits on the listener and up to `maxConnections` open connections at once and serves whichever
 // is ready: accept, read what has arrived until the request is complete or rejected, call the handler, write the
-// response, close. A silent or slow client holds only its own slot, for at most `readTimeoutMs`; only writing a
+// response, then keep the connection for the next request or close it (`keepAlive`, `maxRequestsPerConnection`,
+// `keepAliveTimeoutMs`). A silent or slow client holds only its own slot, for at most `readTimeoutMs`; only writing a
 // response blocks the loop, for at most `writeTimeoutMs`.
 // `serveWorkers`: the same loop only accepts and watches; worker tasks read, call the handler one at a time inside a
 // `Mutex` and write, so a slow write holds one worker and not the loop.
@@ -43,6 +44,14 @@ namespace server {
     [public i32] maxConnections{16i32}
     // How many worker tasks `serveWorkers` starts; 0 starts one per processor. `serve` ignores it.
     [public i32] workers{0i32}
+    // Whether a connection stays open for the client's next request after a response (HTTP/1.1 unless the request
+    // says `Connection: close`; HTTP/1.0 only when it says `keep-alive`). false closes after every response.
+    [public bool] keepAlive{true}
+    // How many requests one connection carries; the response to the last one says `Connection: close`. 0 is no cap.
+    [public i32] maxRequestsPerConnection{1000i32}
+    // How long an answered connection waits for its next request before the server closes it, on /std/os
+    // `monotonicMs()`. Once the first bytes of a request arrive, `readTimeoutMs` applies.
+    [public i32] keepAliveTimeoutMs{5000i32}
   }
 
   // Why `serve` could not start: a /std/net code from listening.
@@ -72,8 +81,8 @@ namespace server {
   }
 
   // The open connections of `serveUntil`. Slot i holds one socket (-1 when free), its state (0 free, 1 reading a
-  // request, 2 draining after a rejected request), its deadline and a count (bytes read while reading, rounds of
-  // input while draining). Its bytes are [i * maxRequestBytes, (i + 1) * maxRequestBytes) of the loop's `buffers`,
+  // request, 2 draining after a rejected request), its deadline, a count (bytes read while reading, rounds of
+  // input while draining) and how many requests it has answered. Its bytes are [i * maxRequestBytes, (i + 1) * maxRequestBytes) of the loop's `buffers`,
   // which grows to cover slot i the first time it is used.
   [struct]
   Connections() {
@@ -81,6 +90,7 @@ namespace server {
     [vector<i32> mut] states{vector<i32>()}
     [vector<i64> mut] deadlines{vector<i64>()}
     [vector<i32> mut] counts{vector<i32>()}
+    [vector<i32> mut] served{vector<i32>()}
   }
 
   // How long a rejected connection is drained between rounds of input, and how many rounds it may take.
@@ -150,7 +160,22 @@ namespace server {
     table.sockets[slot] = connection
     table.states[slot] = 1i32
     table.counts[slot] = 0i32
+    table.served[slot] = 0i32
     table.deadlines[slot] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+  }
+
+  // Whether the connection stays open after the response to `request`, which is the `served + 1`th on it and sits in
+  // the first `total` bytes read. The client must allow it, the cap must not be reached, and no byte may follow the
+  // request: a pipelined request is not answered on this connection, so the response says `Connection: close`.
+  [return<bool>]
+  keeps_connection([Request] request, [ServerConfig] config, [i32] served, [i32] total) {
+    if(!config.keepAlive || !request.allowsReuse()) {
+      return(false)
+    }
+    if(request.length() < total) {
+      return(false)
+    }
+    return(config.maxRequestsPerConnection <= 0i32 || served + 1i32 < config.maxRequestsPerConnection)
   }
 
   // Answers a rejected request with a bare status. Closing with unread input would reset the connection and could
@@ -164,8 +189,8 @@ namespace server {
     table.deadlines[slot] = monotonicMs() + drain_wait_ms()
   }
 
-  // Reads what has arrived on a ready reading slot. A complete request is handed to the handler, answered and
-  // closed; a rejected one, or one that does not fit in `maxRequestBytes` (413), is answered and drained; a closed or
+  // Reads what has arrived on a ready reading slot. A complete request is handed to the handler and answered, and the
+  // connection then waits for its next request or closes (`keeps_connection`); a rejected one, or one that does not fit in `maxRequestBytes` (413), is answered and drained; a closed or
   // failed connection is dropped without an answer.
   [effects(net_io, heap_alloc)]
   read_slot<Handler>([Handler mut] handler,
@@ -189,14 +214,25 @@ namespace server {
     }
     [i32] total{received + convert<i32>(got)}
     table.counts[slot] = total
+    if(received == 0i32 && table.served[slot] > 0i32) {
+      // The next request of a kept connection has begun: it has `readTimeoutMs` from now to arrive whole.
+      table.deadlines[slot] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+    }
     [Request] request{parseRequestBytes(buffers.slice(base, base + total), capacity)}
     [i32] outcome{request.outcome()}
     if(outcome == 0i32) {
+      [bool] keep{keeps_connection(request, config, table.served[slot], total)}
       response.clear()
       handler(request, location(response))
-      [String] bytes{response.serialize()}
+      [String] bytes{response.serializeConnection(keep)}
       send_text(connection, bytes, config.writeTimeoutMs)
-      close_slot(table, slot)
+      if(keep) {
+        table.served[slot] = table.served[slot] + 1i32
+        table.counts[slot] = 0i32
+        table.deadlines[slot] = monotonicMs() + convert<i64>(config.keepAliveTimeoutMs)
+      } else {
+        close_slot(table, slot)
+      }
       return()
     }
     if(outcome >= 400i32) {
@@ -249,6 +285,7 @@ namespace server {
       table.states.push(0i32)
       table.deadlines.push(0i64)
       table.counts.push(0i32)
+      table.served.push(0i32)
       slot = slot + 1i32
     }
     [vector<u8> mut] buffers{vector<u8>()}
@@ -339,17 +376,21 @@ namespace server {
     [i32] slot{0i32}
     [i32] socket{-1i32}
     [i32] received{0i32}
+    // How many requests the connection has answered.
+    [i32] served{0i32}
   }
 
-  // A slot on its way back to the poller. `state` is 0 when the worker closed the connection (answered, or the
-  // client went away), 1 when the request is still incomplete and the connection is to be watched again, and 2 when
-  // the request was rejected and the connection is to be drained.
+  // A slot on its way back to the poller. `state` is 0 when the worker closed the connection (the client went away,
+  // or it was not to be kept), 1 when the connection is to be watched again (its request is still incomplete, or it
+  // was answered and stays open for the next one) and 2 when the request was rejected and the connection is to be
+  // drained.
   [public struct]
   SlotDone() {
     [i32] slot{0i32}
     [i32] socket{-1i32}
     [i32] received{0i32}
     [i32] state{0i32}
+    [i32] served{0i32}
   }
 
   // The most workers `serveWorkers` starts.
@@ -396,7 +437,7 @@ namespace server {
     }
     [i64] got{recv(connection, slot_bytes(buffers, job.slot, job.received), convert<u64>(capacity - job.received), 0i32)}
     if(not_ready(got)) {
-      return(SlotDone{[slot] job.slot, [socket] connection, [received] job.received, [state] 1i32})
+      return(SlotDone{[slot] job.slot, [socket] connection, [received] job.received, [state] 1i32, [served] job.served})
     }
     if(got <= 0i64) {
       close(connection)
@@ -412,13 +453,17 @@ namespace server {
     [Request] request{parseRequestBytes(readSliceMake<u8>(own.data, total), capacity)}
     [i32] outcome{request.outcome()}
     if(outcome == 0i32) {
+      [bool] keep{stopping.load() == 0i32 && keeps_connection(request, config, job.served, total)}
       response.clear()
       [mut] answer{[ref request, ref response]([Reference<RequestHandler>] handler) {
         handler(request, location(response))
       }}
       app.locked(answer)
-      [String] bytes{response.serialize()}
+      [String] bytes{response.serializeConnection(keep)}
       send_text(connection, bytes, config.writeTimeoutMs)
+      if(keep) {
+        return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 1i32, [served] job.served + 1i32})
+      }
       close(connection)
       return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 0i32})
     }
@@ -428,7 +473,7 @@ namespace server {
       send_text(connection, bytes, config.writeTimeoutMs)
       return(SlotDone{[slot] job.slot, [socket] connection, [received] 0i32, [state] 2i32})
     }
-    return(SlotDone{[slot] job.slot, [socket] connection, [received] total, [state] 1i32})
+    return(SlotDone{[slot] job.slot, [socket] connection, [received] total, [state] 1i32, [served] job.served})
   }
 
   // Hands a finished slot back to the poller. A slot whose connection is closed needs no wake: the poller takes it
@@ -476,7 +521,7 @@ namespace server {
 
   // Takes back one slot a worker has finished with.
   [effects(net_io)]
-  take_slot([Connections mut] table, [SlotDone] done) {
+  take_slot([Connections mut] table, [SlotDone] done, [ServerConfig] config) {
     [i32] slot{done.slot}
     if(done.state == 0i32) {
       table.sockets[slot] = -1i32
@@ -485,22 +530,27 @@ namespace server {
     }
     table.states[slot] = done.state
     table.counts[slot] = done.received
+    table.served[slot] = done.served
     if(done.state == 2i32) {
       table.deadlines[slot] = monotonicMs() + drain_wait_ms()
+    }
+    if(done.state == 1i32 && done.received == 0i32 && done.served > 0i32) {
+      // Answered and kept: it waits for its next request until `keepAliveTimeoutMs` from now.
+      table.deadlines[slot] = monotonicMs() + convert<i64>(config.keepAliveTimeoutMs)
     }
   }
 
   // Takes back every slot the workers have finished with so far. `ready` counts what is in `finished`, so no
   // `receive` waits.
   [effects(net_io, channel, atomic)]
-  take_slots([Connections mut] table, [Channel<SlotDone>] finished, [Atomic<i32>] ready) {
+  take_slots([Connections mut] table, [Channel<SlotDone>] finished, [Atomic<i32>] ready, [ServerConfig] config) {
     [i32 mut] left{ready.exchange(0i32)}
     while(left > 0i32) {
       pick(finished.receive()) {
         none {
         }
         some(done) {
-          take_slot(table, done)
+          take_slot(table, done, config)
         }
       }
       left = left - 1i32
@@ -547,6 +597,7 @@ namespace server {
       table.states.push(0i32)
       table.deadlines.push(0i64)
       table.counts.push(0i32)
+      table.served.push(0i32)
       slot = slot + 1i32
     }
     [vector<u8> mut] interest{vector<u8>()}
@@ -609,7 +660,11 @@ namespace server {
           [bool] readable{take_ready(interest, table.sockets[slot])}
           if(readable && state == 1i32) {
             table.states[slot] = 3i32
-            jobs.send(SlotJob{[slot] slot, [socket] table.sockets[slot], [received] table.counts[slot]})
+            if(table.counts[slot] == 0i32 && table.served[slot] > 0i32) {
+              // The next request of a kept connection has begun: it has `readTimeoutMs` from now to arrive whole.
+              table.deadlines[slot] = monotonicMs() + convert<i64>(config.readTimeoutMs)
+            }
+            jobs.send(SlotJob{[slot] slot, [socket] table.sockets[slot], [received] table.counts[slot], [served] table.served[slot]})
           } else {
             if(readable) {
               drain_shared_slot(table, buffers, slot)
@@ -623,7 +678,7 @@ namespace server {
         slot = slot + 1i32
       }
       // After the pass over the slots, so a slot that comes back is watched before it can time out.
-      take_slots(table, finished, ready)
+      take_slots(table, finished, ready, config)
       if(room && take_ready(interest, listener)) {
         [i32] connection{accept(listener, 0i32)}
         if(connection >= 0i32) {
@@ -636,8 +691,9 @@ namespace server {
           table.sockets[free] = connection
           table.states[free] = 3i32
           table.counts[free] = 0i32
+          table.served[free] = 0i32
           table.deadlines[free] = monotonicMs() + convert<i64>(config.readTimeoutMs)
-          jobs.send(SlotJob{[slot] free, [socket] connection, [received] 0i32})
+          jobs.send(SlotJob{[slot] free, [socket] connection, [received] 0i32, [served] 0i32})
         }
       }
     }

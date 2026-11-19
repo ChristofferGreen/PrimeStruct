@@ -18,9 +18,12 @@
 
 using namespace primec;
 
-// `serveWorkers` on the VM with a scripted net (docs/spec/stdlib-reference.md, Workers). The VM has no sockets: the
-// `/std/net` and `/std/os` host functions the server calls are answered from a fixed list of connections and their
-// request bytes, and the bytes the server sends are recorded, so nothing here opens a port, reads a clock or sleeps.
+// `serveWorkers` and `serve` on the VM with a scripted net (docs/spec/stdlib-reference.md, Workers). The VM has no
+// sockets: the `/std/net` and `/std/os` host functions the server calls are answered from a fixed list of connections
+// and their request bytes, and the bytes the server sends are recorded, so nothing here opens a port, reads a real
+// clock or sleeps. A connection's script is the requests of one client: the next one arrives once the server has
+// answered the one before. The clock is a number the `poll` that finds nothing ready advances by its timeout, so an
+// idle timeout runs out after a count of polls.
 // The poller and the two workers run on the VM's task scheduler (the eager default, seeds 1 to 3 and, repeated, task
 // threads), and every run must give the same responses and the same counter.
 TEST_SUITE_BEGIN("primestruct.runtime.vm_serve_workers");
@@ -38,6 +41,28 @@ const std::vector<std::string> Requests = {
     "GET /epsilon HTTP/1.1\r\nHost: test\r\n\r\n",
 };
 
+constexpr int64_t StartClockMs = 1000;
+
+// What a run serves: the script of each connection and the server's request cap per connection (0: none) and idle
+// timeout.
+struct Scenario {
+  std::vector<std::vector<std::string>> scripts;
+  int32_t cap = 0;
+  int32_t idleMs = 5000;
+  // The requests the handler is to see in all when the poller waits for ticks (see ServerSource); 0 when the
+  // connections stay open and the poller spins instead.
+  int32_t answers = 0;
+};
+
+Scenario oneRequestEach() {
+  Scenario scenario;
+  for (const std::string &request : Requests) {
+    scenario.scripts.push_back({request});
+  }
+  scenario.answers = static_cast<int32_t>(Requests.size());
+  return scenario;
+}
+
 constexpr int32_t ListenerFd = 3;
 constexpr int32_t WakeReaderFd = 4;
 constexpr int32_t WakeWriterFd = 5;
@@ -47,10 +72,15 @@ constexpr int32_t FirstConnectionFd = 10;
 // Every host function runs under the VM's host lock (`Serialized`), so the state needs none of its own.
 struct ScriptedNet {
   struct Connection {
+    std::vector<std::string> script;
+    size_t next = 0;
+    // The bytes that have arrived so far: the first request, then each next one once a response has been sent.
     std::string request;
     size_t consumed = 0;
     std::string response;
     bool closed = false;
+    int64_t lastSendMs = 0;
+    int64_t closeMs = 0;
   };
 
   std::vector<Connection> connections;
@@ -59,10 +89,16 @@ struct ScriptedNet {
   bool wakePending = false;
   // Whether the last `poll` found nothing ready: the poller has nothing to do until a worker hands something back.
   bool lastPollIdle = false;
+  int64_t clockMs = StartClockMs;
+  const Scenario &scenario;
 
-  explicit ScriptedNet(const std::vector<std::string> &requests) {
-    for (const std::string &request : requests) {
-      connections.push_back({request, 0, {}, false});
+  explicit ScriptedNet(const Scenario &scenarioToServe) : scenario(scenarioToServe) {
+    for (const std::vector<std::string> &script : scenario.scripts) {
+      Connection connection;
+      connection.script = script;
+      connection.request = script.empty() ? std::string() : script[0];
+      connection.next = 1;
+      connections.push_back(std::move(connection));
     }
   }
 
@@ -83,7 +119,7 @@ struct ScriptedNet {
 
   // Marks the watched descriptors of `interest` (one byte each) 2 when ready and 1 when not; returns how many are
   // ready, or -1 (timeoutCode) when none.
-  int32_t poll(uint8_t *interest, uint64_t length) {
+  int32_t poll(uint8_t *interest, uint64_t length, int32_t timeoutMs) {
     int32_t ready = 0;
     for (uint64_t fd = 0; fd < length; ++fd) {
       if (interest[fd] == 0) {
@@ -101,6 +137,9 @@ struct ScriptedNet {
       ready += isReady ? 1 : 0;
     }
     lastPollIdle = ready == 0;
+    if (lastPollIdle && timeoutMs > 0) {
+      clockMs += timeoutMs;
+    }
     return ready == 0 ? -1 : ready;
   }
 
@@ -122,6 +161,10 @@ struct ScriptedNet {
       return -2;
     }
     open->response.append(reinterpret_cast<const char *>(data), static_cast<size_t>(length));
+    open->lastSendMs = clockMs;
+    if (open->next < open->script.size()) {
+      open->request += open->script[open->next++];
+    }
     return static_cast<int64_t>(length);
   }
 
@@ -129,6 +172,7 @@ struct ScriptedNet {
     if (Connection *open = connection(fd)) {
       if (!open->closed) {
         open->closed = true;
+        open->closeMs = clockMs;
         ++closedCount;
       }
     }
@@ -176,7 +220,7 @@ VmHostFunctions scriptedHosts(ScriptedNet &net, bool withClose = true) {
     return slot(net.send(static_cast<int32_t>(args[0]), bytes(args[1]), args[2]));
   });
   bind(hosts, "net_poll", {Buffer, U64, I32}, I32, [&net](const uint64_t *args) {
-    return slot(net.poll(bytes(args[0]), args[1]));
+    return slot(net.poll(bytes(args[0]), args[1], static_cast<int32_t>(args[2])));
   });
   if (withClose) {
     bind(hosts, "net_close", {I32}, I32, [&net](const uint64_t *args) {
@@ -194,7 +238,8 @@ VmHostFunctions scriptedHosts(ScriptedNet &net, bool withClose = true) {
     net.wakePending = false;
     return slot(0);
   });
-  bind(hosts, "ps_os_monotonic_ms", {}, I64, [](const uint64_t *) { return slot(1000); });
+  bind(
+      hosts, "ps_os_monotonic_ms", {}, I64, [&net](const uint64_t *) { return slot(net.clockMs); });
   bind(hosts, "ps_os_stop_requested", {}, IrHostValueKind::Bool, [&net](const uint64_t *) {
     return static_cast<uint64_t>(net.done() ? 1 : 0);
   });
@@ -203,15 +248,27 @@ VmHostFunctions scriptedHosts(ScriptedNet &net, bool withClose = true) {
   bind(hosts, "ps_os_block_stop_signals", {}, I32, [](const uint64_t *) { return slot(0); });
   bind(hosts, "scripted_idle", {}, I32, [&net](const uint64_t *) { return slot(net.lastPollIdle ? 1 : 0); });
   bind(hosts, "scripted_total", {}, I32, [&net](const uint64_t *) {
-    return slot(static_cast<int64_t>(net.connections.size()));
+    return slot(net.scenario.answers);
+  });
+  bind(hosts, "scripted_cap", {}, I32, [&net](const uint64_t *) { return slot(net.scenario.cap); });
+  bind(hosts, "scripted_idle_ms", {}, I32, [&net](const uint64_t *) {
+    return slot(net.scenario.idleMs);
   });
   return hosts;
 }
 
-// The server: a handler that counts every request in an `Atomic` and tells `ticks` it ran, and a stop condition that
-// ends the poller once every connection is closed. On the VM a host call cannot wait, and the poller never blocks, so
-// with the eager default schedule no worker would ever run: when the last `poll` found nothing ready, the stop
-// condition waits for a tick, which is a wait the scheduler can hand to a worker.
+// The server: a handler that counts every request in an `Atomic`, and a stop condition that ends the poller once every
+// connection is closed. On the VM a host call cannot wait, and the poller never blocks, so with the eager default
+// schedule no worker would ever run: when the last `poll` found nothing ready, the stop condition has to wait for
+// something a worker does. In the `answers` scenarios (one request on each connection) that is a tick the handler
+// sends, and the poller needs nothing more once the worker has answered. Where a connection stays open the poller
+// has to take it back and watch it again after the worker has answered, and a tick cannot say that: the send of
+// a tick to the waiting poller switches to it at once, before the worker has handed the connection back, and the
+// eager schedule runs the poller, the lowest-numbered task, until it blocks. There the stop condition spins on an
+// atomic instead, which is a switch point of a seeded schedule and nothing on the eager one, so those scenarios run
+// on seeds and task threads only (a host call that yields is the open work that would let the eager schedule
+// drive them). A run that never ends because a connection is never closed stops after 100000 rounds and then fails
+// its checks.
 const char *ServerSource = R"(
 import /std/http/*
 import /std/http/server/*
@@ -227,6 +284,14 @@ scripted_idle() {
 scripted_total() {
 }
 
+[host return<i32>]
+scripted_cap() {
+}
+
+[host return<i32>]
+scripted_idle_ms() {
+}
+
 [effects(io_err)]
 log_serve_error([ServeError] err) {
   print_line_error(err.why())
@@ -235,33 +300,44 @@ log_serve_error([ServeError] err) {
 [return<int> effects(heap_alloc, io_out, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
 main() {
   [Atomic<i32>] hits{Atomic<i32>{0i32}}
+  [Atomic<i32>] spins{Atomic<i32>{0i32}}
   [Channel<i32>] ticks{Channel<i32>{[capacity] 16i32}}
-  [mut] handler{[hits, ticks]([Request] request, [Reference<Response>] response) {
+  [i32] total{scripted_total()}
+  [mut] handler{[hits, ticks, total]([Request] request, [Reference<Response>] response) {
     hits.add(1i32)
-    ticks.send(1i32)
+    if(total > 0i32) {
+      ticks.send(1i32)
+    }
     response.body.appendBytes(request.method.data, request.method.count())
     response.body.append(" ")
     response.body.appendBytes(request.target.data, request.target.count())
     response.body.append(" ")
     response.body.appendI64(convert<i64>(request.body.count()))
   }}
-  [i32] total{scripted_total()}
-  [mut] stop{[ticks, total, mut waited{0i32}]() {
-    if(stopRequested()) {
+  [mut] stop{[ticks, spins, total, mut waited{0i32}, mut rounds{0i32}]() {
+    if(stopRequested() || rounds > 100000i32) {
       return(true)
     }
-    if(scripted_idle() != 0i32 && waited < total) {
-      pick(ticks.receive()) {
-        none {
-        }
-        some(tick) {
-          waited = waited + tick
+    if(scripted_idle() != 0i32) {
+      if(total == 0i32) {
+        rounds = rounds + 1i32
+        spins.add(1i32)
+      } else {
+        if(waited < total) {
+          pick(ticks.receive()) {
+            none {
+            }
+            some(tick) {
+              waited = waited + tick
+            }
+          }
         }
       }
     }
     return(stopRequested())
   }}
-  [ServerConfig] config{ServerConfig{[port] 0i32, [workers] 2i32, [announce] false}}
+  [ServerConfig] config{ServerConfig{[port] 0i32, [workers] 2i32, [announce] false,
+                                     [maxRequestsPerConnection] scripted_cap(), [keepAliveTimeoutMs] scripted_idle_ms()}}
   serveWorkersUntil(handler, config, stop)?
   print_line(hits.load())
   return(0i32)
@@ -290,12 +366,51 @@ bool compileVm(const std::string &source, IrModule &module, std::string &error) 
   return true;
 }
 
+// The single-threaded server over the same net.
+const char *SerialSource = R"(
+import /std/http/*
+import /std/http/server/*
+import /std/text/*
+import /std/text/view/*
+
+[host return<i32>]
+scripted_cap() {
+}
+
+[host return<i32>]
+scripted_idle_ms() {
+}
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(heap_alloc, io_out, io_err, net_io) on_error<ServeError, log_serve_error>]
+main() {
+  [mut] handler{[]([Request] request, [Reference<Response>] response) {
+    response.body.appendBytes(request.method.data, request.method.count())
+    response.body.append(" ")
+    response.body.appendBytes(request.target.data, request.target.count())
+    response.body.append(" ")
+    response.body.appendI64(convert<i64>(request.body.count()))
+  }}
+  [mut] stop{[]() { return(stopRequested()) }}
+  [ServerConfig] config{ServerConfig{[port] 0i32, [announce] false,
+                                     [maxRequestsPerConnection] scripted_cap(), [keepAliveTimeoutMs] scripted_idle_ms()}}
+  serveUntil(handler, config, stop)?
+  return(0i32)
+}
+)";
+
 struct Served {
   bool ok = false;
   std::string error;
   std::string out;
   std::vector<std::string> responses;
   size_t closed = 0;
+  // How long each connection stayed open after its last response, on the scripted clock (-1: never closed).
+  std::vector<int64_t> idleMs;
 };
 
 void appendOutput(int fd, std::string_view chunk, void *userData) {
@@ -306,8 +421,12 @@ void appendOutput(int fd, std::string_view chunk, void *userData) {
 
 // Serves `Requests` once: `seed` picks the task schedule (none is the eager default), `threads` runs each task on an
 // OS thread instead.
-Served serve(const IrModule &module, std::optional<uint64_t> seed, bool threads, bool withClose = true) {
-  ScriptedNet net(Requests);
+Served serve(const IrModule &module,
+             const Scenario &scenario,
+             std::optional<uint64_t> seed,
+             bool threads,
+             bool withClose = true) {
+  ScriptedNet net(scenario);
   const VmHostFunctions hosts = scriptedHosts(net, withClose);
   Served served;
   Vm vm;
@@ -318,6 +437,7 @@ Served serve(const IrModule &module, std::optional<uint64_t> seed, bool threads,
   served.ok = vm.execute(module, raw, served.error, std::vector<std::string_view>{"prog"}, hosts);
   for (const ScriptedNet::Connection &connection : net.connections) {
     served.responses.push_back(connection.response);
+    served.idleMs.push_back(connection.closed ? connection.closeMs - connection.lastSendMs : -1);
   }
   served.closed = net.closedCount;
   return served;
@@ -327,7 +447,7 @@ bool endsWith(const std::string &text, const std::string &suffix) {
   return text.size() >= suffix.size() && text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-// The server compiled once for the whole suite: compiling the HTTP stdlib takes longer than serving.
+// The servers compiled once for the whole suite: compiling the HTTP stdlib takes longer than serving.
 const IrModule &serverModule() {
   static IrModule module;
   static bool compiled = false;
@@ -339,11 +459,133 @@ const IrModule &serverModule() {
   return module;
 }
 
+const IrModule &serialModule() {
+  static IrModule module;
+  static bool compiled = false;
+  if (!compiled) {
+    std::string error;
+    REQUIRE_MESSAGE(compileVm(SerialSource, module, error), error);
+    compiled = true;
+  }
+  return module;
+}
+
+// The responses on one connection, one string each (every response starts with the status line).
+std::vector<std::string> splitResponses(const std::string &all) {
+  std::vector<std::string> responses;
+  size_t at = 0;
+  while (at < all.size()) {
+    size_t next = all.find("HTTP/1.1 ", at + 1);
+    if (next == std::string::npos) {
+      next = all.size();
+    }
+    responses.push_back(all.substr(at, next - at));
+    at = next;
+  }
+  return responses;
+}
+
+std::string bodyOf(const std::string &response) {
+  const size_t at = response.find("\r\n\r\n");
+  return at == std::string::npos ? std::string() : response.substr(at + 4);
+}
+
+// Whether the response says `Connection: <value>` and its Content-Length is the length of its body.
+bool wellFormed(const std::string &response, const std::string &connection) {
+  const size_t headEnd = response.find("\r\n\r\n");
+  if (headEnd == std::string::npos ||
+      response.find("Connection: " + connection + "\r\n") == std::string::npos) {
+    return false;
+  }
+  const std::string head = response.substr(0, headEnd + 2);
+  const std::string marker = "Content-Length: ";
+  const size_t at = head.find(marker);
+  if (at == std::string::npos) {
+    return false;
+  }
+  return std::stoul(head.substr(at + marker.size())) == bodyOf(response).size();
+}
+
+std::string get(const std::string &target,
+                const std::string &extraHeaders = {},
+                const std::string &version = "1.1") {
+  return "GET " + target + " HTTP/" + version + "\r\nHost: test\r\n" + extraHeaders + "\r\n";
+}
+
+// One client that sends `count` requests, each after the answer to the one before.
+Scenario oneClient(int count, int32_t cap, int32_t idleMs) {
+  Scenario scenario;
+  std::vector<std::string> script;
+  for (int i = 0; i < count; ++i) {
+    script.push_back(get("/n" + std::to_string(i)));
+  }
+  scenario.scripts.push_back(script);
+  scenario.cap = cap;
+  scenario.idleMs = idleMs;
+  return scenario;
+}
+
+// The connections of the "who closes" scenario: `Connection: close`, HTTP/1.0 alone, HTTP/1.0 asking for
+// keep-alive and then closing, two requests in one read, and a client that outlasts the cap of 3.
+Scenario closingClients() {
+  Scenario scenario;
+  scenario.scripts.push_back({get("/a", "Connection: close\r\n")});
+  scenario.scripts.push_back({get("/b", "", "1.0")});
+  scenario.scripts.push_back(
+      {get("/c", "Connection: Keep-Alive\r\n", "1.0"), get("/d", "Connection: close\r\n")});
+  scenario.scripts.push_back({get("/e") + get("/f")});
+  scenario.scripts.push_back({get("/g"), get("/h"), get("/i"), get("/j"), get("/k")});
+  scenario.cap = 3;
+  scenario.idleMs = 5000;
+  return scenario;
+}
+
+void checkClosingClients(const Served &served, const std::string &label) {
+  REQUIRE_MESSAGE(served.ok, served.error);
+  REQUIRE_MESSAGE(served.responses.size() == 5, label);
+  CHECK_MESSAGE(served.closed == 5, label);
+  const std::vector<std::vector<std::pair<std::string, std::string>>> expected = {
+      {{"close", "GET /a 0"}},
+      {{"close", "GET /b 0"}},
+      {{"keep-alive", "GET /c 0"}, {"close", "GET /d 0"}},
+      {{"close", "GET /e 0"}},
+      {{"keep-alive", "GET /g 0"}, {"keep-alive", "GET /h 0"}, {"close", "GET /i 0"}},
+  };
+  for (size_t i = 0; i < expected.size(); ++i) {
+    const std::vector<std::string> responses = splitResponses(served.responses[i]);
+    REQUIRE_MESSAGE(responses.size() == expected[i].size(),
+                    label << " connection " << i << ": " << served.responses[i]);
+    for (size_t at = 0; at < responses.size(); ++at) {
+      CHECK_MESSAGE(wellFormed(responses[at], expected[i][at].first),
+                    label << " connection " << i << ": " << responses[at]);
+      CHECK_MESSAGE(bodyOf(responses[at]) == expected[i][at].second, label << " connection " << i);
+    }
+  }
+}
+
+// One client reusing a connection: every request is answered `keep-alive` with a right Content-Length, and the
+// connection closes only after it has been idle for the whole timeout.
+void checkReused(const Served &served, int count, int32_t idleMs, const std::string &label) {
+  REQUIRE_MESSAGE(served.ok, served.error);
+  REQUIRE_MESSAGE(served.responses.size() == 1, label);
+  const std::vector<std::string> responses = splitResponses(served.responses[0]);
+  REQUIRE_MESSAGE(responses.size() == static_cast<size_t>(count),
+                  label << ": " << responses.size());
+  for (int i = 0; i < count; ++i) {
+    CHECK_MESSAGE(wellFormed(responses[i], "keep-alive"),
+                  label << " " << i << ": " << responses[i]);
+    CHECK_MESSAGE(bodyOf(responses[i]) == "GET /n" + std::to_string(i) + " 0", label << " " << i);
+  }
+  CHECK_MESSAGE(served.closed == 1, label);
+  CHECK_MESSAGE(served.idleMs[0] >= idleMs,
+                label << ": closed after " << served.idleMs[0] << " ms");
+}
+
 } // namespace
 
 TEST_CASE("serveWorkers with 2 workers answers a fixed set of requests on the eager schedule") {
   const IrModule &module = serverModule();
-  const Served served = serve(module, std::nullopt, false);
+  const Served served = serve(module, oneRequestEach(), std::nullopt, false);
   REQUIRE_MESSAGE(served.ok, served.error);
   CHECK(served.out == "5\n");
   CHECK(served.closed == Requests.size());
@@ -358,10 +600,10 @@ TEST_CASE("serveWorkers with 2 workers answers a fixed set of requests on the ea
 
 TEST_CASE("serveWorkers on the VM gives the same responses and counter on schedule seeds 1 to 3") {
   const IrModule &module = serverModule();
-  const Served eager = serve(module, std::nullopt, false);
+  const Served eager = serve(module, oneRequestEach(), std::nullopt, false);
   REQUIRE_MESSAGE(eager.ok, eager.error);
   for (uint64_t seed = 1; seed <= 3; ++seed) {
-    const Served seeded = serve(module, seed, false);
+    const Served seeded = serve(module, oneRequestEach(), seed, false);
     REQUIRE_MESSAGE(seeded.ok, seeded.error);
     CHECK_MESSAGE(seeded.out == eager.out, "seed " << seed);
     CHECK_MESSAGE(seeded.responses == eager.responses, "seed " << seed);
@@ -371,10 +613,10 @@ TEST_CASE("serveWorkers on the VM gives the same responses and counter on schedu
 
 TEST_CASE("serveWorkers on the VM gives the same responses and counter on task threads") {
   const IrModule &module = serverModule();
-  const Served eager = serve(module, std::nullopt, false);
+  const Served eager = serve(module, oneRequestEach(), std::nullopt, false);
   REQUIRE_MESSAGE(eager.ok, eager.error);
   for (int run = 0; run < ThreadRuns; ++run) {
-    const Served threaded = serve(module, std::nullopt, true);
+    const Served threaded = serve(module, oneRequestEach(), std::nullopt, true);
     REQUIRE_MESSAGE(threaded.ok, threaded.error);
     CHECK(threaded.out == eager.out);
     CHECK(threaded.responses == eager.responses);
@@ -384,10 +626,69 @@ TEST_CASE("serveWorkers on the VM gives the same responses and counter on task t
 
 TEST_CASE("a /std/net function the VM does not answer is reported by name") {
   const IrModule &module = serverModule();
-  const Served missing = serve(module, std::nullopt, false, false);
+  const Served missing = serve(module, oneRequestEach(), std::nullopt, false, false);
   CHECK_FALSE(missing.ok);
   CHECK_MESSAGE(missing.error.find("unbound host function: net_close") != std::string::npos, missing.error);
   CHECK(missing.out.empty());
+}
+
+// The connections of these scenarios stay open, so they run on seeded schedules and task threads (see ServerSource).
+TEST_CASE(
+    "serveWorkers keeps one connection for 100 requests and closes it after the idle timeout") {
+  const IrModule &module = serverModule();
+  const Scenario scenario = oneClient(100, 0, 3000);
+  const Served first = serve(module, scenario, 1, false);
+  checkReused(first, 100, 3000, "seed 1");
+  CHECK(first.out == "100\n");
+  for (uint64_t seed = 2; seed <= 3; ++seed) {
+    const Served seeded = serve(module, scenario, seed, false);
+    checkReused(seeded, 100, 3000, "seed " + std::to_string(seed));
+    CHECK_MESSAGE(seeded.responses == first.responses, "seed " << seed);
+  }
+  for (int run = 0; run < ThreadRuns; ++run) {
+    const Served threaded = serve(module, scenario, std::nullopt, true);
+    checkReused(threaded, 100, 3000, "threads");
+    CHECK(threaded.responses == first.responses);
+  }
+}
+
+TEST_CASE(
+    "serveWorkers closes on Connection: close, HTTP/1.0, a pipelined request and the request cap") {
+  const IrModule &module = serverModule();
+  const Scenario scenario = closingClients();
+  for (uint64_t seed = 1; seed <= 3; ++seed) {
+    const Served seeded = serve(module, scenario, seed, false);
+    checkClosingClients(seeded, "seed " + std::to_string(seed));
+    CHECK_MESSAGE(seeded.out == "8\n", "seed " << seed);
+  }
+  for (int run = 0; run < ThreadRuns; ++run) {
+    checkClosingClients(serve(module, scenario, std::nullopt, true), "threads");
+  }
+}
+
+TEST_CASE(
+    "serveWorkers closes an idle connection only after keepAliveTimeoutMs on the scripted clock") {
+  const IrModule &module = serverModule();
+  for (const int32_t idleMs : {700, 2000, 4500}) {
+    const Scenario scenario = oneClient(2, 0, idleMs);
+    const Served seeded = serve(module, scenario, 1, false);
+    checkReused(seeded, 2, idleMs, "idle " + std::to_string(idleMs));
+    const Served threaded = serve(module, scenario, std::nullopt, true);
+    checkReused(threaded, 2, idleMs, "threads idle " + std::to_string(idleMs));
+  }
+}
+
+TEST_CASE("serve keeps one connection for 100 requests and closes it after the idle timeout") {
+  const IrModule &module = serialModule();
+  const Scenario scenario = oneClient(100, 0, 3000);
+  checkReused(serve(module, scenario, std::nullopt, false), 100, 3000, "serve");
+  const Scenario brief = oneClient(2, 0, 800);
+  checkReused(serve(module, brief, std::nullopt, false), 2, 800, "serve idle");
+}
+
+TEST_CASE("serve closes on Connection: close, HTTP/1.0, a pipelined request and the request cap") {
+  const IrModule &module = serialModule();
+  checkClosingClients(serve(module, closingClients(), std::nullopt, false), "serve");
 }
 
 TEST_SUITE_END();

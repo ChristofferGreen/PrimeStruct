@@ -1,6 +1,6 @@
 // HTTP/1.1 requests and responses for single-threaded servers (docs/spec/stdlib-reference.md, /std/http). Pure code:
 // it parses bytes that have already arrived and builds response bytes, so it runs and is tested on the VM. The socket
-// loop is /std/http/server. The subset: `Content-Length` bodies, `Connection: close`; no chunked encoding.
+// loop is /std/http/server. The subset: `Content-Length` bodies, `Connection: keep-alive` and `close`; no chunked encoding.
 import /std/collections/*
 import /std/text/*
 import /std/text/view/*
@@ -115,6 +115,17 @@ namespace http {
       return(this.headers.splitPart("\r\n", index))
     }
 
+    // Whether the client allows the connection to carry another request: HTTP/1.1 does unless `Connection` lists
+    // `close`, and HTTP/1.0 only when `Connection` lists `keep-alive`.
+    [return<bool>]
+    allowsReuse() {
+      [StringView] connection{this.header("Connection")}
+      if(this.version.equalsText("HTTP/1.0")) {
+        return(header_list_has(connection, "keep-alive"))
+      }
+      return(!header_list_has(connection, "close"))
+    }
+
     // The path segment that the `:name` segment of the matched route pattern stands for, as sent (not decoded), or an
     // empty view when the pattern has no such segment or no route matched.
     [return<StringView>]
@@ -167,6 +178,24 @@ namespace http {
       [StringView] media{contentType.slice(0i32, end).trim()}
       return(media.equalsIgnoreAsciiCase("application/x-www-form-urlencoded"))
     }
+  }
+
+  // Whether the comma-separated header value `list` has the token `token` (ASCII case-insensitive).
+  [return<bool>]
+  header_list_has([StringView] list, [StringView] token) {
+    if(list.empty()) {
+      return(false)
+    }
+    [i32] count{list.splitCount(",")}
+    [i32 mut] index{0i32}
+    while(index < count) {
+      [StringView] part{list.splitPart(",", index).trim()}
+      if(part.equalsIgnoreAsciiCase(token)) {
+        return(true)
+      }
+      index = index + 1i32
+    }
+    return(false)
   }
 
   // The part of a header line before its colon.
@@ -551,6 +580,14 @@ namespace http {
     // have no body), `Connection: close`, a blank line and the body.
     [return<String> effects(heap_alloc)]
     serialize() {
+      return(this.serializeConnection(false))
+    }
+
+    // `serialize()` with `Connection: keep-alive` instead of `close` when `keepAlive` is true: the connection stays
+    // open for the client's next request. The `Content-Length` it writes is what lets the client find the end of
+    // the body.
+    [return<String> effects(heap_alloc)]
+    serializeConnection([bool] keepAlive) {
       [String mut] out{String{}}
       append_status_line(out, this.status)
       out.appendBytes(this.headerLines.data, this.headerLines.count())
@@ -560,7 +597,11 @@ namespace http {
         out.appendI64(convert<i64>(this.body.count()))
         out.append("\r\n")
       }
-      out.append("Connection: close\r\n\r\n")
+      if(keepAlive) {
+        out.append("Connection: keep-alive\r\n\r\n")
+      } else {
+        out.append("Connection: close\r\n\r\n")
+      }
       if(!bodyless) {
         out.appendBytes(this.body.data, this.body.count())
       }

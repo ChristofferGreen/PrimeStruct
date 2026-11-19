@@ -106,8 +106,19 @@ std::string readAll(int client) {
   return response;
 }
 
+// `request` with `Connection: close` after its request line, when it is a whole request: the server keeps a
+// connection open for the next request otherwise, and these clients read until the server closes it.
+std::string closing(const std::string &request) {
+  const size_t lineEnd = request.find("\r\n");
+  if (lineEnd == std::string::npos || request.find("\r\n\r\n") == std::string::npos) {
+    return request;
+  }
+  return request.substr(0, lineEnd + 2) + "Connection: close\r\n" + request.substr(lineEnd + 2);
+}
+
 // Sends `request` on a new connection and returns the whole response.
-std::string roundTrip(int port, const std::string &request) {
+std::string roundTrip(int port, const std::string &requestText) {
+  const std::string request = closing(requestText);
   const int client = connectWithTimeouts(port);
   if (client < 0) {
     return "connect failed";
@@ -347,6 +358,62 @@ TEST_CASE("serve answers routed, missing, malformed, oversized and silent client
   CHECK(stopServer(server) == 0);
 }
 
+// One response from a connection that stays open: the head up to the blank line and `Content-Length` bytes of body.
+std::string readOneResponse(int client) {
+  std::string response;
+  char byte = 0;
+  while (response.find("\r\n\r\n") == std::string::npos) {
+    if (recv(client, &byte, 1, 0) <= 0) {
+      return response;
+    }
+    response.push_back(byte);
+  }
+  const std::string marker = "Content-Length: ";
+  const size_t at = response.find(marker);
+  const size_t length =
+      at == std::string::npos ? 0 : std::stoul(response.substr(at + marker.size()));
+  const size_t bodyAt = response.find("\r\n\r\n") + 4;
+  while (response.size() < bodyAt + length) {
+    if (recv(client, &byte, 1, 0) <= 0) {
+      break;
+    }
+    response.push_back(byte);
+  }
+  return response;
+}
+
+TEST_CASE("serve answers several requests on one connection until the client asks to close over "
+          "loopback") {
+  if (!socketsPermitted()) {
+    MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");
+    return;
+  }
+  const std::string exe = buildServer(Fixtures + "http_server.prime", "http_server");
+  RunningServer server = startServer(exe, "");
+  if (server.port < 0 && readFile(server.errors).find("not permitted") != std::string::npos) {
+    MESSAGE("skipped: the server may not listen here: " << readFile(server.errors));
+    return;
+  }
+  REQUIRE_MESSAGE(server.port > 0, readFile(server.errors));
+  const int client = connectWithTimeouts(server.port);
+  REQUIRE(client >= 0);
+  const std::string get = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  for (int request = 0; request < 3; ++request) {
+    send(client, get.data(), get.size(), 0);
+    const std::string response = readOneResponse(client);
+    CHECK_MESSAGE(response == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 6\r\n"
+                              "Connection: keep-alive\r\n\r\nhello\n",
+                  response);
+  }
+  const std::string last = closing(get);
+  send(client, last.data(), last.size(), 0);
+  const std::string response = readOneResponse(client);
+  CHECK_MESSAGE(response.find("Connection: close\r\n") != std::string::npos, response);
+  CHECK(readAll(client).empty());
+  close(client);
+  CHECK(stopServer(server) == 0);
+}
+
 // Browsers open spare connections and send nothing on them. The loop waits on every open connection at once, so a
 // silent one holds only its own slot (TODO-5705).
 TEST_CASE("an idle connection does not delay other clients over loopback") {
@@ -362,6 +429,7 @@ TEST_CASE("an idle connection does not delay other clients over loopback") {
   }
   REQUIRE_MESSAGE(server.port > 0, readFile(server.errors));
   const std::string get = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string closingGet = closing(get);
 
   // Each attempt opens a silent connection first, gives the server time to accept it, then times a GET. The read
   // timeout is 1500 ms, so a loop that waited on the silent connection would take that long every time.
@@ -377,7 +445,7 @@ TEST_CASE("an idle connection does not delay other clients over loopback") {
     fastest = std::min(fastest, took);
     slowest = std::max(slowest, took);
     // The silent connection is still open and is answered once it sends its request.
-    send(idle, get.data(), get.size(), 0);
+    send(idle, closingGet.data(), closingGet.size(), 0);
     const std::string late = readAll(idle);
     close(idle);
     CHECK_MESSAGE(late.rfind("HTTP/1.1 200 OK\r\n", 0) == 0, late);
@@ -390,7 +458,7 @@ TEST_CASE("an idle connection does not delay other clients over loopback") {
   // A request that arrives in two parts does not hold up a client that sends its request at once.
   const int slow = connectWithTimeouts(server.port);
   REQUIRE(slow >= 0);
-  send(slow, "GET / HTTP/1.1\r\n", 16, 0);
+  send(slow, "GET / HTTP/1.1\r\nConnection: close\r\n", 35, 0);
   usleep(50000);
   std::string quick;
   const std::chrono::milliseconds took = timedRoundTrip(server.port, get, quick);
@@ -520,7 +588,8 @@ int connectAndWait(int port) {
 }
 
 // Sends `request` on a new connection and returns the whole response, however long the server takes.
-std::string exchangeAndWait(int port, const std::string &request) {
+std::string exchangeAndWait(int port, const std::string &requestText) {
+  const std::string request = closing(requestText);
   const int client = connectAndWait(port);
   if (client < 0) {
     return "connect failed";
@@ -607,7 +676,8 @@ TEST_CASE("serveWorkers with 1 worker answers others while a client stalls in th
   const std::string get = "GET /count HTTP/1.1\r\nHost: localhost\r\n\r\n";
   const int stalled = connectAndWait(server.port);
   REQUIRE(stalled >= 0);
-  const std::string half = "POST /hit HTTP/1.1\r\nHost: localhost\r\nContent-Le";
+  const std::string half =
+      "POST /hit HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\nContent-Le";
   send(stalled, half.data(), half.size(), 0);
   // These are answered while the stalled client is still connected (it is answered itself below): the one worker
   // gives a connection back as soon as it has read what arrived.
@@ -658,7 +728,7 @@ TEST_CASE("SIGTERM stops serveWorkers from listening while its worker is busy") 
   }
   const int held = connectAndWait(server.port);
   REQUIRE(held >= 0);
-  const std::string hold = "GET /hold HTTP/1.1\r\nHost: localhost\r\n\r\n";
+  const std::string hold = "GET /hold HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
   send(held, hold.data(), hold.size(), 0);
   // The handler has connected: the only worker is inside it from here on.
   const int release = accept(holdListener, nullptr, nullptr);

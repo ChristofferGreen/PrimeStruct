@@ -126,7 +126,8 @@ handler that brings the menus, toolbars and session up to date after each event.
    TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
-   keep-alive TODO-5805, sessions TODO-5806.
+   sessions TODO-5806; keep-alive TODO-5805 (done: `serve` and `serveWorkers` keep HTTP/1.1 connections open, with a
+   request cap and an idle timeout).
 8. Later: TODO-5954 (handler aliases in the stdlib), TODO-5718 (repeated and decoded
    parameters).
 
@@ -203,7 +204,7 @@ What the numbers say:
   `recv` of its 16 client processes) against 25 us for the C server. So the form's 2.41x is a measurement of the
   generator: a 2.5x target needs 13,900 requests per second from 4 workers, which is above what this generator
   shows for any server, and measuring more needs a generator that costs less per connection or connections that
-  stay open (TODO-5805).
+  stay open (keep-alive, TODO-5805, is implemented; the benchmark clients still send `Connection: close`, and a client that reuses connections has not been measured).
 - **A compiled generator does not move the ceiling: the kernel's loopback setup is it** (measured 2026-11-18, same
   machine, load average 30 to 60 from other work). `benchmarks/http/http_load.c` (non-blocking sockets and `poll`,
   one to four threads) costs 1.4 us of user CPU per request (0.084 s of user time for 58,239 requests) and about
@@ -213,7 +214,7 @@ What the numbers say:
   1 thread (`/ok`); 1 thread and 4 threads give the same 13,700 to 14,600. The rate stays at about 14,500 new
   connections a second whatever the generator, its thread count or the server, so the 2x of TODO-5940 is not
   reachable here: the limit is the system time of connecting and closing a loopback connection (about 60 us each,
-  not spread over threads), and only connections that stay open (TODO-5805) go past it. With the compiled
+  not spread over threads), and only connections that stay open (kept alive since TODO-5805) go past it. With the compiled
   generator `run_http_benchmarks.py` (6 s runs, load average 28 to 45) gave 3878 requests per second for `serve`
   and 12,408 for 4 workers on the 32 KB form (3.20x, the `serve` run being low in that run), 1036 and 1040 on
   `GET /work`, and 232 and 187 on the list page. The 2.5x target is therefore met in ratio, with the new limit
