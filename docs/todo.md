@@ -575,9 +575,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
+- [~] TODO-5525: `Result.ok(x)` passes as a stdlib Result argument
   - owner: ai
   - status: deferred
+  - claimed_by: result-args (worktree-agent-afaf7ba5f216d4795), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-arguments
