@@ -275,9 +275,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be set when the leaf is un-deferred; at least: a poller that calls a host `poll` in a loop lets a spawned worker run on the deterministic scheduler (eager and seeded), with the outcome and output the same for a given seed, and a poll that can never be satisfied is `deadlock: every task is waiting`
   - stop_rule: the scheduler and host-call yield semantics only.
 
-- [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
+- [~] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
   - created_at: 2026-11-08
   - phase: Backend parity (found while fixing TODO-5743)
   - parallel_track: runtime-faults
@@ -466,9 +467,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
 
-- [ ] TODO-6037: A Result-returning main exits with its decoded code on wasm
+- [~] TODO-6037: A Result-returning main exits with its decoded code on wasm
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
   - created_at: 2026-11-18
   - phase: Correctness audit 2026-10
   - parallel_track: result-main-wasm
@@ -479,9 +481,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-6061: Integer narrowing and widening on Wasm
+- [~] TODO-6061: Integer narrowing and widening on Wasm
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (follow-up of TODO-5516)
   - parallel_track: numeric-conversions
@@ -606,9 +609,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: semantics diagnostics builder only.
 
-- [ ] TODO-6068: Wasm computes `FmaF32` and `FmaF64` with one rounding
+- [~] TODO-6068: Wasm computes `FmaF32` and `FmaF64` with one rounding
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10
   - parallel_track: stdlib-math-fma
