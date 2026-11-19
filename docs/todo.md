@@ -145,7 +145,10 @@ of sync with them.
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
-| TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
+| TODO-6045 | `copysign` copies the sign of negative zero | ready | stdlib-math-copysign |
+| TODO-6046 | `round` rounds half away from zero without double rounding | ready | stdlib-math-round |
+| TODO-6047 | `atan2` returns the libm angle in every quadrant | ready | stdlib-math-atan2 |
+| TODO-6048 | `fma` is fused (needs a design decision) | deferred | stdlib-math-fma |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5544 | `Type.staticHelper()` resolves through `import` | deferred | pick-bindings |
@@ -165,6 +168,9 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-6045 (stdlib-math-copysign): `copysign` copies the sign of negative zero
+- TODO-6046 (stdlib-math-round): `round` without double rounding
+- TODO-6047 (stdlib-math-atan2): `atan2` in every quadrant
 
 ### Immediate Next 10
 
@@ -182,7 +188,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6045, TODO-6046, TODO-6047, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -650,18 +656,60 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: diagnostic text and spans only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5521: Math helpers return correct results
+- [~] TODO-6045: `copysign` copies the sign of negative zero
+  - owner: ai
+  - status: ready
+  - claimed_by: worker-math (worktree agent-af2bed80121a13cb3), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-copysign
+  - depends_on: none
+  - scope: `copysign(3, -0.0)` gives +3: the sign is read with `y < 0`, which is false for -0.0. Split from TODO-5521.
+  - acceptance:
+    - `copysign(x, -0.0)` is `-abs(x)` and `copysign(x, 0.0)` is `abs(x)` on VM, native and C++; a NaN `x` stays NaN; matrix case
+    - full release gate green
+  - stop_rule: stdlib math lowering only.
+
+- [~] TODO-6046: `round` rounds half away from zero without double rounding
+  - owner: ai
+  - status: ready
+  - claimed_by: worker-math (worktree agent-af2bed80121a13cb3), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-round
+  - depends_on: none
+  - scope: `round(0.49999999999999994)` gives 1 because the lowering computes `floor(x + 0.5)`, and the add rounds up. Split from TODO-5521.
+  - acceptance:
+    - `round` of 0.49999999999999994, 2.5, -2.5, 0.5, -0.5, a value above 2^52, inf and NaN equals libm `round` on VM, native and C++; matrix case
+    - full release gate green
+  - stop_rule: stdlib math lowering only.
+
+- [~] TODO-6047: `atan2` returns the libm angle in every quadrant
+  - owner: ai
+  - status: ready
+  - claimed_by: worker-math (worktree agent-af2bed80121a13cb3), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-atan2
+  - depends_on: none
+  - scope: `atan2(1, -1)` gives 2.2749 (3*pi/4 is 2.3562): the lowering adds a 3-term series of `y/x` and a quadrant offset. Replace it with a range-reduced `atan` (argument reduction by 2.414 and 0.66, rational polynomial) plus the quadrant and the signed-zero/inf/NaN cases of C `atan2`. `atan` itself is out of scope.
+  - acceptance:
+    - `atan2` of the four quadrants, the axes, signed zeros and infinities agrees with libm within 2 ulp on VM, native and C++; matrix case
+    - full release gate green
+  - stop_rule: stdlib math lowering only.
+
+- [ ] TODO-6048: `fma` is fused (needs a design decision)
   - owner: ai
   - status: deferred
-  - created_at: 2026-10-06
+  - created_at: 2026-11-19
   - phase: Correctness audit 2026-10
-  - parallel_track: stdlib-math
-  - scope: Consistent on all backends but wrong: `atan2(1, -1)` gives 2.2749 (2.3562), `copysign(3, -0.0)` gives +3, `round(0.49999999999999994)` gives 1, `fma` is not fused.
+  - parallel_track: stdlib-math-fma
+  - depends_on: none
+  - scope: `fma(a, b, c)` lowers to a multiply and an add, so it rounds twice. Split from TODO-5521. Options: (a) a new IR opcode `FmaF32`/`FmaF64` implemented by the VM (`std::fma`), the x86_64 and arm64 emitters (FMA3 / `fmadd`), the C++ emitters, wasm and GLSL: exact, large, changes the IR format; (b) an exact emulation in IR (f32: product and sum in f64; f64: Veltkamp-Dekker two-product plus two-sum): no new opcode, but double rounding can differ from libm in rare cases, and it is several times slower; (c) document `fma` as not fused and keep it. Not chosen here.
   - acceptance:
-    - each returns the IEEE/libm result on VM, native and C++; matrix cases
+    - the chosen option is decided; `fma` matches libm on VM, native and C++ for inputs where the unfused result differs; matrix case
     - full release gate green
-  - stop_rule: stdlib math only.
-  - notes: deferred: queued behind the Ready Now cap.
+  - stop_rule: stdlib math lowering only.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
