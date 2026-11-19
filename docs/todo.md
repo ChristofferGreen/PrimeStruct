@@ -305,9 +305,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
 
-- [ ] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
+- [~] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: strview-b (worktree-agent-af83d77d4fc26e68f), 2026-11-19
   - created_at: 2026-11-07
   - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5700)
   - parallel_track: text-literal-views
