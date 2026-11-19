@@ -70,6 +70,8 @@
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
   - Handlers do **not** flow into nested blocks; any nested block using `?` must declare its own `on_error`.
+  - A `?` or `try(...)` written among the arguments of a call to a user definition belongs to the caller: it reports
+    through the caller's `on_error` and return type, not the callee's (`add(1i32, try(fetch()))`).
   - A missing `on_error` for a `?` usage is a compile-time error.
   - The handler signature is `Handler(ErrorType err, args...)`.
   - Bound arguments are evaluated when the error is raised, not at declaration time.

@@ -325,8 +325,22 @@
     }
     const ReturnInfo &returnInfo = callSetup.returnInfo;
     const bool structDef = callSetup.structDefinition;
+    // The arguments written at the call site belong to the caller: a `try(...)` among them reports through the
+    // caller's `on_error` and return type, not the callee's.
+    const std::optional<OnErrorHandler> callerOnError = currentOnError;
+    const std::optional<ResultReturnInfo> callerReturnResult = currentReturnResult;
     OnErrorScope onErrorScope(currentOnError, callSetup.scopedOnError);
     ResultReturnScope resultScope(currentReturnResult, callSetup.scopedResult);
+    auto emitArgumentInCaller = [&](const Expr &argExpr, const LocalMap &argLocals) {
+      const std::optional<OnErrorHandler> calleeOnError = currentOnError;
+      const std::optional<ResultReturnInfo> calleeReturnResult = currentReturnResult;
+      currentOnError = callerOnError;
+      currentReturnResult = callerReturnResult;
+      const bool ok = emitExpr(argExpr, argLocals);
+      currentOnError = calleeOnError;
+      currentReturnResult = calleeReturnResult;
+      return ok;
+    };
     pushFileScope();
     auto popInlineStack = [&]() {
       if (callSetup.insertedInlineStackEntry) {
@@ -369,7 +383,7 @@
                 return inferStructExprPath(candidateExpr, candidateLocals);
               },
               [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                return emitExpr(candidateExpr, candidateLocals);
+                return emitArgumentInCaller(candidateExpr, candidateLocals);
               },
               [&](const Expr &fieldParam,
                   const LocalMap &fieldLocals,
@@ -535,8 +549,10 @@
                 [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
                   return resolveStructSlotLayout(structPath, layoutOut);
                 },
-            .emitExpr = [&](const Expr &argExpr,
-                            const LocalMap &locals) { return emitExpr(argExpr, locals); },
+            .emitExpr =
+                [&](const Expr &argExpr, const LocalMap &locals) {
+                  return emitArgumentInCaller(argExpr, locals);
+                },
             .emitStructCopySlots =
                 [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
                   return emitStructCopySlots(destBaseLocal, srcPtrLocal, slotCount);

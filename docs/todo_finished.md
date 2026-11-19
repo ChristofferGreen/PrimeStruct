@@ -2435,6 +2435,7 @@ are left unarchived.
 | TODO-6034 | A call of an imported function lowers to an import and the pipeline links before optimization | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6035 | A corpus of programs behaves the same built whole and as library plus consumer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6036 | The front end of the http web apps does less work per call | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6040 | `try(...)` as an argument of a user function | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

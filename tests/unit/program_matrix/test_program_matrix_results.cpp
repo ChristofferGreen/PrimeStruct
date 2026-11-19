@@ -626,4 +626,58 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("try as an argument of a user function reports through the caller's on_error") {
+  program_matrix::ProgramCase program;
+  program.name = "result_try_call_argument";
+  program.source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+fetch_ok() {
+  [Result<i32, i32>] r{Result<i32, i32>{[ok] 3i32}}
+  return(r)
+}
+
+[return<Result<i32, i32>>]
+fetch_err() {
+  [Result<i32, i32>] r{Result<i32, i32>{[error] 9i32}}
+  return(r)
+}
+
+[return<i32>]
+add([i32] left, [i32] right) {
+  return(plus(left, right))
+}
+
+[effects(io_out)]
+report([i32] err) {
+  print_line(err)
+}
+
+[return<int> effects(io_out) on_error<i32, /report>]
+sum_ok() {
+  [i32] total{add(10i32, try(fetch_ok()))}
+  print_line(total)
+  return(total)
+}
+
+[return<int> effects(io_out) on_error<i32, /report>]
+sum_err() {
+  [i32] total{add(try(fetch_err()), 1i32)}
+  print_line(total)
+  return(total)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(sum_ok())
+  print_line(sum_err())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "13\n13\n9\n9\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

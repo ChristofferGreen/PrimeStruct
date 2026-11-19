@@ -145,7 +145,6 @@ of sync with them.
 | TODO-6042 | Regression tests pin forms the audit listed that already compile | ready | frontend-accept-pins |
 | TODO-6038 | An `if` yields struct values | ready | frontend-accept-if |
 | TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
-| TODO-6040 | `try(...)` as an argument of a user function | ready | frontend-accept-try-arg |
 | TODO-6041 | `return` builds a sum from `[variant] value` and from `Type{[variant] ...}` | ready | frontend-accept-return-sum |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
@@ -171,7 +170,6 @@ of sync with them.
 - TODO-6042 (frontend-accept-pins): Regression tests pin forms the audit listed that already compile
 - TODO-6038 (frontend-accept-if): An `if` yields struct values
 - TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
-- TODO-6040 (frontend-accept-try-arg): `try(...)` as an argument of a user function
 - TODO-6041 (frontend-accept-return-sum): `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 
@@ -181,8 +179,7 @@ of sync with them.
 2. TODO-6042
 3. TODO-6038
 4. TODO-6039
-5. TODO-6040
-6. TODO-6041
+5. TODO-6041
 
 ### Priority Lanes
 
@@ -196,7 +193,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6040, TODO-6041, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6041, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -664,19 +661,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the repro compiles and runs on the VM; tests cover construction, `pick(b.v)`, a payload with a `Destroy` and a copy of the struct
     - full release gate green
   - stop_rule: sum-typed fields of structs on the VM and, where the sum already lowers there, native and C++; no new sum layouts.
-
-- [~] TODO-6040: `try(...)` as an argument of a user function
-  - owner: ai
-  - status: ready
-  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-try-arg
-  - scope: With `[return<int> on_error<i32, /handler>] main()` declaring the handler, `[i32] x{twice(try(f()))}` fails with `VM lowering error: missing on_error for ? usage` (no location) although `try(f())` as a binding initializer works. A `try(...)` or `?` nested in the arguments of a call must find the enclosing definition's `on_error`.
-  - acceptance:
-    - the repro compiles and runs; error and ok paths both tested (the handler runs, the definition returns its raw code); a negative test keeps `missing on_error for ? usage` when no handler is declared, now with a source location
-    - full release gate green
-  - stop_rule: `?` inside call arguments; handler flow into nested blocks stays as documented.
 
 - [~] TODO-6041: `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
   - owner: ai
