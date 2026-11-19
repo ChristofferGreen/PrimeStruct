@@ -1061,8 +1061,12 @@ main() {
 - **The slots' bytes** are one block that the poller and the workers share through a `[sendable]` struct holding
   its pointer; a slot's bytes belong to whoever holds the slot. Both channels hold one entry per slot, so neither
   side ever waits in `send`.
-- **The VM** cannot run it: `/std/net` passes `Pointer<u8>` buffers to host functions, which the VM rejects
-  (TODO-5862).
+- **The VM** runs it over host functions an embedder binds: the VM passes a `Pointer<u8>` buffer and its length to
+  a host as a checked `uint8_t *`, as `optexe` does, and a scripted net (docs/spec/stdlib-reference.md, Workers) serves
+  a fixed set of requests with 2 workers on the eager schedule, seeds 1 to 3 and task threads with the same responses
+  and counter. `primevm` still has no sockets. A host `poll` cannot yield on the deterministic scheduler, so a
+  program that wants the workers to run there waits on a `Channel` between polls (the test's stop condition does);
+  real sockets on the VM are not built.
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).

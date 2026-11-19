@@ -54,8 +54,10 @@ Rules:
   after checking that all of them lie in one live byte region (a `vector<u8>`'s storage, a `String`'s data, a slice
   of either); an address that is not one, or a length past the region, is the runtime fault `invalid byte pointer
   passed to host function`, and address 0 with length 0 passes `nullptr`. The C declaration is
-  `int64_t host_recv(int32_t, uint8_t *, uint64_t);`. The VM, `Script::bind` and the native backend do not pass byte
-  buffers and reject such an import with a message naming it. The runtime's own `__pstext_*` functions keep raw
+  `int64_t host_recv(int32_t, uint8_t *, uint64_t);`. The VM passes the same `uint8_t *`, checked by `byteSpan`, in the
+  slot of the `VmHostFunctions` binding (declare the binding's parameters as `IrHostValueKind::BytePointer`, then
+  `U64`). `Script::bind` has no buffer host type, so a script that declares one reports `unbound host function:
+  <name>`; the native backend rejects such an import with a message naming it. The runtime's own `__pstext_*` functions keep raw
   addresses.
 
 ```prime

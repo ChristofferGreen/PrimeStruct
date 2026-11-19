@@ -2290,6 +2290,7 @@ are left unarchived.
 | TODO-5859 | A `pick` expression yields a vector | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5860 | Moving a `pick` payload binding does not poison a later binding of the same name | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5861 | `SharedString` keeps its owner count inside the text block | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5862 | `serveWorkers` serves on the VM with 2 workers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5863 | A struct named without its namespace is a `Channel` element | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5864 | A lambda in a generic definition names the definition's type parameters | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |

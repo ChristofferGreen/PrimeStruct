@@ -1441,6 +1441,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_threads.cpp
     tests/unit/runtime/test_vm_threads_sync.cpp
     tests/unit/runtime/test_vm_threads_host.cpp
+    tests/unit/runtime/test_vm_serve_workers.cpp
     tests/unit/runtime/test_vm_sync_replay.cpp
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
@@ -1456,7 +1457,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # The IR link CLI tests (TODO-5922) run `primevm <program.psir> --link <module.psir>`.
   add_dependencies(PrimeStruct_vm_byte_tests primevm)
   target_compile_definitions(PrimeStruct_vm_byte_tests PRIVATE
-    PRIMESTRUCT_TEST_PRIMEVM_PATH="$<TARGET_FILE:primevm>")
+    PRIMESTRUCT_TEST_PRIMEVM_PATH="$<TARGET_FILE:primevm>"
+    PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   primestructEnableWarnings(PrimeStruct_vm_byte_tests)
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
             "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks,primestruct.runtime.atomics,primestruct.runtime.mutexes,primestruct.runtime.conditions"
@@ -1516,6 +1518,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     NAME PrimeStruct_vm_threads_host
     COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_threads_host
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # serveWorkers on the VM over a scripted net: the eager schedule, seeds 1 to 3 and task threads.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_serve_workers"
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_vm_serve_workers
+    COMMAND ${testCommand})
+  set_tests_properties(PrimeStruct_vm_serve_workers
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # Sync-order record and replay (TODO-5901): threaded runs write a log and the deterministic scheduler follows it.
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>

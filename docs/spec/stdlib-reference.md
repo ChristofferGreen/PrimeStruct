@@ -1046,8 +1046,9 @@ main() {
 
 `serveWorkers(handler, config) -> Result<ServeError>` serves like `serve`, with `config.workers` worker tasks beside
 the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both need
-`effects(net_io, heap_alloc, io_err, task, lock, channel, atomic)`. A task is a thread on `optexe`; the VM has no
-`/std/net`, so these run on `optexe` only.
+`effects(net_io, heap_alloc, io_err, task, lock, channel, atomic)`. A task is a thread on `optexe`. The VM has no
+sockets, so `primevm` and `primec --emit=vm` report `unbound host function: net_listen ...`; an embedder that binds
+the `/std/net` and `/std/os` host functions runs the server on the VM's tasks (see Workers on the VM below).
 
 - **The loop** only accepts and watches: it polls the listener, the open connections and a wake pipe (`/std/net`
   `wakePipe`). A new connection goes straight to the workers over a `Channel`, and so does a watched connection
@@ -1075,6 +1076,18 @@ the loop; `serveWorkersUntil(handler, config, stop)` is its `serveUntil`. Both n
 - **Memory:** the request buffers of all slots are one block of `maxConnections * maxRequestBytes` bytes,
   allocated when the server starts (`serve` allocates each slot's buffer on first use). Each worker also keeps one
   block of `maxRequestBytes`, in which it parses a copy of the request, and one `Response`.
+- **Workers on the VM:** a host function that takes a `Pointer<u8>` buffer and its `u64` length is bound on the VM
+  like any other: the VM passes the host a `uint8_t *` to the first of the `length` bytes after checking that they
+  lie in one live byte region, as `optexe` does (address 0 with length 0 is null; anything else is the fault `invalid
+  byte pointer passed to host function`). `Script::bind` has no host type for a buffer, so a test or tool that
+  answers `/std/net` binds `VmHostFunctions` directly. `tests/unit/runtime/test_vm_serve_workers.cpp` answers the
+  calls the server makes from a scripted net (a fixed list of connections and their request bytes; it records what
+  the server sends; no ports, clock or sleeps) and serves five requests with 2 workers on the eager schedule,
+  schedule seeds 1 to 3 and task threads, with the same responses and counter each time; a `/std/net` function it
+  does not bind is reported as `unbound host function: <name>`. On the deterministic scheduler the loop must give a
+  worker a chance to run, which a host `poll` cannot (a host call never yields, and without a seed only a spawn, a
+  wait, a block and a task's end switch tasks): the test's stop condition waits on a `Channel` the handler fills
+  whenever the last `poll` found nothing ready. Real sockets on the VM are not provided.
 
 ```prime
 import /std/http/*

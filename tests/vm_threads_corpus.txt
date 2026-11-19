@@ -32,6 +32,7 @@ repeated|primestruct.program_matrix.vm_sync_replay|tests/unit/program_matrix/tes
 repeated|primestruct.runtime.vm_threads|tests/unit/runtime/test_vm_threads.cpp
 repeated|primestruct.runtime.vm_threads_sync|tests/unit/runtime/test_vm_threads_sync.cpp
 repeated|primestruct.runtime.vm_threads_host|tests/unit/runtime/test_vm_threads_host.cpp
+repeated|primestruct.runtime.vm_serve_workers|tests/unit/runtime/test_vm_serve_workers.cpp
 repeated|primestruct.runtime.vm_sync_replay|tests/unit/runtime/test_vm_sync_replay.cpp
 repeated|primestruct.embed.task_threads|tests/unit/embed/test_embed_task_threads.cpp
 repeated|primestruct.embed.sync_replay|tests/unit/embed/test_embed_sync_replay.cpp

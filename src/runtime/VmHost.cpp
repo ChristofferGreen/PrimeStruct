@@ -67,14 +67,6 @@ bool VmHostFunctions::verify(const IrModule &module, std::string &error) const {
       error = "host function " + import.name + " returns a string, which a host cannot do; it returns text as a String";
       return false;
     }
-    for (const IrHostValueKind parameter : import.parameters) {
-      if (parameter == IrHostValueKind::BytePointer) {
-        error = "host function " + import.name +
-                " takes a Pointer<u8> byte buffer, which only compiled C++ (--emit=optexe) passes to a host; the VM "
-                "and Script::bind do not";
-        return false;
-      }
-    }
     const VmHostBinding *binding = find(import.name);
     if (binding == nullptr || (!binding->invoke && !binding->invokeString)) {
       error = "unbound host function: " + import.name + " " + describeSignature(import.parameters, import.returnKind);

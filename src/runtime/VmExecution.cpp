@@ -143,6 +143,27 @@ bool handleVmHostCall(const VmHostFunctions *hostFunctions,
       slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(&textViews.back()));
       continue;
     }
+    if (import.parameters[i] == IrHostValueKind::BytePointer) {
+      // A byte buffer: the host receives a `uint8_t *` to the first of the `length` bytes (the next parameter), all
+      // in one live byte region, as `optexe` passes it; address 0 with length 0 is null.
+      const bool hasLength = i + 1 < argCount && import.parameters[i + 1] == IrHostValueKind::U64;
+      if (!hasLength || text == nullptr) {
+        error = "invalid byte pointer passed to host function " + import.name;
+        return false;
+      }
+      uint64_t &slot = stack[base + i];
+      const uint64_t length = stack[base + i + 1];
+      if (slot == 0 && length == 0) {
+        continue;
+      }
+      uint8_t *first = text->core->byteSpan(slot, length);
+      if (first == nullptr) {
+        error = "invalid byte pointer passed to host function " + import.name;
+        return false;
+      }
+      slot = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(first));
+      continue;
+    }
     if (import.parameters[i] == IrHostValueKind::String) {
       uint64_t &slot = stack[base + i];
       const std::string *text = nullptr;

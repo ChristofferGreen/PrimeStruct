@@ -316,13 +316,13 @@ TEST_CASE("Pointer<u8> host parameters reach optexe hosts as checked byte pointe
   CHECK(run(shellQuote(overrun) + " 2> " + shellQuote(errors)) == 3);
   CHECK(readFile(errors).find("invalid byte pointer passed to host function") != std::string::npos);
 
-  // The VM does not pass byte buffers to hosts and says so.
+  // The VM passes byte buffers to hosts bound by the embedder; without a binding it names the function.
   ScriptEngine engine;
   const auto script = engine.compileFile(fixtures + "bytes_host.prime");
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
   const auto vm = script.run();
   CHECK_FALSE(vm.ok);
-  CHECK(vm.diagnostics.find("host_fill takes a Pointer<u8> byte buffer") != std::string::npos);
+  CHECK(vm.diagnostics.find("unbound host function: host_fill") != std::string::npos);
 }
 
 TEST_CASE("a Pointer<u8> host parameter needs its u64 length next") {
