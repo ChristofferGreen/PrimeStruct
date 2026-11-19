@@ -142,7 +142,11 @@ of sync with them.
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-5518 | Valid programs the frontend rejects compile | deferred | frontend-accept |
+| TODO-6042 | Regression tests pin forms the audit listed that already compile | ready | frontend-accept-pins |
+| TODO-6038 | An `if` yields struct values | ready | frontend-accept-if |
+| TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
+| TODO-6040 | `try(...)` as an argument of a user function | ready | frontend-accept-try-arg |
+| TODO-6041 | `return` builds a sum from `[variant] value` and from `Type{[variant] ...}` | ready | frontend-accept-return-sum |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
@@ -164,11 +168,21 @@ of sync with them.
 
 ### Ready Now
 
+- TODO-6042 (frontend-accept-pins): Regression tests pin forms the audit listed that already compile
+- TODO-6038 (frontend-accept-if): An `if` yields struct values
+- TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
+- TODO-6040 (frontend-accept-try-arg): `try(...)` as an argument of a user function
+- TODO-6041 (frontend-accept-return-sum): `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 
 ### Immediate Next 10
 
 1. TODO-5603
+2. TODO-6042
+3. TODO-6038
+4. TODO-6039
+5. TODO-6040
+6. TODO-6041
 
 ### Priority Lanes
 
@@ -182,7 +196,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6040, TODO-6041, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -612,18 +626,70 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5518: Valid programs the frontend rejects compile
+- [~] TODO-6042: Regression tests pin forms the audit listed that already compile
   - owner: ai
-  - status: deferred
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: frontend-accept
-  - scope: Rejected though valid per the spec: an unused `import /std/result/*` or `/std/maybe/*` (`unknown import path`, no location); `return(move(v))` and `return(Holder{move(n)})` (`use-after-move`); an `if` yielding struct values (`if branches must return compatible types`); sum-typed struct fields (`missing struct field info`); `try(...)` as an argument to a user function (`missing on_error for ? usage`); `return([ok] value)` and `return(Result<i32,i32>{[error] 7i32})`; `assign(x, Val{none})` / `x = Val{[num] 3i32}` on a sum-typed local (`assign requires matching struct value`).
+  - status: ready
+  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5518)
+  - parallel_track: frontend-accept-pins
+  - scope: Re-checked 2026-11-19 on the release build (VM): an unused `import /std/result/*` and `import /std/maybe/*`, `return(move(v))` of a struct or `vector<i32>` local, `return(Holder{move(n)})`, and `assign(x, Val{none})` / `x = Val{[num] 3i32}` on a user sum local (also with a struct payload and `Maybe<i32>`) all compile and run now. Nothing pins them, so they can regress.
   - acceptance:
-    - each form compiles and runs; semantics tests
+    - a semantics or compile-run test per form (unused wildcard imports of `/std/result` and `/std/maybe`; `return(move(local))`; `return(Holder{move(n)})`; assignment of sum values to a `mut` sum local) passes on the VM and a second backend where one runs it
     - full release gate green
-  - stop_rule: acceptance of these forms; split per form if needed.
-  - notes: deferred: queued behind the Ready Now cap.
+  - stop_rule: tests only; if a form fails on another backend, file a leaf instead of fixing it here.
+
+- [~] TODO-6038: An `if` yields struct values
+  - owner: ai
+  - status: ready
+  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5518)
+  - parallel_track: frontend-accept-if
+  - scope: `[P] p{if(flag) { P{1i32} } else { P{2i32} }}` fails with `VM lowering error: if branches must return compatible types` (no location). Struct-valued `if` branches in a binding initializer, a `return` and an argument must type check and lower on the VM, native and C++.
+  - acceptance:
+    - the repro compiles and runs on the VM; semantics and compile-run tests (one positive with struct branches, one negative with branches of different struct types keeping the compatible-types diagnostic)
+    - full release gate green
+  - stop_rule: if-expressions yielding structs; sums and `Result` yielded by `if` only when the same change covers them for free.
+
+- [~] TODO-6039: A sum-typed struct field lowers
+  - owner: ai
+  - status: ready
+  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5518)
+  - parallel_track: frontend-accept-sum-field
+  - scope: `[struct] Box { [Val] v }` with `Val` a user `[sum]`, then `Box{Val{[num] 3i32}}` and `pick(b.v) {...}` fails with `VM lowering error: internal error: missing struct field info for /Val`. A struct may hold a sum-typed field: construction, read, `pick` on the field, copy and destroy of the owning struct.
+  - acceptance:
+    - the repro compiles and runs on the VM; tests cover construction, `pick(b.v)`, a payload with a `Destroy` and a copy of the struct
+    - full release gate green
+  - stop_rule: sum-typed fields of structs on the VM and, where the sum already lowers there, native and C++; no new sum layouts.
+
+- [~] TODO-6040: `try(...)` as an argument of a user function
+  - owner: ai
+  - status: ready
+  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5518)
+  - parallel_track: frontend-accept-try-arg
+  - scope: With `[return<int> on_error<i32, /handler>] main()` declaring the handler, `[i32] x{twice(try(f()))}` fails with `VM lowering error: missing on_error for ? usage` (no location) although `try(f())` as a binding initializer works. A `try(...)` or `?` nested in the arguments of a call must find the enclosing definition's `on_error`.
+  - acceptance:
+    - the repro compiles and runs; error and ok paths both tested (the handler runs, the definition returns its raw code); a negative test keeps `missing on_error for ? usage` when no handler is declared, now with a source location
+    - full release gate green
+  - stop_rule: `?` inside call arguments; handler flow into nested blocks stays as documented.
+
+- [~] TODO-6041: `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
+  - owner: ai
+  - status: ready
+  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5518)
+  - parallel_track: frontend-accept-return-sum
+  - scope: docs/spec/literals-and-composite-construction.md says explicit `[variant] payload` construction is validated for return values. Today `return([ok] value)` fails with `binding not allowed in expression context` and `return(Result<i32, i32>{[error] 7i32})` with `unknown call target: Result` (the same brace form works as a binding initializer).
+  - acceptance:
+    - both forms compile and run for a stdlib `Result` and a user `[sum]`; tests for `[ok]`/`[error]` and a user sum variant plus a negative test for a variant name the sum lacks
+    - full release gate green
+  - stop_rule: return-position construction of sums; `return({...})` stays unsupported.
 
 - [ ] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
   - owner: ai
