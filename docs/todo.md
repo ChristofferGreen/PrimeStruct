@@ -247,9 +247,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-5824: A null or stray local address faults on the VM
+- [~] TODO-5824: A null or stray local address faults on the VM
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: addr-a (worktree-agent-a3fd71827320b585e), 2026-11-19
   - created_at: 2026-11-09
   - phase: Optimizing backends (found while checking TODO-5776)
   - parallel_track: vm-addresses
