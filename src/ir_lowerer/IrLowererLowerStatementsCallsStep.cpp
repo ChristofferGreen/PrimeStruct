@@ -466,6 +466,7 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   // For primitive elements this is 1; for struct elements it's the struct's totalSlots.
   // Must be resolved before defining lambdas that capture it.
   int32_t elemSlotCountForBuffer = 1;
+  bool pushesResultOkSum = false;
   if (helperName == "push") {
     // A struct-returning call's inferred ValueKind is not reliable here: ReturnInfo
     // tags any non-array-of-struct struct return as an opaque Int64 handle (see
@@ -475,6 +476,12 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     std::string payloadStructPath;
     if (input.inferStructExprPath) {
       payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
+    }
+    // A legacy `Result.ok(x)` has no struct path of its own; it becomes the sum of the element type.
+    if (payloadStructPath.empty() && input.isResultOkSumArgument &&
+        input.isResultOkSumArgument(*payloadArg) && !targetInfo.elementTypeText.empty()) {
+      payloadStructPath = targetInfo.elementTypeText;
+      pushesResultOkSum = true;
     }
     if (!payloadStructPath.empty()) {
       if (!input.resolveStructSlotLayout) {
@@ -584,7 +591,17 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valuesPtrLocal)});
 
   const int32_t payloadLocal = input.allocTempLocal();
-  if (!input.emitExpr(*payloadArg, localsIn)) {
+  if (pushesResultOkSum) {
+    const std::optional<bool> emittedOkSum =
+        input.emitResultOkArgument(*payloadArg, targetInfo.elementTypeText, localsIn);
+    if (!emittedOkSum.has_value()) {
+      errorOut = "vector push requires a stdlib Result element for Result.ok";
+      return VectorMutationStatementEmitResult::Error;
+    }
+    if (!*emittedOkSum) {
+      return VectorMutationStatementEmitResult::Error;
+    }
+  } else if (!input.emitExpr(*payloadArg, localsIn)) {
     return VectorMutationStatementEmitResult::Error;
   }
   instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal)});
@@ -714,7 +731,7 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
         payloadStructPath = input.inferStructExprPath(*payloadArg, localsIn);
       }
       bool takesOver =
-          isSimpleCallName(*payloadArg, "move") ||
+          isSimpleCallName(*payloadArg, "move") || pushesResultOkSum ||
           (input.isTemporaryStructSource && input.isTemporaryStructSource(*payloadArg, localsIn));
       if (payloadArg->kind == Expr::Kind::Name) {
         const auto payloadIt = localsIn.find(payloadArg->name);

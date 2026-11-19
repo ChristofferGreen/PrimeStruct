@@ -158,6 +158,15 @@ namespace primec::ir_lowerer {
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
         return true;
       };
+      // An element of a builtin vector of this sum (`values[i]`, `at(values, i)`) is stored inline: its address is
+      // the sum storage to copy from, never a packed Result value.
+      auto initializerIsSumVectorElement = [&](const Expr &valueExpr) {
+        return valueExpr.kind == Expr::Kind::Call && !valueExpr.isMethodCall &&
+               !valueExpr.isFieldAccess &&
+               (valueExpr.name == "at" || valueExpr.name == "at_unsafe") &&
+               valueExpr.args.size() == 2 &&
+               inferStructExprPath(valueExpr, valueLocals) == sumDef.fullPath;
+      };
       auto initializerResolvesToTargetSum = [&](const Expr &valueExpr) {
         if (isStdlibResultSumDefinition(sumDef) &&
             (isLegacyResultOkCall(valueExpr) ||
@@ -234,6 +243,9 @@ namespace primec::ir_lowerer {
             return true;
           }
         }
+        if (initializerIsSumVectorElement(valueExpr)) {
+          return true;
+        }
         if (valueExpr.kind == Expr::Kind::Call && !valueExpr.isMethodCall &&
             !valueExpr.isFieldAccess) {
           if (const Definition *callee = resolveDefinitionCall(valueExpr);
@@ -295,7 +307,7 @@ namespace primec::ir_lowerer {
           return emitPackedResultIntoSum(
               sumDef, baseLocal, [&]() { return emitExpr(initializer, valueLocals); });
         };
-        if (!initializerIsExistingSumLocal()) {
+        if (!initializerIsExistingSumLocal() && !initializerIsSumVectorElement(initializer)) {
           const std::optional<bool> packedResultEmitResult =
               emitPackedResultValueIntoLocal();
           if (packedResultEmitResult.has_value()) {

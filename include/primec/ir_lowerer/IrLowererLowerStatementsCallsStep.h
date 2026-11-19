@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -48,6 +49,12 @@ struct LowerStatementsCallsStepInput {
   // Finishes copying a struct pushed from a place (its slots are already at `destPtrLocal`): runs
   // its `Copy` helper or its fields' copies, so the element owns what it holds.
   std::function<bool(int32_t, int32_t, const std::string &, const LocalMap &)> emitPushedStructCopy;
+  // A legacy `Result.ok(x)` pushed onto a vector of stdlib Result sums: `isResultOkSumArgument` tells whether the
+  // payload is one, and `emitResultOkArgument` builds the sum for the element type in fresh locals and pushes its
+  // address (nullopt when the payload or element type is no such pair).
+  std::function<bool(const Expr &)> isResultOkSumArgument;
+  std::function<std::optional<bool>(const Expr &, const std::string &, const LocalMap &)>
+      emitResultOkArgument;
   // Whether a struct-valued payload is a temporary the vector takes over (a constructor or a call
   // result) rather than a place that keeps owning it.
   std::function<bool(const Expr &, const LocalMap &)> isTemporaryStructSource;

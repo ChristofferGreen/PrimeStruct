@@ -135,7 +135,6 @@ of sync with them.
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
-| TODO-5526 | Vectors of stdlib Result values keep their elements | deferred | result-containers |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
@@ -180,7 +179,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-5526, TODO-6037
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
 - Frontend and diagnostics: TODO-5518, TODO-5519, TODO-5520, TODO-5521
@@ -572,20 +571,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the ok, error and packed cases of test_compile_run_vm_result_exit_codes.cpp also pass under wasmtime (or the wasm emitter's own run check)
     - full release gate green
   - stop_rule: entry exit codes on wasm only.
-  - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-5526: Vectors of stdlib Result values keep their elements
-  - owner: ai
-  - status: in_progress
-  - claimed_by: result-vec (worktree-agent-ac86e89b387f36bad), 2026-11-19
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: result-containers
-  - scope: `vector<Result<i32, i32>>` with the Result import pushes each sum's address instead of its storage: reading `rs[0i32]` back prints `2147483647` from `pick`, and `Result.error` reads garbage (probe `vr2`/`vr3`). Store sum elements inline (like struct elements) or reject the element type with a diagnostic.
-  - acceptance:
-    - matrix case pushing ok and error Results and reading them back with `pick` and `Result.error` on VM, native and C++, or a diagnostic test if rejected
-    - full release gate green
-  - stop_rule: Result elements in vectors only.
   - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5515: Native Result.ok(Buffer) reads as ok

@@ -512,103 +512,126 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsBindingsContinued.h"
 #include "IrLowererLowerStatementsLoops.h"
-    const bool lowered = ir_lowerer::runLowerStatementsCallsStep(
-        {
-            .semanticProgram = semanticProgram,
-            .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
-            .inferExprKind =
-                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
-            .inferStructExprPath =
-                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                  return inferStructExprPath(valueExpr, valueLocals);
-                },
-            .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-            .allocTempLocal = [&]() { return allocTempLocal(); },
-            .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
-            .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
-              auto it = defMap.find(path);
-              return it == defMap.end() ? nullptr : it->second;
-            },
-            .resolveDestroyHelperForStruct = [](const std::string &) -> const Definition * { return nullptr; },
-            .resolveMoveHelperForStruct = [](const std::string &) -> const Definition * { return nullptr; },
-            .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
-              return isArrayCountCall(callExpr, callLocals);
-            },
-            .isStringCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
-              return isStringCountCall(callExpr, callLocals);
-            },
-            .isVectorCapacityCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
-              return isVectorCapacityCall(callExpr, callLocals);
-            },
-            .resolveStructSlotLayout =
-                [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                  return resolveStructSlotLayout(structPath, layoutOut);
-                },
-            .resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &callLocals) {
-              return resolveMethodCallDefinition(callExpr, callLocals);
-            },
-            .resolveDefinitionCall = [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-            .getReturnInfo =
-                [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
-                  return getReturnInfo(definitionPath, returnInfo);
-                },
-            .emitInlineDefinitionCall =
-                [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
-                  return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
-                },
-            .emitArrayIndexOutOfBounds = [&]() { emitArrayIndexOutOfBounds(); },
-            .emitVectorCapacityExceeded = [&]() { emitVectorCapacityExceeded(); },
-            .emitVectorPopOnEmpty = [&]() { emitVectorPopOnEmpty(); },
-            .emitVectorIndexOutOfBounds = [&]() { emitVectorIndexOutOfBounds(); },
-            .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
-            .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
-            .emitPushedVectorCopy = emitPushedVectorCopy,
-            .emitPushedStructCopy =
-                [&](int32_t destPtrLocal, int32_t srcPtrLocal, const std::string &structPath,
-                    const LocalMap &callLocals) {
-                  bool ranCopyHelper = false;
-                  return ir_lowerer::emitStructCopyHelpersFromPtrs(
-                      destPtrLocal,
-                      srcPtrLocal,
-                      structPath,
-                      [&](const std::string &path) -> const Definition * {
-                        auto copyIt = defMap.find(path + "/Copy");
-                        return copyIt == defMap.end() ? nullptr : copyIt->second;
-                      },
-                      [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
-                        return resolveStructSlotLayout(path, layoutOut);
-                      },
-                      [&]() { return allocTempLocal(); },
-                      function.instructions,
-                      callLocals,
-                      emitInlineDefinitionCall,
-                      ranCopyHelper,
-                      error);
-                },
-            .isTemporaryStructSource =
-                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                  return isTemporaryStructCopySource(valueExpr, valueLocals);
-                },
-            .resolveDroppedVectorElementStructPath = resolveDroppedVectorElementStructPath,
-            .emitStructDestroyFromPtr = emitStructDestroyFromPtr,
-            .resolveVectorRecordElementTypeText =
-                [&](const std::string &structPath) -> std::string {
-                  const auto recordIt = defMap.find(structPath);
-                  if (recordIt == defMap.end() || recordIt->second == nullptr ||
-                      recordIt->second->instanceOfTemplate != ir_lowerer::vectorBackingTypePath() ||
-                      recordIt->second->instanceTemplateArgs.size() != 1) {
-                    return {};
-                  }
-                  return recordIt->second->instanceTemplateArgs.front();
-                },
-            .instructions = &function.instructions,
-        },
-        stmt,
-        localsIn,
-        error);
-    if (!lowered && error.empty()) {
-      error = "IR lower return-emit statements call step failed without diagnostic";
-    }
+  const bool lowered = ir_lowerer::runLowerStatementsCallsStep(
+      {
+          .semanticProgram = semanticProgram,
+          .semanticIndex = &callResolutionAdapters.semanticProductTargets.semanticIndex,
+          .inferExprKind =
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return inferExprKind(valueExpr, valueLocals);
+              },
+          .inferStructExprPath =
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return inferStructExprPath(valueExpr, valueLocals);
+              },
+          .emitExpr = [&](const Expr &valueExpr,
+                          const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+          .allocTempLocal = [&]() { return allocTempLocal(); },
+          .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
+          .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
+            auto it = defMap.find(path);
+            return it == defMap.end() ? nullptr : it->second;
+          },
+          .resolveDestroyHelperForStruct = [](const std::string &) -> const Definition * {
+            return nullptr;
+          },
+          .resolveMoveHelperForStruct = [](const std::string &) -> const Definition * {
+            return nullptr;
+          },
+          .isArrayCountCall =
+              [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isArrayCountCall(callExpr, callLocals);
+              },
+          .isStringCountCall =
+              [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isStringCountCall(callExpr, callLocals);
+              },
+          .isVectorCapacityCall =
+              [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return isVectorCapacityCall(callExpr, callLocals);
+              },
+          .resolveStructSlotLayout =
+              [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                return resolveStructSlotLayout(structPath, layoutOut);
+              },
+          .resolveMethodCallDefinition =
+              [&](const Expr &callExpr, const LocalMap &callLocals) {
+                return resolveMethodCallDefinition(callExpr, callLocals);
+              },
+          .resolveDefinitionCall =
+              [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+          .getReturnInfo =
+              [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                return getReturnInfo(definitionPath, returnInfo);
+              },
+          .emitInlineDefinitionCall =
+              [&](const Expr &callExpr,
+                  const Definition &callee,
+                  const LocalMap &callLocals,
+                  bool expectValue) {
+                return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
+              },
+          .emitArrayIndexOutOfBounds = [&]() { emitArrayIndexOutOfBounds(); },
+          .emitVectorCapacityExceeded = [&]() { emitVectorCapacityExceeded(); },
+          .emitVectorPopOnEmpty = [&]() { emitVectorPopOnEmpty(); },
+          .emitVectorIndexOutOfBounds = [&]() { emitVectorIndexOutOfBounds(); },
+          .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
+          .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
+          .emitPushedVectorCopy = emitPushedVectorCopy,
+          .emitPushedStructCopy =
+              [&](int32_t destPtrLocal,
+                  int32_t srcPtrLocal,
+                  const std::string &structPath,
+                  const LocalMap &callLocals) {
+                bool ranCopyHelper = false;
+                return ir_lowerer::emitStructCopyHelpersFromPtrs(
+                    destPtrLocal,
+                    srcPtrLocal,
+                    structPath,
+                    [&](const std::string &path) -> const Definition * {
+                      auto copyIt = defMap.find(path + "/Copy");
+                      return copyIt == defMap.end() ? nullptr : copyIt->second;
+                    },
+                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                      return resolveStructSlotLayout(path, layoutOut);
+                    },
+                    [&]() { return allocTempLocal(); },
+                    function.instructions,
+                    callLocals,
+                    emitInlineDefinitionCall,
+                    ranCopyHelper,
+                    error);
+              },
+          .isResultOkSumArgument =
+              [&](const Expr &valueExpr) { return sumHelpers.isLegacyResultOkCall(valueExpr); },
+          .emitResultOkArgument = [&](const Expr &okArg,
+                                      const std::string &structPath,
+                                      const LocalMap &callLocals) -> std::optional<bool> {
+            return sumHelpers.emitLegacyResultOkAsSumPointer(okArg, structPath, callLocals);
+          },
+          .isTemporaryStructSource =
+              [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                return isTemporaryStructCopySource(valueExpr, valueLocals);
+              },
+          .resolveDroppedVectorElementStructPath = resolveDroppedVectorElementStructPath,
+          .emitStructDestroyFromPtr = emitStructDestroyFromPtr,
+          .resolveVectorRecordElementTypeText = [&](const std::string &structPath) -> std::string {
+            const auto recordIt = defMap.find(structPath);
+            if (recordIt == defMap.end() || recordIt->second == nullptr ||
+                recordIt->second->instanceOfTemplate != ir_lowerer::vectorBackingTypePath() ||
+                recordIt->second->instanceTemplateArgs.size() != 1) {
+              return {};
+            }
+            return recordIt->second->instanceTemplateArgs.front();
+          },
+          .instructions = &function.instructions,
+      },
+      stmt,
+      localsIn,
+      error);
+  if (!lowered && error.empty()) {
+    error = "IR lower return-emit statements call step failed without diagnostic";
+  }
     return lowered;
   };
 

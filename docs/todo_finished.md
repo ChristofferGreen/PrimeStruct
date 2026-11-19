@@ -2006,6 +2006,7 @@ are left unarchived.
 | TODO-5523 | A Result-returning main exits with its error code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |
 | TODO-5525 | `Result.ok(x)` passes as a stdlib Result argument | [undated.md](todo_archive/undated.md) | - |
+| TODO-5526 | Vectors of stdlib Result values keep their elements | [undated.md](todo_archive/undated.md) | - |
 | TODO-5527 | Stdlib Result locals destroy their payload once | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
 | TODO-5528 | Native UI C ABI with a headless backend and engine bindings | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5529 | `/std/ui/native` surface with an `AppEvent` loop | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |

@@ -571,3 +571,17 @@
   - stop_rule: `Result.ok` arguments only.
   - notes: deferred: queued behind the Ready Now cap.
   - done: the inline parameter binder builds a legacy `Result.ok(x)` argument as the parameter's stdlib Result sum (`emitLegacyResultOkAsSumPointer`); matrix case `Result.ok calls pass as stdlib Result arguments`.
+
+- [x] TODO-5526: Vectors of stdlib Result values keep their elements
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: result-containers
+  - scope: `vector<Result<i32, i32>>` with the Result import pushes each sum's address instead of its storage: reading `rs[0i32]` back prints `2147483647` from `pick`, and `Result.error` reads garbage (probe `vr2`/`vr3`). Store sum elements inline (like struct elements) or reject the element type with a diagnostic.
+  - acceptance:
+    - matrix case pushing ok and error Results and reading them back with `pick` and `Result.error` on VM, native and C++, or a diagnostic test if rejected
+    - full release gate green
+  - stop_rule: Result elements in vectors only.
+  - notes: deferred: queued behind the Ready Now cap.
+  - done: a builtin vector of a stdlib Result sum stores each element inline (tag plus payload slots, like a struct element). A legacy `Result.ok(x)` pushed onto it is built as the element's sum, and a binding initialized from `values[i]` copies the element's sum instead of reading it as a packed value; matrix case `vectors of stdlib Result values keep their elements`.

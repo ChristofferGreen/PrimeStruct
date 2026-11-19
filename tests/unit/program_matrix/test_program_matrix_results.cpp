@@ -315,6 +315,66 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("vectors of stdlib Result values keep their elements") {
+  // Each element is the sum's storage (tag plus payload slots), stored inline like a struct element.
+  program_matrix::ProgramCase program;
+  program.name = "result_vector_elements";
+  program.source = R"(
+import /std/result/*
+import /std/collections/*
+
+[return<i32>]
+show([Result<i32, i32>] r) {
+  return(pick(r) {
+    ok(v) { v }
+    error(e) { 100i32 + e }
+  })
+}
+
+[return<i32>]
+total([vector<Result<i32, i32>>] rs) {
+  [i32 mut] sum{0i32}
+  [i32 mut] index{0i32}
+  while(index < rs.count()) {
+    sum = sum + show(rs[index])
+    index = index + 1i32
+  }
+  return(sum)
+}
+
+[return<int> effects(io_out, heap_alloc)]
+main() {
+  [vector<Result<i32, i32>> mut] rs{vector<Result<i32, i32>>()}
+  rs.push(/std/result/ok<i32, i32>(5i32))
+  rs.push(/std/result/error<i32, i32>(7i32))
+  rs.push(Result.ok(9i32))
+  [Result<i32, i32>] named{/std/result/error<i32, i32>(2i32)}
+  rs.push(named)
+  rs.push(/std/result/ok<i32, i32>(11i32))
+  print_line(rs.count())
+  print_line(show(rs[0i32]))
+  print_line(show(rs[1i32]))
+  print_line(show(rs[2i32]))
+  print_line(show(rs[3i32]))
+  print_line(show(rs[4i32]))
+  [Result<i32, i32>] first{rs[0i32]}
+  [Result<i32, i32>] second{rs[1i32]}
+  print_line(Result.error(first))
+  print_line(Result.error(second))
+  print_line(show(first))
+  print_line(show(second))
+  print_line(total(rs))
+  rs.pop()
+  print_line(rs.count())
+  print_line(show(rs[3i32]))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "5\n5\n107\n9\n102\n11\n0\n1\n5\n107\n234\n4\n102\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("map tryAt with the Result import reads ok and missing keys") {
   program_matrix::ProgramCase program;
   program.name = "result_map_try_at";
