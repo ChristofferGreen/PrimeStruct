@@ -148,7 +148,6 @@ of sync with them.
 | TODO-6048 | `fma` is fused (needs a design decision) | deferred | stdlib-math-fma |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
-| TODO-5544 | `Type.staticHelper()` resolves through `import` | deferred | pick-bindings |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
@@ -186,7 +185,6 @@ of sync with them.
 - Backend parity: TODO-5516, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
@@ -688,19 +686,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `PrimeStructAppleNativeKnownFailingShards` is empty and all `apple_*` shards pass on arm64 macOS
     - full release gate green on Linux and macOS
   - stop_rule: tests and arm64 native emitter output only; no language semantics changes.
-
-- [~] TODO-5544: `Type.staticHelper()` resolves through `import`
-  - owner: ai
-  - status: deferred
-  - claimed_by: static-helper (worktree-agent-af0f101c2107d13a8), 2026-11-19
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: pick-bindings
-  - scope: a static helper of an imported `[public struct]` called as `Type.staticHelper()` does not resolve through `import`, which `App.start(...)` of the native UI found. (The other half found with it, a method call on a `pick` payload binding, is done.)
-  - acceptance:
-    - a static helper of an imported struct is called as `Type.helper()` in VM, native and C++; a negative test keeps the unknown-method diagnostic
-    - full release gate green
-  - stop_rule: imported static helpers only.
 
 - [ ] TODO-5545: Record the macOS AppKit manual smoke checklist
   - owner: human

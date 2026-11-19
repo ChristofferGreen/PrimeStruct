@@ -365,8 +365,8 @@ main() {
 ```
 
 The names follow `docs/CodeExamples.md`. The surface as built (TODO-5529) is in `docs/spec/stdlib-reference.md`
-("Native UI"): `start_app(name)` replaces `App.start(name)` (a type-qualified static call does not resolve through
-an import yet), and `AppEvent` lists `quitRequested` first because a default sum value needs a unit first variant.
+("Native UI"): `start_app(name)` replaced `App.start(name)` (a type-qualified static call did not resolve through
+an import then; it does now), and `AppEvent` lists `quitRequested` first because a default sum value needs a unit first variant.
 
 **Handlers (TODO-5709).** Controls also take handler closures, so a program need not write the loop above
 (docs/WebAppsPlan.md, principle 7). An `AppHandlers<State>` (stdlib/std/ui/native/handlers.prime) holds the app's

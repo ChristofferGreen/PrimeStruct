@@ -2023,6 +2023,7 @@ are left unarchived.
 | TODO-5540 | `StringView`: a borrowed view of literals and Strings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5541 | Host functions take and return `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | [undated.md](todo_archive/undated.md) | - |
+| TODO-5544 | `Type.staticHelper()` resolves through `import` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5546 | Text view file load and save in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5547 | Dialog results need an emptiness test | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5548 | Unicode text in the editor | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |

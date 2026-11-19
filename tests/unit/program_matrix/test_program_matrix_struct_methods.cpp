@@ -531,3 +531,29 @@ main() {
                    // 70 + 71 + 7 + 2 + 0 + 1 + 71 = 222, less 150
                    72);
 }
+
+TEST_CASE("a static helper of an imported struct is called as Type.helper()") {
+  runMethodProgram("struct_methods_imported_static_helper",
+                   R"(
+namespace shapes {
+[public struct]
+Counter() {
+  [public i32] value{5i32}
+
+  [public static return<i32>]
+  default_step() {
+    return(2i32)
+  }
+}
+}
+
+import /shapes/*
+
+[return<i32>]
+main() {
+  [Counter] counter{Counter{}}
+  return(plus(counter.value, Counter.default_step()))
+}
+)",
+                   7);
+}

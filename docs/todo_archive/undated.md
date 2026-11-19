@@ -598,3 +598,16 @@
     - full release gate green
   - stop_rule: receiver offset handling only.
   - resolution: 2026-11-19. count/capacity through `dereference(p)` of a `Pointer<vector<T>>` read the record's count at slot 1 and capacity at slot 2 (src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp); a `Pointer<Vector<T>>` dereferences to the `Vector<T>` struct, so the typed helpers accept it (src/semantics/SemanticsValidatorInferStructReturn.cpp). Matrix cases in program_matrix vector_owners, semantic cases in struct_methods.
+
+- [x] TODO-5544: `Type.staticHelper()` resolves through `import`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-10-08
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: pick-bindings
+  - scope: a static helper of an imported `[public struct]` called as `Type.staticHelper()` does not resolve through `import`, which `App.start(...)` of the native UI found. (The other half found with it, a method call on a `pick` payload binding, is done.)
+  - acceptance:
+    - a static helper of an imported struct is called as `Type.helper()` in VM, native and C++; a negative test keeps the unknown-method diagnostic
+    - full release gate green
+  - stop_rule: imported static helpers only.
+  - resolution: 2026-11-19. The type-qualified static call check (`SemanticsValidatorExprPostAccessPrechecks.cpp`) now also resolves a bare receiver through the import aliases, so `Type.helper()` of an imported struct no longer reports "static helper does not accept method-call syntax". Tests: semantics `struct_helpers` (positive and unknown-helper negative) and a program-matrix case run on the VM kernels, native and optexe. `start_app` stays as the native UI entry.

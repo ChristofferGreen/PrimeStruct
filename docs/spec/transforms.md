@@ -187,7 +187,7 @@ or a semicolon if you intended to index.
       return(this.clampSize(this.size))
     }
 
-    // Static helper: no implicit `this`; call via BrushSettings.defaultSize().
+    // Static helper: no implicit `this`; call via BrushSettings.defaultSize(). An imported struct's static helper is called the same way.
     [public static return<f32>]
     defaultSize() {
       return(12.0f32)

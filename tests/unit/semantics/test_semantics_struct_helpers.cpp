@@ -146,6 +146,54 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("static helper of an imported struct allows type-qualified dot calls") {
+  const std::string source = R"(
+namespace shapes {
+[public struct]
+Counter() {
+  [public static return<i32>]
+  defaultStep() {
+    return(2i32)
+  }
+}
+}
+
+import /shapes/*
+
+[return<i32>]
+main() {
+  return(Counter.defaultStep())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unknown helper of an imported struct keeps the unknown call target diagnostic") {
+  const std::string source = R"(
+namespace shapes {
+[public struct]
+Counter() {
+  [public static return<i32>]
+  defaultStep() {
+    return(2i32)
+  }
+}
+}
+
+import /shapes/*
+
+[return<i32>]
+main() {
+  return(Counter.missing())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: missing") != std::string::npos);
+}
+
 TEST_CASE("generic struct helper resolves local templated root helper with implicit this reference") {
   const std::string source = R"(
 [struct]

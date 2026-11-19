@@ -35,10 +35,14 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     }
     const std::string resolvedReceiverType =
         resolveTypePath(receiver.name, receiver.namespacePrefix);
-    if (resolvedReceiverType.empty()) {
-      return false;
+    if (!resolvedReceiverType.empty() &&
+        resolved.rfind(resolvedReceiverType + "/" + expr.name, 0) == 0) {
+      return true;
     }
-    return resolved.rfind(resolvedReceiverType + "/" + expr.name, 0) == 0;
+    // A bare type name brought in by `import` resolves to the imported struct's path.
+    const auto importIt = importAliases_.find(receiver.name);
+    return importIt != importAliases_.end() && structNames_.count(importIt->second) > 0 &&
+           resolved.rfind(importIt->second + "/" + expr.name, 0) == 0;
   };
 
   if (usedMethodTarget && !resolvedMethod) {
