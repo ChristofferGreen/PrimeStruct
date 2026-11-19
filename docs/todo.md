@@ -137,7 +137,15 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
+| TODO-6077 | Lowering errors carry the user location of the expression being lowered | ready | diagnostics-lowering-spans |
+| TODO-6078 | A lowering error names the backend that lowers | ready | diagnostics-backend-names |
+| TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | ready | diagnostics-demangle |
+| TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | deferred | diagnostics-filtered-columns |
+| TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
+| TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
+| TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | deferred | diagnostics-on-error-handler |
+| TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | deferred | diagnostics-internal-errors |
+| TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
 | TODO-6068 | Wasm computes `FmaF32` and `FmaF64` with one rounding | deferred | stdlib-math-fma |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
@@ -159,11 +167,17 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
+- TODO-6077 (diagnostics-lowering-spans): lowering errors carry the user location
+- TODO-6078 (diagnostics-backend-names): a lowering error names the backend that lowers
+- TODO-6079 (diagnostics-demangle): one demangle helper; generic names in the user's spelling
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
+3. TODO-6077
+4. TODO-6078
+5. TODO-6079
 
 ### Priority Lanes
 
@@ -178,7 +192,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics: TODO-5520
+- Frontend and diagnostics (split from TODO-5520): TODO-6077, TODO-6078, TODO-6079; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
@@ -569,18 +583,119 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [ ] TODO-5520: Diagnostics point at user code with readable names
+- [~] TODO-6077: Lowering errors carry the user location of the expression being lowered
+  - owner: ai
+  - status: ready
+  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-lowering-spans
+  - scope: Lowering errors such as `missing on_error for ? usage`, `requires int-backed stdlib Result error payloads`, `missing semantic-product ...` and `argument count mismatch for /onErr` set only a message, so the CLI prints no file, line or column. A component in `primec/ir_lowerer` records the innermost expression whose lowering failed (wrapped around `emitExpr` and `emitStatement`) and `IrLowerer::lower` publishes its span, mapped to the user file through the expanded source, as the primary span of the failure. A span recorded for a failure that was dropped is not reused for a later, different failure.
+  - acceptance:
+    - `primec --emit=vm --emit-diagnostics` on a program whose `try` reaches `requires int-backed stdlib Result error payloads` reports the file, line and column of the `try` expression; the same for `argument count mismatch for /onErr`
+    - a doctest of the component pins the innermost-first and the dropped-failure rules
+    - full release gate green
+  - stop_rule: spans of lowering failures only; message wording and names are TODO-6078 and TODO-6079.
+
+- [~] TODO-6078: A lowering error names the backend that lowers
+  - owner: ai
+  - status: ready
+  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-backend-names
+  - scope: The lowerer words its errors `native backend ...` for every target. Only the VM rewrote it (`vm backend`), so `--emit=cpp`, `optcpp`, `exe`, `optexe`, `wasm`, `glsl`, `spirv` and `ir` said `native backend`. Each `IrBackend::normalizeLoweringError` names its own target (`C++ backend`, `wasm backend`, ...); the native backend keeps `native backend`.
+  - acceptance:
+    - a lowering error under `--emit=cpp`, `optcpp`, `wasm` and `ir` names that target, not `native backend`; asserted by a diagnostics test per family of target
+    - full release gate green
+  - stop_rule: error text of the backend registry only; no lowerer message is edited.
+
+- [~] TODO-6079: One demangle helper; lowering messages show the user's spelling of generic names
+  - owner: ai
+  - status: ready
+  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-demangle
+  - scope: A generated definition path (`/std/result/Result__arity2__ta77c...`, `/std/collections/vector/Vector__t...`) reaches messages. A component (`primec/support/DiagnosticNames.h`) rewrites a text with explicit inputs (the text and a lookup from a generated path to its template and arguments, built from `Definition::instanceOfTemplate` and `instanceTemplateArgs`): `Result<i32, Oops>`, `Vector<i32>/push`. `IrLowerer::lower` applies it to its failure message. The `requires int-backed stdlib Result error payloads` message names the Result type. The semantics validator keeps its own copy until TODO-6085.
+  - acceptance:
+    - doctests of the helper for a template instance, a nested instance argument, a member path and a text without generated names
+    - `--emit=vm` on a `try` over `Result<i32, Oops>` (Oops has more than one int field) reports `Result<i32, Oops>`, with no `__t` hash in the message
+    - full release gate green
+  - stop_rule: diagnostic text of lowering only.
+
+- [ ] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
   - owner: ai
   - status: deferred
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: diagnostics
-  - scope: Many lowering errors carry no file/line (`missing on_error for ? usage`, `requires int-backed stdlib Result error payloads`, `missing semantic-product ...`, `argument count mismatch for /onErr`); C++ errors say `native backend`; messages show mangled names (`Result__arity2__ta77c...`, `Vector__t...`); source snippets show the text-filtered form instead of what the user wrote; an unknown `break` is reported inside stdlib/std/file/file.prime; `borrowed binding: v (root: v, sink: v)` names the root as the sink.
+  - deferred_reason: owner picks an option
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-filtered-columns
+  - scope: A semantic error in `[i32] b{a + 2i32 * nope}` prints line 4 column 34 and the snippet `plus(a, multiply(2i32, nope))`; `nope` is at column 22 of the file. The text filters rewrite operators into calls and keep no offset map. Options: (a) the filter records each rewrite as an edit (original range, filtered range) and spans map back through the edits; (b) the snippet shows the original line and the caret is placed by aligning identifier and literal tokens of the two lines (cheap, wrong when a rewrite reorders operands); (c) print both lines. Not chosen: it decides what the user sees.
   - acceptance:
-    - each listed diagnostic has a user-file location, the user's spelling and demangled names; diagnostics tests
+    - an owner picks an option; then a diagnostics test asserts file, line, column and the snippet of an operator expression and a rewritten call
+  - stop_rule: spans and snippets only.
+
+- [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
+  - owner: ai
+  - status: deferred
+  - deferred_reason: needs a repro first
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-break-span
+  - scope: Seen in the audit; no repro yet. Find a program that reports it (a `break` in a body that reaches a stdlib file helper), write it as a diagnostics test, then fix the span the way the http one was fixed (docs/todo_finished.md, TODO-5936).
+  - acceptance:
+    - the repro reports the user file, line and column; a diagnostics test asserts them
+  - stop_rule: span only.
+
+- [ ] TODO-6082: `borrowed binding: v (root: v, sink: v)` names the sink
+  - owner: ai
+  - status: deferred
+  - depends_on: TODO-5977
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-borrow-sink
+  - scope: The message names the root of the borrow as the sink. The semantic validator code that builds it belongs to TODO-5977 (one diagnostics builder): do it after that leaf or inside it.
+  - acceptance:
+    - a diagnostics test where the root and the sink differ names each correctly
+  - stop_rule: message of that diagnostic only.
+
+- [ ] TODO-6083: The arity and shape of an `on_error` handler are checked in semantics
+  - owner: ai
+  - status: deferred
+  - deferred_reason: owner picks the span
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-on-error-handler
+  - scope: `on_error<Oops, /onErr>` with `onErr([Oops] err, [i32] extra)` passes semantics and fails in lowering (`argument count mismatch for /onErr`). The check belongs in semantics with a message that names the handler and the expected shape. Options for the span: the `on_error` transform, or the handler definition, or the first `try` that uses it (with the other two as related spans). Not chosen: it is a language-level judgment.
+  - acceptance:
+    - an owner picks the span; then a semantics test for a wrong arity and a wrong first parameter type, with file, line and column
+  - stop_rule: semantic diagnostics of `on_error` handlers only.
+
+- [ ] TODO-6084: Internal lowering errors (`missing semantic-product ...`) say so
+  - owner: ai
+  - status: deferred
+  - deferred_reason: owner picks the wording
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-internal-errors
+  - scope: About 40 `missing semantic-product ...` messages report a compiler invariant, not a mistake of the user, and read as one. Options: prefix every one `internal compiler error:` through one helper and ask the user to report it; or leave the text and rely on TODO-6077 for the location. Not chosen: wording.
+  - acceptance:
+    - an owner picks an option; then one test per prefix path
+  - stop_rule: text of internal-invariant messages only.
+
+- [ ] TODO-6085: The semantics validator uses the shared demangle helper
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-5977
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5520)
+  - parallel_track: diagnostics-demangle-semantics
+  - scope: `SemanticsValidator::diagnosticTypeText` and `diagnosticDefinitionText` rebuild the template spelling on their own; make them call the helper of TODO-6079.
+  - acceptance:
+    - both members delegate to `primec/support/DiagnosticNames.h`; semantics diagnostics tests unchanged
     - full release gate green
-  - stop_rule: diagnostic text and spans only.
-  - notes: deferred: queued behind the Ready Now cap.
+  - stop_rule: semantics diagnostics builder only.
 
 - [ ] TODO-6068: Wasm computes `FmaF32` and `FmaF64` with one rounding
   - owner: ai
