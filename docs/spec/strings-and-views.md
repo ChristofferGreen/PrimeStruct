@@ -387,9 +387,11 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   from a definition that returns a `StringView`. Template monomorphization inserts the `textOf` call once it knows the
   declared type, so the program lowers exactly as if the call were written out. Nothing else converts: a `String`
   still needs `s.view()`, and a non-text argument is the usual `argument type mismatch ... expected
-  /std/text/view/StringView got i32`. At a call of same-arity overloads the literal converts only when every overload
-  takes a `StringView` in that position, so an overload that takes the `string` itself is the exact match and wins,
-  and one that takes something else leaves the literal as a `string`.
+  /std/text/view/StringView got i32`. At a call of same-arity overloads the literal converts when some overload takes a
+  `StringView` in that position and none takes the `string` itself: with `pick([i32])` next to `pick([StringView])`,
+  `pick("y")` selects the view overload. An overload that takes the `string` itself is the exact match and wins, so
+  `describe([string])` next to `describe([StringView])` takes the literal as a `string`. When no overload takes a
+  `StringView`, the literal stays a `string` and the call reports no viable overload.
 
   ```prime
   import /std/text/view/*

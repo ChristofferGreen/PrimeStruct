@@ -151,6 +151,54 @@ main() {
   CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
+TEST_CASE("a literal takes the StringView overload when no overload takes the string") {
+  const std::string source = R"(
+import /std/text/view/*
+
+[return<i32>]
+pick([i32] x) {
+  return(x)
+}
+
+[return<i32>]
+pick([StringView] x) {
+  return(x.count())
+}
+
+[return<int>]
+main() {
+  [string] word{"four"}
+  return(plus(plus(pick("yy"), pick(word)), pick(textOf("z"))))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a literal finds no overload when none takes a StringView") {
+  const std::string source = R"(
+import /std/text/view/*
+
+[return<i32>]
+pick([i32] x) {
+  return(x)
+}
+
+[return<i32>]
+pick([f32] x) {
+  return(2i32)
+}
+
+[return<int>]
+main() {
+  return(pick("yy"))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("no viable overload for /pick") != std::string::npos, error);
+}
+
 TEST_CASE("a string converts at a StringView field of a generic struct only") {
   const std::string head = R"(
 import /std/text/view/*

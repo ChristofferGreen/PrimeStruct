@@ -111,14 +111,24 @@ bool TextViewConversion::convert(Expr &arg,
   if (expected.empty()) {
     return true;
   }
-  // Every candidate callee must be known and take a StringView there. A same-arity overload that takes the `string`
-  // as it is (or anything else) keeps the argument unconverted, so the exact match wins and overload selection,
-  // which cannot type a nested `textOf(...)` call, is not changed.
+  // Every candidate callee must be known. A same-arity overload that takes the `string` as it is keeps the argument
+  // unconverted: the exact match wins, and overload selection, which cannot type a nested `textOf(...)` call by a
+  // `string` parameter, is not changed. Otherwise the argument converts when some candidate takes a StringView
+  // there, and the overloads that take another type drop out of the call.
+  bool takesStringView = false;
   for (const ExpectedType *type : expected) {
-    if (type == nullptr || !type->type.templateArgs.empty() ||
-        !namesStringView(type->type.name, type->typeNamespace, scope.ctx)) {
+    if (type == nullptr || !type->type.templateArgs.empty()) {
       return true;
     }
+    if (baseTypeName(type->type.name) == "string") {
+      return true;
+    }
+    if (namesStringView(type->type.name, type->typeNamespace, scope.ctx)) {
+      takesStringView = true;
+    }
+  }
+  if (!takesStringView) {
+    return true;
   }
   if (!isStringValue(arg, scope)) {
     return true;

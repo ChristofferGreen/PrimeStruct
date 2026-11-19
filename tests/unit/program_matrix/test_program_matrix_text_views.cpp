@@ -260,3 +260,47 @@ main() {
                                  "/std/text/view/StringView got") != std::string::npos,
                 outcome.err);
 }
+
+TEST_CASE("a literal takes the StringView overload when no overload takes the string") {
+  // `pick([i32])` next to `pick([StringView])`: the literal, a `string` value and a `textOf` call select the view
+  // overload; `describe([string])` next to `describe([StringView])` still takes the literal as a `string`, and a
+  // view value takes the view overload.
+  runTextViewProgram("text_view_overload_literal",
+                     R"(
+import /std/text/view/*
+
+[return<i32>]
+pick([i32] x) {
+  return(x)
+}
+
+[return<i32>]
+pick([StringView] x) {
+  return(x.count() + 100i32)
+}
+
+[return<i32>]
+describe([string] text) {
+  return(1i32)
+}
+
+[return<i32>]
+describe([StringView] text) {
+  return(10i32)
+}
+
+[return<int>]
+main() {
+  [string] word{"four"}
+  [StringView] view{"ab"}
+  if(pick("yy") != 102i32 || pick(textOf("z")) != 101i32 || pick(word) != 104i32 || pick(7i32) != 7i32) {
+    return(1i32)
+  }
+  if(describe("q") != 1i32 || describe(word) != 1i32 || describe(view) != 10i32) {
+    return(2i32)
+  }
+  return(pick(view) - 100i32)
+}
+)",
+                     2);
+}

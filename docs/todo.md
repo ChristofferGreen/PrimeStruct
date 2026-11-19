@@ -126,7 +126,6 @@ of sync with them.
 | TODO-5956 | Native string arenas and the remaining string heap statistics | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
@@ -188,7 +187,6 @@ of sync with them.
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
-- Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5854
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
@@ -304,20 +302,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a rule for unannotated callees in docs/spec/language-core.md (Effects), stdlib, examples and tests annotated to match, and the full rule enforced in semantics
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
-
-- [~] TODO-5716: A literal converts to a `StringView` at a call whose overloads differ there
-  - owner: ai
-  - status: in_progress
-  - claimed_by: strview-b (worktree-agent-af83d77d4fc26e68f), 2026-11-19
-  - created_at: 2026-11-07
-  - phase: Language surface for handlers (docs/WebAppsPlan.md; found by TODO-5700)
-  - parallel_track: text-literal-views
-  - scope: A `string` converts to a `StringView` where one is expected (docs/spec/strings-and-views.md), but at a call of same-arity overloads only when every overload takes a `StringView` in that position. With `pick([i32])` and `pick([StringView])`, `pick("y")` reports no viable overload, and even `pick(textOf("y"))` is ambiguous, because overload selection types a nested call argument as unknown (`requirementOverloadArgumentTypeText` in src/semantics/TemplateMonomorphCoreUtilities.cpp). Give a call with a known non-generic return type, such as `textOf`, its type there, then let the conversion pick the `StringView` overload when no overload takes the `string` itself (`TextViewConversion::convert`).
-  - acceptance:
-    - `pick("y")` and `pick(textOf("y"))` select the `StringView` overload on VM and optexe; `describe([string])` next to `describe([StringView])` still takes the literal as a `string`
-    - full release gate green
-  - stop_rule: overload argument facts for calls with a declared return type and the literal conversion at such calls; no change to the specificity rule.
-  - notes: deferred: no stdlib family overloads `string` against `StringView` or another type today.
 
 - [ ] TODO-5718: All values of a repeated parameter and decoded path parameters
   - owner: ai
@@ -598,6 +582,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - the repro reports the user file, line and column; a diagnostics test asserts them
   - stop_rule: span only.
+  - notes: no repro found (tried 2026-11-19 on a release build). `break` is not a PrimeStruct statement, so it is always an unknown call target (`break()`) or identifier (`break`); each of these reports the user's file, line and column and `definition: /main` (or the helper): a `break()` after `File<Write>` open, `writeLine` and `readByte` calls with `?` in `main`; inside a `while` and a `loop` after generic file helper instantiations (`writeLine<Mode, T>`, `readByte<Mode, T>`); in a helper called from a `main` that uses the file helpers; behind `if`. The http bug (TODO-5936) needed a dropped return-type inference failure in a generic stdlib router, and the file helpers have no such failing inference. Next: get the audit's original program from its author, or try `break` in a body whose return type is inferred from a file-helper call.
 
 - [ ] TODO-6082: `borrowed binding: v (root: v, sink: v)` names the sink
   - owner: ai
