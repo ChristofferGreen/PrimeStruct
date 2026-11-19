@@ -22,6 +22,9 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     if (inst.op == IrOpcode::Dup) {
       layout.needsDupTempLocal = true;
     }
+    if (inst.op == IrOpcode::FmaF32 || inst.op == IrOpcode::FmaF64) {
+      layout.needsFmaTemp = true;
+    }
     if (inst.op == IrOpcode::PrintArgv || inst.op == IrOpcode::PrintArgvUnsafe) {
       layout.hasArgvHelpers = true;
     }
@@ -96,6 +99,11 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     layout.fileDigitsRemLocal = static_cast<uint32_t>(totalCount + 1);
     totalCount += 2;
     layout.i64LocalCount = 2;
+  }
+  if (layout.needsFmaTemp) {
+    layout.fmaTempLocal = static_cast<uint32_t>(totalCount);
+    totalCount += 1;
+    layout.i64LocalCount += 1;
   }
   if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
     error = "wasm emitter local count exceeds 32-bit limit in function: " + function.name;

@@ -74,6 +74,10 @@ struct WasmLocalLayout {
   uint32_t fileDigitsNegLocal = 0;
   uint32_t fileDigitsValueLocal = 0;
   uint32_t fileDigitsRemLocal = 0;
+  // A function with a fused multiply-add holds the addend in an i64 local while it multiplies (docs/spec/vm-design.md,
+  // Fused multiply-add).
+  bool needsFmaTemp = false;
+  uint32_t fmaTempLocal = 0;
   uint32_t i32LocalCount = 0;
   uint32_t i64LocalCount = 0;
   uint32_t totalLocals = 0;

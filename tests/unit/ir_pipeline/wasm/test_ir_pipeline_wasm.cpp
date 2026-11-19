@@ -373,4 +373,42 @@ TEST_CASE("wasm emitter lowers recursive call opcode in canonical IR") {
   CHECK(containsByteSequence(bytes, recursiveCallPattern));
 }
 
+// WebAssembly has no fused multiply-add: fma is (a * b) + c with the addend parked in an i64 local, which rounds twice
+// (docs/spec/vm-design.md, Fused multiply-add).
+TEST_CASE("wasm emitter lowers fused multiply-add as a multiply and an add") {
+  for (const bool isF64 : {true, false}) {
+    primec::WasmEmitter emitter;
+    primec::IrModule module;
+    module.entryIndex = 0;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    if (isF64) {
+      mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x4000000000000000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x4008000000000000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::FmaF64, 0});
+      mainFn.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+    } else {
+      mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40000000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x40400000ull});
+      mainFn.instructions.push_back({primec::IrOpcode::FmaF32, 0});
+      mainFn.instructions.push_back({primec::IrOpcode::ReturnF32, 0});
+    }
+    module.functions.push_back(std::move(mainFn));
+
+    std::vector<uint8_t> bytes;
+    std::string error;
+    REQUIRE(emitter.emitModule(module, bytes, error));
+    CHECK(error.empty());
+
+    // The only local is the i64 temp (index 0): set it from the reinterpreted addend, multiply, get it back, add.
+    const std::vector<uint8_t> f64Pattern = {0xbd, 0x21, 0x00, 0xa2, 0x20, 0x00, 0xbf, 0xa0};
+    const std::vector<uint8_t> f32Pattern = {
+        0xbc, 0xad, 0x21, 0x00, 0x94, 0x20, 0x00, 0xa7, 0xbe, 0x92};
+    CHECK(containsByteSequence(bytes, isF64 ? f64Pattern : f32Pattern));
+  }
+}
+
 TEST_SUITE_END();

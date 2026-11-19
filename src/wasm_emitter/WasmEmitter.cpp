@@ -92,6 +92,12 @@ constexpr uint8_t WasmOpF64ConvertI32S = 0xb7;
 constexpr uint8_t WasmOpF64ConvertI64S = 0xb9;
 constexpr uint8_t WasmOpF64ConvertI64U = 0xba;
 constexpr uint8_t WasmOpF64PromoteF32 = 0xbb;
+constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
+constexpr uint8_t WasmOpI64ExtendI32U = 0xad;
+constexpr uint8_t WasmOpI32ReinterpretF32 = 0xbc;
+constexpr uint8_t WasmOpI64ReinterpretF64 = 0xbd;
+constexpr uint8_t WasmOpF32ReinterpretI32 = 0xbe;
+constexpr uint8_t WasmOpF64ReinterpretI64 = 0xbf;
 
 void emitI32LoadAtAddress(uint32_t address, std::vector<uint8_t> &out) {
   out.push_back(WasmOpI32Const);
@@ -272,6 +278,35 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
     case IrOpcode::NegF64:
       out.push_back(WasmOpF64Neg);
       return true;
+    case IrOpcode::FmaF32:
+    case IrOpcode::FmaF64: {
+      // WebAssembly has no fused multiply-add, so a, b, c becomes (a * b) + c with two roundings; the addend waits in an
+      // i64 local (docs/spec/vm-design.md, Fused multiply-add).
+      if (!localLayout.needsFmaTemp) {
+        error = "wasm emitter internal error: missing fma temp local";
+        return false;
+      }
+      const bool isF64 = inst.op == IrOpcode::FmaF64;
+      if (isF64) {
+        out.push_back(WasmOpI64ReinterpretF64);
+      } else {
+        out.push_back(WasmOpI32ReinterpretF32);
+        out.push_back(WasmOpI64ExtendI32U);
+      }
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.fmaTempLocal, out);
+      out.push_back(isF64 ? WasmOpF64Mul : WasmOpF32Mul);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.fmaTempLocal, out);
+      if (isF64) {
+        out.push_back(WasmOpF64ReinterpretI64);
+      } else {
+        out.push_back(WasmOpI32WrapI64);
+        out.push_back(WasmOpF32ReinterpretI32);
+      }
+      out.push_back(isF64 ? WasmOpF64Add : WasmOpF32Add);
+      return true;
+    }
     case IrOpcode::CmpEqF32:
       out.push_back(WasmOpF32Eq);
       return true;
