@@ -146,6 +146,18 @@ TEST_CASE("a loopback echo through std/net round-trips bytes with timeouts on ev
   CHECK_MESSAGE(exitCode == 0, "net_echo failed at step " << exitCode);
 }
 
+namespace {
+// `request` with `Connection: close` after its request line: the server keeps a connection open for the next request
+// otherwise, and these clients read until the server closes it.
+std::string closing(const std::string &request) {
+  const size_t lineEnd = request.find("\r\n");
+  if (lineEnd == std::string::npos) {
+    return request;
+  }
+  return request.substr(0, lineEnd + 2) + "Connection: close\r\n" + request.substr(lineEnd + 2);
+}
+} // namespace
+
 TEST_CASE("the http_hello example answers GET / over loopback, logs it and exits 0 on SIGTERM") {
   const int probe = socket(AF_INET, SOCK_STREAM, 0);
   if (probe < 0 && (errno == EPERM || errno == EACCES)) {
@@ -197,7 +209,7 @@ TEST_CASE("the http_hello example answers GET / over loopback, logs it and exits
     address.sin_port = htons(static_cast<uint16_t>(port));
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     if (connect(client, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0) {
-      const std::string request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+      const std::string request = closing("GET / HTTP/1.1\r\nHost: localhost\r\n\r\n");
       CHECK(send(client, request.data(), request.size(), 0) == static_cast<ssize_t>(request.size()));
       char buffer[512];
       ssize_t count = 0;
@@ -222,7 +234,8 @@ TEST_CASE("the http_hello example answers GET / over loopback, logs it and exits
 
 namespace {
 // Sends `request` to 127.0.0.1:`port` and returns everything the server answers before it closes the connection.
-std::string exchange(int port, const std::string &request) {
+std::string exchange(int port, const std::string &requestText) {
+  const std::string request = closing(requestText);
   std::string response;
   const int client = socket(AF_INET, SOCK_STREAM, 0);
   timeval timeout = {};
