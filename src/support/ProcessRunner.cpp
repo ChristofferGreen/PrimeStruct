@@ -1,4 +1,5 @@
 #include "primec/support/ProcessRunner.h"
+#include "primec/support/ProgressBeat.h"
 
 #include <cerrno>
 
@@ -71,6 +72,7 @@ public:
     }
     argv.push_back(nullptr);
 
+    emitProgressBeat("primec: run " + effectiveArgs.front());
     pid_t pid = 0;
     const int spawnResult =
         posix_spawnp(&pid, effectiveArgs.front().c_str(), nullptr, nullptr, argv.data(), ::environ);

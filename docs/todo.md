@@ -111,7 +111,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6071 | Tests that shell out count `primec` progress | in_progress | gate-timeouts |
 | TODO-6072 | The managed doctest shards run under the watchdog | in_progress | gate-timeouts |
 | TODO-6073 | The remaining CTest families run under the watchdog | blocked | gate-timeouts |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
@@ -239,21 +238,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - ctest `PrimeStruct_test_registration` still passes; no timing assertion is added to any test
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
-
-- [~] TODO-6071: Tests that shell out count `primec` progress
-  - owner: ai
-  - status: in_progress
-  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Test infrastructure (split from TODO-6053)
-  - parallel_track: gate-timeouts
-  - depends_on: TODO-6070
-  - scope: `primec` inherits the beat descriptor through `std::system` and writes a beat at the start of a compile and between its stages; the compile-run, build and library helpers that run a command write a beat before it (`runCommand` in `tests/unit/compile_run/test_compile_run_helpers.h` and its siblings), so one case that compiles many files keeps beating.
-  - acceptance:
-    - a compile of one program writes beats to the descriptor when it is set and none when it is not; startup of `primec` does not regress (one `getenv`, measured)
-    - the helpers beat with the command name
-    - full release gate green
-  - stop_rule: `primec`'s beats and the shell-out helpers.
 
 - [~] TODO-6072: The managed doctest shards run under the watchdog
   - owner: ai

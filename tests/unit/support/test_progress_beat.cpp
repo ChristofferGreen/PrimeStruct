@@ -1,7 +1,12 @@
 #include "primec/support/ProgressBeat.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <string>
+
+#include "primec/testing/TestScratch.h"
+
+#include <filesystem>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -15,7 +20,7 @@ namespace {
 // Points PRIMESTRUCT_BEAT_FD at `fd` (or unsets it) for one test and restores
 // the value the watchdog gave this process, if any.
 class BeatEnvironment {
- public:
+public:
   explicit BeatEnvironment(const char *value) {
     const char *old = std::getenv("PRIMESTRUCT_BEAT_FD");
     if (old != nullptr) {
@@ -36,7 +41,7 @@ class BeatEnvironment {
     }
   }
 
- private:
+private:
   bool hadOld_ = false;
   std::string old_;
 };
@@ -105,6 +110,36 @@ TEST_CASE("a long beat is cut to one atomic line") {
   const std::string line = readAvailable(pipeFds[0]);
   CHECK(line.size() == primec::MaxProgressBeatBytes);
   CHECK(line.back() == '\n');
+  close(pipeFds[0]);
+  close(pipeFds[1]);
+}
+
+TEST_CASE("primec beats between its stages when the variable names a pipe") {
+  const auto dir = primec::testing::testScratchPath("progress_beat");
+  std::filesystem::create_directories(dir);
+  const auto source = dir / "beat.prime";
+  {
+    std::ofstream file(source);
+    file << "[return<int>]\nmain() {\n  return(7i32)\n}\n";
+  }
+  const std::string command = std::string("\"") + PRIMESTRUCT_TEST_PRIMEC_PATH + "\" --emit=ir \"" +
+                              source.string() + "\" -o \"" + (dir / "beat.psir").string() + "\"";
+  int pipeFds[2];
+  REQUIRE(pipe(pipeFds) == 0);
+  fcntl(pipeFds[0], F_SETFL, O_NONBLOCK);
+  {
+    BeatEnvironment environment(nullptr);
+    CHECK(std::system(command.c_str()) == 0);
+  }
+  CHECK(readAvailable(pipeFds[0]).empty());
+  {
+    BeatEnvironment environment(std::to_string(pipeFds[1]).c_str());
+    CHECK(std::system(command.c_str()) == 0);
+  }
+  const std::string beats = readAvailable(pipeFds[0]);
+  CHECK(beats.find("primec: compile start\n") != std::string::npos);
+  CHECK(beats.find("primec: parse\n") != std::string::npos);
+  CHECK(beats.find("primec: semantics\n") != std::string::npos);
   close(pipeFds[0]);
   close(pipeFds[1]);
 }

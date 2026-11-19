@@ -38,14 +38,15 @@ inline bool emitProgressBeatTo(int fd, std::string_view label) {
   if (fd < 0) {
     return false;
   }
-  struct stat info {};
+  struct stat info{};
   // The variable can outlive the descriptor in a process that closed its
   // inherited descriptors; never write a beat into a file that reused the number.
   if (fstat(fd, &info) != 0 || !S_ISFIFO(info.st_mode)) {
     return false;
   }
   char line[MaxProgressBeatBytes];
-  std::size_t size = label.size() < MaxProgressBeatBytes - 1 ? label.size() : MaxProgressBeatBytes - 1;
+  std::size_t size =
+      label.size() < MaxProgressBeatBytes - 1 ? label.size() : MaxProgressBeatBytes - 1;
   for (std::size_t index = 0; index < size; ++index) {
     const char c = label[index];
     line[index] = (c == '\n' || c == '\r') ? ' ' : c;

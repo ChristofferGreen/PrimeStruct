@@ -2465,6 +2465,7 @@ are left unarchived.
 | TODO-6066 | x86_64 native computes `FmaF32` and `FmaF64` as a multiply and an add | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6069 | The test watchdog wrapper and its design | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6070 | Every doctest binary beats at the start of each test case | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6071 | Tests that shell out count `primec` progress | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

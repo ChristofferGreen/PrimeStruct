@@ -5,6 +5,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/testing/TestScratch.h"
+#include "primec/support/ProgressBeat.h"
 
 #include <cstdlib>
 #include <chrono>
@@ -52,6 +53,8 @@ inline std::string quoteShellArg(const std::string &value) {
 }
 
 inline int runCommand(const std::string &command) {
+  // One beat per command: a case that runs many commands keeps reporting progress (docs/TestWatchdog.md).
+  primec::emitProgressBeat("command: " + command);
   int code = -1;
   constexpr int MaxAttempts = 3;
   for (int attempt = 0; attempt < MaxAttempts; ++attempt) {

@@ -1229,6 +1229,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   target_include_directories(PrimeStruct_progress_beat_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_progress_beat_tests PRIVATE primec_support_lib)
+  # The primec stage beats are checked by running the binary.
+  add_dependencies(PrimeStruct_progress_beat_tests primec)
+  target_compile_definitions(PrimeStruct_progress_beat_tests PRIVATE
+    PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
   primestructEnableWarnings(PrimeStruct_progress_beat_tests)
   add_test(
     NAME PrimeStruct_progress_beat

@@ -1,4 +1,5 @@
 #include "primec/pipeline/BuildCommand.h"
+#include "primec/support/ProgressBeat.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/pipeline/BuildFunctionStepEmbed.h"
 #include "primec/pipeline/BuildRunner.h"
@@ -349,6 +350,7 @@ static int emitCompiledProgram(primec::Options &options,
                                primec::CompilePipelineOutput &pipelineOutput) {
   std::string error;
   primec::Program &program = pipelineOutput.program;
+  primec::emitProgressBeat("primec: lower and emit");
   if (primec::isIrModuleDumpStage(options)) {
     return primec::runIrModuleDump(
         std::cout,

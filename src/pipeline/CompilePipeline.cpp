@@ -1,5 +1,6 @@
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/support/CompileContext.h"
+#include "primec/support/ProgressBeat.h"
 
 #include "../frontend/ExpandedSourceBuilder.h"
 
@@ -197,6 +198,7 @@ bool runCompilePipeline(const Options &options,
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
+  emitProgressBeat("primec: compile start");
   CompilePipelineDiagnosticInfo capturedDiagnosticInfo;
   DiagnosticSink diagnosticSink(&capturedDiagnosticInfo);
   diagnosticSink.reset();
@@ -279,6 +281,7 @@ bool runCompilePipeline(const Options &options,
     return true;
   }
 
+  emitProgressBeat("primec: parse");
   CompilePipelineParsedProgramStageState parsedStage;
   if (!runCompilePipelineParseStage(options,
                                     importStage.expandedSource,
@@ -421,6 +424,7 @@ bool runCompilePipeline(const Options &options,
   output.semanticProductDecision = semanticProductDecision;
   output.semanticProductRequested = needsSemanticProduct;
   bool semanticValidationOk = false;
+  emitProgressBeat("primec: semantics");
   if (benchmarkSemanticConfigRequested || benchmarkSemanticCountersRequested) {
     SemanticValidationBenchmarkConfig benchmarkConfig;
     benchmarkConfig.definitionValidationWorkerCount = benchmarkSemanticDefinitionValidationWorkerCount;
