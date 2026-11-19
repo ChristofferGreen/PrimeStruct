@@ -108,7 +108,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
   auto &emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
   auto &emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
-  auto &emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
   const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
   const bool &returnsVoid = entryReturnConfig.returnsVoid;

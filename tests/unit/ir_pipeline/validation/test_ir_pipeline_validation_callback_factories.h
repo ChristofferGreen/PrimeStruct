@@ -142,7 +142,6 @@ inline bool emitConversionsOperatorExprWithInertTail(
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
       [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },

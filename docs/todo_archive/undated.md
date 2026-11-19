@@ -611,3 +611,16 @@
     - full release gate green
   - stop_rule: imported static helpers only.
   - resolution: 2026-11-19. The type-qualified static call check (`SemanticsValidatorExprPostAccessPrechecks.cpp`) now also resolves a bare receiver through the import aliases, so `Type.helper()` of an imported struct no longer reports "static helper does not accept method-call syntax". Tests: semantics `struct_helpers` (positive and unknown-helper negative) and a program-matrix case run on the VM kernels, native and optexe. `start_app` stays as the native UI entry.
+
+- [x] TODO-6060: The unused float-to-int fault emitter is removed from the lowerer
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (follow-up of TODO-5516)
+  - parallel_track: numeric-conversions
+  - scope: `convert` of a non-finite float no longer faults (it saturates), so `emitFloatToIntNonFinite` (`IrLowererRuntimeErrorHelpers`, the `ConversionsAndCallsOperatorContext` member, the parameter of `emitConversionsAndCallsOperatorExpr` and its callers in the lowerer and in the validation tests) has no user. Remove the function, the parameter and the two tests that call it.
+  - acceptance:
+    - no `FloatToIntNonFinite` name is left in `src/`, `include/` or `tests/`
+    - full release gate green
+  - stop_rule: removing the dead plumbing only.
+  - notes: removed the emitter, its bundle member and the positional parameter; the two tests that named it keep their other checks.

@@ -358,23 +358,18 @@ TEST_CASE("ir lowerer runtime error helpers build scoped emitters") {
 
   auto emitArrayIndexOutOfBounds = primec::ir_lowerer::makeEmitArrayIndexOutOfBounds(function, internString);
   auto emitMapKeyNotFound = primec::ir_lowerer::makeEmitMapKeyNotFound(function, internString);
-  auto emitFloatToIntNonFinite = primec::ir_lowerer::makeEmitFloatToIntNonFinite(function, internString);
 
   emitArrayIndexOutOfBounds();
   emitMapKeyNotFound();
-  emitFloatToIntNonFinite();
   emitArrayIndexOutOfBounds();
 
-  const std::vector<std::string> expectedMessages = {
-      "array index out of bounds",
-      "map key not found",
-      "float to int conversion requires finite value"};
+  const std::vector<std::string> expectedMessages = {"array index out of bounds",
+                                                     "map key not found"};
   CHECK(stringTable == expectedMessages);
-  REQUIRE(function.instructions.size() == 12);
+  REQUIRE(function.instructions.size() == 9);
   CHECK(primec::decodePrintStringIndex(function.instructions[0].imm) == 0);
   CHECK(primec::decodePrintStringIndex(function.instructions[3].imm) == 1);
-  CHECK(primec::decodePrintStringIndex(function.instructions[6].imm) == 2);
-  CHECK(primec::decodePrintStringIndex(function.instructions[9].imm) == 0);
+  CHECK(primec::decodePrintStringIndex(function.instructions[6].imm) == 0);
 }
 
 TEST_CASE("ir lowerer runtime error helpers build bundled emitters") {

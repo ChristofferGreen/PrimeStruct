@@ -7,7 +7,6 @@
                 inferExprKind,
                 emitCompareToZero,
                 allocTempLocal,
-                emitFloatToIntNonFinite,
                 emitPointerIndexOutOfBounds,
                 emitArrayIndexOutOfBounds,
                 resolveStringTableTarget,

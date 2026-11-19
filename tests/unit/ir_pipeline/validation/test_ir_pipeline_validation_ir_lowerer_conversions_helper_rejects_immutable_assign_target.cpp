@@ -182,7 +182,6 @@ TEST_CASE("ir lowerer conversions helper uses semantic mutation target facts bef
         [&]() { return nextLocal++; },
         []() {},
         []() {},
-        []() {},
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
           return false;
         },
@@ -352,7 +351,6 @@ TEST_CASE("ir lowerer indexed assign consumes semantic collection facts before s
         [&]() { return nextLocal++; },
         []() {},
         []() {},
-        []() {},
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
           return false;
         },
@@ -448,7 +446,6 @@ TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
         return false;
       },
@@ -538,7 +535,6 @@ TEST_CASE("ir lowerer conversions helper rejects incompatible internal soa stora
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
@@ -1551,7 +1547,6 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
         return false;
       },
@@ -1613,7 +1608,6 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
@@ -1706,7 +1700,6 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
         return false;
       },
@@ -1762,7 +1755,6 @@ TEST_CASE("ir lowerer conversions helper locations direct reference calls from s
       },
       [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {

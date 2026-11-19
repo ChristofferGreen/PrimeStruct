@@ -39,7 +39,6 @@ struct RuntimeErrorEmitters {
   ActionFn emitVectorReserveExceeded{};
   ActionFn emitLoopCountNegative{};
   ActionFn emitPowNegativeExponent{};
-  ActionFn emitFloatToIntNonFinite{};
 };
 
 struct RuntimeErrorAndStringLiteralSetup {
@@ -76,8 +75,6 @@ ActionFn makeEmitVectorReserveExceeded(IrFunction &function,
                                                  const InternRuntimeErrorStringFn &internString);
 ActionFn makeEmitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 ActionFn makeEmitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-ActionFn makeEmitFloatToIntNonFinite(IrFunction &function,
-                                                const InternRuntimeErrorStringFn &internString);
 
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitPointerIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString);
@@ -92,7 +89,6 @@ void emitVectorReserveNegative(IrFunction &function, const InternRuntimeErrorStr
 void emitVectorReserveExceeded(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString);
-void emitFloatToIntNonFinite(IrFunction &function, const InternRuntimeErrorStringFn &internString);
 void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRuntimeErrorStringFn &internString);
 FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     const Expr &expr,

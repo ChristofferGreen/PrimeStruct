@@ -59,7 +59,6 @@ RuntimeErrorEmitters makeRuntimeErrorEmitters(IrFunction &function, const Intern
   emitters.emitVectorReserveExceeded = makeEmitVectorReserveExceeded(function, internString);
   emitters.emitLoopCountNegative = makeEmitLoopCountNegative(function, internString);
   emitters.emitPowNegativeExponent = makeEmitPowNegativeExponent(function, internString);
-  emitters.emitFloatToIntNonFinite = makeEmitFloatToIntNonFinite(function, internString);
   return emitters;
 }
 
@@ -159,15 +158,6 @@ ActionFn makeEmitPowNegativeExponent(IrFunction &function,
   };
 }
 
-ActionFn makeEmitFloatToIntNonFinite(IrFunction &function,
-                                                const InternRuntimeErrorStringFn &internString) {
-  auto *functionPtr = &function;
-  auto internStringFn = internString;
-  return [functionPtr, internStringFn]() {
-    emitFloatToIntNonFinite(*functionPtr, internStringFn);
-  };
-}
-
 void emitArrayIndexOutOfBounds(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "array index out of bounds", internString);
 }
@@ -214,10 +204,6 @@ void emitLoopCountNegative(IrFunction &function, const InternRuntimeErrorStringF
 
 void emitPowNegativeExponent(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
   emitRuntimeError(function, "pow exponent must be non-negative", internString);
-}
-
-void emitFloatToIntNonFinite(IrFunction &function, const InternRuntimeErrorStringFn &internString) {
-  emitRuntimeError(function, "float to int conversion requires finite value", internString);
 }
 
 void emitFileErrorWhy(IrFunction &function, int32_t errorLocal, const InternRuntimeErrorStringFn &internString) {

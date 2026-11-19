@@ -2462,6 +2462,7 @@ are left unarchived.
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6058 | Wasm float to integer conversion saturates; GLSL gap documented | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6060 | The unused float-to-int fault emitter is removed from the lowerer | [undated.md](todo_archive/undated.md) | - |
 | TODO-6062 | The C++ emitters implement `FmaF32` and `FmaF64` with `std::fma` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6063 | arm64 native emits `fmadd` for `FmaF32` and `FmaF64` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6064 | GLSL emits `fma()` for `FmaF32` and `FmaF64` | [2026-11.md](todo_archive/2026-11.md) | - |

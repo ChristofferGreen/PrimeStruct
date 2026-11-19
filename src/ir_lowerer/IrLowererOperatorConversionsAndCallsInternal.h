@@ -12,7 +12,6 @@ struct ConversionsAndCallsOperatorContext {
   const InferConversionsAndCallsExprKindWithLocalsFn &inferExprKind;
   const EmitConversionsAndCallsCompareToZeroFn &emitCompareToZero;
   const Int32ProviderFn &allocTempLocal;
-  const ActionFn &emitFloatToIntNonFinite;
   const ActionFn &emitPointerIndexOutOfBounds;
   const ActionFn &emitArrayIndexOutOfBounds;
   const ResolveConversionsAndCallsStringTableTargetFn &resolveStringTableTarget;

@@ -97,7 +97,6 @@ TEST_CASE("ir lowerer conversions helper emits float conversion opcode") {
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
       [](const std::string &typeName) {
         if (typeName == "f32") {
@@ -158,7 +157,6 @@ TEST_CASE("ir lowerer conversions helper lowers alloc intrinsic to heap alloc") 
       },
       [](ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
@@ -239,7 +237,6 @@ TEST_CASE("ir lowerer conversions helper lowers free intrinsic to heap free") {
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
       [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },
@@ -313,7 +310,6 @@ TEST_CASE("ir lowerer conversions helper lowers realloc intrinsic to heap reallo
       },
       [](ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
@@ -466,7 +462,6 @@ TEST_CASE("ir lowerer conversions helper sizes memory pointer arithmetic from se
         [&]() { return nextLocal++; },
         []() {},
         []() {},
-        []() {},
         [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
         [](const std::string &) { return ValueKind::Unknown; },
         [](const std::string &, std::string &) { return false; },
@@ -584,7 +579,6 @@ TEST_CASE("ir lowerer conversions helper lowers checked memory at intrinsic to b
       },
       [](ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       [&]() {
         instructions.push_back(
             {primec::IrOpcode::PrintString, primec::encodePrintStringImm(0, primec::encodePrintFlags(true, true))});
@@ -688,7 +682,6 @@ TEST_CASE("ir lowerer conversions helper lowers unchecked memory at intrinsic to
       [&]() { return nextLocal++; },
       []() {},
       []() {},
-      []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
       [](const std::string &) { return ValueKind::Unknown; },
       [](const std::string &, std::string &) { return false; },
@@ -769,7 +762,6 @@ TEST_CASE("ir lowerer conversions helper emits vector record from layout fields"
       },
       [](ValueKind, bool) { return true; },
       [&]() { return nextLocal++; },
-      []() {},
       []() {},
       []() {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },

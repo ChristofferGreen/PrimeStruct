@@ -134,7 +134,6 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
-| TODO-6060 | The unused float-to-int fault emitter is removed from the lowerer | deferred | numeric-conversions |
 | TODO-6061 | Integer narrowing and widening on Wasm | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
@@ -179,7 +178,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6059, TODO-6060, TODO-6061, TODO-6051, TODO-6052, TODO-5744
+- Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-5520
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
@@ -513,20 +512,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-6060: The unused float-to-int fault emitter is removed from the lowerer
-  - claimed_by: removal-a (worktree-agent-ad0dea6558d83848b), 2026-11-19
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (follow-up of TODO-5516)
-  - parallel_track: numeric-conversions
-  - scope: `convert` of a non-finite float no longer faults (it saturates), so `emitFloatToIntNonFinite` (`IrLowererRuntimeErrorHelpers`, the `ConversionsAndCallsOperatorContext` member, the parameter of `emitConversionsAndCallsOperatorExpr` and its callers in the lowerer and in the validation tests) has no user. Remove the function, the parameter and the two tests that call it.
-  - acceptance:
-    - no `FloatToIntNonFinite` name is left in `src/`, `include/` or `tests/`
-    - full release gate green
-  - stop_rule: removing the dead plumbing only.
-  - notes: deferred: touches about 12 files of positional-argument call sites; run it when the lowerer files are not claimed by another worker.
 
 - [ ] TODO-6061: Integer narrowing and widening on Wasm
   - owner: ai

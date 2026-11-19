@@ -842,19 +842,18 @@ TEST_CASE("ir lowerer runtime error helpers map each helper to expected message"
   primec::ir_lowerer::emitVectorReserveExceeded(function, internString);
   primec::ir_lowerer::emitLoopCountNegative(function, internString);
   primec::ir_lowerer::emitPowNegativeExponent(function, internString);
-  primec::ir_lowerer::emitFloatToIntNonFinite(function, internString);
 
-  const std::vector<std::string> expectedMessages = {"string index out of bounds",
-                                                     "pointer index out of bounds",
-                                                     "map key not found",
-                                                     "container index out of bounds",
-                                                     "container empty",
-                                                     "vector push allocation failed (out of memory)",
-                                                     "vector reserve expects non-negative capacity",
-                                                     "vector reserve allocation failed (out of memory)",
-                                                     "loop count must be non-negative",
-                                                     "pow exponent must be non-negative",
-                                                     "float to int conversion requires finite value"};
+  const std::vector<std::string> expectedMessages = {
+      "string index out of bounds",
+      "pointer index out of bounds",
+      "map key not found",
+      "container index out of bounds",
+      "container empty",
+      "vector push allocation failed (out of memory)",
+      "vector reserve expects non-negative capacity",
+      "vector reserve allocation failed (out of memory)",
+      "loop count must be non-negative",
+      "pow exponent must be non-negative"};
   CHECK(stringTable == expectedMessages);
 
   REQUIRE(function.instructions.size() == expectedMessages.size() * 3);
