@@ -345,9 +345,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
+- [~] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: mt-task-void (worktree-agent-a7404ce06bdbd226d), 2026-11-19
   - created_at: 2026-11-10
   - phase: Multithreading (found while doing TODO-5835)
   - parallel_track: mt-vm-tasks
