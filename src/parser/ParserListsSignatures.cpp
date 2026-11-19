@@ -46,6 +46,7 @@ std::string nextVariadicPackTemplateName(const std::vector<std::string> &existin
 
 bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures,
                                     std::vector<Expr> &initCaptures,
+                                    std::vector<Transform> &returnTransforms,
                                     const std::string &namespacePrefix) {
   auto skipCommentsOnly = [&]() {
     while (tokens_[pos_].kind == TokenKind::Comment) {
@@ -87,6 +88,7 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures,
 
   captures.clear();
   initCaptures.clear();
+  returnTransforms.clear();
   if (!expectRaw(TokenKind::LBracket, "expected '[' to start lambda capture list")) {
     return false;
   }
@@ -96,6 +98,36 @@ bool Parser::parseLambdaCaptureList(std::vector<std::string> &captures,
   }
   while (true) {
     std::string entry;
+    // `return<T>` states the lambda's return type, spelled as the transform a definition carries.
+    if (matchRaw(TokenKind::Identifier) && tokens_[pos_].text == "return") {
+      Token name = consumeRaw(TokenKind::Identifier, "expected lambda return type");
+      if (name.kind == TokenKind::End) {
+        return false;
+      }
+      if (!matchRaw(TokenKind::LAngle)) {
+        return fail("lambda return type requires a template argument: return<T>");
+      }
+      if (!returnTransforms.empty()) {
+        return fail("lambda return type is stated more than once");
+      }
+      Transform transform;
+      transform.name = "return";
+      transform.phase = TransformPhase::Auto;
+      transform.sourceLine = name.line;
+      transform.sourceColumn = name.column;
+      if (!parseTemplateList(transform.templateArgs, &transform.templateArgDetails)) {
+        return false;
+      }
+      if (transform.templateArgs.size() != 1) {
+        return fail("lambda return type requires exactly one type: return<T>");
+      }
+      returnTransforms.push_back(std::move(transform));
+      skipSeparators();
+      if (matchRaw(TokenKind::RBracket)) {
+        break;
+      }
+      continue;
+    }
     while (true) {
       if (matchRaw(TokenKind::Identifier)) {
         Token name = consumeRaw(TokenKind::Identifier, "expected lambda capture");

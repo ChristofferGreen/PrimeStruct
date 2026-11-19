@@ -396,6 +396,28 @@ bad_set() {
   A body that reads an enclosing binding it does not capture is `unknown identifier: name (the lambda does not
   capture it; add [name])`; writing a non-`mut` capture is `assign target must be a mutable binding`. A `[ref name]`
   of a binding that already is a `Reference` or `Pointer` copies that reference.
+- **Return type:** a lambda states its return type with the `return<T>` transform a definition uses, written inside the
+  capture list: `[return<Result<i32, i32>>]([i32] x) { ... }`, `[base, return<i32>]([i32] x) { ... }`. It may stand
+  anywhere among the captures, at most once, and takes exactly one type, which may name a type parameter of the
+  enclosing definition (`[inner, return<i32>]`). The generated `call` method carries it, so a body whose returns
+  disagree is the usual `return type mismatch` diagnostic of that method. Without it the type is inferred from the
+  body, which fails for a struct or `Result` value (`unable to infer return type`) and for a body that calls a
+  template-typed capture (`return type inference cycle requires explicit annotation`); state the type there.
+
+  ```
+  import /std/result/*
+
+  [return<int> effects(heap_alloc)]
+  main() {
+    [Function<Result<i32, i32>, i32>] double_it{
+      [return<Result<i32, i32>>]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }
+    }
+    return(pick(double_it(4i32)) {
+      ok(v) { v - 8i32 }
+      error(e) { e }
+    })
+  }
+  ```
 - **Calling:** `f(x)` where `f` is a local, parameter or field whose type is a struct with a `call` method means
   `f.call(x)`, with labeled arguments allowed; indexing then calling (`handlers[i]` followed by `(x)`) calls the
   element. Lambdas and hand-written structs with `call` are therefore interchangeable: a generic

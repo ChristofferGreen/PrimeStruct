@@ -843,6 +843,11 @@ private:
         method.transforms.push_back(transform);
       }
     }
+    for (const Transform &transform : lambda.transforms) {
+      if (transform.name == "return") {
+        method.transforms.push_back(transform);
+      }
+    }
     method.templateArgs = lambda.templateArgs;
     method.parameters = lambda.args;
     NameSet capturedNames;

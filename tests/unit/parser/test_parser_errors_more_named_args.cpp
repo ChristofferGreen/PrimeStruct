@@ -176,4 +176,34 @@ main() {
   CHECK(error.find("reserved keyword cannot be used as identifier") != std::string::npos);
 }
 
+TEST_CASE("a lambda return type stated twice fails to parse") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(apply([return<i32>, return<i32>]([i32] x) { return(x) }))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("lambda return type is stated more than once") != std::string::npos);
+}
+
+TEST_CASE("a lambda return type without a type fails to parse") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(apply([return]([i32] x) { return(x) }))
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("lambda return type requires a template argument") != std::string::npos);
+}
+
 TEST_SUITE_END();

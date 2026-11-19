@@ -77,6 +77,10 @@ void appendCall(std::string &out, const Expr &expr) {
       out += " ";
       appendExpr(out, capture);
     }
+    for (const Transform &transform : expr.transforms) {
+      out += " " + transform.name;
+      appendTemplateArgs(out, transform.templateArgs);
+    }
     out += "] ";
   }
   if (expr.isMethodCall && !expr.args.empty()) {

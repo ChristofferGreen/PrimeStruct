@@ -775,4 +775,25 @@ main() {
   CHECK(program.definitions[0].transforms[1].name == "effects");
 }
 
+TEST_CASE("parses a lambda return type among its captures") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(apply([base, return<Result<i32, i32>>]([i32] value) { value }))
+}
+)";
+
+  const auto program = parseProgram(source);
+  const auto &call = program.definitions[0].statements[0].args[0];
+  REQUIRE(call.args.size() == 1);
+  const auto &lambdaExpr = call.args[0];
+  CHECK(lambdaExpr.isLambda);
+  REQUIRE(lambdaExpr.lambdaCaptures.size() == 1);
+  CHECK(lambdaExpr.lambdaCaptures[0] == "base");
+  REQUIRE(lambdaExpr.transforms.size() == 1);
+  CHECK(lambdaExpr.transforms[0].name == "return");
+  REQUIRE(lambdaExpr.transforms[0].templateArgs.size() == 1);
+  CHECK(lambdaExpr.transforms[0].templateArgs[0] == "Result<i32, i32>");
+}
+
 TEST_SUITE_END();

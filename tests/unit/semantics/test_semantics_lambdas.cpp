@@ -677,4 +677,28 @@ main() {
   CHECK(error.find("unsupported reference target type: Nope") != std::string::npos);
 }
 
+TEST_CASE("lambda return type annotation matches the body") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [i32] base{1i32}
+  [base, return<i32>]([i32] offset) { return(plus(base, offset)) }
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+}
+
+TEST_CASE("lambda return type annotation rejects a mismatched body") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [return<i32>]([i32] offset) { return(true) }
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+}
+
 TEST_SUITE_END();

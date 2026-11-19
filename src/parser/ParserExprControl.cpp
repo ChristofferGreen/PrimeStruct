@@ -293,7 +293,8 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
 
   std::vector<std::string> captures;
   std::vector<Expr> initCaptures;
-  if (!parseLambdaCaptureList(captures, initCaptures, namespacePrefix)) {
+  std::vector<Transform> returnTransforms;
+  if (!parseLambdaCaptureList(captures, initCaptures, returnTransforms, namespacePrefix)) {
     return false;
   }
   std::vector<std::string> templateArgs;
@@ -360,6 +361,7 @@ bool Parser::tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, b
   lambda.bodyArguments = std::move(body);
   lambda.lambdaCaptures = std::move(captures);
   lambda.lambdaInitCaptures = std::move(initCaptures);
+  lambda.transforms = std::move(returnTransforms);
   lambda.isLambda = true;
   out = std::move(lambda);
   parsed = true;

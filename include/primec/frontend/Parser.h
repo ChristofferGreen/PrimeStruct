@@ -62,6 +62,7 @@ private:
   bool parseReturnStatement(Expr &out, const std::string &namespacePrefix);
   bool parseLambdaCaptureList(std::vector<std::string> &captures,
                               std::vector<Expr> &initCaptures,
+                              std::vector<Transform> &returnTransforms,
                               const std::string &namespacePrefix);
   bool tryParseLambdaExpr(Expr &out, const std::string &namespacePrefix, bool &parsed);
   bool tryParseIfStatementSugar(Expr &out,

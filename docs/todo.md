@@ -127,7 +127,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
-| TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
@@ -185,7 +184,7 @@ of sync with them.
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5854
@@ -318,19 +317,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: deferred, needs a decision (checked 2026-11-19, nothing implemented). Two points the http conventions do not settle:
     1. Shape for all values of a name. (a) Count plus index like the header accessors: `queryParamCount(name) -> i32` and `queryParamAt(name, index) -> String` (same for `formParam`); each call rescans the text, no allocation beyond the returned String, out-of-range gives an empty String. (b) One call returning a `vector<String>`: `queryParams(name)`, `formParams(name)`; one scan and one heap-owned result, but the stdlib http surface returns no vectors today and a `vector<String>` needs the collection imports in every web app. The block text offers both; the header accessors (`headerCount`/`headerName`/`headerValue`) favour (a), whose names would still need a call (`queryParamCount`/`queryParamAt` versus `queryParamValueCount`/`queryParamValue`).
     2. Decoding a path segment. The block says "the same decoding as `queryParam`", which turns `+` into a space. In a path a `+` is a literal plus (RFC 3986; only form encoding makes it a space), so `/files/a+b` would decode to `a b`. Options: (a) share `urlencoded_byte_at` literally, `+` is a space; (b) decode only `%XX`, `+` stays; the malformed rule is the same either way: a `%` not followed by two hex digits, or non-UTF-8 bytes, gives an empty String (the name is `pathParamDecoded(name) -> String`, with `hasPathParam` not needed since `pathParam` still tells a missing segment).
-
-- [~] TODO-5676: Lambdas can state their return type
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lambda-return (worktree-agent-a5481615c25e81e74), 2026-11-19
-  - created_at: 2026-11-06
-  - phase: Closures follow-ups
-  - parallel_track: closures-return-types
-  - scope: A lambda has no return-type spelling, and inference fails for struct and `Result` returns. `Function<Result<i32, i32>, i32>{[]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }}` is rejected with `unable to infer return type on /main__lambda0/call`. In a generic wrapper whose lambda returns `inner(x) + seen` with `inner` a template-typed capture, the error is `return type inference cycle requires explicit annotation on /with_logging__lambda0__t.../call`, and there is no annotation to give. Specify a return annotation in docs/spec/value-lifecycle.md, and use the `R` of `Function<R, A...>` as the expected type when a lambda is converted. Deferred: handlers that return `void` and write into a `Reference<Response>` avoid it.
-  - acceptance:
-    - both repros run on VM and optexe; a negative test for a mismatched annotation; spec text with a runnable example
-    - full release gate green
-  - stop_rule: lambda return types only.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai

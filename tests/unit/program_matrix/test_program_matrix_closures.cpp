@@ -237,6 +237,59 @@ main() {
                     26);
 }
 
+TEST_CASE("a lambda states a Result return type") {
+  runClosureProgram("closure_return_type_result",
+                    R"(
+import /std/result/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<Result<i32, i32>, i32>] double_it{
+    [return<Result<i32, i32>>]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }
+  }
+  return(pick(double_it(4i32)) {
+    ok(v) { v - 8i32 }
+    error(e) { e + 100i32 }
+  })
+}
+)",
+                    0);
+}
+
+TEST_CASE("a lambda states its return type among its captures") {
+  runClosureProgram("closure_return_type_with_captures",
+                    R"(
+[return<int>]
+main() {
+  [i32] base{3i32}
+  add{[base, return<i32>]([i32] x) { return(x + base) }}
+  add_again{[return<i32>, base]([i32] x) { return(x + base + 1i32) }}
+  return(add(4i32) + add_again(1i32) - 12i32)
+}
+)",
+                    0);
+}
+
+TEST_CASE("a generic wrapper's lambda states the return type its capture cannot infer") {
+  runClosureProgram("closure_return_type_generic_wrapper",
+                    R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<i32, i32> mut] logged{with_logging([]([i32] x) { return(x * 2i32) })}
+  return(logged(3i32) + logged(3i32) - 15i32)
+}
+
+[return<Function<i32, i32>> effects(heap_alloc)]
+with_logging<F>([F] inner) {
+  return(Function<i32, i32>{[mut seen{0i32}, inner, return<i32>]([i32] x) {
+    seen = seen + 1i32
+    return(inner(x) + seen)
+  }})
+}
+)",
+                    0);
+}
+
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_callables");
 
