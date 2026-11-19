@@ -241,9 +241,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
 
-- [ ] TODO-6073: The remaining CTest families run under the watchdog
+- [~] TODO-6073: The remaining CTest families run under the watchdog
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: watchdog-c (worktree-agent-ac5270f11c9576ff9), 2026-11-19
   - created_at: 2026-11-19
   - phase: Test infrastructure (split from TODO-6053)
   - parallel_track: gate-timeouts
