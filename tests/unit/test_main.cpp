@@ -1,8 +1,10 @@
 #define DOCTEST_CONFIG_IMPLEMENT
 
 #include <optional>
+#include <string>
 
 #include "primec/support/CompileArena.h"
+#include "primec/support/ProgressBeat.h"
 #include "primec/testing/TestScratch.h"
 #include "third_party/doctest.h"
 
@@ -87,8 +89,66 @@ class ArenaResetPerTestCaseListener : public doctest::IReporter {
 
 REGISTER_LISTENER("arena_reset_per_test_case", 1, ArenaResetPerTestCaseListener);
 
-}  // namespace
+} // namespace
 #endif
+
+namespace {
+
+// Reports progress to the test watchdog (docs/TestWatchdog.md): one beat when a
+// test case starts and one when a subcase starts, so a case that stops
+// advancing is the last beat the watchdog names. The work loop beats, never a
+// timer thread. Without PRIMESTRUCT_BEAT_FD this does nothing.
+class ProgressBeatListener : public doctest::IReporter {
+public:
+  explicit ProgressBeatListener(const doctest::ContextOptions &) {
+  }
+
+  void report_query(const doctest::QueryData &) override {
+  }
+  void test_run_start() override {
+  }
+  void test_run_end(const doctest::TestRunStats &) override {
+  }
+
+  void test_case_start(const doctest::TestCaseData &data) override {
+    beat("doctest case: ", data.m_test_suite, data.m_name);
+  }
+  void test_case_reenter(const doctest::TestCaseData &data) override {
+    beat("doctest case: ", data.m_test_suite, data.m_name);
+  }
+  void test_case_end(const doctest::CurrentTestCaseStats &) override {
+  }
+  void test_case_exception(const doctest::TestCaseException &) override {
+  }
+  void subcase_start(const doctest::SubcaseSignature &signature) override {
+    beat("doctest subcase: ", signature.m_file, signature.m_name.c_str());
+  }
+  void subcase_end() override {
+  }
+  void log_assert(const doctest::AssertData &) override {
+  }
+  void log_message(const doctest::MessageData &) override {
+  }
+  void test_case_skipped(const doctest::TestCaseData &) override {
+  }
+
+private:
+  static void beat(const char *kind, const char *first, const char *second) {
+    const int fd = primec::progressBeatDescriptor();
+    if (fd < 0) {
+      return;
+    }
+    std::string label = kind;
+    label += first != nullptr ? first : "";
+    label += " / ";
+    label += second != nullptr ? second : "";
+    primec::emitProgressBeatTo(fd, label);
+  }
+};
+
+REGISTER_LISTENER("progress_beat", 0, ProgressBeatListener);
+
+} // namespace
 
 int main(int argc, char **argv) {
   primec::testing::ensureTestScratchEnvironment();

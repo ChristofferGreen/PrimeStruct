@@ -111,7 +111,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6070 | Every doctest binary beats at the start of each test case | in_progress | gate-timeouts |
 | TODO-6071 | Tests that shell out count `primec` progress | in_progress | gate-timeouts |
 | TODO-6072 | The managed doctest shards run under the watchdog | in_progress | gate-timeouts |
 | TODO-6073 | The remaining CTest families run under the watchdog | blocked | gate-timeouts |
@@ -240,21 +239,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - ctest `PrimeStruct_test_registration` still passes; no timing assertion is added to any test
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
-
-- [~] TODO-6070: Every doctest binary beats at the start of each test case
-  - owner: ai
-  - status: in_progress
-  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Test infrastructure (split from TODO-6053)
-  - parallel_track: gate-timeouts
-  - depends_on: TODO-6069
-  - scope: `include/primec/support/ProgressBeat.h` writes a beat line to the descriptor named by `PRIMESTRUCT_BEAT_FD` (a no-op when unset); `tests/unit/test_main.cpp` registers a listener that beats at the start of each test case and subcase, so every doctest binary reports progress from the work loop, never from a timer thread.
-  - acceptance:
-    - a doctest case checks that a beat reaches a pipe named by the environment variable and that nothing is written when it is unset
-    - the beat names the test case and subcase
-    - full release gate green
-  - stop_rule: the beat writer and the doctest listener.
 
 - [~] TODO-6071: Tests that shell out count `primec` progress
   - owner: ai

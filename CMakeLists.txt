@@ -1222,6 +1222,23 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set_tests_properties(PrimeStruct_compile_time_value
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
+  # The progress beat writer the test watchdog reads (docs/TestWatchdog.md).
+  add_executable(PrimeStruct_progress_beat_tests
+    tests/unit/test_main.cpp
+    tests/unit/support/test_progress_beat.cpp
+  )
+  target_include_directories(PrimeStruct_progress_beat_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
+  target_link_libraries(PrimeStruct_progress_beat_tests PRIVATE primec_support_lib)
+  primestructEnableWarnings(PrimeStruct_progress_beat_tests)
+  add_test(
+    NAME PrimeStruct_progress_beat
+    COMMAND $<TARGET_FILE:PrimeStruct_progress_beat_tests>
+            "--test-suite=primestruct.support.progress_beat"
+            "--order-by=file"
+  )
+  set_tests_properties(PrimeStruct_progress_beat
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+
   add_executable(PrimeStruct_embed_tests
     tests/unit/test_main.cpp
     tests/unit/embed/test_embed_script_engine.cpp
