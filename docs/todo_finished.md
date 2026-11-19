@@ -2449,12 +2449,18 @@ are left unarchived.
 | TODO-6045 | `copysign` copies the sign of negative zero | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6046 | `round` rounds half away from zero without double rounding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6047 | `atan2` returns the libm angle in every quadrant | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6048 | `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6058 | Wasm float to integer conversion saturates; GLSL gap documented | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6062 | The C++ emitters implement `FmaF32` and `FmaF64` with `std::fma` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6063 | arm64 native emits `fmadd` for `FmaF32` and `FmaF64` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6064 | GLSL emits `fma()` for `FmaF32` and `FmaF64` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6065 | Wasm lowers `FmaF32` and `FmaF64` as a multiply and an add | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6066 | x86_64 native computes `FmaF32` and `FmaF64` as a multiply and an add | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

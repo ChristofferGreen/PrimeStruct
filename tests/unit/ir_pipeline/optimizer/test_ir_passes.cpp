@@ -1,3 +1,4 @@
+#include "primec/ir/IrFmaExpansion.h"
 #include "primec/ir/IrOptimizer.h"
 #include "primec/ir/IrPreparation.h"
 #include "primec/ir/IrValidation.h"
@@ -1439,4 +1440,46 @@ TEST_CASE("local-sroa leaves addresses it cannot name exactly alone") {
   for (const std::vector<primec::IrInstruction> &body : unchanged) {
     expectGolden("local-sroa", {"left alone", body, body});
   }
+}
+
+// A backend without a fused instruction (x86_64 native) runs the opcodes as a multiply and an add: `a b c Fma` becomes
+// `a b c; StoreLocal t; Mul; LoadLocal t; Add` with a local t of its own, and jump targets move with the code.
+TEST_CASE("expandFusedMultiplyAdd rewrites the opcodes and renumbers jumps") {
+  primec::IrModule module = moduleOf(assemble({"LoadLocal 0",
+                                               "JumpIfZero 7",
+                                               "PushF64 0x3ff0000000400000",
+                                               "PushF64 0x3fefffffff800000",
+                                               "PushF64 0xbff0000000000000",
+                                               "FmaF64",
+                                               "ReturnF64",
+                                               "PushF64 0x0",
+                                               "ReturnF64"}));
+  CHECK(primec::irModuleHasFusedMultiplyAdd(module));
+  primec::expandFusedMultiplyAdd(module);
+  CHECK_FALSE(primec::irModuleHasFusedMultiplyAdd(module));
+  const primec::IrModule expected = moduleOf(assemble({"LoadLocal 0",
+                                                       "JumpIfZero 10",
+                                                       "PushF64 0x3ff0000000400000",
+                                                       "PushF64 0x3fefffffff800000",
+                                                       "PushF64 0xbff0000000000000",
+                                                       "StoreLocal 1",
+                                                       "MulF64",
+                                                       "LoadLocal 1",
+                                                       "AddF64",
+                                                       "ReturnF64",
+                                                       "PushF64 0x0",
+                                                       "ReturnF64"}));
+  CHECK_MESSAGE(listing(module) == listing(expected),
+                "\nactual:\n",
+                listing(module),
+                "expected:\n",
+                listing(expected));
+
+  // The sequence rounds twice: 1 - 2^-60 rounds to 1 and the sum is 0, where the fused opcode gives -2^-60.
+  primec::IrModule f32Module = moduleOf(assemble(
+      {"PushF32 0x3f800400", "PushF32 0x3f7ff800", "PushF32 0xbf800000", "FmaF32", "ReturnF32"}));
+  primec::expandFusedMultiplyAdd(f32Module);
+  CHECK(listing(f32Module).find("FmaF32") == std::string::npos);
+  CHECK(listing(f32Module).find("MulF32") != std::string::npos);
+  CHECK(listing(f32Module).find("AddF32") != std::string::npos);
 }

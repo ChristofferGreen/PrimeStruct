@@ -501,6 +501,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/CompilePipelineStages.cpp
   src/ir/IrBackendProfiles.cpp
   src/ir/IrInliner.cpp
+  src/ir/IrFmaExpansion.cpp
   src/ir/IrOptimizer.cpp
   src/ir/optimizer/IrPassCfgSimplify.cpp
   src/ir/optimizer/IrPassLoopRotate.cpp

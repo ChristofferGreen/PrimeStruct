@@ -1,6 +1,7 @@
 #include "primec/backend/NativeEmitter.h"
 #include "NativeEmitterEmitInternal.h"
 #include "NativeEmitterInternals.h"
+#include "primec/ir/IrFmaExpansion.h"
 #include "primec/ir/IrNativeTextHost.h"
 
 #include <algorithm>
@@ -606,7 +607,18 @@ bool NativeEmitter::emitExecutable(const IrModule &module,
                                    NativeEmitterInstrumentation *instrumentation,
                                    const NativeEmitterOptions &options) const {
   std::vector<uint8_t> image;
-  if (!buildNativeImage(module, options, instrumentation, nullptr, image, error)) {
+  const IrModule *source = &module;
+#if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
+  // x86_64 has no fused multiply-add emission yet (docs/spec/vm-design.md, Fused multiply-add): the opcodes become a
+  // multiply and an add, which round twice.
+  IrModule expanded;
+  if (irModuleHasFusedMultiplyAdd(module)) {
+    expanded = module;
+    expandFusedMultiplyAdd(expanded);
+    source = &expanded;
+  }
+#endif
+  if (!buildNativeImage(*source, options, instrumentation, nullptr, image, error)) {
     return false;
   }
   return writeBinaryFile(outputPath, image, error);
