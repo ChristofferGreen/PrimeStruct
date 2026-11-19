@@ -636,9 +636,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux
   - stop_rule: x86_64 emitter only.
 
-- [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
+- [~] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: arm64-verify (worktree-agent-a60e5634c4eedee1d), 2026-11-19
   - deferred_reason: needs an arm64 macOS machine; the Linux x86_64 session cannot run `Arm64Emitter` output.
   - created_at: 2026-10-03
   - phase: Optimizing backends
@@ -648,9 +649,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes (done: `primestruct.ir.native_codegen` checks SXTW and the float-compare branch conditions through `primec/testing/NativeEmitterEncodings.h`; the float compares now use MI/LS so NaN compares false, also unexecuted)
   - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
 
-- [ ] TODO-5543: Repair or retire the disabled Apple/arm64 native backend test shards
+- [~] TODO-5543: Repair or retire the disabled Apple/arm64 native backend test shards
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: arm64-verify (worktree-agent-a60e5634c4eedee1d), 2026-11-19
   - deferred_reason: needs an arm64 macOS machine to run; the Linux x86_64 session compiles these suites out.
   - created_at: 2026-10-08
   - phase: macOS support
