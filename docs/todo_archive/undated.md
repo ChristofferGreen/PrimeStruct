@@ -624,3 +624,17 @@
     - full release gate green
   - stop_rule: removing the dead plumbing only.
   - notes: removed the emitter, its bundle member and the positional parameter; the two tests that named it keep their other checks.
+
+- [x] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-10
+  - phase: Multithreading (found while doing TODO-5835)
+  - parallel_track: mt-vm-tasks
+  - scope: `[Task<void>] t{[spawn] hello(5i32)}` where `hello` has `[effects(io_out)]` and no `return<...>` is rejected with `spawn requires call target with inferred return type` (src/semantics/SemanticsValidatorTaskHandles.cpp, `inferTaskSpawnCallBinding`), although a definition without a `return` transform is void everywhere else; `[effects(io_out), return<void>]` works.
+  - acceptance:
+    - a semantic test spawns a definition without a `return` transform into a `Task<void>` and waits it; a VM compile-run test prints its output
+    - binding it as `Task<i32>` is still rejected
+    - full release gate green
+  - stop_rule: the spawn binding inference only.
+  - notes: completed 2026-11-19: `inferTaskSpawnCallBinding` answers `void` for a user definition without a `return` transform whose inferred return kind is void; a `Task<i32>` binding of it is a type mismatch.

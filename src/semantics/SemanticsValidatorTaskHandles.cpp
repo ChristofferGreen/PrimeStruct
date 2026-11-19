@@ -225,6 +225,10 @@ bool SemanticsValidator::inferTaskSpawnCallBinding(
         return {};
       }
     }
+    // A definition without a `return` transform is void when its body returns no value, as everywhere else.
+    if (inferExprReturnKind(spawnedCall, params, locals) == ReturnKind::Void) {
+      return "void";
+    }
     return {};
   };
   if (const std::string declared = declaredPlainReturn(); !declared.empty()) {

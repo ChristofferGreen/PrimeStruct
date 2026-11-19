@@ -118,6 +118,33 @@ main() {
   runTaskProgram(program);
 }
 
+// A definition without a `return` transform is a void task when spawned.
+TEST_CASE("a task of a definition without a return transform runs for its output") {
+  program_matrix::ProgramCase program;
+  program.name = "task_void_no_return_transform";
+  program.source = R"(
+[effects(io_out)]
+report([i32] count) {
+  [i32 mut] i{0i32}
+  while(i < count) {
+    print_line(i)
+    i = i + 1i32
+  }
+}
+
+[effects(task, io_out) return<int>]
+main() {
+  [Task<void>] printer{[spawn] report(3i32)};
+  wait(printer)
+  print_line(9i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n1\n2\n9\n";
+  runTaskProgram(program);
+}
+
 // `wait(a, b)` of tasks without results waits each and has no value; no tuple, so no tuple import (TODO-5852).
 TEST_CASE("several tasks without results are waited together") {
   program_matrix::ProgramCase program;

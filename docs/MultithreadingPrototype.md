@@ -93,6 +93,7 @@ scheduled and what value it produces.
 For the first slice:
 
 - `[spawn] f(...)` returns `Task<T>` when `f(...)` returns `T`
+  (a definition without a `return` transform returns nothing, so its spawn is a `Task<void>`)
 - `wait(task)` consumes `Task<T>` and returns `T`; the result is a value of type `T` wherever a `T` is
   expected, so `return(wait(task))` returns a scalar, a `String` or a struct
   result directly

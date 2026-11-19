@@ -1343,4 +1343,42 @@ main() {
   CHECK(error.find("notify does not accept block arguments") != std::string::npos);
 }
 
+TEST_CASE("a spawned definition without a return transform is a void task") {
+  const std::string source = R"(
+[effects(io_out)]
+hello([i32] n) {
+  print_line(n)
+}
+
+[effects(task, io_out), return<i32>]
+main() {
+  [Task<void>] t{[spawn] hello(5i32)}
+  wait(t)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a spawned definition without a return transform is not a value task") {
+  const std::string source = R"(
+[effects(io_out)]
+hello([i32] n) {
+  print_line(n)
+}
+
+[effects(task, io_out), return<i32>]
+main() {
+  [Task<i32>] t{[spawn] hello(5i32)}
+  wait(t)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
+}
+
 TEST_SUITE_END();
