@@ -97,4 +97,44 @@ bool emitRealCallVectorReturn(const Expr &returnStmt,
   return true;
 }
 
+bool emitSumStorageReturn(int32_t ptrLocal,
+                          int32_t totalSlots,
+                          int32_t realCallResultBlockLocal,
+                          const std::optional<ReturnStatementInlineContext> &inlineContext,
+                          std::vector<IrInstruction> &instructions,
+                          const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs,
+                          const SharedReturnExitFn &emitSharedReturn,
+                          const std::function<void()> &cleanupAll,
+                          bool &sawReturn,
+                          std::string &error) {
+  if (realCallResultBlockLocal >= 0 && !inlineContext.has_value()) {
+    if (!copyFromPtrs(realCallResultBlockLocal, ptrLocal, totalSlots)) {
+      return false;
+    }
+    ptrLocal = realCallResultBlockLocal;
+  }
+  if (inlineContext.has_value()) {
+    if (inlineContext->returnLocal < 0) {
+      error = "native backend missing inline return local";
+      return false;
+    }
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back(
+        {IrOpcode::StoreLocal, static_cast<uint64_t>(inlineContext->returnLocal)});
+    const size_t jumpIndex = instructions.size();
+    instructions.push_back({IrOpcode::Jump, 0});
+    if (inlineContext->returnJumps != nullptr) {
+      inlineContext->returnJumps->push_back(jumpIndex);
+    }
+    return true;
+  }
+  if (!emitSharedReturn(IrOpcode::ReturnI64, ptrLocal)) {
+    cleanupAll();
+    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    instructions.push_back({IrOpcode::ReturnI64, 0});
+  }
+  sawReturn = true;
+  return true;
+}
+
 } // namespace primec::ir_lowerer

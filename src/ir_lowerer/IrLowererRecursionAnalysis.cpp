@@ -787,8 +787,7 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
   const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath);
   if (!context.allowCollections &&
-      (structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 ||
-       isSumDefinitionPath(structResultPath, byPath))) {
+      structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
     return false;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&

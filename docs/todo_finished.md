@@ -2205,6 +2205,7 @@ are left unarchived.
 | TODO-5735 | Same-arity overloads of struct methods resolve by argument type | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5736 | `pick` and sum parameters in a generic struct's method lower | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
 | TODO-5737 | Implicit template arguments infer through a generic struct parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5738 | Sum results return through the caller's block in real calls | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5739 | Large struct copies lower to a slot loop | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5740 | Native and the Linux JIT number local addresses across frames | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5741 | `string` parameters become real calls on the VM and optexe | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |

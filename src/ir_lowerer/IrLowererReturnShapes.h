@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -9,6 +10,7 @@
 #include "primec/ast/Ast.h"
 #include "primec/ir/Ir.h"
 #include "primec/ir_lowerer/IrLowererSharedTypes.h"
+#include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -46,5 +48,21 @@ bool emitRealCallVectorReturn(const Expr &returnStmt,
                               Expr &rewrittenStmt,
                               LocalMap &rewrittenLocals,
                               std::string &error);
+
+// The return of a sum built in this frame, as a pointer to its `totalSlots` slots at `ptrLocal`. An inlined call
+// stores the pointer in the call's result local and jumps to its exit. A real call returns the sum in the caller's
+// block (`realCallResultBlockLocal` holds its address, a negative value is no real call): the slots move there, the
+// caller owns the payload from then on, and the block's address is returned. A function body ends in the shared exit
+// when it has one, else in `cleanupAll` and the return; `sawReturn` is set when a return was emitted.
+bool emitSumStorageReturn(int32_t ptrLocal,
+                          int32_t totalSlots,
+                          int32_t realCallResultBlockLocal,
+                          const std::optional<ReturnStatementInlineContext> &inlineContext,
+                          std::vector<IrInstruction> &instructions,
+                          const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs,
+                          const SharedReturnExitFn &emitSharedReturn,
+                          const std::function<void()> &cleanupAll,
+                          bool &sawReturn,
+                          std::string &error);
 
 } // namespace primec::ir_lowerer

@@ -565,9 +565,11 @@
   address of a struct, of a `mut` place or of a referenced value; the receiver passes as its address, `mut` or not. A
   local address names the same slot in every frame (Frames & stack), so writes through these addresses reach the
   caller. A temporary argument is destroyed after the call, where an inlined call destroys it at the end of the callee's
-  body. A struct result (any struct but a sum or a collection record, with or without lifecycle helpers; a spawned call also returns a sum or a builtin `map`) is returned
+  body. A struct or sum result (any struct but a collection record, with or without lifecycle helpers, and a sum: `Result`, `Maybe` or a user `[sum]`; a spawned call also returns a builtin `map`) is returned
   through a block of the caller's frame whose address is the last argument: the callee's `return` moves or copies the
-  value there (as it would into the inlined call's result) and returns the address. A called function therefore never
+  value there (as it would into the inlined call's result) and returns the address. A sum is built in the callee's frame
+  (or, with `Result` and `Maybe`, constructed there) and moves into the block slot for slot, so the payload's owner is the
+  caller from then on; a sum result nobody binds is not destroyed, as for an inlined call. A called function therefore never
   returns an address of its own frame, which is gone once it returns: what it returns came in as a parameter. IR
   validation rejects a function that a `Call` reaches and that returns an address derived from its own
   `AddressOfLocal`. A definition that stays inline at every call site has no function in the module: the module holds
@@ -586,9 +588,10 @@
   the vector handed over; the call site binds it and registers no drop, and the body owns it like a struct `copy`
   parameter: a drop flag and a drop entry (`registerRealCallOwnedParameters`), so it is freed once, on every exit
   unless the body moves it on (a spawned call passes it owned the same way).
-  Shapes that stay inline for a direct call (a spawned call takes owned sums, sum results and builtin maps, above):
+  Shapes that stay inline for a direct call (a spawned call takes owned sums and builtin maps, above):
   `copy` and `move` parameters of sums, args-pack, collection,
-  `File` and template-typed parameters; sum results (`Result`, `Maybe`);
+  `File` and template-typed parameters; the packed `Result` of a program that does not import `/std/result` (its result text is
+  not a scalar type);
   definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
   methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
   (docs/spec/value-lifecycle.md, Borrowing). A `string` parameter is a real call only on the VM and the optimizing C++

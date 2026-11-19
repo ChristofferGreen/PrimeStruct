@@ -896,29 +896,20 @@
     }();
     // A function returning the stdlib Result sum always returns a pointer to its sum storage,
     // whatever the payload types, so every caller reads one representation.
-    const auto emitReturnSumStorage = [&](int32_t ptrLocal) -> bool {
-      if (returnInlineContext.has_value()) {
-        if (returnInlineContext->returnLocal < 0) {
-          error = "native backend missing inline return local";
-          return false;
-        }
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(returnInlineContext->returnLocal)});
-        const size_t jumpIndex = function.instructions.size();
-        function.instructions.push_back({IrOpcode::Jump, 0});
-        if (returnInlineContext->returnJumps != nullptr) {
-          returnInlineContext->returnJumps->push_back(jumpIndex);
-        }
-        return true;
-      }
-      if (!stateOut.emitSharedReturn(IrOpcode::ReturnI64, ptrLocal)) {
-        emitFileScopeCleanupAll();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
-        function.instructions.push_back({IrOpcode::ReturnI64, 0});
-      }
-      sawReturn = true;
-      return true;
+    const auto emitReturnSumStorage = [&](int32_t ptrLocal, int32_t totalSlots) -> bool {
+      return ir_lowerer::emitSumStorageReturn(
+          ptrLocal,
+          totalSlots,
+          realCallStructReturnLocal,
+          returnInlineContext,
+          function.instructions,
+          [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slots) {
+            return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slots);
+          },
+          stateOut.emitSharedReturn,
+          [&]() { emitFileScopeCleanupAll(); },
+          sawReturn,
+          error);
     };
     // An integer value that is not sum storage is a packed Result.
     const auto returnValueIsPackedResult = [&](const Expr &valueExpr) {
@@ -960,7 +951,7 @@
         if (!sumHelpers.emitLoweredSumConstructionIntoLocal(baseLocal, *returnSumDef, returnValueExpr, localsIn)) {
           return false;
         }
-        return emitReturnSumStorage(ptrLocal);
+        return emitReturnSumStorage(ptrLocal, totalSlots);
       }
       if (returnsStdlibResultSum && returnValueIsPackedResult(returnValueExpr)) {
         // A hand-packed Result (the stdlib error helpers, legacy producers) is decoded into sum
@@ -988,7 +979,7 @@
           function.instructions.push_back(
               {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-          return emitReturnSumStorage(ptrLocal);
+          return emitReturnSumStorage(ptrLocal, totalSlots);
         }
       }
       const Expr &stableReturnValueExpr = emittedReturnStmt->args.front();

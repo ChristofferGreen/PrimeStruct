@@ -112,9 +112,9 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | deferred | gate-timeouts |
-| TODO-5738 | Sum results return through the caller's block in real calls | deferred | ir-real-calls |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
+| TODO-6054 | A discarded sum result with an owning payload is destroyed | deferred | lifecycle-temporaries |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
@@ -185,8 +185,8 @@ of sync with them.
 - Backend parity: TODO-5516, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
-- Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718; deferred TODO-5738
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
+- Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752; VM address checks TODO-5824
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5854, TODO-5862
@@ -235,20 +235,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
 
-- [~] TODO-5738: Sum results return through the caller's block in real calls
-  - owner: ai
-  - status: in_progress
-  - claimed_by: sums-a (worktree-agent-aeafb34a6fda295bc), 2026-11-19
-  - created_at: 2026-11-08
-  - phase: Web apps (docs/WebAppsPlan.md; found while finishing TODO-5734)
-  - parallel_track: ir-real-calls
-  - scope: A definition whose result is a sum (`Result`, `Maybe`, a user `[sum]`) is still inlined at every call site on the VM and optcpp/optexe, because the sum return path (`emitReturnSumStorage`) has no real-call form. `/std/http/server` `serve` and `serveUntil` return `Result<ServeError>`, so todo_web's `main` holds both bodies (about 260 KB of its 1.38 MB of C++). Return sums through the caller's result block like structs (docs/spec/vm-design.md, Real calls).
-  - acceptance:
-    - `serve`/`serveUntil` are real calls in todo_web; a matrix case returns `Result` and `Maybe` values (ok, error, a payload with a `Destroy`) from a real call on every backend
-    - full release gate green
-  - stop_rule: sum results of real calls only.
-  - findings: Measured 2026-11-12 (TODO-5741 and TODO-5739 landed first). Two facts change the case for this task. (1) `serve` and `serveUntil` are called once, from todo_web's `main`, so inlining them duplicates nothing: a prototype that made them real calls (`Result<ServeError>` is a packed scalar there, because todo_web does not import `/std/result`; the shape check rejects it only because `hasScalarOrVoidReturn` reads the text `Result<ServeError>` as non-scalar, and the callee body needs `entryHasResultInfo` set from its `ReturnInfo`) grew `--emit=optcpp` from 1,563,197 to 1,588,608 bytes, and clang++ -O2 took 3.3 s before and 3.5 s after, so the 260 KB sits in `main` either way. The task has no size outcome until a definition with a `Result` or `Maybe` result has two or more call sites. (2) With `/std/result` imported a `Result<...>` is sum storage, which a real call must return through a block of the caller's frame: `emitReturnSumStorage` (src/ir_lowerer/IrLowererLowerStatementsBindingsContinued.h) copies the sum into the block (`realCallStructReturnLocal`) and returns its address, the call site (src/ir_lowerer/IrLowererLowerInlineCalls.cpp) allocates the block from `SumHelpersContext::loweredSumSlotCount`, and the sum definition has to come from the semantic product's return fact when the declared text does not resolve; the aggregate return path (`return(other_call())`) already copies into the block. Pick this up when a program with a multi-call-site `Result` or `Maybe` function makes it pay; start from the packed case (no `/std/result`), then sums, then `Maybe` and user `[sum]`.
-
 - [ ] TODO-5752: x86_64 native and the Linux JIT take the address ABI of real calls
   - owner: ai
   - status: deferred
@@ -272,6 +258,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
     - full release gate green
   - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
+
+- [ ] TODO-6054: A discarded sum result with an owning payload is destroyed
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: Lifecycle (found while finishing TODO-5738)
+  - parallel_track: lifecycle-temporaries
+  - scope: A statement that calls a definition returning a sum (`Maybe<String>`, `Result<String, i32>`, a user `[sum]`) and binds nothing leaks the payload: `ownedTemporaryStructPath` (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp) returns no path for a sum, so `discardedTemporaryStructPath` never destroys it. Measured 2026-11-19 on the VM: `tiny(1i32)` as a statement of a two-statement `Maybe<String>` function leaves 32 bytes of the string heap in use (the same for an inlined call and, since TODO-5738, a real call). Destroy the active variant's payload of a discarded sum result at the end of the statement (docs/spec/value-lifecycle.md, Ownership).
+  - acceptance:
+    - a program-matrix case discards `Maybe<String>`, `Result<String, i32>` and a user sum with a `Destroy` payload from an inlined and a real call and ends with the heap statistics of the start (the cases in tests/unit/program_matrix/test_program_matrix_sum_owners.cpp avoid the discard)
+    - full release gate green
+  - stop_rule: discarded sum statement results only.
 
 - [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai

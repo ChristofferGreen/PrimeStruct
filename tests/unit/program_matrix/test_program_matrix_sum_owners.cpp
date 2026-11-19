@@ -292,4 +292,293 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// Real calls return a sum through a block of the caller's frame (docs/spec/vm-design.md, Real calls): the loops keep
+// each callee above the size of a leaf that stays inline.
+TEST_CASE("a real call returns a Result, a Maybe and a user sum through the caller's block") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_real_call_scalar_results";
+  program.source = R"(
+import /std/result/*
+import /std/maybe/*
+
+[sum]
+Shape {
+  empty
+  [i32] circle
+  [i32] square
+}
+
+[return<Shape>]
+make_shape([i32] id) {
+  [i32 mut] acc{0i32}
+  for([i32 mut] i{0i32}; i < id; ++i) {
+    acc = acc + i
+  }
+  if(id == 0i32) {
+    return(Shape{empty})
+  }
+  if(id < 5i32) {
+    return(Shape{[circle] acc})
+  }
+  return(Shape{[square] acc})
+}
+
+[return<Result<i32, i32>>]
+checked([i32] id) {
+  [i32 mut] acc{0i32}
+  for([i32 mut] i{0i32}; i < id; ++i) {
+    acc = acc + i
+  }
+  if(id < 0i32) {
+    return(/std/result/error<i32, i32>(7i32))
+  }
+  return(Result.ok(acc))
+}
+
+[return<Result<i32, i32>>]
+forwarded([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  [Result<i32, i32>] inner{checked(id + spent)}
+  return(inner)
+}
+
+[return<Maybe<i32>>]
+pick_value([i32] id) {
+  [i32 mut] acc{0i32}
+  for([i32 mut] i{0i32}; i < id; ++i) {
+    acc = acc + i
+  }
+  if(id < 0i32) {
+    return(none<i32>())
+  }
+  return(some<i32>(acc))
+}
+
+[return<i32>]
+show_shape([Shape] s) {
+  return(pick(s) {
+    empty { -1i32 }
+    circle(v) { v }
+    square(v) { 100i32 + v }
+  })
+}
+
+[return<i32>]
+show_result([Result<i32, i32>] r) {
+  return(pick(r) {
+    ok(v) { v }
+    error(e) { 1000i32 + e }
+  })
+}
+
+[return<i32>]
+show_maybe([Maybe<i32>] m) {
+  return(pick(m) {
+    some(v) { v }
+    none { -2i32 }
+  })
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(show_shape(make_shape(0i32)))
+  print_line(show_shape(make_shape(3i32)))
+  print_line(show_shape(make_shape(6i32)))
+  print_line(show_result(checked(4i32)))
+  print_line(show_result(checked(-1i32)))
+  print_line(show_result(forwarded(1i32)))
+  print_line(show_result(forwarded(-9i32)))
+  print_line(show_maybe(pick_value(5i32)))
+  print_line(show_maybe(pick_value(-1i32)))
+  [Maybe<i32>] kept{pick_value(4i32)}
+  [Maybe<i32>] other{pick_value(-4i32)}
+  print_line(show_maybe(kept) + show_maybe(other))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-1\n3\n115\n6\n1007\n6\n1007\n10\n-2\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a real call that returns a sum owns its String payload until the caller takes it") {
+  runSumOwnerProgram("sum_real_call_string_payloads",
+                     R"(
+import /std/result/*
+
+[effects(heap_alloc), return<Maybe<String>>]
+build([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(none<String>())
+  }
+  [String mut] text{String{}}
+  text.pushByte(convert<u8>(48i32 + id))
+  return(some<String>(text))
+}
+
+[effects(heap_alloc), return<Maybe<String>>]
+build_twice([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  [Maybe<String>] first{build(id)}
+  [Maybe<String>] second{build(id + 1i32)}
+  if(id > 5i32) {
+    return(first)
+  }
+  return(second)
+}
+
+[effects(heap_alloc), return<Result<String, i32>>]
+fetch([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(/std/result/error<String, i32>(id))
+  }
+  return(Result.ok(label(id)))
+}
+
+[effects(io_out)]
+show_fetched([Result<String, i32>] value) {
+  pick(value) {
+    ok(text) {
+      print_line(first_byte(text))
+    }
+    error(code) {
+      print_line(code)
+    }
+  }
+}
+)",
+                     R"(
+    show(build(1i32))
+    show(build(-1i32))
+    show(build_twice(3i32))
+    show(build_twice(7i32))
+    [Maybe<String>] kept{build_twice(4i32)}
+    show(kept)
+    show_fetched(fetch(5i32))
+    show_fetched(fetch(-5i32))
+)",
+                     "49\n-1\n52\n55\n53\n53\n-5\n");
+}
+
+// `some<Noisy>(Noisy{id})` copies the temporary and destroys it, so each make() prints its id once before the sum
+// exists (an inlined call does the same); the test pins that the sum's own payload is destroyed once, by whoever
+// ends up owning the sum.
+TEST_CASE("a real call that returns a sum moves a payload with a Destroy to its caller once") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_real_call_destroy_payload";
+  program.source = R"(
+import /std/maybe/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[return<Maybe<Noisy>>]
+make([i32] id) {
+  [i32 mut] spent{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    spent = spent + i
+  }
+  if(id < 0i32) {
+    return(none<Noisy>())
+  }
+  return(some<Noisy>(Noisy{id}))
+}
+
+[effects(io_out)]
+show([Maybe<Noisy>] value) {
+  pick(value) {
+    some(noisy) {
+      print_line(noisy.id + 100i32)
+    }
+    none {
+      print_line(-1i32)
+    }
+  }
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Maybe<Noisy>] kept{make(1i32)}
+  show(kept)
+  show(make(2i32))
+  show(make(-1i32))
+  print_line(9i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n101\n2\n102\n2\n-1\n9\n1\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a definition that returns a Result and uses try stays inline") {
+  program_matrix::ProgramCase program;
+  program.name = "sum_result_with_try_stays_inline";
+  program.source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+inner([i32] id) {
+  if(id < 0i32) {
+    return(/std/result/error<i32, i32>(5i32))
+  }
+  return(Result.ok(id))
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(500i32 + err)
+}
+
+[return<Result<i32, i32>> effects(io_out) on_error<i32, /on_err>]
+outer([i32] id) {
+  [i32 mut] acc{0i32}
+  for([i32 mut] i{0i32}; i < 3i32; ++i) {
+    acc = acc + i
+  }
+  [i32] value{try(inner(id))}
+  return(Result.ok(value + acc))
+}
+
+[return<i32>]
+show([Result<i32, i32>] r) {
+  return(pick(r) {
+    ok(v) { v }
+    error(e) { 1000i32 + e }
+  })
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(show(outer(4i32)))
+  print_line(show(outer(-4i32)))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n505\n1005\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
