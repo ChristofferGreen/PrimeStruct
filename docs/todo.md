@@ -146,7 +146,13 @@ of sync with them.
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
-| TODO-6048 | `fma` is fused (needs a design decision) | deferred | stdlib-math-fma |
+| TODO-6048 | `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding | in_progress | stdlib-math-fma |
+| TODO-6062 | The C++ emitters implement `FmaF32` and `FmaF64` with `std::fma` | in_progress | stdlib-math-fma |
+| TODO-6063 | arm64 native emits `fmadd` for `FmaF32` and `FmaF64` | in_progress | stdlib-math-fma |
+| TODO-6064 | GLSL emits `fma()` for `FmaF32` and `FmaF64` | in_progress | stdlib-math-fma |
+| TODO-6065 | Wasm emulates `FmaF32` and `FmaF64` exactly | in_progress | stdlib-math-fma |
+| TODO-6066 | x86_64 native computes `FmaF32` and `FmaF64` as a multiply and an add | in_progress | stdlib-math-fma |
+| TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
 | TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
@@ -184,7 +190,8 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6060, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics: TODO-6044, TODO-5520, TODO-6048
+- Frontend and diagnostics: TODO-6044, TODO-5520
+- Fused `fma` (IR opcodes; one leaf per backend): TODO-6048, TODO-6062, TODO-6063, TODO-6064, TODO-6065, TODO-6066; deferred TODO-6067
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
@@ -669,18 +676,106 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: diagnostic text and spans only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-6048: `fma` is fused (needs a design decision)
+- [~] TODO-6048: `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10
   - parallel_track: stdlib-math-fma
   - depends_on: none
-  - scope: `fma(a, b, c)` lowers to a multiply and an add, so it rounds twice. Split from TODO-5521. Options: (a) a new IR opcode `FmaF32`/`FmaF64` implemented by the VM (`std::fma`), the x86_64 and arm64 emitters (FMA3 / `fmadd`), the C++ emitters, wasm and GLSL: exact, large, changes the IR format; (b) an exact emulation in IR (f32: product and sum in f64; f64: Veltkamp-Dekker two-product plus two-sum): no new opcode, but double rounding can differ from libm in rare cases, and it is several times slower; (c) document `fma` as not fused and keep it. Not chosen here.
+  - scope: The owner chose option (a) of the original block, with speed as the goal ("fma is an optimization, so as fast as possible"): `fma(a, b, c)` lowers to one IR opcode `FmaF32` or `FmaF64` (stack: a, b, c; result the fused `a*b+c`, rounded once) instead of a multiply and an add that round twice. Append the two opcodes to `IrOpcode` (PSIR v40, serializer opcode range for v39 and older, opcode and operand tables, stack effect, validation, module printer), evaluate them with `std::fma` in the VM kernels and in the constant folder (`ir_pure_detail` in IrPureSemantics.h, so folded and run values agree), lower the `fma` builtin to them, add the matrix case `fma rounds once for f64 and f32`, and update the "Exact helpers" bullet of docs/spec/host-and-core-library.md and docs/spec/vm-design.md. Every backend leaf below implements the opcode for its target; until it lands the backend rejects a module that has one.
   - acceptance:
-    - the chosen option is decided; `fma` matches libm on VM, native and C++ for inputs where the unfused result differs; matrix case
+    - `fma` matches libm on the VM (all kernels and -O levels) for inputs where the unfused result differs; matrix case `fma rounds once for f64 and f32` passes on every config the backends below provide
+    - schema v40 round trip and a v39 module loads unchanged; opcode table, operand table and stack-effect tests cover the new opcodes
     - full release gate green
-  - stop_rule: stdlib math lowering only.
+  - stop_rule: IR, VM, folding, lowering and docs; the other backends are TODO-6062 to TODO-6067.
+
+- [~] TODO-6062: The C++ emitters implement `FmaF32` and `FmaF64` with `std::fma`
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6048
+  - scope: `optcpp`, `optexe` and `exe` (IrToCppEmitter, IrToOptCppEmitter and the shared runtime) emit `std::fma(a, b, c)` for the new opcodes, which compiles to the hardware fused instruction, so the generated program computes the VM's bits.
+  - acceptance:
+    - `fma` matrix case passes on `optexe-O2` and `exe` with `PRIMESTRUCT_MATRIX_CONFIGS=all`
+    - the emitters' agreement test with `evalPureOpcode` covers the fma opcodes
+    - full release gate green
+  - stop_rule: C++ emitters only.
+
+- [~] TODO-6063: arm64 native emits `fmadd` for `FmaF32` and `FmaF64`
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6048
+  - scope: The direct arm64 emitter pops the three operands and emits the fused `FMADD` (d or s form) in stack mode; a function with an fma opcode keeps the stack path (the register-allocated path does not list the opcode, so it is not eligible), and the encoding is pinned by a unit test.
+  - acceptance:
+    - `fma` matrix case passes on `native-O0` and `native-O2` on arm64 macOS
+    - encoding unit test for `FMADD`
+    - full release gate green
+  - stop_rule: arm64 native stack emitter only; no register-allocated fma.
+
+- [~] TODO-6064: GLSL emits `fma()` for `FmaF32` and `FmaF64`
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6048
+  - scope: The GLSL emitter writes the built-in `fma(a, b, c)` for both opcodes and the validator accepts them for the GLSL target (an f64 fma follows the existing narrowed-f64 rule).
+  - acceptance:
+    - GLSL emitter test shows `fma(` for an f32 and an f64 module
+    - full release gate green
+  - stop_rule: GLSL emitter and its validation flag only.
+
+- [~] TODO-6065: Wasm emulates `FmaF32` and `FmaF64` exactly
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6048
+  - scope: WebAssembly has no fused multiply-add, so the Wasm emitter writes two helper functions (an exact soft-float fma on i64 bit patterns: exact 128-bit product, aligned add, one round to nearest even, with subnormals, infinities and NaN) and calls them. This is exactness only, much slower than the hardware forms on the other backends; documented as such.
+  - acceptance:
+    - the helpers agree with `std::fma` on a grid of operands run under node; the `fma` program computes the fused value on Wasm
+    - full release gate green
+  - stop_rule: Wasm emitter only.
+
+- [~] TODO-6066: x86_64 native computes `FmaF32` and `FmaF64` as a multiply and an add
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-fma (worktree agent-a4b49fa118806c72e), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6048
+  - scope: Until TODO-6067 lands the fused form, the x86_64 backend expands each fma opcode into `StoreLocal; Mul; LoadLocal; Add`, which rounds twice; the matrix case skips `native-*` on x86_64 and docs/spec/vm-design.md names the difference. No new encodings.
+  - acceptance:
+    - an x86_64 native program with `fma` compiles and runs (two roundings, documented)
+    - full release gate green
+  - stop_rule: the expansion only; no FMA3 encoding.
+
+- [ ] TODO-6067: x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss`
+  - owner: ai
+  - status: deferred
+  - deferred_reason: needs an x86_64 machine to run the encoding.
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10
+  - parallel_track: stdlib-math-fma
+  - depends_on: TODO-6066
+  - scope: Replace the TODO-6066 expansion with the fused FMA3 encodings (VEX), guarded by a CPUID check or a documented baseline. Not landed without a run on an x86_64 machine.
+  - acceptance:
+    - `fma` matrix case passes on `native-O0` and `native-O2` on x86_64 Linux
+    - full release gate green on Linux
+  - stop_rule: x86_64 emitter only.
 
 - [ ] TODO-5483: Verify arm64 SextI32 on a macOS machine
   - owner: ai
