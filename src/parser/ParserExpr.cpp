@@ -228,7 +228,10 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return false;
       }
       const bool bindingTransforms = isBindingTransformList(transforms);
-      Token name = consume(TokenKind::Identifier, "expected identifier");
+      Token name =
+          consume(TokenKind::Identifier,
+                  "expected identifier after `[...]`; `[label] value` never constructs a value, "
+                  "write variant construction with braces: Type{[variant] value}");
       if (name.kind == TokenKind::End) {
         return false;
       }

@@ -144,7 +144,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-6048 | `fma` is fused (needs a design decision) | deferred | stdlib-math-fma |
@@ -185,7 +184,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6060, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
+- Frontend and diagnostics: TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
@@ -643,19 +642,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - vm-design.md states the Wasm outcome past its limit and the Linux native and `exe` depths, each measured
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
-
-- [~] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
-  - owner: ai
-  - status: deferred
-  - claimed_by: worker-return-label (worktree agent-ad85f8a559588c884), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-return-label
-  - scope: `return([ok] value)` fails with `binding not allowed in expression context` for a name argument and with a parse error (`expected identifier`) for a literal one: in parentheses `[ok] value` reads as a binding of type `ok` named `value`, not as a labeled argument. docs/spec/literals-and-composite-construction.md says explicit `[variant] payload` construction is validated for return values but only shows the braced forms (`[Shape] a{[circle] circleA}`). Whether the unbraced label form is valid is undecided. Options: (A) accept `return([variant] expr)` as context-typed sum construction, which makes `[label] x` in `return(...)` a labeled argument, different from every other call where the parser decides by the callee; (B) keep it invalid and document `return(Result<T, E>{[ok] value})` and `return({[ok] value})` (not supported today) as the spellings; (C) accept only `return({[variant] expr})`, the context-typed brace form, which the spec already uses for bindings.
-  - acceptance:
-    - the owner chose an option; the chosen spelling compiles and runs, the others give a diagnostic with a location; semantics tests
-    - full release gate green
-  - stop_rule: the `return` argument form only.
 
 - [ ] TODO-6044: Field access on a `try(...)` of a struct payload
   - owner: ai

@@ -135,7 +135,9 @@ PhaseStatus SemanticsValidator::checkCallFormAndTasks(ExprCallContext &cc) {
     return failExprDiagnostic(expr, std::move(message));
   };
   if (expr.isBinding) {
-    return cc.done(failExprRootDiagnostic("binding not allowed in expression context"));
+    return cc.done(failExprRootDiagnostic(
+        "binding not allowed in expression context; `[label] value` never constructs a value here, "
+        "write variant construction with braces: Type{[variant] value}"));
   }
   if (isIfCall(expr)) {
     return cc.done(validateIfExpr(params, locals, expr));

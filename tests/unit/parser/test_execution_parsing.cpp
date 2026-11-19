@@ -36,6 +36,19 @@ execute_task(1i32)
   CHECK_FALSE(program.executions[0].hasBodyArguments);
 }
 
+TEST_CASE("rejects a bracket label with a literal in return") {
+  const std::string source = R"(
+[return<Result<i32, i32>>]
+make_ok() {
+  return([ok] 1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(parseProgramWithError(source, error));
+  CHECK(error.find("expected identifier") != std::string::npos);
+  CHECK(error.find("Type{[variant] value}") != std::string::npos);
+}
+
 TEST_CASE("rejects execution without parentheses") {
   const std::string source = R"(
 execute_task

@@ -58,6 +58,16 @@
   The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{circleC}`) is valid only
   when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors and multiple matches are
   ambiguity errors requiring an explicit `[variant]` label.
+  The bracket label belongs inside braces: `return` values, call arguments and field values that construct a variant
+  use the braced form `Type{[variant] value}`. `return([variant] value)` is invalid, because `[x] y` in expression
+  position is never a variant construction (the bracket form is reserved); it is rejected with a located diagnostic that
+  names the braced spelling.
+  ```prime
+  [return<Shape>]
+  make_circle([Circle] circleValue) {
+    return(Shape{[circle] circleValue})
+  }
+  ```
   Unit variants can be constructed by default when the first declared variant is unit, or by naming the unit variant in
   a target-typed constructor:
   ```prime

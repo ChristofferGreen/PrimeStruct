@@ -1311,4 +1311,55 @@ main() {
   }
 }
 
+TEST_CASE("return constructs a sum variant only with the braced spelling") {
+  const std::string prelude = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[sum]
+Shape {
+  none
+  [Circle] circle
+}
+
+)";
+
+  SUBCASE("braced variant construction in a return is accepted") {
+    const std::string source = prelude + R"(
+[return<Shape>]
+make_circle([Circle] circleValue) {
+  return(Shape{[circle] circleValue})
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+    std::string error;
+    CHECK(validateProgramExpectingError(source, error));
+    CHECK(error.empty());
+  }
+
+  SUBCASE("bracket label with a name argument names the braced spelling") {
+    const std::string source = prelude + R"(
+[return<Shape>]
+make_circle([Circle] circleValue) {
+  return([circle] circleValue)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("binding not allowed in expression context") != std::string::npos);
+    CHECK(error.find("Type{[variant] value}") != std::string::npos);
+  }
+}
+
 TEST_SUITE_END();
