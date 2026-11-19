@@ -1164,6 +1164,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_tasks.cpp
     tests/unit/program_matrix/test_program_matrix_text_views.cpp
     tests/unit/program_matrix/test_program_matrix_user_at_sources.cpp
+    tests/unit/program_matrix/test_program_matrix_user_shadows.cpp
+    tests/unit/program_matrix/test_program_matrix_variadic_packs.cpp
     tests/unit/program_matrix/test_program_matrix_vector_owners.cpp
     tests/unit/program_matrix/test_program_matrix_vm_threads.cpp
     tests/unit/program_matrix/test_program_matrix_vm_sync_replay.cpp
@@ -3823,9 +3825,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                       CASES_PER_SHARD 10)
     # The one case in test_compile_run_native_backend_collections.cpp has its own
     # shard (array_slice) in PrimeStructManagedCompileRunNativeOtherSuites.cmake.
-    # Cases 221 to 230 took 11 s alone (TODO-6027): shards of five there, of ten elsewhere (the shard names of the
-    # disabled list below are the same).
-    foreach(appleCollectionsRange "1;220;10" "221;230;5" "231;506;10")
+    # Cases 221 to 230 took 11 s alone (TODO-6027): shards of five there, of ten elsewhere.
+    foreach(appleCollectionsRange "1;220;10" "221;230;5" "231;508;10")
       list(GET appleCollectionsRange 0 appleCollectionsFirst)
       list(GET appleCollectionsRange 1 appleCollectionsLast)
       list(GET appleCollectionsRange 2 appleCollectionsPerShard)
@@ -4295,6 +4296,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.tasks
     primestruct.program_matrix.text_views
     primestruct.program_matrix.user_at_sources
+    primestruct.program_matrix.user_shadows
+    primestruct.program_matrix.variadic_packs
     primestruct.program_matrix.vector_owners
     primestruct.program_matrix.vm_threads
     primestruct.program_matrix.vm_sync_replay
@@ -4305,7 +4308,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=13 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=11 container_copies=22
     control=37 conversions=8 early_returns=10 error_handlers=8 element_assign=4 element_copies=10 element_receivers=8 frontend_accept=8 lifecycle=26 math=4 runtime_faults=4 mutexes=7 rwlocks=5 optimizer=16 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=21 pick_values=24 recursion=6 results=19 shared_programs=17
-    shared_strings=5 struct_methods=12 sum_owners=12 tasks=34 text_views=7 user_at_sources=4 vector_owners=50 vm_threads=4 vm_sync_replay=2)
+    shared_strings=5 struct_methods=12 sum_owners=12 tasks=34 text_views=7 user_at_sources=4 user_shadows=4 variadic_packs=5 vector_owners=50 vm_threads=4 vm_sync_replay=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

@@ -154,19 +154,17 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6086 | Native coverage kept after the Apple shard cleanup | ready | native-arm64-tests |
+| TODO-6087 | A block-form call of a user function does not break a later call of the same function | ready | lowering-block-calls |
 
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6086 (native-arm64-tests): native coverage kept after the Apple shard cleanup
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6086
 
 ### Priority Lanes
 
@@ -183,7 +181,8 @@ of sync with them.
 - Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
-- macOS support: TODO-6086, TODO-5545 (needs macOS)
+- macOS support: TODO-5545 (needs macOS)
+- Lowering (found by TODO-6086): TODO-6087
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
@@ -787,15 +786,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [~] TODO-6086: Native coverage kept after the Apple shard cleanup
+- [ ] TODO-6087: A block-form call of a user function does not break a later call of the same function
   - owner: ai
   - status: ready
-  - claimed_by: native-coverage (worktree-agent-af5488f913b4c5cee), 2026-11-19
   - created_at: 2026-11-19
-  - phase: macOS support
-  - parallel_track: native-arm64-tests
-  - scope: The cleanup that retired 89 stale native-backend cases left three gaps that only the VM suites check: (1) the native lowering rejections of `reserve` (literal above the local limit, folded negative, folded overflow), (2) execution of the retired "native user ... shadow" programs on arm64, (3) variadic vector, map and pointer packs on native. For each: find the deleted case, check it is still the language contract, then add one compact program-matrix case (vm-step, vm, native -O0 and -O2, same expected result as the VM) or a native diagnostic test; if native and the VM differ, file the defect as its own leaf.
+  - phase: Correctness audit 2026-10 (found by TODO-6086)
+  - parallel_track: lowering-block-calls
+  - scope: A statement `twice(9i32) { assign(seen, 4i32) }` (a block-form call of a user `[return<int>] twice([i32] value)`) followed anywhere later in the same body by a value call such as `print_line(twice(5i32))` or `[i32] x{twice(5i32)}` fails to lower: `VM IR validation error: invalid IR instruction 7 in /main: operand stack underflow`, and `Native IR validation error: ...` with `--emit=native` (the VM and native agree, so it is not a backend divergence). Each form alone compiles and runs (the block runs, the result is dropped). The same happens for user functions named `vector` and `map`. Repro: `[return<int>] twice([i32] value) { return(plus(value, value)) }` and `[effects(io_out), return<int>] main() { [i32 mut] seen{0i32}  twice(9i32) { assign(seen, 4i32) }  print_line(twice(5i32))  return(0i32) }`. First decide from docs/spec whether a block-form call of a function with no body parameter is valid; if it is, find the lowering that leaves the operand stack unbalanced; if it is not, diagnose it in semantics.
   - acceptance:
-    - each gap has a focused test or a recorded reason it is skipped
-    - a native-vs-VM divergence found on the way is a leaf with a repro
-  - stop_rule: tests and docs only; no language semantics changes.
+    - the repro runs on `primevm` and native (or is rejected with a diagnostic), pinned by a program-matrix case
+  - stop_rule: this call shape only.

@@ -113,6 +113,62 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("rejects native vector reserve literals the lowering folds") {
+  // The lowering folds `plus`/`minus`/`negate` trees of integer literals and rejects the ones that are out of
+  // range; the VM lowering gives the same diagnostics (the VM suite pins them too). 1024 is the last accepted one.
+  const std::string limit = "vector reserve exceeds local capacity limit (1024)";
+  const std::string negative = "vector reserve expects non-negative capacity";
+  const std::string overflow = "vector reserve literal expression overflow";
+  const std::vector<std::pair<std::string, std::string>> cases = {
+      {"1025i32", limit},
+      {"plus(1000i32, 25i32)", limit},
+      {"plus(1000u64, 25u64)", limit},
+      {"-1i32", negative},
+      {"minus(1i32, 2i32)", negative},
+      {"negate(1i32)", negative},
+      {"minus(1u64, 2u64)", overflow},
+      {"plus(9223372036854775807i64, 1i64)", overflow},
+      {"negate(-9223372036854775808i64)", overflow},
+      {"plus(18446744073709551615u64, 1u64)", overflow},
+  };
+  int index = 0;
+  for (const auto &[argument, message] : cases) {
+    std::string source = "import /std/collections/*\n\n";
+    source += "[effects(heap_alloc), return<int>]\nmain() {\n";
+    source += "  [vector<i32> mut] values{vector<i32>(1i32)}\n";
+    source += "  reserve(values, " + argument + ")\n";
+    source += "  return(0i32)\n}\n";
+    const std::string name = "native_vector_reserve_fold_" + std::to_string(index++);
+    const std::string srcPath = writeTemp(name + ".prime", source);
+    const std::string errPath = (testScratchPath("") / (name + ".err")).string();
+    const std::string compileCmd =
+        "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+    CAPTURE(argument);
+    CHECK(runCommand(compileCmd) == 2);
+    CHECK(readFile(errPath).find("Native lowering error: " + message) != std::string::npos);
+  }
+}
+
+TEST_CASE("native vector reserve accepts the local capacity limit") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  reserve(values, 1024i32)
+  return(convert<i32>(and(equal(count(values), 1i32), equal(capacity(values), 1024i32))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_vector_reserve_at_limit.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_vector_reserve_at_limit_exe").string();
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_CASE("native vector shrink helpers") {
   const std::string source = R"(
 import /std/collections/*

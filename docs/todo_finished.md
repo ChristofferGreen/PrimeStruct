@@ -2484,6 +2484,7 @@ are left unarchived.
 | TODO-6077 | Lowering errors carry the user location of the expression being lowered | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6078 | A lowering error names the backend that lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6086 | Native coverage kept after the Apple shard cleanup | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
