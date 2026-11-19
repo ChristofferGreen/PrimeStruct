@@ -597,7 +597,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - spec states the rule; matrix cases for narrowing and out-of-range conversions agree on VM, native, C++ and optexe
     - full release gate green
   - stop_rule: conversions only.
-  - notes: deferred: queued behind the Ready Now cap.
+  - notes: deferred: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, but needs TODO-5517 fault reporting first and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
 
 - [ ] TODO-5517: Runtime faults exit the same way on every backend
   - owner: ai
