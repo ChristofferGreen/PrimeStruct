@@ -64,8 +64,10 @@
   the same for both representations: with `/std/result/*` imported the entry returns the stdlib sum (tag plus
   payload storage; `Result.ok(x)` builds one too), and without the import the builtin packed `Result` (the error code
   in the high 32 bits, the ok payload in the low 32 bits; `Result<E>` is the error code itself, 0 for ok). The
-  declared return type picks the decoder, so every return of one entry is decoded the same way. The wasm and GLSL
-  targets do not decode yet and keep the raw return value.
+  declared return type picks the decoder, so every return of one entry is decoded the same way. Wasm decodes the builtin packed
+  forms too (the module's exported `main` returns the exit code; each return becomes an in-place decode, since Wasm has
+  no jump to an appended block); a stdlib `Result` sum is read through its address, which Wasm does not support. The
+  GLSL target does not decode and keeps the raw return value.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.

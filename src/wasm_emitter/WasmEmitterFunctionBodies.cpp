@@ -116,7 +116,8 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
 // The local declarations of a function body: runs of equal types, for every local after the parameters (the signature
 // declares those) and the scratch locals the emitter allocated while it emitted.
 void appendLocalDecls(const WasmLocalLayout &layout, std::vector<uint8_t> &out) {
-  std::vector<uint8_t> types(layout.localTypes.begin() + layout.parameterCount, layout.localTypes.end());
+  std::vector<uint8_t> types(layout.localTypes.begin() + layout.parameterCount,
+                             layout.localTypes.end());
   for (const WasmScratchSlot &slot : layout.typeState.scratch) {
     types.push_back(slot.type);
   }
@@ -230,7 +231,8 @@ bool inferWasmLocalTypes(const IrModule &module,
       for (size_t k = 0; k < function.parameterCount && k < layout.localTypes.size(); ++k) {
         uint8_t merged = WasmTypeUnknown;
         if (!mergeWasmTypes(layout.localTypes[k], observed[f][k], merged)) {
-          error = "wasm emitter call passes values of different kinds in function: " + function.name;
+          error =
+              "wasm emitter call passes values of different kinds in function: " + function.name;
           return false;
         }
         layout.localTypes[k] = merged;
@@ -240,14 +242,22 @@ bool inferWasmLocalTypes(const IrModule &module,
       std::vector<uint8_t> discarded;
       const size_t start = function.parameterCount;
       if (function.instructions.size() < start) {
-        error = "wasm emitter: function " + function.name + " has too few instructions for its parameters";
+        error = "wasm emitter: function " + function.name +
+                " has too few instructions for its parameters";
         return false;
       }
-      if (!emitInstructionRange(function, start, function.instructions.size(), layout, functionTypes, runtime,
-                                discarded, error)) {
+      if (!emitInstructionRange(function,
+                                start,
+                                function.instructions.size(),
+                                layout,
+                                functionTypes,
+                                runtime,
+                                discarded,
+                                error)) {
         return false;
       }
-      std::vector<uint8_t> next(layout.localTypes.begin(), layout.localTypes.begin() + layout.irLocalCount);
+      std::vector<uint8_t> next(layout.localTypes.begin(),
+                                layout.localTypes.begin() + layout.irLocalCount);
       if (next != irLocalTypes[f]) {
         irLocalTypes[f] = std::move(next);
         changed = true;
@@ -268,7 +278,8 @@ bool inferWasmLocalTypes(const IrModule &module,
           }
         }
         for (size_t k = 0; k < module.functions[f].parameterCount; ++k) {
-          functionTypes[f].params[k] = k < irLocalTypes[f].size() ? irLocalTypes[f][k] : WasmTypeI32;
+          functionTypes[f].params[k] =
+              k < irLocalTypes[f].size() ? irLocalTypes[f][k] : WasmTypeI32;
         }
       }
       return true;

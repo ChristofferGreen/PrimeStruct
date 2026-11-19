@@ -179,4 +179,65 @@ main() {
                      0);
 }
 
+// A Result-returning entry exits with the code decoded from its value (docs/spec/errors-and-file-io.md): the Wasm
+// module's `main` returns that code.
+TEST_CASE("wasm exits with the decoded code of a builtin value Result entry") {
+  checkWasmMatchesVm("packed_value_ok",
+                     R"(
+[return<Result<i32, i32>>]
+main() {
+  return(Result.ok(5i32))
+}
+)",
+                     5);
+  checkWasmMatchesVm("packed_value_ok_large",
+                     R"(
+[return<Result<i32, i32>>]
+main() {
+  return(Result.ok(300i32))
+}
+)",
+                     44);
+}
+
+TEST_CASE("wasm exits with the decoded code of a builtin status Result entry") {
+  checkWasmMatchesVm("packed_status_error",
+                     R"(
+[return<Result<i32>>]
+main() {
+  return(4i32)
+}
+)",
+                     4);
+  checkWasmMatchesVm("packed_status_large",
+                     R"(
+[return<Result<i32>>]
+main() {
+  return(300i32)
+}
+)",
+                     1);
+  checkWasmMatchesVm("packed_status_ok",
+                     R"(
+[return<Result<i32>>]
+main() {
+  return(0i32)
+}
+)",
+                     0);
+  // Two returns, one inside a branch, with output before them: the jumps of the entry are renumbered around the decode.
+  checkWasmMatchesVm("packed_status_branches",
+                     R"(
+[effects(io_out), return<Result<i32>>]
+main() {
+  print_line("before"utf8)
+  [i32 mut] n{4i32}
+  if(greater_than(n, 3i32), then() { return(7i32) }, else() { })
+  print_line("after"utf8)
+  return(0i32)
+}
+)",
+                     7);
+}
+
 TEST_SUITE_END();

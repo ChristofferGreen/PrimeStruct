@@ -523,14 +523,16 @@ bool IrLowerer::lower(const Program &program,
     return false;
   }
 
-  // The wasm and GLSL emitters take structured control flow only, so they keep the entry's raw return value.
-  const bool entryExitCodeTarget = validationTarget != IrValidationTarget::Wasm &&
-                                   validationTarget != IrValidationTarget::WasmBrowser &&
-                                   validationTarget != IrValidationTarget::Glsl;
-  if (entryExitCodeTarget && out.entryIndex >= 0 &&
-      static_cast<size_t>(out.entryIndex) < out.functions.size()) {
-    ir_lowerer::applyEntryResultExitCode(
-        *entryDef, defMap, out.functions[static_cast<size_t>(out.entryIndex)]);
+  // The wasm emitters take structured control flow only, so they get the decode in place of the appended block. The GLSL
+  // emitter keeps the entry's raw return value.
+  if (out.entryIndex >= 0 && static_cast<size_t>(out.entryIndex) < out.functions.size()) {
+    IrFunction &entryFunction = out.functions[static_cast<size_t>(out.entryIndex)];
+    if (validationTarget == IrValidationTarget::Wasm ||
+        validationTarget == IrValidationTarget::WasmBrowser) {
+      ir_lowerer::applyEntryResultExitCodeStructured(*entryDef, defMap, entryFunction);
+    } else if (validationTarget != IrValidationTarget::Glsl) {
+      ir_lowerer::applyEntryResultExitCode(*entryDef, defMap, entryFunction);
+    }
   }
 
   if (libraryRoots != nullptr && !ir_lowerer::removeLibraryEntryStub(out, error)) {

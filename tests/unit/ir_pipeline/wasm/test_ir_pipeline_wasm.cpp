@@ -443,7 +443,8 @@ TEST_CASE("wasm emitter wraps a narrowed i64 and extends a widened i32") {
   // local 0 is an i64 and local 1 an i32.
   CHECK(containsByteSequence(bytes, {0x02, 0x01, 0x7e, 0x01, 0x7f, 0x42}));
   // store, load, i32.wrap_i64, store, load, i64.extend_i32_s, return
-  CHECK(containsByteSequence(bytes, {0x21, 0x00, 0x20, 0x00, 0xa7, 0x21, 0x01, 0x20, 0x01, 0xac, 0x0f}));
+  CHECK(containsByteSequence(bytes,
+                             {0x21, 0x00, 0x20, 0x00, 0xa7, 0x21, 0x01, 0x20, 0x01, 0xac, 0x0f}));
 }
 
 TEST_CASE("wasm emitter parks the operands above a mismatched integer width while it converts") {
@@ -456,9 +457,8 @@ TEST_CASE("wasm emitter parks the operands above a mismatched integer width whil
 
   // the two scratch locals (an i64 and an i32), then: i32.const 3, i64.const 4, set the i64, set the i32, get the i32
   // and extend it, get the i64, i64.add
-  CHECK(containsByteSequence(bytes,
-                             {0x02, 0x01, 0x7e, 0x01, 0x7f, 0x41, 0x03, 0x42, 0x04, 0x21, 0x00, 0x21, 0x01, 0x20,
-                              0x01, 0xac, 0x20, 0x00, 0x7c, 0x0f}));
+  CHECK(containsByteSequence(bytes, {0x02, 0x01, 0x7e, 0x01, 0x7f, 0x41, 0x03, 0x42, 0x04, 0x21,
+                                     0x00, 0x21, 0x01, 0x20, 0x01, 0xac, 0x20, 0x00, 0x7c, 0x0f}));
 }
 
 TEST_CASE("wasm emitter types the parameters of a function by what its calls pass") {
@@ -500,8 +500,24 @@ TEST_CASE("wasm emitter duplicates a float through a scratch local of its own ty
 
   // one f64 local; the dup is local.tee 0, local.get 0
   CHECK(containsByteSequence(bytes,
-                             {0x01, 0x01, 0x7c, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0x22, 0x00,
-                              0x20, 0x00, 0xa0, 0x0f}));
+                             {0x01,
+                              0x01,
+                              0x7c,
+                              0x44,
+                              0x00,
+                              0x00,
+                              0x00,
+                              0x00,
+                              0x00,
+                              0x00,
+                              0xf0,
+                              0x3f,
+                              0x22,
+                              0x00,
+                              0x20,
+                              0x00,
+                              0xa0,
+                              0x0f}));
 }
 
 TEST_CASE("wasm emitter rejects a local that holds an integer and a float") {

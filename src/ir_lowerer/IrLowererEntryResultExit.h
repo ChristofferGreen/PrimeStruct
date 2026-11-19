@@ -20,4 +20,13 @@ void applyEntryResultExitCode(const Definition &entryDef,
                               const std::unordered_map<std::string, const Definition *> &defMap,
                               IrFunction &entryFunction);
 
+// The same exit codes for a target that takes structured control flow only (Wasm), which cannot jump to an appended
+// block: each return of the entry is replaced in place by a decode that parks the value in a fresh local and ends
+// every branch in its own return, and the jumps of the entry are renumbered. Handles the builtin packed `Result`;
+// a stdlib `Result` sum is read through its address, which such a target does not support, so it is left alone.
+void applyEntryResultExitCodeStructured(
+    const Definition &entryDef,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    IrFunction &entryFunction);
+
 } // namespace primec::ir_lowerer

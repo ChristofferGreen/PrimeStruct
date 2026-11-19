@@ -126,7 +126,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
-| TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
@@ -174,7 +173,6 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902, TODO-6075
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
@@ -465,20 +463,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred: after the macOS editor works.
-
-- [~] TODO-6037: A Result-returning main exits with its decoded code on wasm
-  - owner: ai
-  - status: in_progress
-  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
-  - created_at: 2026-11-18
-  - phase: Correctness audit 2026-10
-  - parallel_track: result-main-wasm
-  - scope: The entry exit code rule (docs/spec/errors-and-file-io.md, Result-returning entry) is decoded on the VM, native, C++ and optimized C++ backends. The wasm emitter rejects the jump to the appended decode block (`unsupported control-flow pattern`), so the wasm and GLSL targets keep the raw return value. Decode the value with structured control flow (branch-free arithmetic or an in-place `if` the wasm emitter accepts) and drop the target exclusion in `IrLowererLower.cpp`.
-  - acceptance:
-    - the ok, error and packed cases of test_compile_run_vm_result_exit_codes.cpp also pass under wasmtime (or the wasm emitter's own run check)
-    - full release gate green
-  - stop_rule: entry exit codes on wasm only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-6059: Native x86_64 float to integer conversion saturates
   - owner: ai

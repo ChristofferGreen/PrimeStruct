@@ -143,7 +143,12 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   }
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     WasmCodeBody codeBody;
-    if (!lowerFunctionCode(module.functions[functionIndex], functionTypes, runtime, irLocalTypes[functionIndex], codeBody, error)) {
+    if (!lowerFunctionCode(module.functions[functionIndex],
+                           functionTypes,
+                           runtime,
+                           irLocalTypes[functionIndex],
+                           codeBody,
+                           error)) {
       return false;
     }
     codeBodies.push_back(std::move(codeBody));

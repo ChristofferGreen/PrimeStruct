@@ -770,10 +770,18 @@ main() {
 
   const std::string wasmCmd = "./primec --emit=wasm " + quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                               " --entry /main 2> " + quoteShellArg(errPath);
-  CHECK(runCommand(wasmCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("unsupported control-flow pattern") != std::string::npos);
-  CHECK(std::filesystem::exists(wasmPath) == false);
+  // The inlined call ends in a jump to the next instruction, which the emitter takes as no code.
+  CHECK(runCommand(wasmCmd) == 0);
+  CHECK(std::filesystem::exists(wasmPath));
+  if (hasNode()) {
+    std::string result;
+    std::string nodeError;
+    REQUIRE(runWasmMainViaNode(wasmPath, result, nodeError));
+    CHECK(nodeError.empty());
+    CHECK(result == "11");
+  } else {
+    MESSAGE("SKIP: node is unavailable; the Wasm output was not run");
+  }
 }
 
 

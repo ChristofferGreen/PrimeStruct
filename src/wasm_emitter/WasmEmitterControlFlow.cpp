@@ -305,11 +305,13 @@ bool emitInstructionRange(const IrFunction &function,
       return false;
     }
 
-    if (!emitTypedInstruction(inst, localLayout, functionTypes, runtime, out, error, function.name)) {
+    if (!emitTypedInstruction(
+            inst, localLayout, functionTypes, runtime, out, error, function.name)) {
       return false;
     }
-    diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
-               inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64;
+    diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 ||
+               inst.op == IrOpcode::ReturnI64 || inst.op == IrOpcode::ReturnF32 ||
+               inst.op == IrOpcode::ReturnF64;
     ++index;
   }
 
