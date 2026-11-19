@@ -163,7 +163,9 @@ enum class IrOperandClass : uint8_t {
   X(MutexLock, None)                                                                               \
   X(MutexUnlock, None)                                                                             \
   X(ConditionWait, None)                                                                           \
-  X(ConditionNotify, None)
+  X(ConditionNotify, None)                                                                         \
+  X(FmaF32, None)                                                                                  \
+  X(FmaF64, None)
 
 struct IrOperandInfo {
   IrOpcode op;

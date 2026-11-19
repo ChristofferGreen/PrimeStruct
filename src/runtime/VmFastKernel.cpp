@@ -49,79 +49,6 @@ bool vmFastKernelEnabled() {
 
 namespace {
 
-// Float arithmetic, comparisons and conversions: each gets a threaded handler that evaluates it
-// with the shared pure semantics (IrPureSemantics.h), the opcode a constant so the switch folds.
-// The three-address forms of VmFastKernelProgram.h (results stored straight into a local).
-// clang-format off
-#define FAST_STORE_FORMS(X) \
-  X(FastOpLocalAddLocalStore) \
-  X(FastOpLocalSubLocalStore) \
-  X(FastOpLocalMulLocalStore) \
-  X(FastOpLocalAddLocalSextStore) \
-  X(FastOpLocalSubLocalSextStore) \
-  X(FastOpLocalMulLocalSextStore) \
-  X(FastOpAddStore) \
-  X(FastOpSubStore) \
-  X(FastOpMulStore) \
-  X(FastOpAddSextStore) \
-  X(FastOpSubSextStore) \
-  X(FastOpMulSextStore) \
-  X(FastOpLocalAddLocalStoreF64) \
-  X(FastOpLocalSubLocalStoreF64) \
-  X(FastOpLocalMulLocalStoreF64) \
-  X(FastOpLocalDivLocalStoreF64) \
-  X(FastOpLocalAddImmStoreF64) \
-  X(FastOpLocalSubImmStoreF64) \
-  X(FastOpLocalMulImmStoreF64) \
-  X(FastOpLocalDivImmStoreF64) \
-  X(FastOpAddStoreF64) \
-  X(FastOpSubStoreF64) \
-  X(FastOpMulStoreF64) \
-  X(FastOpDivStoreF64) \
-  X(FastOpLocalNegStoreF64)
-// clang-format on
-
-// clang-format off
-#define FAST_FLOAT_BINARY(X) \
-  X(AddF32) \
-  X(SubF32) \
-  X(MulF32) \
-  X(DivF32) \
-  X(AddF64) \
-  X(SubF64) \
-  X(MulF64) \
-  X(DivF64) \
-  X(CmpEqF32) \
-  X(CmpNeF32) \
-  X(CmpLtF32) \
-  X(CmpLeF32) \
-  X(CmpGtF32) \
-  X(CmpGeF32) \
-  X(CmpEqF64) \
-  X(CmpNeF64) \
-  X(CmpLtF64) \
-  X(CmpLeF64) \
-  X(CmpGtF64) \
-  X(CmpGeF64)
-#define FAST_FLOAT_UNARY(X) \
-  X(NegF32) \
-  X(NegF64) \
-  X(ConvertI32ToF32) \
-  X(ConvertI32ToF64) \
-  X(ConvertI64ToF32) \
-  X(ConvertI64ToF64) \
-  X(ConvertU64ToF32) \
-  X(ConvertU64ToF64) \
-  X(ConvertF32ToI32) \
-  X(ConvertF32ToI64) \
-  X(ConvertF32ToU64) \
-  X(ConvertF64ToI32) \
-  X(ConvertF64ToI64) \
-  X(ConvertF64ToU64) \
-  X(ConvertF32ToF64) \
-  X(ConvertF64ToF32)
-// clang-format on
-
 constexpr size_t InitialStackSlots = 4096;
 
 #define OP(name) static_cast<uint16_t>(IrOpcode::name)
@@ -350,6 +277,8 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
   FAST_FLOAT_BINARY(FAST_TABLE_FLOAT)
   FAST_FLOAT_UNARY(FAST_TABLE_FLOAT)
 #undef FAST_TABLE_FLOAT
+  table[OP(FmaF32)] = &&lbl_FmaF32;
+  table[OP(FmaF64)] = &&lbl_FmaF64;
 #define FAST_TABLE_CMP(N, O)                                                                       \
   table[FastOpStoreJmpCmpLocalImm##N] = &&lbl_FastOpStoreJmpCmpLocalImm##N;                        \
   table[FastOpJmpCmpLocalImm##N] = &&lbl_FastOpJmpCmpLocalImm##N;                                  \
@@ -1037,6 +966,15 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       ++ip;                                                                                        \
       DISPATCH();                                                                                  \
     }
+// Fused multiply-add: three operands in, one result (IrPureSemantics.h, evalFmaOpcode).
+#define FAST_CASE_FMA(N)                                                                           \
+  case OP(N):                                                                                      \
+    lbl_##N : {                                                                                    \
+      sp[-3] = evalFmaOpcode(IrOpcode::N, sp[-3], sp[-2], sp[-1]);                                 \
+      sp -= 2;                                                                                     \
+      ++ip;                                                                                        \
+      DISPATCH();                                                                                  \
+    }
 #define FAST_CASE_LOCAL_F64(NAME, OPCODE, RHS)                                                     \
   case NAME:                                                                                       \
     lbl_##NAME : {                                                                                 \
@@ -1058,8 +996,11 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       // Float operations never fault (division by zero gives an infinity or NaN).
       FAST_FLOAT_BINARY(FAST_CASE_FLOAT_BINARY)
       FAST_FLOAT_UNARY(FAST_CASE_FLOAT_UNARY)
+      FAST_CASE_FMA(FmaF32)
+      FAST_CASE_FMA(FmaF64)
 #undef FAST_CASE_FLOAT_BINARY
 #undef FAST_CASE_FLOAT_UNARY
+#undef FAST_CASE_FMA
 
     // The scheduler's opcodes (prepareModule accepts them only for a run with tasks): the call stack is handed back
     // with `ip` at the opcode, and the scheduler runs it, moves `ip` past it and resumes the task or another one.

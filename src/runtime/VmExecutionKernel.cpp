@@ -526,6 +526,18 @@ template <bool TrackEvents>
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }
+  case IrOpcode::FmaF32:
+  case IrOpcode::FmaF64: {
+    const size_t size = stack.size();
+    if (size < 3) {
+      error = "IR stack underflow on fma";
+      return VmKernelStepOutcome::Fault;
+    }
+    stack[size - 3] = evalFmaOpcode(inst.op, stack[size - 3], stack[size - 2], stack[size - 1]);
+    stack.resize(size - 2);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  }
   default:
     // Arithmetic, comparisons and conversions: operands are read in place and
     // the result overwrites the lower operand, with the value semantics shared

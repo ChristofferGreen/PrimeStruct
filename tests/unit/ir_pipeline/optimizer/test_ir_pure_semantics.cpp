@@ -2,6 +2,7 @@
 #include "primec/ir/IrPureSemantics.h"
 #include "primec/runtime/Vm.h"
 #include "primec/runtime/VmKernelBoundary.h"
+#include "primec/testing/VmKernelSelection.h"
 
 #include "third_party/doctest.h"
 
@@ -304,4 +305,99 @@ TEST_CASE("evalPureOpcode agrees with the VM over an operand grid") {
     }
   }
   CHECK(compared > 2000);
+}
+
+namespace {
+
+// Runs `a b c op` through the real VM with the step kernel or the flat loop.
+bool runFmaInVm(IrOpcode op,
+                uint64_t a,
+                uint64_t b,
+                uint64_t c,
+                bool fastKernel,
+                uint64_t &result,
+                std::string &error) {
+  primec::testing::setVmFastKernelEnabled(fastKernel);
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({IrOpcode::PushI64, a});
+  function.instructions.push_back({IrOpcode::PushI64, b});
+  function.instructions.push_back({IrOpcode::PushI64, c});
+  function.instructions.push_back({op, 0});
+  function.instructions.push_back({IrOpcode::ReturnI64, 0});
+  module.functions.push_back(std::move(function));
+  primec::Vm vm;
+  const bool ok = vm.execute(module, result, error);
+  primec::testing::setVmFastKernelEnabled(true);
+  return ok;
+}
+
+} // namespace
+
+// FmaF32 and FmaF64 take three operands, so they are not among the pure opcodes above; evalFmaOpcode is their shared
+// semantics, and the VM (the step kernel and the flat loop) and the constant folder use it.
+TEST_CASE("fused multiply-add rounds once and the VM kernels agree with evalFmaOpcode") {
+  const double e64 = std::ldexp(1.0, -30);
+  const float e32 = std::ldexp(1.0f, -13);
+  const double inf = std::numeric_limits<double>::infinity();
+  struct Case {
+    IrOpcode op;
+    uint64_t a;
+    uint64_t b;
+    uint64_t c;
+    uint64_t expected;
+  };
+  // (1 + e) * (1 - e) is 1 - e * e, which does not fit the type: a multiply and an add give 0 for the first and
+  // fourth case, the fused result is -e * e.
+  const std::vector<Case> cases = {
+      {IrOpcode::FmaF64,
+       f64Bits(1.0 + e64),
+       f64Bits(1.0 - e64),
+       f64Bits(-1.0),
+       f64Bits(-std::ldexp(1.0, -60))},
+      {IrOpcode::FmaF64, f64Bits(2.0), f64Bits(3.0), f64Bits(4.0), f64Bits(10.0)},
+      {IrOpcode::FmaF64, f64Bits(1.0e200), f64Bits(1.0e200), f64Bits(-inf), f64Bits(-inf)},
+      {IrOpcode::FmaF32,
+       f32Bits(1.0f + e32),
+       f32Bits(1.0f - e32),
+       f32Bits(-1.0f),
+       f32Bits(-std::ldexp(1.0f, -26))},
+      {IrOpcode::FmaF32, f32Bits(2.0f), f32Bits(3.0f), f32Bits(4.0f), f32Bits(10.0f)},
+  };
+  CHECK_FALSE(primec::isIrPureOpcode(IrOpcode::FmaF64));
+  CHECK(primec::isIrFmaOpcode(IrOpcode::FmaF32));
+  CHECK_FALSE(primec::isIrFmaOpcode(IrOpcode::MulF32));
+  for (const Case &fmaCase : cases) {
+    CHECK(primec::evalFmaOpcode(fmaCase.op, fmaCase.a, fmaCase.b, fmaCase.c) == fmaCase.expected);
+    for (const bool fastKernel : {false, true}) {
+      CAPTURE(fastKernel);
+      uint64_t result = 0;
+      std::string error;
+      REQUIRE_MESSAGE(
+          runFmaInVm(fmaCase.op, fmaCase.a, fmaCase.b, fmaCase.c, fastKernel, result, error),
+          error);
+      CHECK(result == fmaCase.expected);
+    }
+  }
+}
+
+TEST_CASE("fused multiply-add on a short stack faults") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction function;
+  function.name = "/main";
+  function.instructions.push_back({IrOpcode::PushI64, f64Bits(1.0)});
+  function.instructions.push_back({IrOpcode::PushI64, f64Bits(2.0)});
+  function.instructions.push_back({IrOpcode::FmaF64, 0});
+  function.instructions.push_back({IrOpcode::ReturnI64, 0});
+  module.functions.push_back(std::move(function));
+  primec::testing::setVmFastKernelEnabled(false);
+  primec::Vm vm;
+  uint64_t result = 0;
+  std::string error;
+  CHECK_FALSE(vm.execute(module, result, error));
+  CHECK(error.find("underflow") != std::string::npos);
+  primec::testing::setVmFastKernelEnabled(true);
 }

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <bit>
+#include <cmath>
 #include <cstdint>
 #include <limits>
 
@@ -367,6 +368,22 @@ inline IrPureEval evalPureOpcode(IrOpcode op, uint64_t lhs, uint64_t rhs, uint64
   default:
     return IrPureEval::NotPure;
   }
+}
+
+// The fused multiply-adds FmaF32 and FmaF64 take three operands, so they are not part of the one- and two-operand
+// opcodes above (irPureOpcodeArity is 0 for them); each execution form and the constant folder call evalFmaOpcode.
+// The product is not rounded before the addition, as std::fma defines it.
+constexpr bool isIrFmaOpcode(IrOpcode op) {
+  return op == IrOpcode::FmaF32 || op == IrOpcode::FmaF64;
+}
+
+// a is the operand pushed first and c the top of stack. For a NaN result the payload is the host's.
+inline uint64_t evalFmaOpcode(IrOpcode op, uint64_t a, uint64_t b, uint64_t c) {
+  using namespace ir_pure_detail;
+  if (op == IrOpcode::FmaF32) {
+    return slotFromF32(std::fma(f32FromSlot(a), f32FromSlot(b), f32FromSlot(c)));
+  }
+  return slotFromF64(std::fma(f64FromSlot(a), f64FromSlot(b), f64FromSlot(c)));
 }
 
 // True when evalPureOpcode yields the same value on every host. Division by zero is not portable to fold (it is a

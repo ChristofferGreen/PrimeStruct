@@ -32,8 +32,11 @@
   so its recursion is rejected with the parameter named.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v38 (v24 to v38 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log). v38 (TODO-5922, the IR link) appends one section after the host imports: a
+- **PSIR versioning:** current portable IR is PSIR v40 (v24 to v40 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log). v40 appends `FmaF32` and `FmaF64` (see Fused multiply-add). Migration: the
+  module layout is unchanged, so a v33 to v39 module still loads (it cannot hold the opcodes) and a writer always
+  writes v40; the loader refuses an opcode newer than the module's version. v39 marks string literal pushes, as the
+  string literal paragraph below describes. v38 (TODO-5922, the IR link) appends one section after the host imports: a
   count and, for each function that is an import (`IrFunction::isImport`: a name and a parameter count, no
   instructions, the name of the library that defines it), its index and library name; and an entry index of
   `0xFFFFFFFF` means no entry point (a library has none). Migration: a v33 to v37 module has no such section, so the
@@ -203,6 +206,23 @@
   tasks count themselves as live and signal when they end). IR validation accepts the opcodes for the VM, serialized
   IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `mutex operations are not supported by
   the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `lock` is `1 << 14`.
+- **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
+  once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result
+  can differ from `MulF32` then `AddF32` (and the `F64` forms), which round twice (immediate 0, no fault). The `fma`
+  builtin lowers to one of them. They have three operands, so they are outside the one- and two-operand pure opcodes of
+  `IrPureSemantics.h`; `evalFmaOpcode` there is their value, which the VM kernels (step and flat loop) and the constant
+  folder call, so a folded and a run `fma` agree bit for bit (a NaN result is never folded). Each backend:
+
+  | backend | form | rounding |
+  | --- | --- | --- |
+  | VM (step kernel, flat loop), constant folding | `std::fma` | once |
+  | `optcpp`, `optexe`, `exe` (the C++ emitters) | `std::fma` (the host's fused instruction; the host compiler runs with `-ffp-contract=off`) | once |
+  | arm64 native (Mach-O), stack and register-allocated functions | `FMADD`; a function that has the opcode keeps the stack path | once |
+  | GLSL | `fma()` (the narrowed f64 path computes it on f32 payloads like the other f64 operations) | once |
+  | Wasm (WASI and browser profiles) | WebAssembly has no fused instruction: `(a * b) + c`, the addend held in an i64 local | twice, until an exact emulation lands (exactness only, slower) |
+  | x86_64 native (ELF) | the opcode becomes `StoreLocal t; Mul; LoadLocal t; Add` before emission (`expandFusedMultiplyAdd`, `primec/ir/IrFmaExpansion.h`) | twice, until FMA3 `vfmadd231` lands |
+  | the Linux x86_64 JIT | not inline and not bridged, so a module with the opcode stays on the interpreter | once |
+
 - **Conditions (PSIR v37):** `ConditionWait` and `ConditionNotify` let a task that holds a lock wait until another
   task has changed what the lock guards. A condition is the address of one heap slot. `ConditionWait` pops the
   address of a lock the task holds (on top) and the address of a condition, frees the lock and leaves the task

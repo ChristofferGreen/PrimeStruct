@@ -234,6 +234,51 @@ TEST_CASE("const-fold leaves unsafe or unprofitable cases alone") {
                 assemble({"LoadLocal 0", "Pop", "PushI32 5", "ReturnI32"})});
 }
 
+// (1 + 2^-30) * (1 - 2^-30) is 1 - 2^-60, which does not fit a double: a multiply followed by an add rounds it to 1 and
+// gives 0, the fused opcode gives -2^-60. The folded value must be the fused one, as the VM computes it.
+TEST_CASE("const-fold folds fused multiply-adds with one rounding") {
+  expectGolden("const-fold",
+               {"f64 fma",
+                assemble({"PushF64 0x3ff0000000400000",
+                          "PushF64 0x3fefffffff800000",
+                          "PushF64 0xbff0000000000000",
+                          "FmaF64",
+                          "ReturnF64"}),
+                assemble({"PushF64 0xbc30000000000000", "ReturnF64"})});
+  expectGolden("const-fold",
+               {"f32 fma",
+                assemble({"PushF32 0x3f800400",
+                          "PushF32 0x3f7ff800",
+                          "PushF32 0xbf800000",
+                          "FmaF32",
+                          "ReturnF32"}),
+                assemble({"PushF32 0xb2800000", "ReturnF32"})});
+  expectGolden("const-fold",
+               {"an operand that is not a constant stays",
+                assemble({"LoadLocal 0",
+                          "PushF64 0x3fefffffff800000",
+                          "PushF64 0xbff0000000000000",
+                          "FmaF64",
+                          "ReturnF64"}),
+                assemble({"LoadLocal 0",
+                          "PushF64 0x3fefffffff800000",
+                          "PushF64 0xbff0000000000000",
+                          "FmaF64",
+                          "ReturnF64"})});
+  expectGolden("const-fold",
+               {"an infinity times zero is a NaN and stays",
+                assemble({"PushF64 0x7ff0000000000000",
+                          "PushF64 0x0",
+                          "PushF64 0x3ff0000000000000",
+                          "FmaF64",
+                          "ReturnF64"}),
+                assemble({"PushF64 0x7ff0000000000000",
+                          "PushF64 0x0",
+                          "PushF64 0x3ff0000000000000",
+                          "FmaF64",
+                          "ReturnF64"})});
+}
+
 TEST_CASE("const-fold evaluates floats and conversions but never bakes in a NaN") {
   expectGolden("const-fold",
                {"f32 add",

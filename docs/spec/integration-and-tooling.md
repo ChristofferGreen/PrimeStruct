@@ -198,7 +198,7 @@ case has its own message, and the ones about an archive that is stale or damaged
 | cut short, trailing bytes, sections out of order, a manifest or code that does not load | `library archive is damaged (...)` |
 | a section whose SHA-256 differs from its table entry | `library section <name> changed since the library was built (its hash differs)` |
 | another compiler build | `library was built by another compiler build (<id>, this compiler is <id>)` |
-| another IR schema version | `library was built with IR schema version 38, this compiler uses version 39` |
+| another IR schema version | `library was built with IR schema version 39, this compiler uses version 40` |
 | another hash scheme | `library uses the hash scheme ..., which this compiler does not know` |
 | manifest and symbol table with different interface hashes | `library manifest and symbol table name different interface hashes` |
 

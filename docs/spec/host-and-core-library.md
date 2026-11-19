@@ -108,7 +108,12 @@ main() {
     NaN), `round` rounds half away from zero with no double rounding (`round(0.49999999999999994)` is `0.0`,
     `round(-0.4)` is `-0.0`, values at or above 2^52 for `f64` and 2^23 for `f32`, infinities and NaN are returned
     unchanged), and `atan2` returns the C angle in (-pi, pi] for every quadrant, signed zero, infinity and NaN within
-    about 2 ulp. `fma` still rounds twice (multiply, then add); a fused `fma` is open.
+    about 2 ulp. `fma(a, b, c)` is fused: it computes `a * b + c` with one rounding (C's `fmaf` and `fma`), so
+    `fma(1.0 + 2^-30, 1.0 - 2^-30, -1.0)` is `-2^-60` where a multiply and an add give `0.0`. It lowers to the IR
+    opcodes `FmaF32` and `FmaF64`; the VM, constant folding and the C++ emitters (`optcpp`, `optexe`, `exe`) use
+    `std::fma`, arm64 native uses `fmadd` and GLSL uses `fma()`. Wasm (no fused instruction) and x86_64 native
+    (its FMA3 form is not landed) still round twice, and the Wasm form is meant to become an exact emulation
+    (exactness only, slower); see docs/spec/vm-design.md, Fused multiply-add.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
   - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline
     within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range

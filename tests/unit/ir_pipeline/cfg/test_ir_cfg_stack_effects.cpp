@@ -240,6 +240,14 @@ std::vector<EffectCase> buildCases() {
   // A notify with no waiter, on a local's slot.
   add(IrOpcode::ConditionNotify, 0, {{IrOpcode::AddressOfLocal, 1}});
 
+  // Fused multiply-add: three operands in, one result.
+  add(IrOpcode::FmaF32,
+      0,
+      {pushF32(F32OnePointFive), pushF32(F32TwoPointFive), pushF32(F32OnePointFive)});
+  add(IrOpcode::FmaF64,
+      0,
+      {pushF64(F64OnePointFive), pushF64(F64TwoPointFive), pushF64(F64OnePointFive)});
+
   // Printing. imm 0 means stdout without a newline.
   add(IrOpcode::PrintI32, 0, {pushI32(5)});
   add(IrOpcode::PrintI64, 0, {pushI32(5)});

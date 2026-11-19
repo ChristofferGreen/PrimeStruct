@@ -203,6 +203,8 @@ bool computeIrStackEffect(const IrInstruction &instruction,
   case IrOpcode::AtomicExchange:
     return set(2, 1);
   case IrOpcode::AtomicCompareExchange:
+  case IrOpcode::FmaF32:
+  case IrOpcode::FmaF64:
     return set(3, 1);
   case IrOpcode::CallHost: {
     uint32_t parameterCount = 0;

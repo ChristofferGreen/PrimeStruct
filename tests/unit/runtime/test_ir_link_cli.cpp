@@ -350,4 +350,51 @@ TEST_CASE("primevm --link refuses a version 38 library with strings and links on
   CHECK(quiet.exitCode == 0);
 }
 
+// 1.5 * 2.0 + 0.5 = 3.5, converted to the i32 3.
+static IrModule fusedMultiplyAddModule() {
+  return moduleOf({functionOf("/main",
+                              0,
+                              {{IrOpcode::PushF64, 0x3ff8000000000000ull},
+                               {IrOpcode::PushF64, 0x4000000000000000ull},
+                               {IrOpcode::PushF64, 0x3fe0000000000000ull},
+                               {IrOpcode::FmaF64, 0},
+                               {IrOpcode::ConvertF64ToI32, 0},
+                               {IrOpcode::ReturnI32, 0}})});
+}
+
+TEST_CASE("schema 40: a module with a fused multiply-add round trips and runs") {
+  const IrModule module = fusedMultiplyAddModule();
+  std::string error;
+  IrModule back;
+  REQUIRE_MESSAGE(deserializeIr(bytesOf(module), back, error), error);
+  CHECK(back.schemaVersion == IrSchemaVersion);
+  CHECK(IrSchemaVersion >= 40u);
+  REQUIRE(back.functions[0].instructions.size() == 6);
+  CHECK(back.functions[0].instructions[3].op == IrOpcode::FmaF64);
+  const Run result = run(back);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.value == 3);
+}
+
+TEST_CASE("schema 40: a version 39 module loads unchanged and cannot hold a fused multiply-add") {
+  const IrModule plain =
+      moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}})});
+  std::vector<uint8_t> old = bytesOf(plain);
+  setVersion(old, 39u);
+  IrModule loaded;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(old, loaded, error), error);
+  CHECK(loaded.schemaVersion == 39u);
+  CHECK(run(loaded).value == 9);
+  std::vector<uint8_t> rewritten;
+  REQUIRE_MESSAGE(serializeIr(loaded, rewritten, error), error);
+  CHECK(rewritten == bytesOf(plain));
+
+  // The opcode byte of a FmaF64 did not exist in version 39.
+  std::vector<uint8_t> withFma = bytesOf(fusedMultiplyAddModule());
+  setVersion(withFma, 39u);
+  CHECK_FALSE(deserializeIr(withFma, loaded, error));
+  CHECK(error == "unsupported IR opcode");
+}
+
 TEST_SUITE_END();

@@ -78,6 +78,7 @@ bool foldedPush(IrOpcode op, uint64_t result, IrOpcode &pushOp, uint64_t &imm) {
   case IrOpcode::MulF32:
   case IrOpcode::DivF32:
   case IrOpcode::NegF32:
+  case IrOpcode::FmaF32:
   case IrOpcode::ConvertI32ToF32:
   case IrOpcode::ConvertI64ToF32:
   case IrOpcode::ConvertU64ToF32:
@@ -93,6 +94,7 @@ bool foldedPush(IrOpcode op, uint64_t result, IrOpcode &pushOp, uint64_t &imm) {
   case IrOpcode::MulF64:
   case IrOpcode::DivF64:
   case IrOpcode::NegF64:
+  case IrOpcode::FmaF64:
   case IrOpcode::ConvertI32ToF64:
   case IrOpcode::ConvertI64ToF64:
   case IrOpcode::ConvertU64ToF64:
@@ -138,6 +140,28 @@ bool foldFunction(IrFunction &function, const IrModule &module) {
     if (isConstantPush(instruction.op) && !instruction.isStringLiteral) {
       window.push_back({true, pushedSlot(instruction), i});
       continue;
+    }
+
+    if (isIrFmaOpcode(instruction.op) && window.size() >= 3) {
+      const Entry &cEntry = window[window.size() - 1];
+      const Entry &bEntry = window[window.size() - 2];
+      const Entry &aEntry = window[window.size() - 3];
+      if (aEntry.known && bEntry.known && cEntry.known && aEntry.producer != NoProducer &&
+          bEntry.producer != NoProducer && cEntry.producer != NoProducer) {
+        const uint64_t result =
+            evalFmaOpcode(instruction.op, aEntry.value, bEntry.value, cEntry.value);
+        IrOpcode pushOp = IrOpcode::PushI64;
+        uint64_t imm = 0;
+        if (foldedPush(instruction.op, result, pushOp, imm)) {
+          rewriter.erase(aEntry.producer);
+          rewriter.erase(bEntry.producer);
+          rewriter.erase(cEntry.producer);
+          rewriter.replace(i, pushOp, imm);
+          window.resize(window.size() - 3);
+          window.push_back({true, result, i});
+          continue;
+        }
+      }
     }
 
     const int arity = irPureOpcodeArity(instruction.op);

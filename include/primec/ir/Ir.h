@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 39u;
+constexpr uint32_t IrSchemaVersion = 40u;
 // v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes, v36 only MutexLock and MutexUnlock and v37
 // only ConditionWait and ConditionNotify, so a v33 to v36 module loads unchanged (it cannot hold the opcodes added
 // after it). v38 appends a section after the host imports (the functions that are imports of a library) and
@@ -20,6 +20,8 @@ constexpr uint32_t IrSchemaVersion = 39u;
 // byte false when it has strings, and the IR link (primec/ir/IrLinker.h) refuses it as a library with a message that
 // asks for a rebuild, because the strings it would have to move are not known. Migration: a loader reads any
 // supported version; a writer always writes v39, so a loaded older module keeps its false byte and runs unchanged.
+// v40 only appends FmaF32 and FmaF64, so a v33 to v39 module loads unchanged (it cannot hold them) and a writer always
+// writes v40. The format of a module is otherwise the same as v39.
 // The opcode bytes of a marked PushI32 and PushI64 in a serialized module (v39); no opcode may take these values, and
 // lowering uses them for the same pushes until it resolves them into IrInstruction::isStringLiteral.
 constexpr uint8_t IrStringPushI32Code = 0xFEu;
@@ -209,6 +211,12 @@ enum class IrOpcode : uint8_t {
   ConditionWait,
   // Pops a condition address and wakes every task that waits on it.
   ConditionNotify,
+  // Fused multiply-add (docs/spec/vm-design.md, Fused multiply-add; added in PSIR v40): pops c, then b, then a and
+  // pushes a * b + c rounded once, as C's fmaf and fma do. The product is not rounded before the addition, so the
+  // result can differ from MulF32 then AddF32 (and MulF64 then AddF64), which round twice. Every backend gives the
+  // bits of std::fma; a backend with a fused instruction uses it.
+  FmaF32,
+  FmaF64,
 };
 
 enum class IrStructFieldCategory : uint8_t {

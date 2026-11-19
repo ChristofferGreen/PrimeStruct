@@ -8,7 +8,11 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.math");
 
 namespace {
 
-void runMathProgram(const std::string &name, const std::string &body, int checks) {
+// `nativeRoundsOnce` is false for a program whose native config does not give the fused result on this host.
+void runMathProgram(const std::string &name,
+                    const std::string &body,
+                    int checks,
+                    bool nativeRoundsOnce = true) {
   program_matrix::ProgramCase program;
   program.name = name;
   program.source = R"(
@@ -37,6 +41,9 @@ main() {
   program.stdoutText = expected;
   program.onlyConfigs = {
       "vm-step-O0", "vm-O0", "vm-O2", "native-O0", "native-O2", "optexe-O2", "exe"};
+  if (!nativeRoundsOnce) {
+    program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2", "exe"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 
@@ -114,4 +121,41 @@ TEST_CASE("atan2 returns the angle of every quadrant, axis and zero") {
   print_line(check(abs(atan2(1.0f32, -1.0f32) - 2.3561945f32) < 0.000001f32))
   print_line(check(abs(atan2(-3.0f32, 4.0f32) + 0.6435011f32) < 0.000001f32))
 )", 23);
+}
+
+// fma rounds once. Each case below has a product that does not fit the type, so a multiply followed by an add
+// (two roundings) gives a different value than the fused result; every backend and the constant folder must give the
+// fused one (docs/spec/host-and-core-library.md, Exact helpers).
+TEST_CASE("fma rounds once for f64 and f32") {
+#if defined(__x86_64__)
+  // x86_64 native computes the opcode as a multiply and an add until its FMA3 form lands (docs/spec/vm-design.md,
+  // Fused multiply-add).
+  const bool nativeRoundsOnce = false;
+#else
+  const bool nativeRoundsOnce = true;
+#endif
+  runMathProgram("math_fma_fused",
+                 R"(
+  [f64] e{1.0f64 / 1073741824.0f64}
+  [f64] tiny{e * e}
+  print_line(check(fma(1.0f64 + e, 1.0f64 - e, -1.0f64) == negate(tiny)))
+  print_line(check(fma(1.0f64 - e, 1.0f64 + e, -1.0f64) == negate(tiny)))
+  print_line(check(fma(1.0f64 + e, 1.0f64 + e, -1.0f64 - e - e) == tiny))
+  print_line(check(fma(2.0f64, 3.0f64, 4.0f64) == 10.0f64))
+  print_line(check(fma(0.1f64, 10.0f64, -1.0f64) == 0.000000000000000055511151231257827f64))
+  [f32] e32{1.0f32 / 8192.0f32}
+  [f32] tiny32{e32 * e32}
+  print_line(check(fma(1.0f32 + e32, 1.0f32 - e32, -1.0f32) == negate(tiny32)))
+  print_line(check(fma(2.0f32, 3.0f32, 4.0f32) == 10.0f32))
+  [f32] a{8391483.0f32 / 34359738368.0f32}
+  [f32] b{8385734.0f32 / 34359738368.0f32}
+  print_line(check(fma(a, b, 1.0f32) == 1.0f32 + 0.00000011920928955078125f32))
+  print_line(check(fma(b, a, 1.0f32) == 1.0f32 + 0.00000011920928955078125f32))
+  print_line(check(fma(inf, 1.0f64, 2.0f64) == inf))
+  print_line(check(fma(inf, 0.0f64, 1.0f64) != fma(inf, 0.0f64, 1.0f64)))
+  print_line(check(fma(inf, 1.0f64, negate(inf)) != fma(inf, 1.0f64, negate(inf))))
+  print_line(check(fma(1.0e200f64, 1.0e200f64, negate(inf)) == negate(inf)))
+)",
+                 13,
+                 nativeRoundsOnce);
 }

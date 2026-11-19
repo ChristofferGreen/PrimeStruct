@@ -212,18 +212,13 @@ emitClampMinMaxTrigOperatorExpr(const Expr &expr,
       error = fmaName + " requires float arguments of the same type";
       return OperatorClampMinMaxTrigEmitResult::Error;
     }
-    fe.useFloatKind(aKind);
-    if (!emitExpr(expr.args[0], localsIn)) {
-      return OperatorClampMinMaxTrigEmitResult::Error;
+    // One fused multiply-add: the product is not rounded before the addition (IrOpcode::FmaF64).
+    for (const Expr &argument : expr.args) {
+      if (!emitExpr(argument, localsIn)) {
+        return OperatorClampMinMaxTrigEmitResult::Error;
+      }
     }
-    if (!emitExpr(expr.args[1], localsIn)) {
-      return OperatorClampMinMaxTrigEmitResult::Error;
-    }
-    fe.mul();
-    if (!emitExpr(expr.args[2], localsIn)) {
-      return OperatorClampMinMaxTrigEmitResult::Error;
-    }
-    fe.add();
+    fe.op(aKind == LocalInfo::ValueKind::Float64 ? IrOpcode::FmaF64 : IrOpcode::FmaF32);
     return OperatorClampMinMaxTrigEmitResult::Handled;
   }
   std::string hypotName;

@@ -14,6 +14,79 @@ namespace primec::vm_detail {
 // The six integer comparisons the fused compare-and-branch forms cover.
 #define FAST_CMPS(X) X(Eq, ==) X(Ne, !=) X(Lt, <) X(Le, <=) X(Gt, >) X(Ge, >=)
 
+// Float arithmetic, comparisons and conversions: each gets a threaded handler that evaluates it
+// with the shared pure semantics (IrPureSemantics.h), the opcode a constant so the switch folds.
+// FAST_STORE_FORMS are the three-address forms (results stored straight into a local).
+// clang-format off
+#define FAST_STORE_FORMS(X) \
+  X(FastOpLocalAddLocalStore) \
+  X(FastOpLocalSubLocalStore) \
+  X(FastOpLocalMulLocalStore) \
+  X(FastOpLocalAddLocalSextStore) \
+  X(FastOpLocalSubLocalSextStore) \
+  X(FastOpLocalMulLocalSextStore) \
+  X(FastOpAddStore) \
+  X(FastOpSubStore) \
+  X(FastOpMulStore) \
+  X(FastOpAddSextStore) \
+  X(FastOpSubSextStore) \
+  X(FastOpMulSextStore) \
+  X(FastOpLocalAddLocalStoreF64) \
+  X(FastOpLocalSubLocalStoreF64) \
+  X(FastOpLocalMulLocalStoreF64) \
+  X(FastOpLocalDivLocalStoreF64) \
+  X(FastOpLocalAddImmStoreF64) \
+  X(FastOpLocalSubImmStoreF64) \
+  X(FastOpLocalMulImmStoreF64) \
+  X(FastOpLocalDivImmStoreF64) \
+  X(FastOpAddStoreF64) \
+  X(FastOpSubStoreF64) \
+  X(FastOpMulStoreF64) \
+  X(FastOpDivStoreF64) \
+  X(FastOpLocalNegStoreF64)
+// clang-format on
+
+// clang-format off
+#define FAST_FLOAT_BINARY(X) \
+  X(AddF32) \
+  X(SubF32) \
+  X(MulF32) \
+  X(DivF32) \
+  X(AddF64) \
+  X(SubF64) \
+  X(MulF64) \
+  X(DivF64) \
+  X(CmpEqF32) \
+  X(CmpNeF32) \
+  X(CmpLtF32) \
+  X(CmpLeF32) \
+  X(CmpGtF32) \
+  X(CmpGeF32) \
+  X(CmpEqF64) \
+  X(CmpNeF64) \
+  X(CmpLtF64) \
+  X(CmpLeF64) \
+  X(CmpGtF64) \
+  X(CmpGeF64)
+#define FAST_FLOAT_UNARY(X) \
+  X(NegF32) \
+  X(NegF64) \
+  X(ConvertI32ToF32) \
+  X(ConvertI32ToF64) \
+  X(ConvertI64ToF32) \
+  X(ConvertI64ToF64) \
+  X(ConvertU64ToF32) \
+  X(ConvertU64ToF64) \
+  X(ConvertF32ToI32) \
+  X(ConvertF32ToI64) \
+  X(ConvertF32ToU64) \
+  X(ConvertF64ToI32) \
+  X(ConvertF64ToI64) \
+  X(ConvertF64ToU64) \
+  X(ConvertF32ToF64) \
+  X(ConvertF64ToF32)
+// clang-format on
+
 #define FAST_ENUM_JMP_CMP_LOCAL_IMM(N, O) FastOpJmpCmpLocalImm##N,
 #define FAST_ENUM_JMP_CMP_LOCAL_LOCAL(N, O) FastOpJmpCmpLocalLocal##N,
 #define FAST_ENUM_JMP_CMP(N, O) FastOpJmpCmp##N,
