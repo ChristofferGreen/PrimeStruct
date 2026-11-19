@@ -590,9 +590,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [ ] TODO-6044: Field access on a `try(...)` of a struct payload
+- [~] TODO-6044: Field access on a `try(...)` of a struct payload
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: try-field (worktree-agent-af9483feccd55b235), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5519)
   - parallel_track: frontend-try-field
