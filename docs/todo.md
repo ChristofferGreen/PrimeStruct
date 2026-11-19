@@ -231,9 +231,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the executable from `primec build` launches and opens a document
   - stop_rule: measuring and recording; no code change unless the medians differ, then file the cause.
 
-- [ ] TODO-5738: Sum results return through the caller's block in real calls
+- [~] TODO-5738: Sum results return through the caller's block in real calls
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: sums-a (worktree-agent-aeafb34a6fda295bc), 2026-11-19
   - created_at: 2026-11-08
   - phase: Web apps (docs/WebAppsPlan.md; found while finishing TODO-5734)
   - parallel_track: ir-real-calls
