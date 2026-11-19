@@ -131,6 +131,7 @@ of sync with them.
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
+| TODO-6089 | A value-yielding `if` validates and runs on Wasm | ready | wasm-value-if |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | deferred | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -156,11 +157,13 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
+- TODO-6089 (wasm-value-if): a value-yielding `if` validates and runs on Wasm
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
+3. TODO-6089
 
 ### Priority Lanes
 
@@ -173,7 +176,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-5744
+- Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6089, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -507,6 +510,21 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - vm-design.md states the Wasm outcome past its limit and the Linux native and `exe` depths, each measured
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
+
+- [~] TODO-6089: A value-yielding `if` validates and runs on Wasm
+  - owner: ai
+  - status: ready
+  - claimed_by: wasm-value-if worker (worktree agent-aee2b0e5ec9a61dab), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10
+  - parallel_track: wasm-value-if
+  - scope: `if(c, then() { 1i32 }, else() { 0i32 })` as an expression inside a function produces an invalid Wasm module: `src/wasm_emitter/WasmEmitterControlFlow.cpp` emits every `if` with the empty block type, so the value an arm leaves on the stack at the join fails validation. Give the `if` the result type of its arms (merging i32 with i64, coercing each arm), for nested ifs, calls in arms and i32, i64 and f64 values. Found running the program matrix's `check()` helper on Wasm.
+  - acceptance:
+    - node-run compile-run cases (skipped with a message when node is absent) agree with the VM for nested, call-in-arm, i64 and f64 value-yielding ifs
+    - emitter byte tests show the typed `if` block
+    - docs/spec/project-phases.md Wasm limits updated
+    - full release gate green
+  - stop_rule: value-yielding `if`/`else` only; a value left at a join by anything else is a new leaf.
 
 - [ ] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
   - owner: ai
