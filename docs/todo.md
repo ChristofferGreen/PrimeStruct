@@ -113,7 +113,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
-| TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5836 | A spawned definition without a `return` transform is a `Task<void>` | deferred | mt-vm-tasks |
@@ -187,7 +186,7 @@ of sync with them.
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752; VM address checks TODO-5824
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5805, TODO-5806, TODO-5836, TODO-5854, TODO-5862
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 
@@ -246,19 +245,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - x86_64 native and the JIT run the real-call program-matrix cases (struct, `mut` and Reference parameters, struct results, runtime errors) with real calls; the JIT no longer refuses such modules
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
-
-- [~] TODO-5824: A null or stray local address faults on the VM
-  - owner: ai
-  - status: in_progress
-  - claimed_by: addr-a (worktree-agent-a3fd71827320b585e), 2026-11-19
-  - created_at: 2026-11-09
-  - phase: Optimizing backends (found while checking TODO-5776)
-  - parallel_track: vm-addresses
-  - scope: A local address is `(base + index) * 16` with the entry frame's base 0 (docs/spec/vm-design.md, Frames & stack), so address 0 is the entry frame's slot 0 and `0 + 16` its slot 1: a null reference reads or writes a live slot on the VM (the gfx `ShaderLibrary.CubeBasic` bug returned 90 instead of faulting), while arm64 native faults on it. Start the numbering at base 1 (or reserve the entry frame's slot 0) in the step kernel, the fast kernel's locals arena and the optcpp frame registry, so an address below the first frame faults with `invalid indirect address in IR` (exit 3). Deferred: the gfx case is fixed at its source and no known program reaches a null local address now.
-  - acceptance:
-    - `LoadIndirect`/`StoreIndirect` of address 0 and 16 fault with exit 3 on the VM step and fast kernels and on optexe; a program-matrix case pins it, and every program-matrix and compile-run case keeps its result
-    - full release gate green
-  - stop_rule: local address numbering on the VM and optcpp only; no change to heap addresses or native.
 
 - [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai

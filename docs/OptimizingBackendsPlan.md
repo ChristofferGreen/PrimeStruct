@@ -1491,8 +1491,8 @@ which the VM resolved to slot 1 of the entry frame and native faulted on; rewrit
 drop the slot the stray read saw, and the VM result changed from 90 to 2. The 0 was `ShaderLibrary.CubeBasic`,
 declared `{0i32}`: a bare scalar in a struct binding's braces is the value, not a field entry, so the struct was
 bound as the number 0 and read as its address. The stdlib now constructs it (`{[value] 0i32}`), the validator rejects
-a scalar initializer for a struct binding or field, and the programs score 2 on every backend. Address 0 is still
-the entry frame's slot 0 on the VM, so a null address reads a slot instead of faulting (TODO-5824). Other addresses are taken not to name the
+a scalar initializer for a struct binding or field, and the programs score 2 on every backend. Address 0 no longer
+names the entry frame's slot 0 (local addresses start at the second slot), so a null address faults on the VM and optcpp as it does on native. Other addresses are taken not to name the
 frame, the rule `IrLocalEscape` already applies to every function without `AddressOfLocal`. Exact: the rewritten access touches the slot the address named, and an in-range, aligned
 frame address cannot fault. With no `AddressOfLocal` left, `IrLocalEscape` pins nothing, so `copy-prop`,
 `dead-store`, the optcpp scalar locals and the native allocators treat the slots as ordinary locals.

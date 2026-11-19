@@ -195,8 +195,10 @@ template <bool TrackEvents>
       error = "invalid local index in IR";
       return VmKernelStepOutcome::Fault;
     }
-    stack.push_back((static_cast<uint64_t>(frame.localsBase) + static_cast<uint64_t>(inst.imm)) *
-                    host.slotBytes());
+    // Local addresses start at the second slot, so address 0 names no local and faults.
+    stack.push_back(
+        (static_cast<uint64_t>(frame.localsBase) + static_cast<uint64_t>(inst.imm) + 1) *
+        host.slotBytes());
     ip += 1;
     return VmKernelStepOutcome::Continue;
   }

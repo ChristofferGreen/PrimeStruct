@@ -64,10 +64,11 @@
   `PrintArgvUnsafe`, `PrintArgv`, `PushArgc`, pointer helpers, `ReturnVoid`, and print opcode upgrades).
 - **Frames & stack:** VM/native execution starts at the entry frame and pushes/pops frames for `Call`/`CallVoid`; each
   frame stores locals in 16-byte slots while the operand stack stores raw `u64` values interpreted by opcode (ints,
-  floats as bits, and indices). A local address (`AddressOfLocal`) is `(base + index) * 16`, where a frame's `base` is
+  floats as bits, and indices). A local address (`AddressOfLocal`) is `(base + index + 1) * 16`, where a frame's `base` is
   its caller's base plus the caller's local count (the entry frame's base is 0): the live frames' locals form one
-  numbering, so an address of a caller's local names the same slot in every callee, which reads and writes it through
-  `LoadIndirect`/`StoreIndirect`. An address beyond the live frames faults (`invalid indirect address in IR`).
+  numbering that starts at the second slot, so address 0 (a null reference or pointer) names no local, so an address of a caller's local names the same slot in every callee, which reads and writes it through
+  `LoadIndirect`/`StoreIndirect`. An address below the first slot (0) or beyond the live frames faults (`invalid indirect address in IR`). The simple
+  C++ emitters, Wasm and GLSL keep their own local numbering from 0 and do not fault on address 0.
   Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
   and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
   locals arena is laid out that way, and generated C++ registers each addressable frame). The arm64 native backend

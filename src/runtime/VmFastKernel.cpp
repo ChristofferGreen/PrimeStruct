@@ -140,8 +140,9 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       return host.resolveIndirectAddress(address, noLocals, slot, error);
     }
     // Local addresses number the locals arena, so an address of a caller's local stays valid in its callees.
-    // Every live frame's locals lie below the end of the current frame's.
-    const uint64_t index = address / slotBytes;
+    // Every live frame's locals lie below the end of the current frame's. Address 0 wraps the index to the
+    // largest value, so it faults with the rest.
+    const uint64_t index = address / slotBytes - 1;
     if (index >= localsBase + current->localCount) [[unlikely]] {
       return addressFault(error, "invalid indirect address in IR: ", address);
     }
@@ -346,7 +347,7 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       DISPATCH();
     case OP(AddressOfLocal):
     lbl_AddressOfLocal:
-      *sp++ = (localsBase + inst.imm) * slotBytes;
+      *sp++ = (localsBase + inst.imm + 1) * slotBytes;
       ++ip;
       DISPATCH();
     case OP(Dup):

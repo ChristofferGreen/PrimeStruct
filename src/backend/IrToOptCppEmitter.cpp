@@ -792,7 +792,7 @@ private:
       return true;
     }
     case IrOpcode::AddressOfLocal:
-      line(slot(depth) + " = (psBase + UINT64_C(" + std::to_string(instruction.imm) +
+      line(slot(depth) + " = (psBase + UINT64_C(" + std::to_string(instruction.imm + 1) +
            ")) * PsSlotBytes;");
       return true;
     case IrOpcode::LoadIndirect:

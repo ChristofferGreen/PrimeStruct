@@ -545,7 +545,7 @@ private:
       error = "unaligned indirect address in IR: " + std::to_string(address);
       return false;
     }
-    const uint64_t index = address / slotBytes;
+    const uint64_t index = address / slotBytes - 1; // address 0 wraps and faults
     if (index >= task.fast.localsBase + task.fast.current->localCount) {
       error = "invalid indirect address in IR: " + std::to_string(address);
       return false;

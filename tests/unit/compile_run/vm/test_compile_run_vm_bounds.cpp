@@ -402,7 +402,8 @@ main() {
   const std::string errPath = (testScratchPath("") / "primec_vm_pointer_misaligned_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "VM error: unaligned indirect address in IR: 8\n");
+  // The first local sits at address 16 (address 0 names no local), so a half-slot step lands on 24.
+  CHECK(readFile(errPath) == "VM error: unaligned indirect address in IR: 24\n");
 }
 
 TEST_CASE("vm array unsafe access reads element") {

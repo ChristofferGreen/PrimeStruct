@@ -113,9 +113,11 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       emitTestRegReg(address);
       toHeap = emitCondJumpPlaceholder(CondCode::Lt); // js
     }
-    emitCmpRegImm32(address, static_cast<int32_t>(hooks.vmLocalCount * IrSlotBytes));
-    emitJitFaultIfWithRegister(CondCode::AboveEq, JitFault::InvalidIndirectAddress, address);
+    // The VM's local addresses start at the second slot, so address 0 wraps below and faults.
     emitMovRegReg(Rdx, address);
+    emitSubRegImm32(Rdx, static_cast<int32_t>(IrSlotBytes));
+    emitCmpRegImm32(Rdx, static_cast<int32_t>(hooks.vmLocalCount * IrSlotBytes));
+    emitJitFaultIfWithRegister(CondCode::AboveEq, JitFault::InvalidIndirectAddress, address);
     emitAddRegReg(Rdx, 5);
     emitAddRegImm32(Rdx, regAllocSlotDisp(0));
     if (hooks.heapAddresses) {
@@ -843,8 +845,8 @@ inline bool X64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint32_t d = instruction.defs[0];
         const uint8_t target = targetReg(d, -1);
         if (jitMode_) {
-          // The VM's address: the slot's byte offset in this frame.
-          emitMovRegImm64(target, ir.imm * IrSlotBytes);
+          // The VM's address: the slot's byte offset in this frame, past the unused first slot.
+          emitMovRegImm64(target, (ir.imm + 1) * IrSlotBytes);
         } else {
           emitMovRegReg(target, 5);
           emitAddRegImm32(target, regAllocSlotDisp(static_cast<uint32_t>(ir.imm)));

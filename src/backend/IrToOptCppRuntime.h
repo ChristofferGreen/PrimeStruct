@@ -271,7 +271,8 @@ inline uint64_t *ps_resolve(Rt &rt, uint64_t *frame, uint64_t base, size_t frame
     }
     return slot;
   }
-  const uint64_t index = address / PsSlotBytes;
+  // Local addresses start at the second slot; address 0 wraps the index and falls through to the fault.
+  const uint64_t index = address / PsSlotBytes - 1;
   if (index - base < frameCount) {
     return &frame[static_cast<size_t>(index - base)];
   }

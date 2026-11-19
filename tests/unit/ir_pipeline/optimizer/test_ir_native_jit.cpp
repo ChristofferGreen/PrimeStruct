@@ -197,8 +197,8 @@ TEST_CASE("native JIT passes argc like the interpreter") {
 }
 
 TEST_CASE("native JIT addresses frame locals like the interpreter") {
-  // Address values are the VM's byte offsets (printed, compared and stepped through), locals
-  // reached only through an address start at zero, and an address handed to another function
+  // Address values are the VM's byte offsets (printed, compared and stepped through) past an unused
+  // first slot, locals reached only through an address start at zero, and an address handed to another function
   // names a slot of that function's own frame, as in the VM.
   primec::IrModule module = moduleFrom(
       {"PushI64 11",   "StoreLocal 0", "PushI64 22",    "StoreLocal 1", "AddressOfLocal 0",
@@ -206,7 +206,7 @@ TEST_CASE("native JIT addresses frame locals like the interpreter") {
        "AddI64",       "LoadIndirect", "PrintI64 1",    "LoadLocal 4",  "PushI64 48",
        "AddI64",       "LoadIndirect", "PrintI64 1",    "LoadLocal 4",  "PushI64 32",
        "AddI64",       "PushI64 77",   "StoreIndirect", "PrintI64 1",   "LoadLocal 2",
-       "PrintI64 1",   "PushI64 16",   "Call 1",        "PrintI64 1",   "PushI32 0",
+       "PrintI64 1",   "PushI64 32",   "Call 1",        "PrintI64 1",   "PushI32 0",
        "ReturnI32"});
   module.functions.push_back(
       optimizer_test::functionOf("/callee",
@@ -218,7 +218,7 @@ TEST_CASE("native JIT addresses frame locals like the interpreter") {
                                   optimizer_test::assembleOne("ReturnI64")},
                                  1));
   expectSame(module, "frame addresses");
-  CHECK(runJit(module).outcome.output == "0\n22\n0\n77\n77\n5\n");
+  CHECK(runJit(module).outcome.output == "16\n22\n0\n77\n77\n5\n");
 
   struct Case {
     const char *name;
@@ -227,7 +227,8 @@ TEST_CASE("native JIT addresses frame locals like the interpreter") {
   };
   const std::vector<Case> cases = {
       {"unaligned", "24", "unaligned indirect address in IR: 24"},
-      {"past_the_locals", "64", "invalid indirect address in IR: 64"},
+      {"zero", "0", "invalid indirect address in IR: 0"},
+      {"past_the_locals", "80", "invalid indirect address in IR: 80"},
       {"tagged", "9223372036854775824", "invalid indirect address in IR: 9223372036854775824"},
   };
   for (const Case &testCase : cases) {
