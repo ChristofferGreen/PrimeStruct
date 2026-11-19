@@ -274,7 +274,7 @@ void emitWasiWriteDecimalFromI64Local(uint32_t fdLocal,
   appendS32Leb(static_cast<int32_t>(WasmAsciiZero), out);
   out.push_back(WasmOpI32Add);
   out.push_back(WasmOpI32Store8);
-  appendI32MemArg(0, out);
+  appendI8MemArg(0, out);
 
   out.push_back(WasmOpLocalGet);
   appendU32Leb(lenLocal, out);
@@ -315,7 +315,7 @@ void emitWasiWriteDecimalFromI64Local(uint32_t fdLocal,
     out.push_back(WasmOpI32Const);
     appendS32Leb(static_cast<int32_t>(WasmAsciiMinus), out);
     out.push_back(WasmOpI32Store8);
-    appendI32MemArg(0, out);
+    appendI8MemArg(0, out);
 
     out.push_back(WasmOpLocalGet);
     appendU32Leb(lenLocal, out);

@@ -19,7 +19,6 @@ constexpr uint8_t WasmOpReturn = 0x0f;
 constexpr uint8_t WasmOpDrop = 0x1a;
 constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
-constexpr uint8_t WasmOpLocalTee = 0x22;
 constexpr uint8_t WasmOpI32Load = 0x28;
 constexpr uint8_t WasmOpI32Const = 0x41;
 constexpr uint8_t WasmOpI64Const = 0x42;
@@ -113,7 +112,6 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
                                std::vector<uint8_t> &out,
                                std::string &error,
                                const std::string &functionName) {
-  const uint32_t dupTempIndex = localLayout.dupTempIndex;
   switch (inst.op) {
     case IrOpcode::PushI32:
       out.push_back(WasmOpI32Const);
@@ -148,15 +146,8 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       appendU32Leb(static_cast<uint32_t>(inst.imm), out);
       return true;
     case IrOpcode::Dup:
-      if (!localLayout.needsDupTempLocal) {
-        error = "wasm emitter internal error: missing dup temp local";
-        return false;
-      }
-      out.push_back(WasmOpLocalTee);
-      appendU32Leb(dupTempIndex, out);
-      out.push_back(WasmOpLocalGet);
-      appendU32Leb(dupTempIndex, out);
-      return true;
+      error = "wasm emitter internal error: dup reached the untyped emitter";
+      return false;
     case IrOpcode::Pop:
       out.push_back(WasmOpDrop);
       return true;

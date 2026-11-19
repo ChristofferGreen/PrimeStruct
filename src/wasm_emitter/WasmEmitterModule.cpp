@@ -13,6 +13,7 @@ namespace {
 
 constexpr uint8_t WasmMagic[] = {0x00, 0x61, 0x73, 0x6d};
 constexpr uint8_t WasmVersion[] = {0x01, 0x00, 0x00, 0x00};
+constexpr uint8_t WasmMemoryKind = 0x02;
 constexpr uint8_t WasmValueTypeI32 = 0x7f;
 constexpr uint8_t WasmValueTypeI64 = 0x7e;
 constexpr uint8_t WasmValueTypeF32 = 0x7d;
@@ -123,6 +124,12 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     runtime.functionIndexOffset = 0;
   }
 
+  // The parameter types come from what the calls pass, the IR local types from what the functions store.
+  std::vector<std::vector<uint8_t>> irLocalTypes;
+  if (!inferWasmLocalTypes(module, functionTypes, runtime, irLocalTypes, error)) {
+    return false;
+  }
+
   std::vector<uint32_t> functionTypeIndexes;
   std::vector<WasmCodeBody> codeBodies;
   types.reserve(types.size() + module.functions.size());
@@ -136,7 +143,7 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   }
   for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
     WasmCodeBody codeBody;
-    if (!lowerFunctionCode(module.functions[functionIndex], functionTypes, runtime, codeBody, error)) {
+    if (!lowerFunctionCode(module.functions[functionIndex], functionTypes, runtime, irLocalTypes[functionIndex], codeBody, error)) {
       return false;
     }
     codeBodies.push_back(std::move(codeBody));
@@ -149,6 +156,14 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     exportEntry.kind = WasmFunctionKind;
     exportEntry.index = runtime.functionIndexOffset + static_cast<uint32_t>(module.entryIndex);
     exports.push_back(std::move(exportEntry));
+  }
+  if (!runtime.memories.empty()) {
+    // A WASI host reads and writes the module's memory by this name (the WASI ABI requires the export).
+    WasmExport memoryExport;
+    memoryExport.name = "memory";
+    memoryExport.kind = WasmMemoryKind;
+    memoryExport.index = 0;
+    exports.push_back(std::move(memoryExport));
   }
 
   const std::vector<WasmMemoryLimit> &memories = runtime.memories;

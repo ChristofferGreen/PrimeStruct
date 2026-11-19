@@ -1,5 +1,7 @@
 #include "WasmEmitterInternal.h"
 
+#include <utility>
+
 namespace primec {
 
 namespace {
@@ -93,16 +95,20 @@ bool emitIfRegion(const IrFunction &function,
                   size_t trueEnd,
                   size_t falseStart,
                   size_t falseEnd,
-                  const WasmLocalLayout &localLayout,
+                  WasmLocalLayout &localLayout,
                   const std::vector<WasmFunctionType> &functionTypes,
                   const WasmRuntimeContext &runtime,
                   std::vector<uint8_t> &out,
                   std::string &error,
                   bool *outDiverges) {
   (void)conditionIndex;
+  if (!consumeWasmCondition(localLayout, out, error, function.name)) {
+    return false;
+  }
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
   bool trueDiverges = false;
+  std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
   if (!emitInstructionRange(
           function, trueStart, trueEnd, localLayout, functionTypes, runtime, out, error, &trueDiverges)) {
     return false;
@@ -110,12 +116,14 @@ bool emitIfRegion(const IrFunction &function,
   const bool hasElse = falseStart < falseEnd;
   bool falseDiverges = false;
   if (hasElse) {
+    localLayout.typeState.stack.clear();
     out.push_back(WasmOpElse);
     if (!emitInstructionRange(
             function, falseStart, falseEnd, localLayout, functionTypes, runtime, out, error, &falseDiverges)) {
       return false;
     }
   }
+  leaveWasmBlock(localLayout, std::move(outerStack));
   out.push_back(WasmOpEnd);
   if (outDiverges != nullptr) {
     *outDiverges = hasElse && trueDiverges && falseDiverges;
@@ -128,7 +136,7 @@ bool emitIfRegion(const IrFunction &function,
 bool emitInstructionRange(const IrFunction &function,
                           size_t start,
                           size_t end,
-                          const WasmLocalLayout &localLayout,
+                          WasmLocalLayout &localLayout,
                           const std::vector<WasmFunctionType> &functionTypes,
                           const WasmRuntimeContext &runtime,
                           std::vector<uint8_t> &out,
@@ -144,6 +152,7 @@ bool emitInstructionRange(const IrFunction &function,
       out.push_back(WasmBlockTypeVoid);
       out.push_back(WasmOpLoop);
       out.push_back(WasmBlockTypeVoid);
+      std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
 
       if (!emitInstructionRange(
               function,
@@ -154,6 +163,9 @@ bool emitInstructionRange(const IrFunction &function,
               runtime,
               out,
               error)) {
+        return false;
+      }
+      if (!consumeWasmCondition(localLayout, out, error, function.name)) {
         return false;
       }
       out.push_back(WasmOpI32Eqz);
@@ -175,6 +187,7 @@ bool emitInstructionRange(const IrFunction &function,
       appendU32Leb(0, out);
       out.push_back(WasmOpEnd);
       out.push_back(WasmOpEnd);
+      leaveWasmBlock(localLayout, std::move(outerStack));
 
       index = loopRegion.endIndex;
       continue;
@@ -283,15 +296,20 @@ bool emitInstructionRange(const IrFunction &function,
         error = "wasm emitter malformed jump target in function: " + function.name;
         return false;
       }
-      (void)target;
+      if (target == index + 1) {
+        // A jump to the next instruction (the end of an inlined body that returns a value) does nothing.
+        ++index;
+        continue;
+      }
       error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
       return false;
     }
 
-    if (!emitSimpleInstruction(inst, localLayout, functionTypes, runtime, out, error, function.name)) {
+    if (!emitTypedInstruction(inst, localLayout, functionTypes, runtime, out, error, function.name)) {
       return false;
     }
-    diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64;
+    diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
+               inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64;
     ++index;
   }
 

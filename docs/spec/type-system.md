@@ -566,11 +566,11 @@ result and fix a result where C++ leaves it undefined.
   clamps at 255.
 - **Backends.** The rules hold on the VM, `optcpp`/`optexe`, `cpp`/`exe` and arm64 native (the matrix suite
   `program_matrix.conversions` runs them on each). Wasm emits the saturating truncations (`i32.trunc_sat_f64_s` and the
-  rest, prefix `0xfc`), which have exactly this rule; the emitter test checks the bytes, and no Wasm runtime ran the
-  output. GLSL is the narrowed profile (32-bit integers and `f32` payloads) and already clamps and maps NaN to 0 at the
+  rest, prefix `0xfc`), which have exactly this rule; the emitter test checks the bytes and a compile-run suite runs the output under Node and compares it with the VM. GLSL is the narrowed profile (32-bit integers and `f32` payloads) and already clamps and maps NaN to 0 at the
   32-bit limits, so a `u64` saturates at 2147483647 there. Gap: x86_64 native float to integer keeps the CPU's result for NaN
-  and out of range values (TODO-6059, deferred). Integer narrowing on Wasm is not covered: its `i32` and `i64` locals
-  share one type there.
+  and out of range values (TODO-6059, deferred). Wasm types every local and parameter by the values it holds (an IR local carries no type), narrows an `i64`
+  with `i32.wrap_i64` (modulo 2^32, like the VM's `SextI32`) and widens an `i32` with `i64.extend_i32_s`; `u8` is not
+  supported on Wasm.
 
 ```
 [effects(io_out), return<int>]

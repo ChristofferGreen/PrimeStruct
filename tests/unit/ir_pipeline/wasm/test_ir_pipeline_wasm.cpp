@@ -411,4 +411,116 @@ TEST_CASE("wasm emitter lowers fused multiply-add as a multiply and an add") {
   }
 }
 
+// IR locals carry no type: the emitter infers the wasm type of every local and parameter from the values stored and
+// passed, and converts an integer operand to the width an instruction wants (WasmEmitterTypes.cpp). SextI32 of an i64
+// narrows it modulo 2^32 (`i32.wrap_i64`) and an i32 used as an i64 sign-extends (`i64.extend_i32_s`).
+namespace {
+std::vector<uint8_t> emitSingleFunctionModule(primec::IrFunction mainFn) {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  mainFn.name = "/main";
+  module.functions.push_back(std::move(mainFn));
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+  return bytes;
+}
+} // namespace
+
+TEST_CASE("wasm emitter wraps a narrowed i64 and extends a widened i32") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 4294967297ull});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::SextI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::LoadLocal, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // local 0 is an i64 and local 1 an i32.
+  CHECK(containsByteSequence(bytes, {0x02, 0x01, 0x7e, 0x01, 0x7f, 0x42}));
+  // store, load, i32.wrap_i64, store, load, i64.extend_i32_s, return
+  CHECK(containsByteSequence(bytes, {0x21, 0x00, 0x20, 0x00, 0xa7, 0x21, 0x01, 0x20, 0x01, 0xac, 0x0f}));
+}
+
+TEST_CASE("wasm emitter parks the operands above a mismatched integer width while it converts") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // the two scratch locals (an i64 and an i32), then: i32.const 3, i64.const 4, set the i64, set the i32, get the i32
+  // and extend it, get the i64, i64.add
+  CHECK(containsByteSequence(bytes,
+                             {0x02, 0x01, 0x7e, 0x01, 0x7f, 0x41, 0x03, 0x42, 0x04, 0x21, 0x00, 0x21, 0x01, 0x20,
+                              0x01, 0xac, 0x20, 0x00, 0x7c, 0x0f}));
+}
+
+TEST_CASE("wasm emitter types the parameters of a function by what its calls pass") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(std::move(mainFn));
+
+  primec::IrFunction calleeFn;
+  calleeFn.name = "/callee";
+  calleeFn.parameterCount = 1;
+  calleeFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  calleeFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  calleeFn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  module.functions.push_back(std::move(calleeFn));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  // (func (param i64) (result i64)) is the callee's type.
+  CHECK(containsByteSequence(bytes, {0x60, 0x01, 0x7e, 0x01, 0x7e}));
+}
+
+TEST_CASE("wasm emitter duplicates a float through a scratch local of its own type") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::Dup, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::AddF64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnF64, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // one f64 local; the dup is local.tee 0, local.get 0
+  CHECK(containsByteSequence(bytes,
+                             {0x01, 0x01, 0x7c, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0x22, 0x00,
+                              0x20, 0x00, 0xa0, 0x0f}));
+}
+
+TEST_CASE("wasm emitter rejects a local that holds an integer and a float") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000u});
+  mainFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(emitter.emitModule(module, bytes, error));
+  CHECK(error.find("different kinds") != std::string::npos);
+}
+
 TEST_SUITE_END();

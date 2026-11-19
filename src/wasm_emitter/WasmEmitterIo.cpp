@@ -34,6 +34,7 @@ constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32And = 0x71;
 constexpr uint8_t WasmOpI32Or = 0x72;
 constexpr uint8_t WasmOpI64ExtendI32S = 0xac;
+constexpr uint8_t WasmOpI64ExtendI32U = 0xad;
 
 constexpr uint32_t WasiFdflagAppend = 1u;
 constexpr uint32_t WasiOflagsCreat = 1u;
@@ -378,7 +379,10 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Const);
       appendS32Leb(static_cast<int32_t>(runtime.byteScratchAddr), out);
       out.push_back(WasmOpI32Load8U);
-      appendI32MemArg(0, out);
+      appendI8MemArg(0, out);
+      if (localLayout.localTypes[static_cast<size_t>(inst.imm)] == WasmTypeI64) {
+        out.push_back(WasmOpI64ExtendI32U);
+      }
       out.push_back(WasmOpLocalSet);
       appendU32Leb(static_cast<uint32_t>(inst.imm), out);
       out.push_back(WasmOpI32Const);
@@ -494,7 +498,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileValueLocal, out);
       out.push_back(WasmOpI32Store8);
-      appendI32MemArg(0, out);
+      appendI8MemArg(0, out);
       emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.byteScratchAddr, 1, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);

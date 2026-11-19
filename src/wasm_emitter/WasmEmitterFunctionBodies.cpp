@@ -1,16 +1,17 @@
 #include "WasmEmitterInternal.h"
 
 #include <limits>
+#include <utility>
 
 namespace primec {
 
 namespace {
 
-constexpr uint8_t WasmValueTypeI32 = 0x7f;
-constexpr uint8_t WasmValueTypeI64 = 0x7e;
 constexpr uint8_t WasmOpEnd = 0x0b;
 
-WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &error) {
+WasmLocalLayout computeLocalLayout(const IrFunction &function,
+                                   const std::vector<uint8_t> &irLocalTypes,
+                                   std::string &error) {
   WasmLocalLayout layout;
   uint64_t maxLocalIndex = 0;
   bool hasLocal = false;
@@ -18,9 +19,6 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
     if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal || inst.op == IrOpcode::FileReadByte) {
       maxLocalIndex = std::max(maxLocalIndex, inst.imm);
       hasLocal = true;
-    }
-    if (inst.op == IrOpcode::Dup) {
-      layout.needsDupTempLocal = true;
     }
     if (inst.op == IrOpcode::FmaF32 || inst.op == IrOpcode::FmaF64) {
       layout.needsFmaTemp = true;
@@ -50,10 +48,6 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
   const uint64_t baseCount = hasLocal ? (maxLocalIndex + 1) : 0;
   layout.irLocalCount = static_cast<uint32_t>(baseCount);
   uint64_t totalCount = baseCount;
-  if (layout.needsDupTempLocal) {
-    layout.dupTempIndex = static_cast<uint32_t>(totalCount);
-    totalCount += 1;
-  }
   if (layout.hasArgvHelpers) {
     layout.argvIndexLocal = static_cast<uint32_t>(totalCount);
     layout.argvCountLocal = static_cast<uint32_t>(totalCount + 1);
@@ -93,17 +87,23 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
             function.name;
     return WasmLocalLayout{};
   }
-  layout.i32LocalCount = static_cast<uint32_t>(totalCount - function.parameterCount);
+  layout.parameterCount = function.parameterCount;
+  // The parameters and IR locals take the inferred types; the helper locals below are i32 except the i64 ones.
+  layout.localTypes.assign(static_cast<size_t>(totalCount), WasmTypeI32);
+  for (size_t i = 0; i < baseCount; ++i) {
+    layout.localTypes[i] = i < irLocalTypes.size() ? irLocalTypes[i] : WasmTypeUnknown;
+  }
   if (layout.hasFileNumericHelpers) {
     layout.fileDigitsValueLocal = static_cast<uint32_t>(totalCount);
     layout.fileDigitsRemLocal = static_cast<uint32_t>(totalCount + 1);
     totalCount += 2;
-    layout.i64LocalCount = 2;
+    layout.localTypes.push_back(WasmTypeI64);
+    layout.localTypes.push_back(WasmTypeI64);
   }
   if (layout.needsFmaTemp) {
     layout.fmaTempLocal = static_cast<uint32_t>(totalCount);
     totalCount += 1;
-    layout.i64LocalCount += 1;
+    layout.localTypes.push_back(WasmTypeI64);
   }
   if (totalCount > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
     error = "wasm emitter local count exceeds 32-bit limit in function: " + function.name;
@@ -113,26 +113,28 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function, std::string &erro
   return layout;
 }
 
+// The local declarations of a function body: runs of equal types, for every local after the parameters (the signature
+// declares those) and the scratch locals the emitter allocated while it emitted.
 void appendLocalDecls(const WasmLocalLayout &layout, std::vector<uint8_t> &out) {
-  if (layout.totalLocals == 0) {
-    appendU32Leb(0, out);
-    return;
+  std::vector<uint8_t> types(layout.localTypes.begin() + layout.parameterCount, layout.localTypes.end());
+  for (const WasmScratchSlot &slot : layout.typeState.scratch) {
+    types.push_back(slot.type);
   }
-  uint32_t groupCount = 0;
-  if (layout.i32LocalCount > 0) {
-    groupCount += 1;
+  std::vector<std::pair<uint32_t, uint8_t>> runs;
+  for (uint8_t type : types) {
+    if (type == WasmTypeUnknown) {
+      type = WasmTypeI32;
+    }
+    if (!runs.empty() && runs.back().second == type) {
+      runs.back().first += 1;
+    } else {
+      runs.emplace_back(1u, type);
+    }
   }
-  if (layout.i64LocalCount > 0) {
-    groupCount += 1;
-  }
-  appendU32Leb(groupCount, out);
-  if (layout.i32LocalCount > 0) {
-    appendU32Leb(layout.i32LocalCount, out);
-    out.push_back(WasmValueTypeI32);
-  }
-  if (layout.i64LocalCount > 0) {
-    appendU32Leb(layout.i64LocalCount, out);
-    out.push_back(WasmValueTypeI64);
+  appendU32Leb(static_cast<uint32_t>(runs.size()), out);
+  for (const auto &run : runs) {
+    appendU32Leb(run.first, out);
+    out.push_back(run.second);
   }
 }
 
@@ -141,16 +143,16 @@ void appendLocalDecls(const WasmLocalLayout &layout, std::vector<uint8_t> &out) 
 bool lowerFunctionCode(const IrFunction &function,
                        const std::vector<WasmFunctionType> &functionTypes,
                        const WasmRuntimeContext &runtime,
+                       const std::vector<uint8_t> &irLocalTypes,
                        WasmCodeBody &outBody,
                        std::string &error) {
-  const WasmLocalLayout localLayout = computeLocalLayout(function, error);
+  WasmLocalLayout localLayout = computeLocalLayout(function, irLocalTypes, error);
   if (!error.empty()) {
     return false;
   }
 
   outBody.localDecls.clear();
   outBody.instructions.clear();
-  appendLocalDecls(localLayout, outBody.localDecls);
 
   // wasm's own `call` instruction auto-binds a callee's arguments as its
   // first N locals per the wasm spec, but the real-call body-lowering loop
@@ -197,7 +199,83 @@ bool lowerFunctionCode(const IrFunction &function,
     return false;
   }
   outBody.instructions.push_back(WasmOpEnd);
+  // The scratch locals are known only after the body is emitted.
+  appendLocalDecls(localLayout, outBody.localDecls);
   return true;
+}
+
+bool inferWasmLocalTypes(const IrModule &module,
+                         std::vector<WasmFunctionType> &functionTypes,
+                         const WasmRuntimeContext &runtime,
+                         std::vector<std::vector<uint8_t>> &irLocalTypes,
+                         std::string &error) {
+  const size_t functionCount = module.functions.size();
+  irLocalTypes.assign(functionCount, {});
+  std::vector<std::vector<uint8_t>> observed(functionCount);
+  for (size_t f = 0; f < functionCount; ++f) {
+    observed[f].assign(module.functions[f].parameterCount, WasmTypeUnknown);
+    functionTypes[f].params.assign(module.functions[f].parameterCount, WasmTypeUnknown);
+  }
+  // Types only widen (unknown, i32, i64), so the dry runs reach a fixed point; the bound keeps a defect from looping.
+  constexpr size_t MaxRounds = 64;
+  for (size_t round = 0; round < MaxRounds; ++round) {
+    bool changed = false;
+    for (size_t f = 0; f < functionCount; ++f) {
+      const IrFunction &function = module.functions[f];
+      WasmLocalLayout layout = computeLocalLayout(function, irLocalTypes[f], error);
+      if (!error.empty()) {
+        return false;
+      }
+      // The parameters hold the widest type the calls pass.
+      for (size_t k = 0; k < function.parameterCount && k < layout.localTypes.size(); ++k) {
+        uint8_t merged = WasmTypeUnknown;
+        if (!mergeWasmTypes(layout.localTypes[k], observed[f][k], merged)) {
+          error = "wasm emitter call passes values of different kinds in function: " + function.name;
+          return false;
+        }
+        layout.localTypes[k] = merged;
+      }
+      layout.typeState.inferring = true;
+      layout.typeState.observedParams = &observed;
+      std::vector<uint8_t> discarded;
+      const size_t start = function.parameterCount;
+      if (function.instructions.size() < start) {
+        error = "wasm emitter: function " + function.name + " has too few instructions for its parameters";
+        return false;
+      }
+      if (!emitInstructionRange(function, start, function.instructions.size(), layout, functionTypes, runtime,
+                                discarded, error)) {
+        return false;
+      }
+      std::vector<uint8_t> next(layout.localTypes.begin(), layout.localTypes.begin() + layout.irLocalCount);
+      if (next != irLocalTypes[f]) {
+        irLocalTypes[f] = std::move(next);
+        changed = true;
+      }
+      for (size_t k = 0; k < function.parameterCount && k < observed[f].size(); ++k) {
+        if (observed[f][k] != layout.localTypes[k]) {
+          observed[f][k] = layout.localTypes[k];
+          changed = true;
+        }
+      }
+      changed = changed || layout.typeState.changed;
+    }
+    if (!changed) {
+      for (size_t f = 0; f < functionCount; ++f) {
+        for (uint8_t &type : irLocalTypes[f]) {
+          if (type == WasmTypeUnknown) {
+            type = WasmTypeI32;
+          }
+        }
+        for (size_t k = 0; k < module.functions[f].parameterCount; ++k) {
+          functionTypes[f].params[k] = k < irLocalTypes[f].size() ? irLocalTypes[f][k] : WasmTypeI32;
+        }
+      }
+      return true;
+    }
+  }
+  error = "wasm emitter could not infer local types: the type inference did not converge";
+  return false;
 }
 
 } // namespace primec

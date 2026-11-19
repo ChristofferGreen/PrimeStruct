@@ -130,7 +130,6 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
-| TODO-6061 | Integer narrowing and widening on Wasm | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
@@ -177,7 +176,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
+- Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -480,21 +479,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-6061: Integer narrowing and widening on Wasm
-  - owner: ai
-  - status: in_progress
-  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (follow-up of TODO-5516)
-  - parallel_track: numeric-conversions
-  - scope: The Wasm emitter gives every local the same value type, so `convert<i32>(x)` of an `i64` (no instruction) and `convert<i64>(x)` of an `i32` leave a value of the wrong type on the Wasm stack, and the module is invalid. Emit `i32.wrap_i64` and `i64.extend_i32_s` for the integer conversions and type the locals by the value kind, so narrowing wraps modulo 2^32 on Wasm too.
-  - acceptance:
-    - an emitter test shows `i32.wrap_i64` for an i64 to i32 conversion and `i64.extend_i32_s` for the reverse
-    - the output validates and, with a Wasm runtime, prints what the VM prints for the conversions matrix rows
-    - full release gate green
-  - stop_rule: integer conversions on Wasm only.
-  - notes: deferred: needs a Wasm runtime to check the output (none is available here).
 
 - [ ] TODO-6059: Native x86_64 float to integer conversion saturates
   - owner: ai
