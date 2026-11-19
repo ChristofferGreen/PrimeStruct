@@ -623,9 +623,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5902: Each task of a `--vm-threads` run uses the fast kernel
+- [~] TODO-5902: Each task of a `--vm-threads` run uses the fast kernel
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: vm-threads-fast (worktree-agent-acadc657931542fd8), 2026-11-20
   - created_at: 2026-11-11
   - phase: VM threads (docs/MultithreadingPrototype.md, VM Threads)
   - parallel_track: vm-threads
