@@ -119,7 +119,7 @@ of sync with them.
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
-| TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
+| TODO-5805 | The server keeps connections alive between requests | ready | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
@@ -396,15 +396,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the CPU-bound GET handler of benchmarks/http (`GET /work`; 0.98x measured 2026-11-11, docs/WebAppsPlan.md, Measured) at least 2.5x `serve` with 4 workers, and todo_web's list page with 200 items (0.95x measured) at least 1.5x; a read-only handler that writes its state is a compile error
   - stop_rule: read-only handlers and `RwLock`.
 
-- [ ] TODO-5805: The server keeps connections alive between requests
+- [~] TODO-5805: The server keeps connections alive between requests
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: keepalive (worktree-agent-a613f27b153248cbd), 2026-11-19
   - created_at: 2026-11-09
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: web-keepalive
-  - scope: `serve` and `serveWorkers` close every connection after one response. Honor HTTP/1.1 persistent connections (`Connection: keep-alive` by default, `close` on request, an idle timeout and a request cap per connection), with an answered connection going back to the poller. Deferred until the worker server exists.
+  - scope: `serve` and `serveWorkers` close every connection after one response. Honor HTTP/1.1 persistent connections (`Connection: keep-alive` by default for HTTP/1.1, `close` on request, HTTP/1.0 closes unless it asks, a request cap per connection, an idle timeout), with an answered connection going back to the poller. The idle timeout runs on `monotonicMs()` like the other deadlines, which a scripted VM test drives. A request with bytes after it (pipelining) is answered with `Connection: close`.
   - acceptance:
-    - to be set when the leaf is un-deferred; at least: a client reusing one connection for 100 requests gets 100 answers, and an idle connection closes after its timeout
+    - a scripted client reusing one connection for 100 requests gets 100 answers on `serveWorkers` (eager, seeds 1 to 3, task threads), each with `Connection: keep-alive` and a correct `Content-Length`
+    - `Connection: close` on a request, an HTTP/1.0 request without `keep-alive`, and the request cap (`maxRequestsPerConnection`) close the connection after the response, which says `Connection: close`
+    - an idle connection closes after `keepAliveTimeoutMs` on the scripted clock, with no sleeps and no real sockets
+    - the same on the single-threaded `serve` where the VM test can reach it, and real-socket tests that read to end of stream send `Connection: close`
   - stop_rule: persistent connections.
 
 - [ ] TODO-5806: Sessions: a cookie and per-session state
