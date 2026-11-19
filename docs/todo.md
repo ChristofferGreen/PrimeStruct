@@ -689,9 +689,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux and macOS
   - stop_rule: tests and arm64 native emitter output only; no language semantics changes.
 
-- [ ] TODO-5544: `Type.staticHelper()` resolves through `import`
+- [~] TODO-5544: `Type.staticHelper()` resolves through `import`
   - owner: ai
   - status: deferred
+  - claimed_by: static-helper (worktree-agent-af0f101c2107d13a8), 2026-11-19
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: pick-bindings
