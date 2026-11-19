@@ -514,7 +514,8 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-6060: The unused float-to-int fault emitter is removed from the lowerer
+- [~] TODO-6060: The unused float-to-int fault emitter is removed from the lowerer
+  - claimed_by: removal-a (worktree-agent-ad0dea6558d83848b), 2026-11-19
   - owner: ai
   - status: deferred
   - created_at: 2026-11-19
