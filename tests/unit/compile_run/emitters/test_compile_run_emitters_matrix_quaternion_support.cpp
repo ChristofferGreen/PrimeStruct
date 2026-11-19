@@ -75,7 +75,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
+  CHECK(err.find("exe backend only supports") != std::string::npos);
   CHECK(err.find("call=/") != std::string::npos);
 }
 
@@ -126,7 +126,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports") != std::string::npos);
+  CHECK(err.find("exe backend only supports") != std::string::npos);
   CHECK(err.find("call=/") != std::string::npos);
 }
 

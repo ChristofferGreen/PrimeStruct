@@ -177,8 +177,9 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
   CHECK(readFile(errPath).find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
-            "convert/pointer/assign/increment/decrement calls in expressions") != std::string::npos);
+            "exe backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+            "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter mutator rewrite keeps known vector receiver leading names") {
@@ -230,7 +231,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
-            "native backend only supports at() on numeric/bool/string arrays or vectors") !=
+            "exe backend only supports at() on numeric/bool/string arrays or vectors") !=
         std::string::npos);
 }
 

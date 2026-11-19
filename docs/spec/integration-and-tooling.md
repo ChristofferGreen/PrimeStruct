@@ -451,6 +451,13 @@ The effect ceiling (`--allow-effects`) checks user code: definitions under `/std
 stdlib file are trusted, including stdlib types that live outside `/std/` such as `/File`. That is why the runner can
 write to standard output under a ceiling of `file_read,heap_alloc,build_run` while `make.prime` cannot declare `file_write`.
 
+### Lowering diagnostics
+
+A lowering error names the target that lowers, in the words of the emit kind: `vm backend`, `native backend`,
+`C++ backend` (`--emit=cpp`), `exe backend`, `optimized C++ backend`, `optimized exe backend`, `wasm backend`,
+`GLSL backend`, `SPIR-V backend` and `IR backend` (`--emit=ir`). The registry names them in
+`IrBackendDiagnostics::loweringBackendName`.
+
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
   canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export

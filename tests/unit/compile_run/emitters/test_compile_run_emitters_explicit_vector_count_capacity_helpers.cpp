@@ -203,7 +203,7 @@ main() {
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   const std::string out = readFile(outPath);
-  CHECK(out.find("native backend only supports") == std::string::npos);
+  CHECK(out.find("C++ backend only supports") == std::string::npos);
 }
 
 TEST_CASE("runs bare vector capacity methods without helper in C++ emitter") {
@@ -510,7 +510,7 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("native backend only supports arithmetic/comparison") != std::string::npos);
+  CHECK(err.find("exe backend only supports arithmetic/comparison") != std::string::npos);
   CHECK(err.find("call=/std/collections/vector/capacity") != std::string::npos);
 }
 

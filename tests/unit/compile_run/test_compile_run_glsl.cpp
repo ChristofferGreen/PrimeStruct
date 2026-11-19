@@ -10,9 +10,9 @@ static bool compileGlslOrExpectNominalMathUnsupported(const std::string &compile
   }
   CHECK(code == 2);
   const std::string error = readFile(errPath);
-  CHECK((error.find(
-             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
-             "assign/increment/decrement calls in expressions") != std::string::npos ||
+  CHECK((error.find("GLSL backend only supports "
+                    "arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
+                    "assign/increment/decrement calls in expressions") != std::string::npos ||
          error.find("local index exceeds glsl local-slot limit") != std::string::npos ||
          error.find("arithmetic operators require numeric operands") != std::string::npos));
   return false;

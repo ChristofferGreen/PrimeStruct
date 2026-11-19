@@ -122,7 +122,13 @@ inline bool compileAcrossBackendsOrExpectUnsupported(const std::string &nameStem
 
   CHECK(exeCode == 2);
   CHECK_FALSE(std::filesystem::exists(exePath));
-  CHECK(readFile(exeErrPath).find(nativeMessage) != std::string::npos);
+  // `--emit=exe` goes through the C++ emitter, so its lowering errors name the exe backend.
+  std::string exeMessage = nativeMessage;
+  if (const size_t nativeName = exeMessage.find("native backend");
+      nativeName != std::string::npos) {
+    exeMessage.replace(nativeName, std::string("native backend").size(), "exe backend");
+  }
+  CHECK(readFile(exeErrPath).find(exeMessage) != std::string::npos);
 
   const int vmCode = runCommand(runVmCmd + " 2> " + quoteShellArg(vmErrPath));
   CHECK(vmCode == 2);

@@ -2477,6 +2477,7 @@ are left unarchived.
 | TODO-6072 | The managed doctest shards run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6073 | The remaining CTest families run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6076 | `RwLock<T>`: many readers or one writer | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6078 | A lowering error names the backend that lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

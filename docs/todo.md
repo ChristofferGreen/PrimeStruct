@@ -138,7 +138,6 @@ of sync with them.
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6077 | Lowering errors carry the user location of the expression being lowered | ready | diagnostics-lowering-spans |
-| TODO-6078 | A lowering error names the backend that lowers | ready | diagnostics-backend-names |
 | TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | ready | diagnostics-demangle |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | deferred | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -168,7 +167,6 @@ of sync with them.
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
 - TODO-6077 (diagnostics-lowering-spans): lowering errors carry the user location
-- TODO-6078 (diagnostics-backend-names): a lowering error names the backend that lowers
 - TODO-6079 (diagnostics-demangle): one demangle helper; generic names in the user's spelling
 
 ### Immediate Next 10
@@ -176,8 +174,7 @@ of sync with them.
 1. TODO-5603
 2. TODO-6052
 3. TODO-6077
-4. TODO-6078
-5. TODO-6079
+4. TODO-6079
 
 ### Priority Lanes
 
@@ -192,7 +189,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics (split from TODO-5520): TODO-6077, TODO-6078, TODO-6079; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
+- Frontend and diagnostics (split from TODO-5520): TODO-6077, TODO-6079; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
@@ -596,19 +593,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a doctest of the component pins the innermost-first and the dropped-failure rules
     - full release gate green
   - stop_rule: spans of lowering failures only; message wording and names are TODO-6078 and TODO-6079.
-
-- [~] TODO-6078: A lowering error names the backend that lowers
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-diagnostics (worktree-agent-a11b999352edd5990), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5520)
-  - parallel_track: diagnostics-backend-names
-  - scope: The lowerer words its errors `native backend ...` for every target. Only the VM rewrote it (`vm backend`), so `--emit=cpp`, `optcpp`, `exe`, `optexe`, `wasm`, `glsl`, `spirv` and `ir` said `native backend`. Each `IrBackend::normalizeLoweringError` names its own target (`C++ backend`, `wasm backend`, ...); the native backend keeps `native backend`.
-  - acceptance:
-    - a lowering error under `--emit=cpp`, `optcpp`, `wasm` and `ir` names that target, not `native backend`; asserted by a diagnostics test per family of target
-    - full release gate green
-  - stop_rule: error text of the backend registry only; no lowerer message is edited.
 
 - [~] TODO-6079: One demangle helper; lowering messages show the user's spelling of generic names
   - owner: ai

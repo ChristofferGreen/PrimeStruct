@@ -115,12 +115,22 @@ const IrBackendDiagnostics &vmIrBackendDiagnostics() {
       .inliningErrorPrefix = "VM IR inlining error: ",
       .emitErrorPrefix = "VM error: ",
       .backendTag = "vm",
+      .loweringBackendName = "vm",
   };
   return Diagnostics;
 }
 
 void normalizeVmLoweringError(std::string &error) {
   replaceAll(error, "native backend", "vm backend");
+}
+
+void normalizeLoweringBackendName(std::string &error, const IrBackendDiagnostics &diagnostics) {
+  const std::string_view name =
+      diagnostics.loweringBackendName != nullptr ? diagnostics.loweringBackendName : "";
+  if (name.empty() || name == "native") {
+    return;
+  }
+  replaceAll(error, "native backend", std::string(name) + " backend");
 }
 
 std::span<const IrBackendCapabilityProfile> listIrBackendCapabilityProfiles() {

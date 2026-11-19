@@ -22,6 +22,9 @@ struct IrBackendDiagnostics {
   const char *inliningErrorPrefix = "";
   const char *emitErrorPrefix = "";
   const char *backendTag = "";
+  // How a lowering error names the target (`wasm backend ...`): the lowerer words its errors `native backend`
+  // for every target, and `normalizeLoweringError` swaps the name. Empty or `native` leaves the text.
+  const char *loweringBackendName = "";
 };
 
 struct IrBackendEmitOptions {

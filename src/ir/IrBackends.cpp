@@ -196,6 +196,7 @@ public:
         .inliningErrorPrefix = "Native IR inlining error: ",
         .emitErrorPrefix = "Native emit error: ",
         .backendTag = "native",
+        .loweringBackendName = "native",
     };
     return Diagnostics;
   }
@@ -254,6 +255,7 @@ public:
         .inliningErrorPrefix = "IR inlining error: ",
         .emitErrorPrefix = "IR serialize error: ",
         .backendTag = "ir",
+        .loweringBackendName = "IR",
     };
     return Diagnostics;
   }
@@ -299,6 +301,7 @@ public:
         .inliningErrorPrefix = "Wasm IR inlining error: ",
         .emitErrorPrefix = "Wasm emit error: ",
         .backendTag = "wasm",
+        .loweringBackendName = "wasm",
     };
     return Diagnostics;
   }
@@ -345,6 +348,7 @@ public:
         .inliningErrorPrefix = "GLSL-IR inlining error: ",
         .emitErrorPrefix = "GLSL-IR emit error: ",
         .backendTag = "glsl-ir",
+        .loweringBackendName = "GLSL",
     };
     return Diagnostics;
   }
@@ -392,6 +396,7 @@ public:
         .inliningErrorPrefix = "SPIR-V IR inlining error: ",
         .emitErrorPrefix = "SPIR-V IR emit error: ",
         .backendTag = "spirv-ir",
+        .loweringBackendName = "SPIR-V",
     };
     return Diagnostics;
   }
@@ -489,6 +494,7 @@ public:
         .inliningErrorPrefix = "C++ IR inlining error: ",
         .emitErrorPrefix = "C++ IR emit error: ",
         .backendTag = "cpp-ir",
+        .loweringBackendName = "C++",
     };
     return Diagnostics;
   }
@@ -551,6 +557,7 @@ public:
         .inliningErrorPrefix = "EXE IR inlining error: ",
         .emitErrorPrefix = "EXE IR emit error: ",
         .backendTag = "exe-ir",
+        .loweringBackendName = "exe",
     };
     return Diagnostics;
   }
@@ -627,6 +634,7 @@ public:
         .inliningErrorPrefix = "Optimized C++ IR inlining error: ",
         .emitErrorPrefix = "Optimized C++ IR emit error: ",
         .backendTag = "optcpp-ir",
+        .loweringBackendName = "optimized C++",
     };
     return Diagnostics;
   }
@@ -678,6 +686,7 @@ public:
         .inliningErrorPrefix = "Optimized EXE IR inlining error: ",
         .emitErrorPrefix = "Optimized EXE IR emit error: ",
         .backendTag = "optexe-ir",
+        .loweringBackendName = "optimized exe",
     };
     return Diagnostics;
   }
@@ -757,7 +766,9 @@ const std::array<const IrBackend *, 10> &registeredBackends() {
 
 } // namespace
 
-void IrBackend::normalizeLoweringError(std::string & /*error*/) const {}
+void IrBackend::normalizeLoweringError(std::string &error) const {
+  normalizeLoweringBackendName(error, diagnostics());
+}
 
 const IrBackend *findIrBackend(std::string_view emitKind) {
   const auto &backends = registeredBackends();
