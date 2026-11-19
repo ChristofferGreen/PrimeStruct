@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <sstream>
 
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 
@@ -90,7 +91,15 @@ bool parseResultTypeName(const std::string &typeName,
   }
   if (args.size() == 2) {
     hasValue = true;
-    valueKind = valueKindFromTypeName(args.front());
+    // A Buffer payload is an address: its element kind is not the payload kind, so callers
+    // resolve the collection kind from the type text instead.
+    std::string payloadBase;
+    std::string payloadArgs;
+    const bool isBufferPayload =
+        splitTemplateTypeName(trimTemplateTypeText(args.front()), payloadBase, payloadArgs) &&
+        normalizeCollectionBindingTypeName(payloadBase) == "Buffer";
+    valueKind =
+        isBufferPayload ? LocalInfo::ValueKind::Unknown : valueKindFromTypeName(args.front());
     errorType = args.back();
     return true;
   }

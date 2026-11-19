@@ -134,7 +134,6 @@ of sync with them.
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
-| TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6060 | The unused float-to-int fault emitter is removed from the lowerer | deferred | numeric-conversions |
 | TODO-6061 | Integer narrowing and widening on Wasm | deferred | numeric-conversions |
@@ -180,7 +179,7 @@ of sync with them.
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-5902
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
-- Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
+- Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6060, TODO-6061, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6044, TODO-5520
@@ -523,20 +522,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the ok, error and packed cases of test_compile_run_vm_result_exit_codes.cpp also pass under wasmtime (or the wasm emitter's own run check)
     - full release gate green
   - stop_rule: entry exit codes on wasm only.
-  - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-5515: Native Result.ok(Buffer) reads as ok
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a65b1362a27f7e83e (worktree-agent-a65b1362a27f7e83e), 2026-11-19
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: native-result
-  - scope: On native, `[Result<Buffer<i32>, GfxError>] s{Result.ok(b)}` then `Result.error(s)` prints 1 (VM/C++ print 0): the payload is packed as a stack address, and native addresses exceed 2^32.
-  - acceptance:
-    - matrix case agrees on VM, native and C++
-    - full release gate green
-  - stop_rule: covered by the convention chosen in TODO-5506 if possible.
   - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-6060: The unused float-to-int fault emitter is removed from the lowerer

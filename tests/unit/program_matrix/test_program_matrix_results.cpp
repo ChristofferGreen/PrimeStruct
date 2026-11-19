@@ -708,4 +708,32 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a Buffer payload Result reads as ok through locals and direct calls") {
+  program_matrix::ProgramCase program;
+  program.name = "result_buffer_payload_reads_ok";
+  program.source = R"(
+import /std/gfx/*
+
+[return<Result<Buffer<i32>, GfxError>> effects(gpu_dispatch)]
+make_buffer() {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  return(Result.ok(/std/gfx/Buffer/upload(values)))
+}
+
+[return<int> effects(gpu_dispatch, io_out)]
+main() {
+  [Buffer<i32>] b{/std/gfx/Buffer/upload(array<i32>(1i32, 2i32, 3i32))}
+  [Result<Buffer<i32>, GfxError>] fromLocal{Result.ok(b)}
+  [Result<Buffer<i32>, GfxError>] fromCall{make_buffer()}
+  print_line(Result.error(fromLocal))
+  print_line(Result.error(fromCall))
+  print_line(Result.error(make_buffer()))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n0\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
