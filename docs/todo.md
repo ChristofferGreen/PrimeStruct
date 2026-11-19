@@ -118,7 +118,6 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
-| TODO-6076 | `RwLock<T>`: many readers or one writer | ready | mt-rwlock |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | deferred | mt-server |
 | TODO-5805 | The server keeps connections alive between requests | deferred | web-keepalive |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
@@ -160,7 +159,6 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6076 (mt-rwlock): `RwLock<T>`, many readers or one writer
 
 ### Immediate Next 10
 
@@ -402,30 +400,14 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the handle layout of `Mutex` and `Atomic`.
 
-- [~] TODO-6076: `RwLock<T>`: many readers or one writer
-  - owner: ai
-  - status: ready
-  - claimed_by: worker rwlock (worktree agent-a6058e6c5fb88a502), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Multithreading (docs/MultithreadingPrototype.md, Mutex)
-  - parallel_track: mt-rwlock
-  - scope: `RwLock<T>` in `/std/sync` with `read(body)` (the body gets a read-only `T`) and `write(body)` (the body gets a `Reference<T>`), following the shape of `Mutex<T>.locked`, effect `lock`. A reader count over one lock slot, built from the existing lock and condition opcodes like `Channel<T>` (no new host function or opcode), on the VM (eager and seeded schedules, `--vm-threads`) and on the C++ backends and native targets where `Mutex` works today.
-  - acceptance:
-    - deterministic tests: readers hold the lock together (observable by a scripted interleaving through `Channel`s, no sleeps), a writer excludes readers and other writers
-    - the writer-versus-reader fairness is stated in docs/MultithreadingPrototype.md and docs/spec/stdlib-reference.md
-    - full release gate green
-  - stop_rule: the primitive only, not the HTTP server registration form.
-  - notes: prerequisite of TODO-5804 (the registration form of read-only handlers stays an owner decision).
-
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
   - status: deferred
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
-  - depends_on: TODO-6076
   - scope: Under `serveWorkers` every handler holds the app's mutex, so page rendering runs one request at a time. Add `RwLock<T>` (`read(body)` with a read-only `T`, `write(body)` with a `Reference<T>`), let a handler say it only reads (its state parameter `[State] state` against `[Reference<State>] state`, which needs same-arity overloads by argument type (struct methods resolve them since TODO-5735); or a named registration, open question 5 of the design), and run read-only handlers under the read lock. Deferred: decide the registration form first.
-  - design_decision_needed: how a handler says it only reads is open question 5 of docs/MultithreadingPrototype.md (The Server) and a language-design choice (surface syntax and overload rules), so this block stays deferred until the owner picks one; nothing is implemented. Measured context: `serveWorkers` (stdlib/std/http/server.prime) erases the whole app into one `RequestHandler` held in one `Mutex<RequestHandler>` and takes the lock around each call (`work_slot`), so the lock mode must be known per request before the handler runs, and a route lookup must happen before the lock is taken, or the lock mode must come from the handler's type. `RwLock<T>` does not exist yet (stdlib/std/sync has `Mutex`, `Atomic`, `Channel`), so it is a separable leaf that needs no decision: `read(body)` over a read-only `T`, `write(body)` over `Reference<T>`, one lock slot with a reader count on every backend like `Mutex` (docs/spec/vm-design.md). Options for the registration form:
+  - design_decision_needed: how a handler says it only reads is open question 5 of docs/MultithreadingPrototype.md (The Server) and a language-design choice (surface syntax and overload rules), so this block stays deferred until the owner picks one; nothing is implemented. Measured context: `serveWorkers` (stdlib/std/http/server.prime) erases the whole app into one `RequestHandler` held in one `Mutex<RequestHandler>` and takes the lock around each call (`work_slot`), so the lock mode must be known per request before the handler runs, and a route lookup must happen before the lock is taken, or the lock mode must come from the handler's type. `RwLock<T>` exists in stdlib/std/sync (`read(body)` over a read-only `T`, `write(body)` over `Reference<T>`; docs/MultithreadingPrototype.md, RwLock). Options for the registration form:
     - option A, by the state parameter (the recommendation of question 5): a handler whose state parameter is `[State] state` is read-only, one with `[Reference<State>] state` may write, picked by overloads of `get`/`route` on the `Function` type. Trade-off: no new syntax and the read-only rule is the existing borrow check (writing a `[State]` is already a diagnostic, which gives the acceptance's compile error for free), but a lambda's type is not known at overload resolution (only same-arity struct-method overloads by argument type resolve, TODO-5735), so it needs the lambda parameter types to drive resolution or an explicit `Function<...>` at the call; and the stored `RequestHandler` must carry the mode.
     - option B, a separately named registration: `app.view(pattern, handler)` registers a read-only handler (state passed as `[State]`) and `get`/`post`/`route` keep taking `Reference<State>`. Trade-off: trivially resolved and explicit, no overload change, but a second registration name for every method, a handler's mode is the caller's promise unless the parameter type enforces it (it would, as in A), and existing apps keep their serialized GETs until they switch to `view`.
     - option C, the method decides: every GET (and HEAD) handler is read-only and runs under the read lock, every other method writes. Trade-off: no per-handler syntax at all and every `get` benefits, but it is a breaking change for any GET handler that writes state (counters, caches, the todo_web list page if it does), and HTTP method says nothing about a handler's actual effects.

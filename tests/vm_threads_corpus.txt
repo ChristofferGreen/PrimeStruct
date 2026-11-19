@@ -18,6 +18,7 @@
 matrix|primestruct.program_matrix.tasks|tests/unit/program_matrix/test_program_matrix_tasks.cpp|20
 matrix|primestruct.program_matrix.atomics|tests/unit/program_matrix/test_program_matrix_atomics.cpp|20
 matrix|primestruct.program_matrix.mutexes|tests/unit/program_matrix/test_program_matrix_mutexes.cpp|20
+matrix|primestruct.program_matrix.rwlocks|tests/unit/program_matrix/test_program_matrix_rwlocks.cpp|20
 matrix|primestruct.program_matrix.channels|tests/unit/program_matrix/test_program_matrix_channels.cpp|20
 matrix|primestruct.program_matrix.shared_strings|tests/unit/program_matrix/test_program_matrix_shared_strings.cpp|20
 

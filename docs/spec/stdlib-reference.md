@@ -1142,7 +1142,7 @@ router.get("/static/*", []([Request] request, [Reference<Response>] response) {
 
 ### Shared state (`/std/sync`)
 
-`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, `Mutex<T>` and `Channel<T>` (below); `/std/http/server`
+`import /std/sync/*` provides `Atomic<i32>` and `Atomic<i64>`, `Mutex<T>`, `RwLock<T>` and `Channel<T>` (below); `/std/http/server`
 `serveWorkers` is built from all three. The atomics
 are integer cells that several tasks read and change without losing an update (docs/MultithreadingPrototype.md, Atomic). An `Atomic` is a handle: a copy shares the cell,
 so a task that is given one works on the same integer as its spawner, and the cell is freed when its last handle is
@@ -1242,6 +1242,30 @@ This prints `7` on the VM, under every schedule seed, and on `optexe`.
   ends the program with `deadlock: every task is waiting` (exit code 3).
 - The lock and unlock are IR opcodes (docs/spec/vm-design.md, Mutexes); native, Wasm and GLSL reject the program
   with `mutex operations are not supported by the native backend`.
+
+`RwLock<T>` is a `Mutex<T>` that lets tasks read together (docs/MultithreadingPrototype.md, RwLock).
+`RwLock<Tally>{Tally{}}` makes one holding a copy of the value; it is a sendable handle like `Mutex`. `read(body)`
+calls `body` with the value as a read-only `T` (`[Tally] state`) while other tasks may be inside `read` too;
+`write(body)` calls it with a `Reference<T>` and the task is alone inside. Both unlock on every way out of `body`,
+return what `body` returns, and need the `lock` effect (making one needs `heap_alloc`).
+
+```prime
+import /std/sync/*
+
+[effects(lock), return<i64>]
+total([RwLock<Tally>] tally) {
+  return(tally.read([]([Tally] state) { return(state.total) }))
+}
+```
+
+- A body of `read` that assigns to its parameter is a compile error (a write to a borrowed parameter).
+- A task that waits to write keeps new readers out: readers already inside finish, the writer runs, and the readers
+  that waited follow. A stream of readers cannot starve a writer.
+- There is no holder to record: calling `read` or `write` on a lock inside its own `read` body, or `write` inside its
+  own `write` body, waits for ever and ends the program with `deadlock: every task is waiting` when nothing else can
+  run.
+- It is stdlib code over the lock and condition opcodes (docs/spec/vm-design.md, Mutexes and Conditions); it runs
+  wherever `Mutex` and `Channel` do (the VM, `optexe`, arm64 native).
 
 `Channel<T>` is a bounded queue of a sendable type `T` that tasks use to hand values to each other
 (docs/MultithreadingPrototype.md, Channel). `Channel<i64>{[capacity] 4i32}` makes one that holds up to four items

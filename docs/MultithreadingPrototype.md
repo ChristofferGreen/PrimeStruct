@@ -904,8 +904,43 @@ docs/spec/stdlib-reference.md, Shared state.
   first sketch said `std::mutex`: the slot has to hold the holder for the locked-again fault either way.
 - Each handle also keeps the value it was made from (the struct's `initial` field), so a `Mutex<T>` handle is as
   large as a `T` plus two pointers and a `T` is destroyed with each handle (TODO-5854).
-- Effect `lock`; making one needs `heap_alloc`. `RwLock<T>` follows the same shape later, with `read(body)` taking
-  a read-only `T` (TODO-5804).
+- Effect `lock`; making one needs `heap_alloc`.
+
+### RwLock
+
+`RwLock<T>` is a `Mutex<T>` that lets tasks read together (`/std/sync`, implemented on every backend that has
+`Mutex`):
+
+```prime
+import /std/sync/*
+
+[effects(lock), return<i64>]
+total([RwLock<i64>] cell) {
+  return(cell.read([]([i64] value) { return(value + 0i64) }))
+}
+
+[effects(lock), return<void>]
+add([RwLock<i64>] cell, [i64] amount) {
+  cell.write([amount]([Reference<i64> mut] value) { value = value + amount })
+}
+```
+
+- `read(body)` calls `body` with the value as a read-only `T` (a body that declares `[i64 mut] value` or assigns to
+  the value is a compile error, like any write to a borrowed parameter); any number of tasks are inside `read` at
+  once. `write(body)` calls `body` with a `Reference<T>`; the task is alone inside. Both return what `body` returns,
+  need the `lock` effect, and take a closure that may borrow the caller's locals with `[ref name]`, as `locked` does.
+- It is a handle like `Mutex`: copies share the value, `T` is sendable, the last copy destroys it.
+- **Fairness:** a task that waits to write keeps new readers out, so a stream of readers cannot starve a writer;
+  readers already inside finish first, then the writer runs, then the readers that waited. When a writer leaves, the
+  waiting readers and writers race for the lock, and no order between them is promised. Readers that arrive while
+  no writer is inside or waiting are never held up by other readers.
+- No holder is recorded (many readers hold the lock), so the faults of `Mutex` are not detected: calling `write` or
+  `read` on the same lock inside a `read` body, or `write` inside a `write` body, waits for ever, which the VM and
+  `optexe` report as `deadlock: every task is waiting` when no other task can run. Calling `read` inside `read`
+  also waits for ever while a writer waits between the two. Do not nest them.
+- It is stdlib code over the lock and condition opcodes of `Channel` (no new opcode or host function): one control
+  cell of six slots (the lock, the handle count, the condition, the readers inside, whether a writer is inside, the
+  writers that wait). The `RwLock` of the server is TODO-5804 (how a handler says it only reads is open question 5).
 
 ### Atomic
 
@@ -1012,7 +1047,7 @@ sum_jobs([Channel<i64>] jobs) {
 | --- | --- |
 | `task` | `[spawn]` and `wait` (unchanged) |
 | `atomic` | operations on an `Atomic` |
-| `lock` | `Mutex.locked` (and later `RwLock`) |
+| `lock` | `Mutex.locked`, `RwLock.read` and `RwLock.write` |
 | `channel` | `send`, `receive` and `close` on a `Channel` |
 
 Making a `Mutex`, `Atomic` or `Channel` also needs `heap_alloc`. `lock` and `channel` are the effects that can
@@ -1070,7 +1105,7 @@ main() {
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).
-- **Later, filed but deferred:** read-only handlers under `RwLock` (TODO-5804), keep-alive (TODO-5805), sessions
+- **Later, filed but deferred:** read-only handlers under `RwLock` (TODO-5804; the `RwLock` itself is done), keep-alive (TODO-5805), sessions
   (TODO-5806).
 
 ### Open Questions

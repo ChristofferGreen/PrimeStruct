@@ -14,6 +14,11 @@
 // its own body faults. The `__psmutex_*` functions lower to the MutexLock and MutexUnlock IR opcodes
 // (docs/spec/vm-design.md, Mutexes).
 //
+// `RwLock<T>` is a Mutex that lets tasks read together: `read(body)` gives the body a read-only `T` and any number of
+// tasks may be inside `read` at once, `write(body)` gives it a `Reference<T>` and is alone inside. A task that waits to
+// write keeps new readers out, so a stream of readers cannot starve a writer. Handles are shared like a Mutex's; both
+// calls need the `lock` effect. It is built from the lock and condition opcodes, as `Channel<T>` is.
+//
 // `Channel<T>{[capacity] 4i32}` is a bounded queue of a sendable type between tasks: `send(value)` moves the value
 // in and waits while the channel is full, `receive()` gives a `Maybe<T>` and waits while the channel is empty and
 // open, `close()` ends it. A Channel is a handle too: copies share the queue, and the last one destroyed destroys
@@ -220,6 +225,130 @@ namespace std {
     locked<Body>([Body mut] body) {
       __psmutex_lock(this.cell)
       [MutexHold] hold{MutexHold{this.cell}}
+      return(body(mutexValueBorrow<T>(this.value)))
+    }
+
+    [mut]
+    Copy([Reference<Self>] other) {
+      this.cell = other.cell
+      this.value = other.value
+      this.live = other.live
+      if(other.live) {
+        atomicCellShare(other.cell)
+      }
+    }
+
+    [mut]
+    Move([Reference<Self>] other) {
+      this.cell = other.cell
+      this.value = other.value
+      this.live = other.live
+      other.live = false
+    }
+
+    [mut effects(heap_alloc)]
+    Destroy() {
+      if(this.live) {
+        mutexRelease<T>(this.cell, this.value)
+        this.live = false
+      }
+    }
+  }
+
+  // The control cell of a read-write lock is six heap slots: the lock that guards the other slots, the number of
+  // handles, the condition every waiter sleeps on, the number of readers inside, whether a writer is inside, and the
+  // number of writers that wait. All but the handle count are read and written with the lock held.
+  [unsafe effects(heap_alloc), return<Pointer<i64>>]
+  rwlockCellAlloc() {
+    [Pointer<i64>] cell{/std/intrinsics/memory/alloc<i64>(6i32)}
+    [i32 mut] index{0i32}
+    while(index < 6i32) {
+      __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, index), 0i64)
+      index = index + 1i32
+    }
+    __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
+    return(cell)
+  }
+
+  // Holds a read lock for a scope: destroying it leaves, and the last reader out wakes the waiting writers.
+  [struct]
+  RwReadHold() {
+    [Pointer<i64>] cell
+
+    [mut]
+    Destroy() {
+      __psmutex_lock(this.cell)
+      channelSet(this.cell, 3i32, channelGet(this.cell, 3i32) - 1i64)
+      if(channelGet(this.cell, 3i32) == 0i64) {
+        __pscondition_notify(channelField(this.cell, 2i32))
+      }
+      __psmutex_unlock(this.cell)
+    }
+  }
+
+  // Holds the write lock for a scope: destroying it leaves and wakes every waiter.
+  [struct]
+  RwWriteHold() {
+    [Pointer<i64>] cell
+
+    [mut]
+    Destroy() {
+      __psmutex_lock(this.cell)
+      channelSet(this.cell, 4i32, 0i64)
+      __pscondition_notify(channelField(this.cell, 2i32))
+      __psmutex_unlock(this.cell)
+    }
+  }
+
+  // Waits until no writer is inside or waits, then counts one more reader in.
+  [unsafe return<void>]
+  rwlockEnterRead([Pointer<i64>] cell) {
+    __psmutex_lock(cell)
+    [MutexHold] hold{MutexHold{cell}}
+    while(channelGet(cell, 4i32) != 0i64 || channelGet(cell, 5i32) != 0i64) {
+      __pscondition_wait(channelField(cell, 2i32), cell)
+      __psmutex_lock(cell)
+    }
+    channelSet(cell, 3i32, channelGet(cell, 3i32) + 1i64)
+  }
+
+  // Waits until no reader and no writer is inside, then takes the lock. While it waits, new readers wait too.
+  [unsafe return<void>]
+  rwlockEnterWrite([Pointer<i64>] cell) {
+    __psmutex_lock(cell)
+    [MutexHold] hold{MutexHold{cell}}
+    channelSet(cell, 5i32, channelGet(cell, 5i32) + 1i64)
+    while(channelGet(cell, 4i32) != 0i64 || channelGet(cell, 3i32) != 0i64) {
+      __pscondition_wait(channelField(cell, 2i32), cell)
+      __psmutex_lock(cell)
+    }
+    channelSet(cell, 5i32, channelGet(cell, 5i32) - 1i64)
+    channelSet(cell, 4i32, 1i64)
+  }
+
+  // `RwLock<Tally>{Tally{}}` makes a lock owning a copy of that value. `T` is a sendable type.
+  [public struct sendable]
+  RwLock<T>() {
+    [T mut] initial
+    [private Pointer<i64> mut] cell{rwlockCellAlloc()}
+    [private Pointer<uninitialized<T>> mut] value{mutexValueAlloc<T>(initial)}
+    [private bool mut] live{true}
+
+    // Calls `body` with the value as a read-only `T` and returns what `body` returns. Any number of tasks read
+    // together; a task that calls `read` waits while a writer is inside or waits for its turn.
+    [effects(lock), return<auto>]
+    read<Body>([Body mut] body) {
+      rwlockEnterRead(this.cell)
+      [RwReadHold] hold{RwReadHold{this.cell}}
+      return(body(mutexValueBorrow<T>(this.value)))
+    }
+
+    // Calls `body` with a reference to the value and returns what `body` returns. One task at a time is inside, and
+    // none reads meanwhile.
+    [effects(lock), return<auto>]
+    write<Body>([Body mut] body) {
+      rwlockEnterWrite(this.cell)
+      [RwWriteHold] hold{RwWriteHold{this.cell}}
       return(body(mutexValueBorrow<T>(this.value)))
     }
 

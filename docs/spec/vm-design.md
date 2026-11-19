@@ -237,7 +237,7 @@
   Both push nothing (immediate 0). A wait by a task that does not hold the lock faults with `condition wait by a
   task that does not hold the lock`. A notify wakes only the tasks that already wait, so a waiter checks what it
   waits for in a loop with the lock held, and the notifier changes it with the lock held. Their source is
-  `Channel<T>` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state), through the `[host]` definitions
+  `Channel<T>` and `RwLock<T>` of `/std/sync` (docs/spec/stdlib-reference.md, Shared state), through the `[host]` definitions
   `/std/sync/__pscondition_wait` and `__pscondition_notify`; a wait in `receive` is
 
   ```
