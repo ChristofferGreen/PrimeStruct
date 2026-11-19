@@ -17,7 +17,7 @@ requirement is to open as fast as a native app can. Every design choice below is
 is measured, not assumed.
 
 **Budget.** On a warm launch, the PrimeStruct editor shows its window within 5 ms of a pure Objective-C++ editor with
-the same UI (the reference build in TODO-5535), and shows the text of a 1 MB file within one more frame.
+the same UI (`tools/launch_bench/reference_editor.mm`, measured in "Against a reference editor and TextEdit" below), and shows the text of a 1 MB file within one more frame.
 
 **Measured so far** (Linux, release build, 2026-10-08; wall time of a whole process run):
 
@@ -29,7 +29,7 @@ the same UI (the reference build in TODO-5535), and shows the text of a 1 MB fil
 
 **Measured on the Mac, 2026-10-22** (`scripts/measure_app_startup.sh`, retired since for `scripts/measure_startup.sh`; 10 runs of the editor in the AppKit backend's
 snapshot mode, so wall time to the first laid-out and drawn window including the snapshot itself, and the peak
-resident set; not the 5 ms budget measurement, which is TODO-5535):
+resident set; not the 5 ms budget measurement, which is "Against a reference editor and TextEdit" below):
 
 | PrimeScroll build | Bundle executable | Bytecode | No file: mean / peak RSS | Opening the 3-language showcase file: mean / peak RSS |
 | --- | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ highlighter's runs). There is no PrimeStruct-owned memory to trim here; the 120 
 
 The native build is 5 times smaller on disk and uses about 10 MB less memory; the snapshot wall time is dominated by
 AppKit's own window creation and layout, and the run-to-run noise (the first bytecode series includes cold caches) is
-larger than the VM's own cost, so the launch harness of TODO-5535 is still the way to compare against the budget.
+larger than the VM's own cost, so the reference-editor comparison below is the way to check the budget.
 
 So the VM itself costs about 1 ms; compiling at launch is never acceptable; and bytecode size is the cost that
 matters. The large program's size comes from lowering inlining almost every call, which TODO-5536 addresses.
@@ -159,8 +159,87 @@ earlier count of about 1270 included dyld's lines for deferred initializers). CT
 loads more than 4 images that a plain AppKit program (`tools/startup_probe/reference_app.m`) does not: today
 `libps_ui_appkit.dylib` and the menu bar's MenuBarClientCore and sometimes CampoUIServices; one more framework link
 adds about 3 (AVKit adds AVKit, AVKitCore and PIP). It counts images, not milliseconds, which move by 30 ms or more
-between runs and with the machine's load. The rest of the harness (cold launches, window-list polling, a reference
-editor with the same UI, installed editors for comparison) is TODO-5535.
+between runs and with the machine's load.
+
+**Against a reference editor and TextEdit** (2026-11-19, TODO-5535). The harness has three more parts:
+- `tools/launch_bench/reference_editor.mm`, an editor written directly in Objective-C++ (`scripts/measure_startup.sh
+  tools/launch_bench/reference_editor.mm` builds it with `clang++` into a bundle and measures it). It has the window
+  (plain `NSWindow`, tabbing mode and identifier of PrimeScroll's windows), the menu bar of the editor (application,
+  File, Edit, Format, View, Run, Window and Help menus, over 100 items counting submenus), a text view set up as
+  `ps_ui_text_view_create` does, the toolbar of a script or markdown tab for a `.prime` or `.md` file, the launch
+  defaults of `ps_ui_init` (no restoration, AutoFill, completion or Writing Tools), the window shown before the file
+  is loaded in one batch, and an open-file event handler. It writes its own phase marks in the probe's format
+  (`--marks self`), so one table holds both. CTest `PrimeStruct_launch_bench_reference_editor` builds it and runs it
+  twice in snapshot mode (nothing on screen) and checks that its marks arrive; it checks no time.
+- `--poll NAME` (with `--open`): `tools/launch_bench/window_poll.c` polls the window list every millisecond for the
+  first on-screen window of the process named NAME, which times a program that has no probe. With `--marks none`
+  the program is ended once its window is listed (TextEdit has no way to quit by itself), and `--app-args` passes
+  arguments to it (`-ApplePersistenceIgnoreState YES`, so TextEdit does not bring documents back). The `listed` row
+  is that time; for programs with marks it is about 20 ms after `text`, so `listed` figures compare with each
+  other, not with `text`.
+- `--cold`: every measured launch runs a fresh `ditto` copy of the bundle at a new path (removed and unregistered from
+  Launch Services afterwards), so it pays what new code pays (Gatekeeper's assessment, the code-signature check, a cold
+  file cache for the copy). A launch after `purge` needs root, and a reboot needs a person; the fresh copy is the
+  nearest thing an agent can do.
+
+Medians of round medians, M3 Pro, macOS 27.0.1, rounds interleaved (PrimeScroll, reference, TextEdit in turn). The load
+average comes from other jobs on the machine (the user's and the other worker's builds), not from the measurement, and
+was not below 5 at any time:
+
+| Launch | main | app_init | loop | window | first text | listed |
+| --- | --- | --- | --- | --- | --- | --- |
+| snapshot, no file (4 rounds of 10, load 5.4 to 6.6): PrimeScroll | 26 | 103 | 144 | 180 | 189 | - |
+| snapshot, no file: reference editor | 24 | 100 | 140 | 177 | 184 | - |
+| `--open`, no file (3 rounds of 10, load 6 to 22): PrimeScroll | 76 | 214 | 261 | 294 | 305 | 323 |
+| `--open`, no file: reference editor | 68 | 206 | 249 | 286 | 297 | 317 |
+| `--open`, no file: TextEdit (no marks) | - | - | - | - | - | 2166 (1877 to 2792) |
+| `--open`, `small.txt` (1 round of 10, load 6 to 13): PrimeScroll | 103 | 241 | 286 | 320 | 330 | 349 |
+| `--open`, `small.txt`: reference editor | 115 | 288 | 334 | 377 | 388 | 412 |
+| `--open`, `small.txt`: TextEdit | - | - | - | - | - | 375 |
+| cold copy, snapshot (6 runs, load 6): PrimeScroll | 312 | 401 | 437 | 469 | 475 | - |
+| cold copy, snapshot: reference editor | 74 | 160 | 195 | 228 | 236 | - |
+| cold copy, `--open` (6 runs, load 6): PrimeScroll | 383 | 478 | 520 | 550 | 558 | 576 |
+| cold copy, `--open`: reference editor | 153 | 257 | 290 | 326 | 337 | 355 |
+
+Peak resident set: PrimeScroll 113 MB in snapshot mode (which renders the PNG: about 20 MB) and 89.6 MB on a real
+launch, the reference editor 91 and 89 MB.
+
+What it shows:
+- **The budget holds.** PrimeScroll's snapshot `text` median is 5 ms above the reference's (189 against 184 ms; round
+  medians 168 to 196 against 174 to 189), inside the 30 ms the acceptance allows and the run-to-run spread of one round
+  (about 20 ms); on a real launch the gap is 8 ms (305 against 297) and the window is listed 6 ms later. The earlier
+  prototype (one window and text view, no menus: 192 against PrimeScroll's 217 ms) left 25 ms; with the editor's menus
+  and window setup the reference costs what PrimeScroll costs, so the 5 ms budget is met within what these runs can
+  resolve (the rounds' own spread is larger than 5 ms), and no gap gets a TODO. The phases agree one by one: `app_init` 103 against 100, `loop` 144 against 140.
+- **A launch through Launch Services costs about 110 ms more than a snapshot launch for both programs**
+  (`app_init` 214 and 206 against 103 and 100): `open` itself, Launch Services and the regular activation policy (not
+  taken apart here). It is the platform's share, equal for the reference.
+- **TextEdit shows its first window in 2.2 s without a file** (1.9 to 2.8 s, load up to 41) and in 375 ms with a file;
+  the editor shows its window in 0.32 s (0.35 s with a file). What TextEdit shows in that time without a file was not
+  recorded (it is probably the open panel, which the editor's no-file launch does not need).
+- **With a file the reference is slower than PrimeScroll** (388 against 330 ms, one round each): `small.txt` has no
+  toolbar in either program, so the difference is the handling of the open-file event (the reference sets its title
+  and loads the text when the event arrives, inside its event loop). It was not taken apart; the reference is not
+  tuned for file launches, so this is not a budget input.
+- **A copy of a bundle that was never launched costs PrimeScroll 290 ms more at `main` and the reference 50 ms** (312
+  against 24 to 26 ms in snapshot mode): the executable, the AppKit backend dylib and the script runner are new code
+  to Gatekeeper, the reference is one 50 KB file. This is cause 1 above (TODO-5755); `scripts/warm_macos_app.sh`
+  pays it at install. The first launch of a freshly copied and warmed bundle is checked below.
+
+**The real-launch baseline of TODO-5603** (2026-11-19, a fresh `ditto` copy of the master bundle at a new path in the
+session's scratch directory, signed and warmed as the install recipe does; `scripts/measure_startup.sh --open`; the
+installed `~/Applications/PrimeScroll.app` was not touched):
+1. Launch Services baseline, 10 runs each: no file, three rounds, `main` 76, `app_init` 214, `loop` 261, `window` 294,
+   first text 305 ms (listed 323), load 6 to 22; with a small `.txt` file as argument, `main` 103, first text 330 ms
+   (listed 349), load 6 to 13.
+2. First launch after install and warm-up: three fresh copies, each launched twice (`--runs 1`, so the discarded
+   warm-up launch is the first launch after the install and warm-up): `main` at 72, 56 and 57 ms for the first launch
+   against 49, 52 and 50 ms for the second, so the first is 23, 4 and 7 ms above the second, inside the 50 ms the
+   TODO expects. (A first attempt measured 834 ms: the probe library had been rebuilt just before, and the new
+   library is itself new code; a run that follows a rebuild of the probe is not a first launch of the bundle.)
+3. The sampled real launch: see the status of TODO-5603 in docs/todo.md; at a load of 9.4 (the condition is under
+   4) `app_init` was 164 ms, `ps_ui_init` 101 ms, `window_create` 17 ms and the window show 9 ms, and the unified log
+   showed no entry for the app.
 
 ## 2. Principles
 

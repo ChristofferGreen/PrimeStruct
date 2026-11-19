@@ -72,6 +72,19 @@ open-work-only scope rule as `docs/todo.md` itself.
 
 ## TODO-5603
 
+- 2026-11-19 (agent allowed to show windows until 07:20; fresh `ditto` copies of the master bundle at scratch paths,
+  never the installed app; load 5 to 22 from other jobs, never under 4): `--open` on a copy signed and warmed as the
+  install recipe does. (1) 10 runs, no file, three rounds: first text 296, 305 and 362 ms (loads 6 to 17, round
+  loads rose to 27); with `small.txt` 330 ms (load 9.5 to 13.5). (2) first launch after install and warm-up, three
+  fresh copies, `--runs 1` twice each: warm-up (first) `main` 71.9, 55.7 and 57.2 ms against 48.8, 52.0 and 50.1 ms
+  for the second launch (an earlier first try measured 834 ms because the probe library had been rebuilt just before and is
+  itself new code). (3) `--open --sample --runs 3` at load 9.4: `main` 60, `app_init` 164, `loop` 205, window 234, first
+  text 242 ms; `ps_ui_init` 101 ms (sampled: `-[NSApplication init]` 44 to 49 percent, the menu-bar presentation
+  instances 21 to 37 percent), `window_create` 17, `window_show` 9, `text_view_create` 3.5; no verdict, since the
+  condition is a load under 4. `log show --last 20m --predicate 'process == "PrimeScroll" OR process ==
+  "SafariPlatformSupport.Helper"'` printed no entries. TextEdit and the reference editor figures are in docs/NativeUiPlan.md
+  section 1.
+
 - 2026-11-09: launch audit (M3 Pro, 11 cores, 18 GB, macOS 27.0.1
   26A434). Tools: `scripts/measure_startup.sh` with
   `tools/startup_probe/startup_probe.c` (phases from the kernel's process

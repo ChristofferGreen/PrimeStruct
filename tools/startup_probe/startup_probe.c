@@ -22,6 +22,8 @@
  *   PS_PROBE_SESSION_PREVIEWS=<0:1:2...>  the matching "session.previews"
  *   PS_PROBE_EXIT_AFTER_TEXT=1   write the report and _exit(0) right after the first text is drawn (a real launch
  *                                through `open`, which has no snapshot to end it)
+ *   PS_PROBE_EXIT_DELAY_MS=<ms>  with PS_PROBE_EXIT_AFTER_TEXT: keep running that long after the report before exiting,
+ *                                so a window-list poller (tools/launch_bench/window_poll.c) can still see the window
  *   PS_PROBE_SAMPLE_US=<us>      sample the main thread
  */
 #include "primec/ui/NativeUi.h"
@@ -29,6 +31,7 @@
 /* Calls a backend may predate: the probe still loads into an app built before them. */
 extern bool ps_ui_window_add_background_tab(uint64_t host, uint64_t tab) __attribute__((weak_import));
 
+#include <dispatch/dispatch.h>
 #include <dlfcn.h>
 #include <mach/mach.h>
 #include <objc/message.h>
@@ -227,9 +230,21 @@ static void report(void) {
   }
 }
 
+static void exit_now(void *unused) {
+  (void)unused;
+  _exit(0);
+}
+
 static void after_text(void) {
   if (getenv("PS_PROBE_EXIT_AFTER_TEXT") != NULL) {
     report();
+    const char *delay = getenv("PS_PROBE_EXIT_DELAY_MS");
+    if (delay != NULL) {
+      /* The event loop goes on, so the window is committed and listed for a poller (scripts/measure_startup.sh). */
+      dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(atof(delay) * 1e6)), dispatch_get_main_queue(), NULL,
+                       exit_now);
+      return;
+    }
     _exit(0);
   }
 }

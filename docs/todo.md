@@ -129,7 +129,6 @@ of sync with them.
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-5956 | Native string arenas and the remaining string heap statistics | deferred | native-backend-strings |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
-| TODO-5535 | Launch-time harness and reference Objective-C++ editor | ready | native-ui-launch |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
@@ -168,16 +167,14 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-5535 (native-ui-launch): launch-time harness and reference Objective-C++ editor
 
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-5535
 
 ### Priority Lanes
 
-- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5535, TODO-5821
+- Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
@@ -521,11 +518,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-26
   - phase: Native PrimeScroll startup (docs/NativeUiPlan.md section 1)
   - parallel_track: startup
-  - scope: The audit, the guard (CTest `PrimeStruct_native_ui_startup_guard`: images beyond a plain AppKit program) and `scripts/measure_startup.sh` are done (docs/todo_log.md under TODO-5603); `scripts/measure_app_startup.sh` is gone. Left, for a person at the Mac (an `--open` launch shows the window and takes focus, which agents and tests must not do), after reinstalling PrimeScroll and running `bash scripts/warm_macos_app.sh ~/Applications/PrimeScroll.app` on the installed copy: (1) the Launch Services baseline, `scripts/measure_startup.sh --open --runs 10 ~/Applications/PrimeScroll.app` and `scripts/measure_startup.sh --open --runs 10 --file <a small .txt> ~/Applications/PrimeScroll.app`; (2) the first launch after an install (TODO-5755), `scripts/measure_startup.sh --open --runs 1 ~/Applications/PrimeScroll.app` twice right after the install and warm-up (the warm-up line of the first is the one to compare; expected within 50 ms of the second); (3) a sampled real launch for TODO-5756, `scripts/measure_startup.sh --open --sample --runs 3 ~/Applications/PrimeScroll.app` with load under 4 (expected `app_init` at most 150 ms), and in the unified log (`log show --last 2m --predicate 'process == "PrimeScroll" OR process == "SafariPlatformSupport.Helper"'`) no AutoFill helper, Writing Tools or window restoration before the first drawn text.
+  - scope: The audit, the guard (CTest `PrimeStruct_native_ui_startup_guard`: images beyond a plain AppKit program) and `scripts/measure_startup.sh` are done (docs/todo_log.md under TODO-5603); `scripts/measure_app_startup.sh` is gone. Steps (1) and (2) were measured on 2026-11-19 by an agent the user allowed to show windows, on fresh `ditto` copies of the master bundle (signed and warmed as the install recipe does; the installed app was not touched) and are in docs/NativeUiPlan.md section 1 ("The real-launch baseline of TODO-5603"): (1) `--open --runs 10` first text 305 ms without a file and 330 ms with a small `.txt`; (2) the first launch after an install and warm-up started `main` 4 to 23 ms later than the second, inside the expected 50 ms. Left, for a person at the Mac with a quiet machine (the load stayed at 6 to 20 from other jobs for four hours, so the agent could not get under 4): (3) a sampled real launch for TODO-5756, `scripts/measure_startup.sh --open --sample --runs 3 ~/Applications/PrimeScroll.app` with load under 4 (expected `app_init` at most 150 ms; at load 9.4 on a copy it was 164 ms with `ps_ui_init` at 101 ms, so no verdict), and in the unified log (`log show --last 2m --predicate 'process == "PrimeScroll" OR process == "SafariPlatformSupport.Helper"'`) no AutoFill helper, Writing Tools or window restoration before the first drawn text (the agent's `log show --last 20m` for those processes printed no entries at all, so it checked nothing). Steps (1) and (2) on the installed copy after a reinstall, if the person wants the installed bundle itself measured.
   - acceptance:
     - the numbers of (1) to (3), with the load average, are in docs/NativeUiPlan.md section 1 and docs/todo_log.md; anything over its expectation gets a TODO
   - stop_rule: measurement only.
-  - notes: needs a person at the Mac; the guard counts images, not milliseconds.
+  - notes: step (3) needs a quiet machine and a person (or an agent allowed to show windows) at the Mac; the guard counts images, not milliseconds.
 
 - [ ] TODO-5956: Native string arenas and the remaining string heap statistics
   - owner: ai
@@ -551,20 +548,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: bytecode size and load time only; split lazy loading out if the size change is large.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path (the startup audit of TODO-5603 found the 0.79 MB executable's size makes no measurable difference warm). It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
-
-- [~] TODO-5535: Launch-time harness and reference Objective-C++ editor
-  - owner: ai
-  - status: in_progress
-  - claimed_by: launch-bench (worktree-agent-a72e58a6c3da913ca), 2026-11-18
-  - created_at: 2026-10-08
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-launch
-  - scope: `scripts/measure_startup.sh` and its probe (TODO-5603) time PrimeStruct apps in snapshot mode and through Launch Services. Left: a reference editor written directly in Objective-C++ (`tools/launch_bench/reference_editor.mm`: the same window, tab, menu, toolbar and text view setup as PrimeScroll and the startup rules of section 1, with its own phase marks in the probe's format), so the budget "within 5 ms of a pure Objective-C++ editor" can be checked; and a cold-launch mode for the script (a launch after `purge` is not possible without root, so a fresh copy of the bundle at a new path, which also measures new-code assessment, and a person's run after a reboot). Compare PrimeScroll, the reference and TextEdit (`--open` against `/System/Applications/TextEdit.app` with window polling for apps without the probe).
-  - acceptance:
-    - the reference editor builds with clang from the script; a table of PrimeScroll, reference and TextEdit (snapshot where possible, `--open` for all) is recorded in docs/NativeUiPlan.md section 1; PrimeScroll's snapshot `text` median is within 30 ms of the reference (2026-11-09 with a one-text-view prototype: 217 against 192 ms) or each gap has a TODO
-    - full release gate green
-  - stop_rule: measurement tooling and the reference editor only.
-  - notes: needs a Mac; the `--open` runs need a person at the machine (they show a window and take focus).
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

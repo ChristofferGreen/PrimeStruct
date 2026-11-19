@@ -2187,6 +2187,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
                          SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
   endforeach()
 
+  # The reference editor of the launch-time harness: builds with clang++ and writes its phase marks in
+  # snapshot mode (cmake/LaunchBenchReferenceEditorTest.cmake). Nothing shows on screen; times are not checked.
+  add_test(
+    NAME PrimeStruct_launch_bench_reference_editor
+    COMMAND ${CMAKE_COMMAND}
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -DWORK_DIR=${CMAKE_BINARY_DIR}/launch_bench_reference_editor
+            -DGUARD_ENABLED=$<AND:$<BOOL:${PRIMESTRUCT_BUILD_NATIVE_UI}>,$<BOOL:${APPLE}>>
+            -P ${CMAKE_SOURCE_DIR}/cmake/LaunchBenchReferenceEditorTest.cmake
+  )
+  set_tests_properties(PrimeStruct_launch_bench_reference_editor
+                       PROPERTIES TIMEOUT 300 RESOURCE_LOCK native_ui_appkit
+                       SKIP_REGULAR_EXPRESSION "PRIMESTRUCT_UI_SKIPPED")
+
   set(PrimeStructBackendAllTestSources
     tests/unit/ir_pipeline/test_ir_pipeline.cpp
     tests/unit/ir_pipeline/serialization/test_ir_pipeline_serialization_calls.cpp

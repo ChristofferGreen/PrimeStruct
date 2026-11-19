@@ -2012,6 +2012,7 @@ are left unarchived.
 | TODO-5531 | macOS AppKit backend and app runner | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5532 | Native text editor example | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5534 | The C++ emitters lower `[host]` calls with scalar and static-text arguments | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
+| TODO-5535 | Launch-time harness and reference Objective-C++ editor | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-5537 | IR byte opcodes and VM byte regions | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5538 | The `Slice<T, Capability>` value and its operations | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
 | TODO-5539 | Owned `String` with the string heap | [2026-10.md](todo_archive/2026-10.md) | 2026-10-22 |
