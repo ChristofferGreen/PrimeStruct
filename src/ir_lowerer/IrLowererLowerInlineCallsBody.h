@@ -458,12 +458,7 @@
                     error);
               },
               [&](const Expr &argExpr, const LocalMap &argLocals) {
-                return ir_lowerer::isTemporaryStructCopySourceExpr(
-                    argExpr, [&](const Expr &callExpr) {
-                      return callExpr.isMethodCall
-                                 ? resolveMethodCallDefinition(callExpr, argLocals)
-                                 : resolveDefinitionCall(callExpr);
-                    });
+                return stateOut.isTemporaryStructCopySource(argExpr, argLocals);
               })) {
         popFileScope();
         popInlineStack();
@@ -557,6 +552,10 @@
             .isBuiltinVectorElementPlace =
                 [&](const Expr &argExpr) {
                   return stateOut.isBuiltinVectorElementPlace(argExpr, callerLocals);
+                },
+            .isTemporaryCopySource =
+                [&](const Expr &argExpr) {
+                  return stateOut.isTemporaryStructCopySource(argExpr, callerLocals);
                 },
             .resolveStructSlotLayout =
                 [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {

@@ -32,6 +32,7 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
     const SemanticProgram *semanticProgram,
     const Expr &expr,
     const LocalMap &localsIn,
-    std::string &error);
+    std::string &error,
+    const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryStructCopySource);
 
 } // namespace primec::ir_lowerer

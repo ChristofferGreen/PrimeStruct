@@ -73,7 +73,8 @@ bool emitInlinePackedCallParameter(
     const Int32ProviderFn &allocTempLocal,
     const EmitInstructionFn &emitInstruction,
     std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo) {
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
+    const ExprPredicateFn &isTemporaryCopySource) {
   StructSlotLayoutInfo structLayout;
   const bool isUnsupportedStringPointerReferenceArgsPack =
       ((paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
@@ -482,7 +483,8 @@ bool emitInlinePackedCallParameter(
     if (!emitStructCopySlots(destBaseLocal, srcPtrLocal, structLayout.totalSlots)) {
       return false;
     }
-    if (shouldDisarmStructCopySourceExpr(argExpr)) {
+    if (isTemporaryCopySource ? isTemporaryCopySource(argExpr)
+                              : shouldDisarmStructCopySourceExpr(argExpr)) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
     }
     return true;

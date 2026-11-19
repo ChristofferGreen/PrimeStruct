@@ -113,7 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
-| TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
+| TODO-6074 | An args pack and `Result.map` destroy the `String`s of their temporaries | deferred | lifecycle-temporaries |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5853 | A borrowed `Reference` parameter stored through a `[ref]` capture is diagnosed | deferred | closures-references |
 | TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | deferred | mt-primitives |
@@ -181,7 +181,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-5520
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853; collection fields found by closures and the todo example: TODO-5727
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752
@@ -244,18 +244,17 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [~] TODO-5727: Every struct copy site tells a place from a temporary by resolution
+- [ ] TODO-6074: An args pack and `Result.map` destroy the `String`s of their temporaries
   - owner: ai
-  - status: in_progress
-  - claimed_by: copy-sites (worktree-agent-a83711737645e00d6), 2026-11-19
-  - created_at: 2026-11-07
-  - phase: Lifecycle (found while fixing TODO-5720)
-  - parallel_track: lifecycle-copy-sources
-  - scope: TODO-5720 added `isTemporaryStructCopySourceExpr` (src/ir_lowerer/IrLowererFlowControlHelpers.cpp), which resolves a call before deciding whether a struct value is a place to copy or a temporary to move; bindings, assignments, returns, brace fields and sum payloads use it. Parameter and packed arguments, the collection receiver, sum mapping, `pick` and the method-call form of a sum payload still classify syntactically, so a user-defined `at` method whose result feeds one of them would be copied and its temporary leaked. Route those sites through the same resolver.
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: Lifecycle (found while finishing TODO-5727)
+  - parallel_track: lifecycle-temporaries
+  - scope: `total(Box{[text] label(3i32)}, Box{[text] label(4i32)})` for `total([args<Box>] xs)` leaves both `String`s on the string heap after the call, and `Result.map(Result.ok(1i32), [maker]([i32] v) { return(Box{[text] label(v)}) })` leaves the mapped `Box`'s `String` (measured with `heapLiveBlocks`/`stringHeapBytesInUse` on the VM: 64 and 32 bytes). Whoever owns the pack elements or the mapped sum payload must destroy them; the matrix cases would copy the shape of tests/unit/program_matrix/test_program_matrix_user_at_sources.cpp.
   - acceptance:
-    - matrix cases with a user `at` method feeding each listed site destroy every value exactly once on VM, native and optexe
+    - matrix cases for an args pack of `Box` temporaries and a `Result.map` yielding a `Box` end with the heap statistics of the start on VM and optexe
     - full release gate green
-  - stop_rule: copy-source classification at the listed sites only.
+  - stop_rule: ownership of args-pack elements and of a mapped sum payload only.
 
 - [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai

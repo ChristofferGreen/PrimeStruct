@@ -2198,6 +2198,7 @@ are left unarchived.
 | TODO-5724 | Web hover and key handlers through the fragment script | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5725 | Native pointer and key events for control handlers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5726 | An indexed element of a stdlib `Vector<T>` of structs binds without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |
+| TODO-5727 | Every struct copy site tells a place from a temporary by resolution | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-5728 | `slice` and `sliceMut` on a vector field of a struct resolve | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5729 | The web example loopback tests run in their own CTest entries | [2026-11.md](todo_archive/2026-11.md) | 2026-11-07 |
 | TODO-5730 | Elements of a `vector<String>` struct field read without a fault | [2026-11.md](todo_archive/2026-11.md) | 2026-11-12 |

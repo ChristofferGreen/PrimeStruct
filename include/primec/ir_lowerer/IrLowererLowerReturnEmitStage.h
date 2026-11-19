@@ -78,6 +78,8 @@ struct LowerReturnEmitStageState {
   ExprLocalsPredicateFn emitExpr;
   // Whether a call reads an element of a builtin vector in place (an element place, not a temporary).
   ExprLocalsPredicateFn isBuiltinVectorElementPlace;
+  // Whether a struct value copied out of an expression is a temporary the copy takes over, not a place (resolved).
+  ExprLocalsPredicateFn isTemporaryStructCopySource;
   LowerReturnEmitStatementFn emitStatement;
   LowerReturnEmitInlineDefinitionCallFn emitInlineDefinitionCall;
   Int32ProviderFn allocTempLocal;

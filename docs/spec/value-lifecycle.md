@@ -121,7 +121,11 @@
   fields (it never aliases `other`'s storage) and the helper only adjusts what it needs; assigning a field destroys
   that copy first. The same applies to a binding initialized from an existing place (a binding, field, element or
   dereference): `[Vector<i32> mut] b{a}` gives `b` its own elements, and `[Todo mut] t{todos[i]}` gives `t` its own
-  `String` and `Function` fields, so changing or destroying either leaves the other intact. The builtin `vector<T>`
+  `String` and `Function` fields, so changing or destroying either leaves the other intact. Whether a source is a place or a
+  temporary is decided the same way at every site that copies a struct (binding, assignment, return, brace field, parameter
+  and packed argument, collection receiver, sum payload and mapped value, `pick` subject and value arm): a call shaped
+  like an element access (`bag.at(i)`, `at(bag, i)`) is a place only when it is the builtin element read, and a user `at`
+  that returns a value is a temporary the site takes over. The builtin `vector<T>`
   spelling copies the same way: `[vector<i32> mut] b{a}`, a field built from a vector binding (`KeepV{[seen] start}`),
   a copy of a struct holding one, and a by-value capture (`[mut values]`) each get a buffer of their own, and so does
   a definition that returns a place (`return(holder.values)`, `return(holders[1i32].values)`, `return(nested[0i32])`

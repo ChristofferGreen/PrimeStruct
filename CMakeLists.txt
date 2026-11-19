@@ -1160,6 +1160,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_shared_programs.cpp
     tests/unit/program_matrix/test_program_matrix_tasks.cpp
     tests/unit/program_matrix/test_program_matrix_text_views.cpp
+    tests/unit/program_matrix/test_program_matrix_user_at_sources.cpp
     tests/unit/program_matrix/test_program_matrix_vector_owners.cpp
     tests/unit/program_matrix/test_program_matrix_vm_threads.cpp
     tests/unit/program_matrix/test_program_matrix_vm_sync_replay.cpp
@@ -4319,6 +4320,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.sum_owners
     primestruct.program_matrix.tasks
     primestruct.program_matrix.text_views
+    primestruct.program_matrix.user_at_sources
     primestruct.program_matrix.vector_owners
     primestruct.program_matrix.vm_threads
     primestruct.program_matrix.vm_sync_replay
@@ -4329,7 +4331,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=10 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=11 container_copies=22
     control=37 conversions=8 early_returns=10 error_handlers=8 element_assign=4 element_copies=10 element_receivers=8 frontend_accept=8 lifecycle=26 math=4 runtime_faults=4 mutexes=7 optimizer=16 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=20 pick_values=24 recursion=6 results=19 shared_programs=17
-    shared_strings=5 struct_methods=12 sum_owners=12 tasks=34 text_views=6 vector_owners=50 vm_threads=4 vm_sync_replay=2)
+    shared_strings=5 struct_methods=12 sum_owners=12 tasks=34 text_views=6 user_at_sources=4 vector_owners=50 vm_threads=4 vm_sync_replay=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")

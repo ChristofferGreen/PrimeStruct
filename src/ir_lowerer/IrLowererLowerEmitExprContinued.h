@@ -489,7 +489,7 @@
                 emitExpr, allocTempLocal, emitStructCopySlots, resolveDefinitionCall,
                 resolveExprPath, resolveStructSlotLayout, inferExprKind, inferStructExprPath,
                 emitArrayIndexOutOfBounds, callResolutionAdapters, semanticProgram,
-                expr, localsIn, error);
+                expr, localsIn, error, stateOut.isTemporaryStructCopySource);
             collectionHelpersResult.has_value()) {
           return *collectionHelpersResult;
         }

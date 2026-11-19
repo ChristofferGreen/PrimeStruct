@@ -63,6 +63,9 @@ struct InlineDefinitionCallParameters {
       {};
   // Whether an argument reads an element of a builtin vector in place: a place, not a temporary to take over.
   ExprPredicateFn isBuiltinVectorElementPlace = {};
+  // Whether an argument is a temporary the parameter takes over, not a place it copies (resolved); an argument
+  // shaped like a call is one when unset.
+  ExprPredicateFn isTemporaryCopySource = {};
   ResolveInlineParameterStructSlotLayoutFn resolveStructSlotLayout;
   ExprLocalsPredicateFn emitExpr;
   EmitInlineParameterStructCopySlotsFn emitStructCopySlots;

@@ -390,9 +390,7 @@ namespace primec::ir_lowerer {
           if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, selection.payloadSlotCount)) {
             return false;
           }
-          if (isTemporaryStructCopySourceExpr(*selection.payloadExpr, [&](const Expr &callExpr) {
-                return resolveDefinitionCall(callExpr);
-              })) {
+          if (returnEmitStage.isTemporaryStructCopySource(*selection.payloadExpr, selectedLocals)) {
             ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
@@ -459,7 +457,7 @@ namespace primec::ir_lowerer {
         if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, targetPayload.slotCount)) {
           return false;
         }
-        if (shouldDisarmStructCopySourceExpr(mappedExpr)) {
+        if (returnEmitStage.isTemporaryStructCopySource(mappedExpr, mappedLocals)) {
           ir_lowerer::emitDisarmTemporaryStructAfterCopy(
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               srcPtrLocal,

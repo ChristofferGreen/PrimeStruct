@@ -39,7 +39,8 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
     const SemanticProgram *semanticProgram,
     const Expr &expr,
     const LocalMap &localsIn,
-    std::string &error) {
+    std::string &error,
+    const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryStructCopySource) {
         auto resolveCollectionExprDirectPath = [&](const Expr &candidate) {
           if (!candidate.name.empty() && candidate.name.front() == '/') {
             return candidate.name;
@@ -704,7 +705,7 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
             if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
               return false;
             }
-            if (shouldDisarmStructCopySourceExpr(*receiverExpr)) {
+            if (isTemporaryStructCopySource(*receiverExpr, localsIn)) {
               ir_lowerer::emitDisarmTemporaryStructAfterCopy(
                   [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                   srcPtrLocal,

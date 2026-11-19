@@ -22,6 +22,8 @@ bool emitInlinePackedCallParameter(
     const Int32ProviderFn &allocTempLocal,
     const EmitInstructionFn &emitInstruction,
     std::string &error,
-    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {});
+    const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo = {},
+    // Whether an argument is a temporary the pack takes over; a call-shaped argument is one when unset.
+    const ExprPredicateFn &isTemporaryCopySource = {});
 
 } // namespace primec::ir_lowerer

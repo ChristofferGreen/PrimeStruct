@@ -559,9 +559,8 @@ namespace primec::ir_lowerer {
     // element and anything unresolved is a place that keeps owning its value.
     bool SumHelpersContext::isOwnedTemporaryPickSubject(const Expr &subject,
                                                         const LocalMap &valueLocals) {
-      if (!ir_lowerer::shouldDisarmStructCopySourceExpr(subject) ||
-          isSimpleCallName(subject, "move") || isSimpleCallName(subject, "borrow") ||
-          isSimpleCallName(subject, "at") || isSimpleCallName(subject, "at_unsafe")) {
+      if (!returnEmitStage.isTemporaryStructCopySource(subject, valueLocals) ||
+          isSimpleCallName(subject, "move") || isSimpleCallName(subject, "borrow")) {
         return false;
       }
       if (subject.isBraceConstructor) {
@@ -1054,7 +1053,7 @@ namespace primec::ir_lowerer {
           }
           const bool freshValue =
               vectorResultLifecyclePath.empty()
-                  ? shouldDisarmStructCopySourceExpr(*valueExpr)
+                  ? returnEmitStage.isTemporaryStructCopySource(*valueExpr, branchLocals)
                   : ir_lowerer::isFreshBuiltinVectorExpr(
                         *valueExpr,
                         ir_lowerer::makeCallOrMethodResolver(

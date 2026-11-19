@@ -338,6 +338,7 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
   const ResolveInlineParameterDefinitionCallFn &resolveDefinitionCall =
       parameters.resolveDefinitionCall;
   const ExprPredicateFn &isBuiltinVectorElementPlace = parameters.isBuiltinVectorElementPlace;
+  const ExprPredicateFn &isTemporaryCopySource = parameters.isTemporaryCopySource;
   const ResolveInlineParameterStructSlotLayoutFn &resolveStructSlotLayout =
       parameters.resolveStructSlotLayout;
   const ExprLocalsPredicateFn &emitExpr = parameters.emitExpr;
@@ -465,7 +466,8 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
                                          allocTempLocal,
                                          emitInstruction,
                                          error,
-                                         inferExprLocalInfo)) {
+                                         inferExprLocalInfo,
+                                         isTemporaryCopySource)) {
         return false;
       }
       continue;
@@ -771,7 +773,9 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
         }
       }
       if (!builtinSoaToAosStructBridge && !emittedResultOkArgument &&
-          shouldDisarmStructCopySourceExpr(*orderedArg, isBuiltinVectorElementPlace)) {
+          (isTemporaryCopySource
+               ? isTemporaryCopySource(*orderedArg)
+               : shouldDisarmStructCopySourceExpr(*orderedArg, isBuiltinVectorElementPlace))) {
         emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, copiedParamInfo.structTypeName);
       }
       calleeLocals.emplace(param.name, copiedParamInfo);

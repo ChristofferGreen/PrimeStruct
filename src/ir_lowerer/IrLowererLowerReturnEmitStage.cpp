@@ -470,7 +470,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
   // Whether a struct value copied out of `sourceExpr` is a temporary the copy takes over (and
   // disarms) rather than a place that keeps owning it (an element access, unless a user `at`).
-  auto isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
+  // Every site that copies a struct asks this one predicate (docs/spec/value-lifecycle.md, Copies).
+  stateOut.isTemporaryStructCopySource = [&](const Expr &sourceExpr, const LocalMap &locals) {
     if (stateOut.isBuiltinVectorElementPlace(sourceExpr, locals)) {
       return false;
     }
@@ -479,6 +480,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                                    : resolveDefinitionCall(callExpr);
     });
   };
+  const auto &isTemporaryStructCopySource = stateOut.isTemporaryStructCopySource;
 
   emitInlineDefinitionCall = [&](const Expr &callExpr,
                                  const Definition &callee,
@@ -626,7 +628,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
           },
           .isTemporaryStructSource =
               [&](const Expr &valueExpr, const LocalMap &valueLocals) {
-                return isTemporaryStructCopySource(valueExpr, valueLocals);
+                return stateOut.isTemporaryStructCopySource(valueExpr, valueLocals);
               },
           .resolveDroppedVectorElementStructPath = resolveDroppedVectorElementStructPath,
           .emitStructDestroyFromPtr = emitStructDestroyFromPtr,
