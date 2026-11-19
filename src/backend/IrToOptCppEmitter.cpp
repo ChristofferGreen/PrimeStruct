@@ -209,22 +209,24 @@ bool pureExpression(IrOpcode op, const std::string &a, const std::string &b, std
     expr = "ps_slot_f64(static_cast<double>(" + a + "))";
     return true;
   case IrOpcode::ConvertF32ToI32:
-    expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f32(" + a + "))))";
+    expr =
+        "static_cast<uint64_t>(static_cast<int64_t>(ps_float_to_int<int32_t>(ps_f32(" + a + "))))";
     return true;
   case IrOpcode::ConvertF32ToI64:
-    expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f32(" + a + ")))";
+    expr = "static_cast<uint64_t>(ps_float_to_int<int64_t>(ps_f32(" + a + ")))";
     return true;
   case IrOpcode::ConvertF32ToU64:
-    expr = "static_cast<uint64_t>(ps_f32(" + a + "))";
+    expr = "ps_float_to_int<uint64_t>(ps_f32(" + a + "))";
     return true;
   case IrOpcode::ConvertF64ToI32:
-    expr = "static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(ps_f64(" + a + "))))";
+    expr =
+        "static_cast<uint64_t>(static_cast<int64_t>(ps_float_to_int<int32_t>(ps_f64(" + a + "))))";
     return true;
   case IrOpcode::ConvertF64ToI64:
-    expr = "static_cast<uint64_t>(static_cast<int64_t>(ps_f64(" + a + ")))";
+    expr = "static_cast<uint64_t>(ps_float_to_int<int64_t>(ps_f64(" + a + ")))";
     return true;
   case IrOpcode::ConvertF64ToU64:
-    expr = "static_cast<uint64_t>(ps_f64(" + a + "))";
+    expr = "ps_float_to_int<uint64_t>(ps_f64(" + a + "))";
     return true;
   case IrOpcode::ConvertF32ToF64:
     expr = "ps_slot_f64(static_cast<double>(ps_f32(" + a + ")))";

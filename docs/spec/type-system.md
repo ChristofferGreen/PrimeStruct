@@ -551,12 +551,27 @@ result and fix a result where C++ leaves it undefined.
   `convert<u8>(300)` is `44`. Widening keeps the value: an `i32` widens by sign extension (`convert<u64>(-1i32)` is
   `18446744073709551615`), a `u8` by zero extension.
 
+- **Float to integer** truncates toward zero. A value beyond the target's range, and an infinity, becomes the target's
+  minimum or maximum; NaN becomes `0`; a float below zero converts to `0` for an unsigned target (`u64`, `u8`). The
+  conversion never faults and never wraps: `convert<i32>(3000000000.0)` is `2147483647`, `convert<u64>(-1.0)` is `0`,
+  `convert<u8>(300.0)` is `255`, `convert<i64>(1.0 / 0.0)` is `9223372036854775807`, and a NaN converts to `0`. C++ leaves
+  the out of range and NaN cases undefined; the VM, native and C++ backends all give the result above, and the C++
+  emitters cast only a value strictly inside the target's range. A float converts to `u8` through `u64` and then
+  clamps at 255.
+- **Backends.** The rules hold on the VM, `optcpp`/`optexe`, `cpp`/`exe` and arm64 native (the matrix suite
+  `program_matrix.conversions` runs them on each). Gaps: x86_64 native float to integer keeps the CPU's result for NaN and
+  out of range values (TODO-6059, deferred).
+
 ```
 [effects(io_out), return<int>]
 main() {
   print_line(convert<i32>(4294967297i64))  // 1
   print_line(convert<i32>(2147483648i64))  // -2147483648
   print_line(convert<u8>(300))             // 44
+  print_line(convert<u8>(300.0f64))        // 255
+  print_line(convert<i32>(3000000000.0f64))  // 2147483647
+  print_line(convert<u64>(-1.0f64))        // 0
+  print_line(convert<i64>(0.0f64 / 0.0f64))  // 0
   return(0i32)
 }
 ```

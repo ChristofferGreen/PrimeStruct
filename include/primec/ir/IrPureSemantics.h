@@ -3,6 +3,7 @@
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <limits>
 
 #include "primec/ir/Ir.h"
 
@@ -136,6 +137,28 @@ inline uint64_t slotFromF64(double value) {
 }
 inline int64_t asSigned(uint64_t raw) {
   return static_cast<int64_t>(raw);
+}
+
+// The float to integer conversion every backend implements (docs/spec/type-system.md, Numeric Conversions): truncate
+// toward zero; a value beyond the target's range, and an infinity, becomes the nearest limit; NaN becomes 0. A float
+// below zero converts to 0 for an unsigned target. The casts run only for a value strictly inside the range, where C++
+// defines them. A limit that rounds in the float type is compared as the float it rounds to (2^63 for INT64_MAX): the
+// values the comparison sends to the limit are exactly those at or above it.
+template <typename Int, typename Float> inline Int saturatingFloatToInt(Float value) {
+  if (value != value) {
+    return 0;
+  }
+  if constexpr (std::numeric_limits<Int>::is_signed) {
+    if (value <= static_cast<Float>(std::numeric_limits<Int>::min())) {
+      return std::numeric_limits<Int>::min();
+    }
+  } else if (value <= static_cast<Float>(0)) {
+    return 0;
+  }
+  if (value >= static_cast<Float>(std::numeric_limits<Int>::max())) {
+    return std::numeric_limits<Int>::max();
+  }
+  return static_cast<Int>(value);
 }
 
 } // namespace ir_pure_detail
@@ -316,22 +339,24 @@ inline IrPureEval evalPureOpcode(IrOpcode op, uint64_t lhs, uint64_t rhs, uint64
     result = slotFromF64(static_cast<double>(lhs));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF32ToI32:
-    result = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(f32FromSlot(lhs))));
+    result = static_cast<uint64_t>(
+        static_cast<int64_t>(saturatingFloatToInt<int32_t>(f32FromSlot(lhs))));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF32ToI64:
-    result = static_cast<uint64_t>(static_cast<int64_t>(f32FromSlot(lhs)));
+    result = static_cast<uint64_t>(saturatingFloatToInt<int64_t>(f32FromSlot(lhs)));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF32ToU64:
-    result = static_cast<uint64_t>(f32FromSlot(lhs));
+    result = saturatingFloatToInt<uint64_t>(f32FromSlot(lhs));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF64ToI32:
-    result = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(f64FromSlot(lhs))));
+    result = static_cast<uint64_t>(
+        static_cast<int64_t>(saturatingFloatToInt<int32_t>(f64FromSlot(lhs))));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF64ToI64:
-    result = static_cast<uint64_t>(static_cast<int64_t>(f64FromSlot(lhs)));
+    result = static_cast<uint64_t>(saturatingFloatToInt<int64_t>(f64FromSlot(lhs)));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF64ToU64:
-    result = static_cast<uint64_t>(f64FromSlot(lhs));
+    result = saturatingFloatToInt<uint64_t>(f64FromSlot(lhs));
     return IrPureEval::Ok;
   case IrOpcode::ConvertF32ToF64:
     result = slotFromF64(static_cast<double>(f32FromSlot(lhs)));
@@ -344,44 +369,15 @@ inline IrPureEval evalPureOpcode(IrOpcode op, uint64_t lhs, uint64_t rhs, uint64
   }
 }
 
-// True when evalPureOpcode yields the same value on every host. The float to
-// integer conversions are the exception: casting NaN or an out-of-range float
-// is undefined in C++ and differs between x86-64 and arm64, so a constant
-// folder must leave those instructions to run time. Division by zero is also
-// not portable to fold (it is a fault, not a value).
-inline bool irPureEvalIsPortable(IrOpcode op, uint64_t lhs, uint64_t rhs) {
-  using namespace ir_pure_detail;
+// True when evalPureOpcode yields the same value on every host. Division by zero is not portable to fold (it is a
+// fault, not a value); every other pure opcode, the float to integer conversions included, has one defined result.
+inline bool irPureEvalIsPortable(IrOpcode op, uint64_t /*lhs*/, uint64_t rhs) {
   switch (op) {
   case IrOpcode::DivI32:
   case IrOpcode::DivI64:
   case IrOpcode::DivU64:
     return rhs != 0;
-  case IrOpcode::ConvertF32ToI32: {
-    const float v = f32FromSlot(lhs);
-    return v >= -2147483648.0f && v < 2147483648.0f;
-  }
-  case IrOpcode::ConvertF32ToI64: {
-    const float v = f32FromSlot(lhs);
-    return v >= -9223372036854775808.0f && v < 9223372036854775808.0f;
-  }
-  case IrOpcode::ConvertF32ToU64: {
-    const float v = f32FromSlot(lhs);
-    return v > -1.0f && v < 18446744073709551616.0f;
-  }
-  case IrOpcode::ConvertF64ToI32: {
-    const double v = f64FromSlot(lhs);
-    return v > -2147483649.0 && v < 2147483648.0;
-  }
-  case IrOpcode::ConvertF64ToI64: {
-    const double v = f64FromSlot(lhs);
-    return v >= -9223372036854775808.0 && v < 9223372036854775808.0;
-  }
-  case IrOpcode::ConvertF64ToU64: {
-    const double v = f64FromSlot(lhs);
-    return v > -1.0 && v < 18446744073709551616.0;
-  }
   default:
-    (void)rhs;
     return true;
   }
 }

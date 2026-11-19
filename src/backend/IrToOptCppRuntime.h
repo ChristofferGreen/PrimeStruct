@@ -25,6 +25,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <string>
 #include <string_view>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <mutex>
 #include <new>
@@ -99,6 +100,26 @@ inline uint64_t ps_slot_f32(float value) { return static_cast<uint64_t>(std::bit
 inline double ps_f64(uint64_t raw) { return std::bit_cast<double>(raw); }
 inline uint64_t ps_slot_f64(double value) { return std::bit_cast<uint64_t>(value); }
 inline int64_t ps_s64(uint64_t value) { return static_cast<int64_t>(value); }
+
+// Float to integer as the VM does it (saturatingFloatToInt in IrPureSemantics.h): truncate, saturate, NaN is 0. A
+// static_cast of an out of range float is undefined in C++, so the casts run only strictly inside the range.
+template <typename Int, typename Float>
+inline Int ps_float_to_int(Float value) {
+  if (value != value) {
+    return 0;
+  }
+  if constexpr (std::numeric_limits<Int>::is_signed) {
+    if (value <= static_cast<Float>(std::numeric_limits<Int>::min())) {
+      return std::numeric_limits<Int>::min();
+    }
+  } else if (value <= static_cast<Float>(0)) {
+    return 0;
+  }
+  if (value >= static_cast<Float>(std::numeric_limits<Int>::max())) {
+    return std::numeric_limits<Int>::max();
+  }
+  return static_cast<Int>(value);
+}
 
 inline uint64_t ps_div_s64(uint64_t lhs, uint64_t rhs) {
   const int64_t divisor = ps_s64(rhs);

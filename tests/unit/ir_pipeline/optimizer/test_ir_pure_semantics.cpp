@@ -138,16 +138,47 @@ TEST_CASE("conversions read the operand width the opcode names") {
   CHECK(eval(IrOpcode::ConvertF64ToF32, f64Bits(0.25)).value == f32Bits(0.25f));
 }
 
-TEST_CASE("portability check rejects host-defined float conversions and division by zero") {
-  CHECK(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI32, f64Bits(2.5), 0));
-  CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI32, f64Bits(3e10), 0));
-  CHECK_FALSE(primec::irPureEvalIsPortable(
+TEST_CASE("float to integer conversions truncate and saturate") {
+  const double nan = std::numeric_limits<double>::quiet_NaN();
+  const double inf = std::numeric_limits<double>::infinity();
+  const int64_t i32Min = std::numeric_limits<int32_t>::min();
+  const int64_t i32Max = std::numeric_limits<int32_t>::max();
+  const int64_t i64Min = std::numeric_limits<int64_t>::min();
+  const int64_t i64Max = std::numeric_limits<int64_t>::max();
+  const uint64_t u64Max = std::numeric_limits<uint64_t>::max();
+  // In range: toward zero.
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(2.9)).value == 2);
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(-2.9)).value == i64(-2));
+  CHECK(eval(IrOpcode::ConvertF64ToU64, f64Bits(-0.5)).value == 0);
+  // Out of range and infinite: the target's limit; the I32 results are sign-extended slots.
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(3e10)).value == i64(i32Max));
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(-3e10)).value == i64(i32Min));
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(inf)).value == i64(i32Max));
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(-inf)).value == i64(i32Min));
+  CHECK(eval(IrOpcode::ConvertF32ToI32, f32Bits(2147483648.0f)).value == i64(i32Max));
+  CHECK(eval(IrOpcode::ConvertF32ToI32, f32Bits(-2147483648.0f)).value == i64(i32Min));
+  CHECK(eval(IrOpcode::ConvertF64ToI64, f64Bits(9.3e18)).value == i64(i64Max));
+  CHECK(eval(IrOpcode::ConvertF64ToI64, f64Bits(-9.3e18)).value == i64(i64Min));
+  CHECK(eval(IrOpcode::ConvertF64ToI64, f64Bits(-9223372036854775808.0)).value == i64(i64Min));
+  CHECK(eval(IrOpcode::ConvertF32ToI64, f32Bits(9223372036854775808.0f)).value == i64(i64Max));
+  CHECK(eval(IrOpcode::ConvertF64ToU64, f64Bits(-5.0)).value == 0);
+  CHECK(eval(IrOpcode::ConvertF64ToU64, f64Bits(18446744073709551616.0)).value == u64Max);
+  CHECK(eval(IrOpcode::ConvertF64ToU64, f64Bits(-inf)).value == 0);
+  CHECK(eval(IrOpcode::ConvertF32ToU64, f32Bits(std::numeric_limits<float>::infinity())).value ==
+        u64Max);
+  CHECK(eval(IrOpcode::ConvertF64ToU64, f64Bits(9223372036854775808.0)).value ==
+        9223372036854775808ull);
+  // NaN is 0.
+  CHECK(eval(IrOpcode::ConvertF64ToI32, f64Bits(nan)).value == 0);
+  CHECK(eval(IrOpcode::ConvertF64ToI64, f64Bits(nan)).value == 0);
+  CHECK(eval(IrOpcode::ConvertF32ToU64, f32Bits(std::numeric_limits<float>::quiet_NaN())).value ==
+        0);
+}
+
+TEST_CASE("portability check rejects only division by zero") {
+  CHECK(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI32, f64Bits(3e10), 0));
+  CHECK(primec::irPureEvalIsPortable(
       IrOpcode::ConvertF64ToI64, f64Bits(std::numeric_limits<double>::quiet_NaN()), 0));
-  CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::ConvertF32ToU64, f32Bits(-5.0f), 0));
-  CHECK(primec::irPureEvalIsPortable(IrOpcode::ConvertF32ToU64, f32Bits(-0.5f), 0));
-  CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI64, f64Bits(9.3e18), 0));
-  CHECK(
-      primec::irPureEvalIsPortable(IrOpcode::ConvertF64ToI64, f64Bits(-9223372036854775808.0), 0));
   CHECK_FALSE(primec::irPureEvalIsPortable(IrOpcode::DivI64, 5, 0));
   CHECK(primec::irPureEvalIsPortable(IrOpcode::DivI64, 5, 2));
   CHECK(primec::irPureEvalIsPortable(IrOpcode::AddF32, f32Bits(1.0f), f32Bits(2.0f)));

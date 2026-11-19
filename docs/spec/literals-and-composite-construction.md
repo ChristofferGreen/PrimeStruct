@@ -390,8 +390,8 @@
   transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the
   minimal native subset (integer width conversions wrap modulo 2^N, see [Numeric Conversions](type-system.md#numeric-conversions);
   `convert<bool>` compares against zero, so any non-zero value—including negative
-  integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting
-  NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
+  integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native; a float converts to an integer
+  by truncating and saturating, and NaN becomes `0` (see [Numeric Conversions](type-system.md#numeric-conversions)).
   - **Convert constructor resolution (v1):**
     - Builtin fast-path: when `T` is `bool/i32/i64/u64/f32/f64` and `value` is numeric/bool, use the builtin conversion
       rules; user-defined conversions do not override this.

@@ -866,42 +866,41 @@ main() {
   checkMathConformance(source, "math_conformance_conversions");
 }
 
-TEST_CASE("math conformance convert non-finite float to int") {
-  auto runCase = [&](const std::string &name, const std::string &valueExpr) {
+TEST_CASE("math conformance convert non-finite float to int saturates") {
+  // NaN converts to 0 and an infinity to the target's limit (docs/spec/type-system.md, Numeric Conversions).
+  auto runCase = [&](const std::string &name,
+                     const std::string &valueExpr,
+                     const std::string &expected) {
     const std::string source = std::string(R"(
 import /std/math/*
 
 [return<int>]
 main() {
   [f32] value{)") + valueExpr + R"(}
-  return(convert<i32>(value))
+  if(convert<i32>(value) == )" +
+                               expected + R"(i32) {
+    return(0i32)
+  }
+  return(1i32)
 }
 )";
     const std::string srcPath = writeTemp("math_conformance_convert_nonfinite_" + name + ".prime", source);
-    const std::string vmErrPath =
-        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_vm.err")).string();
-
-    const std::string vmCmd =
-        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(vmErrPath);
-    CHECK(runCommand(vmCmd) == 3);
-    CHECK(readFile(vmErrPath) == "float to int conversion requires finite value\n");
+    const std::string vmCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+    CHECK(runCommand(vmCmd) == 0);
 
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
     const std::string nativePath =
         (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_native")).string();
-    const std::string nativeErrPath =
-        (testScratchPath("") / ("math_conformance_convert_nonfinite_" + name + "_native.err")).string();
     const std::string nativeCompileCmd = "./primec --emit=native " + quoteShellArg(srcPath) + " -o " +
                                          quoteShellArg(nativePath) + " --entry /main";
     CHECK(runCommand(nativeCompileCmd) == 0);
-    CHECK(runCommand(quoteShellArg(nativePath) + " 2> " + quoteShellArg(nativeErrPath)) == 3);
-    CHECK(readFile(nativeErrPath) == "float to int conversion requires finite value\n");
+    CHECK(runCommand(quoteShellArg(nativePath)) == 0);
 #endif
   };
 
-  runCase("nan", "0.0f32 / 0.0f32");
-  runCase("pos_inf", "1.0f32 / 0.0f32");
-  runCase("neg_inf", "-1.0f32 / 0.0f32");
+  runCase("nan", "0.0f32 / 0.0f32", "0");
+  runCase("pos_inf", "1.0f32 / 0.0f32", "2147483647");
+  runCase("neg_inf", "-1.0f32 / 0.0f32", "-2147483648");
 }
 
 TEST_CASE("math conformance policy behavior") {
