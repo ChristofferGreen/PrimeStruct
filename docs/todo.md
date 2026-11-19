@@ -111,7 +111,6 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6069 | The test watchdog wrapper and its design | in_progress | gate-timeouts |
 | TODO-6070 | Every doctest binary beats at the start of each test case | in_progress | gate-timeouts |
 | TODO-6071 | Tests that shell out count `primec` progress | in_progress | gate-timeouts |
 | TODO-6072 | The managed doctest shards run under the watchdog | in_progress | gate-timeouts |
@@ -241,22 +240,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - ctest `PrimeStruct_test_registration` still passes; no timing assertion is added to any test
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
-
-- [~] TODO-6069: The test watchdog wrapper and its design
-  - owner: ai
-  - status: in_progress
-  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Test infrastructure (split from TODO-6053)
-  - parallel_track: gate-timeouts
-  - scope: `docs/TestWatchdog.md` states the beat format (one line written to the inherited descriptor named by `PRIMESTRUCT_BEAT_FD`), the wrapper (`scripts/test_watchdog.py`, a command prefix for a CTest entry), the child-process rule (output on the child's pipe counts as progress; the descriptor is inherited by `primec`), the hard cap and which test families beat. The wrapper kills the whole process group on silence for N seconds or at the hard cap, with a message naming the last beat. Its own tests run fake children against an injected clock.
-  - acceptance:
-    - the design doc exists and `scripts/check_spec_docs.py` still passes
-    - a fake child that beats and then goes silent is killed with a message naming its last beat; a child that beats on every step is not killed however long the injected clock runs under the silence limit; a beating child past the hard cap is killed; a grandchild dies with the process group
-    - the wrapper passes the child's exit code and output through
-    - the tests use no sleep and no real-time race (an injected clock, a control pipe per beat)
-    - full release gate green
-  - stop_rule: the wrapper, its tests and the design; no CTest entry uses it yet.
 
 - [~] TODO-6070: Every doctest binary beats at the start of each test case
   - owner: ai

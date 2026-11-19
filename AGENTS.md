@@ -219,6 +219,10 @@ build and layout solidify.
   is split into focused cases or CTest entries, or made cheaper; raising its
   timeout is not the fix. Delete a test only when it cannot be made
   deterministic without losing its point, and say why in the commit.
+- **Liveness, not wall-clock:** a long-running test reports progress (a beat
+  from its work loop, never from a timer thread) and `scripts/test_watchdog.py`
+  kills it only when nothing arrived for the silence limit; the CTest `TIMEOUT`
+  stays as the hard cap. See `docs/TestWatchdog.md`.
 - **Doctest runtime guardrail:** if a doctest case with multiple subcases takes more than 5 seconds in routine release validation, split it into smaller focused cases; if a single-focus doctest still takes more than 5 seconds, optimize it or add a brief justification in the test source or nearby registration.
 
 ## TODO slicing workflow

@@ -4517,6 +4517,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_todo_references_self_test PROPERTIES TIMEOUT 60)
 
+  # The test watchdog wrapper (docs/TestWatchdog.md) has fixture tests that drive fake children with an injected clock.
+  add_test(
+    NAME PrimeStruct_test_watchdog_self_test
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/scripts/test_test_watchdog.py
+            --repo-root ${CMAKE_SOURCE_DIR}
+  )
+  set_tests_properties(PrimeStruct_test_watchdog_self_test PROPERTIES TIMEOUT 120)
+
   # TODO-5418: refactor helpers and the finish-TODO flow have fixture tests.
   add_test(
     NAME PrimeStruct_finish_todo_self_test

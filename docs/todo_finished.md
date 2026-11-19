@@ -2463,6 +2463,7 @@ are left unarchived.
 | TODO-6064 | GLSL emits `fma()` for `FmaF32` and `FmaF64` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6065 | Wasm lowers `FmaF32` and `FmaF64` as a multiply and an add | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6066 | x86_64 native computes `FmaF32` and `FmaF64` as a multiply and an add | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6069 | The test watchdog wrapper and its design | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
