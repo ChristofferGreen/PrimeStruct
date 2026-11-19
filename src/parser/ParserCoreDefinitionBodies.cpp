@@ -3,6 +3,7 @@
 
 #include "ParserHelpers.h"
 
+#include <algorithm>
 #include <utility>
 
 namespace primec {
@@ -498,6 +499,16 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   }
 
   if ((name.text == "pick" || name.text == "block") && transforms.empty()) {
+    pos_ = savedPos;
+    return true;
+  }
+
+  // A block that only carries `on_error` overrides the handler of its body: it is a statement block,
+  // not a nested definition (`[return<...> on_error<...>] block() {...}` stays a definition).
+  if (name.text == "block" && !hasReturnTransform && !hasNoReturnDefinitionTransform &&
+      std::all_of(transforms.begin(), transforms.end(), [](const Transform &transform) {
+        return transform.name == "on_error";
+      })) {
     pos_ = savedPos;
     return true;
   }

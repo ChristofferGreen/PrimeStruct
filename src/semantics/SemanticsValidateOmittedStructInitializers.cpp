@@ -161,6 +161,11 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     if (!expr.isBinding && expr.transforms.empty()) {
       return true;
     }
+    // `[on_error<...>] block() {...}` is a statement block, not a binding.
+    if (!expr.isBinding && expr.kind == Expr::Kind::Call && expr.name == "block" &&
+        expr.hasBodyArguments) {
+      return true;
+    }
     semantics::BindingInfo info;
     std::optional<std::string> restrictType;
     std::string parseError;

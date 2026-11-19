@@ -960,7 +960,6 @@ bool SemanticsValidator::validatePickStatement(
 
     std::vector<BorrowLivenessRange> livenessRanges;
     livenessRanges.reserve(2);
-    OnErrorScope onErrorScope(*this, std::nullopt);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     const std::vector<const Expr *> bodyExprs = pickArmBodyExprs(arm);
     for (size_t bodyIndex = 0; bodyIndex < bodyExprs.size(); ++bodyIndex) {

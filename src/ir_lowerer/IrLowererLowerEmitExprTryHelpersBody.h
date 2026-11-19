@@ -346,6 +346,7 @@
                 error = "native backend missing inline return local";
                 return false;
               }
+              emitNestedScopeCleanupForInlineExit(context);
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(errorLocal)});
               if (returnHasValue) {
                 function.instructions.push_back({IrOpcode::PushI64, 4294967296ull});
@@ -768,6 +769,7 @@
                   error = "native backend missing inline return local";
                   return false;
                 }
+                emitNestedScopeCleanupForInlineExit(context);
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
                 function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
                 size_t jumpIndex = function.instructions.size();

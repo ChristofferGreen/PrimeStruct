@@ -191,7 +191,6 @@
       error = "native backend does not support arguments on if branch blocks";
       return false;
     }
-    OnErrorScope onErrorScope(currentOnError, std::nullopt);
     pushFileScope();
     for (const auto &stmt : blockExpr.bodyArguments) {
       if (!emitStatement(stmt, blockLocals)) {

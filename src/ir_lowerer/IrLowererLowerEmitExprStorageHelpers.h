@@ -154,7 +154,6 @@
           }
           const int32_t resultLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
-          OnErrorScope onErrorScope(currentOnError, std::nullopt);
           pushFileScope();
           LocalMap blockLocals = localsIn;
           for (const auto &bodyExpr : expr.bodyArguments) {

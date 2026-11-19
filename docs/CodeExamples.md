@@ -804,6 +804,8 @@ Why this is good:
 - The typed fallible helper stays separate from the entrypoint-style integer status boundary.
 - `?` keeps the happy path short without hiding that an early return can happen.
 - The example uses the current accepted short envelope and handler spelling.
+- The handler of the definition also covers `?` inside its `if` branches, loops and blocks; write
+  `[on_error<E, handler>] block() { ... }` only when a part of the body needs a different handler.
 
 Current note:
 - Use `import /std/collections/*` for bare vector helper names and method-sugar

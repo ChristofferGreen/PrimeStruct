@@ -2290,6 +2290,7 @@ are left unarchived.
 | TODO-5865 | A `Function` local given positionally to a brace constructor is copied | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5866 | A closure captures a `pick` payload binding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5867 | A string heap that alternates between block sizes keeps its chunks | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5868 | `serve(app)?` in an `if` block of `main` compiles | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5869 | `serveWorkers` with 1 worker is within 10% of `serve` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5870 | A VM program that uses tasks runs its string code on the fast kernel | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5871 | `serveWorkers` answers more new connections a second than one thread can accept | [2026-11.md](todo_archive/2026-11.md) | - |

@@ -47,7 +47,6 @@
         error = "loop body requires a block envelope";
         return false;
       }
-      OnErrorScope onErrorScope(currentOnError, std::nullopt);
       pushFileScope();
       LocalMap bodyLocals = localsIn;
       for (const auto &bodyStmt : body.bodyArguments) {
@@ -98,7 +97,6 @@
 
       // Each iteration's body is its own scope: its owning locals are destroyed before the
       // condition is checked again.
-      OnErrorScope onErrorScope(currentOnError, std::nullopt);
       pushFileScope();
       LocalMap bodyLocals = localsIn;
       if (!ir_lowerer::emitBodyStatements(
@@ -252,7 +250,6 @@
       const size_t jumpEndIndex = function.instructions.size();
       function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-      OnErrorScope onErrorScope(currentOnError, std::nullopt);
       if (!ir_lowerer::emitBodyStatementsWithFileScope(
               body.bodyArguments,
               loopLocals,
@@ -302,7 +299,6 @@
         return false;
       }
 
-      OnErrorScope onErrorScope(currentOnError, std::nullopt);
       pushFileScope();
       LocalMap bodyLocals = localsIn;
       for (const auto &bodyStmt : stmt.bodyArguments) {
@@ -335,7 +331,9 @@
               stmt.transforms, stmt.namespacePrefix, "block", resolveExprPath, definitionExists, blockOnError, error)) {
         return false;
       }
-      OnErrorScope onErrorScope(currentOnError, blockOnError);
+      // A block inherits the handler in force; its own `on_error` overrides it for the block and what is nested in it.
+      OnErrorScope onErrorScope(currentOnError,
+                                blockOnError.has_value() ? blockOnError : currentOnError);
       pushFileScope();
       LocalMap blockLocals = localsIn;
       for (const auto &bodyStmt : stmt.bodyArguments) {
@@ -376,7 +374,6 @@
         if (!info.returnsVoid) {
           function.instructions.push_back({IrOpcode::Pop, 0});
         }
-        OnErrorScope onErrorScope(currentOnError, std::nullopt);
         pushFileScope();
         LocalMap blockLocals = localsIn;
         for (const auto &bodyExpr : stmt.bodyArguments) {

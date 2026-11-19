@@ -52,6 +52,15 @@ std::optional<bool> tryLowerEmitExprTryHelper(
     using InlineContext = LowerReturnEmitInlineContext;
     auto &emitInlineDefinitionCall = stateOut.emitInlineDefinitionCall;
     auto &emitFileScopeCleanupAll = stateOut.emitFileScopeCleanupAll;
+    auto &fileScopeStack = setupStage.fileScopeStack;
+    auto &emitFileScopeCleanup = stateOut.emitFileScopeCleanup;
+    // A `?` leaves an inlined callee through the call's exit, which cleans only the callee body's own scope:
+    // destroy the locals of the blocks nested in that body first, innermost first.
+    const auto emitNestedScopeCleanupForInlineExit = [&](const InlineContext &context) {
+      for (size_t depth = fileScopeStack.size(); depth > context.bodyScopeDepth; --depth) {
+        emitFileScopeCleanup(fileScopeStack[depth - 1]);
+      }
+    };
     auto &setupLocalsOrchestration = setupStage.setupLocalsOrchestration;
     const bool &returnsVoid = setupLocalsOrchestration.entryReturnConfig.returnsVoid;
     auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;

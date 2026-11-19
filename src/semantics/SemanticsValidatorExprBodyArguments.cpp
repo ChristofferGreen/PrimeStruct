@@ -122,7 +122,6 @@ bool SemanticsValidator::validateExprBodyArguments(
                                          : std::min(statementIndex + 1, enclosingStatements->size());
   std::vector<BorrowLivenessRange> livenessRanges;
   livenessRanges.reserve(2);
-  OnErrorScope onErrorScope(*this, std::nullopt);
   BorrowEndScope borrowScope(*this,
                              currentValidationState_.endedReferenceBorrows);
   for (size_t bodyIndex = 0; bodyIndex < expr.bodyArguments.size();

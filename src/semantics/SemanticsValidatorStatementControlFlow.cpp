@@ -136,7 +136,6 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
       LocalBindingScope branchScope(*this, locals);
       std::vector<BorrowLivenessRange> livenessRanges;
       livenessRanges.reserve(2);
-      OnErrorScope onErrorScope(*this, std::nullopt);
       BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
       for (size_t bodyIndex = 0; bodyIndex < branch.bodyArguments.size(); ++bodyIndex) {
         const Expr &bodyExpr = branch.bodyArguments[bodyIndex];
@@ -200,7 +199,6 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     LocalBindingScope bodyScope(*this, activeLocals);
     std::vector<BorrowLivenessRange> livenessRanges;
     livenessRanges.reserve(includeNextIterationBody ? 3 : 2);
-    OnErrorScope onErrorScope(*this, std::nullopt);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < body.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = body.bodyArguments[bodyIndex];

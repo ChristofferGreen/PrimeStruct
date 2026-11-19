@@ -398,7 +398,10 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
       }
     }
     LocalBindingScope blockLocalScope(*this, locals);
-    OnErrorScope onErrorScope(*this, blockOnError);
+    // A block inherits the handler in force; its own `on_error` overrides it for the block and what is nested in it.
+    OnErrorScope onErrorScope(*this,
+                              blockOnError.has_value() ? std::move(blockOnError)
+                                                       : currentValidationState_.context.onError);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
     for (size_t bodyIndex = 0; bodyIndex < stmt.bodyArguments.size(); ++bodyIndex) {
       const Expr &bodyExpr = stmt.bodyArguments[bodyIndex];

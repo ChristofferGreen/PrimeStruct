@@ -223,9 +223,9 @@
   destroyed by the callee when its body ends (the caller does not destroy a binding it passed to a `move` parameter),
   `init(slot, x)` hands `x` to the storage, and dropping a container slot (`pop`, `clear`, `Destroy` of the container)
   destroys the element, also on a builtin `vector<T>` of structs or vectors held in a local, a field
-  (`grid.rows.pop()`) or an outer vector (`a[i].clear()`), and in the direct forms `pop(v)` and `clear(v)`. Error propagation (`?`) needs no extra cleanup: a handler does not flow into nested blocks, so
-  `?` only runs at the top level of the body that declares `on_error`, and leaving through it destroys that body's
-  owning locals like a `return`.
+  (`grid.rows.pop()`) or an outer vector (`a[i].clear()`), and in the direct forms `pop(v)` and `clear(v)`. Error propagation (`?`) needs no extra cleanup: the handler flows into nested blocks, so
+  `?` can run in any block of the body, and leaving through it destroys the owning locals of every block it leaves
+  (innermost first) and of the body, once each, like a `return` (docs/spec/errors-and-file-io.md, Local handlers).
 
 ## Uninitialized Storage (draft)
 - **Purpose:** model explicit, inline uninitialized storage without implicit construction (C-style tagged storage and

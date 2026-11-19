@@ -943,11 +943,11 @@ log_file_error([FileError] err) {
   CHECK(error.find("on_error transform is not allowed on executions: /print_line") != std::string::npos);
 }
 
-TEST_CASE("statement block on_error reports block return requirement") {
+TEST_CASE("nested definition named block with on_error reports block return requirement") {
   const std::string source = R"(
 [return<Result<FileError>> on_error<FileError, /log_file_error>]
 main() {
-  [on_error<FileError, /log_file_error>] block(){
+  [return<void> on_error<FileError, /log_file_error>] block(){
     print_line("x"utf8)
   }
   return(Result.ok())
@@ -985,6 +985,93 @@ log_file_error([FileError] err) {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("try error type mismatch") != std::string::npos);
+}
+
+TEST_CASE("try in nested blocks of a definition without on_error is reported at the try") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(io_err)]
+main() {
+  [Result<FileError>] r{Result.ok()}
+  if(true) {
+    while(true) {
+      r?
+    }
+  }
+  return(Result.ok())
+}
+)";
+  std::string error;
+  primec::SemanticDiagnosticInfo diagnostics;
+  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, diagnostics));
+  REQUIRE_FALSE(diagnostics.records.empty());
+  const auto &record = diagnostics.records.front();
+  CHECK(record.message.find("missing on_error for ? usage") != std::string::npos);
+  CHECK(record.primarySpan.line == 7);
+  std::string related;
+  for (const auto &span : record.relatedSpans) {
+    related += span.label + "\n";
+  }
+  CHECK(related.find("/main") != std::string::npos);
+}
+
+TEST_CASE("an on_error block override ends with its block") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(io_err)]
+main() {
+  [Result<FileError>] r{Result.ok()}
+  if(true) {
+    [on_error<FileError, /log_file_error>] block() {
+      r?
+    }
+    r?
+  }
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  primec::SemanticDiagnosticInfo diagnostics;
+  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, diagnostics));
+  REQUIRE_FALSE(diagnostics.records.empty());
+  CHECK(diagnostics.records.front().message.find("missing on_error for ? usage") !=
+        std::string::npos);
+  CHECK(diagnostics.records.front().primarySpan.line == 9);
+}
+
+TEST_CASE("the on_error of a definition covers nested blocks and a block overrides it") {
+  const std::string source = R"(
+[return<Result<FileError>> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<FileError>] r{Result.ok()}
+  if(true) {
+    r?
+    while(true) {
+      r?
+    }
+  } else {
+    [on_error<FileError, /log_file_error>] block() {
+      r?
+      while(true) {
+        r?
+      }
+    }
+    r?
+  }
+  return(Result.ok())
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error("file error"utf8)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

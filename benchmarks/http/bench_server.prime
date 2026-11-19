@@ -56,19 +56,7 @@ bench_router() {
   return(router)
 }
 
-[return<int> effects(heap_alloc, io_err, net_io) on_error<ServeError, log_serve_error>]
-run_serve([ServerConfig] config) {
-  serve(bench_router(), config)?
-  return(0i32)
-}
-
 [return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
-run_workers([ServerConfig] config) {
-  serveWorkers(bench_router(), config)?
-  return(0i32)
-}
-
-[return<int> effects(heap_alloc, io_err, net_io, task, lock, channel, atomic)]
 main() {
   [String] portText{envOr(stringFrom("PORT"), stringFrom("8080"))}
   [String] server{envOr(stringFrom("SERVER"), stringFrom("workers"))}
@@ -76,7 +64,9 @@ main() {
   [ServerConfig] config{ServerConfig{[port] portText.view().parseI32Or(8080i32), [loopbackOnly] true,
                                      [workers] workers.view().parseI32Or(0i32)}}
   if(server.equalsText("serve")) {
-    return(run_serve(config))
+    serve(bench_router(), config)?
+    return(0i32)
   }
-  return(run_workers(config))
+  serveWorkers(bench_router(), config)?
+  return(0i32)
 }

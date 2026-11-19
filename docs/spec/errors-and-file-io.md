@@ -69,12 +69,106 @@
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
-  - Handlers do **not** flow into nested blocks; any nested block using `?` must declare its own `on_error`.
+  - **Handlers flow into nested blocks.** The handler a definition declares applies to every block nested in its body:
+    `if` branches, loop bodies (`loop`, `while`, `for`, `repeat`), `pick` arms, statement blocks (`block() { ... }`)
+    and block arguments. A `?` in a nested block needs no `on_error` of its own.
+  - **A block can override the handler.** `[on_error<ErrorType, Handler>(args...)] block() { ... }` replaces the
+    handler for that block and for everything nested in it. A `?` uses the nearest enclosing handler: the override of
+    the innermost block (inside the definition) that has one, else the definition's. When the block ends the outer
+    handler applies again. The block form works anywhere a statement does, also inside an `if` branch or a loop body,
+    and a definition with no `on_error` of its own can use it to cover a part of its body. A block that only carries
+    `on_error` is a statement block; with a `return` transform it is still a nested definition.
+  - **`?` is an early exit like `return`.** In a nested block it runs the handler in force, then destroys the owning
+    locals of the blocks it leaves, innermost block first and each block's locals in reverse declaration order,
+    then those of the body, and returns the error from the definition (the code for a `return<int>` definition, the
+    `Result` for a `Result` definition). Every owning local is destroyed exactly once; a loop does not run its
+    next iteration.
+  - A `?` with no handler anywhere in force (the definition has no `on_error` and no enclosing block overrides it) is a
+    compile-time error reported at that `?`, naming the definition.
   - A `?` or `try(...)` written among the arguments of a call to a user definition belongs to the caller: it reports
     through the caller's `on_error` and return type, not the callee's (`add(1i32, try(fetch()))`).
   - A missing `on_error` for a `?` usage is a compile-time error.
   - The handler signature is `Handler(ErrorType err, args...)`.
   - Bound arguments are evaluated when the error is raised, not at declaration time.
+  - Example (the same shapes run on the VM, native and C++ backends; the handler runs before the locals are destroyed):
+    ```
+    import /std/result/*
+
+    [struct]
+    Noisy() {
+      [i32 mut] id{0i32}
+
+      [public effects(io_out)]
+      Destroy() {
+        print_line(this.id)
+      }
+    }
+
+    [return<Result<i32, i32>>]
+    check([i32] value) {
+      if(value > 2i32) {
+        return(/std/result/error<i32, i32>(value + 4i32))
+      }
+      return(Result.ok(value))
+    }
+
+    [effects(io_out)]
+    on_outer([i32] err) {
+      print_line(100i32 + err)
+    }
+
+    [effects(io_out)]
+    on_inner([i32] err) {
+      print_line(200i32 + err)
+    }
+
+    [return<i32> effects(io_out) on_error<i32, /on_outer>]
+    in_if([i32] value) {
+      [Noisy] a{Noisy{1i32}}
+      if(value > 0i32) {
+        [Noisy] b{Noisy{2i32}}
+        [i32] x{check(value)?}
+        print_line(x)
+      }
+      return(0i32)
+    }
+
+    [return<i32> effects(io_out) on_error<i32, /on_outer>]
+    in_loop([i32] limit) {
+      [i32 mut] i{0i32}
+      while(i < limit) {
+        [Noisy] b{Noisy{2i32}}
+        [i32] x{check(i)?}
+        print_line(x)
+        i = i + 1i32
+      }
+      return(0i32)
+    }
+
+    [return<i32> effects(io_out) on_error<i32, /on_outer>]
+    overridden([i32] value) {
+      [on_error<i32, /on_inner>] block() {
+        [i32] x{check(value)?}
+        print_line(x)
+      }
+      [i32] y{check(value + 3i32)?}
+      return(y)
+    }
+
+    [return<int> effects(io_out)]
+    main() {
+      print_line(in_if(5i32))
+      print_line(in_loop(9i32))
+      print_line(overridden(1i32))
+      print_line(overridden(5i32))
+      return(0i32)
+    }
+    ```
+    `in_if(5i32)`: `check` fails with 9 inside the `if`, so `on_outer` prints 109, `b` and then `a` are destroyed
+    (prints 2, 1) and the call returns 9. `in_loop(9i32)` fails in the fourth iteration: the iterations before it
+    destroyed their `b`, the fourth runs the handler (107) and destroys its `b`. `overridden(1i32)` prints 1 from the
+    override block, and its `y` takes the error of `check(4)` with `on_outer` (108), so the outer handler applies
+    again after the block; `overridden(5i32)` fails inside the block, so `on_inner` runs (209).
 
 ### File I/O (draft)
 - **RAII object:** `File<Mode>` is the owning file handle with automatic close on scope exit (`Destroy`).
