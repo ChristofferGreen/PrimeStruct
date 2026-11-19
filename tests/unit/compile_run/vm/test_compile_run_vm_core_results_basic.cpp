@@ -1229,4 +1229,58 @@ main() {
   CHECK(readFile(outPath) == "6\n");
 }
 
+TEST_CASE("vm evaluates postfix question operands of binary and prefix operators") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_ok() {
+  return(Result.ok(9i32))
+}
+
+[return<void>]
+swallow([i32] err) {
+}
+
+[return<int> on_error<i32, /swallow>]
+main() {
+  [i32] scaled{make_ok()? * 3i32}
+  [i32] negated{-make_ok()? + 9i32}
+  [i32] shifted{1i32 + make_ok()?}
+  return(scaled + negated + shifted)
+}
+)";
+  const std::string srcPath = writeTemp("vm_postfix_question_operator_operands.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 37);
+}
+
+TEST_CASE("vm evaluates prefix operators on call operands and nested prefix operators") {
+  const std::string source = R"(
+[return<i32>]
+id([i32] x) {
+  return(x)
+}
+
+[return<bool>]
+id_bool([bool] x) {
+  return(x)
+}
+
+[return<int>]
+main() {
+  [i32] n{-id(-id(2i32))}
+  [i32] m{5i32 + -id(5i32)}
+  [bool] flag{!(id_bool(!true))}
+  if(flag) {
+    return(n + m + 40i32)
+  }
+  return(1i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_prefix_operators_on_call_operands.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 42);
+}
+
 TEST_SUITE_END();

@@ -108,6 +108,10 @@ or a semicolon if you intended to index.
   `greater_equal(a, b)`, `a <= b` → `less_equal(a, b)`, `a == b` → `equal(a, b)`, `a != b` → `not_equal(a, b)`, `a && b`
   → `and(a, b)`, `a || b` → `or(a, b)`, `!a` → `not(a)`, `-a` → `negate(a)`, `a = b` → `assign(a, b)`, `++a` / `a++` →
   `increment(a)`, `--a` / `a--` → `decrement(a)`).
+  Postfix forms bind tighter than every prefix and binary operator: a call, an index, a `.member` name and the `?` try
+  suffix belong to their operand, so `-id(5i32)` → `negate(id(5i32))`, `-v[i].x` → `negate(v[i].x)`, `x? + 1i32` →
+  `plus(x?, 1i32)` and `1i32 + f()?.field` → `plus(1i32, f()?.field)`. Prefix operators nested in an operand are
+  rewritten too (`!(id(!true))` → `not(id(not(true)))`).
 - Operators on structs: once the AST exists, the template-monomorph pass rewrites `plus`, `equal`, `not_equal`,
   `less_than`, `less_equal`, `greater_than`, `greater_equal` and `at` whose first operand is a struct value (and, except
   for `at`, whose second operand has the same type) to the struct's member `opPlus`, `opEqual`, `opNotEqual`,

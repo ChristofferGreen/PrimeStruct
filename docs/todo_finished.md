@@ -2002,6 +2002,7 @@ are left unarchived.
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | [undated.md](todo_archive/undated.md) | - |
 | TODO-5514 | Native file I/O writes newlines and reports errno | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5523 | A Result-returning main exits with its error code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-5524 | Int-backed error structs round-trip through stdlib Result sums | [2026-11.md](todo_archive/2026-11.md) | 2026-11-16 |

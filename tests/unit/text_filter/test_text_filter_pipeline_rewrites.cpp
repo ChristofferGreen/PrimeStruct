@@ -578,4 +578,67 @@ TEST_CASE("an assigned pick keeps arms that open on a later line") {
   CHECK(output.find("assign(v, pick(get(1i32)))") == std::string::npos);
 }
 
+namespace {
+std::string rewriteOperators(const std::string &source, std::string &error) {
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  CHECK(pipeline.apply(source, output, error));
+  return output;
+}
+} // namespace
+
+TEST_CASE("unary minus takes a whole call operand") {
+  std::string error;
+  const std::string output = rewriteOperators("main(){ return(-id(5i32)) }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("negate(id(5i32))") != std::string::npos);
+  CHECK(output.find("negate(id)(") == std::string::npos);
+}
+
+TEST_CASE("unary minus takes index and member operands") {
+  std::string error;
+  const std::string output = rewriteOperators("main(){ return(-v[1i32].x + -f(a).y) }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("plus(negate(v[1i32].x), negate(f(a).y))") != std::string::npos);
+}
+
+TEST_CASE("prefix operators nested in a call argument are rewritten") {
+  std::string error;
+  const std::string output = rewriteOperators(
+      "main(){ print_line(!(id(!true))) print_line(-id(-id(2i32))) print_line(!f(-x)) }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("print_line(not(id(not(true))))") != std::string::npos);
+  CHECK(output.find("print_line(negate(id(negate(id(2i32)))))") != std::string::npos);
+  CHECK(output.find("print_line(not(f(negate(x))))") != std::string::npos);
+  CHECK(output.find('!') == std::string::npos);
+}
+
+TEST_CASE("postfix question binds tighter than binary operators") {
+  std::string error;
+  const std::string output =
+      rewriteOperators("main(){ a = x? + 1i32\n b = 1i32 + x?\n c = x? * 3i32 }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("assign(a, plus(x?, 1i32))") != std::string::npos);
+  CHECK(output.find("assign(b, plus(1i32, x?))") != std::string::npos);
+  CHECK(output.find("assign(c, multiply(x?, 3i32))") != std::string::npos);
+}
+
+TEST_CASE("postfix question keeps member chains and prefix operands") {
+  std::string error;
+  const std::string output =
+      rewriteOperators("main(){ a = f()?.field + 1i32\n b = -f()?\n c = !g()? }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("assign(a, plus(f()?.field, 1i32))") != std::string::npos);
+  CHECK(output.find("assign(b, negate(f()?))") != std::string::npos);
+  CHECK(output.find("assign(c, not(g()?))") != std::string::npos);
+}
+
+TEST_CASE("prefix operators without an operand are left for the parser") {
+  std::string error;
+  const std::string output = rewriteOperators("main(){ return(f(!) + g(-)) }\n", error);
+  CHECK(error.empty());
+  CHECK(output.find("f(!)") != std::string::npos);
+  CHECK(output.find("g(-)") != std::string::npos);
+}
+
 TEST_SUITE_END();

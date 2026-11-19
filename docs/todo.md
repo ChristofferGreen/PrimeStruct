@@ -143,7 +143,7 @@ of sync with them.
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
-| TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
+| TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
 | TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
@@ -182,7 +182,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6043, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -624,18 +624,17 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `return` argument form only.
 
-- [~] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
+- [ ] TODO-6044: Field access on a `try(...)` of a struct payload
   - owner: ai
-  - status: in_progress
-  - claimed_by: operators-a (worktree-agent-aad56314f45938382), 2026-11-19
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: text-filter
-  - scope: `-id(5i32)` becomes `negate(id)(5i32)`; `print_line(!(id(!true)))` leaves the inner `!` unrewritten (`invalid character '!'`); `x? + 1i32` and `x? * 3i32` are parse errors and `1i32 + x?` parses as `plus(1, x)?`; `try(f()).field` and `f()?.field` fail with `field access requires struct receiver`.
+  - status: deferred
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (split from TODO-5519)
+  - parallel_track: frontend-try-field
+  - scope: with `make_pair()` returning `Result<Pair, MyError>` and `Pair` a struct, `[i32] e{try(make_pair()).left}` and `[i32] d{make_pair()?.right}` fail with `field access requires struct receiver` (semantics, `resolveStructFieldReceiverPath` does not resolve the ok payload type of a `try` call, and the IR lowerer has the same check). The text filter already produces `try(make_pair()).left` correctly.
   - acceptance:
-    - each form rewrites to the expected canonical call; text-filter tests
+    - both forms compile and run on the VM, native and C++; the receiver type of a `try` call is its Result ok payload; tests cover a struct payload and an unknown field (diagnostic with a location)
     - full release gate green
-  - stop_rule: text filter only.
+  - stop_rule: field access on a `try` receiver only.
   - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5520: Diagnostics point at user code with readable names

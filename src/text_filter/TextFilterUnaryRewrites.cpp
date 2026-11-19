@@ -1,7 +1,54 @@
 #include "TextFilterHelpers.h"
 
+#include "TextFilterPipelineInternal.h"
+
 namespace primec::text_filter {
 namespace {
+
+// Extends the end of a unary operand over the postfix forms that bind tighter than any prefix or binary
+// operator: call arguments, index expressions, `.member` names and the `?` try suffix (`-f(x)`, `!v[i]`,
+// `-f()?.field`).
+size_t extendPostfixOperandEnd(const std::string &text, size_t end) {
+  while (end < text.size()) {
+    const char c = text[end];
+    if (c == '(' || c == '[') {
+      const size_t close = findMatchingClose(text, end, c, c == '(' ? ')' : ']');
+      if (close == std::string::npos) {
+        break;
+      }
+      end = close + 1;
+      continue;
+    }
+    if (c == '?') {
+      ++end;
+      continue;
+    }
+    if (c == '.' && end + 1 < text.size() && isTokenChar(text[end + 1]) &&
+        !isDigitChar(text[end + 1])) {
+      end += 2;
+      while (end < text.size() && isTokenChar(text[end])) {
+        ++end;
+      }
+      continue;
+    }
+    break;
+  }
+  return end;
+}
+
+// A unary operand is copied into the output whole, so prefix operators nested inside it (`!(f(!x))`,
+// `-f(-x)`) are rewritten here, by running the same operator pass over the operand text.
+std::string rewriteNestedOperators(const std::string &operand, const TextFilterOptions &options) {
+  if (!options.hasFilter("operators") || operand.find_first_of("!&*-+") == std::string::npos) {
+    return operand;
+  }
+  std::string rewritten;
+  std::string error;
+  if (!primec::applyPass(operand, rewritten, error, options)) {
+    return operand;
+  }
+  return rewritten;
+}
 
 bool rewriteUnaryMutation(const std::string &input,
                           std::string &output,
@@ -109,13 +156,14 @@ bool rewriteUnaryNot(const std::string &input,
   if (!isRightOperandStartChar(input, rightStart)) {
     return false;
   }
-  size_t rightEnd = findRightTokenEnd(input, rightStart);
+  size_t rightEnd = extendPostfixOperandEnd(input, findRightTokenEnd(input, rightStart));
   if (rightEnd == rightStart) {
     return false;
   }
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
+  right = rewriteNestedOperators(right, options);
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }
@@ -137,7 +185,6 @@ bool rewriteUnaryAddressOf(const std::string &input,
                            std::string &output,
                            size_t &index,
                            const TextFilterOptions &options) {
-  (void)options;
   if (input[index] != '&' || index + 1 >= input.size() || input[index + 1] == '&') {
     return false;
   }
@@ -159,9 +206,11 @@ bool rewriteUnaryAddressOf(const std::string &input,
   if (rightEnd == rightStart) {
     return false;
   }
+  rightEnd = extendPostfixOperandEnd(input, rightEnd);
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
+  right = rewriteNestedOperators(right, options);
   output.append("location(");
   output.append(right);
   output.append(")");
@@ -173,7 +222,6 @@ bool rewriteUnaryDeref(const std::string &input,
                        std::string &output,
                        size_t &index,
                        const TextFilterOptions &options) {
-  (void)options;
   if (input[index] != '*' || index + 1 >= input.size()) {
     return false;
   }
@@ -192,9 +240,11 @@ bool rewriteUnaryDeref(const std::string &input,
   if (rightEnd == rightStart) {
     return false;
   }
+  rightEnd = extendPostfixOperandEnd(input, rightEnd);
   std::string right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
+  right = rewriteNestedOperators(right, options);
   output.append("dereference(");
   output.append(right);
   output.append(")");
@@ -244,7 +294,9 @@ bool rewriteUnaryMinus(const std::string &input,
   if (rightEnd == rightStart) {
     return false;
   }
+  rightEnd = extendPostfixOperandEnd(input, rightEnd);
   std::string right = input.substr(rightStart, rightEnd - rightStart);
+  right = rewriteNestedOperators(right, options);
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
   }

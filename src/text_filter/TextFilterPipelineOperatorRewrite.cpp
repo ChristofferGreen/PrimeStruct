@@ -238,10 +238,18 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
       pos = close + 1;
       continue;
     }
+    // `?` after an operand is the postfix try: it binds tighter than any binary operator (`x? + 1`,
+    // `1 + x?`), so it belongs to the operand.
+    if (scan == pos && scan < input.size() && input[scan] == '?') {
+      token.push_back('?');
+      pos = scan + 1;
+      continue;
+    }
     // `.name` after a call, an index or such a member (`a.f().g(y)`, `v[i].name.count()`): the member name is
     // part of the same operand.
-    if (scan == pos && scan + 1 < input.size() && input[scan] == '.' && isIdentifierStartChar(input[scan + 1]) &&
-        !token.empty() && (token.back() == ')' || token.back() == ']' || afterMember)) {
+    if (scan == pos && scan + 1 < input.size() && input[scan] == '.' &&
+        isIdentifierStartChar(input[scan + 1]) && !token.empty() &&
+        (token.back() == ')' || token.back() == ']' || token.back() == '?' || afterMember)) {
       size_t end = scan + 2;
       while (end < input.size() && isIdentifierBodyChar(input[end]) && input[end] != '.') {
         ++end;
