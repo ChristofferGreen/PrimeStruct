@@ -383,9 +383,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the handle layout of `Mutex` and `Atomic`.
 
-- [ ] TODO-5862: `serveWorkers` serves on the VM with 2 workers
+- [~] TODO-5862: `serveWorkers` serves on the VM with 2 workers
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: vm-serve (worktree-agent-ad9aed8242d2614db), 2026-11-19
   - created_at: 2026-11-11
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
