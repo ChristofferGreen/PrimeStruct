@@ -465,6 +465,15 @@ private:
 
   bool emitInstruction(const IrInstruction &instruction, int64_t depth, std::string &error) {
     const IrOpcode op = instruction.op;
+    if (isIrFmaOpcode(op)) {
+      // One fused multiply-add: std::fma is the host's fused instruction and equals evalFmaOpcode (IrPureSemantics.h).
+      const bool isF32 = op == IrOpcode::FmaF32;
+      const std::string conversion = isF32 ? "ps_f32(" : "ps_f64(";
+      line(slot(depth - 3) + " = " + (isF32 ? "ps_slot_f32" : "ps_slot_f64") + "(std::fma(" +
+           conversion + slot(depth - 3) + "), " + conversion + slot(depth - 2) + "), " +
+           conversion + slot(depth - 1) + ")));");
+      return true;
+    }
     if (isIrPureOpcode(op)) {
       std::string expr;
       if (irPureOpcodeArity(op) == 2) {

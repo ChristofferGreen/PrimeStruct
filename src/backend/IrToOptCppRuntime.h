@@ -16,6 +16,7 @@ inline constexpr const char *OptCppRuntimeHeaders = R"CPP(#include <algorithm>
 #include <bit>
 #include <cerrno>
 #include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>

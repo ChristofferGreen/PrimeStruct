@@ -144,14 +144,31 @@ bool emitInstruction(const IrInstruction &instruction,
     out << "        pc = " << nextIndex << ";\n";
     out << "        break;\n";
   };
+  // The product is not rounded before the addition: std::fma, which is the fused hardware instruction where the host has
+  // one (docs/spec/vm-design.md, Fused multiply-add).
+  const auto emitFma = [&](const char *type, const char *toBits, const char *fromBits) {
+    emitStackUnderflowGuard(3, "fma");
+    out << "        " << type << " addend = " << fromBits << "(stack[--sp]);\n";
+    out << "        " << type << " right = " << fromBits << "(stack[--sp]);\n";
+    out << "        " << type << " left = " << fromBits << "(stack[--sp]);\n";
+    out << "        stack[sp++] = " << toBits << "(std::fma(left, right, addend));\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+  };
   switch (instruction.op) {
-    case IrOpcode::PushI32: {
-      const int32_t value = static_cast<int32_t>(instruction.imm);
-      out << "        stack[sp++] = " << value << ";\n";
-      out << "        pc = " << nextIndex << ";\n";
-      out << "        break;\n";
-      return true;
-    }
+  case IrOpcode::FmaF32:
+    emitFma("float", "psF32ToBits", "psBitsToF32");
+    return true;
+  case IrOpcode::FmaF64:
+    emitFma("double", "psF64ToBits", "psBitsToF64");
+    return true;
+  case IrOpcode::PushI32: {
+    const int32_t value = static_cast<int32_t>(instruction.imm);
+    out << "        stack[sp++] = " << value << ";\n";
+    out << "        pc = " << nextIndex << ";\n";
+    out << "        break;\n";
+    return true;
+  }
     case IrOpcode::PushI64: {
       const int64_t value = static_cast<int64_t>(instruction.imm);
       out << "        stack[sp++] = static_cast<uint64_t>(" << value << "ll);\n";

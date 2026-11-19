@@ -41,6 +41,7 @@ bool usesF32Helpers(IrOpcode opcode) {
     case IrOpcode::MulF32:
     case IrOpcode::DivF32:
     case IrOpcode::NegF32:
+    case IrOpcode::FmaF32:
     case IrOpcode::CmpEqF32:
     case IrOpcode::CmpNeF32:
     case IrOpcode::CmpLtF32:
@@ -79,6 +80,7 @@ bool usesF64Helpers(IrOpcode opcode) {
     case IrOpcode::MulF64:
     case IrOpcode::DivF64:
     case IrOpcode::NegF64:
+    case IrOpcode::FmaF64:
     case IrOpcode::CmpEqF64:
     case IrOpcode::CmpNeF64:
     case IrOpcode::CmpLtF64:
@@ -264,7 +266,8 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "#include <utility>\n";
   body << "#include <vector>\n";
   body << "#include <sys/mman.h>\n";
-  if (needsClampI32ConvertHelpers || needsClampI64ConvertHelpers || needsClampU64ConvertHelpers) {
+  if (needsClampI32ConvertHelpers || needsClampI64ConvertHelpers || needsClampU64ConvertHelpers ||
+      needsF32Helpers || needsF64Helpers) {
     body << "#include <cmath>\n";
   }
   if (needsF32Helpers || needsF64Helpers) {
