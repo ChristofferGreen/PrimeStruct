@@ -786,9 +786,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-6087: A block-form call of a user function does not break a later call of the same function
+- [~] TODO-6087: A block-form call of a user function does not break a later call of the same function
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: block-calls (worktree-agent-adb268bb3de95eec3), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (found by TODO-6086)
   - parallel_track: lowering-block-calls
