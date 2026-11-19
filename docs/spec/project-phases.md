@@ -190,6 +190,10 @@ module {
   that holds an integer and a float, or a function whose calls pass an integer and a float for one parameter, is
   refused (`wasm emitter local holds values of different kinds`). An integer operand is converted to the width an
   instruction wants (`i32.wrap_i64`, `i64.extend_i32_s`).
+- `WASM-LIMIT-VALUE-IF`: an `if` whose arms each leave one value on the stack at the join (an `if` expression) is
+  emitted as a typed Wasm `if` block. The result type is that of the arms; an `i32` arm beside an `i64` arm is widened,
+  and an integer arm beside a float arm (`wasm emitter value type mismatch`), arms leaving different numbers of values,
+  or more than one value are refused. An arm that ends in a return does not count.
 - `WASM-LIMIT-IMPORTS-WASI`: imported host calls are limited to `wasi_snapshot_preview1` and the fixed symbol set
   `{fd_write, fd_read, args_sizes_get, args_get, path_open, fd_close, fd_sync}` selected on demand from IR opcode usage.
 - `WASM-LIMIT-PROFILE-BROWSER`: `--wasm-profile=browser` rejects all non-zero effect/capability masks and rejects

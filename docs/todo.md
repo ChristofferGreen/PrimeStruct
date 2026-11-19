@@ -131,7 +131,7 @@ of sync with them.
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
-| TODO-6089 | A value-yielding `if` validates and runs on Wasm | ready | wasm-value-if |
+| TODO-6090 | The program matrix runs the programs Wasm supports on a Wasm config | deferred | wasm-matrix |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | deferred | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -157,13 +157,11 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6089 (wasm-value-if): a value-yielding `if` validates and runs on Wasm
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6089
 
 ### Priority Lanes
 
@@ -176,7 +174,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6089, TODO-5744
+- Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6090, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -511,20 +509,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [~] TODO-6089: A value-yielding `if` validates and runs on Wasm
+- [ ] TODO-6090: The program matrix runs the programs Wasm supports on a Wasm config
   - owner: ai
-  - status: ready
-  - claimed_by: wasm-value-if worker (worktree agent-aee2b0e5ec9a61dab), 2026-11-20
+  - status: deferred
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10
-  - parallel_track: wasm-value-if
-  - scope: `if(c, then() { 1i32 }, else() { 0i32 })` as an expression inside a function produces an invalid Wasm module: `src/wasm_emitter/WasmEmitterControlFlow.cpp` emits every `if` with the empty block type, so the value an arm leaves on the stack at the join fails validation. Give the `if` the result type of its arms (merging i32 with i64, coercing each arm), for nested ifs, calls in arms and i32, i64 and f64 values. Found running the program matrix's `check()` helper on Wasm.
+  - parallel_track: wasm-matrix
+  - scope: `PRIMESTRUCT_MATRIX_CONFIGS` (tests/unit/program_matrix/program_matrix.h) has no Wasm config. A survey (every raw-string program of tests/unit/program_matrix/test_program_matrix_*.cpp compiled with `--emit=wasm --wasm-profile wasi` and run under node, 365 programs, 2026-11-20) found 47 that already print and exit as the VM does (27 of control, 6 optimizer, 5 shared_programs, 4 user_shadows, 1 each of conversions, frontend_accept, parameter_modes, runtime_faults, struct_methods), 2 that only differ because the runner reads the result of a `void` main, and 316 that do not compile for Wasm: about 200 `unsupported opcode for wasm target` (heap, vectors, strings, closures, sums), 23 `unsupported effect mask bits` (effects other than `io_out`), 19 atomics and 18 channels (`not supported by the wasm backend`), the rest frontend errors of programs that need a flag or are fragments. Missing: (1) `Backend::Wasm` in `ExecutionConfig` and `runConfigUnnormalized`: `primec --emit=wasm --wasm-profile wasi ... -o x.wasm`, then `node` with a runner like `WasmNodeRunner` in test_compile_run_smoke_wasm_node.cpp, which must also accept a `void` main (exit code 0) and map a Wasm trap to a fault outcome (TODO-5744 records the trap options); (2) a skip message when node is absent (`hasNode`); (3) a way to name the programs it runs. Options, not chosen: (a) the config is slow and opt-in (`PRIMESTRUCT_MATRIX_CONFIGS=all`) and runs only the cases that list it in `onlyConfigs`, so the 47 programs are annotated one by one and a backend gap stays visible as the absence of the annotation; (b) the config is in `allConfigs()` and every case that Wasm cannot run lists `wasm` in `skipConfigs` with its reason, about 316 annotations, which keeps the matrix rule that a gap is named at the case; (c) a case may carry `wasmUnsupported` once and the config skips them with one reason each, so a program that starts to compile on Wasm is reported as a stale skip.
   - acceptance:
-    - node-run compile-run cases (skipped with a message when node is absent) agree with the VM for nested, call-in-arm, i64 and f64 value-yielding ifs
-    - emitter byte tests show the typed `if` block
-    - docs/spec/project-phases.md Wasm limits updated
+    - the chosen option is recorded here and the Wasm config runs the programs Wasm supports and agrees with the VM on stdout and exit code
+    - a machine without node skips the config with a message
     - full release gate green
-  - stop_rule: value-yielding `if`/`else` only; a value left at a join by anything else is a new leaf.
+  - stop_rule: the config and its annotations only; opcode gaps found by it (heap, strings, atomics, channels) are separate leaves.
+  - notes: a matrix helper such as `check()` that returns an `if` expression could not run on Wasm until TODO-6089 (a value-yielding `if`) was fixed.
 
 - [ ] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
   - owner: ai

@@ -540,4 +540,87 @@ TEST_CASE("wasm emitter rejects a local that holds an integer and a float") {
   CHECK(error.find("different kinds") != std::string::npos);
 }
 
+TEST_CASE("wasm emitter gives an if that yields a value the type of its arms") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // i32.const 1, if (result i32), i32.const 7, else, i32.const 9, end, return
+  CHECK(containsByteSequence(bytes,
+                             {0x41, 0x01, 0x04, 0x7f, 0x41, 0x07, 0x05, 0x41, 0x09, 0x0b, 0x0f}));
+}
+
+TEST_CASE("wasm emitter widens the i32 arm of an if whose other arm is an i64") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI64, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI64, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // if (result i64), i32.const 7, i64.extend_i32_s, else, i64.const 9, end, return
+  CHECK(containsByteSequence(bytes, {0x04, 0x7e, 0x41, 0x07, 0xac, 0x05, 0x42, 0x09, 0x0b, 0x0f}));
+}
+
+TEST_CASE("wasm emitter keeps nested value ifs typed") {
+  primec::IrFunction mainFn;
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 8});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 2});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  const std::vector<uint8_t> bytes = emitSingleFunctionModule(std::move(mainFn));
+
+  // if (result i32) { i32.const 0, if (result i32) 1 else 2 end } else 3 end, return
+  CHECK(containsByteSequence(bytes,
+                             {0x04,
+                              0x7f,
+                              0x41,
+                              0x00,
+                              0x04,
+                              0x7f,
+                              0x41,
+                              0x01,
+                              0x05,
+                              0x41,
+                              0x02,
+                              0x0b,
+                              0x05,
+                              0x41,
+                              0x03,
+                              0x0b,
+                              0x0f}));
+}
+
+TEST_CASE("wasm emitter rejects an if whose arms yield an integer and a float") {
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(std::move(mainFn));
+  std::vector<uint8_t> bytes;
+  std::string error;
+  CHECK_FALSE(emitter.emitModule(module, bytes, error));
+  CHECK(error.find("value type mismatch") != std::string::npos);
+}
+
 TEST_SUITE_END();

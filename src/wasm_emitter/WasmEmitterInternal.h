@@ -385,6 +385,12 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
 
 // A structured block (`if`, `loop`) cannot reach the values below it: its code starts with an empty tracked stack and
 // the outer stack comes back at the end.
+// Converts the value on top of the tracked stack to `type` (an integer of the other width), emitting into `out`.
+bool coerceWasmTopValue(WasmLocalLayout &localLayout,
+                        uint8_t type,
+                        std::vector<uint8_t> &out,
+                        std::string &error,
+                        const std::string &functionName);
 std::vector<uint8_t> enterWasmBlock(WasmLocalLayout &localLayout);
 void leaveWasmBlock(WasmLocalLayout &localLayout, std::vector<uint8_t> &&outerStack);
 

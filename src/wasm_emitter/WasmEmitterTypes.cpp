@@ -387,6 +387,14 @@ bool mergeWasmTypes(uint8_t current, uint8_t incoming, uint8_t &merged) {
   return false;
 }
 
+bool coerceWasmTopValue(WasmLocalLayout &localLayout,
+                        uint8_t type,
+                        std::vector<uint8_t> &out,
+                        std::string &error,
+                        const std::string &functionName) {
+  return coerceOperands(localLayout, {type}, out, error, functionName);
+}
+
 std::vector<uint8_t> enterWasmBlock(WasmLocalLayout &localLayout) {
   std::vector<uint8_t> outer;
   outer.swap(localLayout.typeState.stack);

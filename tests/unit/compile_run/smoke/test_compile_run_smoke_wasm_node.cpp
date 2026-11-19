@@ -277,4 +277,92 @@ main() {
   checkWasmMatchesVm("fma_fused", source, 0);
 }
 
+// An `if` expression leaves its arm's value on the stack at the join, so the Wasm `if` block has that value's type.
+TEST_CASE("wasm runs a value yielding if with i32 arms and calls like the vm") {
+  checkWasmMatchesVm("value_if_i32",
+                     R"(
+[return<i32>]
+double_it([i32] x) {
+  return(plus(x, x))
+}
+
+[return<i32>]
+pick_one([bool] ok) {
+  return(if(ok, then() { 1i32 }, else() { 0i32 }))
+}
+
+[return<i32>]
+classify([i32] n) {
+  return(if(less_than(n, 0i32),
+    then() { if(equal(n, -1i32), then() { double_it(10i32) }, else() { -5i32 }) },
+    else() { if(equal(n, 0i32), then() { 100i32 }, else() { double_it(plus(n, 1i32)) }) }))
+}
+
+[return<i32>]
+sum_of_ifs([i32] n) {
+  return(plus(if(greater_than(n, 0i32), then() { n }, else() { 0i32 }), if(greater_than(n, 5i32), then() { 1000i32 }, else() { 1i32 })))
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(pick_one(true))
+  print_line(pick_one(false))
+  print_line(classify(-1i32))
+  print_line(classify(-7i32))
+  print_line(classify(0i32))
+  print_line(classify(4i32))
+  print_line(sum_of_ifs(3i32))
+  print_line(sum_of_ifs(9i32))
+  print_line(sum_of_ifs(-2i32))
+  [i32 mut] total{0i32}
+  [i32 mut] i{0i32}
+  while(less_than(i, 6i32)) {
+    total = plus(total, if(less_than(i, 3i32), then() { double_it(i) }, else() { 1i32 }))
+    i = plus(i, 1i32)
+  }
+  print_line(total)
+  return(0i32)
+}
+)",
+                     0);
+}
+
+TEST_CASE("wasm runs a value yielding if with i64 and f64 arms like the vm") {
+  checkWasmMatchesVm("value_if_wide_float",
+                     R"(
+[return<i64>]
+wide_pick([bool] ok, [i64] big) {
+  return(if(ok, then() { plus(big, 1i64) }, else() { 7i64 }))
+}
+
+[return<i64>]
+mixed_pick([bool] ok, [i32] small) {
+  return(if(ok, then() { convert<i64>(small) }, else() { 9000000000i64 }))
+}
+
+[return<f64>]
+float_pick([bool] ok, [f64] x) {
+  return(if(ok, then() { multiply(x, 2.0f64) }, else() { 0.5f64 }))
+}
+
+[return<f32>]
+float32_pick([bool] ok) {
+  return(if(ok, then() { 1.5f32 }, else() { 2.5f32 }))
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(wide_pick(true, 4294967296i64))
+  print_line(wide_pick(false, 4294967296i64))
+  print_line(mixed_pick(true, -3i32))
+  print_line(mixed_pick(false, 1i32))
+  print_line(convert<i32>(float_pick(true, 4.25f64)))
+  print_line(convert<i32>(multiply(float_pick(false, 1.0f64), 10.0f64)))
+  print_line(convert<i32>(multiply(float32_pick(true), 10.0f32)))
+  return(0i32)
+}
+)",
+                     0);
+}
+
 TEST_SUITE_END();

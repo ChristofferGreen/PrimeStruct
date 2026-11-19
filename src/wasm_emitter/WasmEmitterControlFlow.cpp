@@ -105,26 +105,97 @@ bool emitIfRegion(const IrFunction &function,
   if (!consumeWasmCondition(localLayout, out, error, function.name)) {
     return false;
   }
-  out.push_back(WasmOpIf);
-  out.push_back(WasmBlockTypeVoid);
-  bool trueDiverges = false;
+  // Both arms are emitted apart first: a value an arm leaves on the stack gives the `if` its result type, which the
+  // block type in front of the arms must name.
   std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
-  if (!emitInstructionRange(
-          function, trueStart, trueEnd, localLayout, functionTypes, runtime, out, error, &trueDiverges)) {
+  std::vector<uint8_t> trueCode;
+  bool trueDiverges = false;
+  if (!emitInstructionRange(function,
+                            trueStart,
+                            trueEnd,
+                            localLayout,
+                            functionTypes,
+                            runtime,
+                            trueCode,
+                            error,
+                            &trueDiverges)) {
     return false;
   }
+  const std::vector<uint8_t> trueStack = localLayout.typeState.stack;
   const bool hasElse = falseStart < falseEnd;
+  std::vector<uint8_t> falseCode;
+  std::vector<uint8_t> falseStack;
   bool falseDiverges = false;
   if (hasElse) {
     localLayout.typeState.stack.clear();
-    out.push_back(WasmOpElse);
-    if (!emitInstructionRange(
-            function, falseStart, falseEnd, localLayout, functionTypes, runtime, out, error, &falseDiverges)) {
+    if (!emitInstructionRange(function,
+                              falseStart,
+                              falseEnd,
+                              localLayout,
+                              functionTypes,
+                              runtime,
+                              falseCode,
+                              error,
+                              &falseDiverges)) {
       return false;
     }
+    falseStack = localLayout.typeState.stack;
   }
-  leaveWasmBlock(localLayout, std::move(outerStack));
+
+  uint8_t resultType = WasmBlockTypeVoid;
+  if (hasElse) {
+    const std::vector<uint8_t> *yielded[2] = {trueDiverges ? nullptr : &trueStack,
+                                              falseDiverges ? nullptr : &falseStack};
+    uint8_t merged = WasmTypeUnknown;
+    size_t yielding = 0;
+    size_t valueCount = 0;
+    for (const std::vector<uint8_t> *stack : yielded) {
+      if (stack == nullptr) {
+        continue;
+      }
+      if (yielding > 0 && stack->size() != valueCount) {
+        error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+        return false;
+      }
+      valueCount = stack->size();
+      ++yielding;
+      if (valueCount == 1 && !mergeWasmTypes(merged, stack->back(), merged)) {
+        error = "wasm emitter value type mismatch in function: " + function.name;
+        return false;
+      }
+    }
+    if (valueCount > 1) {
+      error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+      return false;
+    }
+    if (valueCount == 1) {
+      resultType = merged == WasmTypeUnknown ? WasmTypeI32 : merged;
+      // Each arm that falls through converts its value to the merged type (an i32 arm of an i64 `if`).
+      for (size_t arm = 0; arm < 2; ++arm) {
+        if (yielded[arm] == nullptr) {
+          continue;
+        }
+        localLayout.typeState.stack = *yielded[arm];
+        if (!coerceWasmTopValue(
+                localLayout, resultType, arm == 0 ? trueCode : falseCode, error, function.name)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  out.push_back(WasmOpIf);
+  out.push_back(resultType);
+  out.insert(out.end(), trueCode.begin(), trueCode.end());
+  if (hasElse) {
+    out.push_back(WasmOpElse);
+    out.insert(out.end(), falseCode.begin(), falseCode.end());
+  }
   out.push_back(WasmOpEnd);
+  leaveWasmBlock(localLayout, std::move(outerStack));
+  if (resultType != WasmBlockTypeVoid) {
+    localLayout.typeState.stack.push_back(resultType);
+  }
   if (outDiverges != nullptr) {
     *outDiverges = hasElse && trueDiverges && falseDiverges;
   }
