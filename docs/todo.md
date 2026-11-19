@@ -244,9 +244,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-5727: Every struct copy site tells a place from a temporary by resolution
+- [~] TODO-5727: Every struct copy site tells a place from a temporary by resolution
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: copy-sites (worktree-agent-a83711737645e00d6), 2026-11-19
   - created_at: 2026-11-07
   - phase: Lifecycle (found while fixing TODO-5720)
   - parallel_track: lifecycle-copy-sources
