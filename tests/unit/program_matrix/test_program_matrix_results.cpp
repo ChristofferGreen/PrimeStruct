@@ -680,4 +680,32 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a return builds a stdlib Result from a brace constructor") {
+  program_matrix::ProgramCase program;
+  program.name = "result_return_brace_constructor";
+  program.source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+failed() {
+  return(Result<i32, i32>{[error] 7i32})
+}
+
+[return<Result<i32, i32>>]
+succeeded() {
+  return(Result<i32, i32>{[ok] 5i32})
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(pick(failed()) { ok(value) { value } error(err) { err } })
+  print_line(pick(succeeded()) { ok(value) { value } error(err) { err } })
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n5\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

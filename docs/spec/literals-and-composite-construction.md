@@ -97,6 +97,8 @@
   implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload. Variant order is
   therefore layout/serialization-sensitive and should be treated as version-sensitive API surface. `Maybe<T>` uses this
   substrate, and imported value-carrying `Result<T, E>` construction is available through `/std/result/*`.
+  A generic sum constructor head with explicit arguments, `Result<i32, i32>{[error] 7i32}`, builds the sum wherever an
+  expression may stand: a binding initializer, a `return` argument or a `pick` subject.
   `Result.ok(value)`, `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` compatibility helpers can initialize typed imported value-carrying sum locals/returns
   on IR-backed VM/native paths with local imported Result sum sources or direct calls returning them. `try(...)`,

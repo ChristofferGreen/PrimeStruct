@@ -455,6 +455,46 @@ PhaseStatus rewriteNameAndTransforms(ExprRewriteContext &rc) {
   return PhaseStatus::Continue;
 }
 
+// `Result<i32, i32>{[error] 7i32}` names a generic sum with overloads by arity as a brace constructor head. A typed
+// binding or a return type instantiates the specialization through the type text; a head written where no type text
+// names it (a `return` argument, a `pick` subject) has to ask for it itself, or the validator finds no definition.
+PhaseStatus instantiateGenericSumConstructorHead(ExprRewriteContext &rc) {
+  Expr &expr = rc.expr;
+  Context &ctx = rc.ctx;
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
+      !expr.isBraceConstructor || expr.templateArgs.empty() || expr.name.empty()) {
+    return PhaseStatus::Continue;
+  }
+  const std::string headPath =
+      resolveNameToPath(expr.name,
+                        rc.namespacePrefix,
+                        scopedImportAliasesForNamespace(rc.namespacePrefix, ctx),
+                        ctx.sourceDefs);
+  if (ctx.genericTypeOverloads.count(headPath) == 0) {
+    return PhaseStatus::Continue;
+  }
+  const ResolvedType specialized =
+      resolveTypeString(expr.name + "<" + semantics::joinTemplateArgs(expr.templateArgs) + ">",
+                        rc.mapping,
+                        rc.allowedParams,
+                        rc.namespacePrefix,
+                        ctx,
+                        rc.error);
+  if (!rc.error.empty()) {
+    return rc.done(false);
+  }
+  if (specialized.concrete && !specialized.text.empty() && specialized.text.front() == '/') {
+    if (expr.sourceName.empty()) {
+      expr.sourceName = expr.name;
+    }
+    expr.name = specialized.text;
+    expr.namespacePrefix.clear();
+    expr.templateArgs.clear();
+    expr.templateArgDetails.clear();
+  }
+  return PhaseStatus::Continue;
+}
+
 PhaseStatus rewriteLiteralAndTaskCalls(ExprRewriteContext &rc) {
   Expr &expr = rc.expr;
   const SubstMap &mapping = rc.mapping;

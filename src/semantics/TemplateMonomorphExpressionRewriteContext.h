@@ -77,6 +77,7 @@ std::string preferredBorrowedPathForPublicOrCompatibility(ExprRewriteContext &rc
                                                           const std::string &canonicalPath,
                                                           std::string_view borrowedHelper);
 PhaseStatus rewriteNameAndTransforms(ExprRewriteContext &rc);
+PhaseStatus instantiateGenericSumConstructorHead(ExprRewriteContext &rc);
 PhaseStatus rewriteLiteralAndTaskCalls(ExprRewriteContext &rc);
 PhaseStatus rewriteCollectionHelperTemplate(ExprRewriteContext &rc);
 PhaseStatus rewritePlainCallReference(ExprRewriteContext &rc);

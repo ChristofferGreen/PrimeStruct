@@ -145,7 +145,7 @@ of sync with them.
 | TODO-6042 | Regression tests pin forms the audit listed that already compile | ready | frontend-accept-pins |
 | TODO-6038 | An `if` yields struct values | ready | frontend-accept-if |
 | TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
-| TODO-6041 | `return` builds a sum from `[variant] value` and from `Type{[variant] ...}` | ready | frontend-accept-return-sum |
+| TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-5521 | Math helpers return correct results | deferred | stdlib-math |
@@ -170,7 +170,6 @@ of sync with them.
 - TODO-6042 (frontend-accept-pins): Regression tests pin forms the audit listed that already compile
 - TODO-6038 (frontend-accept-if): An `if` yields struct values
 - TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
-- TODO-6041 (frontend-accept-return-sum): `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 
 ### Immediate Next 10
@@ -179,7 +178,6 @@ of sync with them.
 2. TODO-6042
 3. TODO-6038
 4. TODO-6039
-5. TODO-6041
 
 ### Priority Lanes
 
@@ -193,7 +191,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6041, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -662,18 +660,17 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: sum-typed fields of structs on the VM and, where the sum already lowers there, native and C++; no new sum layouts.
 
-- [~] TODO-6041: `return` builds a sum from `[variant] value` and from `Type{[variant] ...}`
+- [ ] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
   - owner: ai
-  - status: ready
-  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
+  - status: deferred
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-return-sum
-  - scope: docs/spec/literals-and-composite-construction.md says explicit `[variant] payload` construction is validated for return values. Today `return([ok] value)` fails with `binding not allowed in expression context` and `return(Result<i32, i32>{[error] 7i32})` with `unknown call target: Result` (the same brace form works as a binding initializer).
+  - parallel_track: frontend-accept-return-label
+  - scope: `return([ok] value)` fails with `binding not allowed in expression context` for a name argument and with a parse error (`expected identifier`) for a literal one: in parentheses `[ok] value` reads as a binding of type `ok` named `value`, not as a labeled argument. docs/spec/literals-and-composite-construction.md says explicit `[variant] payload` construction is validated for return values but only shows the braced forms (`[Shape] a{[circle] circleA}`). Whether the unbraced label form is valid is undecided. Options: (A) accept `return([variant] expr)` as context-typed sum construction, which makes `[label] x` in `return(...)` a labeled argument, different from every other call where the parser decides by the callee; (B) keep it invalid and document `return(Result<T, E>{[ok] value})` and `return({[ok] value})` (not supported today) as the spellings; (C) accept only `return({[variant] expr})`, the context-typed brace form, which the spec already uses for bindings.
   - acceptance:
-    - both forms compile and run for a stdlib `Result` and a user `[sum]`; tests for `[ok]`/`[error]` and a user sum variant plus a negative test for a variant name the sum lacks
+    - the owner chose an option; the chosen spelling compiles and runs, the others give a diagnostic with a location; semantics tests
     - full release gate green
-  - stop_rule: return-position construction of sums; `return({...})` stays unsupported.
+  - stop_rule: the `return` argument form only.
 
 - [ ] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
   - owner: ai

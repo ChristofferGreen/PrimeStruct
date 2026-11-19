@@ -661,6 +661,7 @@ bool rewriteExpr(Expr &expr,
   // Ordered rules: each either decides the expression (Done) or leaves it to the next.
   using Rule = PhaseStatus (*)(ExprRewriteContext &);
   static constexpr Rule Rules[] = {rewriteNameAndTransforms,
+                                   instantiateGenericSumConstructorHead,
                                    rewriteLiteralAndTaskCalls,
                                    rewriteCollectionHelperTemplate,
                                    rewritePlainCallReference,
