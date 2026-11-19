@@ -4204,8 +4204,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
       continue()
     endif()
     if(suite STREQUAL "primestruct.ir.native_codegen")
-      # TODO-6027: 31 cases (macOS arm64) took 11 s alone as one entry: shards of 8.
-      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 31 8 300 "--test-suite=${suite}")
+      # TODO-6027: 32 cases (macOS arm64) took 11 s alone as one entry: shards of 8.
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 32 8 300 "--test-suite=${suite}")
       continue()
     endif()
     add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")

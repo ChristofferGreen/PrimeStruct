@@ -1511,6 +1511,20 @@ TEST_CASE("arm64 native constants and immediate operands match the VM") {
 }
 #endif
 
+// The fused multiply-adds are one FMADD with the accumulator c in the third source register: d0 = d0 * d1 + d2 (and
+// the s form for f32), so the product is rounded once.
+TEST_CASE("arm64 fused multiply-add emits FMADD") {
+  const std::vector<uint32_t> f64 = primec::testing::arm64TemplateWords(primec::IrOpcode::FmaF64);
+  const std::vector<uint32_t> f32 = primec::testing::arm64TemplateWords(primec::IrOpcode::FmaF32);
+  CHECK(std::count(f64.begin(), f64.end(), 0x1F410800u) == 1);
+  CHECK(std::count(f32.begin(), f32.end(), 0x1F010800u) == 1);
+  // Never a separate multiply or add, which would round twice.
+  CHECK(std::find(f64.begin(), f64.end(), 0x1E610800u) == f64.end());
+  CHECK(std::find(f64.begin(), f64.end(), 0x1E612800u) == f64.end());
+  CHECK(std::find(f32.begin(), f32.end(), 0x1E210800u) == f32.end());
+  CHECK(std::find(f32.begin(), f32.end(), 0x1E212800u) == f32.end());
+}
+
 // TODO-5483: the arm64 backend cannot run here, so its encodings are pinned. SextI32 is SXTW x0,
 // w0 (SBFM x0, x0, #0, #31). Float comparisons branch on the fcmp flags with the conditions that
 // are false for an unordered pair: EQ, NE (true), MI for <, LS for <=, GT and GE.

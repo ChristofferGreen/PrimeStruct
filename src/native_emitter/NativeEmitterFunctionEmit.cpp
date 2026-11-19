@@ -1,6 +1,6 @@
 #include "NativeEmitterEmitInternal.h"
+#include "NativeEmitterFunctionQueries.h"
 #include "NativeEmitterPromotion.h"
-#include "primec/ir/IrLocalEscape.h"
 #include "primec/ir/IrNativeTextHost.h"
 
 #include <algorithm>
@@ -8,51 +8,6 @@
 #include <type_traits>
 
 namespace primec::native_emitter {
-
-namespace {
-
-// Whether the VM could reach this function's locals through memory: it takes an address, or it
-// dereferences one, which the VM resolves against the current frame whatever its origin. The
-// JIT keeps such a function's locals in their frame slots, zeroed at entry as in the VM.
-[[maybe_unused]] bool jitFrameAccessible(const IrFunction &function) {
-  if (analyzeIrLocalEscape(function).addressTaken) {
-    return true;
-  }
-  // The runtime reads and writes frame slots too: FileReadByte stores into its local.
-  for (const IrInstruction &instruction : function.instructions) {
-    if (instruction.op == IrOpcode::LoadIndirect || instruction.op == IrOpcode::StoreIndirect ||
-        instruction.op == IrOpcode::FileReadByte) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// The VM's local count: one past the highest local an instruction loads, stores or addresses.
-[[maybe_unused]] uint32_t vmLocalCount(const IrFunction &function) {
-  uint64_t count = 0;
-  for (const IrInstruction &instruction : function.instructions) {
-    if (instruction.op == IrOpcode::LoadLocal || instruction.op == IrOpcode::StoreLocal ||
-        instruction.op == IrOpcode::AddressOfLocal) {
-      count = std::max<uint64_t>(count, instruction.imm + 1);
-    }
-  }
-  return static_cast<uint32_t>(count);
-}
-
-bool allocatesHeap(const IrModule &module) {
-  for (const IrFunction &function : module.functions) {
-    for (const IrInstruction &instruction : function.instructions) {
-      if (instruction.op == IrOpcode::HeapAlloc || instruction.op == IrOpcode::HeapRealloc ||
-          instruction.op == IrOpcode::HeapAllocBytes) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-} // namespace
 
 template <typename EmitterT>
 bool emitNativeFunctions(const IrModule &module,
@@ -508,6 +463,16 @@ bool emitNativeFunctions(const IrModule &module,
       case IrOpcode::NegF64:
         emitter.emitNegF64();
         break;
+      case IrOpcode::FmaF32:
+      case IrOpcode::FmaF64:
+        // arm64 has the fused FMADD; x86_64 never sees these opcodes (they are expanded before emission).
+        if constexpr (kIsArm64) {
+          emitter.emitFma(inst.op == IrOpcode::FmaF64);
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       case IrOpcode::CmpEqI32:
         emitter.emitCmpEq();
         break;

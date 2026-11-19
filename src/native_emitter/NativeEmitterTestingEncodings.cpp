@@ -61,6 +61,12 @@ std::vector<uint32_t> arm64TemplateWords(IrOpcode op) {
   case IrOpcode::CmpGeF64:
     emitter.emitCmpGeF64();
     break;
+  case IrOpcode::FmaF32:
+    emitter.emitFma(false);
+    break;
+  case IrOpcode::FmaF64:
+    emitter.emitFma(true);
+    break;
   default:
     return {};
   }

@@ -432,6 +432,7 @@ class Arm64Emitter {
   void emitMulF64();
   void emitDivF64();
   void emitNegF64();
+  void emitFma(bool isF64); // FMADD: a * b + c rounded once; pops c, b, a
   void emitCmpEq();
   void emitCmpNe();
   void emitCmpLt();
@@ -767,6 +768,9 @@ class Arm64Emitter {
   static constexpr uint32_t kFdivS0S0S1 = 0x1e211800;
   static constexpr uint32_t kFnegS0 = 0x1e214000;
   static constexpr uint32_t kFcmpS0S1 = 0x1e212000;
+  // FMADD d0, d0, d1, d2 and s0, s0, s1, s2: d0 = d0 * d1 + d2 with one rounding.
+  static constexpr uint32_t kFmaddD0D0D1D2 = 0x1f410800;
+  static constexpr uint32_t kFmaddS0S0S1S2 = 0x1f010800;
   static constexpr uint32_t kScvtfD0X0 = 0x9e620000;
   static constexpr uint32_t kScvtfS0X0 = 0x9e220000;
   static constexpr uint32_t kUcvtfD0X0 = 0x9e630000;

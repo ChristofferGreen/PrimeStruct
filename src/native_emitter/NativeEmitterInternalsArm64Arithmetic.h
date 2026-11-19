@@ -100,6 +100,28 @@ inline void Arm64Emitter::emitNegF64() {
   emitFloatUnaryOp(true, kFnegD0, kFnegS0);
 }
 
+// The hardware fused multiply-add, so the result has the bits of std::fma (the VM's evaluation). Operands: a is
+// pushed first and c is on top.
+inline void Arm64Emitter::emitFma(bool isF64) {
+  emitPopReg(0); // c
+  emitPopReg(1); // b
+  emitPopReg(2); // a
+  if (isF64) {
+    emit(encodeFmovDX(0, 2));
+    emit(encodeFmovDX(1, 1));
+    emit(encodeFmovDX(2, 0));
+    emit(kFmaddD0D0D1D2);
+    emit(encodeFmovXD(0, 0));
+  } else {
+    emit(encodeFmovSW(0, 2));
+    emit(encodeFmovSW(1, 1));
+    emit(encodeFmovSW(2, 0));
+    emit(kFmaddS0S0S1S2);
+    emit(encodeFmovWS(0, 0));
+  }
+  emitPushReg(0);
+}
+
 inline void Arm64Emitter::emitCmpEq() {
   emitCompareAndPush(CondCode::Eq);
 }

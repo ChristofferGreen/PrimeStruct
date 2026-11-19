@@ -16,7 +16,7 @@ bool buildMachOImportProbe(const std::string &symbol, std::vector<uint8_t> &imag
 
 // The arm64 machine words the native emitter writes for one IR instruction's template, from an
 // empty buffer. Lets x86_64 hosts pin encodings they cannot execute. Supported opcodes:
-// SextI32 and the F32/F64 comparisons; any other opcode yields no words.
+// SextI32, the F32/F64 comparisons and the fused multiply-adds; any other opcode yields no words.
 std::vector<uint32_t> arm64TemplateWords(IrOpcode op);
 
 // The arm64 words that build the 64-bit constant `value` in x`rd` (MOVZ, MOVN, MOVK, ORR).
