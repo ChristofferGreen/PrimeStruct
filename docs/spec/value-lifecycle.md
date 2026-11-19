@@ -467,6 +467,13 @@ bad_set() {
 - **Copy** clones the stored closure into a new block (the copy has its own state), also where a `Function` local is
   an argument of a brace constructor (`Wrap{plain}` and `Wrap{[run] plain}` alike); **Move** hands the block over;
   **Destroy** destroys the closure and frees the block.
+- **Nesting:** a closure may hold a `Function` of its own type (middleware: `Function<i32, i32>{[mut inner{next},
+  mut seen{0i32}]([i32] x) { seen = seen + 1i32  return(inner(x) + seen) }}` wrapping a `Function<i32, i32>` it
+  was given), to any depth. The generated `Copy` and `Destroy` of the box then reach themselves through the
+  closure's field; the lowerer runs that reentry as a call of the helper instead of expanding it again (below), so
+  each copy has its own state and destroying the outermost one frees every block. Runs on the VM, `optexe` and
+  arm64 native; `--emit=exe` and the x86_64 native backend have no struct-passing calls and still report `does not
+  support recursive calls`.
 - **Lowering:** the closure pass spells `Function<R, A...>` as the struct `/__FunctionN<R, A...>` (a tag and the heap
   address) and a conversion as `/__FunctionN<R, A...>{[tag] 0i32, [env] /__fn_box(closure)}`. After
   monomorphization the `function-values` pass numbers the closure types converted to each `Function` instance and

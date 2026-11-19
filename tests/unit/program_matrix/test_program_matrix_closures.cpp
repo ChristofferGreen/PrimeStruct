@@ -2123,4 +2123,72 @@ main() {
                     43);
 }
 
+// A closure that holds a `Function` of its own type (middleware wrapping a boxed handler): the generated `Copy` and
+// `Destroy` of the box reach themselves through the closure, so they run as functions instead of expanding forever.
+TEST_CASE("a Function whose closure holds a Function copies independently") {
+  runClosureProgram("function_wraps_function_copy",
+                    R"(
+import /std/collections/*
+
+[return<Function<i32, i32>> effects(heap_alloc)]
+wrap([Function<i32, i32> move] next) {
+  return(Function<i32, i32>{[mut inner{next}, mut seen{0i32}]([i32] x) {
+    seen = seen + 1i32
+    return(inner(x) + seen)
+  }})
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<i32, i32> mut] f{Function<i32, i32>{[]([i32] x) { return(x * 2i32) }}}
+  f = wrap(f)
+  f = wrap(f)
+  [i32] a{f(10i32)}
+  [Function<i32, i32> mut] g{f}
+  [i32] b{g(1i32)}
+  [i32] c{f(10i32)}
+  return(a + b + c)
+}
+)",
+                    52);
+}
+
+TEST_CASE("wrapping Functions in Functions leaks no heap block") {
+  runHeapFlatProgram("function_wraps_function_destroy_loop",
+                     R"(
+import /std/collections/*
+import /std/text/*
+
+[return<Function<i32, i32>> effects(heap_alloc)]
+wrap([Function<i32, i32> move] next) {
+  return(Function<i32, i32>{[mut inner{next}, mut seen{0i32}]([i32] x) {
+    seen = seen + 1i32
+    return(inner(x) + seen)
+  }})
+}
+
+[effects(heap_alloc) return<int>]
+round() {
+  [Function<i32, i32> mut] f{Function<i32, i32>{[]([i32] x) { return(x * 2i32) }}}
+  f = wrap(f)
+  f = wrap(f)
+  f = wrap(f)
+  [Function<i32, i32> mut] g{f}
+  return(f(1i32) + g(2i32))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  repeat(300i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  return(first - 12i32 + leakedBlocks * 1000i32)
+}
+)",
+                     0);
+}
+
 TEST_SUITE_END();

@@ -30,6 +30,11 @@
   builtin `vector<T>` taken by `mut`, read only, `copy` or `move`, or a `mut`, `Reference` or `Pointer` of those (a
   `Reference<vector<T>>` too). A vector parameter whose element the lowerer cannot copy or destroy keeps the definition inline,
   so its recursion is rejected with the parameter named.
+  A lifecycle helper (`Create`, `Destroy`, `Copy`, `Move`) is expanded inline where a value is made, copied or
+  destroyed; when its expansion reaches the same helper again (a `Function` box whose closure holds a `Function` of
+  its own type) the second reach is a real call of the helper, lowered once as a function whose receiver and
+  `Reference<Self>` argument are addresses. Only such a reentry reserves a lifecycle helper; once reserved, its
+  later expansions are calls too, and every other lifecycle helper stays inline.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
 - **PSIR versioning:** current portable IR is PSIR v40 (v24 to v40 are listed in `include/primec/ir/Ir.h`'s opcode

@@ -297,6 +297,14 @@
       }
       return true;
     }
+    // A real call of a definition that is also being expanded around this call (a lifecycle helper reached from
+    // its own expansion) binds its parameters here without expanding the body, so the outer expansion's stack entry
+    // steps aside for the call and returns after it.
+    const bool realCallReentry =
+        addressAbiCallImm.has_value() && inlineStack.count(callee.fullPath) != 0;
+    if (realCallReentry) {
+      inlineStack.erase(callee.fullPath);
+    }
     ir_lowerer::InlineDefinitionCallContextSetup callSetup;
     if (!ir_lowerer::prepareInlineDefinitionCallContext(
             callee,
@@ -316,7 +324,9 @@
                                              &structNames,
                                              setupStage.realCallAllowStructs,
                                              false,
-                                             setupStage.realCallAllowStrings});
+                                             setupStage.realCallAllowStrings,
+                                             false,
+                                             ir_lowerer::isLifecycleHelperPath(callee.fullPath)});
         if (!blocker.empty()) {
           error += " (it stays inline because " + blocker + ")";
         }
@@ -345,6 +355,9 @@
     auto popInlineStack = [&]() {
       if (callSetup.insertedInlineStackEntry) {
         inlineStack.erase(callee.fullPath);
+      }
+      if (realCallReentry) {
+        inlineStack.insert(callee.fullPath);
       }
     };
     std::vector<Expr> callParams;

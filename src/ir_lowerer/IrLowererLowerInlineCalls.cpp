@@ -488,15 +488,21 @@ bool emitInlineDefinitionCallImpl(
       }
       return true;
     }
+    // A lifecycle helper reached from inside its own expansion cannot be expanded again: it becomes a function.
+    const bool lifecycleReentry = inlineStack.count(callee.fullPath) != 0 &&
+                                  ir_lowerer::isLifecycleHelperPath(callee.fullPath);
     if (setupStage.realCallAllowStructs && realCallReservationIndex.count(callee.fullPath) == 0 &&
-        &callee != setupStage.entryDef && !ir_lowerer::isTinyInlineLeaf(callee) &&
+        &callee != setupStage.entryDef &&
+        (lifecycleReentry || !ir_lowerer::isTinyInlineLeaf(callee)) &&
         ir_lowerer::isRealCallShapeEligible(
             callee,
             ir_lowerer::RealCallShapeContext{&setupStage.defMap,
                                              &structNames,
                                              setupStage.realCallAllowStructs,
                                              false,
-                                             setupStage.realCallAllowStrings})) {
+                                             setupStage.realCallAllowStrings,
+                                             false,
+                                             lifecycleReentry})) {
       // The first call of a definition with a real-call shape reserves it; its body is lowered once, after the entry.
       realCallReservationIndex.emplace(
           callee.fullPath, static_cast<uint64_t>(setupStage.realCallEligibleOrder.size()));

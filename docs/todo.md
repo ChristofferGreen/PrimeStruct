@@ -131,7 +131,6 @@ of sync with them.
 | TODO-5716 | A literal converts to a `StringView` at a call whose overloads differ there | deferred | text-literal-views |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | deferred | web-params |
 | TODO-5676 | Lambdas can state their return type | deferred | closures-return-types |
-| TODO-5677 | A `Function` whose closure holds a same-typed `Function` copies and destroys | deferred | closures-lifecycle |
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
@@ -187,7 +186,7 @@ of sync with them.
 - Frontend and diagnostics: TODO-6044, TODO-5520
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
-- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
+- Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853; collection fields found by closures and the todo example: TODO-5727
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Language surface for handlers (docs/WebAppsPlan.md): TODO-5716
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752; VM address checks TODO-5824
@@ -335,19 +334,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - both repros run on VM and optexe; a negative test for a mismatched annotation; spec text with a runnable example
     - full release gate green
   - stop_rule: lambda return types only.
-
-- [~] TODO-5677: A `Function` whose closure holds a same-typed `Function` copies and destroys
-  - owner: ai
-  - status: ready
-  - claimed_by: closures-a (worktree-agent-aa384eaf7df535914), 2026-11-19
-  - created_at: 2026-11-06
-  - phase: Closures follow-ups
-  - parallel_track: closures-lifecycle
-  - scope: `with_logging([Function<i32, i32> move] next)` returning `Function<i32, i32>{[mut inner{next}, mut seen{0i32}]([i32] x) { ... inner(x) ... }}` stops at lowering with `vm backend does not support recursive calls: /__Function1__t.../Copy` (and the native/optexe equivalent). The generated `Copy` and `Destroy` of that `Function` instance call themselves, and lifecycle helpers are lowered inline (`src/ir_lowerer/IrLowererInlineCallContextHelpers.cpp`), which rejects recursion; plain recursive functions work. Lower recursive lifecycle helpers as real calls. Deferred: generic middleware (a closure wrapping a template-typed handler) composes without erasure and runs today.
-  - acceptance:
-    - the repro (a two-level wrapped `Function` called, copied and destroyed) runs on VM, native and optexe with no leaked blocks
-    - full release gate green
-  - stop_rule: recursive generated lifecycle helpers.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai

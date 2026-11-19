@@ -658,6 +658,11 @@ bool isAddressAbiParameter(
     if (target.find('<') != std::string::npos) {
       return false;
     }
+    // `Self` names the struct whose helper this is (the `other` of a `Copy`).
+    std::string selfPath;
+    if (target == "Self" && isStructHelperDefinition(def, structNames, selfPath)) {
+      return isAddressAbiStruct(selfPath, structNames, allowCollections);
+    }
     return isSupportedScalarTypeName(target) ||
            isAddressAbiStruct(resolveStructTypeName(target, def.namespacePrefix, structNames),
                               structNames,
@@ -759,7 +764,9 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
     const size_t leafStart = def.fullPath.find_last_of('/');
     const std::string leaf =
         leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
-    if (leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move" ||
+    const bool lifecycleHelper =
+        leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move";
+    if ((lifecycleHelper && !context.allowLifecycleHelpers) ||
         !isAddressAbiStruct(parentStructPath, structNames, context.allowCollections)) {
       return false;
     }
@@ -1031,6 +1038,12 @@ size_t countExprNodes(const Expr &expr, size_t limit) {
 }
 
 } // namespace
+
+bool isLifecycleHelperPath(const std::string &path) {
+  const size_t slash = path.find_last_of('/');
+  const std::string leaf = slash == std::string::npos ? path : path.substr(slash + 1);
+  return leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move";
+}
 
 bool isTinyInlineLeaf(const Definition &def) {
   if (def.statements.size() > 2) {

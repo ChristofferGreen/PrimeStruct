@@ -1013,8 +1013,9 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
     and at most 64 are started. `serve` ignores it.
 - **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
   through `logLine`. Middleware is a generic function that returns a closure capturing `next`, so wrapping is
-  zero-cost and composes: `serve(withRequestLog(router), config)`. Do not erase a middleware chain into a `Function`
-  (TODO-5677).
+  zero-cost and composes: `serve(withRequestLog(router), config)`. A middleware chain may also be erased into a
+  `Function` (a closure that holds a `Function`: docs/spec/value-lifecycle.md, Function values), which costs a heap
+  block per layer.
 - **`ServeError`:** the only error is failing to listen. Its `code` is the `/std/net` code, and `why()` names the
   common causes (sockets not permitted, port in use).
 - **Checking the result:** use `serve(...)?` in a `main` with `on_error<ServeError, handler>`; the handler prints

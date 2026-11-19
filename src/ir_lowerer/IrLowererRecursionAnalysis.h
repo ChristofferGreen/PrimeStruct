@@ -93,6 +93,10 @@ struct RealCallShapeContext {
   // A builtin `vector<T>` result, and a struct with collection fields: only a spawned call's shape takes them. A
   // builtin `vector<T>` parameter is taken by direct calls too, `copy` and `move` included.
   bool allowCollections = false;
+  // A `Create`, `Destroy`, `Copy` or `Move` helper on the address ABI. Lifecycle helpers are expanded inline where a
+  // value is made, copied or destroyed; one reached again from inside its own expansion (a `Function` whose closure
+  // holds a `Function`) is lowered as a function instead, since an expansion into itself never ends.
+  bool allowLifecycleHelpers = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
@@ -133,6 +137,9 @@ bool resolveTaskSpawnShape(const Definition &def,
 // every call site unless it is recursive.
 inline constexpr size_t TinyInlineLeafMaxNodes = 12;
 bool isTinyInlineLeaf(const Definition &def);
+
+// Whether the last path segment names a lifecycle helper (`Create`, `Destroy`, `Copy` or `Move`).
+bool isLifecycleHelperPath(const std::string &path);
 
 // Exposed so real-call body lowering (which must build the exact same
 // parameter/return LocalInfo::ValueKind this eligibility scan already
