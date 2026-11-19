@@ -2003,6 +2003,7 @@ are left unarchived.
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | [undated.md](todo_archive/undated.md) | - |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | [undated.md](todo_archive/undated.md) | - |
 | TODO-5514 | Native file I/O writes newlines and reports errno | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5523 | A Result-returning main exits with its error code | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
@@ -2452,6 +2453,7 @@ are left unarchived.
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6058 | Wasm float to integer conversion saturates; GLSL gap documented | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

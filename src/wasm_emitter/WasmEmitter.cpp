@@ -73,12 +73,17 @@ constexpr uint8_t WasmOpF64Sub = 0xa1;
 constexpr uint8_t WasmOpF64Mul = 0xa2;
 constexpr uint8_t WasmOpF64Div = 0xa3;
 constexpr uint8_t WasmOpF64Neg = 0x9a;
-constexpr uint8_t WasmOpI32TruncF32S = 0xa8;
-constexpr uint8_t WasmOpI32TruncF64S = 0xaa;
-constexpr uint8_t WasmOpI64TruncF32S = 0xae;
-constexpr uint8_t WasmOpI64TruncF32U = 0xaf;
-constexpr uint8_t WasmOpI64TruncF64S = 0xb0;
-constexpr uint8_t WasmOpI64TruncF64U = 0xb1;
+// Float to integer conversions are the saturating truncations (prefix 0xfc, the non-trapping float-to-int feature of
+// WebAssembly 2.0): they truncate toward zero, saturate at the target's limits and map NaN to 0, which is the
+// conversion rule of every backend (docs/spec/type-system.md, Numeric Conversions). The trapping `trunc` opcodes
+// would trap on NaN and out of range values.
+constexpr uint8_t WasmOpMiscPrefix = 0xfc;
+constexpr uint8_t WasmTruncSatI32F32S = 0x00;
+constexpr uint8_t WasmTruncSatI32F64S = 0x02;
+constexpr uint8_t WasmTruncSatI64F32S = 0x04;
+constexpr uint8_t WasmTruncSatI64F32U = 0x05;
+constexpr uint8_t WasmTruncSatI64F64S = 0x06;
+constexpr uint8_t WasmTruncSatI64F64U = 0x07;
 constexpr uint8_t WasmOpF32ConvertI32S = 0xb2;
 constexpr uint8_t WasmOpF32ConvertI64S = 0xb4;
 constexpr uint8_t WasmOpF32ConvertI64U = 0xb5;
@@ -322,22 +327,28 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       out.push_back(WasmOpF64ConvertI64U);
       return true;
     case IrOpcode::ConvertF32ToI32:
-      out.push_back(WasmOpI32TruncF32S);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI32F32S);
       return true;
     case IrOpcode::ConvertF64ToI32:
-      out.push_back(WasmOpI32TruncF64S);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI32F64S);
       return true;
     case IrOpcode::ConvertF32ToI64:
-      out.push_back(WasmOpI64TruncF32S);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI64F32S);
       return true;
     case IrOpcode::ConvertF32ToU64:
-      out.push_back(WasmOpI64TruncF32U);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI64F32U);
       return true;
     case IrOpcode::ConvertF64ToI64:
-      out.push_back(WasmOpI64TruncF64S);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI64F64S);
       return true;
     case IrOpcode::ConvertF64ToU64:
-      out.push_back(WasmOpI64TruncF64U);
+      out.push_back(WasmOpMiscPrefix);
+      out.push_back(WasmTruncSatI64F64U);
       return true;
     case IrOpcode::ConvertF32ToF64:
       out.push_back(WasmOpF64PromoteF32);

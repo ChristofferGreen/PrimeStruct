@@ -223,15 +223,8 @@ TEST_CASE("wasm emitter lowers float ops and conversions to deterministic opcode
   CHECK(error.empty());
 
   const std::vector<uint8_t> opPattern = {
-      0x41, 0x02,
-      0xb2,
-      0x43, 0x00, 0x00, 0xc0, 0x3f,
-      0x92,
-      0xbb,
-      0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f,
-      0xa1,
-      0xb6,
-      0xa8,
+      0x41, 0x02, 0xb2, 0x43, 0x00, 0x00, 0xc0, 0x3f, 0x92, 0xbb, 0x44, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0xa1, 0xb6, 0xfc, 0x00,
   };
   CHECK(containsByteSequence(bytes, opPattern));
 }
@@ -258,12 +251,54 @@ TEST_CASE("wasm emitter lowers i64 and u64 conversion opcodes deterministically"
   CHECK(error.empty());
 
   const std::vector<uint8_t> opPattern = {
-      0x43, 0x00, 0x00, 0x20, 0x41,
-      0xae,
+      0x43,
+      0x00,
+      0x00,
+      0x20,
+      0x41,
+      0xfc,
+      0x04,
       0xb9,
-      0xb1,
+      0xfc,
+      0x07,
       0xb5,
-      0xa8,
+      0xfc,
+      0x00,
+  };
+  CHECK(containsByteSequence(bytes, opPattern));
+}
+
+TEST_CASE("wasm emitter lowers float to integer conversions to saturating truncations") {
+  // A float converts by truncating, saturating at the target's limits, NaN as 0 (docs/spec/type-system.md, Numeric
+  // Conversions): the 0xfc-prefixed trunc_sat opcodes, not the trapping trunc.
+  primec::WasmEmitter emitter;
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF64, 0x3ff0000000000000ull});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF64ToI64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushF32, 0x3f800000u});
+  mainFn.instructions.push_back({primec::IrOpcode::ConvertF32ToU64, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Pop, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  module.functions.push_back(mainFn);
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE(emitter.emitModule(module, bytes, error));
+  CHECK(error.empty());
+
+  const std::vector<uint8_t> opPattern = {
+      0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0xfc, 0x02,
+      0x1a, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f, 0xfc,
+      0x06, 0x1a, 0x43, 0x00, 0x00, 0x80, 0x3f, 0xfc, 0x05, 0x1a,
   };
   CHECK(containsByteSequence(bytes, opPattern));
 }
