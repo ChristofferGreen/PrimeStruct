@@ -300,6 +300,17 @@ bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<Parame
         (void)resolveStructPathFromType(receiverFieldType, receiverNamespace, structPathOut);
       }
     }
+    if (!receiverExpr.isMethodCall && isSimpleCallName(receiverExpr, "try") &&
+        receiverExpr.args.size() == 1) {
+      ResultTypeInfo tryResult;
+      if (resolveResultTypeForExpr(receiverExpr.args.front(), params, locals, tryResult) &&
+          tryResult.isResult && tryResult.hasValue) {
+        (void)resolveStructPathFromType(
+            unwrapReferencePointerTypeText(normalizeBindingTypeName(tryResult.valueType)),
+            receiverNamespace,
+            structPathOut);
+      }
+    }
     if (structPathOut.empty()) {
       std::string accessName;
       if (getBuiltinArrayAccessName(receiverExpr, accessName) && receiverExpr.args.size() == 2) {

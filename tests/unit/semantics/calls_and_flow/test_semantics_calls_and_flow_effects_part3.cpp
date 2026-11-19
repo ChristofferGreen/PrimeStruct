@@ -211,4 +211,74 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("field access resolves the struct payload of a try and of a question mark") {
+  const auto source = [](const std::string &field) {
+    std::string text = R"(
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, i32>>]
+make_pair() {
+  return(Result.ok(Pair{[left] 1i32, [right] 2i32}))
+}
+
+[effects(io_out)]
+on_failure([i32] err) {
+  print_line(err)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_failure>]
+main() {
+  [i32] a{try(make_pair()).FIELD}
+  [i32] b{make_pair()?.FIELD}
+  return(plus(a, b))
+}
+)";
+    const size_t at = text.find("FIELD");
+    text.replace(text.find("FIELD", at + 1), 5, field);
+    text.replace(at, 5, field);
+    return text;
+  };
+  std::string error;
+  CHECK(validateProgram(source("right"), "/main", error));
+  CHECK(error.empty());
+  error.clear();
+  const std::string missing = source("missing");
+  const size_t tryOffset = missing.find("try(make_pair())");
+  REQUIRE(tryOffset != std::string::npos);
+  const int tryLine =
+      1 + static_cast<int>(std::count(missing.begin(), missing.begin() + tryOffset, '\n'));
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  CHECK_FALSE(validateProgramReportingDiagnostic(missing, "/main", error, diagnosticInfo));
+  CHECK(error.find("unknown field: missing") != std::string::npos);
+  CHECK(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == tryLine);
+}
+
+TEST_CASE("field access on a try of a scalar payload needs a struct receiver") {
+  const std::string source = R"(
+[return<Result<i32, i32>>]
+make_value() {
+  return(Result.ok(1i32))
+}
+
+[effects(io_out)]
+on_failure([i32] err) {
+  print_line(err)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_failure>]
+main() {
+  [i32] a{try(make_value()).left}
+  return(a)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+}
+
 TEST_SUITE_END();

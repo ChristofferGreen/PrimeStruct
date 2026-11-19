@@ -662,6 +662,12 @@ inline bool populateBindingTypeInfoFromSemanticTryFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
     StatementBindingTypeInfo &infoOut) {
+  // A try fact describes a `try` call itself. A field access on a `try` shares its source position,
+  // so the position fallback below would hand the field the struct type of the payload.
+  if (expr.kind != Expr::Kind::Call || expr.isFieldAccess || expr.isMethodCall ||
+      !isSimpleCallName(expr, "try")) {
+    return false;
+  }
   if (semanticIndex == nullptr || expr.semanticNodeId == 0) {
     if (semanticProgram == nullptr || expr.sourceLine == 0 ||
         expr.sourceColumn == 0) {

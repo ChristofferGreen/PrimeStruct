@@ -736,4 +736,82 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("field access reads the struct payload of a try and of a question mark") {
+  program_matrix::ProgramCase program;
+  program.name = "result_try_struct_payload_field";
+  program.source = R"(
+import /std/file/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, FileError>>]
+make_pair([i32] left, [i32] right) {
+  return(Result.ok(Pair{[left] left, [right] right}))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [i32] a{try(make_pair(3i32, 4i32)).left}
+  [i32] b{make_pair(5i32, 6i32)?.right}
+  print_line(a)
+  print_line(b)
+  return(plus(a, b))
+}
+)";
+  program.exitCode = 9;
+  program.stdoutText = "3\n6\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("field access on a try takes the error path of the handler") {
+  program_matrix::ProgramCase program;
+  program.name = "result_try_struct_payload_field_error";
+  program.source = R"(
+import /std/result/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, i32>>]
+make_pair([i32] value) {
+  if(value > 2i32) {
+    return(/std/result/error<Pair, i32>(plus(value, 4i32)))
+  }
+  return(Result.ok(Pair{[left] value, [right] plus(value, 10i32)}))
+}
+
+[effects(io_out)]
+on_failure([i32] err) {
+  print_line(100i32 + err)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_failure>]
+read_right([i32] value) {
+  return(plus(try(make_pair(value)).right, 1i32))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(read_right(1i32))
+  print_line(read_right(5i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "12\n109\n9\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

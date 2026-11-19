@@ -2449,6 +2449,7 @@ are left unarchived.
 | TODO-6041 | `return` builds a generic sum from its brace constructor | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6042 | Regression tests pin forms the audit listed that already compile | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
+| TODO-6044 | Field access on a `try(...)` of a struct payload | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6045 | `copysign` copies the sign of negative zero | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6046 | `round` rounds half away from zero without double rounding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6047 | `atan2` returns the libm angle in every quadrant | [2026-11.md](todo_archive/2026-11.md) | - |

@@ -140,7 +140,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6044 | Field access on a `try(...)` of a struct payload | deferred | frontend-try-field |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
 | TODO-6068 | Wasm computes `FmaF32` and `FmaF64` with one rounding | deferred | stdlib-math-fma |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
@@ -182,7 +181,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6060, TODO-6061, TODO-6051, TODO-6052, TODO-5744
-- Frontend and diagnostics: TODO-6044, TODO-5520
+- Frontend and diagnostics: TODO-5520
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -589,20 +588,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - vm-design.md states the Wasm outcome past its limit and the Linux native and `exe` depths, each measured
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
-
-- [~] TODO-6044: Field access on a `try(...)` of a struct payload
-  - owner: ai
-  - status: in_progress
-  - claimed_by: try-field (worktree-agent-af9483feccd55b235), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5519)
-  - parallel_track: frontend-try-field
-  - scope: with `make_pair()` returning `Result<Pair, MyError>` and `Pair` a struct, `[i32] e{try(make_pair()).left}` and `[i32] d{make_pair()?.right}` fail with `field access requires struct receiver` (semantics, `resolveStructFieldReceiverPath` does not resolve the ok payload type of a `try` call, and the IR lowerer has the same check). The text filter already produces `try(make_pair()).left` correctly.
-  - acceptance:
-    - both forms compile and run on the VM, native and C++; the receiver type of a `try` call is its Result ok payload; tests cover a struct payload and an unknown field (diagnostic with a location)
-    - full release gate green
-  - stop_rule: field access on a `try` receiver only.
-  - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5520: Diagnostics point at user code with readable names
   - owner: ai

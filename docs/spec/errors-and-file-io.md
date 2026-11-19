@@ -88,6 +88,11 @@
   - A `?` or `try(...)` written among the arguments of a call to a user definition belongs to the caller: it reports
     through the caller's `on_error` and return type, not the callee's (`add(1i32, try(fetch()))`).
   - A missing `on_error` for a `?` usage is a compile-time error.
+  - A `try(...)` or `?` whose `Result` has a struct payload may be the receiver of a field access:
+    `try(make_pair()).left` and `make_pair()?.left` read the field `left` of the ok payload, and the error path runs
+    the handler first like any other `?`. The receiver type is the ok payload type of the `Result`; a payload that is
+    not a struct, or a field the struct does not have, is a compile-time error at the access (`field access requires
+    struct receiver`, `unknown field: name`).
   - The handler signature is `Handler(ErrorType err, args...)`.
   - Bound arguments are evaluated when the error is raised, not at declaration time.
   - Example (the same shapes run on the VM, native and C++ backends; the handler runs before the locals are destroyed):
