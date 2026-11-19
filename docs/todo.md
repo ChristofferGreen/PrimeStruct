@@ -627,9 +627,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5931: The stdlib builds as a library
+- [~] TODO-5931: The stdlib builds as a library
   - owner: ai
   - status: deferred
+  - claimed_by: lib-measure (worktree-agent-ac0aaaf574d610232), 2026-11-20
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 12)
   - parallel_track: lib-stdlib
