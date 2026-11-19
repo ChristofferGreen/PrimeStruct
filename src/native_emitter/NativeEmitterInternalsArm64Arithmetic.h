@@ -22,12 +22,30 @@ inline void Arm64Emitter::emitMul() {
   emitBinaryOp(encodeMulReg(0, 1, 0));
 }
 
+// A zero divisor in `reg` is the VM's runtime fault; the check falls through to the division otherwise. `sdiv`/`udiv`
+// answer 0 for a zero divisor, so without it the program would go on with a wrong value.
+inline void Arm64Emitter::emitDivisorCheck(uint8_t reg) {
+  emitCompareRegZero(reg);
+  const size_t jumpNonZero = emitCondBranchPlaceholder(CondCode::Ne);
+  emitFaultMessage("VM error: division by zero in IR\n");
+  const size_t afterFault = currentWordIndex();
+  patchCondBranch(jumpNonZero, static_cast<int32_t>(afterFault - jumpNonZero), CondCode::Ne);
+}
+
 inline void Arm64Emitter::emitDiv() {
-  emitBinaryOp(encodeSdivReg(0, 1, 0));
+  emitPopReg(0);
+  emitPopReg(1);
+  emitDivisorCheck(0);
+  emit(encodeSdivReg(0, 1, 0));
+  emitPushReg(0);
 }
 
 inline void Arm64Emitter::emitDivU() {
-  emitBinaryOp(encodeUdivReg(0, 1, 0));
+  emitPopReg(0);
+  emitPopReg(1);
+  emitDivisorCheck(0);
+  emit(encodeUdivReg(0, 1, 0));
+  emitPushReg(0);
 }
 
 inline void Arm64Emitter::emitNeg() {

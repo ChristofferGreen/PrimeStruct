@@ -2444,6 +2444,8 @@ are left unarchived.
 | TODO-6045 | `copysign` copies the sign of negative zero | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6046 | `round` rounds half away from zero without double rounding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6047 | `atan2` returns the libm angle in every quadrant | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

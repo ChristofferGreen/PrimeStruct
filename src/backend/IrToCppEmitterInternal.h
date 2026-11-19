@@ -44,7 +44,7 @@ inline constexpr CppIntegerOpHelper CppIntegerOpHelpers[] = {
 };
 
 void emitIntegerOpHelpers(std::ostringstream &out);
-// Emits `if (!helper(stack, sp)) return 1;` and the step to the next instruction; false when no helper matches.
+// Emits `if (!helper(stack, sp)) std::exit(3);` and the step to the next instruction; false when no helper matches.
 bool emitIntegerOpHelperCall(const char *operandType,
                              const char *op,
                              bool compare,

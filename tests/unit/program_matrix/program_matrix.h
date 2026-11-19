@@ -54,6 +54,8 @@ struct ProgramCase {
   // has its own expectation.
   std::optional<std::string> vmStderr;
   std::optional<std::string> nativeStderr;
+  // The C++ emitters (`optexe`, `exe`) write the VM's fault messages; checked on those two configs only.
+  std::optional<std::string> cppStderr;
   std::vector<std::string> flags; // extra primec/primevm flags, e.g. --default-effects=io_out
   std::vector<std::string> skipConfigs;
   std::vector<std::string> onlyConfigs; // restrict to these when non-empty
@@ -331,10 +333,11 @@ inline void runProgramMatrix(const ProgramCase &program,
     } else if (!program.exitCode.has_value()) {
       CHECK(outcome.out == oracle->out);
     }
+    const bool cppFamily = config.backend == Backend::OptExe || config.backend == Backend::Exe;
     const std::optional<std::string> &stderrText =
-        isVmFamily(config.backend) ? program.vmStderr : program.nativeStderr;
-    if (stderrText.has_value() &&
-        (config.backend != Backend::OptExe && config.backend != Backend::Exe)) {
+        isVmFamily(config.backend) ? program.vmStderr
+                                   : (cppFamily ? program.cppStderr : program.nativeStderr);
+    if (stderrText.has_value()) {
       CHECK(outcome.err == *stderrText);
     }
   }

@@ -419,6 +419,7 @@ class Arm64Emitter {
   void emitMul();
   void emitDiv();
   void emitDivU();
+  void emitDivisorCheck(uint8_t reg);
   void emitNeg();
   void emitSextI32(); // low 32 bits of the top operand, sign-extended (SXTW)
   void emitAddF32();

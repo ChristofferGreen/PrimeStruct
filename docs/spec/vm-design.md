@@ -538,7 +538,21 @@
   the C++ emitters (`cpp`/`exe` and `optcpp`/`optexe`: `exit` after flushing the output), `--emit=native` (the exit
   syscall: `exit` on macOS arm64, `exit_group` on Linux x86_64; output is already written) and the Linux x86_64 JIT
   (which hands the code back to `primevm` as the program's result). The Wasm and GLSL targets never receive it; there a
-  runtime error in a called function still returns 3 to its caller (TODO-5744).
+  runtime error in a called function still returns 3 to its caller (TODO-5744). **Runtime faults on every backend:**
+  integer division by zero (`i32`, `i64`, `u64`) is the runtime fault `division by zero in IR`: the VM, the C++
+  emitters (`cpp`/`exe` and `optcpp`/`optexe`) and the Linux x86_64 JIT write `VM error: division by zero in IR` to
+  stderr and exit with code 3, keeping the output printed before it. The simple C++ emitter exits 3 for all its
+  runtime faults (stack underflow, invalid or unaligned address, invalid string index, string index out of bounds,
+  heap misuse, host function misuse), after flushing the buffered output, with the VM's message. `INT64_MIN / -1` and
+  `INT32_MIN / -1` wrap on the VM and the C++ emitters. Float division never faults (an infinity or NaN). Native arm64 division by zero is the same fault (an inline zero check before `sdiv`/`udiv`); native x86_64 is
+  still a hardware result (SIGFPE; TODO-6051). **Recursion limits (backend
+  specific, measured on macOS arm64 with the default 8 MiB stack, a recursive `i32` function):** the VM, the flat
+  loop and `optexe` allow 4096 frames and past that fault with `VM error: VM call stack overflow` and exit code 3
+  (`depth(4096)` of the measured function already faults); the Linux x86_64 JIT does the same.
+  `--emit=native` and `--emit=exe` keep the frames on the process stack and have no depth check: native ran 8000 and
+  failed at 20000, `exe` ran 20000 and failed at 50000, both ending with SIGSEGV (exit status 139) and, for `exe`,
+  without the buffered output. A program needing more than 4096 levels is therefore portable to neither the VM nor
+  `optexe`; Wasm and GLSL were not measured (no Wasm runtime on the measuring machine).
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 

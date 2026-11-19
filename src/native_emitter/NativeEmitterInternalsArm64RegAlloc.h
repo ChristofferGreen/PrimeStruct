@@ -752,6 +752,11 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         }
         const uint8_t left = valueReg(a, X0);
         const uint8_t right = valueReg(b, X1);
+        const bool isDivide =
+            ir.op == IrOpcode::DivI32 || ir.op == IrOpcode::DivI64 || ir.op == IrOpcode::DivU64;
+        if (isDivide && !(location(b).kind == RegAllocLocationKind::Imm && location(b).imm != 0)) {
+          emitDivisorCheck(right);
+        }
         if (isAdd) {
           emit(encodeAddReg(target, left, right));
         } else if (isSub) {

@@ -15,7 +15,7 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
                                  std::string &error) {
   const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
     out << "        if (!psEnsureStack(sp, " << required << "ull, \"" << operation << "\")) {\n";
-    out << "          return 1;\n";
+    out << "          std::exit(3);\n";
     out << "        }\n";
   };
   // `lengthExpr`, when given, is the byte length of the text at `valueExpr`: the text is written
@@ -77,8 +77,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(1, "print");
       out << "        uint64_t stringIndex = stack[--sp];\n";
       out << "        if (stringIndex >= ps_string_table_count) {\n";
-      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid string index in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
       const bool newline = (flags & PrintFlagNewline) != 0;
@@ -97,8 +97,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(1, "print");
       out << "        int64_t indexValue = static_cast<int64_t>(stack[--sp]);\n";
       out << "        if (indexValue < 0 || indexValue >= static_cast<int64_t>(argc)) {\n";
-      out << "          std::cerr << \"invalid argv index in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid argv index in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       const char *stream = (flags & PrintFlagStderr) != 0 ? "std::cerr" : "std::cout";
       const bool newline = (flags & PrintFlagNewline) != 0;
@@ -163,8 +163,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(1, "file open");
       out << "        uint64_t stringIndex = stack[--sp];\n";
       out << "        if (stringIndex >= ps_string_table_count) {\n";
-      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid string index in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        int fileOpenFlags = ";
       if (instruction.op == IrOpcode::FileOpenWriteDynamic) {
@@ -254,8 +254,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(2, "file write");
       out << "        uint64_t fileStringDynamicIndex = stack[--sp];\n";
       out << "        if (fileStringDynamicIndex >= ps_string_table_count) {\n";
-      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid string index in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        uint64_t fileStringDynamicHandle = stack[--sp];\n";
       out << "        int fileStringDynamicFd = static_cast<int>(fileStringDynamicHandle & 0xffffffffu);\n";
@@ -314,8 +314,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       out << "        uint64_t stringByteIndex = stack[--sp];\n";
       out << "        if (stringByteIndex >= "
           << context.stringLengths[static_cast<size_t>(instruction.imm)] << "ull) {\n";
-      out << "          std::cerr << \"string index out of bounds in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: string index out of bounds in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        uint8_t byte = static_cast<uint8_t>(ps_string_table[" << instruction.imm
           << "][stringByteIndex]);\n";
@@ -327,8 +327,8 @@ bool emitPrintAndFileInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(1, "string length");
       out << "        uint64_t stringLengthIndex = stack[--sp];\n";
       out << "        if (stringLengthIndex >= ps_string_table_count) {\n";
-      out << "          std::cerr << \"invalid string index in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid string index in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        stack[sp++] = static_cast<uint64_t>(ps_string_table_lengths[stringLengthIndex]);\n";
       out << "        pc = " << nextIndex << ";\n";

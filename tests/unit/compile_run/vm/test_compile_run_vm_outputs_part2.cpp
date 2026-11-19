@@ -775,7 +775,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " 2> " + errPath) == 1);
+  CHECK(runCommand(exePath + " 2> " + errPath) == 3);
   CHECK(readFile(errPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 

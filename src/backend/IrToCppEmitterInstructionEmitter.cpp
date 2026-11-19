@@ -27,6 +27,22 @@ void emitIntegerOpHelpers(std::ostringstream &out) {
         out << "static_cast<" << helper.operandType << ">(stack[--sp]);\n";
       }
     }
+    if (!helper.compare && std::strcmp(helper.op, "/") == 0) {
+      // A zero divisor is a runtime fault as on the VM, and `-1` wraps instead of trapping on the minimum value.
+      out << "  if (right == 0) {\n";
+      out << "    std::cerr << \"VM error: division by zero in IR\\n\";\n";
+      out << "    return false;\n";
+      out << "  }\n";
+      const bool narrow = std::strcmp(helper.operandType, "int32_t") == 0;
+      out << "  if (right == -1) {\n";
+      if (narrow) {
+        out << "    stack[sp++] = static_cast<int32_t>(0u - static_cast<uint32_t>(left));\n";
+      } else {
+        out << "    stack[sp++] = 0ull - static_cast<uint64_t>(left);\n";
+      }
+      out << "    return true;\n";
+      out << "  }\n";
+    }
     if (helper.compare) {
       out << "  stack[sp++] = (left " << helper.op << " right) ? 1u : 0u;\n";
     } else if (std::strcmp(helper.operandType, "int32_t") == 0) {
@@ -48,7 +64,7 @@ bool emitIntegerOpHelperCall(const char *operandType,
     if (std::strcmp(helper.operandType, operandType) == 0 && std::strcmp(helper.op, op) == 0 &&
         helper.compare == compare) {
       out << "        if (!" << helper.name << "(stack, sp)) {\n";
-      out << "          return 1;\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -68,7 +84,7 @@ bool emitInstruction(const IrInstruction &instruction,
                      std::string &error) {
   const auto emitStackUnderflowGuard = [&](size_t required, const char *operation) {
     out << "        if (!psEnsureStack(sp, " << required << "ull, \"" << operation << "\")) {\n";
-    out << "          return 1;\n";
+    out << "          std::exit(3);\n";
     out << "        }\n";
   };
   const auto emitBinaryI32 = [&](const char *op, const char * /*underflowOperation*/) {
@@ -186,14 +202,14 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::LoadIndirect:
       out << "        if (!psLoadIndirect(stack, sp, locals, heap)) {\n";
-      out << "          return 1;\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
     case IrOpcode::StoreIndirect:
       out << "        if (!psStoreIndirect(stack, sp, locals, heap)) {\n";
-      out << "          return 1;\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -203,8 +219,8 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        uint64_t heapAllocSlotCount = stack[--sp];\n";
       out << "        uint64_t heapAllocAddress = 0ull;\n";
       out << "        if (!psHeapAlloc(heapAllocSlotCount, heap, heapAllocAddress)) {\n";
-      out << "          std::cerr << \"VM heap allocation overflow\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: VM heap allocation overflow\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        stack[sp++] = heapAllocAddress;\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -213,8 +229,8 @@ bool emitInstruction(const IrInstruction &instruction,
     case IrOpcode::HeapFree:
       emitStackUnderflowGuard(1, "heap free");
       out << "        if (!psHeapFree(stack[--sp], heap)) {\n";
-      out << "          std::cerr << \"invalid heap free address in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid heap free address in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -226,8 +242,8 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        uint64_t heapReallocResult = 0ull;\n";
       out << "        if (!psHeapRealloc(heapReallocAddress, heapReallocSlotCount, heap, "
              "heapReallocResult)) {\n";
-      out << "          std::cerr << \"invalid heap realloc address in IR\\n\";\n";
-      out << "          return 1;\n";
+      out << "          std::cerr << \"VM error: invalid heap realloc address in IR\\n\";\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        stack[sp++] = heapReallocResult;\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -235,7 +251,7 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::Dup:
       out << "        if (!psEnsureStack(sp, 1ull, \"dup\")) {\n";
-      out << "          return 1;\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        uint64_t dupValue = stack[sp - 1];\n";
       out << "        stack[sp++] = dupValue;\n";
@@ -244,7 +260,7 @@ bool emitInstruction(const IrInstruction &instruction,
       return true;
     case IrOpcode::Pop:
       out << "        if (!psEnsureStack(sp, 1ull, \"pop\")) {\n";
-      out << "          return 1;\n";
+      out << "          std::exit(3);\n";
       out << "        }\n";
       out << "        --sp;\n";
       out << "        pc = " << nextIndex << ";\n";
@@ -292,6 +308,10 @@ bool emitInstruction(const IrInstruction &instruction,
       emitStackUnderflowGuard(2, "div");
       out << "        uint64_t right = stack[--sp];\n";
       out << "        uint64_t left = stack[--sp];\n";
+      out << "        if (right == 0ull) {\n";
+      out << "          std::cerr << \"VM error: division by zero in IR\\n\";\n";
+      out << "          std::exit(3);\n";
+      out << "        }\n";
       out << "        stack[sp++] = left / right;\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
@@ -603,9 +623,9 @@ bool emitInstruction(const IrInstruction &instruction,
           case IrHostValueKind::String:
             out << "        const char *hostText" << i << " = psHostText(" << slot << ");\n";
             out << "        if (hostText" << i << " == nullptr) {\n";
-            out << "          std::cerr << \"host function " << import.name
+            out << "          std::cerr << \"VM error: host function " << import.name
                 << " was given text that is not in the module string table\\n\";\n";
-            out << "          return 1;\n";
+            out << "          std::exit(3);\n";
             out << "        }\n";
             arg = "hostText" + std::to_string(i);
             break;
