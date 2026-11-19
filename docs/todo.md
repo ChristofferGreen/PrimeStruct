@@ -574,9 +574,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5526: Vectors of stdlib Result values keep their elements
+- [~] TODO-5526: Vectors of stdlib Result values keep their elements
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: result-vec (worktree-agent-ac86e89b387f36bad), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: result-containers
