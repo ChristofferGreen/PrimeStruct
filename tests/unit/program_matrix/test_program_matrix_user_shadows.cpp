@@ -176,4 +176,44 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a bare statement call of a user vector, map or array function runs it") {
+  program_matrix::ProgramCase program;
+  program.name = "user_shadow_statement_calls";
+  program.source = R"(
+[effects(io_out), return<int>]
+vector([i32] value) {
+  print_line(value)
+  return(plus(value, 1i32))
+}
+
+[effects(io_out), return<int>]
+map([i32] key, [i32] value) {
+  print_line(plus(key, value))
+  return(key)
+}
+
+[effects(io_out), return<int>]
+array([i32] value) {
+  print_line(multiply(value, 2i32))
+  return(value)
+}
+
+[effects(io_out), return<int>]
+main() {
+  vector(9i32)
+  map(4i32, 6i32)
+  array(5i32)
+  print_line(vector(3i32))
+  print_line(map(1i32, 2i32))
+  print_line(array(7i32))
+  [i32] kept{vector(20i32)}
+  print_line(kept)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "9\n10\n10\n3\n4\n3\n1\n14\n7\n20\n21\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

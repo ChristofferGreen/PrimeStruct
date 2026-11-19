@@ -218,6 +218,10 @@ bool isOwnedTemporaryArgumentExpr(
     const Expr &expr,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &)> &isElementPlace = {});
+// True when a user definition (not the stdlib's) resolves for a call spelled like a builtin
+// collection constructor (`vector`, `map`, `array`): the user's function wins, so it is an ordinary call.
+bool isUserShadowedCollectionCall(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee);
 // Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
 // user definition or method returning a vector, never a name, field, element or stdlib accessor
 // result. `resolveCallee` resolves a method call too (see makeCallOrMethodResolver).

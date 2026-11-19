@@ -245,6 +245,12 @@ re-defining it piecemeal.
   spellings no longer act as builtin compatibility aliases for canonical
   `/std/collections/*` helpers; explicit user definitions under those paths
   remain ordinary definitions.
+- **User functions named like constructors:** a user definition named
+  `vector`, `map` or `array` is an ordinary function. A call of it wins over
+  the builtin constructor spelling in value position, as a bare statement and
+  in block form; the statement's result is dropped like that of any other
+  user function (it is not destroyed as a fresh builtin vector unless the
+  function returns `vector<T>`).
 - **Rooted same-path shadows (vector and map, symmetric):** an explicit user
   definition at a rooted same-path helper is an intentional override for the
   matching bare call on that receiver family, not a retiring alias. Bare

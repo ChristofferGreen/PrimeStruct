@@ -1144,6 +1144,12 @@ std::function<const Definition *(const Expr &)> makeCallOrMethodResolver(
   };
 }
 
+bool isUserShadowedCollectionCall(
+    const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee) {
+  const Definition *callee = resolveCallee ? resolveCallee(expr) : nullptr;
+  return callee != nullptr && callee->fullPath.rfind("/std/", 0) != 0;
+}
+
 bool isFreshBuiltinVectorExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee) {
   if (expr.kind != Expr::Kind::Call || expr.isFieldAccess) {
@@ -1151,7 +1157,8 @@ bool isFreshBuiltinVectorExpr(
   }
   if (!expr.isMethodCall) {
     std::string collectionName;
-    if (getBuiltinCollectionName(expr, collectionName)) {
+    if (getBuiltinCollectionName(expr, collectionName) &&
+        !isUserShadowedCollectionCall(expr, resolveCallee)) {
       return collectionName == "vector";
     }
     // A `pick` expression that yields a vector builds a record of its own (`tryEmitPickExpr`).

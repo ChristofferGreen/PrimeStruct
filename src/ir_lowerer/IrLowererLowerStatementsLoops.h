@@ -447,7 +447,8 @@
         std::string elementText;
         std::string elementNamespace = stmt.namespacePrefix;
         std::string collectionName;
-        if (discardedVectorMethod == nullptr && getBuiltinCollectionName(stmt, collectionName)) {
+        if (discardedVectorMethod == nullptr && getBuiltinCollectionName(stmt, collectionName) &&
+            !ir_lowerer::isUserShadowedCollectionCall(stmt, resolveDiscardedCallee)) {
           if (stmt.templateArgs.size() == 1) {
             elementText = trimTemplateTypeText(stmt.templateArgs.front());
           }
