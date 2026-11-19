@@ -319,9 +319,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     1. Shape for all values of a name. (a) Count plus index like the header accessors: `queryParamCount(name) -> i32` and `queryParamAt(name, index) -> String` (same for `formParam`); each call rescans the text, no allocation beyond the returned String, out-of-range gives an empty String. (b) One call returning a `vector<String>`: `queryParams(name)`, `formParams(name)`; one scan and one heap-owned result, but the stdlib http surface returns no vectors today and a `vector<String>` needs the collection imports in every web app. The block text offers both; the header accessors (`headerCount`/`headerName`/`headerValue`) favour (a), whose names would still need a call (`queryParamCount`/`queryParamAt` versus `queryParamValueCount`/`queryParamValue`).
     2. Decoding a path segment. The block says "the same decoding as `queryParam`", which turns `+` into a space. In a path a `+` is a literal plus (RFC 3986; only form encoding makes it a space), so `/files/a+b` would decode to `a b`. Options: (a) share `urlencoded_byte_at` literally, `+` is a space; (b) decode only `%XX`, `+` stays; the malformed rule is the same either way: a `%` not followed by two hex digits, or non-UTF-8 bytes, gives an empty String (the name is `pathParamDecoded(name) -> String`, with `hasPathParam` not needed since `pathParam` still tells a missing segment).
 
-- [ ] TODO-5676: Lambdas can state their return type
+- [~] TODO-5676: Lambdas can state their return type
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: lambda-return (worktree-agent-a5481615c25e81e74), 2026-11-19
   - created_at: 2026-11-06
   - phase: Closures follow-ups
   - parallel_track: closures-return-types
