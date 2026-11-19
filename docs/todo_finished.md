@@ -2001,6 +2001,7 @@ are left unarchived.
 | TODO-5508 | User Copy helpers work for structs with owning fields | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | [undated.md](todo_archive/undated.md) | - |
+| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | [undated.md](todo_archive/undated.md) | - |
 | TODO-5514 | Native file I/O writes newlines and reports errno | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5522 | Builtin vector<T> locals destroy their elements | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |

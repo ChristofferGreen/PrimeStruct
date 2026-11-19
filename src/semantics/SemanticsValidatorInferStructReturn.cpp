@@ -162,11 +162,19 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       const std::string pointeeType = inferStructReturnPointerTargetTypeText(expr.args.front(), params, locals);
       if (!pointeeType.empty()) {
         const std::string collectionPath = normalizeCollectionTypePath(pointeeType);
+        std::string unwrappedType = unwrapReferencePointerTypeText(pointeeType);
+        std::string structPath = resolveInferStructTypePath(unwrappedType, expr.namespacePrefix);
+        // A pointer to the stdlib vector struct yields that struct, as a binding of that struct does; only the
+        // builtin `vector<T>` spelling is the collection path.
+        if (collection_helpers::isCollectionFamilyRoot(
+                collectionPath, collection_helpers::CollectionFamily::Vector) &&
+            inferStructReturnCollectionPath(unwrappedType, std::string{}).empty() &&
+            !structPath.empty()) {
+          return structPath;
+        }
         if (!collectionPath.empty()) {
           return collectionPath;
         }
-        std::string unwrappedType = unwrapReferencePointerTypeText(pointeeType);
-        std::string structPath = resolveInferStructTypePath(unwrappedType, expr.namespacePrefix);
         if (!structPath.empty()) {
           return structPath;
         }

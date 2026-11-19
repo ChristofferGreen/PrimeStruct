@@ -137,7 +137,6 @@ of sync with them.
 | TODO-6037 | A Result-returning main exits with its decoded code on wasm | deferred | result-main-wasm |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
-| TODO-5513 | Methods through a dereferenced vector pointer read the right fields | deferred | collections-access |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
@@ -183,7 +182,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
-- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
+- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-5516, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
@@ -381,20 +380,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - both are rejected with borrow diagnostics; negative + positive semantics tests
     - full release gate green
   - stop_rule: borrow tracking for Pointer roots and aliases.
-  - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-5513: Methods through a dereferenced vector pointer read the right fields
-  - owner: ai
-  - status: deferred
-  - claimed_by: worker-5513 (worktree-agent-a3f9f97d756554a66), 2026-11-19
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: collections-access
-  - scope: With `[Pointer<vector<i32>>] p{location(v)}`, `dereference(p).count()` returns 0 and `dereference(p).capacity()` returns the count on VM and native; `vectorCount<i32>(dereference(p))` on a `Pointer<Vector<i32>>` is rejected with `expected /std/collections/vector/Vector__t... got /vector`.
-  - acceptance:
-    - count/capacity/at through `dereference(p)` match the direct calls; matrix case
-    - full release gate green
-  - stop_rule: receiver offset handling only.
   - notes: deferred: queued behind the Ready Now cap.
 
 - [ ] TODO-5836: A spawned definition without a `return` transform is a `Task<void>`

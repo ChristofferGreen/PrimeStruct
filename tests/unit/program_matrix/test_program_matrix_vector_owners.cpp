@@ -1643,4 +1643,59 @@ refill([vector<Named> mut] values) {
                         "30\n235\n9\n6\n54\n4\n49\n");
 }
 
+// count, capacity and at through `dereference(p)` of a `Pointer<vector<T>>` read the same record as the direct calls.
+TEST_CASE("methods through a dereferenced vector pointer match the direct calls") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_deref_pointer_methods";
+  program.source = R"(
+import /std/collections/*
+
+[return<i32>]
+count_through([Pointer<vector<i32>>] p) {
+  return(dereference(p).count())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>{}}
+  values.reserve(10i32)
+  values.push(5i32)
+  values.push(6i32)
+  values.push(7i32)
+  [Pointer<vector<i32>>] p{location(values)}
+  print_line(values.count())
+  print_line(dereference(p).count())
+  print_line(values.capacity())
+  print_line(dereference(p).capacity())
+  print_line(dereference(p).at(1i32))
+  print_line(count_through(p))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n3\n10\n10\n6\n3\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+// A `Pointer<Vector<T>>` (the stdlib struct) dereferences to that struct, which the typed helpers accept.
+TEST_CASE("a dereferenced Vector struct pointer passes to the typed helpers") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_struct_deref_pointer_helpers";
+  program.source = R"(
+import /std/collections/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Vector<i32> mut] values{Vector<i32>{0i32, 0i32}}
+  [Pointer<Vector<i32>>] p{location(values)}
+  print_line(/std/collections/vector/vectorCount<i32>(dereference(p)))
+  print_line(/std/collections/vector/vectorCapacity<i32>(dereference(p)))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

@@ -38,6 +38,12 @@ bool isCanonicalVectorStructLocal(const LocalInfo &info, const std::string &cano
           info.structTypeName.rfind(canonicalVecPath + "__", 0) == 0);
 }
 
+// A dereferenced pointer to a stdlib vector lowers to the address of the record, whose type tag sits at slot 0.
+bool isDereferencedVectorRecordTarget(const Expr &target) {
+  return target.kind == Expr::Kind::Call && isSimpleCallName(target, "dereference") &&
+         target.args.size() == 1;
+}
+
 } // namespace
 
 CountAccessCallEmitResult tryEmitCountAccessCall(
@@ -360,7 +366,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return false;
     }
     // A Vector field lowers to the address of its inline record, whose count is at slot 1.
-    if (target.kind == Expr::Kind::Call && target.isFieldAccess) {
+    if ((target.kind == Expr::Kind::Call && target.isFieldAccess) ||
+        isDereferencedVectorRecordTarget(target)) {
       emitInstruction(IrOpcode::PushI64, IrSlotBytes);
       emitInstruction(IrOpcode::AddI64, 0);
     }
@@ -389,7 +396,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return false;
     }
     // A Vector field's inline record keeps its capacity at slot 2.
-    const bool fieldRecord = target.kind == Expr::Kind::Call && target.isFieldAccess;
+    const bool fieldRecord = (target.kind == Expr::Kind::Call && target.isFieldAccess) ||
+                             isDereferencedVectorRecordTarget(target);
     emitInstruction(IrOpcode::PushI64, (fieldRecord ? 2ull : 1ull) * IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
@@ -644,10 +652,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const bool isVectorFieldCountTarget =
         expr.args.front().kind == Expr::Kind::Call && expr.args.front().isFieldAccess &&
         isDynamicVectorCountTargetFn != nullptr && isDynamicVectorCountTargetFn(expr.args.front(), localsIn);
+    const bool isDereferencedVectorCountTarget =
+        isDereferencedVectorRecordTarget(expr.args.front()) &&
+        isDynamicVectorCountTargetFn != nullptr &&
+        isDynamicVectorCountTargetFn(expr.args.front(), localsIn);
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
-    if (isVectorLiteralCountTarget || isVectorFieldCountTarget) {
+    if (isVectorLiteralCountTarget || isVectorFieldCountTarget || isDereferencedVectorCountTarget) {
       emitInstruction(IrOpcode::PushI64, IrSlotBytes);
       emitInstruction(IrOpcode::AddI64, 0);
     }

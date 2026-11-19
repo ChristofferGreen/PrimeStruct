@@ -585,3 +585,16 @@
   - stop_rule: Result elements in vectors only.
   - notes: deferred: queued behind the Ready Now cap.
   - done: a builtin vector of a stdlib Result sum stores each element inline (tag plus payload slots, like a struct element). A legacy `Result.ok(x)` pushed onto it is built as the element's sum, and a binding initialized from `values[i]` copies the element's sum instead of reading it as a packed value; matrix case `vectors of stdlib Result values keep their elements`.
+
+- [x] TODO-5513: Methods through a dereferenced vector pointer read the right fields
+  - owner: ai
+  - status: done
+  - created_at: 2026-10-06
+  - phase: Correctness audit 2026-10
+  - parallel_track: collections-access
+  - scope: With `[Pointer<vector<i32>>] p{location(v)}`, `dereference(p).count()` returns 0 and `dereference(p).capacity()` returns the count on VM and native; `vectorCount<i32>(dereference(p))` on a `Pointer<Vector<i32>>` is rejected with `expected /std/collections/vector/Vector__t... got /vector`.
+  - acceptance:
+    - count/capacity/at through `dereference(p)` match the direct calls; matrix case
+    - full release gate green
+  - stop_rule: receiver offset handling only.
+  - resolution: 2026-11-19. count/capacity through `dereference(p)` of a `Pointer<vector<T>>` read the record's count at slot 1 and capacity at slot 2 (src/ir_lowerer/IrLowererCountAccessHelpersEmit.cpp); a `Pointer<Vector<T>>` dereferences to the `Vector<T>` struct, so the typed helpers accept it (src/semantics/SemanticsValidatorInferStructReturn.cpp). Matrix cases in program_matrix vector_owners, semantic cases in struct_methods.

@@ -331,4 +331,40 @@ main() {
   CHECK(error.find("unknown method") != std::string::npos);
 }
 
+TEST_CASE("a dereferenced Vector struct pointer passes to the typed vector helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{Vector<i32>{0i32, 0i32}}
+  [Pointer<Vector<i32>>] p{location(values)}
+  return(/std/collections/vector/vectorCount<i32>(dereference(p)))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a dereferenced pointer to another struct is rejected by the typed vector helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Other() {
+  [i32] size{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Other mut] other{Other{}}
+  [Pointer<Other>] p{location(other)}
+  return(/std/collections/vector/vectorCount<i32>(dereference(p)))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("argument type mismatch for") != std::string::npos, error);
+}
+
 TEST_SUITE_END();
