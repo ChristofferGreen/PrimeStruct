@@ -244,9 +244,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6074: An args pack and `Result.map` destroy the `String`s of their temporaries
+- [~] TODO-6074: An args pack and `Result.map` destroy the `String`s of their temporaries
   - owner: ai
   - status: deferred
+  - claimed_by: lifecycle-a (worktree-agent-a528dda38173cf8e7), 2026-11-19
   - created_at: 2026-11-19
   - phase: Lifecycle (found while finishing TODO-5727)
   - parallel_track: lifecycle-temporaries
