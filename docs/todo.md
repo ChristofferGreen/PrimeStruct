@@ -111,7 +111,12 @@ of sync with them.
 
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
-| TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | deferred | gate-timeouts |
+| TODO-6069 | The test watchdog wrapper and its design | in_progress | gate-timeouts |
+| TODO-6070 | Every doctest binary beats at the start of each test case | in_progress | gate-timeouts |
+| TODO-6071 | Tests that shell out count `primec` progress | in_progress | gate-timeouts |
+| TODO-6072 | The managed doctest shards run under the watchdog | in_progress | gate-timeouts |
+| TODO-6073 | The remaining CTest families run under the watchdog | blocked | gate-timeouts |
+| TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | blocked | gate-timeouts |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5824 | A null or stray local address faults on the VM | deferred | vm-addresses |
 | TODO-5727 | Every struct copy site tells a place from a temporary by resolution | deferred | lifecycle-copy-sources |
@@ -222,12 +227,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6053: Tests report progress and a watchdog replaces wall-clock timeouts
   - owner: ai
-  - status: deferred
+  - status: blocked
+  - blocked_on: TODO-6073
   - created_at: 2026-11-19
   - phase: Test infrastructure (replaces TODO-6028; owner decision 2026-11-19)
   - parallel_track: gate-timeouts
-  - depends_on: none
-  - scope: a wall-clock timeout cannot tell a hung test from a slow one, so a loaded gate times out tests that are making progress (TODO-6026 measured 5 to 15 times the quiet time at `nice -n 10`). Replace it with liveness: every test that can run long reports that it is awake, and a watchdog kills a test only when no progress arrived for a stated time. Design: (1) a beat is emitted by the work loop, never by a timer thread, so a deadlocked main thread stops beating (per doctest case through a custom reporter, per compiled file or batch in compile-run, build and library cases); (2) the limit is "no beat for N seconds" with N covering one unit of work under heavy load, not the whole test; (3) a test that shells out to `primec` counts output on the child's pipe or a beat written by `primec` itself as progress; (4) a generous hard cap stays as a backstop against a test that beats forever; (5) `ctest` has no heartbeat, so a small wrapper around each test command watches for beats and kills the process tree. `scripts/compile.sh` is not changed (the stability rule); the wrapper goes in the CTest registration. `nice -n 10` stays as it is.
+  - depends_on: TODO-6069, TODO-6070, TODO-6071, TODO-6072
+  - scope: (split into TODO-6069 the wrapper and design, TODO-6070 the doctest beat, TODO-6071 the shell-out beats, TODO-6072 and TODO-6073 the registrations; what is left here is the loaded-gate record) a wall-clock timeout cannot tell a hung test from a slow one, so a loaded gate times out tests that are making progress (TODO-6026 measured 5 to 15 times the quiet time at `nice -n 10`). Replace it with liveness: every test that can run long reports that it is awake, and a watchdog kills a test only when no progress arrived for a stated time. Design: (1) a beat is emitted by the work loop, never by a timer thread, so a deadlocked main thread stops beating (per doctest case through a custom reporter, per compiled file or batch in compile-run, build and library cases); (2) the limit is "no beat for N seconds" with N covering one unit of work under heavy load, not the whole test; (3) a test that shells out to `primec` counts output on the child's pipe or a beat written by `primec` itself as progress; (4) a generous hard cap stays as a backstop against a test that beats forever; (5) `ctest` has no heartbeat, so a small wrapper around each test command watches for beats and kills the process tree. `scripts/compile.sh` is not changed (the stability rule); the wrapper goes in the CTest registration. `nice -n 10` stays as it is.
   - acceptance:
     - a short design in `docs/` states the beat format, the wrapper, the child-process rule and the hard cap, and names which test families beat
     - a test that stops beating is killed with a message naming the last beat; a test that beats slowly under a load above 40 is not
@@ -235,6 +241,81 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - ctest `PrimeStruct_test_registration` still passes; no timing assertion is added to any test
     - full release gate green
   - stop_rule: the test-liveness mechanism only; no timeout of an individual test is raised, and `scripts/compile.sh` is not touched.
+
+- [~] TODO-6069: The test watchdog wrapper and its design
+  - owner: ai
+  - status: in_progress
+  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (split from TODO-6053)
+  - parallel_track: gate-timeouts
+  - scope: `docs/TestWatchdog.md` states the beat format (one line written to the inherited descriptor named by `PRIMESTRUCT_BEAT_FD`), the wrapper (`scripts/test_watchdog.py`, a command prefix for a CTest entry), the child-process rule (output on the child's pipe counts as progress; the descriptor is inherited by `primec`), the hard cap and which test families beat. The wrapper kills the whole process group on silence for N seconds or at the hard cap, with a message naming the last beat. Its own tests run fake children against an injected clock.
+  - acceptance:
+    - the design doc exists and `scripts/check_spec_docs.py` still passes
+    - a fake child that beats and then goes silent is killed with a message naming its last beat; a child that beats on every step is not killed however long the injected clock runs under the silence limit; a beating child past the hard cap is killed; a grandchild dies with the process group
+    - the wrapper passes the child's exit code and output through
+    - the tests use no sleep and no real-time race (an injected clock, a control pipe per beat)
+    - full release gate green
+  - stop_rule: the wrapper, its tests and the design; no CTest entry uses it yet.
+
+- [~] TODO-6070: Every doctest binary beats at the start of each test case
+  - owner: ai
+  - status: in_progress
+  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (split from TODO-6053)
+  - parallel_track: gate-timeouts
+  - depends_on: TODO-6069
+  - scope: `include/primec/support/ProgressBeat.h` writes a beat line to the descriptor named by `PRIMESTRUCT_BEAT_FD` (a no-op when unset); `tests/unit/test_main.cpp` registers a listener that beats at the start of each test case and subcase, so every doctest binary reports progress from the work loop, never from a timer thread.
+  - acceptance:
+    - a doctest case checks that a beat reaches a pipe named by the environment variable and that nothing is written when it is unset
+    - the beat names the test case and subcase
+    - full release gate green
+  - stop_rule: the beat writer and the doctest listener.
+
+- [~] TODO-6071: Tests that shell out count `primec` progress
+  - owner: ai
+  - status: in_progress
+  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (split from TODO-6053)
+  - parallel_track: gate-timeouts
+  - depends_on: TODO-6070
+  - scope: `primec` inherits the beat descriptor through `std::system` and writes a beat at the start of a compile and between its stages; the compile-run, build and library helpers that run a command write a beat before it (`runCommand` in `tests/unit/compile_run/test_compile_run_helpers.h` and its siblings), so one case that compiles many files keeps beating.
+  - acceptance:
+    - a compile of one program writes beats to the descriptor when it is set and none when it is not; startup of `primec` does not regress (one `getenv`, measured)
+    - the helpers beat with the command name
+    - full release gate green
+  - stop_rule: `primec`'s beats and the shell-out helpers.
+
+- [~] TODO-6072: The managed doctest shards run under the watchdog
+  - owner: ai
+  - status: in_progress
+  - claimed_by: watchdog (worktree-agent-aa60323c43b3354ad), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (split from TODO-6053)
+  - parallel_track: gate-timeouts
+  - depends_on: TODO-6071
+  - scope: `addPrimeStructManagedDoctestSuite` and `primestructAddDoctestShards` (CMakeLists.txt, cmake/PrimeStructManaged*.cmake) and the `PrimeStruct_build_function_steps` and `PrimeStruct_embed_*` entries that hit timeouts (docs/failing_tests.md) register their command behind `scripts/test_watchdog.py` with a silence limit and the existing TIMEOUT as the hard cap (the wrapper's cap is a few seconds below it so its message is the one printed). `scripts/compile.sh` is not touched.
+  - acceptance:
+    - ctest `PrimeStruct_test_registration` and `PrimeStruct_test_inventory` pass
+    - a shard that stops beating is killed with the last beat in the message (shown by one wrapped fake entry run by hand)
+    - no TIMEOUT is raised
+    - full release gate green
+  - stop_rule: the shard registration functions and the entries named; the other families stay as they are.
+
+- [ ] TODO-6073: The remaining CTest families run under the watchdog
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6072
+  - created_at: 2026-11-19
+  - phase: Test infrastructure (split from TODO-6053)
+  - parallel_track: gate-timeouts
+  - scope: The CTest entries that are not doctest shards (the native UI entries, the `PrimeStruct_vm_threads_corpus_*` entries, `PrimeStruct_library_*`, `PrimeStruct_ir_link*`, the Python checks, and the rest of the `add_test` calls in CMakeLists.txt) move behind the wrapper family by family, each with a silence limit that covers one unit of work. Entries that cannot beat (a single long `primec` run with no output) keep their TIMEOUT alone and are listed in docs/TestWatchdog.md.
+  - acceptance:
+    - every entry with a TIMEOUT of 300 s or more is either wrapped or listed with the reason it cannot beat
+    - full release gate green
+  - stop_rule: registrations only; no TIMEOUT raised.
 
 - [ ] TODO-5752: x86_64 native and the Linux JIT take the address ABI of real calls
   - owner: ai
