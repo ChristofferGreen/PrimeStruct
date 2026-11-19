@@ -442,9 +442,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the server on the VM; no other backend.
 
-- [ ] TODO-5868: `serve(app)?` in an `if` block of `main` compiles
+- [~] TODO-5868: `serve(app)?` in an `if` block of `main` compiles
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: handlers-a (worktree-agent-a2c69663dfc80e4f0), 2026-11-19
   - created_at: 2026-11-11
   - phase: Result and control flow (docs/spec/errors-and-file-io.md; found with benchmarks/http/bench_server.prime)
   - parallel_track: result-question
