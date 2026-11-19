@@ -388,8 +388,8 @@
     other string key expressions require the C++ emitter (which uses `std::string_view` keys).
 - **Conversions:** no implicit coercions. Use explicit executions (`convert<f32>(value)` or `bool{value}`) or custom
   transforms. The builtin `convert<T>(value)` is the default cast helper and supports `i32/i64/u64/bool/f32/f64` in the
-  minimal native subset (integer width conversions currently lower as no-ops in the VM/native backends, while the C++
-  emitter uses `static_cast`; `convert<bool>` compares against zero, so any non-zero value—including negative
+  minimal native subset (integer width conversions wrap modulo 2^N, see [Numeric Conversions](type-system.md#numeric-conversions);
+  `convert<bool>` compares against zero, so any non-zero value—including negative
   integers—yields `true`). Float ↔ integer conversions lower to dedicated PSIR opcodes in VM/native, and converting
   NaN/Inf to an integer is a runtime error (stderr + exit code `3`).
   - **Convert constructor resolution (v1):**

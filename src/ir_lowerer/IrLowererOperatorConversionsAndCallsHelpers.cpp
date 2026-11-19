@@ -187,6 +187,7 @@ bool emitConversionsAndCallsOperatorExpr(
     }
     IrOpcode convertOp = IrOpcode::ConvertI32ToF32;
     bool needsConvert = true;
+    bool needsSextI32 = false;
     if (targetKind == LocalInfo::ValueKind::Float32) {
       if (argKind == LocalInfo::ValueKind::Int32) {
         convertOp = IrOpcode::ConvertI32ToF32;
@@ -220,6 +221,9 @@ bool emitConversionsAndCallsOperatorExpr(
         convertOp = IrOpcode::ConvertF64ToI32;
       } else {
         needsConvert = false;
+        // Narrowing wraps modulo 2^32: the slot form of an i32 is its low 32 bits sign-extended.
+        needsSextI32 =
+            argKind == LocalInfo::ValueKind::Int64 || argKind == LocalInfo::ValueKind::UInt64;
       }
     } else if (targetKind == LocalInfo::ValueKind::Int64) {
       if (argKind == LocalInfo::ValueKind::Float32) {
@@ -240,6 +244,9 @@ bool emitConversionsAndCallsOperatorExpr(
     }
     if (needsConvert) {
       instructions.push_back({convertOp, 0});
+    }
+    if (needsSextI32) {
+      instructions.push_back({IrOpcode::SextI32, 0});
     }
     if (targetKind == LocalInfo::ValueKind::UInt8) {
       instructions.push_back({IrOpcode::ZextU8, 0});

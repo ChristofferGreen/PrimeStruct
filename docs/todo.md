@@ -139,7 +139,6 @@ of sync with them.
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | deferred | native-result |
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | ready | numeric-conversions |
-| TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | ready | numeric-conversions |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | ready | numeric-conversions |
 | TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | ready | numeric-conversions |
 | TODO-6058 | Wasm float to integer conversion saturates; GLSL gap documented | ready | numeric-conversions |
@@ -170,7 +169,6 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6055 (numeric-conversions): integer narrowing wraps modulo 2^N on every backend
 - TODO-6056 (numeric-conversions): float to integer conversion saturates on the VM and the C++ emitters
 - TODO-6057 (numeric-conversions): native arm64 float to i32 conversion saturates at 32 bits
 - TODO-6058 (numeric-conversions): Wasm float to integer conversion saturates; GLSL gap documented
@@ -179,10 +177,9 @@ of sync with them.
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6055
-4. TODO-6056
-5. TODO-6057
-6. TODO-6058
+3. TODO-6056
+4. TODO-6057
+5. TODO-6058
 
 ### Priority Lanes
 
@@ -195,7 +192,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5931, TODO-5932, TODO-5933, TODO-6032
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6055, TODO-6056, TODO-6057, TODO-6058, TODO-6059, TODO-6051, TODO-6052, TODO-5744
+- Backend parity: TODO-6056, TODO-6057, TODO-6058, TODO-6059, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics: TODO-6043, TODO-6044, TODO-5520, TODO-6048
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727; a discarded sum result with an owning payload: TODO-6054
@@ -602,20 +599,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: conversions only.
   - notes: split 2026-11-19 into TODO-6055, TODO-6056, TODO-6057, TODO-6058 and TODO-6059 after the owner decided: narrowing wraps modulo 2^N; float to integer truncates, saturates out of range and at the infinities, NaN is 0, convert<u8>(300.0) is 255. Closes when those leaves close. Earlier notes: needs a language-design decision before implementation. The spec (type-system.md, u8 paragraph) only says `convert<u8>` keeps the low eight bits and a float is converted to an integer first; it does not state the out-of-range finite float-to-int rule, NaN, or infinity. Integer narrowing (wrap mod 2^N, fix the VM/native high-bit leak) is settled and can be split into its own leaf once the owner confirms. Options for float-to-int out of range: (A) saturate to the target's min/max, NaN to 0 (matches the VM for i32, defined everywhere, costs a compare per conversion in C++ and native); (B) runtime fault, exit 3 with a message (matches vm-design.md runtime faults, and makes a hot conversion able to fail); (C) wrap after truncation to i64 then narrow (cheapest, but infinities and NaN still need a rule and u64 of negative floats becomes platform-specific). Also decide whether `convert<u8>(300.0)` saturates (255) or wraps (44).
-
-- [~] TODO-6055: Integer narrowing wraps modulo 2^N on every backend
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-conv (worktree agent-a50d692ca89e8d02e), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5516)
-  - parallel_track: numeric-conversions
-  - scope: Owner decision: integer narrowing wraps modulo 2^N, like C++ unsigned. After `[i32] x{convert<i32>(4294967297i64)}`, `x` printed 1 but `x == 1i32` was false and `convert<i64>(x)` was 4294967297: the lowerer emitted no instruction for an i64 or u64 to i32 conversion, so the slot kept its high bits. Emit `SextI32` after it (the slot form of every i32 is the low 32 bits sign-extended); `convert<u8>` of an integer already ends in `ZextU8`. `convert<u8>(300)` is 44.
-  - acceptance:
-    - a matrix case covers every integer width pair (i32, i64, u64, u8) with boundary values and agrees on VM, native, optexe and exe
-    - type-system.md states the rule with examples
-    - full release gate green
-  - stop_rule: integer to integer conversions only.
 
 - [~] TODO-6056: Float to integer conversion saturates on the VM and the C++ emitters
   - owner: ai

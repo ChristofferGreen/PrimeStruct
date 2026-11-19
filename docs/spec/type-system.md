@@ -13,8 +13,8 @@
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `u8`, `f32`, `f64`, `string`, `void`, `Self`.
   `u8` is an unsigned byte (literals `65u8`, 0 to 255; larger literals are rejected). `+ - *` and `increment`/
-  `decrement` wrap modulo 256, `/` and comparisons are unsigned, `convert<u8>(x)` keeps the low eight bits (a float is
-  converted to an integer first), and a `u8` mixed with any other integer type needs an explicit `convert`. `u8` is a
+  `decrement` wrap modulo 256, `/` and comparisons are unsigned, `convert<u8>(x)` keeps the low eight bits of an integer (`convert<u8>(300)` is 44; a float
+  saturates instead, see Numeric Conversions), and a `u8` mixed with any other integer type needs an explicit `convert`. `u8` is a
   struct field of one byte, may cross the `[host]` boundary (zero-extended in the VM slot), and is VM-only until the
   native/C++/wasm/GLSL backends gain byte support. `pow`, `lerp` and negation reject `u8`; convert to `u64` first.
   Element storage is packed: `vector<u8>` and `Pointer<u8>` buffers keep one byte per element in a VM byte region
@@ -539,6 +539,27 @@ the generic layout and storage primitives that the stdlib wrapper still needs.
   calls, field-view borrow roots, and live structural-mutation invalidation
   are covered now. Remaining SoA public-surface work should move helper
   behavior through ordinary `.prime` bodies before compatibility cleanup.
+
+### Numeric Conversions
+
+`convert<T>(x)` between the numeric types has one meaning on every backend. The rules follow C++ where C++ defines the
+result and fix a result where C++ leaves it undefined.
+
+- **Integer to integer** wraps modulo 2^N of the target width N, like a C++ conversion to an unsigned type; a signed
+  target reads the wrapped bits as two's complement. `convert<i32>(4294967297i64)` is `1` and equals `1i32`,
+  `convert<i32>(2147483648i64)` is `-2147483648`, `convert<i32>(18446744073709551615u64)` is `-1`, and
+  `convert<u8>(300)` is `44`. Widening keeps the value: an `i32` widens by sign extension (`convert<u64>(-1i32)` is
+  `18446744073709551615`), a `u8` by zero extension.
+
+```
+[effects(io_out), return<int>]
+main() {
+  print_line(convert<i32>(4294967297i64))  // 1
+  print_line(convert<i32>(2147483648i64))  // -2147483648
+  print_line(convert<u8>(300))             // 44
+  return(0i32)
+}
+```
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
