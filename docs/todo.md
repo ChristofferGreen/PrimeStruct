@@ -271,14 +271,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be set when the leaf is un-deferred; at least: a poller that calls a host `poll` in a loop lets a spawned worker run on the deterministic scheduler (eager and seeded), with the outcome and output the same for a given seed, and a poll that can never be satisfied is `deadlock: every task is waiting`
   - stop_rule: the scheduler and host-call yield semantics only.
 
-- [~] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
+- [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
-  - status: in_progress
-  - claimed_by: wasm-backend (worktree-agent-a9cbaf1369f7f1f4b), 2026-11-19
+  - status: deferred
   - created_at: 2026-11-08
   - phase: Backend parity (found while fixing TODO-5743)
   - parallel_track: runtime-faults
   - scope: TODO-5743 made a runtime error (a bounds check, `panic`) inside a real-call body end the program with `Trap 3` on the VM, optcpp/optexe, `--emit=native` and the Linux JIT. The simple C++ emitters (`cpp`, `exe`), Wasm and GLSL have no `Trap` (IrValidation rejects it there), so `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) still returns 3 from the callee and the caller carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 on `--emit=exe` (the slow `exe` matrix config, not in the default gate). Lower `Trap` in Wasm (a WASI `proc_exit`, or keep such bodies inline), and decide GLSL (no calls that can fault, or inline). The simple C++ emitters (`cpp`, `exe`) run `Trap` since TODO-5839.
+  - decision_needed: how a Wasm module reports a runtime error to its host (the exported `main` returns an `i32` that the host takes as the exit code, as `wasmtime --invoke main` does; the program matrix check of this leaf needs a way to see exit 3). Options:
+    - option A, a WASI `proc_exit(3)` import for the WASI profile and an `unreachable` trap for the browser profile: lowers `Trap` in the emitter (new import `proc_exit`, the output written before it is already out, matching the VM's exit 3 and its stderr text), and a browser host sees a `WebAssembly.RuntimeError` instead of an exit code. Trade-off: the exit code is exact only under WASI, and the two profiles differ.
+    - option B, `unreachable` for both profiles: one rule and no new import, but a host sees an exception and never the code 3 (a test under Node can only check that the call throws), and the output written before the trap stays flushed only if the host wrote it as it went.
+    - option C, a module-level exported mutable global (for example `exit_code`, 0 until a fault) that a `Trap` sets before it unwinds with `unreachable`, which a host reads after the trap: the code reaches a browser host too and no WASI import is needed, but it is a new part of the module's ABI (an export every host must know) and a new thing for `docs/spec/integration-and-tooling.md` to promise.
+    - option D, keep such bodies inline on Wasm (never a real call when the body can fault), so the caller returns 3 as the entry's value: no ABI, but recursion needs real calls and a fault inside one still would not stop the program, and code size grows.
+    - GLSL, in every option: no recursion and no output, so either reject a call that can fault (a diagnostic) or inline it; a runtime error there has no host to report to.
+  - implementation_notes: `Trap` is validated away for Wasm and GLSL (IrValidation); the Wasm emitter now infers local types and has a Node runner in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp, so a Trap lowering can be checked by running the program. The matrix program of this leaf uses arrays, which Wasm does not support yet, so its acceptance needs another faulting program (an explicit `Trap`/`panic` in a real call).
   - acceptance:
     - a Wasm runtime check of the matrix program exits 3 where wasmtime is available
     - full release gate green
