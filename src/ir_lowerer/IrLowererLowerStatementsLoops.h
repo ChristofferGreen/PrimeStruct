@@ -371,9 +371,7 @@
         if (!emitInlineDefinitionCall(callExpr, *callee, localsIn, false)) {
           return false;
         }
-        if (!info.returnsVoid) {
-          function.instructions.push_back({IrOpcode::Pop, 0});
-        }
+        ir_lowerer::dropInlinedStatementResult(function.instructions, info.returnsVoid);
         pushFileScope();
         LocalMap blockLocals = localsIn;
         for (const auto &bodyExpr : stmt.bodyArguments) {
@@ -395,9 +393,7 @@
           if (!emitInlineDefinitionCall(stmt, *callee, localsIn, false)) {
             return false;
           }
-          if (!info.returnsVoid) {
-            function.instructions.push_back({IrOpcode::Pop, 0});
-          }
+          ir_lowerer::dropInlinedStatementResult(function.instructions, info.returnsVoid);
           return true;
         }
       }

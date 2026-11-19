@@ -19,6 +19,13 @@
 
 namespace primec::ir_lowerer {
 
+void dropInlinedStatementResult(std::vector<IrInstruction> &instructions, bool calleeReturnsVoid) {
+  if (!calleeReturnsVoid && !instructions.empty() &&
+      instructions.back().op == IrOpcode::LoadLocal) {
+    instructions.push_back({IrOpcode::Pop, 0});
+  }
+}
+
 namespace {
 bool isSinglePathSegmentWithPrefix(std::string_view path, std::string_view prefix) {
   return path.rfind(prefix, 0) == 0 && path.size() > prefix.size() &&

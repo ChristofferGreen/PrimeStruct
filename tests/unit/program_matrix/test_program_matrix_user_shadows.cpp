@@ -129,4 +129,51 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a block-form call and a value call of one user function share a body") {
+  program_matrix::ProgramCase program;
+  program.name = "user_call_block_and_value_calls";
+  program.source = R"(
+[return<int>]
+twice([i32] value) {
+  return(plus(value, value))
+}
+
+[return<int>]
+vector([i32] value) {
+  return(value)
+}
+
+[return<int>]
+map([i32] key, [i32] value) {
+  return(plus(key, value))
+}
+
+[effects(io_out), return<int>]
+main() {
+  [i32 mut] seen{0i32}
+  twice(9i32) {
+    assign(seen, 4i32)
+  }
+  print_line(twice(5i32))
+  print_line(seen)
+  [i32] kept{twice(7i32) { assign(seen, 6i32) }}
+  print_line(kept)
+  print_line(seen)
+  vector(9i32) {
+    assign(seen, 8i32)
+  }
+  map(4i32, 6i32) {
+    assign(seen, plus(seen, 1i32))
+  }
+  print_line(vector(3i32))
+  print_line(map(1i32, 2i32))
+  print_line(seen)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "10\n4\n14\n6\n3\n3\n9\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

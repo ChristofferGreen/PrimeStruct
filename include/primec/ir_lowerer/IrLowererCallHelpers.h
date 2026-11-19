@@ -97,6 +97,11 @@ bool isTailCallCandidate(const Expr &expr,
                          const ExprStringFn &resolveExprPath);
 bool isKeyValueStorageStructPath(std::string_view path);
 
+// A statement that discards the result of a definition it just emitted with `requireValue` false. An inlined callee
+// leaves its result on the stack in that case (its last instruction loads the return local), while a real call has
+// already popped it, so the pop is only added after an inlined result and a statement keeps one stack depth on both.
+void dropInlinedStatementResult(std::vector<IrInstruction> &instructions, bool calleeReturnsVoid);
+
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
                                const ExprPredicateFn &isTailCallCandidate);

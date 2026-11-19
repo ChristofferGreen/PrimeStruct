@@ -329,9 +329,8 @@
             if (!emitInlineDefinitionCall(callExpr, *defIt->second, handlerLocals, false)) {
               return false;
             }
-            if (!handlerReturn.returnsVoid) {
-              function.instructions.push_back({IrOpcode::Pop, 0});
-            }
+            ir_lowerer::dropInlinedStatementResult(function.instructions,
+                                                   handlerReturn.returnsVoid);
             return true;
           };
 

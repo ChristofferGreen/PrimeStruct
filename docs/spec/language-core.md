@@ -213,6 +213,11 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
+  - **A call of a definition may carry a trailing block.** `twice(9i32) { assign(seen, 4i32) }` calls the definition
+    with its parenthesized arguments, then runs the block as a nested statement block (its bindings are local to it),
+    on every backend. The expression's value is the call's value: a statement discards it, `[i32] total{ sum(2i32,
+    3i32) { ... } }` keeps it. The block is not passed to the definition (a definition has no body parameter), and
+    the form works the same in a body that also calls the definition without a block.
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
   - Nested forms inside execution arguments still follow their own rules (e.g., labeled entries are valid in
     `array<i32>{[first] 1i32}` only if that collection form explicitly supports them).

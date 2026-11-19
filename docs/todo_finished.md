@@ -2485,6 +2485,7 @@ are left unarchived.
 | TODO-6078 | A lowering error names the backend that lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6086 | Native coverage kept after the Apple shard cleanup | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6087 | A block-form call of a user function does not break a later call of the same function | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 
 <!-- INDEX-END -->
 

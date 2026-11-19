@@ -674,9 +674,8 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   // already pops it); a statement discards it so every path keeps the same stack depth.
   auto dropInlinedStatementResult = [&](const Definition &callee) {
     ReturnInfo calleeReturn;
-    if (getReturnInfo(callee.fullPath, calleeReturn) && !calleeReturn.returnsVoid &&
-        !instructions.empty() && instructions.back().op == IrOpcode::LoadLocal) {
-      instructions.push_back({IrOpcode::Pop, 0});
+    if (getReturnInfo(callee.fullPath, calleeReturn)) {
+      ir_lowerer::dropInlinedStatementResult(instructions, calleeReturn.returnsVoid);
     }
     return true;
   };
