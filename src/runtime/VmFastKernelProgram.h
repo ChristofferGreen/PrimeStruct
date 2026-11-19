@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -238,6 +239,11 @@ struct VmFastTask {
   const FastFunction *current = nullptr;
   size_t localsBase = 0;
   const FastInst *ip = nullptr;
+  // A threads-mode task (VmThreadedTasks) names the run's stop flag and, when the embedder gave one, its cancel flag.
+  // With a stop flag the loop polls it at every call and every jump that goes back, and ends with `Stopped` when
+  // either flag is set. A task without one (the default) polls nothing.
+  const std::atomic<bool> *stop = nullptr;
+  const std::atomic<bool> *cancel = nullptr;
 };
 
 enum class VmFastRunOutcome : uint8_t {
@@ -247,6 +253,8 @@ enum class VmFastRunOutcome : uint8_t {
   Trapped,
   // `task.ip` names an opcode the scheduler runs; the loop resumes after it.
   SwitchPoint,
+  // The loop found the stop or cancel flag set (threads mode); the call stack is dropped.
+  Stopped,
 };
 
 // Starts a task: `functionIndex` with `arguments` as its operand stack.

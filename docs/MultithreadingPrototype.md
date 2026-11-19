@@ -632,8 +632,11 @@ has. The deterministic scheduler stays; it is not replaced.
   uses the mode (`RunOptions::threads`; `RunOptions::cancel` stops every thread with `VM error: execution stopped`;
   TODO-5899). A module without task opcodes starts no thread.
 - **Speed:** a VM program that uses tasks runs each task on the flat loop between scheduler opcodes (TODO-5870), as
-  fast as a program without tasks. The flat loop's state is already per call stack (`VmFastTask`), so TODO-5902 is the
-  threads mode giving each task's `VmFastTask` an OS thread and the scheduler opcodes real primitives.
+  fast as a program without tasks. The flat loop's state is already per call stack (`VmFastTask`), so the threads mode
+  gives each task's `VmFastTask` an OS thread and the scheduler opcodes real primitives (TODO-5902, landed): the loop
+  hands the call stack back at each such opcode, and the thread runs it and resumes the loop. The loop polls the run's
+  stop flag and the embedder's cancel flag at every call and every jump that goes back, in its threads-mode
+  instantiation only; the default loop has no poll.
 - **Replay:** the language has no shared mutable state outside `Mutex`, `Atomic` and `Channel`, so the recorded order
   of synchronization events is enough to reproduce a threaded run, apart from host input and output. A threads run
   records that order (`--vm-record-sync`) and the deterministic scheduler replays it (`--vm-replay-sync`; TODO-5901,

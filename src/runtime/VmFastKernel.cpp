@@ -88,14 +88,17 @@ addressFault(std::string &error, const char *message, uint64_t address) {
 // Runs `task` until its root function returns, a trap, or (with `forTasks`) an opcode of the task scheduler. A
 // plain run is one task that never suspends. The loop keeps the stack, the arena and the frames in locals and
 // hands them back to `task` only when it suspends.
-VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
-                                           VmKernelHost &host,
-                                           const std::vector<FastFunction> &functions,
-                                           VmFastTask &task,
-                                           bool forTasks,
-                                           uint64_t &result,
-                                           VmFastRunOutcome &outcome,
-                                           std::string &error) {
+// `Poll` is the threads-mode instantiation: calls and jumps that go back look at the task's stop flags. The default
+// one compiles to the loop without them.
+template <bool Poll>
+VM_FAST_LOOP_ATTRIBUTES static bool runVmFastTaskImpl(const IrModule &module,
+                                                      VmKernelHost &host,
+                                                      const std::vector<FastFunction> &functions,
+                                                      VmFastTask &task,
+                                                      bool forTasks,
+                                                      uint64_t &result,
+                                                      VmFastRunOutcome &outcome,
+                                                      std::string &error) {
   outcome = VmFastRunOutcome::Finished;
   const size_t maxCallDepth = host.maxCallDepth();
   constexpr uint64_t slotBytes = IrSlotBytes;
@@ -106,6 +109,13 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
     return resolveVmString(module, index, text, error);
   };
 
+  [[maybe_unused]] const std::atomic<bool> *const stopFlag = task.stop;
+  [[maybe_unused]] const std::atomic<bool> *const cancelFlag = task.cancel;
+  // True when the run is ending: the stop flag a fault or the main task's return sets, or the embedder's cancel.
+  [[maybe_unused]] const auto stopRequested = [&]() {
+    return stopFlag->load(std::memory_order_relaxed) ||
+           (cancelFlag != nullptr && cancelFlag->load(std::memory_order_relaxed));
+  };
   const FastFunction *current = task.current;
   std::vector<uint64_t> stack = std::move(task.stack);
   const size_t usedSlots = stack.size();
@@ -309,6 +319,42 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
     goto *table[instp->op];                                                                        \
   } while (0)
 #define inst (*instp)
+  // Ends the run's loop for this task when a threads-mode poll finds a stop; `ip` still names the current instruction.
+#define STOP_IF_REQUESTED()                                                                        \
+  do {                                                                                             \
+    if constexpr (Poll) {                                                                          \
+      if (stopRequested()) [[unlikely]] {                                                          \
+        outcome = VmFastRunOutcome::Stopped;                                                       \
+        return true;                                                                               \
+      }                                                                                            \
+    }                                                                                              \
+  } while (0)
+  // Continues at `target`; a jump that goes back (to this instruction or before it) polls in threads mode.
+#define JUMP_TO(target)                                                                            \
+  do {                                                                                             \
+    const FastInst *const jumpTarget = (target);                                                   \
+    if constexpr (Poll) {                                                                          \
+      if (jumpTarget <= ip) {                                                                      \
+        STOP_IF_REQUESTED();                                                                       \
+      }                                                                                            \
+    }                                                                                              \
+    ip = jumpTarget;                                                                               \
+    DISPATCH();                                                                                    \
+  } while (0)
+  // Falls through by `length` instructions when `fall` holds, else jumps to `target`.
+#define COND_JUMP(fall, length, target)                                                            \
+  do {                                                                                             \
+    if constexpr (Poll) {                                                                          \
+      if (fall) {                                                                                  \
+        ip += (length);                                                                            \
+        DISPATCH();                                                                                \
+      }                                                                                            \
+      JUMP_TO(target);                                                                             \
+    } else {                                                                                       \
+      ip = (fall) ? ip + (length) : (target);                                                      \
+      DISPATCH();                                                                                  \
+    }                                                                                              \
+  } while (0)
   const FastInst *instp = ip;
 
   error.clear();
@@ -363,12 +409,13 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       DISPATCH();
     case OP(Jump):
     lbl_Jump:
-      ip = current->code.data() + inst.imm;
-      DISPATCH();
+      JUMP_TO(current->code.data() + inst.imm);
     case OP(JumpIfZero):
     lbl_JumpIfZero:
-      ip = *--sp == 0 ? current->code.data() + inst.imm : ip + 1;
-      DISPATCH();
+      {
+        const bool notZero = *--sp != 0;
+        COND_JUMP(notZero, 1, current->code.data() + inst.imm);
+      }
 
     case FastOpStoreLocalDupPop:
     lbl_FastOpStoreLocalDupPop:
@@ -387,8 +434,7 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
       DISPATCH();
     case FastOpJmpLocalZero:
     lbl_FastOpJmpLocalZero:
-      ip = locals[inst.a] == 0 ? current->code.data() + inst.b : ip + 2;
-      DISPATCH();
+      COND_JUMP(locals[inst.a] != 0, 2, current->code.data() + inst.b);
     case FastOpPushLocalAddImm:
     lbl_FastOpPushLocalAddImm:
       *sp++ = locals[inst.a] + inst.imm;
@@ -493,37 +539,33 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
     }
 #define FAST_CASE_JMP_CMP_LOCAL_IMM(N, O)                                                          \
   case FastOpJmpCmpLocalImm##N:                                                                    \
-    lbl_FastOpJmpCmpLocalImm##N : ip = static_cast<int64_t>(locals[inst.a])                        \
-                                               O static_cast<int64_t>(inst.imm)                    \
-                                           ? ip + 4                                                \
-                                           : current->code.data() + inst.b;                        \
-    DISPATCH();
+    lbl_FastOpJmpCmpLocalImm##N                                                                    \
+        : COND_JUMP(static_cast<int64_t>(locals[inst.a]) O static_cast<int64_t>(inst.imm),         \
+                    4,                                                                             \
+                    current->code.data() + inst.b);
 #define FAST_CASE_JMP_CMP_LOCAL_LOCAL(N, O)                                                        \
   case FastOpJmpCmpLocalLocal##N:                                                                  \
-    lbl_FastOpJmpCmpLocalLocal##N : ip = static_cast<int64_t>(locals[inst.a])                      \
-                                                 O static_cast<int64_t>(locals[inst.b])            \
-                                             ? ip + 4                                              \
-                                             : current->code.data() + inst.imm;                    \
-    DISPATCH();
+    lbl_FastOpJmpCmpLocalLocal##N                                                                  \
+        : COND_JUMP(static_cast<int64_t>(locals[inst.a]) O static_cast<int64_t>(locals[inst.b]),   \
+                    4,                                                                             \
+                    current->code.data() + inst.imm);
 #define FAST_CASE_JMP_CMP(N, O)                                                                    \
   case FastOpJmpCmp##N:                                                                            \
     lbl_FastOpJmpCmp##N : {                                                                        \
-      const bool taken = static_cast<int64_t>(sp[-2]) O static_cast<int64_t>(sp[-1]);              \
-      sp -= 2;                                                                                     \
-      ip = taken ? ip + 2 : current->code.data() + inst.b;                                         \
-      DISPATCH();                                                                                  \
+    const bool taken = static_cast<int64_t>(sp[-2]) O static_cast<int64_t>(sp[-1]);                \
+    sp -= 2;                                                                                       \
+    COND_JUMP(taken, 2, current->code.data() + inst.b);                                            \
     }
 #define FAST_CASE_STORE_JMP_CMP(N, O)                                                              \
   case FastOpStoreJmpCmpLocalImm##N:                                                               \
     lbl_FastOpStoreJmpCmpLocalImm##N : {                                                           \
-      const uint64_t value = *--sp;                                                                \
-      locals[inst.a] = value;                                                                      \
-      ip = static_cast<int64_t>(value) O static_cast<int64_t>(inst.imm)                            \
-               ? ip + 5                                                                            \
-               : current->code.data() + inst.b;                                                    \
-      DISPATCH();                                                                                  \
+    const uint64_t value = *--sp;                                                                  \
+    locals[inst.a] = value;                                                                        \
+    COND_JUMP(static_cast<int64_t>(value) O static_cast<int64_t>(inst.imm),                        \
+              5,                                                                                   \
+              current->code.data() + inst.b);                                                      \
     }
-      FAST_CMPS(FAST_CASE_STORE_JMP_CMP)
+    FAST_CMPS(FAST_CASE_STORE_JMP_CMP)
 #undef FAST_CASE_STORE_JMP_CMP
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_IMM)
       FAST_CMPS(FAST_CASE_JMP_CMP_LOCAL_LOCAL)
@@ -630,10 +672,9 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
     lbl_FastOpSwitchLocal: {
       const FastSwitch &chain = current->switches[static_cast<size_t>(inst.imm)];
       const uint64_t offset = locals[inst.a] - chain.low;
-      ip = current->code.data() + (offset < chain.targets.size()
-                                       ? chain.targets[static_cast<size_t>(offset)]
-                                       : chain.otherwise);
-      DISPATCH();
+      JUMP_TO(current->code.data() + (offset < chain.targets.size()
+                                          ? chain.targets[static_cast<size_t>(offset)]
+                                          : chain.otherwise));
     }
 
     case FastOpAddSext:
@@ -874,11 +915,12 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
     lbl_Call:
     case OP(CallVoid):
     lbl_CallVoid: {
-      // prepareModule only accepts modules whose call targets exist.
-      // The step kernel counts the current frame too.
-      if (frames.size() + 1 >= maxCallDepth) {
-        FAULT("VM call stack overflow");
-      }
+        STOP_IF_REQUESTED();
+        // prepareModule only accepts modules whose call targets exist.
+        // The step kernel counts the current frame too.
+        if (frames.size() + 1 >= maxCallDepth) {
+          FAULT("VM call stack overflow");
+        }
       const FastFunction &callee = functions[static_cast<size_t>(inst.imm)];
       const size_t callerTop = localsBase + current->localCount;
       frames.push_back({current, ip + 1, localsBase, inst.op == OP(Call)});
@@ -1093,6 +1135,9 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
   }
 #undef FAULT
 #undef DISPATCH
+#undef STOP_IF_REQUESTED
+#undef JUMP_TO
+#undef COND_JUMP
 #undef inst
 }
 
@@ -1103,6 +1148,21 @@ VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
 #endif
 
 #undef OP
+
+VM_FAST_LOOP_ATTRIBUTES bool runVmFastTask(const IrModule &module,
+                                           VmKernelHost &host,
+                                           const std::vector<FastFunction> &functions,
+                                           VmFastTask &task,
+                                           bool forTasks,
+                                           uint64_t &result,
+                                           VmFastRunOutcome &outcome,
+                                           std::string &error) {
+  return task.stop != nullptr
+             ? runVmFastTaskImpl<true>(
+                   module, host, functions, task, forTasks, result, outcome, error)
+             : runVmFastTaskImpl<false>(
+                   module, host, functions, task, forTasks, result, outcome, error);
+}
 
 bool executeVmFastKernel(const IrModule &module,
                          VmKernelHost &host,

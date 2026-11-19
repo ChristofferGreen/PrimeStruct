@@ -1,5 +1,7 @@
 #include "VmThreadedTasks.h"
 
+#include "VmFastKernel.h"
+#include "VmFastKernelProgram.h"
 #include "VmTaskHandle.h"
 #include "VmTaskScheduler.h"
 #include "VmThreadedSync.h"
@@ -46,15 +48,17 @@ struct ThreadTask {
 // The tasks of one run (docs/spec/vm-design.md, Tasks on threads). Every spawned task is a detached thread running
 // the step kernel on a call stack of its own; the calling thread is the main task. The task table (slots with
 // generations) and every flag below are behind one mutex, and one condition variable wakes whoever waits for a task
-// to end or for the run to stop. The run is over (`ended_`) when the main task returns, a task traps or a task
+// to end or for the run to stop. A task runs on the flat loop (`runFastTask`) between scheduler opcodes when the loop
+// takes the module, and on the step kernel (`runTask`) otherwise. The run is over (`ended_`) when the main task returns, a task traps or a task
 // faults, whichever comes first; the stop flag then ends every other task at its next poll.
 class VmThreadedTasks {
 public:
   VmThreadedTasks(const IrModule &module,
                   VmKernelHost &host,
                   std::vector<size_t> localCounts,
+                  const std::vector<FastFunction> *fast,
                   SyncLogRecorder *recorder)
-      : module_(module), host_(host), localCounts_(std::move(localCounts)) {
+      : module_(module), host_(host), localCounts_(std::move(localCounts)), fast_(fast) {
     sync_.recorder = recorder;
   }
 
@@ -120,7 +124,8 @@ private:
                      std::vector<uint64_t> arguments,
                      uint64_t &value) {
     try {
-      return runTask(functionIndex, holder, std::move(arguments), value);
+      return fast_ != nullptr ? runFastTask(functionIndex, holder, std::move(arguments), value)
+                              : runTask(functionIndex, holder, std::move(arguments), value);
     } catch (const std::exception &exception) {
       fail(std::string("exception: ") + exception.what());
     } catch (...) {
@@ -162,31 +167,9 @@ private:
       VmKernelFrame &top = frames.back();
       if (top.ip < top.function->instructions.size()) {
         const IrInstruction &inst = top.function->instructions[top.ip];
-        if (inst.op == IrOpcode::TaskSpawn) {
-          if (!spawn(inst.imm, holder, stack, error)) {
-            fail(error);
-            return TaskEnd::Stopped;
-          }
-          top.ip += 1;
-          continue;
-        }
-        if (isVmSyncOpcode(inst.op)) {
-          const SyncOutcome synced =
-              stepThreadedSyncOpcode(inst, sync_, host_, stack, frames, holder, error);
-          if (synced == SyncOutcome::Fault) {
-            fail(error);
-          }
-          if (synced != SyncOutcome::Done) {
-            return TaskEnd::Stopped;
-          }
-          top.ip += 1;
-          continue;
-        }
-        if (inst.op == IrOpcode::TaskWait) {
-          if (!wait(holder, stack, error)) {
-            if (!error.empty()) {
-              fail(error);
-            }
+        if (isVmSchedulerOpcode(inst.op)) {
+          FrameAddressResolver resolver(host_, frames);
+          if (!schedulerOp(inst, holder, stack, resolver, error)) {
             return TaskEnd::Stopped;
           }
           top.ip += 1;
@@ -208,6 +191,77 @@ private:
                            exitFrame.function->instructions[exitFrame.ip].op == IrOpcode::Trap;
       return trapped ? TaskEnd::Trapped : TaskEnd::Returned;
     }
+  }
+
+  // The flat loop on one call stack, which it hands back at each scheduler opcode; the answers are those of runTask.
+  TaskEnd runFastTask(size_t functionIndex,
+                      uint64_t holder,
+                      std::vector<uint64_t> arguments,
+                      uint64_t &value) {
+    VmFastTask task;
+    initVmFastTask(*fast_, functionIndex, std::move(arguments), task);
+    task.stop = &sync_.stop;
+    task.cancel = host_.cancelFlag();
+    FastTaskAddressResolver resolver(host_, task);
+    std::string error;
+    while (true) {
+      VmFastRunOutcome outcome = VmFastRunOutcome::Finished;
+      if (!runVmFastTask(module_, host_, *fast_, task, true, value, outcome, error)) {
+        fail(error);
+        return TaskEnd::Stopped;
+      }
+      switch (outcome) {
+      case VmFastRunOutcome::Finished:
+        return TaskEnd::Returned;
+      case VmFastRunOutcome::Trapped:
+        return TaskEnd::Trapped;
+      case VmFastRunOutcome::Stopped:
+        if (!sync_.stop.load(std::memory_order_relaxed)) {
+          fail("execution stopped"); // the embedder's cancel flag
+        }
+        return TaskEnd::Stopped;
+      case VmFastRunOutcome::SwitchPoint:
+        if (!schedulerOp(*task.ip->source, holder, task.stack, resolver, error)) {
+          return TaskEnd::Stopped;
+        }
+        ++task.ip;
+        break;
+      }
+    }
+  }
+
+  static bool isVmSchedulerOpcode(IrOpcode op) {
+    return op == IrOpcode::TaskSpawn || op == IrOpcode::TaskWait || isVmSyncOpcode(op);
+  }
+
+  // Runs a task, atomic, mutex or condition opcode of the task that owns `stack`. True: it ran and the caller moves
+  // the task on. False: the run is ending (a fault was reported through fail()) and the task stops.
+  bool schedulerOp(const IrInstruction &inst,
+                   uint64_t holder,
+                   std::vector<uint64_t> &stack,
+                   SyncAddressResolver &resolver,
+                   std::string &error) {
+    if (inst.op == IrOpcode::TaskSpawn) {
+      if (!spawn(inst.imm, holder, stack, error)) {
+        fail(error);
+        return false;
+      }
+      return true;
+    }
+    if (inst.op == IrOpcode::TaskWait) {
+      if (!wait(holder, stack, error)) {
+        if (!error.empty()) {
+          fail(error);
+        }
+        return false;
+      }
+      return true;
+    }
+    const SyncOutcome synced = stepThreadedSyncOpcode(inst, sync_, resolver, stack, holder, error);
+    if (synced == SyncOutcome::Fault) {
+      fail(error);
+    }
+    return synced == SyncOutcome::Done;
   }
 
   // TaskSpawn: pops the callee's arguments, gives the task a heap and a thread, and pushes its handle. False with
@@ -362,6 +416,8 @@ private:
   const IrModule &module_;
   VmKernelHost &host_;
   const std::vector<size_t> localCounts_;
+  // The module on the flat loop, or null when the step kernel runs the tasks.
+  const std::vector<FastFunction> *fast_ = nullptr;
 
   // The mutex, condition variable, stop flag and wait counts every thread of the run shares.
   ThreadedWaitState sync_;
@@ -398,7 +454,15 @@ bool runVmThreadedTasks(const IrModule &module,
       return false;
     }
   }
-  VmThreadedTasks tasks(module, host, std::move(localCounts), recorder.get());
+  // Every task runs on the flat loop between scheduler opcodes when the loop takes the whole module.
+  std::vector<FastFunction> fastFunctions;
+  const bool fast = vmFastKernelEnabled() && host.slotBytes() == IrSlotBytes &&
+                    prepareModule(module, fastFunctions, true);
+  if (fast) {
+    noteVmFastTaskRun();
+  }
+  VmThreadedTasks tasks(
+      module, host, std::move(localCounts), fast ? &fastFunctions : nullptr, recorder.get());
   const bool ran = tasks.run(result, error);
   // Every task thread ended, so the log is complete; a run that faulted keeps the events up to its fault.
   std::string recordError;

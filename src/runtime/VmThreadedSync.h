@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "VmFastKernelProgram.h"
 #include "VmSyncLog.h"
 #include "primec/ir/Ir.h"
 #include "primec/runtime/VmExecutionKernel.h"
@@ -77,14 +78,46 @@ bool isVmSyncOpcode(IrOpcode op);
 
 enum class SyncOutcome { Done, Stopped, Fault };
 
-// Runs one atomic, mutex or condition opcode of the task that owns `stack` and `frames`. `holder` is the task's
-// non-zero number, stored in a lock slot it holds. Done: the opcode ran and the caller advances. Stopped: the run is
+// The slot an address names on the call stack of the task that runs a sync opcode: a local of one of its frames or
+// a heap slot. `atomic` asks for the check atomic operations need.
+class SyncAddressResolver {
+public:
+  virtual ~SyncAddressResolver() = default;
+  virtual bool resolve(uint64_t address, bool atomic, uint64_t *&slot, std::string &error) = 0;
+};
+
+// A task on the step kernel: its frames hold the locals.
+class FrameAddressResolver final : public SyncAddressResolver {
+public:
+  FrameAddressResolver(VmKernelHost &host, std::vector<VmKernelFrame> &frames)
+      : host_(host), frames_(frames) {
+  }
+  bool resolve(uint64_t address, bool atomic, uint64_t *&slot, std::string &error) override;
+
+private:
+  VmKernelHost &host_;
+  std::vector<VmKernelFrame> &frames_;
+};
+
+// A task on the flat loop: its locals are one arena, numbered across its frames.
+class FastTaskAddressResolver final : public SyncAddressResolver {
+public:
+  FastTaskAddressResolver(VmKernelHost &host, VmFastTask &task) : host_(host), task_(task) {
+  }
+  bool resolve(uint64_t address, bool atomic, uint64_t *&slot, std::string &error) override;
+
+private:
+  VmKernelHost &host_;
+  VmFastTask &task_;
+};
+
+// Runs one atomic, mutex or condition opcode of the task that owns `stack` and whose addresses `resolver` resolves.
+// `holder` is the task's non-zero number, stored in a lock slot it holds. Done: the opcode ran and the caller advances. Stopped: the run is
 // ending. Fault: `error` is set (a deadlock is one).
 SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
                                    ThreadedWaitState &state,
-                                   VmKernelHost &host,
+                                   SyncAddressResolver &resolver,
                                    std::vector<uint64_t> &stack,
-                                   std::vector<VmKernelFrame> &frames,
                                    uint64_t holder,
                                    std::string &error);
 

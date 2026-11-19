@@ -284,9 +284,13 @@
   scheduler; the default stays the deterministic scheduler and threads are opt-in (decided 2026-11-18), so without the
   flag nothing changes, and a program without tasks runs as before (its heap is the first
   arena, with today's addresses). The calling thread is the main task. A spawned task is a detached pthread with an
-  8 MiB stack that runs the step kernel on a call stack of its own (`VmThreadedTasks` in
-  `src/runtime/VmThreadedTasks.cpp`; the flat loop is not used until TODO-5902) and numbers its locals from 0, as
-  every task does. The task table (slots with generations, the handle format of Tasks above) and the flags below sit
+  8 MiB stack that runs a call stack of its own (`VmThreadedTasks` in `src/runtime/VmThreadedTasks.cpp`) and numbers
+  its locals from 0, as every task does. Each task runs on the flat loop (the fast kernel of Tasks above: its
+  `VmFastTask` holds the task's operand stack, locals arena and frames) between scheduler opcodes, so a task costs
+  the instructions of the same code in a program without tasks, plus a stop poll at every call and every jump that
+  goes back; the thread that runs a task handles `TaskSpawn`, `TaskWait` and the atomic, mutex and condition opcodes
+  itself, as real primitives, when the loop hands the call stack back at one, and resumes the loop after it. Whatever
+  the flat loop declines (`PRIMEVM_KERNEL=step`, a module its CFG analysis rejects) runs on the step kernel. The task table (slots with generations, the handle format of Tasks above) and the flags below sit
   behind one mutex; `TaskWait` consumes the handle, sleeps on one condition variable until the task's function has
   returned and reads the result, with the faults of the deterministic scheduler (`invalid task handle in IR`, `task
   handle already waited`). A thread is started per live task (`too many live tasks` past a million, and

@@ -1,5 +1,6 @@
 #include "primec/ir/Ir.h"
 #include "primec/runtime/Vm.h"
+#include "primec/testing/VmKernelSelection.h"
 
 #include "third_party/doctest.h"
 
@@ -410,7 +411,111 @@ TEST_CASE("handle faults read as in the default schedule") {
   }
 }
 
-TEST_CASE("atomic, mutex and condition opcodes run in threads mode (TODO-5897)") {
+namespace {
+
+// Turns the flat loop on or off for a scope and restores it.
+struct FlatLoopScope {
+  explicit FlatLoopScope(bool enabled) {
+    testing::setVmFastKernelEnabled(enabled);
+  }
+  ~FlatLoopScope() {
+    testing::setVmFastKernelEnabled(true);
+  }
+};
+
+// main spawns /worker twice (in order) and adds the results. /worker takes and releases a mutex and adds to an
+// atomic, both through the address of its own locals (the flat loop numbers a task's locals in one arena), calls
+// /bump twice, and returns the atomic's total.
+IrModule localSyncTasks() {
+  return moduleOf(
+      {functionOf("/main",
+                  0,
+                  {{IrOpcode::PushI32, 5},
+                   {IrOpcode::TaskSpawn, 1},
+                   {IrOpcode::PushI32, 6},
+                   {IrOpcode::TaskSpawn, 1},
+                   {IrOpcode::TaskWait, 0},
+                   {IrOpcode::StoreLocal, 0},
+                   {IrOpcode::TaskWait, 0},
+                   {IrOpcode::LoadLocal, 0},
+                   {IrOpcode::AddI32, 0},
+                   {IrOpcode::ReturnI32, 0}}),
+       functionOf("/worker", 1, {{IrOpcode::StoreLocal, 0}, // n
+                                 {IrOpcode::PushI64, 0},
+                                 {IrOpcode::StoreLocal, 1}, // lock
+                                 {IrOpcode::PushI64, 0},
+                                 {IrOpcode::StoreLocal, 2}, // counter
+                                 {IrOpcode::AddressOfLocal, 1},
+                                 {IrOpcode::MutexLock, 0},
+                                 {IrOpcode::AddressOfLocal, 2},
+                                 {IrOpcode::LoadLocal, 0},
+                                 {IrOpcode::AtomicAdd, 64},
+                                 {IrOpcode::Pop, 0},
+                                 {IrOpcode::AddressOfLocal, 1},
+                                 {IrOpcode::MutexUnlock, 0},
+                                 {IrOpcode::AddressOfLocal, 2},
+                                 {IrOpcode::Call, 2},
+                                 {IrOpcode::Pop, 0},
+                                 {IrOpcode::AddressOfLocal, 2},
+                                 {IrOpcode::Call, 2},
+                                 {IrOpcode::Pop, 0},
+                                 {IrOpcode::AddressOfLocal, 2},
+                                 {IrOpcode::AtomicLoad, 64},
+                                 {IrOpcode::ReturnI32, 0}}),
+       // /bump(address): adds 100 to the caller's local through the address, in a counted loop.
+       functionOf("/bump",
+                  1,
+                  {{IrOpcode::StoreLocal, 0}, // address
+                   {IrOpcode::PushI32, 0},
+                   {IrOpcode::StoreLocal, 1}, // i
+                   // 3: loop head
+                   {IrOpcode::LoadLocal, 1},
+                   {IrOpcode::PushI32, 3},
+                   {IrOpcode::CmpLtI32, 0},
+                   {IrOpcode::JumpIfZero, 16},
+                   {IrOpcode::LoadLocal, 0},
+                   {IrOpcode::PushI64, 100},
+                   {IrOpcode::AtomicAdd, 64},
+                   {IrOpcode::Pop, 0},
+                   {IrOpcode::LoadLocal, 1},
+                   {IrOpcode::PushI32, 1},
+                   {IrOpcode::AddI32, 0},
+                   {IrOpcode::StoreLocal, 1},
+                   {IrOpcode::Jump, 3},
+                   {IrOpcode::PushI32, 0},
+                   {IrOpcode::ReturnI32, 0}})});
+}
+
+} // namespace
+
+TEST_CASE("threads mode runs its tasks on the flat loop and agrees with the step kernel") {
+  const std::vector<IrModule> modules = {fourSums(), localSyncTasks()};
+  for (size_t index = 0; index < modules.size(); ++index) {
+    CAPTURE(index);
+    for (int repeat = 0; repeat < Repeats; ++repeat) {
+      Run step;
+      {
+        const FlatLoopScope off(false);
+        const uint64_t before = testing::vmFastTaskRunCount();
+        step = run(modules[index], true);
+        CHECK(testing::vmFastTaskRunCount() == before);
+      }
+      const uint64_t before = testing::vmFastTaskRunCount();
+      const Run fast = run(modules[index], true);
+      CHECK(testing::vmFastTaskRunCount() == before + 1);
+      REQUIRE_MESSAGE(step.ok, step.error);
+      REQUIRE_MESSAGE(fast.ok, fast.error);
+      CHECK(fast.raw == step.raw);
+      CHECK(fast.out == step.out);
+    }
+  }
+  // Each worker adds n, then six times 100 in /bump (two calls of three rounds), so 5 + 600 and 6 + 600.
+  const Run local = run(localSyncTasks(), true);
+  REQUIRE_MESSAGE(local.ok, local.error);
+  CHECK(local.value == 1211);
+}
+
+TEST_CASE("atomic, mutex and condition opcodes run in threads mode") {
   const IrModule atomic = moduleOf({functionOf("/main",
                                                0,
                                                {{IrOpcode::PushI64, 2},

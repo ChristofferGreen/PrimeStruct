@@ -10,24 +10,48 @@ namespace {
 
 using Cell = std::atomic_ref<uint64_t>;
 
-bool resolveSlot(VmKernelHost &host,
-                 std::vector<VmKernelFrame> &frames,
-                 uint64_t address,
-                 bool atomic,
-                 uint64_t *&slot,
-                 std::string &error) {
+} // namespace
+
+bool FrameAddressResolver::resolve(uint64_t address,
+                                   bool atomic,
+                                   uint64_t *&slot,
+                                   std::string &error) {
   std::vector<uint64_t> *addressLocals = nullptr;
-  localizeVmAddress(frames, host.slotBytes(), address, addressLocals);
-  return atomic ? host.resolveAtomicAddress(address, *addressLocals, slot, error)
-                : host.resolveIndirectAddress(address, *addressLocals, slot, error);
+  localizeVmAddress(frames_, host_.slotBytes(), address, addressLocals);
+  return atomic ? host_.resolveAtomicAddress(address, *addressLocals, slot, error)
+                : host_.resolveIndirectAddress(address, *addressLocals, slot, error);
 }
+
+bool FastTaskAddressResolver::resolve(uint64_t address,
+                                      bool atomic,
+                                      uint64_t *&slot,
+                                      std::string &error) {
+  if ((address & (uint64_t{1} << 63)) != 0) {
+    std::vector<uint64_t> noLocals;
+    return atomic ? host_.resolveAtomicAddress(address, noLocals, slot, error)
+                  : host_.resolveIndirectAddress(address, noLocals, slot, error);
+  }
+  const uint64_t slotBytes = host_.slotBytes();
+  if (address % slotBytes != 0) {
+    error = "unaligned indirect address in IR: " + std::to_string(address);
+    return false;
+  }
+  const uint64_t index = address / slotBytes - 1; // address 0 wraps and faults
+  if (index >= task_.localsBase + task_.current->localCount) {
+    error = "invalid indirect address in IR: " + std::to_string(address);
+    return false;
+  }
+  slot = task_.localsArena.data() + index;
+  return true;
+}
+
+namespace {
 
 // Sequentially consistent atomics on the heap slot (docs/spec/vm-design.md, Atomics). A 32-bit value is kept
 // sign-extended in its 64-bit slot, like every i32, so the read-modify-write forms are compare-exchange loops.
 SyncOutcome stepAtomic(const IrInstruction &inst,
-                       VmKernelHost &host,
+                       SyncAddressResolver &resolver,
                        std::vector<uint64_t> &stack,
-                       std::vector<VmKernelFrame> &frames,
                        SyncLogRecorder *recorder,
                        uint64_t holder,
                        std::string &error) {
@@ -52,7 +76,7 @@ SyncOutcome stepAtomic(const IrInstruction &inst,
   const uint64_t address = stack[stack.size() - operandCount];
   stack.resize(stack.size() - operandCount);
   uint64_t *slot = nullptr;
-  if (!resolveSlot(host, frames, address, true, slot, error)) {
+  if (!resolver.resolve(address, true, slot, error)) {
     return SyncOutcome::Fault;
   }
   // A recorded run holds the record's ordering point across the operation, so the log orders atomic operations as
@@ -239,9 +263,8 @@ bool isVmSyncOpcode(IrOpcode op) {
 
 SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
                                    ThreadedWaitState &state,
-                                   VmKernelHost &host,
+                                   SyncAddressResolver &resolver,
                                    std::vector<uint64_t> &stack,
-                                   std::vector<VmKernelFrame> &frames,
                                    uint64_t holder,
                                    std::string &error) {
   switch (inst.op) {
@@ -252,7 +275,7 @@ SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
       return SyncOutcome::Fault;
     }
     uint64_t *slot = nullptr;
-    if (!resolveSlot(host, frames, stack.back(), false, slot, error)) {
+    if (!resolver.resolve(stack.back(), false, slot, error)) {
       return SyncOutcome::Fault;
     }
     stack.pop_back();
@@ -268,12 +291,11 @@ SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
       return SyncOutcome::Fault;
     }
     uint64_t *conditionSlot = nullptr;
-    if (!resolveSlot(
-            host, frames, stack[stack.size() - operandCount], false, conditionSlot, error)) {
+    if (!resolver.resolve(stack[stack.size() - operandCount], false, conditionSlot, error)) {
       return SyncOutcome::Fault;
     }
     uint64_t *lockSlot = nullptr;
-    if (wait && !resolveSlot(host, frames, stack.back(), false, lockSlot, error)) {
+    if (wait && !resolver.resolve(stack.back(), false, lockSlot, error)) {
       return SyncOutcome::Fault;
     }
     stack.resize(stack.size() - operandCount);
@@ -284,7 +306,7 @@ SyncOutcome stepThreadedSyncOpcode(const IrInstruction &inst,
     return waitCondition(state, lockSlot, conditionSlot, holder, error);
   }
   default:
-    return stepAtomic(inst, host, stack, frames, state.recorder, holder, error);
+    return stepAtomic(inst, resolver, stack, state.recorder, holder, error);
   }
 }
 
