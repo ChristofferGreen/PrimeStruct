@@ -624,9 +624,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `return` argument form only.
 
-- [ ] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
+- [~] TODO-5519: Operator rewriting handles calls, nested `!` and `?` precedence
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: operators-a (worktree-agent-aad56314f45938382), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: text-filter
