@@ -258,9 +258,13 @@ TEST_CASE("const-fold evaluates floats and conversions but never bakes in a NaN"
                 assemble({"PushF32 0x0", "PushF32 0x0", "DivF32", "ReturnF32"}),
                 assemble({"PushF32 0x0", "PushF32 0x0", "DivF32", "ReturnF32"})});
   expectGolden("const-fold",
-               {"out-of-range float to int is host-defined",
+               {"out-of-range float to int saturates",
                 assemble({"PushF64 0x4202a05f20000000", "ConvertF64ToI32", "ReturnI32"}),
-                assemble({"PushF64 0x4202a05f20000000", "ConvertF64ToI32", "ReturnI32"})});
+                assemble({"PushI32 2147483647", "ReturnI32"})});
+  expectGolden("const-fold",
+               {"a NaN converted to an int is 0",
+                assemble({"PushF64 0x7ff8000000000000", "ConvertF64ToI32", "ReturnI32"}),
+                assemble({"PushI32 0", "ReturnI32"})});
 }
 
 TEST_CASE("peephole removes dead pushes and identities") {

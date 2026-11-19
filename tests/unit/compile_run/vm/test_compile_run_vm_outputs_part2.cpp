@@ -975,7 +975,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe-ir " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("exe emitter uses ir backend for f32/f64 to i64 conversion edges") {
@@ -995,7 +995,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_exe_f64_to_i64_ir_first_edges.prime", source);
   const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 3);
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("exe-ir emitter truncates in-range f32/f64 to i64") {
