@@ -142,7 +142,6 @@ of sync with them.
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6042 | Regression tests pin forms the audit listed that already compile | ready | frontend-accept-pins |
 | TODO-6038 | An `if` yields struct values | ready | frontend-accept-if |
 | TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
@@ -167,7 +166,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-6042 (frontend-accept-pins): Regression tests pin forms the audit listed that already compile
 - TODO-6038 (frontend-accept-if): An `if` yields struct values
 - TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
 - TODO-5603 (startup): the real-launch baseline, measured by a person
@@ -175,9 +173,8 @@ of sync with them.
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-6042
-3. TODO-6038
-4. TODO-6039
+2. TODO-6038
+3. TODO-6039
 
 ### Priority Lanes
 
@@ -191,7 +188,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6042, TODO-6038, TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6038, TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -620,19 +617,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-6042: Regression tests pin forms the audit listed that already compile
-  - owner: ai
-  - status: ready
-  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-pins
-  - scope: Re-checked 2026-11-19 on the release build (VM): an unused `import /std/result/*` and `import /std/maybe/*`, `return(move(v))` of a struct or `vector<i32>` local, `return(Holder{move(n)})`, and `assign(x, Val{none})` / `x = Val{[num] 3i32}` on a user sum local (also with a struct payload and `Maybe<i32>`) all compile and run now. Nothing pins them, so they can regress.
-  - acceptance:
-    - a semantics or compile-run test per form (unused wildcard imports of `/std/result` and `/std/maybe`; `return(move(local))`; `return(Holder{move(n)})`; assignment of sum values to a `mut` sum local) passes on the VM and a second backend where one runs it
-    - full release gate green
-  - stop_rule: tests only; if a form fails on another backend, file a leaf instead of fixing it here.
 
 - [~] TODO-6038: An `if` yields struct values
   - owner: ai
