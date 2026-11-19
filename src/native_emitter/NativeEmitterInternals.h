@@ -696,7 +696,7 @@ class Arm64Emitter {
   void emitFloatUnaryOp(bool isF64, uint32_t opD, uint32_t opS);
   void emitCompareAndPushFloat(bool isF64, CondCode cond);
   void emitConvertIntToFloat(bool toF64, bool isUnsigned);
-  void emitConvertFloatToInt(bool fromF64, bool isUnsigned);
+  void emitConvertFloatToInt(bool fromF64, bool isUnsigned, bool toI32 = false);
   void emitConvertFloatToFloat(bool fromF64);
   void emitCompareRegZero(uint8_t reg);
   void emitCompareReg(uint8_t left, uint8_t right);
@@ -772,6 +772,7 @@ class Arm64Emitter {
   static constexpr uint32_t kUcvtfD0X0 = 0x9e630000;
   static constexpr uint32_t kUcvtfS0X0 = 0x9e230000;
   static constexpr uint32_t kFcvtzsX0D0 = 0x9e780000;
+  static constexpr uint32_t kFcvtzsW0D0 = 0x1e780000;
   static constexpr uint32_t kFcvtzuX0D0 = 0x9e790000;
   static constexpr uint32_t kFcvtD0S0 = 0x1e22c000;
   static constexpr uint32_t kFcvtS0D0 = 0x1e624000;

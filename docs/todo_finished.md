@@ -2451,6 +2451,7 @@ are left unarchived.
 | TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6057 | Native arm64 float to i32 conversion saturates at 32 bits | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

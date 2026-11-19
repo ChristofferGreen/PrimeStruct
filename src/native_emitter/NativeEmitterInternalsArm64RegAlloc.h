@@ -896,8 +896,11 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
       case IrOpcode::ConvertF64ToI32:
       case IrOpcode::ConvertF64ToI64:
       case IrOpcode::ConvertF64ToU64: {
-        // FCVTZS/FCVTZU to a 64-bit register, as the templates convert. They widen an f32 to f64
-        // first; that widening is exact, so converting the f32 directly gives the same result.
+        // FCVTZS/FCVTZU, as the templates convert. They widen an f32 to f64 first; that widening is
+        // exact, so converting the f32 directly gives the same result. Both truncate toward zero and
+        // saturate at the destination's limits with NaN as 0; an i32 result uses the 32-bit destination
+        // (saturating at the i32 limits) and is sign-extended into the slot form of an i32.
+        const bool toI32 = ir.op == IrOpcode::ConvertF32ToI32 || ir.op == IrOpcode::ConvertF64ToI32;
         const bool isUnsigned =
             ir.op == IrOpcode::ConvertF32ToU64 || ir.op == IrOpcode::ConvertF64ToU64;
         const bool fromF64 = ir.op == IrOpcode::ConvertF64ToI32 ||
@@ -906,8 +909,11 @@ inline bool Arm64Emitter::emitRegisterAllocatedFunction(const IrFunction &fn,
         const uint32_t d = instruction.defs[0];
         const uint8_t source = floatReg(instruction.uses[0], D0);
         const uint8_t target = targetReg(d);
-        emit((isUnsigned ? 0x9E390000u : 0x9E380000u) | (fromF64 ? DoubleType : 0u) |
-             (static_cast<uint32_t>(source) << 5) | target);
+        const uint32_t base = toI32 ? 0x1E380000u : (isUnsigned ? 0x9E390000u : 0x9E380000u);
+        emit(base | (fromF64 ? DoubleType : 0u) | (static_cast<uint32_t>(source) << 5) | target);
+        if (toI32) {
+          emit(0x93407C00u | (static_cast<uint32_t>(target) << 5) | target); // SXTW
+        }
         storeValue(d, target);
         break;
       }

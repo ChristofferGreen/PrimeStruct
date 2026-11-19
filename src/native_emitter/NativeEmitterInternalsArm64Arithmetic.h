@@ -213,7 +213,7 @@ inline void Arm64Emitter::emitConvertU64ToF64() {
 }
 
 inline void Arm64Emitter::emitConvertF32ToI32() {
-  emitConvertFloatToInt(false, false);
+  emitConvertFloatToInt(false, false, true);
 }
 
 inline void Arm64Emitter::emitConvertF32ToI64() {
@@ -225,7 +225,7 @@ inline void Arm64Emitter::emitConvertF32ToU64() {
 }
 
 inline void Arm64Emitter::emitConvertF64ToI32() {
-  emitConvertFloatToInt(true, false);
+  emitConvertFloatToInt(true, false, true);
 }
 
 inline void Arm64Emitter::emitConvertF64ToI64() {
@@ -351,7 +351,10 @@ inline void Arm64Emitter::emitConvertIntToFloat(bool toF64, bool isUnsigned) {
   emitPushReg(0);
 }
 
-inline void Arm64Emitter::emitConvertFloatToInt(bool fromF64, bool isUnsigned) {
+// FCVTZS and FCVTZU truncate toward zero, saturate at the destination's limits and map NaN to 0, which is the
+// conversion rule of every backend (docs/spec/type-system.md, Numeric Conversions). An i32 result uses the 32-bit
+// destination so it saturates at the i32 limits, then sign-extends into the slot form of an i32.
+inline void Arm64Emitter::emitConvertFloatToInt(bool fromF64, bool isUnsigned, bool toI32) {
   emitPopReg(0);
   if (fromF64) {
     emit(encodeFmovDX(0, 0));
@@ -359,7 +362,12 @@ inline void Arm64Emitter::emitConvertFloatToInt(bool fromF64, bool isUnsigned) {
     emit(encodeFmovSW(0, 0));
     emit(kFcvtD0S0);
   }
-  emit(isUnsigned ? kFcvtzuX0D0 : kFcvtzsX0D0);
+  if (toI32) {
+    emit(kFcvtzsW0D0);
+    emit(0x93407C00u); // SXTW x0, w0
+  } else {
+    emit(isUnsigned ? kFcvtzuX0D0 : kFcvtzsX0D0);
+  }
   emitPushReg(0);
 }
 
