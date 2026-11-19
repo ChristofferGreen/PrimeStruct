@@ -525,9 +525,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: entry exit codes on wasm only.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5515: Native Result.ok(Buffer) reads as ok
+- [~] TODO-5515: Native Result.ok(Buffer) reads as ok
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a65b1362a27f7e83e (worktree-agent-a65b1362a27f7e83e), 2026-11-19
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: native-result
