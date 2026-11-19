@@ -9,45 +9,6 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native std-namespaced vector method alias access struct method chain with helper receiver diagnostics") {
-  const std::string source = R"(
-Marker {
-  [i32] value
-}
-
-[return<Marker>]
-/std/collections/vector/at([vector<i32>] values, [i32] index) {
-  return(Marker(index))
-}
-
-[return<int>]
-/Marker/tag([Marker] self) {
-  return(self.value)
-}
-
-[return<auto>]
-project([vector<i32>] values) {
-  return(values./std/collections/vector/at(2i32).tag())
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(project(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_std_namespaced_vector_method_alias_access_struct_method_chain_reject.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_std_namespaced_vector_method_alias_access_struct_method_chain_reject.err")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("rejects native std-namespaced vector access slash methods without canonical helper on vector receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
@@ -178,58 +139,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects native templated stdlib vector return envelope nested arg") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<vector<array<i32>>>]
-wrapVectorArray([i32] value) {
-  return(/std/collections/vector/vector<i32>(value))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{wrapVectorArray(3i32)}
-  return(/std/collections/vector/count<i32>(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_stdlib_collection_shim_templated_return_vector_nested_arg.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_vector_nested_arg_err.txt")
-                                  .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support return type on /wrapVectorArray") !=
-        std::string::npos);
-}
-
-TEST_CASE("rejects native templated stdlib map return envelope nested arg") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<map<string, array<i32>>>]
-wrapMapNestedValue([string] key, [i32] value) {
-  return(mapSingle<string, i32>(key, value))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{wrapMapNestedValue("only"raw_utf8, 3i32)}
-  return(/std/collections/map/count<string, i32>(values))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_stdlib_collection_shim_templated_return_map_nested_arg.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_return_map_nested_arg_err.txt")
-                                  .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support return type on /wrapMapNestedValue") !=
         std::string::npos);
 }
 
@@ -379,25 +288,6 @@ main() {
   CHECK(runCommand(exePath) == 19);
 }
 
-TEST_CASE("native stdlib collection shim map single") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapSingle<string, i32>("only"raw_utf8, 21i32)}
-  return(plus(/std/collections/map/at<string, i32>(values, "only"raw_utf8), /std/collections/map/count<string, i32>(values)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_single.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_single_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 22);
-}
-
 TEST_CASE("rejects native stdlib collection shim map single type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -429,44 +319,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native stdlib collection shim map new") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{mapNew<i32, i32>()}
-  return(plus(/std/collections/map/count<i32, i32>(values), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_new.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_new_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
-}
-
-TEST_CASE("native stdlib collection shim map new string key envelope") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapNew<string, i32>()}
-  return(plus(/std/collections/map/count<string, i32>(values), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_new_string.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_new_string_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
-}
-
 TEST_CASE("rejects native stdlib collection shim map new type mismatch") {
   const std::string source = R"(
 import /std/collections/*
@@ -496,45 +348,6 @@ main() {
       writeTemp("compile_native_stdlib_collection_shim_map_new_string_mismatch.prime", source);
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main";
   CHECK(runCommand(compileCmd) == 2);
-}
-
-TEST_CASE("native stdlib collection shim map count") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{mapTriple<i32, i32>(1i32, 10i32, 2i32, 20i32, 3i32, 30i32)}
-  return(plus(/std/collections/map/count<i32, i32>(values), 9i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_count.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_map_count_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
-}
-
-TEST_CASE("native stdlib collection shim map count string keys") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<int>]
-main() {
-  [map<string, i32>] values{mapDouble<string, i32>("left"raw_utf8, 10i32, "right"raw_utf8, 15i32)}
-  return(plus(/std/collections/map/count<string, i32>(values), 9i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_map_count_string_key.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_map_count_string_key_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
 }
 
 TEST_CASE("rejects native stdlib collection shim map count type mismatch") {

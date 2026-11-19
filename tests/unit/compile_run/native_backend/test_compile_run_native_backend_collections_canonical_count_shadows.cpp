@@ -189,35 +189,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles native canonical vector access builtin string count shadow") {
-  const std::string source = R"(
-[return<int>]
-/string/count([string] values) {
-  return(91i32)
-}
-
-[return<i32>]
-/std/collections/vector/at([vector<string>] values, [i32] index) {
-  return(7i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<string>] values{vector<string>("hello"raw_utf8)}
-  return(count(/std/collections/vector/at(values, 0i32)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_canonical_vector_access_builtin_string_count_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_canonical_vector_access_builtin_string_count_shadow_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-}
-
 TEST_CASE("rejects native canonical vector unsafe access count shadow with expression-call diagnostics") {
   const std::string source = R"(
 [return<int>]

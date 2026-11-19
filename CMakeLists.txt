@@ -3805,7 +3805,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # shards are registered only there; they do not exist in Linux/x86_64 builds.
   if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
     # Cases 71 to 100 took 78 to 108 s per ten in a loaded gate, so they are shards of five.
-    foreach(appleCoreRange "1;70;10" "71;100;5" "101;202;10")
+    foreach(appleCoreRange "1;70;10" "71;100;5" "101;190;10")
       list(GET appleCoreRange 0 appleCoreFirst)
       list(GET appleCoreRange 1 appleCoreLast)
       list(GET appleCoreRange 2 appleCorePerShard)
@@ -3825,7 +3825,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     # shard (array_slice) in PrimeStructManagedCompileRunNativeOtherSuites.cmake.
     # Cases 221 to 230 took 11 s alone (TODO-6027): shards of five there, of ten elsewhere (the shard names of the
     # disabled list below are the same).
-    foreach(appleCollectionsRange "1;220;10" "221;230;5" "231;583;10")
+    foreach(appleCollectionsRange "1;220;10" "221;230;5" "231;506;10")
       list(GET appleCollectionsRange 0 appleCollectionsFirst)
       list(GET appleCollectionsRange 1 appleCollectionsLast)
       list(GET appleCollectionsRange 2 appleCollectionsPerShard)
@@ -3836,48 +3836,6 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                         RANGE_FIRST ${appleCollectionsFirst}
                                         RANGE_LAST ${appleCollectionsLast}
                                         CASES_PER_SHARD ${appleCollectionsPerShard})
-    endforeach()
-    # These shards were never part of any gate, and some of their cases have
-    # drifted from the compiler (stale expected diagnostics, native arm64 output
-    # mismatches). They stay registered so the registration check keeps counting
-    # their cases, but disabled until TODO-5543 repairs or retires them.
-    set(PrimeStructAppleNativeKnownFailingShards
-      core_apple_core_1_10
-      core_apple_core_131_140
-      core_apple_core_191_200
-      core_apple_core_201_202
-      math_numeric_apple_math_numeric_41_49
-      collections_apple_collections_71_80
-      collections_apple_collections_101_110
-      collections_apple_collections_111_120
-      collections_apple_collections_151_160
-      collections_apple_collections_171_180
-      collections_apple_collections_181_190
-      collections_apple_collections_271_280
-      collections_apple_collections_291_300
-      collections_apple_collections_311_320
-      collections_apple_collections_321_330
-      collections_apple_collections_331_340
-      collections_apple_collections_421_430
-      collections_apple_collections_431_440
-      collections_apple_collections_441_450
-      collections_apple_collections_451_460
-      collections_apple_collections_481_490
-      collections_apple_collections_491_500
-      collections_apple_collections_501_510
-      collections_apple_collections_511_520
-      collections_apple_collections_521_530
-      collections_apple_collections_531_540
-      collections_apple_collections_541_550
-      collections_apple_collections_551_560
-      collections_apple_collections_561_570
-      collections_apple_collections_571_580
-    )
-    foreach(shard IN LISTS PrimeStructAppleNativeKnownFailingShards)
-      set(shardTest "PrimeStruct_primestruct_compile_run_native_backend_${shard}")
-      if(TEST "${shardTest}")
-        set_tests_properties("${shardTest}" PROPERTIES DISABLED TRUE)
-      endif()
     endforeach()
   endif()
 

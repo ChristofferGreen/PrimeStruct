@@ -103,34 +103,6 @@ main() {
   CHECK(runCommand(exePath) == 166);
 }
 
-TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return</std/collections/map<i32, i32>>]
-wrapValues() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(wrapValues().at(true))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_canonical_map_access_helper_key_mismatch_wrapper_slash_return_receiver.prime", source);
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_native_canonical_map_access_helper_key_mismatch_wrapper_slash_return_receiver_out.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find(
-            "Semantic error: unknown call target: /map/at [PSC1005]") !=
-        std::string::npos);
-}
-
 TEST_CASE("native explicit canonical map typed bindings with builtin helpers") {
   const std::string source = R"(
 import /std/collections/*

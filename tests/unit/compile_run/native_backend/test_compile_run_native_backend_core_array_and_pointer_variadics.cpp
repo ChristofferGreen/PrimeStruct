@@ -5,21 +5,6 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 namespace {
 
-void expectNativeCompileReject(const std::string &srcPath,
-                               const std::string &errName,
-                               const std::string &expected,
-                               const std::string &alsoExpected = "") {
-  const std::string errPath = (testScratchPath("") / errName).string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find(expected) != std::string::npos);
-  if (!alsoExpected.empty()) {
-    CHECK(err.find(alsoExpected) != std::string::npos);
-  }
-}
-
 void expectNativeCompileRun(const std::string &srcPath,
                             const std::string &exeName,
                             int expectedExitCode) {
@@ -109,57 +94,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_array.prime", source);
   expectNativeCompileRun(srcPath, "primec_native_variadic_args_borrowed_array_exe", 11);
-}
-
-TEST_CASE("native rejects variadic borrowed array packs with indexed dereference access helpers") {
-  const std::string source = R"(
-[return<int>]
-score_refs([args<Reference<array<i32>>>] values) {
-  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
-  return(plus(head, dereference(at(values, 2i32)).at(0i32)))
-}
-
-[return<int>]
-forward([args<Reference<array<i32>>>] values) {
-  return(score_refs([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<Reference<array<i32>>>] values) {
-  [array<i32>] extra{array<i32>(1i32, 2i32)}
-  [Reference<array<i32>>] extra_ref{location(extra)}
-  return(score_refs(extra_ref, [spread] values))
-}
-
-[return<int>]
-main() {
-  [array<i32>] a0{array<i32>(1i32, 2i32)}
-  [array<i32>] a1{array<i32>(3i32)}
-  [array<i32>] a2{array<i32>(4i32, 5i32, 6i32)}
-  [Reference<array<i32>>] r0{location(a0)}
-  [Reference<array<i32>>] r1{location(a1)}
-  [Reference<array<i32>>] r2{location(a2)}
-
-  [array<i32>] b0{array<i32>(7i32, 8i32)}
-  [array<i32>] b1{array<i32>(9i32)}
-  [array<i32>] b2{array<i32>(10i32, 11i32)}
-  [Reference<array<i32>>] s0{location(b0)}
-  [Reference<array<i32>>] s1{location(b1)}
-  [Reference<array<i32>>] s2{location(b2)}
-
-  [array<i32>] c0{array<i32>(12i32)}
-  [array<i32>] c1{array<i32>(13i32, 14i32, 15i32)}
-  [Reference<array<i32>>] t0{location(c0)}
-  [Reference<array<i32>>] t1{location(c1)}
-
-  return(plus(score_refs(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_array_deref_access.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_borrowed_array_deref_access.err",
-                            "semantic-product method-call target missing lowered definition", "/array/at");
 }
 
 TEST_CASE("native materializes variadic scalar reference packs with indexed dereference") {
@@ -288,66 +222,6 @@ main() {
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference.prime", source);
   expectNativeCompileRun(srcPath, "primec_native_variadic_args_struct_reference_exe", 65);
-}
-
-TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack access") {
-  const std::string source = R"(
-[return<int>]
-score_ptrs([args<Pointer<i32>>] values) {
-  return(plus(dereference(values[0i32]), dereference(values[2i32])))
-}
-
-[return<int>]
-score_from_at([args<Reference<i32>>] values) {
-  return(score_ptrs(location(at(values, 0i32)),
-                    location(values.at(1i32)),
-                    location(values.at_unsafe(2i32))))
-}
-
-[return<int>]
-forward([args<Reference<i32>>] values) {
-  return(score_from_at([spread] values))
-}
-
-[return<int>]
-forward_mixed([args<Reference<i32>>] values) {
-  [i32] extra{1i32}
-  [Reference<i32>] extra_ref{location(extra)}
-  return(score_ptrs(location(at(values, 0i32)),
-                    location(extra_ref),
-                    location(values.at_unsafe(1i32))))
-}
-
-[return<int>]
-main() {
-  [i32] a0{1i32}
-  [i32] a1{2i32}
-  [i32] a2{3i32}
-  [Reference<i32>] r0{location(a0)}
-  [Reference<i32>] r1{location(a1)}
-  [Reference<i32>] r2{location(a2)}
-
-  [i32] b0{4i32}
-  [i32] b1{5i32}
-  [i32] b2{6i32}
-  [Reference<i32>] s0{location(b0)}
-  [Reference<i32>] s1{location(b1)}
-  [Reference<i32>] s2{location(b2)}
-
-  [i32] c0{7i32}
-  [i32] c1{8i32}
-  [Reference<i32>] t0{location(c0)}
-  [Reference<i32>] t1{location(c1)}
-
-  return(plus(score_from_at(r0, r1, r2),
-              plus(forward(s0, s1, s2),
-                   forward_mixed(t0, t1))))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer_pack_access.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_variadic_args_scalar_pointer_pack_access.err",
-                            "semantic-product method-call target missing lowered definition",
-                            "/array/at");
 }
 
 TEST_SUITE_END();

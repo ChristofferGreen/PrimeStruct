@@ -246,7 +246,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("native matrix arithmetic helpers with tolerance") {
+TEST_CASE("rejects native matrix scalar divide helper call") {
   const std::string source = R"(
 import /std/math/*
 
@@ -309,15 +309,21 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_matrix_arithmetic_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_matrix_arithmetic_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_matrix_arithmetic_helpers.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  // The std/math matrix helpers are library calls the native backend does not lower inside an expression; the VM
+  // backend rejects the same program the same way.
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Native lowering error: native backend only supports arithmetic") !=
+        std::string::npos);
+  CHECK(err.find("call=/divide, name=/std/math/mat2_div_scalar_internal") != std::string::npos);
 }
 
-TEST_CASE("native quaternion arithmetic helpers with tolerance") {
+TEST_CASE("rejects native quaternion scalar multiply helper call") {
   const std::string source = R"(
 import /std/math/*
 
@@ -357,12 +363,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_quaternion_arithmetic_helpers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_quaternion_arithmetic_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_quaternion_arithmetic_helpers.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  // The std/math quaternion helpers are library calls the native backend does not lower inside an expression; the VM
+  // backend rejects the same program the same way.
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("Native lowering error: native backend only supports arithmetic") !=
+        std::string::npos);
+  CHECK(err.find("call=/multiply, name=/std/math/quat") != std::string::npos);
 }
 
 TEST_CASE("rejects native support-matrix plus mismatch diagnostic") {

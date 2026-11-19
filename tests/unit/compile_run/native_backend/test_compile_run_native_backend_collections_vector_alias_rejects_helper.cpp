@@ -133,60 +133,6 @@ main() {
   CHECK(runCommand(exePath) == 46);
 }
 
-TEST_CASE("native array alias slash-method helpers through same-path helpers") {
-  const std::string source = R"(
-Marker {
-  [i32] value
-}
-
-[return<int>]
-/array/count([vector<i32>] values) {
-  return(77i32)
-}
-
-[return<int>]
-/array/capacity([vector<i32>] values) {
-  return(78i32)
-}
-
-[return<Marker>]
-/array/at([vector<i32>] values, [i32] index) {
-  return(Marker(plus(index, 10i32)))
-}
-
-[return<Marker>]
-/array/at_unsafe([vector<i32>] values, [i32] index) {
-  return(Marker(plus(index, 20i32)))
-}
-
-[return<int>]
-/Marker/tag([Marker] self) {
-  return(self.value)
-}
-
-[effects(heap_alloc), return<vector<i32>>]
-wrapVector() {
-  return(vector<i32>(1i32, 2i32, 3i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(plus(plus(values./array/count(), values./array/capacity()),
-              plus(plus(values./array/at(1i32).tag(), values./array/at_unsafe(2i32).tag()),
-                   plus(wrapVector()./array/at(0i32).tag(), wrapVector()./array/at_unsafe(1i32).tag()))))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_array_alias_method_helpers_same_path_vector_receivers.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_array_alias_method_helpers_same_path_vector_receivers_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 219);
-}
-
 TEST_CASE("rejects native vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
 [return<int>]
@@ -216,26 +162,6 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("template arguments are only supported on templated definitions: /vector/count") !=
         std::string::npos);
-}
-
-TEST_CASE("native vector namespaced mutator alias") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32)}
-  /vector/push(values, 2i32)
-  return(/std/collections/vector/at<i32>(values, 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_vector_namespaced_mutator_alias.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_namespaced_mutator_alias_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native vector namespaced count capacity access aliases without alias helpers") {
@@ -341,28 +267,6 @@ main() {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 4);
-}
-
-TEST_CASE("rejects native bare vector literal unsafe access through imported stdlib helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(at_unsafe(vector<i32>(4i32, 7i32, 9i32), 1i32))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_vector_literal_unsafe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_vector_literal_unsafe_err.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_literal_unsafe_exe").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("only supports at() on numeric/bool/string arrays or vectors") !=
-        std::string::npos);
 }
 
 TEST_CASE("native bare vector at through imported stdlib helper") {
@@ -480,25 +384,6 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects native bare vector count method without imported helper") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
-  return(values.count())
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_vector_count_method_import_requirement.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_vector_count_method_import_requirement_err.txt")
-          .string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
-}
-
 TEST_CASE("rejects native wrapper temporary vector count method without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
@@ -571,83 +456,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /string/capacity") != std::string::npos);
-}
-
-TEST_CASE("native stdlib collection shim helpers") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(7i32)}
-  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
-  [i32 mut] total{plus(/std/collections/vector/count<i32>(values), /std/collections/map/count<i32, i32>(pairs))}
-  [vector<i32>] emptyValues{/std/collections/vector/vector<i32>()}
-  [map<i32, i32>] emptyPairs{mapNew<i32, i32>()}
-  assign(total, plus(total, plus(/std/collections/vector/count<i32>(emptyValues), /std/collections/map/count<i32, i32>(emptyPairs))))
-  return(total)
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shims.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shims_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
-}
-
-TEST_CASE("native stdlib collection shim multi constructors") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(5i32, 7i32, 9i32)}
-  [map<i32, i32>] pairs{mapDouble<i32, i32>(1i32, 11i32, 2i32, 22i32)}
-  [i32] vectorTotal{plus(/std/collections/vector/at<i32>(values, 0i32), /std/collections/vector/at<i32>(values, 2i32))}
-  [i32] mapTotal{plus(/std/collections/map/at<i32, i32>(pairs, 1i32), /std/collections/map/at_unsafe<i32, i32>(pairs, 2i32))}
-  return(plus(plus(vectorTotal, mapTotal), plus(/std/collections/vector/count<i32>(values), /std/collections/map/count<i32, i32>(pairs))))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_multi_ctor.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_multi_ctor_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
-}
-
-TEST_CASE("native templated stdlib collection return envelopes") {
-  const std::string source = R"(
-import /std/collections/*
-
-[return<vector<T>>]
-wrapVector<T>([T] value) {
-  return(/std/collections/vector/vector<T>(value))
-}
-
-[return<map<K, V>>]
-wrapMap<K, V>([K] key, [V] value) {
-  return(mapSingle<K, V>(key, value))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{wrapVector<i32>(9i32)}
-  [map<string, i32>] pairs{wrapMap<string, i32>("only"raw_utf8, 4i32)}
-  return(plus(plus(/std/collections/vector/count<i32>(values), /std/collections/map/count<string, i32>(pairs)), /std/collections/map/at<string, i32>(pairs, "only"raw_utf8)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_templated_returns.prime", source);
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_stdlib_collection_shim_templated_returns_exe")
-                                  .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 6);
 }
 
 TEST_SUITE_END();

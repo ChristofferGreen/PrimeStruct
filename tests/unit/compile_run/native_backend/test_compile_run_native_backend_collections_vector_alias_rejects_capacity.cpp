@@ -262,35 +262,6 @@ main() {
   CHECK(readFile(errPath).find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector alias compatibility template forwarding on bool type mismatch") {
-  const std::string source = R"(
-[return<int>]
-/vector/count([vector<i32>] values, [i32] marker) {
-  return(7i32)
-}
-
-[return<int>]
-/std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
-  return(90i32)
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
-  return(plus(/vector/count(values, true), values.count(true)))
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_vector_alias_implicit_canonical_forwarding_bool_type_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_native_vector_alias_implicit_canonical_forwarding_bool_type_mismatch_exe")
-          .string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
-}
-
 TEST_CASE("rejects native vector alias compatibility template forwarding on non-bool type mismatch") {
   const std::string source = R"(
 [return<int>]
@@ -697,28 +668,6 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
-}
-
-TEST_CASE("rejects native local alias slash-method vector count on string receiver during lowering") {
-  const std::string source = R"(
-[effects(heap_alloc), return<int>]
-main() {
-  [string] value{"abc"raw_utf8}
-  return(value./vector/count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_local_alias_slash_vector_count_string_no_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_native_local_alias_slash_vector_count_string_no_helper_err.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("semantic-product method-call target missing lowered definition: /string/count") !=
-        std::string::npos);
 }
 
 TEST_SUITE_END();

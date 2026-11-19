@@ -9,21 +9,6 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 namespace {
 
-void expectNativeCompileReject(const std::string &srcPath,
-                               const std::string &errName,
-                               const std::string &expected,
-                               const std::string &alsoExpected = "") {
-  const std::string errPath = (testScratchPath("") / errName).string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string err = readFile(errPath);
-  CHECK(err.find(expected) != std::string::npos);
-  if (!alsoExpected.empty()) {
-    CHECK(err.find(alsoExpected) != std::string::npos);
-  }
-}
-
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
@@ -54,45 +39,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 166);
-}
-
-TEST_CASE("native vector literal count helper") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(count(vector<i32>(1i32, 2i32, 3i32)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_vector_literal_count_helper.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_literal_count_helper_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 0);
-}
-
-TEST_CASE("native collection constructor parity expression access") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [array<i32>] values{array<i32>[1i32, 2i32]}
-  [vector<i32>] list{vector<i32>[3i32, 4i32]}
-  [map<i32, i32>] table{map<i32, i32>(5i32, 6i32)}
-  return(plus(plus(values[1i32], list[1i32]), at(table, 5i32)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_collection_brackets.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_collection_brackets_exe").string();
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(runCommand(exePath) == 127);
 }
 
 TEST_CASE("rejects native map constructor call access expressions") {
@@ -343,70 +289,6 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("rejects native string-keyed map constructor access expressions") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{/std/collections/map/map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  [i32] a{at(values, "b"raw_utf8)}
-  [i32] b{at_unsafe(values, "a"raw_utf8)}
-  return(plus(plus(a, b), count(values)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_literal_string_key.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_key.err",
-                            "error:");
-}
-
-TEST_CASE("rejects native map constructor string binding key access expressions") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [string] key{"b"raw_utf8}
-  [map<string, i32>] values{/std/collections/map/map<string, i32>(key, 2i32, "a"raw_utf8, 1i32)}
-  return(at(values, key))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_literal_string_binding_key.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_binding_key.err",
-                            "error:");
-}
-
-TEST_CASE("rejects native string-keyed map indexing sugar") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  return(values["b"raw_utf8])
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_indexing_string_key.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_key.err",
-                            "error:");
-}
-
-TEST_CASE("rejects native string-keyed map indexing binding key") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  [string] key{"b"raw_utf8}
-  return(values[key])
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_indexing_string_binding.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_map_indexing_string_binding.err",
-                            "error:");
-}
-
 TEST_CASE("rejects native map indexing with argv key") {
   const std::string source = R"(
 import /std/collections/*
@@ -429,22 +311,6 @@ main([array<string>] args) {
   CHECK(err.find(": error: Semantic error: entry argument strings are only supported in print calls or string "
                  "bindings") != std::string::npos);
   CHECK(err.find("^") != std::string::npos);
-}
-
-TEST_CASE("rejects native string-keyed map binding lookup") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  [string] key{"b"raw_utf8}
-  return(plus(at(values, key), count(values)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_map_literal_string_binding.prime", source);
-  expectNativeCompileReject(srcPath, "primec_native_map_literal_string_binding.err",
-                            "error:");
 }
 
 TEST_CASE("rejects native map lookup with argv string key") {

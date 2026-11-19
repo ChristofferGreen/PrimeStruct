@@ -142,8 +142,6 @@ of sync with them.
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
 | TODO-6068 | Wasm computes `FmaF32` and `FmaF64` with one rounding | deferred | stdlib-math-fma |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
-| TODO-5483 | Verify arm64 SextI32 on a macOS machine | deferred | ir-semantics |
-| TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | deferred | native-arm64-tests |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-5902 | Each task of a `--vm-threads` run uses the fast kernel | deferred | vm-threads |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
@@ -182,10 +180,10 @@ of sync with them.
 - Backend parity: TODO-6059, TODO-6061, TODO-6051, TODO-6052, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine), TODO-6068 (Wasm exact emulation)
-- macOS support: TODO-5543, TODO-5545 (need macOS)
+- macOS support: TODO-5545 (needs macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5853
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
-- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; arm64 SextI32 TODO-5483 (needs macOS); VM speed ; passes ; real calls TODO-5752
+- Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5804, TODO-5806, TODO-5854
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 
@@ -635,33 +633,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `fma` matrix case passes on `native-O0` and `native-O2` on x86_64 Linux
     - full release gate green on Linux
   - stop_rule: x86_64 emitter only.
-
-- [~] TODO-5483: Verify arm64 SextI32 on a macOS machine
-  - owner: ai
-  - status: in_progress
-  - claimed_by: arm64-verify (worktree-agent-a60e5634c4eedee1d), 2026-11-19
-  - deferred_reason: needs an arm64 macOS machine; the Linux x86_64 session cannot run `Arm64Emitter` output.
-  - created_at: 2026-10-03
-  - phase: Optimizing backends
-  - parallel_track: ir-semantics
-  - scope: `Arm64Emitter::emitSextI32` (SXTW x0, w0, encoded 0x93407C00) was written from the encoding and never executed. The i32 builtins audit is done: increment, decrement, abs and pow emit SextI32, and integer lerp, saturate, clamp, min, max and sign already agree at the limits on every backend (matrix cases `i32_wrap_builtins` and `i32_limit_builtins`; lerp and clamp go through plus/minus/multiply, which wrap).
-  - acceptance:
-    - the `i32` matrix cases (`i32_wrap_basic`, `i32_wrap_loops`, `i32_wrap_builtins`, `i32_limit_builtins`) pass on arm64 macOS native; an encoding unit test pins the SXTW bytes (done: `primestruct.ir.native_codegen` checks SXTW and the float-compare branch conditions through `primec/testing/NativeEmitterEncodings.h`; the float compares now use MI/LS so NaN compares false, also unexecuted)
-  - stop_rule: do not change i64/u64 behavior or the I32 arithmetic opcodes themselves; lowering also uses them for address arithmetic.
-
-- [~] TODO-5543: Repair or retire the disabled Apple/arm64 native backend test shards
-  - owner: ai
-  - status: in_progress
-  - claimed_by: arm64-verify (worktree-agent-a60e5634c4eedee1d), 2026-11-19
-  - deferred_reason: needs an arm64 macOS machine to run; the Linux x86_64 session compiles these suites out.
-  - created_at: 2026-10-08
-  - phase: macOS support
-  - parallel_track: native-arm64-tests
-  - scope: `primestruct.compile.run.native_backend.{core,math_numeric,collections}` are compiled only on Apple/arm64 and were never registered with CTest, so they drifted. They are now registered for Apple/arm64 in `CMakeLists.txt` (shards `*_apple_core_*`, `*_apple_math_numeric_*`, `*_apple_collections_*`), and the 30 shards listed in `PrimeStructAppleNativeKnownFailingShards` are `DISABLED`: stale expected diagnostics (`compile ... == 2` with a changed message), native arm64 exit-code mismatches in `math_numeric_types.h`, and collection shadow/shim cases. Run each disabled shard on a Mac, then fix the expectation, fix the native arm64 backend, or delete the case, and remove the shard from the list.
-  - acceptance:
-    - `PrimeStructAppleNativeKnownFailingShards` is empty and all `apple_*` shards pass on arm64 macOS
-    - full release gate green on Linux and macOS
-  - stop_rule: tests and arm64 native emitter output only; no language semantics changes.
 
 - [ ] TODO-5545: Record the macOS AppKit manual smoke checklist
   - owner: human

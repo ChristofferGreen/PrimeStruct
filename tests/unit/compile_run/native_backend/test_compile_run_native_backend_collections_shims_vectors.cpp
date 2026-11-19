@@ -9,30 +9,6 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("native stdlib collection shim access helpers") {
-  const std::string source = R"(
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{/std/collections/vector/vector<i32>(7i32)}
-  [map<i32, i32>] pairs{mapSingle<i32, i32>(3i32, 9i32)}
-  [i32] a{/std/collections/vector/at<i32>(values, 0i32)}
-  [i32] b{/std/collections/vector/at_unsafe<i32>(values, 0i32)}
-  [i32] c{/std/collections/map/at<i32, i32>(pairs, 3i32)}
-  [i32] d{/std/collections/map/at_unsafe<i32, i32>(pairs, 3i32)}
-  return(plus(plus(a, b), plus(c, d)))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_stdlib_collection_shim_access.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_collection_shim_access_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 32);
-}
-
 TEST_CASE("native stdlib collection shim capacity helper") {
   const std::string source = R"(
 import /std/collections/*

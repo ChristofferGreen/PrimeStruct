@@ -1974,6 +1974,7 @@ are left unarchived.
 | TODO-5480 | IR passes for the patterns lowering leaves behind | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5481 | Gate vm, native and optexe rows in the benchmark baseline | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
 | TODO-5482 | Triage the corpus programs where native differs from the VM | [2026-10.md](todo_archive/2026-10.md) | 2026-10-03 |
+| TODO-5483 | Verify arm64 SextI32 on a macOS machine | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-5484 | Parameter modes: mode flags and call-site borrow checks | [2026-10.md](todo_archive/2026-10.md) | - |
 | TODO-5485 | `[T copy]` parameters receive their own copy | [2026-10.md](todo_archive/2026-10.md) | 2026-10-05 |
 | TODO-5486 | `[T move]` parameters take ownership | [2026-10.md](todo_archive/2026-10.md) | - |
@@ -2025,6 +2026,7 @@ are left unarchived.
 | TODO-5540 | `StringView`: a borrowed view of literals and Strings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-02 |
 | TODO-5541 | Host functions take and return `String` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5542 | Native and C++ parity for bytes, slices and strings | [undated.md](todo_archive/undated.md) | - |
+| TODO-5543 | Repair or retire the disabled Apple/arm64 native backend test shards | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5544 | `Type.staticHelper()` resolves through `import` | [undated.md](todo_archive/undated.md) | - |
 | TODO-5546 | Text view file load and save in the native UI ABI | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |
 | TODO-5547 | Dialog results need an emptiness test | [2026-10.md](todo_archive/2026-10.md) | 2026-10-08 |

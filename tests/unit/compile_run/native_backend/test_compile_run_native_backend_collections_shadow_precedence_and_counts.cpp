@@ -62,31 +62,6 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("rejects native user map count call shadow without imported canonical helper") {
-  const std::string source = R"(
-[return<int>]
-/map/count([map<i32, i32>] values) {
-  return(96i32)
-}
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(count(values))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_user_map_count_call_shadow.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_user_map_count_call_shadow_out.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + outPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find(
-            "Semantic error: unknown call target: count [PSC1005]") !=
-        std::string::npos);
-}
-
 TEST_CASE("rejects native user map count method shadow without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
@@ -110,54 +85,6 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
-}
-
-TEST_CASE("native canonical map sugar with current precedence before compatibility aliases") {
-  const std::string source = R"(
-[return<int>]
-/map/count([map<i32, i32>] values) {
-  return(96i32)
-}
-
-[return<int>]
-/std/collections/map/count([map<i32, i32>] values) {
-  return(73i32)
-}
-
-[return<int>]
-/map/at([map<i32, i32>] values, [i32] key) {
-  return(41i32)
-}
-
-[return<int>]
-/std/collections/map/at([map<i32, i32>] values, [i32] key) {
-  return(11i32)
-}
-
-[return<int>]
-/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(42i32)
-}
-
-[return<int>]
-/std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
-  return(12i32)
-}
-
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(plus(plus(count(values), values.count()),
-              plus(values.at(1i32), values.at_unsafe(1i32))))
-}
-)";
-  const std::string srcPath = writeTemp("compile_native_canonical_map_sugar_before_aliases.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_canonical_map_sugar_before_aliases_exe").string();
-
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 169);
 }
 
 TEST_CASE("rejects native canonical unknown map helper with canonical diagnostics") {
