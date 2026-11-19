@@ -89,10 +89,27 @@ through the wrapper prefix.
 
 | Family | Beat | Wrapped |
 | --- | --- | --- |
-| every doctest binary (`tests/unit/test_main.cpp`) | each test case and subcase start | the managed suites (`addPrimeStructDoctestSuite`) and `primestructAddDoctestShards` entries |
+| every doctest binary (`tests/unit/test_main.cpp`) | each test case and subcase start | every CTest entry that runs one with a `TIMEOUT` of 300 s or more (the managed suites, `primestructAddDoctestShards`, and the direct entries for collection parity, compile time, embed, VM byte regions, `ir_link`, `library_*`, `vm_threads*`, u8 scalar, net, http, path, file listing, glob, build, UI events, native UI headless/markdown/bindings/stdlib/editor, misc, backend, semantics, text filter, IR cfg and optimizer suites, the TSan smoke entries, and the `PrimeStruct_vm_threads_corpus_*` rounds) |
 | compile-run, build and library tests that shell out | `runCommand` and `primec` stage beats | with the doctest binary they run in |
-| `PrimeStruct_embed_host_calls`, `PrimeStruct_embed_runtime_only`, `PrimeStruct_build_function_steps_*` (the entries that hit timeouts) | doctest beat | yes |
-| the other direct `add_test` entries in `CMakeLists.txt`, Python checks, native UI entries, `PrimeStruct_vm_threads_corpus_*` | doctest beat where they are doctest binaries | no; their `TIMEOUT` is their only limit until the open leaf in `docs/todo.md` (track `gate-timeouts`) moves them |
+| doctest entries with a `TIMEOUT` under 300 s (parser suites at 30 s) | doctest beat | no: a 30 s `TIMEOUT` is already shorter than a silence limit |
+| `PrimeStruct_test_registration` (300 s), the other Python check scripts and their self-tests (60 to 120 s) | none | no: a script that prints nothing until it ends cannot beat, and its `TIMEOUT` is its only limit |
+| `PrimeStruct_semantic_memory_benchmark`, `PrimeStruct_semantic_memory_definition_worker_parity`, `PrimeStruct_semantic_memory_trend` | none | no: one long `primec` measurement run that prints at the end |
+| `PrimeStruct_embed_install_package`, `PrimeStruct_launch_bench_reference_editor`, `PrimeStruct_native_ui_appkit_*`, `PrimeStruct_native_ui_compiled_app_*`, `PrimeStruct_native_ui_startup_guard_*` | none | no: `cmake -P` scripts that run one long compile or one app launch and print at the end; the AppKit drivers also drive app windows (`PRIMESTRUCT_SKIP_UI_WINDOWS`), so no process layer is added there |
+| `*_suite_registration` entries (60 s, `cmake -P`) | none | no: seconds long |
 
-An entry that cannot beat (one long `primec` or VM run with no output) keeps its `TIMEOUT` alone and is listed in the
-open leaf.
+A wrapped entry that is a native UI doctest binary runs headless exactly as before; the wrapper adds a pipe and a process
+group, not a window.
+
+`PRIMESTRUCT_TEST_WATCHDOG=OFF` (above) registers every entry plain again.
+
+An entry with no `TIMEOUT` of its own (`PrimeStruct_native_ui_markdown`, `PrimeStruct_native_ui_markdown_edit`) is
+passed to the wrapper with CTest's default 1500 s, so its hard cap is the limit it already had.
+
+### Beats seen at the wrapper
+
+The compile-run entry `PrimeStruct_primestruct_compile_run_vm_outputs_ir_and_output_modes_emitters_23_32_23_23`, run
+under `Watchdog` with an `on_beat` callback (the beats as the wrapper receives them), delivered `doctest case: ...`,
+`command: ./primec --emit=vm ...`, then the `primec` stage beats `primec: compile start`, `primec: parse`,
+`primec: semantics` and `primec: lower and emit`; the last beat at exit was `primec: lower and emit`. A
+`primevm` compile-run entry delivered `doctest case`, `command: ./primevm ...`, `primec: compile start`,
+`primec: parse`, `primec: semantics`. So a stage of `primec` that stops is named in the kill message.

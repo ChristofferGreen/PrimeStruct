@@ -1196,21 +1196,21 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set(parityTestName "PrimeStruct_collection_parity_${parityFamily}")
       set(parityCaseName "collection parity ${parityFamily} rows")
     endif()
+    primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_collection_parity_tests>
+              "--test-suite=primestruct.collection_parity"
+              "--test-case=${parityCaseName}")
     add_test(
       NAME ${parityTestName}
-      COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
-              "--test-suite=primestruct.collection_parity"
-              "--test-case=${parityCaseName}"
-    )
+      COMMAND ${testCommand})
     set_tests_properties(${parityTestName}
                          PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_collection_parity_tests>
+            "--test-suite=primestruct.collection_parity"
+            "--test-case=every helper family*,docs/CollectionHelperTargets.md*")
   add_test(
     NAME PrimeStruct_collection_parity_matrix
-    COMMAND $<TARGET_FILE:PrimeStruct_collection_parity_tests>
-            "--test-suite=primestruct.collection_parity"
-            "--test-case=every helper family*,docs/CollectionHelperTargets.md*"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_collection_parity_matrix
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
@@ -1223,28 +1223,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_compile_time_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_compile_time_tests PRIVATE primec_frontend_lib)
   primestructEnableWarnings(PrimeStruct_compile_time_tests)
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_compile_time_tests>
+            "--test-suite=primestruct.compile_time.facade"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_compile_time_facade
-    COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
-            "--test-suite=primestruct.compile_time.facade"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_compile_time_facade
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_compile_time_tests>
+            "--test-suite=primestruct.compile_time.callable"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_compile_time_callable
-    COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
-            "--test-suite=primestruct.compile_time.callable"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_compile_time_callable
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_compile_time_tests>
+            "--test-suite=primestruct.compile_time.value"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_compile_time_value
-    COMMAND $<TARGET_FILE:PrimeStruct_compile_time_tests>
-            "--test-suite=primestruct.compile_time.value"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_compile_time_value
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
@@ -1260,12 +1260,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_definitions(PrimeStruct_progress_beat_tests PRIVATE
     PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
   primestructEnableWarnings(PrimeStruct_progress_beat_tests)
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_progress_beat_tests>
+            "--test-suite=primestruct.support.progress_beat"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_progress_beat
-    COMMAND $<TARGET_FILE:PrimeStruct_progress_beat_tests>
-            "--test-suite=primestruct.support.progress_beat"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_progress_beat
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
@@ -1292,28 +1292,28 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_definitions(PrimeStruct_embed_tests PRIVATE
     PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
   primestructEnableWarnings(PrimeStruct_embed_tests)
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.script_engine"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_script_engine
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.script_engine"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_script_engine
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.diagnostics"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_diagnostics
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.diagnostics"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_diagnostics
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.bytecode"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_bytecode
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.bytecode"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_bytecode
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   primestructWatchedCommand(PrimeStruct_embed_host_calls_command 300
@@ -1326,71 +1326,71 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_embed_host_calls
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.host_language"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_host_language
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.host_language"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_host_language
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # 29 cases, 98 s in a loaded gate: shards of ten.
   primestructAddDoctestShards(PrimeStruct_embed_exports PrimeStruct_embed_tests 29 10 300
                               "--test-suite=primestruct.embed.exports")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.lifetime"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_lifetime
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.lifetime"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_lifetime
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.order_independence"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_order_independence
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.order_independence"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_order_independence
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.no_process"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_no_process
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.no_process"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_no_process
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.run_options"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_run_options
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.run_options"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_run_options
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.threads"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_threads
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.threads"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_threads
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.task_threads"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_task_threads
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.task_threads"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_task_threads
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.sync_replay"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_embed_sync_replay
-    COMMAND $<TARGET_FILE:PrimeStruct_embed_tests>
-            "--test-suite=primestruct.embed.sync_replay"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_embed_sync_replay
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
@@ -1457,81 +1457,81 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_compile_definitions(PrimeStruct_vm_byte_tests PRIVATE
     PRIMESTRUCT_TEST_PRIMEVM_PATH="$<TARGET_FILE:primevm>")
   primestructEnableWarnings(PrimeStruct_vm_byte_tests)
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks,primestruct.runtime.atomics,primestruct.runtime.mutexes,primestruct.runtime.conditions"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_byte_regions
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.byte_regions,primestruct.runtime.text_heap,primestruct.runtime.tasks,primestruct.runtime.atomics,primestruct.runtime.mutexes,primestruct.runtime.conditions"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_byte_regions
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The IR link (TODO-5922) of hand-built serialized modules: functions, layouts, host imports, strings; and the
   # primevm --link command line with the schema version 38.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.ir_link,primestruct.runtime.ir_link_strings"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_ir_link
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.ir_link,primestruct.runtime.ir_link_strings"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_ir_link PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.ir_link_cli"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_ir_link_cli
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.ir_link_cli"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_ir_link_cli PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The container of the library archive: layout, determinism and every refusal of the reader.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.library_archive"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_library_archive
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.library_archive"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_library_archive PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The VM's threads mode (--vm-threads), with hand-built IR.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_threads
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.vm_threads"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_threads
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # Atomics, mutexes and conditions under --vm-threads, each program run 100 times (no sleeps, no timing).
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads_sync"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_threads_sync
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.vm_threads_sync"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_threads_sync
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # Host functions registered reentrant or main-thread only under --vm-threads, each program run 20 times.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_threads_host"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_threads_host
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.vm_threads_host"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_threads_host
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # Sync-order record and replay (TODO-5901): threaded runs write a log and the deterministic scheduler follows it.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_sync_replay"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_sync_replay
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.vm_sync_replay"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_sync_replay
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The per-thread heap arenas of generated programs (VmHeapArenas.h), driven by std::threads.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.heap_arenas"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_vm_heap_arenas
-    COMMAND $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.heap_arenas"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_heap_arenas
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
 
@@ -1555,12 +1555,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   primestructAddDoctestShards(PrimeStruct_u8_scalar_slices PrimeStruct_u8_scalar_tests 21 10 300
                               "--test-suite=primestruct.language.slices")
   foreach(u8ScalarSuite u8_scalar u8_containers host_text)
+    primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
+              "--test-suite=primestruct.language.${u8ScalarSuite}"
+              "--order-by=file")
     add_test(
       NAME PrimeStruct_u8_scalar_${u8ScalarSuite}
-      COMMAND $<TARGET_FILE:PrimeStruct_u8_scalar_tests>
-              "--test-suite=primestruct.language.${u8ScalarSuite}"
-              "--order-by=file"
-    )
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_u8_scalar_${u8ScalarSuite}
                          PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   endforeach()
@@ -1627,45 +1627,45 @@ if(PRIMESTRUCT_BUILD_TESTS)
   set(PRIMESTRUCT_NET_EXAMPLE_CASES http_hello web_app todo_web hello_button)
   set(PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "")
   foreach(primestructNetExample IN LISTS PRIMESTRUCT_NET_EXAMPLE_CASES)
-    add_test(
-      NAME PrimeStruct_net_${primestructNetExample}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 1800 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.net"
               "--test-case=the ${primestructNetExample} example *"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_net_${primestructNetExample}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_net_${primestructNetExample}
                          PROPERTIES TIMEOUT 1800 LABELS "parallel-safe")
     list(APPEND PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "the ${primestructNetExample} example *")
   endforeach()
   list(JOIN PRIMESTRUCT_NET_EXAMPLE_EXCLUDES "," PRIMESTRUCT_NET_EXAMPLE_EXCLUDE_FILTER)
-  add_test(
-    NAME PrimeStruct_net
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.net"
             "--test-case-exclude=${PRIMESTRUCT_NET_EXAMPLE_EXCLUDE_FILTER}"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_net
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_net
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # /std/http: the request parser, responses and the router (tests/unit/backend_host/test_http.cpp). Its cases run on
   # the VM, build a fixture "through optexe", serve "over loopback" or are about "serveWorkers"; the last three build
   # optexe programs, so they are CTest entries of their own and PrimeStruct_http runs the VM cases.
-  add_test(
-    NAME PrimeStruct_http
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.http"
             "--test-case-exclude=*through optexe*,*over loopback*,*serveWorkers*"
-            "--order-by=file"
-  )
-  # (6 cases, 8 s alone, 5 s of it the fixture's one optexe build, which is a case of its own.)
+            "--order-by=file")
   add_test(
-    NAME PrimeStruct_http_workers
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    NAME PrimeStruct_http
+    COMMAND ${testCommand})
+  # (6 cases, 8 s alone, 5 s of it the fixture's one optexe build, which is a case of its own.)
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.http"
             "--test-case=*serveWorkers*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_http_workers
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_http_workers
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   set_tests_properties(PrimeStruct_http
@@ -1674,13 +1674,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   primestructAddDoctestShards(PrimeStruct_http_optexe PrimeStruct_cpp_host_call_tests 8 2 900
                               "--test-suite=primestruct.backend.http"
                               "--test-case=*through optexe*")
-  add_test(
-    NAME PrimeStruct_http_loopback
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 1200 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.http"
             "--test-case=*over loopback*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_http_loopback
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_http_loopback
                        PROPERTIES TIMEOUT 1200 LABELS "parallel-safe")
 
@@ -1691,43 +1691,43 @@ if(PRIMESTRUCT_BUILD_TESTS)
 
   # /std/path: the textual path functions (tests/unit/backend_host/test_path.cpp). One case runs the fixture on the VM,
   # the other builds it with optexe, so each is a CTest entry of its own.
-  add_test(
-    NAME PrimeStruct_path_vm
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.path"
             "--test-case-exclude=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_path_vm
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_path_vm
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_path_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.path"
             "--test-case=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_path_optexe
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_path_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/file/listing: listDirectory over a fixture directory (tests/unit/backend_host/test_file_listing.cpp). The VM
   # cases and the optexe builds are CTest entries of their own.
-  add_test(
-    NAME PrimeStruct_file_listing_vm
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.file_listing"
             "--test-case-exclude=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_file_listing_vm
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_file_listing_vm
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_file_listing_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.file_listing"
             "--test-case=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_file_listing_optexe
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_file_listing_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
@@ -1735,71 +1735,71 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # CTest entries of their own.
   foreach(glob_case "matches star" "lists exactly" "stops a walk")
     string(MAKE_C_IDENTIFIER "${glob_case}" glob_case_id)
-    add_test(
-      NAME PrimeStruct_glob_vm_${glob_case_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.glob"
               "--test-case=*${glob_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_glob_vm_${glob_case_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_glob_vm_${glob_case_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
-  add_test(
-    NAME PrimeStruct_glob_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.glob"
             "--test-case=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_glob_optexe
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_glob_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/build: the build graph value and its JSON export (tests/unit/backend_host/test_build_graph.cpp). The VM run, the
   # optexe build and the build-profile script are CTest entries of their own.
-  add_test(
-    NAME PrimeStruct_build_graph_vm
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*on the VM*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_graph_vm
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_graph_vm
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_build_graph_optcpp
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*in optcpp*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_graph_optcpp
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_graph_optcpp
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_build_graph_one_body_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*under optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_graph_one_body_optexe
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_graph_one_body_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_build_graph_optexe
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*through optexe*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_graph_optexe
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_graph_optexe
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
-  add_test(
-    NAME PrimeStruct_build_graph_profile
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*under the build profile*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_graph_profile
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_graph_profile
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # Each case compiles make.prime cold (about 1.2 s), so each is a CTest entry of its own.
@@ -1808,13 +1808,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "rejects a bad --jobs" "reports the diagnostics of a broken" "when the directory has none" "for a script with a type error"
           "rejects an effect outside")
     string(MAKE_C_IDENTIFIER "${command_case}" command_id)
-    add_test(
-      NAME PrimeStruct_build_command_${command_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_graph"
               "--test-case=*${command_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_command_${command_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_command_${command_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1824,13 +1824,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "deleting or replacing an output" "gives byte-identical outputs" "outputs left in place" "failed step leaves no cache"
           "damaged cache file" "names its hash scheme" "sha256 matches")
     string(MAKE_C_IDENTIFIER "${cache_case}" cache_id)
-    add_test(
-      NAME PrimeStruct_build_cache_${cache_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_cache"
               "--test-case=*${cache_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_cache_${cache_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_cache_${cache_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1839,13 +1839,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "puts a file into the output" "edited copy source" "deleted or edited copy" "outside the output directory"
           "absolute copy destination" "copy of a missing file" "optexe step leaves")
     string(MAKE_C_IDENTIFIER "${copy_case}" copy_id)
-    add_test(
-      NAME PrimeStruct_build_copy_${copy_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_copy"
               "--test-case=*${copy_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_copy_${copy_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_copy_${copy_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1871,12 +1871,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # The compiled make.prime is cached in the project (tests/unit/backend_host/test_build_script_cache.cpp).
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.build_script_cache"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_build_script_cache
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.build_script_cache"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_script_cache
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # A step whose glob listing changes runs again (tests/unit/backend_host/test_build_glob_cache.cpp).
@@ -1885,13 +1885,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "is removed runs" "rewriting a matched file" "does not match the pattern" "starts to read another"
           "exports the watched" "missing target" "records the listing hash" "listing hash covers")
     string(MAKE_C_IDENTIFIER "${glob_cache_case}" glob_cache_id)
-    add_test(
-      NAME PrimeStruct_build_glob_cache_${glob_cache_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_glob_cache"
               "--test-case=*${glob_cache_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_glob_cache_${glob_cache_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_glob_cache_${glob_cache_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1903,13 +1903,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "entry lists the used symbols" "cannot be read runs" "compare by name without overload" "round trips its uses"
           "become one --library each")
     string(MAKE_C_IDENTIFIER "${library_cutoff_case}" library_cutoff_id)
-    add_test(
-      NAME PrimeStruct_build_library_cutoff_${library_cutoff_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_library_cutoff"
               "--test-case=*${library_cutoff_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_library_cutoff_${library_cutoff_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_library_cutoff_${library_cutoff_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1919,13 +1919,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "executables that link them run" "library build: a second run" "library build: a diamond"
           "library build: a failed library" "library links:")
     string(MAKE_C_IDENTIFIER "${library_graph_case}" library_graph_id)
-    add_test(
-      NAME PrimeStruct_build_library_graph_${library_graph_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_library_graph"
               "--test-case=*${library_graph_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_library_graph_${library_graph_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_library_graph_${library_graph_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1933,13 +1933,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
   foreach(stages_case
           "builds a second graph" "dry run of a staged script" "without the build_run effect" "reads the incomplete marker")
     string(MAKE_C_IDENTIFIER "${stages_case}" stages_id)
-    add_test(
-      NAME PrimeStruct_build_stages_${stages_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_stages"
               "--test-case=*${stages_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_stages_${stages_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_stages_${stages_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1949,13 +1949,13 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "declares build_run" "calls Graph.run" "builds the steps of a subproject" "the merge prefixes ids"
           "options of the project without build_run")
     string(MAKE_C_IDENTIFIER "${subproject_case}" subproject_id)
-    add_test(
-      NAME PrimeStruct_build_subprojects_${subproject_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_subprojects"
               "--test-case=*${subproject_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_subprojects_${subproject_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_subprojects_${subproject_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
@@ -1964,51 +1964,51 @@ if(PRIMESTRUCT_BUILD_TESTS)
           "options reach the root script" "reaches the scripts of a subproject" "that no script declares" "limits of its type" "cache of the steps follows"
           "every stage of a staged" "plan reads --option" "merge keeps one entry")
     string(MAKE_C_IDENTIFIER "${options_case}" options_id)
-    add_test(
-      NAME PrimeStruct_build_options_${options_id}
-      COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_options"
               "--test-case=*${options_case}*"
-              "--order-by=file"
-    )
+              "--order-by=file")
+    add_test(
+      NAME PrimeStruct_build_options_${options_id}
+      COMMAND ${testCommand})
     set_tests_properties(PrimeStruct_build_options_${options_id}
                          PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
   # PrimeScroll's make.prime prints the graph of scripts/build_native_app.sh's optexe build (tests/unit/backend_host/test_build_primescroll.cpp).
-  add_test(
-    NAME PrimeStruct_build_primescroll
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_primescroll"
             "--test-case=*prints the graph of the script's optexe build*"
-            "--order-by=file"
-  )
-  set_tests_properties(PrimeStruct_build_primescroll PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+            "--order-by=file")
   add_test(
-    NAME PrimeStruct_build_primescroll_direct
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+    NAME PrimeStruct_build_primescroll
+    COMMAND ${testCommand})
+  set_tests_properties(PrimeStruct_build_primescroll PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_primescroll"
             "--test-case=*direct form*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_primescroll_direct
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_primescroll_direct PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   # `primec build` runs a graph with an exe and an optexe step; the two host-compiler builds are an entry of their own.
-  add_test(
-    NAME PrimeStruct_build_command_native
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
             "--test-suite=primestruct.backend.build_graph"
             "--test-case=*exe and optexe steps*"
-            "--order-by=file"
-  )
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_build_command_native
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_build_command_native
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
   # /std/ui/events: the event values control handlers receive (tests/unit/backend_host/test_ui_events.cpp).
+  primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
+            "--test-suite=primestruct.backend.ui_events"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_ui_events
-    COMMAND $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
-            "--test-suite=primestruct.backend.ui_events"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_ui_events
                        PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
 
@@ -2083,40 +2083,40 @@ if(PRIMESTRUCT_BUILD_TESTS)
       PRIMESTRUCT_COMPILED_EDITOR_NATIVE="${PRIMESTRUCT_COMPILED_EDITOR_NATIVE}")
   endif()
   primestructEnableWarnings(PrimeStruct_native_ui_tests)
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.headless"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_headless
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.headless"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_native_ui_headless
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 1500 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.markdown"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_markdown
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.markdown"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
+  primestructWatchedCommand(testCommand 1500 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.markdown_edit"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_markdown_edit
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.markdown_edit"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.bindings"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_bindings
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.bindings"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_native_ui_bindings
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.stdlib"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_stdlib
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.stdlib"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_native_ui_stdlib
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # The editor scenarios and the editor acceptance suite (TODO-5552..5554); `ctest -R native_ui_editor` runs both.
@@ -2125,12 +2125,12 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # 79 cases, 10.5 s alone as one entry: two shards (each compiles the editor, 2.3 s, once).
   primestructAddDoctestShards(PrimeStruct_native_ui_editor PrimeStruct_native_ui_tests 79 40 300
                               "--test-suite=primestruct.ui.editor")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.editor_acceptance"
+            "--order-by=file")
   add_test(
     NAME PrimeStruct_native_ui_editor_acceptance
-    COMMAND $<TARGET_FILE:PrimeStruct_native_ui_tests>
-            "--test-suite=primestruct.ui.editor_acceptance"
-            "--order-by=file"
-  )
+    COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_native_ui_editor_acceptance
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   if(PRIMESTRUCT_BUILD_NATIVE_UI AND APPLE)
@@ -2869,22 +2869,22 @@ if(PRIMESTRUCT_BUILD_TESTS)
     target_include_directories(PrimeStruct_embed_tsan_smoke PRIVATE third_party ${CMAKE_SOURCE_DIR} tests/unit/embed)
     target_link_libraries(PrimeStruct_embed_tsan_smoke PRIVATE primec_embed_lib)
     primestructEnableWarnings(PrimeStruct_embed_tsan_smoke)
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_embed_tsan_smoke>
+              "--test-suite=primestruct.embed.tsan_smoke"
+              "--order-by=file")
     add_test(
       NAME PrimeStruct_embed_tsan_smoke
-      COMMAND $<TARGET_FILE:PrimeStruct_embed_tsan_smoke>
-              "--test-suite=primestruct.embed.tsan_smoke"
-              "--order-by=file"
-    )
+      COMMAND ${testCommand})
     set_tests_properties(
       PrimeStruct_embed_tsan_smoke
       PROPERTIES TIMEOUT 600 LABELS "optional-ci;tsan")
 
+    primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_semantics_tsan_smoke>
+              "--test-suite=primestruct.semantics.tsan_smoke"
+              "--order-by=file")
     add_test(
       NAME PrimeStruct_semantics_tsan_smoke
-      COMMAND $<TARGET_FILE:PrimeStruct_semantics_tsan_smoke>
-              "--test-suite=primestruct.semantics.tsan_smoke"
-              "--order-by=file"
-    )
+      COMMAND ${testCommand})
     set_tests_properties(
       PrimeStruct_semantics_tsan_smoke
       PROPERTIES TIMEOUT 300 LABELS "optional-ci;tsan")
@@ -3181,7 +3181,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_misc_tests> "--test-suite=${suite}")
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_misc_tests> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND ${testCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 600)
   endforeach()
 
@@ -3192,7 +3193,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     primeStructSelectDoctestTarget(suiteTarget "${suite}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:${suiteTarget}> "--test-suite=${suite}")
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:${suiteTarget}> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND ${testCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
 
@@ -3217,34 +3219,38 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set(semanticsTimeout 30)
     endif()
     if (suite STREQUAL "primestruct.semantics.operators")
-      add_test(NAME "${testName}_matrix_and_shape_rules_core"
-               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+      primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
                        "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=1"
                        "--last=5")
-      add_test(NAME "${testName}_matrix_and_shape_rules_shapes"
-               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+      add_test(NAME "${testName}_matrix_and_shape_rules_core"
+               COMMAND ${testCommand})
+      primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
                        "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=6"
                        "--last=10")
-      add_test(NAME "${testName}_matrix_and_shape_rules_products"
-               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+      add_test(NAME "${testName}_matrix_and_shape_rules_shapes"
+               COMMAND ${testCommand})
+      primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
                        "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=11"
                        "--last=15")
-      add_test(NAME "${testName}_scalar_and_mixed_numeric_rules"
-               COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests>
+      add_test(NAME "${testName}_matrix_and_shape_rules_products"
+               COMMAND ${testCommand})
+      primestructWatchedCommand(testCommand 900 $<TARGET_FILE:PrimeStruct_semantics_tests>
                        "--test-suite=${suite}"
                        "--source-file=*test_semantics_entry_operators.cpp"
                        "--order-by=file"
                        "--first=16"
                        "--last=29")
+      add_test(NAME "${testName}_scalar_and_mixed_numeric_rules"
+               COMMAND ${testCommand})
       # Semantics-only shards avoid the compile-run temp-artifact conflicts that still
       # require serialization elsewhere in the suite.
       set_tests_properties("${testName}_matrix_and_shape_rules_core" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
@@ -3252,7 +3258,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
       set_tests_properties("${testName}_matrix_and_shape_rules_products" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
       set_tests_properties("${testName}_scalar_and_mixed_numeric_rules" PROPERTIES TIMEOUT 900 LABELS "parallel-safe")
     else()
-      add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_semantics_tests> "--test-suite=${suite}")
+      primestructWatchedCommand(testCommand ${semanticsTimeout} $<TARGET_FILE:PrimeStruct_semantics_tests>
+                                "--test-suite=${suite}")
+      add_test(NAME "${testName}" COMMAND ${testCommand})
       set_tests_properties("${testName}" PROPERTIES TIMEOUT "${semanticsTimeout}" LABELS "${semanticsLabels}")
     endif()
   endforeach()
@@ -3263,7 +3271,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
     endif()
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_text_filter_tests> "--test-suite=${suite}")
+    primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_text_filter_tests> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND ${testCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   endforeach()
 
@@ -4217,7 +4226,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   foreach(suite IN LISTS PrimeStructIrCfgTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_cfg_tests> "--test-suite=${suite}")
+    primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_ir_cfg_tests> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND ${testCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
   addPrimeStructSuiteRegistration(
@@ -4264,7 +4274,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
       primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 32 8 300 "--test-suite=${suite}")
       continue()
     endif()
-    add_test(NAME "${testName}" COMMAND $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
+    primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_ir_optimizer_tests> "--test-suite=${suite}")
+    add_test(NAME "${testName}" COMMAND ${testCommand})
     set_tests_properties("${testName}" PROPERTIES TIMEOUT 300)
   endforeach()
   addPrimeStructSuiteRegistration(
@@ -4360,7 +4371,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   function(primeStructAddCorpusRounds namePrefix perEntry)
     math(EXPR rounds "(${PrimeStructVmThreadsCorpusRepeats} + ${perEntry} - 1) / ${perEntry}")
     foreach(round RANGE 1 ${rounds})
-      add_test(NAME ${namePrefix}_r${round} COMMAND ${ARGN})
+      primestructWatchedCommand(corpusCommand 300 ${ARGN})
+      add_test(NAME ${namePrefix}_r${round} COMMAND ${corpusCommand})
       set_tests_properties(${namePrefix}_r${round} PROPERTIES
         TIMEOUT 300 LABELS "parallel-safe"
         ENVIRONMENT "PRIMESTRUCT_VM_THREADS_CORPUS=${perEntry}")
