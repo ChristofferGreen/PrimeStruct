@@ -190,7 +190,9 @@
   `copy`/`move` parameter whose payload was moved out is moved-from after the arm (`use-after-move` until it is
   assigned again). The payload of a sum the definition only borrows (a read-only parameter, `this`, a field, an
   element, a `Reference`) cannot be moved out or returned: `borrowed pick payload cannot be moved`, `borrowed pick
-  payload escapes via return`. A builtin
+  payload escapes via return`. `some<T>(fresh)` is a call like any other: the fresh `T` belongs to the parameter of
+  `some`, the sum holds a copy of it (`Copy` runs), and each is destroyed once, the argument when `some` ends and the
+  payload with the sum, so `pick(some<Noisy>(Noisy{6i32}))` prints two `Destroy` lines, for two values. A builtin
   `vector<T>` payload is owned by the sum like a `vector<T>` field by its struct: one taken from a place gets a buffer of
   its own, a fresh one is taken over, and destroying the sum destroys the elements and frees the buffer. Its payload
   binding is a vector binding the sum keeps owning, so a `mut` binding initialized from it and `return(values)` copy it

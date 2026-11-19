@@ -888,4 +888,55 @@ main() {
   CHECK_MESSAGE(outcome.err.find("unknown capture: job") != std::string::npos, outcome.err);
 }
 
+// `some<Noisy>(Noisy{6i32})` hands the `Noisy` to the parameter of `some`, which builds the sum from a copy of it:
+// the argument is destroyed when `some` ends (the first line, 6) and the sum's payload, a value of its own made by
+// `Copy` (1006), when the `pick` or the local that holds the sum ends. Two values, each destroyed once; the same
+// holds for a sum local. Not a double destroy: the ids differ because `Copy` adds 1000.
+TEST_CASE("some of a fresh struct destroys the argument and the payload copy once each") {
+  program_matrix::ProgramCase program;
+  program.name = "pick_subject_some_argument_and_payload";
+  program.source = R"(
+import /std/maybe/*
+
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public] Copy([Reference<Self>] other) { assign(this.id, other.id + 1000i32) }
+  [public effects(io_out)] Destroy() { print_line(this.id) }
+}
+
+[effects(io_out), return<int>]
+main() {
+  pick(some<Noisy>(Noisy{6i32})) {
+    none {
+      print_line(0i32)
+    }
+    some(n) {
+      print_line(100i32)
+    }
+  }
+  print_line(200i32)
+  [Maybe<Noisy>] kept{some<Noisy>(Noisy{7i32})}
+  pick(kept) {
+    none {
+      print_line(0i32)
+    }
+    some(n) {
+      print_line(300i32)
+    }
+  }
+  print_line(400i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "6\n100\n1006\n200\n7\n300\n400\n1007\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
