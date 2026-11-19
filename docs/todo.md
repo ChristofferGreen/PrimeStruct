@@ -644,9 +644,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [ ] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
+- [~] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
   - owner: ai
   - status: deferred
+  - claimed_by: worker-return-label (worktree agent-ad85f8a559588c884), 2026-11-19
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5518)
   - parallel_track: frontend-accept-return-label
