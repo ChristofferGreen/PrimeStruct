@@ -511,6 +511,74 @@ bool resolveVectorPayloadRecordPath(const std::string &typeText, std::string &pa
   return !pathOut.empty();
 }
 
+// A sum a struct holds in a field takes its tag slots and payload slots inline. The field layout resolver reads
+// a nested type through the cache, so the sums the fields of `structPath` (and of the structs inside it) name are
+// laid out first.
+static bool layoutSumFieldsOf(const std::string &structPath,
+                              const StructLayoutFieldIndex &fieldIndex,
+                              const std::unordered_map<std::string, const Definition *> &defMap,
+                              const ResolveStructTypeNameFn &resolveStructTypeName,
+                              const ValueKindFromTypeNameFn &valueKindFromTypeName,
+                              StructSlotLayoutCache &layoutCache,
+                              std::unordered_set<std::string> &layoutStack,
+                              std::unordered_set<std::string> &visited,
+                              std::string &error) {
+  if (!visited.insert(structPath).second) {
+    return true;
+  }
+  std::vector<StructLayoutFieldInfo> fields;
+  const auto structDefIt = defMap.find(structPath);
+  if (structDefIt == defMap.end() || structDefIt->second == nullptr ||
+      !collectStructLayoutFieldsFromIndex(fieldIndex, structPath, fields)) {
+    return true;
+  }
+  for (const StructLayoutFieldInfo &field : fields) {
+    if (field.isStatic) {
+      continue;
+    }
+    const std::string fieldType = buildTemplatedTypeName(field.typeName, field.typeTemplateArg);
+    std::string fieldPath;
+    if (valueKindFromTypeName(fieldType) != LocalInfo::ValueKind::Unknown ||
+        !resolveStructTypeName(fieldType, structDefIt->second->namespacePrefix, fieldPath)) {
+      continue;
+    }
+    const auto fieldDefIt = defMap.find(fieldPath);
+    if (fieldDefIt == defMap.end() || fieldDefIt->second == nullptr) {
+      continue;
+    }
+    const bool isSum =
+        std::any_of(fieldDefIt->second->transforms.begin(),
+                    fieldDefIt->second->transforms.end(),
+                    [](const Transform &transform) { return transform.name == "sum"; });
+    if (isSum) {
+      StructSlotLayoutInfo sumLayout;
+      if (layoutCache.count(fieldPath) == 0 &&
+          !resolveStructSlotLayoutFromDefinitionFieldIndex(fieldPath,
+                                                           fieldIndex,
+                                                           defMap,
+                                                           resolveStructTypeName,
+                                                           valueKindFromTypeName,
+                                                           layoutCache,
+                                                           layoutStack,
+                                                           sumLayout,
+                                                           error)) {
+        return false;
+      }
+    } else if (!layoutSumFieldsOf(fieldPath,
+                                  fieldIndex,
+                                  defMap,
+                                  resolveStructTypeName,
+                                  valueKindFromTypeName,
+                                  layoutCache,
+                                  layoutStack,
+                                  visited,
+                                  error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     const std::string &structPath,
     const StructLayoutFieldIndex &fieldIndex,
@@ -580,6 +648,20 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
       out = layout;
       layoutCache[structPath] = layout;
       return true;
+    }
+  }
+  if (layoutCache.count(structPath) == 0) {
+    std::unordered_set<std::string> visited;
+    if (!layoutSumFieldsOf(structPath,
+                           fieldIndex,
+                           defMap,
+                           resolveStructTypeName,
+                           valueKindFromTypeName,
+                           layoutCache,
+                           layoutStack,
+                           visited,
+                           error)) {
+      return false;
     }
   }
   return resolveStructSlotLayoutFromDefinitionFields(

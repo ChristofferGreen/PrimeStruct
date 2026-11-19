@@ -215,4 +215,104 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a struct holds sum fields: read, pick, replace and copy") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_sum_struct_field";
+  program.source = R"(
+import /std/maybe/*
+
+[struct]
+Circle {
+  [i32] radius
+}
+
+[sum]
+Shape {
+  none
+  [Circle] circle
+  [i32] side
+}
+
+[struct]
+Holder {
+  [i32] before
+  [Shape mut] shape
+  [Maybe<i32> mut] extra
+  [i32] after
+}
+
+[return<i32>]
+area([Shape] shape) {
+  return(pick(shape) {
+    none { 0i32 }
+    circle(c) { c.radius * 3i32 }
+    side(n) { n * n }
+  })
+}
+
+[return<Holder>]
+make([i32] k) {
+  return(Holder{1i32, Shape{[circle] Circle{k}}, Maybe<i32>{[some] 7i32}, 2i32})
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Holder mut] h{make(5i32)}
+  print_line(h.before)
+  print_line(area(h.shape))
+  print_line(pick(h.extra) { none { 0i32 } some(v) { v } })
+  print_line(h.after)
+  [Holder] copy{h}
+  h.shape = Shape{[side] 4i32}
+  print_line(area(h.shape))
+  print_line(area(copy.shape))
+  h.extra = Maybe<i32>{none}
+  print_line(pick(h.extra) { none { 0i32 } some(v) { v } })
+  print_line(pick(copy.extra) { none { 0i32 } some(v) { v } })
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1\n15\n7\n2\n16\n15\n0\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a sum field destroys the owning payload it replaces and the one it ends with") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_sum_struct_field_destroy";
+  program.source = R"(
+[struct]
+Res {
+  [i32] id
+
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[sum]
+Slot {
+  none
+  [Res] res
+}
+
+[struct]
+Box {
+  [Slot mut] slot
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Box mut] box{Box{Slot{[res] Res{1i32}}}}
+  print_line(100i32)
+  box.slot = Slot{[res] Res{2i32}}
+  print_line(200i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "100\n1\n200\n2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

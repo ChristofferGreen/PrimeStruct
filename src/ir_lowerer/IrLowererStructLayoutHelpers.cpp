@@ -245,8 +245,36 @@ bool resolveBindingTypeLayout(
     return false;
   }
 
+  const Definition &fieldDef = *defIt->second;
+  if (std::any_of(fieldDef.transforms.begin(),
+                  fieldDef.transforms.end(),
+                  [](const Transform &transform) { return transform.name == "sum"; })) {
+    // A sum is a tag slot, a size slot and the widest payload in eight-byte slots.
+    uint32_t payloadBytes = 8;
+    for (const SumVariant &variant : fieldDef.sumVariants) {
+      const std::string &payloadType =
+          variant.payloadTypeText.empty() ? variant.payloadType : variant.payloadTypeText;
+      const std::string payloadPath =
+          variant.hasPayload && !payloadType.empty()
+              ? resolveStructTypePath(payloadType, fieldDef.namespacePrefix)
+              : std::string{};
+      const auto payloadDefIt = payloadPath.empty() ? defMap.end() : defMap.find(payloadPath);
+      if (payloadDefIt == defMap.end() || payloadDefIt->second == nullptr) {
+        continue;
+      }
+      IrStructLayout payloadLayout;
+      if (!computeStructLayout(*payloadDefIt->second, payloadLayout, errorOut)) {
+        return false;
+      }
+      payloadBytes = std::max(payloadBytes, alignTo(payloadLayout.totalSizeBytes, 8));
+    }
+    layoutOut.sizeBytes = 16 + payloadBytes;
+    layoutOut.alignmentBytes = 8;
+    return true;
+  }
+
   IrStructLayout nested;
-  if (!computeStructLayout(*defIt->second, nested, errorOut)) {
+  if (!computeStructLayout(fieldDef, nested, errorOut)) {
     return false;
   }
 

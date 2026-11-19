@@ -142,7 +142,6 @@ of sync with them.
 | TODO-5516 | Integer narrowing and float-to-int conversion agree across backends | deferred | numeric-conversions |
 | TODO-5517 | Runtime faults exit the same way on every backend | deferred | runtime-faults |
 | TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | deferred | runtime-faults |
-| TODO-6039 | A sum-typed struct field lowers | ready | frontend-accept-sum-field |
 | TODO-6043 | `return([ok] value)` constructs a sum (needs a language-design decision) | deferred | frontend-accept-return-label |
 | TODO-5519 | Operator rewriting handles calls, nested `!` and `?` precedence | deferred | text-filter |
 | TODO-5520 | Diagnostics point at user code with readable names | deferred | diagnostics |
@@ -165,13 +164,11 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-6039 (frontend-accept-sum-field): A sum-typed struct field lowers
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 
 ### Immediate Next 10
 
 1. TODO-5603
-2. TODO-6039
 
 ### Priority Lanes
 
@@ -185,7 +182,7 @@ of sync with them.
 - Result and control flow (docs/spec/errors-and-file-io.md): TODO-5515, TODO-6037
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512, TODO-5513
 - Backend parity: TODO-5516, TODO-5517, TODO-5744
-- Frontend and diagnostics: TODO-6039, TODO-6043, TODO-5519, TODO-5520, TODO-5521
+- Frontend and diagnostics: TODO-6043, TODO-5519, TODO-5520, TODO-5521
 - macOS support: TODO-5543, TODO-5545 (need macOS)
 - Language gaps found by native UI: TODO-5544
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5676, TODO-5677, TODO-5853; collection fields found by closures and the todo example: TODO-5727
@@ -614,19 +611,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: fault reporting only; recursion limits stay backend-specific but documented.
   - notes: deferred: queued behind the Ready Now cap.
-
-- [~] TODO-6039: A sum-typed struct field lowers
-  - owner: ai
-  - status: ready
-  - claimed_by: accept-a (worktree-agent-a1bd239c9c284a1b5), 2026-11-19
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5518)
-  - parallel_track: frontend-accept-sum-field
-  - scope: `[struct] Box { [Val] v }` with `Val` a user `[sum]`, then `Box{Val{[num] 3i32}}` and `pick(b.v) {...}` fails with `VM lowering error: internal error: missing struct field info for /Val`. A struct may hold a sum-typed field: construction, read, `pick` on the field, copy and destroy of the owning struct.
-  - acceptance:
-    - the repro compiles and runs on the VM; tests cover construction, `pick(b.v)`, a payload with a `Destroy` and a copy of the struct
-    - full release gate green
-  - stop_rule: sum-typed fields of structs on the VM and, where the sum already lowers there, native and C++; no new sum layouts.
 
 - [ ] TODO-6043: `return([ok] value)` constructs a sum (needs a language-design decision)
   - owner: ai
