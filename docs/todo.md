@@ -154,16 +154,19 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-6088 | A bare statement call of a user function named `vector` or `map` runs the user function | ready | lowering-user-shadow-statements |
 
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
+- TODO-6088 (lowering-user-shadow-statements): a bare statement call of a user function named `vector` or `map` runs the user function
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
+3. TODO-6088
 
 ### Priority Lanes
 
@@ -201,6 +204,19 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (direc
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
+
+- [~] TODO-6088: A bare statement call of a user function named `vector` or `map` runs the user function
+  - owner: ai
+  - status: ready
+  - claimed_by: shadow-stmt (worktree-agent-a4be60a801dabf453), 2026-11-19
+  - created_at: 2026-11-19
+  - phase: Correctness audit 2026-10 (found by TODO-6087)
+  - parallel_track: lowering-user-shadow-statements
+  - scope: With a user `[return<int>] vector([i32] value)`, a bare statement `vector(9i32)` fails on the VM with `unaligned indirect address: 57`, while the value call `print_line(vector(3i32))` works (program-matrix suite `user_shadows`). Reproduce on the VM and native, as a statement and as a value, for `vector`, `map` and `array`; find the statement path that treats the name as the builtin constructor or a collection helper although a user definition shadows it (docs/spec/type-system.md, rooted shadows); make the user function win, as for any other user name. If the spec says the builtin wins in statement position, stop and write options here instead.
+  - acceptance:
+    - a program-matrix case with a statement call and a value call of user `vector` and `map`, with a side effect seen in the output, passes on every config
+    - `map(..)` and `array(..)` are checked the same way and the result is reported in the block
+  - stop_rule: statement calls of shadowed constructor names only.
 
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai
