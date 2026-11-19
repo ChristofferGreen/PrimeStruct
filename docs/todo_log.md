@@ -7,6 +7,21 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-5931
+
+- 2026-11-20 (TODO-5931, release build, macOS arm64, `primec --emit=vm`, loaded machine, alternating runs, min of 20, instructions retired via `/usr/bin/time -l`; twice, identical instruction counts):
+
+  | Program | Instructions | Real |
+  | --- | --- | --- |
+  | empty `main` | 61M | 0.01 s |
+  | one `linearToSrgbChannel` call, `import /std/math/*` | 3293M | 0.22 s |
+  | same call, source of color.prime only (`import<"colorsrc.prime">`) | 425M | 0.03 s |
+  | same call, color.psa (`--library`, 80 KB) | 1226M | 0.08 s |
+  | one `Vec2` built and read, vector.prime as source | 759M | 0.06 s |
+  | same, vector.psa (`--library`, 125 KB) | 1247M | 0.08 s |
+
+  The library costs about 1.2G instructions per link whatever it holds, more than compiling the source it replaces. Building `std.psa` is also refused for matrix, quaternion, image, text/string and map today, and a method with an explicit `self` is seen with one parameter too many through the interface. Decision: low-value, archived without building (threshold: 20 percent of the compile time of a typical program).
+
 ## TODO-6030
 
 - 2026-11-18 (TODO-6030, release build, macOS arm64, `ctest -R PrimeStruct_vm_threads_corpus_ --parallel 1`, other agents'

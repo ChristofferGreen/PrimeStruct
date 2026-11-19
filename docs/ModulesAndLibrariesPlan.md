@@ -198,6 +198,10 @@ the front-end win is taken. A prebuilt `std.psa`, produced by the project's own 
 re-parsing and re-validating the non-generic stdlib per compile; generic collections would still ship as definitions.
 Measure first with the benchmarks of the manifest plan and do it only if it shows a gain.
 
+Measured 2026-11-20 (TODO-5931): no gain. A linked library costs about 1.2G instructions per compile, more than compiling the
+same stdlib file from source (color: 1226M against 425M; vector: 1247M against 759M), and most stdlib modules do not build
+with `--emit=lib` yet. Not built; see `docs/todo_finished.md`.
+
 ## 13. Backends: what IR-level libraries do not buy
 
 Linking at the IR level saves the front end (parse, validate, lower) and gives early cutoff. It does not save the back
