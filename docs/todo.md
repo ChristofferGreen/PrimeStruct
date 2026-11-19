@@ -244,10 +244,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [~] TODO-6074: An args pack and `Result.map` destroy the `String`s of their temporaries
+- [ ] TODO-6074: An args pack and `Result.map` destroy the `String`s of their temporaries
   - owner: ai
   - status: deferred
-  - claimed_by: lifecycle-a (worktree-agent-a528dda38173cf8e7), 2026-11-19
   - created_at: 2026-11-19
   - phase: Lifecycle (found while finishing TODO-5727)
   - parallel_track: lifecycle-temporaries
@@ -256,6 +255,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - matrix cases for an args pack of `Box` temporaries and a `Result.map` yielding a `Box` end with the heap statistics of the start on VM and optexe
     - full release gate green
   - stop_rule: ownership of args-pack elements and of a mapped sum payload only.
+  - notes: needs a decision, not chosen yet (measured 2026-11-19 on the release VM and optexe, the two halves have different causes).
+    - Args pack: `emitStructPackedValueToSlots` (src/ir_lowerer/IrLowererInlinePackedArgs.cpp) copies each element into the pack slots, disarms a temporary argument (the pack takes it over) and does a shallow slot copy of a named one (no `Copy` helper, no disarm), and the callee never destroys the pack. So the pack owns what a temporary gave it and borrows what a place gave it, with no per-element record of which. Option A: the pack owns every element (a named argument runs its `Copy` helper like a vector push) and the callee destroys all elements when its body ends; this changes a named argument's cost and its `Copy` side effects. Option B: keep the mixed ownership and give each element a drop flag, set only for a taken-over temporary; no `Copy` change, more state per call. Option C: the caller destroys the temporaries after the call (they are borrowed by the pack for the call's duration), like a read-only parameter; simplest, but `[spread]` forwarding of a pack then has to say who owns the elements.
+    - `Result.map`: the leak does not happen for a typed local (`[Result<Box, i32>] r{...}` destroys the payload once, measured); it happens when the result is held by an `[auto]` local or read by `try` from one: the semantic product types `[auto] m{Result.map(...)}` and `[auto] r{Result.ok(Box{...})}` as `i64` (a packed legacy Result), the payload lives in untracked struct slots next to it, `try(m)` copies it out through `Copy` and nothing destroys the original (32 bytes: one `String`). Option A: infer the stdlib `Result<T, E>` sum for an `[auto]` local of `Result.ok`/`Result.map`/`Result.and_then`, so the existing sum drop applies (the binding type text changes from `i64`). Option B: keep the packed legacy local and register a drop entry for its struct payload when the init is a fresh legacy producer. Option C: refuse `[auto]` for a Result whose payload owns something (`declare the Result type`), a diagnostic instead of a fix.
 
 - [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
