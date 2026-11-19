@@ -333,12 +333,27 @@ emitClampMinMaxTrigOperatorExpr(const Expr &expr,
 
     fe.patch(jumpAbsEnd);
 
+    // -0.0 is not below zero, so its magnitude is rebuilt as +0.0.
+    fe.load(tempAbs).push(0.0).cmpEq();
+    size_t absNotZero = fe.jumpIfZero();
+    fe.push(0.0).store(tempAbs);
+    fe.patch(absNotZero);
+
+    // The sign of y is negative below zero and for -0.0, where 1 / y is -inf.
     fe.load(tempY).push(0.0).cmpLt();
+    size_t yNotBelowZero = fe.jumpIfZero();
+    size_t yBelowZero = fe.jump();
+    fe.patch(yNotBelowZero);
+    fe.load(tempY).push(0.0).cmpEq();
     size_t usePositive = fe.jumpIfZero();
+    fe.push(1.0).load(tempY).div().push(0.0).cmpLt();
+    size_t usePositiveAfterZero = fe.jumpIfZero();
+    fe.patch(yBelowZero);
     fe.load(tempAbs).neg().store(tempOut);
     size_t jumpToEnd = fe.jump();
 
     fe.patch(usePositive);
+    fe.patch(usePositiveAfterZero);
     fe.load(tempAbs).store(tempOut);
 
     fe.patch(jumpToEnd);

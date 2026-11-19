@@ -104,6 +104,11 @@ main() {
   - **Hyperbolic:** `/std/math/sinh`, `/std/math/cosh`, `/std/math/tanh`, `/std/math/asinh`, `/std/math/acosh`,
     `/std/math/atanh`.
   - **Float utils:** `/std/math/fma`, `/std/math/hypot`, `/std/math/copysign`.
+  - **Exact helpers:** `copysign` takes the sign of the second operand including `-0.0` (a NaN first operand stays
+    NaN), `round` rounds half away from zero with no double rounding (`round(0.49999999999999994)` is `0.0`,
+    `round(-0.4)` is `-0.0`, values at or above 2^52 for `f64` and 2^23 for `f32`, infinities and NaN are returned
+    unchanged), and `atan2` returns the C angle in (-pi, pi] for every quadrant, signed zero, infinity and NaN within
+    about 2 ulp. `fma` still rounds twice (multiply, then add); a fused `fma` is open.
   - **Predicates:** `/std/math/is_nan`, `/std/math/is_inf`, `/std/math/is_finite`.
   - **Backend limits (current):** VM/native math uses fast approximations and is validated against the C++/exe baseline
     within tolerances. Large-magnitude trig/log/exp inputs are only required to stay finite and within basic range

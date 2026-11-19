@@ -210,18 +210,55 @@ emitSaturateRoundingRootsOperatorExpr(const Expr &expr,
       return OperatorSaturateRoundingRootsEmitResult::Handled;
     }
     if (roundingName == "round") {
-      int32_t tempAdjusted = allocTempLocal();
+      // Half away from zero. Adding 0.5 and flooring rounds 0.49999999999999994
+      // up (the sum is exactly 1), so the remainder of the truncated value is
+      // compared with 0.5 instead. Values at or above 2^52 (2^23 for f32) are
+      // already integers; infinities and NaN take the same pass-through branch.
+      int32_t tempAbs = allocTempLocal();
+      int32_t tempDiff = allocTempLocal();
+      const double integerLimit = fe.isF64() ? 4503599627370496.0 : 8388608.0;
+
       fe.load(tempValue).push(0.0).cmpLt();
-      size_t jumpNonNegative = fe.jumpIfZero();
+      size_t jumpNonNegAbs = fe.jumpIfZero();
+      fe.load(tempValue).neg().store(tempAbs);
+      size_t jumpAbsEnd = fe.jump();
+      fe.patch(jumpNonNegAbs);
+      fe.load(tempValue).store(tempAbs);
+      fe.patch(jumpAbsEnd);
 
-      fe.load(tempValue).push(0.5).sub().store(tempAdjusted);
-      emitFloorOrCeil(tempAdjusted, tempOut, true);
+      fe.load(tempAbs).push(integerLimit).cmpLt();
+      size_t jumpPassThrough = fe.jumpIfZero();
+      emitFloatTrunc(tempValue, tempOut);
+      fe.load(tempValue).push(0.0).cmpLt();
+      size_t jumpPositive = fe.jumpIfZero();
+
+      fe.load(tempOut).load(tempValue).sub().store(tempDiff);
+      fe.load(tempDiff).push(0.5).cmpLt();
+      size_t jumpNegAdjust = fe.jumpIfZero();
+      size_t jumpNegKeep = fe.jump();
+      fe.patch(jumpNegAdjust);
+      fe.load(tempOut).push(1.0).sub().store(tempOut);
+      size_t jumpNegEnd = fe.jump();
+
+      fe.patch(jumpPositive);
+      fe.load(tempValue).load(tempOut).sub().store(tempDiff);
+      fe.load(tempDiff).push(0.5).cmpLt();
+      size_t jumpPosAdjust = fe.jumpIfZero();
+      size_t jumpPosKeep = fe.jump();
+      fe.patch(jumpPosAdjust);
+      fe.load(tempOut).push(1.0).add().store(tempOut);
+
+      fe.patch(jumpNegKeep);
+      fe.patch(jumpNegEnd);
+      fe.patch(jumpPosKeep);
+      // A zero result keeps the sign of the argument (-0.4 rounds to -0.0).
+      fe.load(tempOut).push(0.0).cmpEq();
+      size_t jumpNonZeroResult = fe.jumpIfZero();
+      fe.load(tempValue).push(0.0).mul().store(tempOut);
+      fe.patch(jumpNonZeroResult);
       size_t jumpEnd = fe.jump();
-
-      fe.patch(jumpNonNegative);
-      fe.load(tempValue).push(0.5).add().store(tempAdjusted);
-      emitFloorOrCeil(tempAdjusted, tempOut, false);
-
+      fe.patch(jumpPassThrough);
+      fe.load(tempValue).store(tempOut);
       fe.patch(jumpEnd);
       fe.load(tempOut);
       return OperatorSaturateRoundingRootsEmitResult::Handled;

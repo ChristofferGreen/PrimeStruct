@@ -158,4 +158,13 @@ void emitSqrtSeries(MathEmitter &fe,
                     int32_t valueLocal,
                     int32_t outLocal);
 
+// atan2(y, x) as C defines it: the angle of (x, y) in (-pi, pi], with the signed
+// zeros, the infinities and NaN handled, to about 2 ulp. `fe` already has the
+// float kind selected; the result is left in `outLocal`.
+void emitAtan2(MathEmitter &fe,
+               const Int32ProviderFn &allocTempLocal,
+               int32_t yLocal,
+               int32_t xLocal,
+               int32_t outLocal);
+
 } // namespace primec::ir_lowerer

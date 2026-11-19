@@ -195,10 +195,6 @@ emitAngleTrigOperatorExpr(const Expr &expr,
     fe.useFloatKind(argKind);
     int32_t tempY = allocTempLocal();
     int32_t tempX = allocTempLocal();
-    int32_t tempZ = allocTempLocal();
-    int32_t tempZ2 = allocTempLocal();
-    int32_t tempZ3 = allocTempLocal();
-    int32_t tempZ5 = allocTempLocal();
     int32_t tempOut = allocTempLocal();
 
     if (!emitExpr(expr.args[0], localsIn)) {
@@ -210,61 +206,7 @@ emitAngleTrigOperatorExpr(const Expr &expr,
     }
     fe.store(tempX);
 
-    // Handle x == 0 axis cases.
-    fe.load(tempX).push(0.0).cmpEq();
-    size_t jumpIfNotZeroX = fe.jumpIfZero();
-
-    fe.load(tempY).push(0.0).cmpEq();
-    size_t jumpIfNotZeroY = fe.jumpIfZero();
-
-    fe.push(0.0).store(tempOut);
-    size_t jumpAxisEndZero = fe.jump();
-
-    fe.patch(jumpIfNotZeroY);
-    fe.load(tempY).push(0.0).cmpLt();
-    size_t jumpIfPosY = fe.jumpIfZero();
-
-    fe.push(-1.5707963267948966).store(tempOut);
-    size_t jumpAxisEndNeg = fe.jump();
-
-    fe.patch(jumpIfPosY);
-    fe.push(1.5707963267948966).store(tempOut);
-    size_t jumpAxisEndPos = fe.jump();
-
-    fe.patch(jumpIfNotZeroX);
-
-    // atan2(y, x) ≈ atan(y/x) with quadrant adjustment.
-    fe.load(tempY).load(tempX).div().store(tempZ);
-
-    auto emitMulLocal = [&](int32_t leftLocal, int32_t rightLocal, int32_t outLocal) {
-      fe.load(leftLocal).load(rightLocal).mul().store(outLocal);
-    };
-
-    emitMulLocal(tempZ, tempZ, tempZ2);
-    emitMulLocal(tempZ2, tempZ, tempZ3);
-    emitMulLocal(tempZ3, tempZ2, tempZ5);
-
-    fe.load(tempZ).load(tempZ3).push(3.0).div().sub().load(tempZ5).push(5.0).div().add().store(
-        tempOut);
-
-    fe.load(tempX).push(0.0).cmpLt();
-    size_t jumpIfNotNegX = fe.jumpIfZero();
-
-    fe.load(tempY).push(0.0).cmpLt();
-    size_t jumpIfPosYAdj = fe.jumpIfZero();
-
-    fe.load(tempOut).push(-3.14159265358979323846).add().store(tempOut);
-    size_t jumpAdjustEnd = fe.jump();
-
-    fe.patch(jumpIfPosYAdj);
-    fe.load(tempOut).push(3.14159265358979323846).add().store(tempOut);
-    fe.patch(jumpAdjustEnd);
-
-    fe.patch(jumpIfNotNegX);
-
-    fe.patch(jumpAxisEndZero);
-    fe.patch(jumpAxisEndNeg);
-    fe.patch(jumpAxisEndPos);
+    emitAtan2(fe, allocTempLocal, tempY, tempX, tempOut);
 
     fe.load(tempOut);
     return OperatorClampMinMaxTrigEmitResult::Handled;
