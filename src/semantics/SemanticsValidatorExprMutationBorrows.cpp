@@ -699,23 +699,6 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
     }
     const bool targetIsName = target.kind == Expr::Kind::Name;
-    auto isLifecycleHelperPath = [](const std::string &fullPath) -> bool {
-      static const std::array<std::string_view, 10> suffixes = {
-          "/Create",        "/Destroy",        "/Copy",
-          "/Move",          "/CreateStack",    "/DestroyStack",
-          "/CreateHeap",    "/DestroyHeap",    "/CreateBuffer",
-          "/DestroyBuffer"};
-      for (std::string_view suffix : suffixes) {
-        if (fullPath.size() < suffix.size()) {
-          continue;
-        }
-        if (fullPath.compare(fullPath.size() - suffix.size(), suffix.size(),
-                             suffix.data(), suffix.size()) == 0) {
-          return true;
-        }
-      }
-      return false;
-    };
     auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess ||
           candidate.args.size() != 1) {
@@ -922,8 +905,23 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         }
         std::string pointerBorrowRoot;
         std::string ignoreBorrowName;
-        if (!resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot,
-                                             ignoreBorrowName)) {
+        // `*this.kept = value` writes through a `Reference` field to its referent.
+        bool throughReferenceField = false;
+        if (pointerExpr.kind == Expr::Kind::Call && pointerExpr.isFieldAccess &&
+            pointerExpr.args.size() == 1) {
+          BindingInfo referenceField;
+          if (this->resolveStructFieldBinding(
+                  params, locals, pointerExpr.args.front(), pointerExpr.name, referenceField) &&
+              referenceField.typeName == "Reference") {
+            if (const auto message =
+                    referenceFieldWriteDiagnostic(referenceField, pointerExpr.name)) {
+              return failMutationBorrowDiagnostic(*message);
+            }
+            throughReferenceField = true;
+          }
+        }
+        if (!throughReferenceField &&
+            !resolveMutablePointerWriteTarget(pointerExpr, pointerBorrowRoot, ignoreBorrowName)) {
           if (pointerExpr.kind == Expr::Kind::Name &&
               !isMutableBinding(pointerExpr.name)) {
             return failMutationBorrowDiagnostic(

@@ -764,6 +764,58 @@ main() {
   CHECK(found.column == 3);
 }
 
+TEST_CASE("a mut Reference field is written through with a dereference") {
+  const std::string source = R"(
+[struct]
+Keeper() {
+  [Reference<i64> mut] kept
+
+  [return<void>]
+  store([i64] value) {
+    assign(dereference(this.kept), value)
+  }
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  assign(dereference(keeper.kept), 3i64)
+  keeper.store(7i64)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("writing through a Reference field that is not mut is a diagnostic naming the field") {
+  const std::string source = R"(
+[struct]
+Keeper() {
+  [Reference<i64>] kept
+
+  [return<void>]
+  store([i64] value) {
+    assign(dereference(this.kept), value)
+  }
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  keeper.store(7i64)
+  return(0i32)
+}
+)";
+  const ReferenceFieldDiagnostic found = firstDiagnostic(source);
+  CHECK(found.message.find("Reference field is not mutable: kept") == 0);
+  CHECK(found.line == 8);
+  // The column of the `assign` call; the surface `*this.kept = value` reports the operand of `*`.
+  CHECK(found.column == 5);
+}
+
 TEST_CASE("a closure that assigns a Reference parameter to a Reference field is a diagnostic") {
   const std::string source = R"(
 import /std/sync/*

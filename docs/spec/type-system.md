@@ -703,7 +703,10 @@ helper over `value` (docs/spec/transforms.md).
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
   - A field of type `Reference<T>` is construction-only: brace construction binds it once, and an assignment to it
     (`keeper.kept = value`) is the diagnostic `Reference field cannot be reassigned: kept`. A write through the field
-    uses a method that binds a `Reference` local to `location(this.kept)` and assigns that local. The validator asks one component (`fieldBindingFor`,
+    is `*this.kept = value` (or `*keeper.kept = value`), which stores into the referent on every backend and never
+    rebinds the field, as assigning to a reference member does in C++. The field must be declared `mut`
+    (`[Reference<T> mut] kept`); a write through one that is not is the diagnostic `Reference field is not mutable:
+    kept`. Binding a `Reference` local to `location(this.kept)` and assigning that local works too. The validator asks one component (`fieldBindingFor`,
     `src/semantics/SemanticsFieldModifiers.h`) whether a field is set only by construction, so a later field modifier
     with a related rule extends that one place.
   - **Construction-only fields (`ctor_only`):** a field marked `[ctor_only T] name` (a modifier like `[mut]`, `[public]`;

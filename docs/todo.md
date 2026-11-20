@@ -133,6 +133,7 @@ of sync with them.
 | TODO-6126 | `convert<i32>(round(x))` is "wasm emitter unsupported control-flow pattern" | ready | wasm-round-control-flow |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
+| TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | ready | assign-type-mismatch |
 | TODO-6108 | `repeat` with a negative `i32` count says so at run time | ready | repeat-negative-count |
 | TODO-6123 | The build command hashes the 22 MB `primec` twice per run | ready | build-compiler-hash |
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
@@ -157,7 +158,6 @@ of sync with them.
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
-| TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
 
 ### Ready Now
 
@@ -191,7 +191,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6123 (the build command hashes `primec` twice), TODO-6019 (a person measures startup); TODO-6107 (`panic` on Wasm) and the Wasm leaves found by the Wasm matrix config, TODO-6124, TODO-6125 and TODO-6126, are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6123 (the build command hashes `primec` twice), TODO-6019 (a person measures startup); TODO-6107 (`panic` on Wasm) and the Wasm leaves found by the Wasm matrix config, TODO-6124, TODO-6125 and TODO-6126, are ready, and so is TODO-6129 (a mismatched scalar assignment is accepted). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -513,6 +513,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the chosen lowering or diagnostic, with matrix coverage
   - stop_rule: the decision and its first slice; no change to the VM or native task models.
 
+- [ ] TODO-6129: Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (found with TODO-6105)
+  - parallel_track: assign-type-mismatch
+  - scope: `[i64 mut] other{2i64}` followed by `other = 2.5f64` or `other = true` compiles and runs on the VM, as does `*r = 2.5f64` and `*r = true` for `[Reference<i64> mut] r` (and `*this.kept = true` through a `Reference<i64>` field, TODO-6105): no `assign value type mismatch` diagnostic, the stored bits are whatever the lowering makes of the operand (`true` stores 1; `2.5f64` stored a value that read back as 0 in the repro). The semantic check in `SemanticsValidatorExprMutationBorrows.cpp` (`assign value type mismatch: expected X, got Y`) only compares struct paths (`resolveStructTypePath`), not scalar types. `let`-style initialisation (`[i64] x{2.5f64}`) is a separate path and was not checked. Not run on native or the C++ emitters.
+  - acceptance:
+    - positive: an assignment whose value has the target's scalar type (and the integer literal forms that already convert) is accepted unchanged
+    - negative: `other = 2.5f64`, `other = true` and `*r = 2.5f64` are `assign value type mismatch: expected i64, got f64` (or `bool`) with file, line and column, for a local, a `Reference` parameter and a `Reference` field
+    - matrix case on every config; full release gate green
+  - stop_rule: scalar and bool types of `assign` through a name and a dereference; no new implicit conversions.
+  - repro: `[return<void>] put([Reference<i64> mut] r) { *r = 2.5f64 }`, `main` with `[i64 mut] target{1i64}` and `put(target)`; `./primec --emit=vm` exits 0 with no diagnostic.
+
 - [ ] TODO-6123: The build command hashes the 22 MB `primec` twice per run
   - owner: ai
   - status: ready
@@ -779,20 +793,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - negative: a genuine transform list `[mut] x` after an expression still reports its diagnostic
     - matrix case on every config; full release gate green
   - stop_rule: the parse of chained index reads; no change to how index reads lower.
-
-- [~] TODO-6105: `*field = value` writes through a `mut` `Reference` field
-  - owner: ai
-  - status: ready
-  - claimed_by: wasm-matrix-agent (worktree-agent-a095f6cf908123bcd), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
-  - parallel_track: reference-field-write
-  - scope: Decided by the owner on 2026-11-20: it should work. A `Reference<T>` field is construction-only (TODO-5853), so `this.kept = v` is a diagnostic. Writing the referent today needs `[Reference<i64> mut] target{location(this.kept)}` and `target = value`. Make `*kept = value` (and `*this.kept = value`) in a struct member write through the reference to the referent on every backend, as assigning to a reference member does in C++; it never rebinds the field.
-  - acceptance:
-    - positive: a `[Reference<i64> mut]` field written with `*kept = value` changes the referent (values on the VM, native and optexe); a read through the same spelling still works
-    - negative: `*kept = value` on a field that is not `mut` is a diagnostic with file, line and column
-    - docs/spec updated; matrix case on every config; full release gate green
-  - stop_rule: write-through of `Reference` fields only; no change to `Pointer` assignment.
 
 - [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
   - owner: ai

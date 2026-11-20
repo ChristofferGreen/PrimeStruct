@@ -23,6 +23,16 @@ FieldBinding fieldBindingFor(const BindingInfo &field);
 // `Reference field cannot be reassigned: <field>` for a `Reference` field and ends with the way out.
 std::optional<std::string> fieldAssignmentDiagnostic(const BindingInfo &field, const std::string &fieldName);
 
+// The diagnostic for `*this.field = value` (a write through a `Reference` field to its referent), or
+// nothing when the write is allowed: the field must be declared `mut` (`[Reference<T> mut] field`). The write never
+// rebinds the field; `fieldAssignmentDiagnostic` still rejects `this.field = value`.
+std::optional<std::string> referenceFieldWriteDiagnostic(const BindingInfo &field,
+                                                         const std::string &fieldName);
+
+// Whether `fullPath` names a lifecycle helper (`Create`, `Destroy`, `Copy`, `Move` and their storage variants), which
+// may write the fields of `this` that are not `mut`.
+bool isLifecycleHelperPath(const std::string &fullPath);
+
 // The error for a `ctor_only` that is not on a field of an explicit `[struct]` (a local, a parameter, a
 // field of an implicit struct) or that is combined with `static`, or empty when every use is allowed.
 std::string constructionOnlyPlacementError(const Program &program);

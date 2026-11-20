@@ -1,5 +1,7 @@
 #include "SemanticsFieldModifiers.h"
 
+#include <string_view>
+
 namespace primec::semantics {
 
 namespace {
@@ -99,8 +101,40 @@ std::optional<std::string> fieldAssignmentDiagnostic(const BindingInfo &field, c
            "construction)";
   }
   return "Reference field cannot be reassigned: " + fieldName +
-         " (a Reference field is bound once by brace construction; to write through it, bind a Reference "
-         "local to location(this." + fieldName + ") in a method and assign that)";
+         " (a Reference field is bound once by brace construction; to write the referent, assign "
+         "through it "
+         "with *this." +
+         fieldName + " = value)";
+}
+
+std::optional<std::string> referenceFieldWriteDiagnostic(const BindingInfo &field,
+                                                         const std::string &fieldName) {
+  if (field.isMutable) {
+    return std::nullopt;
+  }
+  return "Reference field is not mutable: " + fieldName +
+         " (declare it [Reference<T> mut] to write through it with *this." + fieldName +
+         " = value)";
+}
+
+bool isLifecycleHelperPath(const std::string &fullPath) {
+  static const char *const suffixes[] = {"/Create",
+                                         "/Destroy",
+                                         "/Copy",
+                                         "/Move",
+                                         "/CreateStack",
+                                         "/DestroyStack",
+                                         "/CreateHeap",
+                                         "/DestroyHeap",
+                                         "/CreateBuffer",
+                                         "/DestroyBuffer"};
+  for (const std::string_view suffix : suffixes) {
+    if (fullPath.size() >= suffix.size() &&
+        fullPath.compare(fullPath.size() - suffix.size(), suffix.size(), suffix) == 0) {
+      return true;
+    }
+  }
+  return false;
 }
 
 std::string constructionOnlyPlacementError(const Program &program) {

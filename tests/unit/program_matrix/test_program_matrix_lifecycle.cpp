@@ -1304,4 +1304,39 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a mut Reference field is written through and never rebound") {
+  program_matrix::ProgramCase program;
+  program.name = "reference_field_write_through";
+  program.source = R"(
+[struct]
+Keeper() {
+  [Reference<i64> mut] kept
+
+  [return<void>]
+  store([i64] value) {
+    *this.kept = value
+  }
+
+  [return<i64>]
+  load() {
+    return(*this.kept)
+  }
+}
+
+[return<int>]
+main() {
+  [i64 mut] first{1i64}
+  [i64 mut] second{100i64}
+  [Keeper mut] keeper{Keeper{location(first)}}
+  keeper.store(5i64)
+  *keeper.kept = *keeper.kept + 2i64
+  return(convert<i32>(first + keeper.load() + second))
+}
+)";
+  // first becomes 7 through the field, the field still refers to it, second is untouched: 7 + 7 + 100.
+  program.exitCode = 114;
+  // Wasm has no Reference or Pointer opcodes (TODO-6124), so the case does not list it.
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
