@@ -261,8 +261,11 @@
     record (count, capacity, data, owner flag). `init` of a named owner or a temporary hands its buffer to the slot (a
     temporary's owner flag is cleared); a view, a borrowed parameter or any other place is copied with its elements.
     `drop` of the slot frees the buffer, so `Mutex<vector<i64>>{v}` of a non-empty vector holds its elements and
-    leaves no live block when the mutex and its copies are gone. Slots of vectors of structs or vectors, `map`, and a
-    struct field of type `uninitialized<vector<T>>` (one slot) are not covered by this rule.
+    leaves no live block when the mutex and its copies are gone. Pointer arithmetic on such a pointer (`at`,
+    `at_unsafe`, `realloc`, `plus`) steps the five slots of one record, so the stdlib `Vector<vector<i64>>` (a
+    `Reference<vector<vector<i64>>>` helper pushing fresh vectors) keeps each element at its own record. Slots of
+    vectors of structs or vectors, `map`, and a struct field of type `uninitialized<vector<T>>` (one slot) are not
+    covered by this rule.
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.

@@ -41,6 +41,25 @@ std::string resolveSemanticPointerFactTypeText(const SemanticProgram *semanticPr
   return trimTemplateTypeText(typeText);
 }
 
+// The specialized record path of a builtin `vector<T>` pointee (`Pointer<uninitialized<vector<i64>>>`), whose
+// elements are five-slot records, or an empty path for any other type.
+std::string builtinVectorRecordPathOfPointee(const std::string &pointeeTypeText) {
+  std::string vectorBase;
+  std::string vectorArg;
+  if (!splitTemplateTypeName(trimTemplateTypeText(pointeeTypeText), vectorBase, vectorArg) ||
+      normalizeCollectionBindingTypeName(trimTemplateTypeText(vectorBase)) != "vector") {
+    return "";
+  }
+  std::string elementType = trimTemplateTypeText(vectorArg);
+  if (!elementType.empty() && elementType.front() == '/') {
+    elementType.erase(elementType.begin());
+  }
+  if (elementType.empty()) {
+    return "";
+  }
+  return specializedCollectionVectorRecordPathForElementType(elementType);
+}
+
 std::string inferPointerTargetStructPathFromTypeText(
     const std::string &typeText,
     const std::string &namespacePrefix,
@@ -68,7 +87,7 @@ std::string inferPointerTargetStructPathFromTypeText(
   if (!namespacePrefix.empty() && resolveStructTypeName(targetType, "", structPath)) {
     return structPath;
   }
-  return "";
+  return builtinVectorRecordPathOfPointee(targetType);
 }
 
 std::string resolveSemanticPointerStructTypePath(
@@ -911,16 +930,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
       }
       if (resolvedStructType.empty()) {
         // A `vector<T>` target is its specialized record.
-        std::string vectorBase;
-        std::string vectorArg;
-        if (splitTemplateTypeName(targetTypeName, vectorBase, vectorArg) &&
-            normalizeCollectionBindingTypeName(trimTemplateTypeText(vectorBase)) == "vector") {
-          std::string elementType = trimTemplateTypeText(vectorArg);
-          if (!elementType.empty() && elementType.front() == '/') {
-            elementType.erase(elementType.begin());
-          }
-          resolvedStructType = specializedCollectionVectorRecordPathForElementType(elementType);
-        }
+        resolvedStructType = builtinVectorRecordPathOfPointee(targetTypeName);
       }
       if (resolvedStructType.empty()) {
         error = "native backend does not support alloc target type: " + targetTypeName;
