@@ -123,7 +123,9 @@
   vector local the block declared (`[String] text{block() { [String] e{label()} e }}`), the block hands the local
   over: the binding or argument outside owns it, the block's scope does not destroy it, and a call argument of that
   shape is destroyed after the call like any temporary. A value that is a local of an outer scope, a field or an
-  element is a place that stays owned there, so the binding outside gets a copy of it.
+  element is a place that stays owned there, so the binding outside gets a copy of it. A `[T move]` parameter given
+  `block() { seed }` gets such a copy too (the owner keeps `seed` and destroys it once, the callee destroys its copy
+  once); the bare name `consume(seed)` and `consume(move(seed))` move `seed` instead.
 - **Copies:** `copy` duplicates through the type's `Copy` helper when it has one (collections copy their elements),
   otherwise bitwise for `Copy` types; a struct without a `Copy` helper copies its fields, running the helpers of the
   fields that have one. A user `Copy` helper runs after that field-wise copy, so `this` already owns copies of its

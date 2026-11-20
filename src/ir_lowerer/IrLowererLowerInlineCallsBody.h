@@ -687,8 +687,19 @@
       if (const auto vectorIt = calleeLocals.find(param.name);
           !fileScopeStack.empty() && argExpr != nullptr && vectorIt != calleeLocals.end() &&
           vectorIt->second.kind == LocalInfo::Kind::Vector && !vectorIt->second.isSoaVector) {
-        const bool moveParam = ir_lowerer::parameterHasTransform(param, "move");
-        const bool copyParam = !moveParam && ir_lowerer::parameterHasTransform(param, "copy");
+        // `block() { seed }` given to a `move` parameter is a copy of the place `seed`, not a hand-over.
+        const bool movesBlockPlace =
+            ir_lowerer::parameterHasTransform(param, "move") &&
+            ir_lowerer::isBlockPlaceArgumentExpr(
+                *argExpr,
+                ir_lowerer::makeCallOrMethodResolver(
+                    resolveDefinitionCall, resolveMethodCallDefinition, callerLocals),
+                [&](const Expr &candidate) {
+                  return stateOut.isBuiltinVectorElementPlace(candidate, callerLocals);
+                });
+        const bool moveParam = ir_lowerer::parameterHasTransform(param, "move") && !movesBlockPlace;
+        const bool copyParam =
+            !moveParam && (movesBlockPlace || ir_lowerer::parameterHasTransform(param, "copy"));
         const bool mutParam = ir_lowerer::parameterHasTransform(param, "mut");
         // `move(x)` or a `move` parameter hands the caller's vector over (its drop flag is released): no copy.
         const bool freshArg =

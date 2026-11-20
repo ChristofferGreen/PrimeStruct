@@ -218,6 +218,14 @@ bool isOwnedTemporaryArgumentExpr(
     const Expr &expr,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &)> &isElementPlace = {});
+// An argument written `block() { ... }` that yields a place its outer scope keeps owning (`block() { seed }`, the
+// shape `Type{seed}` parses to): not a temporary and not a local the block declared. A `move` parameter given such an
+// argument gets a copy of the place, so the callee's scope and the owner each destroy a value of their own
+// (docs/spec/value-lifecycle.md, Block expressions).
+bool isBlockPlaceArgumentExpr(
+    const Expr &expr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &)> &isElementPlace = {});
 // True when a user definition (not the stdlib's) resolves for a call spelled like a builtin
 // collection constructor (`vector`, `map`, `array`): the user's function wins, so it is an ordinary call.
 bool isUserShadowedCollectionCall(

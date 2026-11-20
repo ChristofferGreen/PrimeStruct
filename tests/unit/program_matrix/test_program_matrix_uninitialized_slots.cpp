@@ -146,4 +146,78 @@ main() {
   runSlotProgram("slot_pointer_stride", source, "5 2357 0h 32 3h 0h");
 }
 
+// `consume(block() { seed })` into a `move` parameter is a copy of the place `seed` (the owner keeps it, Block
+// expressions); a bare name and `move(x)` hand it over. The callee destroys its value once and the owner its own once.
+TEST_CASE("a block place given to a move parameter is copied") {
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Holder() {
+  [vector<i64>] items{vector<i64>()}
+  [i32] id{0i32}
+}
+
+[struct]
+Noisy() {
+  [i32] id{0i32}
+  Destroy() { print_line(this.id) }
+}
+
+[effects(heap_alloc, io_out), return<void>]
+consume_holder([Holder move] h) {
+  print_line(h.items.count())
+}
+
+[effects(heap_alloc, io_out), return<void>]
+consume_vector([vector<i64> move] v) {
+  print_line(v.count())
+}
+
+[effects(io_out), return<void>]
+consume_noisy([Noisy move] n) {
+  print_line(100i32)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] start{heapLiveBlocks()}
+  if(true) {
+    [Holder] h{Holder{vector<i64>(1i64, 2i64), 1i32}}
+    consume_holder(block() { h })
+    print_line(h.items.count())
+    print_line(heapLiveBlocks() - start)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [vector<i64> mut] v{vector<i64>(1i64, 2i64, 3i64)}
+    consume_vector(block() { v })
+    print_line(v.count())
+    print_line(heapLiveBlocks() - start)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [Holder] h{Holder{vector<i64>(1i64, 2i64), 1i32}}
+    consume_holder(h)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [Holder] h{Holder{vector<i64>(1i64), 2i32}}
+    consume_holder(move(h))
+  }
+  print_line(heapLiveBlocks() - start)
+  [Noisy] a{Noisy{1i32}}
+  consume_noisy(block() { a })
+  print_line(200i32)
+  [Noisy] b{Noisy{2i32}}
+  consume_noisy(move(b))
+  print_line(300i32)
+  return(0i32)
+}
+)";
+  runSlotProgram(
+      "block_place_move_parameter", source, "2 2 1h 0h 3 3 1h 0h 2 0h 1 0h 100 1 200 100 2 300 1");
+}
+
 TEST_SUITE_END();

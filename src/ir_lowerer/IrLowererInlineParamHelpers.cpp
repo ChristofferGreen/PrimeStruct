@@ -19,6 +19,15 @@
 
 namespace primec::ir_lowerer {
 
+bool isBlockPlaceArgumentExpr(
+    const Expr &expr,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &)> &isElementPlace) {
+  return isSimpleCallName(expr, "block") && expr.args.empty() && !expr.bodyArguments.empty() &&
+         !expr.bodyArguments.back().isBinding &&
+         !isOwnedTemporaryArgumentExpr(expr, resolveDefinitionCall, isElementPlace);
+}
+
 // Whether `callee` is declared `return<Reference<T>>`; `referentTypeOut` is the text of T.
 bool definitionReturnsReference(const Definition &callee, std::string &referentTypeOut) {
   for (const Transform &transform : callee.transforms) {
@@ -362,8 +371,16 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
     // `[T copy]` (docs/spec/value-lifecycle.md, Parameter Passing): the callee gets its own copy
     // instead of a borrow, except of a `move(x)` argument or a temporary, handed over as is.
+    // A `move` parameter given `block() { seed }` gets a copy of the place `seed`, which its owner keeps destroying.
+    const bool movesBlockPlace =
+        orderedArg != nullptr && parameterHasTransform(param, "move") &&
+        isBlockPlaceArgumentExpr(*orderedArg,
+                                 makeCallOrMethodResolver(resolveDefinitionCall,
+                                                          parameters.resolveMethodCallDefinition,
+                                                          callerLocals),
+                                 isBuiltinVectorElementPlace);
     const bool isCopyParam =
-        parameterHasTransform(param, "copy") &&
+        (parameterHasTransform(param, "copy") || movesBlockPlace) &&
         (orderedArg == nullptr ||
          (!isOwnedTemporaryArgumentExpr(
               *orderedArg,

@@ -147,7 +147,6 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6100 | A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice | in_progress | lifecycle-block-place |
 | TODO-6101 | A struct field `[uninitialized<vector<T>>]` stores the whole vector record | in_progress | lifecycle-field-slot |
 | TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | in_progress | lifecycle-struct-slot |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
@@ -187,7 +186,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now):  (slot stride of a builtin vector), TODO-6100 (`block() { seed }` into a `move` parameter), TODO-6101 (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
+- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now):  (slot stride of a builtin vector) (`block() { seed }` into a `move` parameter), TODO-6101 (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -675,20 +674,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-6100: A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Block expressions)
-  - parallel_track: lifecycle-block-place
-  - scope: Found with TODO-6098. `consume(block() { h })` with `[Holder move] h` (a struct with a `vector<i64>` field) and `consume([vector<i64> move] v)` with `block() { v }` hand the caller's record to the callee without a copy and without releasing the caller's drop flag, so the callee frees the buffer and the owner frees it again (`invalid heap free address`). `Type{x}` parses its argument as `block() { x }`, so this is the general shape. The spec already decides it: a block value that is a local of an outer scope is a place the outer scope keeps owning, and the receiver gets a copy (Block expressions); a bare `consume(h)` moves `h`, and `consume(move(h))` too. The lowering copied that shape only for brace constructors.
-  - acceptance:
-    - positive: a `move` parameter given `block() { place }` gets its own copy (struct with a vector field, `vector<i64>`, struct with `Destroy`): the callee destroys its copy once and the owner destroys the place once; `heapLiveBlocks()` returns to its start (VM, optexe); a bare name and `move(x)` still move
-    - negative: none (no new diagnostic; `consume(seed)` stays moved-from)
-    - matrix case on every config; docs/spec/value-lifecycle.md Block expressions names the `move` parameter; full release gate green
-  - stop_rule: inline calls (a real call whose body owns the parameter is not covered); no change to the semantics move checker.
 
 - [~] TODO-6101: A struct field `[uninitialized<vector<T>>]` stores the whole vector record
   - owner: ai
