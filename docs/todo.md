@@ -295,9 +295,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5853: A `Reference` field is bound once at construction; assigning to it is a diagnostic
+- [~] TODO-5853: A `Reference` field is bound once at construction; assigning to it is a diagnostic
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: ref-fields (worktree-agent-ab7fc97083e5b5f49), 2026-11-20
   - created_at: 2026-11-10
   - phase: Closures (docs/spec/value-lifecycle.md, Lambdas)
   - parallel_track: closures-references
