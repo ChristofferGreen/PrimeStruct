@@ -91,11 +91,33 @@ through the wrapper prefix.
 | --- | --- | --- |
 | every doctest binary (`tests/unit/test_main.cpp`) | each test case and subcase start | every CTest entry that runs one with a `TIMEOUT` of 300 s or more (the managed suites, `primestructAddDoctestShards`, and the direct entries for collection parity, compile time, embed, VM byte regions, `ir_link`, `library_*`, `vm_threads*`, u8 scalar, net, http, path, file listing, glob, build, UI events, native UI headless/markdown/bindings/stdlib/editor, misc, backend, semantics, text filter, IR cfg and optimizer suites, the TSan smoke entries, and the `PrimeStruct_vm_threads_corpus_*` rounds) |
 | compile-run, build and library tests that shell out | `runCommand` and `primec` stage beats | with the doctest binary they run in |
-| doctest entries with a `TIMEOUT` under 300 s (parser suites at 30 s) | doctest beat | no: a 30 s `TIMEOUT` is already shorter than a silence limit |
+| doctest entries registered with a `TIMEOUT` under 300 s (parser, semantics and compile-run shards at 30 and 60 s) | doctest beat | yes, with the floor below: their `TIMEOUT` is 300 s |
 | `PrimeStruct_test_registration` (300 s), the other Python check scripts and their self-tests (60 to 120 s) | none | no: a script that prints nothing until it ends cannot beat, and its `TIMEOUT` is its only limit |
 | `PrimeStruct_semantic_memory_benchmark`, `PrimeStruct_semantic_memory_definition_worker_parity`, `PrimeStruct_semantic_memory_trend` | none | no: one long `primec` measurement run that prints at the end |
 | `PrimeStruct_embed_install_package`, `PrimeStruct_launch_bench_reference_editor`, `PrimeStruct_native_ui_appkit_*`, `PrimeStruct_native_ui_compiled_app_*`, `PrimeStruct_native_ui_startup_guard_*` | none | no: `cmake -P` scripts that run one long compile or one app launch and print at the end; the AppKit drivers also drive app windows (`PRIMESTRUCT_SKIP_UI_WINDOWS`), so no process layer is added there |
 | `*_suite_registration` entries (60 s, `cmake -P`) | none | no: seconds long |
+
+### The hard-cap floor of doctest entries
+
+`primestructDoctestTimeout` (`CMakeLists.txt`) gives every watched doctest entry a `TIMEOUT` of at least
+`PRIMESTRUCT_TEST_DOCTEST_HARD_CAP_SECONDS` (300 s, so a hard cap of 295 s). Reason: entries registered at 30 and 60 s
+(`semantics_move_cases_22_24`, `vm_maps_map_helpers_4`) had a hard cap of 25 and 55 s and, because the silence limit is
+never above the cap, a silence limit of the same size. They take 0.1 to 1.3 s alone; a gate at load 100 and `nice -n 10`
+stretched them 20 to 200 times and the wrapper killed them while they were still beating. With the floor the silence
+limit (180 s, one doctest case or one command between beats) is what governs a hang and the cap only ends a test that
+beats forever. No unit of work got more time than one silence limit; a test that needs longer between two beats gets
+more beats, not a longer limit. `-DPRIMESTRUCT_TEST_WATCHDOG=OFF` keeps the registered `TIMEOUT` values.
+
+### Waiting for a child
+
+`SystemProcessRunner` (`src/support/ProcessRunner.cpp`, the `clang++` step of `primec --emit=exe` and the like) waits for
+its child with one blocking `waitpid` unless `PRIMESTRUCT_BEAT_FD` is set. Behind the watchdog it polls instead and beats
+`primec: <tool> is running` whenever the child's CPU time grew since the last look (once a second at most). A `clang++`
+compile of the generated C++ is one unit that no `primec` stage beat can split, and a gate at load 100 stretched it past
+the 180 s silence limit (`pick_values_9_9`, `vector_owners_11_11`, `12_12`, `17_17`, `38_38`: silence at
+`primec: run clang++`, 3 to 4 s alone). The beat comes from the waiting loop, not a timer thread, and only when the child
+used CPU, so a child that stopped is still caught by silence. The CPU time is the child process's own
+(`proc_pid_rusage` on macOS, `/proc/<pid>/stat` on Linux); a driver that only waits for a grandchild shows no growth.
 
 A wrapped entry that is a native UI doctest binary runs headless exactly as before; the wrapper adds a pipe and a process
 group, not a window.

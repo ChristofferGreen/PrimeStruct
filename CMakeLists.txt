@@ -162,6 +162,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/MathNames.cpp
   src/support/OptionsParser.cpp
   src/support/OptionsVmFlags.cpp
+  src/support/ProcessCpuTime.cpp
   src/support/ProcessRunner.cpp
   src/support/Sha256.cpp
   src/support/ExecutableBuildId.cpp
@@ -383,6 +384,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprLateMapSoaBuiltins.cpp
   src/semantics/SemanticsValidatorExprLateUnknownTargetFallbacks.cpp
   src/semantics/SemanticsValidatorExprNamedArgumentBuiltins.cpp
+  src/semantics/AssignScalarTypeCheck.cpp
   src/semantics/SemanticsValidatorExprMutationBorrows.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
   src/semantics/SemanticsValidatorExprReferenceEscapes.cpp
@@ -1025,6 +1027,20 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # TIMEOUT, which stays as it was. PRIMESTRUCT_TEST_WATCHDOG=OFF registers the plain command (for a debugger).
   option(PRIMESTRUCT_TEST_WATCHDOG "Run wrapped CTest entries behind scripts/test_watchdog.py" ON)
   set(PRIMESTRUCT_TEST_SILENCE_SECONDS 180 CACHE STRING "Seconds without a beat or output before the watchdog kills a test")
+  # primestructDoctestTimeout(<out var> <timeout>) is the CTest TIMEOUT of a doctest entry. A doctest binary beats at
+  # every case and the compile-run helpers beat at every command, so behind the watchdog a hang is caught by the silence
+  # limit and the hard cap is only the backstop for a test that beats forever. A cap of 25 to 55 s (the 30 and 60 s
+  # entries) governed instead: a gate at load 100 stretched a shard that takes 0.1 to 1.3 s alone past it while it was
+  # still beating. So a watched doctest entry never has less than PRIMESTRUCT_TEST_DOCTEST_HARD_CAP_SECONDS.
+  set(PRIMESTRUCT_TEST_DOCTEST_HARD_CAP_SECONDS 300 CACHE STRING "Smallest CTest TIMEOUT of a watched doctest entry")
+  function(primestructDoctestTimeout outVar timeout)
+    if(PRIMESTRUCT_TEST_WATCHDOG AND timeout LESS PRIMESTRUCT_TEST_DOCTEST_HARD_CAP_SECONDS)
+      set(${outVar} ${PRIMESTRUCT_TEST_DOCTEST_HARD_CAP_SECONDS} PARENT_SCOPE)
+    else()
+      set(${outVar} ${timeout} PARENT_SCOPE)
+    endif()
+  endfunction()
+
   function(primestructWatchedCommand outVar timeout)
     if(NOT PRIMESTRUCT_TEST_WATCHDOG)
       set(${outVar} ${ARGN} PARENT_SCOPE)
@@ -1050,6 +1066,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # split this way (AGENTS.md, No flaky tests) rather than given more time. <total> must be the filter's case count:
   # ctest PrimeStruct_test_registration fails when the shards do not tile it.
   function(primestructAddDoctestShards name target total perShard timeout)
+    primestructDoctestTimeout(timeout ${timeout})
     math(EXPR lastIndex "(${total} + ${perShard} - 1) / ${perShard} - 1")
     foreach(index RANGE ${lastIndex})
       math(EXPR first "${index} * ${perShard} + 1")
@@ -3122,6 +3139,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
                               "--last=${PrimeStructSuite_LAST}")
     endif()
 
+    primestructDoctestTimeout(PrimeStructSuite_TIMEOUT ${PrimeStructSuite_TIMEOUT})
     primestructWatchedCommand(suiteCommand ${PrimeStructSuite_TIMEOUT}
                               $<TARGET_FILE:${PrimeStructSuite_TARGET}> ${commandArgs})
     add_test(NAME "${testName}" COMMAND ${suiteCommand})

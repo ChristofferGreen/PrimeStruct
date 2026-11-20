@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "AssignScalarTypeCheck.h"
 #include "SemanticsFieldModifiers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include <algorithm>
@@ -699,6 +700,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
     }
     const bool targetIsName = target.kind == Expr::Kind::Name;
+    ReturnKind referenceFieldKind = ReturnKind::Unknown;
     auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess ||
           candidate.args.size() != 1) {
@@ -918,6 +920,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
               return failMutationBorrowDiagnostic(*message);
             }
             throughReferenceField = true;
+            referenceFieldKind =
+                returnKindForTypeName(normalizeBindingTypeName(referenceField.typeTemplateArg));
           }
         }
         if (!throughReferenceField &&
@@ -1114,6 +1118,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (!validateExpr(params, locals, expr.args[1])) {
       return false;
+    }
+    if (const auto message =
+            assignScalarTypeMismatchMessage(inferExprReturnKind(target, params, locals),
+                                            referenceFieldKind,
+                                            inferExprReturnKind(expr.args[1], params, locals))) {
+      return failMutationBorrowDiagnostic(*message);
     }
     if (targetIsName) {
       currentValidationState_.movedBindings.erase(target.name);

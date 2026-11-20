@@ -467,4 +467,168 @@ main() {
   CHECK(error.empty());
 }
 
+namespace {
+
+struct AssignDiagnostic {
+  std::string message;
+  int line = 0;
+  int column = 0;
+};
+
+AssignDiagnostic firstAssignDiagnostic(const std::string &source) {
+  std::string error;
+  primec::SemanticDiagnosticInfo info;
+  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, info));
+  AssignDiagnostic found;
+  if (!info.records.empty()) {
+    found.message = info.records.front().message;
+    found.line = info.records.front().primarySpan.line;
+    found.column = info.records.front().primarySpan.column;
+  }
+  return found;
+}
+
+} // namespace
+
+TEST_CASE("assigning a scalar of another type to a local is a diagnostic with a span") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [i64 mut] other{2i64}
+  assign(other, 2.5f64)
+  return(0i32)
+}
+)";
+  const AssignDiagnostic found = firstAssignDiagnostic(source);
+  CHECK(found.message.find("assign value type mismatch: expected i64, got f64") == 0);
+  CHECK(found.line == 5);
+  CHECK(found.column > 0);
+}
+
+TEST_CASE("assigning a bool, an f32 or an i32 to a local of another scalar type is a diagnostic") {
+  SUBCASE("bool to i64") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<int>]
+main() {
+  [i64 mut] other{2i64}
+  assign(other, true)
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("assign value type mismatch: expected i64, got bool") == 0);
+  }
+  SUBCASE("f64 to f32") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<int>]
+main() {
+  [f32 mut] other{1.0f32}
+  assign(other, 2.5f64)
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("assign value type mismatch: expected f32, got f64") == 0);
+  }
+  SUBCASE("i32 to bool") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<int>]
+main() {
+  [bool mut] flag{true}
+  assign(flag, 1i32)
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("assign value type mismatch: expected bool, got i32") == 0);
+  }
+}
+
+TEST_CASE("assigning a scalar of another type through a Reference parameter is a diagnostic") {
+  const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<void>]
+put([Reference<i64> mut] r) {
+  assign(dereference(r), 2.5f64)
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  put(target)
+  return(0i32)
+}
+)");
+  CHECK(found.message.find("assign value type mismatch: expected i64, got f64") == 0);
+  CHECK(found.line == 4);
+}
+
+TEST_CASE("assigning a bool through a Reference parameter or a Reference field is a diagnostic") {
+  SUBCASE("parameter") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<void>]
+put([Reference<i64> mut] r) {
+  assign(dereference(r), true)
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  put(target)
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("assign value type mismatch: expected i64, got bool") == 0);
+  }
+  SUBCASE("field") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[struct]
+Keeper() {
+  [Reference<i64> mut] kept
+
+  [return<void>]
+  flip() {
+    assign(dereference(this.kept), true)
+  }
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  keeper.flip()
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("assign value type mismatch: expected i64, got bool") == 0);
+  }
+}
+
+TEST_CASE("assigning a value of the target's scalar type validates for every scalar") {
+  const std::string source = R"(
+[return<void>]
+put([Reference<i64> mut] r) {
+  assign(dereference(r), 7i64)
+}
+
+[return<int>]
+main() {
+  [i32 mut] a{1i32}
+  [i64 mut] b{1i64}
+  [u64 mut] c{1u64}
+  [u8 mut] d{1u8}
+  [f32 mut] e{1.0f32}
+  [f64 mut] f{1.0f64}
+  [bool mut] g{true}
+  assign(a, 2i32)
+  assign(b, plus(2i64, b))
+  assign(c, 2u64)
+  assign(d, 2u8)
+  assign(e, 2.5f32)
+  assign(f, 2.5f64)
+  assign(g, false)
+  put(b)
+  return(a)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_SUITE_END();

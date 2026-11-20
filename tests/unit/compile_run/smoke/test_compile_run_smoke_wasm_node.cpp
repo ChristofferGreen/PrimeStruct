@@ -261,6 +261,7 @@ main() {
                      44);
 }
 
+// One case per program: each runs three commands (the VM, the Wasm compile and Node), and a case is a unit of liveness.
 TEST_CASE("wasm exits with the decoded code of a builtin status Result entry") {
   checkWasmMatchesVm("packed_status_error",
                      R"(
@@ -270,6 +271,9 @@ main() {
 }
 )",
                      4);
+}
+
+TEST_CASE("wasm exits with a builtin status Result entry code that is too large") {
   checkWasmMatchesVm("packed_status_large",
                      R"(
 [return<Result<i32>>]
@@ -278,6 +282,9 @@ main() {
 }
 )",
                      1);
+}
+
+TEST_CASE("wasm exits with zero for an ok builtin status Result entry") {
   checkWasmMatchesVm("packed_status_ok",
                      R"(
 [return<Result<i32>>]
@@ -286,6 +293,9 @@ main() {
 }
 )",
                      0);
+}
+
+TEST_CASE("wasm renumbers the jumps of an entry around the status decode") {
   // Two returns, one inside a branch, with output before them: the jumps of the entry are renumbered around the decode.
   checkWasmMatchesVm("packed_status_branches",
                      R"(

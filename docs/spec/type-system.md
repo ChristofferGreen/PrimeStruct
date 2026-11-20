@@ -605,6 +605,10 @@ main() {
   Struct constructors map positional/labeled entries to fields; all fields must be provided or defaulted.
 - **`convert<T>` and `T{...}`:** explicit conversions; `T` must be a supported conversion target.
 - **`assign(target, value)`:** allowed only when `target` is mutable and `value` has the exact same type.
+  For the primitive scalars (`i32`, `i64`, `u64`, `u8`, `f32`, `f64`, `bool`) this is the diagnostic
+  `assign value type mismatch: expected i64, got f64`, whether the target is a local, a `Reference` or `Pointer`
+  dereference (`*r = 2.5f64`) or a field; there is no widening, narrowing or bool conversion on assignment, write
+  `convert<T>(value)`. A struct target is compared by struct path (same message).
 - **Matrix/quaternion operators (draft):** matrix and quaternion arithmetic is explicit and shape-checked; no implicit
   widening or family conversion is allowed.
 - **Control flow:** `if`, `while`, and `for` conditions must be `bool`. `loop(count)` requires an integer type.

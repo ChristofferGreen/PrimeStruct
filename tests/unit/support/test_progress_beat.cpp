@@ -1,3 +1,4 @@
+#include "primec/support/ProcessRunner.h"
 #include "primec/support/ProgressBeat.h"
 
 #include <cstdlib>
@@ -140,6 +141,64 @@ TEST_CASE("primec beats between its stages when the variable names a pipe") {
   CHECK(beats.find("primec: compile start\n") != std::string::npos);
   CHECK(beats.find("primec: parse\n") != std::string::npos);
   CHECK(beats.find("primec: semantics\n") != std::string::npos);
+  close(pipeFds[0]);
+  close(pipeFds[1]);
+}
+
+// A child that burns CPU for longer than the runner's look interval, then exits: the runner beats for it while it
+// runs. The child ends on its own CPU time, so it is still running at the first look however loaded the machine is.
+TEST_CASE("waiting for a child that uses CPU beats on its behalf") {
+  int pipeFds[2];
+  REQUIRE(pipe(pipeFds) == 0);
+  fcntl(pipeFds[0], F_SETFL, O_NONBLOCK);
+  int code = -1;
+  {
+    BeatEnvironment environment(std::to_string(pipeFds[1]).c_str());
+    code = primec::systemProcessRunner().run(
+        {"python3", "-c", "import time\nwhile time.process_time() < 1.5:\n    pass"});
+  }
+  CHECK(code == 0);
+  const std::string beats = readAvailable(pipeFds[0]);
+  CHECK(beats.find("primec: run python3\n") != std::string::npos);
+  CHECK(beats.find("primec: python3 is running\n") != std::string::npos);
+  close(pipeFds[0]);
+  close(pipeFds[1]);
+}
+
+// `clang++` runs its compiler and linker as child processes, so the time of the process that was started says nothing;
+// the time of the whole tree counts. The shell starts the spinning program as a child because a command follows it.
+TEST_CASE("waiting for a child whose child uses CPU beats on its behalf") {
+  int pipeFds[2];
+  REQUIRE(pipe(pipeFds) == 0);
+  fcntl(pipeFds[0], F_SETFL, O_NONBLOCK);
+  int code = -1;
+  {
+    BeatEnvironment environment(std::to_string(pipeFds[1]).c_str());
+    code = primec::systemProcessRunner().run(
+        {"/bin/sh",
+         "-c",
+         "python3 -c 'import time\nwhile time.process_time() < 1.5:\n    pass'; exit 0"});
+  }
+  CHECK(code == 0);
+  CHECK(readAvailable(pipeFds[0]).find("primec: /bin/sh is running\n") != std::string::npos);
+  close(pipeFds[0]);
+  close(pipeFds[1]);
+}
+
+TEST_CASE("waiting for a child keeps its exit code and beats once outside the watchdog") {
+  int pipeFds[2];
+  REQUIRE(pipe(pipeFds) == 0);
+  fcntl(pipeFds[0], F_SETFL, O_NONBLOCK);
+  int watchedCode = -1;
+  {
+    BeatEnvironment environment(std::to_string(pipeFds[1]).c_str());
+    watchedCode = primec::systemProcessRunner().run({"python3", "-c", "raise SystemExit(7)"});
+  }
+  CHECK(watchedCode == 7);
+  CHECK(readAvailable(pipeFds[0]) == "primec: run python3\n");
+  BeatEnvironment unset(nullptr);
+  CHECK(primec::systemProcessRunner().run({"python3", "-c", "raise SystemExit(5)"}) == 5);
+  CHECK(readAvailable(pipeFds[0]).empty());
   close(pipeFds[0]);
   close(pipeFds[1]);
 }
