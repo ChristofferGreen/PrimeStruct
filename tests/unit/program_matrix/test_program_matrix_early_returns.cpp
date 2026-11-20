@@ -67,8 +67,12 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = stdoutText + "0\n0\n";
-  // The heap statistics exist on the VM and optexe only.
+  // The heap statistics exist on the VM, optexe and arm64 native.
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeRunsStringHeap()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
   program_matrix::runProgramMatrix(program);
 }
 

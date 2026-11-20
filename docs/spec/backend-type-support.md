@@ -9,9 +9,10 @@
   string pointers/references are rejected. `convert<T>` supports `i32`, `i64`, `u64`, `bool`, `f32`, `f64`.
 - **`u8`, byte containers and `String`:** run on the VM and on the optimized C++ emitters (`--emit=optcpp|optexe`,
   which also pass `String` through `[host]` calls). The arm64 native backend (macOS) runs `u8` and byte containers
-  (`vector<u8>`; byte regions grow with realloc) and `String` (text blocks come from the pooled slot heap; the string heap statistics for bytes in use, blocks handed
-  out, large blocks and chunks, `setStringMemoryLimit` over the bytes of live text blocks, and entry arguments work,
-  while the free-bytes statistic, `heapLiveBlocks` and string arenas are TODO-5956), and calls `[host]` functions as C functions imported by
+  (`vector<u8>`; byte regions grow with realloc) and `String` (text blocks come from the pooled slot heap; every string heap statistic, `heapLiveBlocks`,
+  `setStringMemoryLimit` over the bytes of live text blocks, `StringArena` and entry arguments work, with the
+  figures that differ from the VM's listed in docs/spec/strings-and-views.md, "The string heap on the native
+  backend"), and calls `[host]` functions as C functions imported by
   name from libSystem or from a `.dylib` named with `--link-arg` (integer, floating-point, static-string, `String` and
   text-returning signatures; the AppKit backend is built as such a dylib); the
   Linux/x86_64 native backend, Wasm and GLSL reject the byte opcodes and `u8`/text host values at validation. The simple

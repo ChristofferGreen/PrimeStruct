@@ -71,6 +71,10 @@ main() {
   program.exitCode = 0;
   program.stdoutText = stdoutText + "0\n0\n";
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeRunsStringHeap()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
   program_matrix::runProgramMatrix(program);
 }
 
@@ -1164,6 +1168,10 @@ main() {
   program.exitCode = 0;
   program.stdoutText = "105\n1\n0\n0\n";
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeRunsStringHeap()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
   program_matrix::runProgramMatrix(program);
 }
 

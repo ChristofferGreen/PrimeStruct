@@ -72,10 +72,38 @@ constexpr uint64_t AllocationsOffset = StatOffset + 16;
 constexpr uint64_t LargeBlocksOffset = StatOffset + 24;
 constexpr uint64_t LargeBytesOffset = StatOffset + 32;
 constexpr uint64_t ChunksOffset = StatOffset + 40;
-constexpr uint64_t StatBytes = 48;
+// Then the live slot blocks (HeapAlloc), the bytes of freed pool blocks on the free lists (class sizes, headers
+// included), the string arenas that are open, the text bytes their blocks hold, the innermost arena (0 for none) and
+// the list of arena regions that are free to reuse (NativeEmitterInternalsArm64Arena.h).
+constexpr uint64_t SlotBlocksOffset = StatOffset + 48;
+constexpr uint64_t FreeBytesOffset = StatOffset + 56;
+constexpr uint64_t ArenaDepthOffset = StatOffset + 64;
+constexpr uint64_t ArenaBytesOffset = StatOffset + 72;
+constexpr uint64_t ArenaCurrentOffset = StatOffset + 80;
+constexpr uint64_t ArenaFreeRegionsOffset = StatOffset + 88;
+constexpr uint64_t StatBytes = 96;
 constexpr uint64_t LargeThreshold = 64 * 1024;
 
 } // namespace arm64_text
+
+namespace arm64_arena {
+
+// A string arena is a chain of regions mapped from the system. Every region starts with this header; the first one
+// (the arena's record) also holds the arena's state. The blocks follow the header, each with the pool's block header
+// (a magic word, then its size) and 16-byte aligned. A region of the standard size goes on a free list when its arena
+// ends and is reused by the next one; a larger region (a block that does not fit a standard one) stays mapped.
+constexpr uint64_t RegionBytes = 256 * 1024;
+constexpr uint64_t HeaderBytes = 64;
+constexpr uint64_t NextOffset = 0;    // the older region of the arena (0 for the first)
+constexpr uint64_t BytesOffset = 8;   // the region's size
+constexpr uint64_t UsedOffset = 16;   // where its blocks end, set when the arena moves on or ends
+constexpr uint64_t ParentOffset = 24; // record: the enclosing arena
+constexpr uint64_t BumpOffset = 32;   // record: the next free byte of the newest region
+constexpr uint64_t EndOffset = 40;    // record: the end of the newest region
+constexpr uint64_t NewestOffset = 48; // record: the newest region
+constexpr uint64_t DirtyOffset = 56;  // a used-before region: its blocks are zeroed when handed out
+
+} // namespace arm64_arena
 
 namespace arm64_theap {
 

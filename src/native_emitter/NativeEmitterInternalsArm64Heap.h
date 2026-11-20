@@ -183,6 +183,29 @@ inline void Arm64Emitter::emitHeapRuntime() {
     emitAddRegImm(6, 6, 16);
   };
 
+  // The string heap statistics of a module that reads them (textStats_): the live slot blocks, which a block of the
+  // slot kind (`magic`, in `magicReg`) changes by one, and the bytes of freed pool blocks. `tmp`, `address`, `value`
+  // and `discard` are scratch registers; the counters are atomic and in the data segment, shared by every thread.
+  const auto countSlotBlock = [&](uint8_t magicReg,
+                                  uint64_t magic,
+                                  bool increment,
+                                  uint8_t tmp,
+                                  uint8_t address,
+                                  uint8_t value,
+                                  uint8_t discard) {
+    if (!textStats_) {
+      return;
+    }
+    emitMovImm64(tmp, magic);
+    emitCompareReg(magicReg, tmp);
+    const size_t skip = branch(CondCode::Ne);
+    emitHeapStateAddress(address);
+    emitAddRegImm(address, address, static_cast<uint16_t>(arm64_text::SlotBlocksOffset));
+    emitMovImm64(value, increment ? 1 : ~0ull);
+    emit(arm64_atomics::ldaddal(value, discard, address));
+    bind(skip, CondCode::Ne);
+  };
+
   // ---- alloc: x1 slots (0 allocates nothing), x2 the magic of a mapped block of its kind -> x0 ----
   // Uses x0-x11 and x16.
   const size_t allocIndex = currentWordIndex();
@@ -199,6 +222,15 @@ inline void Arm64Emitter::emitHeapRuntime() {
   const size_t allocBump = currentWordIndex();
   emit(encodeCbz(7, 0));
   const size_t allocReuse = currentWordIndex();
+  if (textStats_) {
+    // The block leaves the free lists: its class bytes are no longer free.
+    emitHeapStateAddress(10);
+    emitAddRegImm(10, 10, static_cast<uint16_t>(arm64_text::FreeBytesOffset));
+    emit(lslImm(3, 5, 4));
+    emitMovImm64(11, 0);
+    emitSubReg(11, 11, 3);
+    emit(arm64_atomics::ldaddal(11, 8, 10));
+  }
   // Reuse the class's first free block: unlink it (the link is its first slot) and zero its slots.
   emit(encodeLdrRegBase(8, 7, 16));
   emit(encodeStrRegBase(8, 6, 0));
@@ -278,6 +310,7 @@ inline void Arm64Emitter::emitHeapRuntime() {
   bind(allocFits, CondCode::Ls);
   emit(encodeStrRegBase(6, 9, 0));
   bindJump(allocReused);
+  countSlotBlock(2, HeapHeaderMagic, true, 1, 3, 4, 6);
   // x7 = the block: a pooled header of the block's kind and the class's bytes.
   emitAddRegImm(8, 2, 2);
   emit(encodeStrRegBase(8, 7, 0));
@@ -291,6 +324,7 @@ inline void Arm64Emitter::emitHeapRuntime() {
   emitMovReg(10, 2);
   emitMmap(6);
   const size_t largeFailed = branch(CondCode::Hs);
+  countSlotBlock(10, HeapHeaderMagic, true, 1, 3, 4, 5);
   emit(encodeStrRegBase(10, 0, 0));
   emit(encodeStrRegBase(6, 0, 8));
   emitAddRegImm(0, 0, 16);
@@ -327,6 +361,7 @@ inline void Arm64Emitter::emitHeapRuntime() {
   for (const size_t at : freeUnmap) {
     bind(at, CondCode::Eq);
   }
+  countSlotBlock(1, HeapHeaderMagic, false, 2, 3, 4, 5);
   emitMovReg(0, 10);
   emit(encodeLdrRegBase(1, 10, 8));
   emitMovImm64(16, SysMunmap);
@@ -335,11 +370,19 @@ inline void Arm64Emitter::emitHeapRuntime() {
   for (const size_t at : freePool) {
     bind(at, CondCode::Eq);
   }
+  countSlotBlock(1, HeapHeaderMagicPooled, false, 2, 3, 4, 5);
   emit(encodeLdrRegBase(3, 10, 8));
   // A text block's size is its text block size plus the header, which may not be whole slots: round up.
   emitAddRegImm(3, 3, static_cast<uint16_t>(IrSlotBytes - 1));
   emit(lsrImm(3, 3, 4));
   emitHeapPoolClass();
+  if (textStats_) {
+    // The block's class bytes are free from now on (x5 = the class's slots).
+    emitHeapStateAddress(1);
+    emitAddRegImm(1, 1, static_cast<uint16_t>(arm64_text::FreeBytesOffset));
+    emit(lslImm(2, 5, 4));
+    emit(arm64_atomics::ldaddal(2, 3, 1));
+  }
   size_t freeRemoteDone = SIZE_MAX;
   resolveState();
   if (threaded_) {

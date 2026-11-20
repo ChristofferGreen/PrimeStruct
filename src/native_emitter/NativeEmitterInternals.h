@@ -73,6 +73,8 @@ constexpr uint64_t HeapHeaderMagicBytes = 0x5053484541503032ull;
 constexpr uint64_t HeapHeaderMagicPooled = HeapHeaderMagic + 2;
 constexpr uint64_t HeapHeaderMagicPooledBytes = HeapHeaderMagicBytes + 2;
 constexpr uint64_t HeapHeaderMagicFree = 0x5053484541503046ull;
+// The magic of a text block in a string arena: it is never freed one by one, and its arena's end makes it free.
+constexpr uint64_t HeapHeaderMagicArena = HeapHeaderMagicBytes + 4;
 constexpr uint64_t HeapPoolMaxSlots = 2048;
 constexpr uint64_t HeapPoolChunkBytes = 256 * 1024;
 constexpr uint64_t HeapPoolClassCount = 39;
@@ -309,7 +311,8 @@ class Arm64Emitter {
   // segment's address (heapStateFixups).
   void emitHeapRuntime();
   bool usesHeapRuntime() const {
-    return !heapAllocCalls_.empty() || !heapFreeCalls_.empty() || !heapReallocCalls_.empty();
+    return !heapAllocCalls_.empty() || !heapFreeCalls_.empty() || !heapReallocCalls_.empty() ||
+           !arenaCalls_.empty();
   }
   // Tasks on pthreads (NativeEmitterInternalsArm64Tasks.h): a threaded module (one with TaskSpawn) locks its heap
   // routines and emits the spawn and wait routines.
@@ -349,8 +352,8 @@ class Arm64Emitter {
     if (!usesHeapRuntime() && !sync_) {
       return 0;
     }
-    if (textStats_) {
-      return HeapStateBytes + 192 + 48;
+    if (textStats_ || arenas_) {
+      return HeapStateBytes + 192 + 96; // the counters (arm64_text::StatBytes)
     }
     return HeapStateBytes + ((threaded_ || sync_) ? 48 : 0) + (sync_ ? 144 : 0);
   }
@@ -359,6 +362,14 @@ class Arm64Emitter {
   void setTextStats(bool textStats) {
     textStats_ = textStats;
   }
+  // A module that opens string arenas (set before any code is emitted): its text blocks come from the innermost
+  // arena's region while one is open (NativeEmitterInternalsArm64Arena.h). A threaded module's arenas only count.
+  void setArenas(bool arenas) {
+    arenas_ = arenas;
+  }
+  void emitArenaBegin();
+  void emitArenaEnd();
+  void emitArenaRuntime();
   void emitTaskRuntime(std::vector<std::pair<size_t, size_t>> &callFixups,
                        std::vector<std::pair<size_t, std::string>> &slotLoads);
   const std::vector<size_t> &heapStateFixups() const {
@@ -606,6 +617,7 @@ class Arm64Emitter {
     size_t heapFreeCalls = 0;
     size_t heapReallocCalls = 0;
     size_t heapStateFixups = 0;
+    size_t arenaCalls = 0;
     size_t taskSpawnCalls = 0;
     size_t taskWaitCalls = 0;
     size_t threadHeapInitCalls = 0;
@@ -618,6 +630,7 @@ class Arm64Emitter {
             heapFreeCalls_.size(),
             heapReallocCalls_.size(),
             heapStateFixups_.size(),
+            arenaCalls_.size(),
             taskSpawnCalls_.size(),
             taskWaitCalls_.size(),
             threadHeapInitCalls_.size(),
@@ -633,6 +646,7 @@ class Arm64Emitter {
     heapFreeCalls_.resize(point.heapFreeCalls);
     heapReallocCalls_.resize(point.heapReallocCalls);
     heapStateFixups_.resize(point.heapStateFixups);
+    arenaCalls_.resize(point.arenaCalls);
     taskSpawnCalls_.resize(point.taskSpawnCalls);
     taskWaitCalls_.resize(point.taskWaitCalls);
     threadHeapInitCalls_.resize(point.threadHeapInitCalls);
@@ -856,6 +870,10 @@ class Arm64Emitter {
   std::vector<size_t> taskWaitCalls_;
   bool threaded_ = false;
   bool textStats_ = false;
+  bool arenas_ = false;
+  // The BL sites of the arena routines (begin, end and a text block's allocation), patched by emitArenaRuntime.
+  enum class ArenaRoutine { Begin, End, Alloc };
+  std::vector<std::pair<size_t, ArenaRoutine>> arenaCalls_;
   // Per-thread allocator states: the BL sites of the state lookup, of the remote-free drain and of the entry's
   // init, and the entries of the routines.
   std::vector<size_t> heapCurStateCalls_;
@@ -885,6 +903,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Io.h"
 #include "NativeEmitterInternalsArm64Host.h"
 #include "NativeEmitterInternalsArm64Heap.h"
+#include "NativeEmitterInternalsArm64Arena.h"
 #include "NativeEmitterInternalsArm64Tasks.h"
 #include "NativeEmitterInternalsArm64Sync.h"
 #include "NativeEmitterInternalsArm64ThreadHeap.h"

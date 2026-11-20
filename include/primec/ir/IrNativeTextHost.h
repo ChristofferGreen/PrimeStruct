@@ -21,8 +21,10 @@ enum class NativeTextHost {
   Compare, // __pstext_compare(Pointer<u8> a, Pointer<u8> b, u64 count) -> i32: -1, 0 or 1
   Find,    // __pstext_find(Pointer<u8> address, u64 count, u64 value) -> i32: the index or -1
   Literal, // __pstext_literal(string) -> Pointer<u8>: the address of a string literal's bytes in the image
-  Stat,        // __pstext_stat(u64 which) -> u64: a counter of the text blocks (0, 1 and 3 to 7)
+  Stat,        // __pstext_stat(u64 which) -> u64: a counter of the text blocks (0 to 8)
   SetLimit,    // __pstext_set_limit(u64 bytes): the most bytes of live text blocks (0 for no limit)
+  ArenaBegin,  // __pstext_arena_begin(): the text blocks that follow come from a bump region
+  ArenaEnd,    // __pstext_arena_end(): the innermost arena's blocks are free at once
   Unsupported, // a `__pstext_*` function the native backend does not answer yet
 };
 
@@ -75,6 +77,12 @@ inline NativeTextHost nativeTextHost(std::string_view importName) {
   }
   if (leaf == "__pstext_set_limit") {
     return NativeTextHost::SetLimit;
+  }
+  if (leaf == "__pstext_arena_begin") {
+    return NativeTextHost::ArenaBegin;
+  }
+  if (leaf == "__pstext_arena_end") {
+    return NativeTextHost::ArenaEnd;
   }
   return NativeTextHost::Unsupported;
 }

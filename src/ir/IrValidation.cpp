@@ -274,7 +274,7 @@ bool validateFunction(const IrModule &module,
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
-                               "string arenas are not available on the native backend yet",
+                               "string heap function is not available on the native backend yet",
                                error);
       }
       if (!nativeHost && target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&

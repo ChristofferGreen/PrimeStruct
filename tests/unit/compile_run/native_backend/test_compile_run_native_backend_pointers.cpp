@@ -398,29 +398,6 @@ main() {
   CHECK(readFile(faultErr).find("string memory limit exceeded") != std::string::npos);
 }
 
-TEST_CASE("native string heap statistics the pool cannot answer stop the program") {
-  // The free-byte statistic is the VM's per-chunk figure; the native pool has no such count, so it says so.
-  const std::string source = R"(
-import /std/text/*
-
-[return<int> effects(io_out, heap_alloc)]
-main() {
-  print_line(stringHeapBytesFree())
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_native_string_heap_unsupported_stat.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_string_heap_unsupported_stat_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_string_heap_unsupported_stat_err.txt").string();
-  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main") == 0);
-  CHECK(runCommand(exePath + " > /dev/null 2> " + errPath) == 3);
-  CHECK(readFile(errPath).find("string heap statistic is not available on the native backend") !=
-        std::string::npos);
-}
-
 TEST_CASE("native heap realloc keeps the leading slots across pooled and mapped blocks") {
   // 1 slot (pooled) grows to 3000 (a mapping of its own) and shrinks back to 2 (pooled): the leading values
   // move with the block, and slots past the old size start zeroed.

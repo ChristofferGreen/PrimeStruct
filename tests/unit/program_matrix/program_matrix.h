@@ -78,6 +78,15 @@ inline bool nativeSupported() {
 #endif
 }
 
+// Whether the native backend runs programs that use the String heap and read its statistics (arm64 macOS only).
+inline bool nativeRunsStringHeap() {
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  return true;
+#else
+  return false;
+#endif
+}
+
 // The VM with each task on an OS thread of its own (--vm-threads; docs/spec/vm-design.md, Tasks on threads).
 inline ExecutionConfig vmThreadsConfig() {
   ExecutionConfig config{"vm-O2-threads", Backend::Vm, 2, false};

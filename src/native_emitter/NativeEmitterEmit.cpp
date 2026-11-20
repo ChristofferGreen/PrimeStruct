@@ -220,6 +220,9 @@ bool buildNativeImage(const IrModule &module,
     if (kind == NativeTextHost::Stat || kind == NativeTextHost::SetLimit) {
       emitter.setTextStats(true);
     }
+    if (kind == NativeTextHost::ArenaBegin || kind == NativeTextHost::ArenaEnd) {
+      emitter.setArenas(true);
+    }
   }
 #endif
   bool registerAllocation = options.registerAllocation;
@@ -342,6 +345,7 @@ bool buildNativeImage(const IrModule &module,
     }
   }
   emitter.emitHeapRuntime();
+  emitter.emitArenaRuntime();
 #endif
   if (instrumentation != nullptr) {
     for (const auto &functionInstrumentation : instrumentation->perFunction) {

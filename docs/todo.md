@@ -117,7 +117,9 @@ of sync with them.
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
-| TODO-5956 | Native string arenas and the remaining string heap statistics | ready | native-backend-strings |
+| TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
+| TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
+| TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5718 | All values of a repeated parameter and decoded path parameters | ready | web-params |
@@ -167,13 +169,12 @@ of sync with them.
 2. TODO-5804
 4. TODO-5603
 5. TODO-6052
-6. TODO-5956
 7. TODO-6080
 
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-5956
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
@@ -191,7 +192,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-5956 (native string arenas and statistics), TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) and TODO-6107 (`panic` on Wasm) are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) and TODO-6107 (`panic` on Wasm) are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -358,22 +359,44 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: measurement only.
   - notes: step (3) needs a quiet machine and a person (or an agent allowed to show windows) at the Mac; the guard counts images, not milliseconds.
 
-- [~] TODO-5956: Native string arenas and the remaining string heap statistics
+- [ ] TODO-6117: Native text used after its arena ended is read and written silently
   - owner: ai
   - status: ready
-  - claimed_by: string-arenas (worktree agent-ad3f1a3afe8d1ebc3), 2026-11-20
-  - created_at: 2026-11-12
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md; follows TODO-5586)
-  - parallel_track: native-backend-strings
-  - scope: The arm64 native backend answers `__pstext_stat` for chunks, bytes in use, large blocks and bytes, and blocks handed out, and `__pstext_set_limit` over the bytes of live text blocks, but `stringHeapBytesFree()` and `heapLiveBlocks()` (statistics 2 and 8) stop the program with "string heap statistic is not available on the native backend", and `StringArena` (`__pstext_arena_begin` and `_end`) is rejected at validation ("string arenas are not available on the native backend yet"). The limit counts live text-block bytes where the VM counts the bytes of its chunk regions, so a program that sits close to a limit can differ. Count the slot heap's live blocks and the free blocks' bytes in the pool, and give arenas a bump region in the data segment's state.
-  - decision: 2026-11-20, option A: native-defined statistics, not the VM's figures. Statistic 2 (`stringHeapBytesFree()`) is the bytes of freed text blocks on the pool's free lists (a counter in `emitTextFree` and in the reuse path of the pool alloc). Statistic 8 (`heapLiveBlocks()`) is the live slot-magic blocks, a counter in the heap routines gated by `textStats_` (one global atomic counter, so a threaded program counts all threads where the VM's `liveSlotAllocationCount` is per thread heap). Arenas are bump regions mapped per arena and linked from the data segment's state (statistics 6 and 7 answered), `__pstext_arena_end` unmaps nothing that a later use could trip over silently: keep the regions mapped and fill the header of freed arena text with the free magic, so text used after its arena ended hits the existing double-free style message (exit 3) rather than SIGSEGV; the limit counts text-block bytes. No startup cost for a program that does not use the figures. Option B (a second allocator mirroring `VmTextHeap`) and option C (keep faulting) are not taken.
-  - implementation_notes: the native heap is one shared slot pool (256 KiB chunks, size classes shared by all blocks) while the VM's text heap is per-size-class chunks (4 KiB first chunk, doubling to 256 KiB, free chunks returned beyond a 1 MiB cap), so `chunks` and absolute `bytesFree` differ even today. The tests print relations and deltas (a figure after minus before, balanced to zero, `live` goes up by one per live block), never absolute `chunks` or `bytesFree`. docs/spec/vm-design.md (or the native backend spec) lists the differences between the VM's and the native figures.
+  - created_at: 2026-11-20
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
+  - parallel_track: native-arena-stale-text
+  - scope: Ending a native `StringArena` writes the free magic into the header of every block it made, so a later `__pstext_free` of that text reports "invalid heap free address: the block is already free" (exit 3), but every other use of it is unchecked: `capacity`, `usable` and `length` answer 0, and a read or write of its bytes touches the arena's region, which stays mapped and which the next arena reuses (a write then corrupts that arena's blocks without any message). The VM faults on any use ("invalid byte address in IR"). Repro: `[String mut] escaped{String{}}`, open a `StringArena`, `escaped = stringFromI32(7i32)`, close the arena, call `escaped.clear()` and print: native prints and exits 3 only at the destroy of `escaped`; the VM stops at `clear()`.
+  - implementation_notes: options for the owner (docs/todo.md TODO-5956 decided to keep the regions mapped): (a) leave as is and document it (done in docs/spec/strings-and-views.md); (b) protect the regions of an ended arena (`mprotect` no access) until the next arena reuses them, so a stale use is a SIGSEGV instead of silent; (c) check the header magic in the byte memory loads and stores of the native backend, which costs every load and store. Not decided; do not pick one without the owner.
   - acceptance:
-    - `stringMemory()`, `heapLiveBlocks()` and a `StringArena` program (the programs of `tests/unit/runtime/test_vm_heap_arenas.cpp`, rewritten to print relations and deltas) run through `--emit=native` with the VM's output
-    - text used after its arena ended reports the free-magic double-free message and exit 3 on native
-    - the spec lists the differences in the figures
+    - the decided option, with a native matrix case that uses text after its arena ended and the expected fault
     - full release gate green
-  - stop_rule: the native string heap's arenas and the two statistics only.
+  - stop_rule: stale arena text on the arm64 native backend only.
+
+- [ ] TODO-6118: Native arena regions larger than the standard one are never unmapped
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
+  - parallel_track: native-arena-large-regions
+  - scope: A native arena maps a region of 256 KiB; a block that does not fit one gets a region of its own size, and TODO-5956 keeps every region mapped when its arena ends (a standard region goes on a free list the next arena reuses, a larger one is just left). A loop that opens an arena and makes one large text leaks that mapping each round: 3000 rounds of `stringFilled(300000i32, 66u8)` in a `StringArena` reach a peak resident size of 935 MB on native (`/usr/bin/time -l`), where the VM's peak stays flat.
+  - implementation_notes: options for the owner: (a) `munmap` the larger regions at the end (a stale use of such text is then a SIGSEGV, exit 139, not silent), or (b) keep a free list of larger regions by size and reuse the first that fits, or (c) map blocks above a limit by the pool's own large path inside the arena and unmap them at the end. (a) is the smallest; the decision of TODO-5956 ("unmaps nothing that a later use could trip over silently") does not say which of these it allows.
+  - acceptance:
+    - the 3000-round program above runs in bounded memory on native (a test that compares the peak resident size of the first 100 and the last 100 rounds, or a counter, not a timing), and its output is the VM's
+    - full release gate green
+  - stop_rule: arena regions larger than the standard one only.
+
+- [ ] TODO-6119: A native module with tasks keeps arena text in the pool
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
+  - parallel_track: native-arena-threads
+  - scope: The native arena state is the program's (one innermost arena and one list of free regions in the data segment), so a module with `TaskSpawn` cannot let a thread bump from it: its `beginStringArena` and end only change the depth that `stringArenaDepth()` reads, and its text blocks come from the pool and are freed one by one. The VM gives each task thread a text heap of its own with its own arenas (it only disables them for a heap that threads share). Repro: spawn a task, open a `StringArena` on the main task, make 500 strings: `stringArenaBytes()` stays 0 on native and is not 0 on the VM.
+  - implementation_notes: the fix is a per-thread arena stack in the thread's allocator state (NativeEmitterInternalsArm64ThreadHeap.h), found through the same lookup the pool uses.
+  - acceptance:
+    - the arena matrix cases run on a program that also spawns a task, with the same output on the VM, optexe and native
+    - full release gate green
+  - stop_rule: arenas of threaded native modules only.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai

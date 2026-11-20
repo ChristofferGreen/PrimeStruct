@@ -71,8 +71,23 @@ inline void Arm64Emitter::emitTextAlloc(bool faultOnLimit) {
   emitAddRegImm(1, 12, static_cast<uint16_t>(IrSlotBytes - 1));
   emit(0xD344FC21u); // LSR x1, x1, #4: the slots that hold the block size
   emitMovImm64(2, HeapHeaderMagicBytes);
-  heapAllocCalls_.push_back(currentWordIndex());
-  emit(encodeBl(0));
+  if (arenas_ && !threaded_) {
+    // While a string arena is open the block comes from its region (a null innermost arena means none is open).
+    emitHeapStateAddress();
+    emit(encodeLdrRegBase(3, 9, static_cast<uint16_t>(arm64_text::ArenaCurrentOffset)));
+    const size_t jumpPool = currentWordIndex();
+    emit(encodeCbz(3, 0));
+    arenaCalls_.emplace_back(currentWordIndex(), ArenaRoutine::Alloc);
+    emit(encodeBl(0));
+    const size_t jumpJoin = emitJumpPlaceholder();
+    patchWord(jumpPool, encodeCbz(3, static_cast<int32_t>(currentWordIndex() - jumpPool)));
+    heapAllocCalls_.push_back(currentWordIndex());
+    emit(encodeBl(0));
+    patchJump(jumpJoin, static_cast<int32_t>(currentWordIndex() - jumpJoin));
+  } else {
+    heapAllocCalls_.push_back(currentWordIndex());
+    emit(encodeBl(0));
+  }
   emitCompareRegZero(0);
   const size_t jumpDoneFailed = emitCondBranchPlaceholder(CondCode::Eq);
   emitAddRegImm(3, 12, static_cast<uint16_t>(IrSlotBytes));
@@ -117,6 +132,13 @@ inline void Arm64Emitter::emitTextFree() {
   emitTextBlockSize();
   emitCompareRegZero(8);
   const size_t jumpNone = emitCondBranchPlaceholder(CondCode::Eq);
+  size_t jumpArena = SIZE_MAX;
+  if (arenas_) {
+    // A block of a string arena is not freed one by one: its arena's end gives its bytes back.
+    emitMovImm64(11, HeapHeaderMagicArena);
+    emitCompareReg(10, 11);
+    jumpArena = emitCondBranchPlaceholder(CondCode::Eq);
+  }
   emitHeapStateAddress();
   emitMovImm64(4, 0);
   emitSubReg(4, 4, 8); // -size
@@ -133,6 +155,9 @@ inline void Arm64Emitter::emitTextFree() {
   const size_t countedIndex = currentWordIndex();
   patchCondBranch(jumpSmall, static_cast<int32_t>(countedIndex - jumpSmall), CondCode::Ls);
   patchCondBranch(jumpNone, static_cast<int32_t>(countedIndex - jumpNone), CondCode::Eq);
+  if (jumpArena != SIZE_MAX) {
+    patchCondBranch(jumpArena, static_cast<int32_t>(countedIndex - jumpArena), CondCode::Eq);
+  }
   emitMovReg(0, 7);
   heapFreeCalls_.push_back(currentWordIndex());
   emit(encodeBl(0));
@@ -159,8 +184,9 @@ inline void Arm64Emitter::emitFaultMessage(std::string_view message) {
   }
 }
 
-// The string heap statistic the popped number names (primec/ir/IrNativeTextHost.h): 0 chunks, 1 bytes in use (large
-// blocks included), 3 large blocks, 4 large bytes, 5 blocks handed out, 6 and 7 arenas (none). The others fault.
+// The string heap statistic the popped number names (primec/ir/IrNativeTextHost.h): 0 pool chunks, 1 bytes in use
+// (large blocks included), 2 bytes of freed pool blocks (class sizes, headers included), 3 large blocks, 4 large
+// bytes, 5 blocks handed out, 6 open arenas, 7 text bytes in open arenas, 8 live slot blocks. The others fault.
 // `setLimit` instead sets the memory limit to the popped number.
 inline void Arm64Emitter::emitTextCounters(bool setLimit) {
   emitPopReg(0);
@@ -184,11 +210,13 @@ inline void Arm64Emitter::emitTextCounters(bool setLimit) {
   };
   counter(0, arm64_text::ChunksOffset);
   counter(1, arm64_text::HeldOffset);
+  counter(2, arm64_text::FreeBytesOffset);
   counter(3, arm64_text::LargeBlocksOffset);
   counter(4, arm64_text::LargeBytesOffset);
   counter(5, arm64_text::AllocationsOffset);
-  statistic(6, [&]() { emitMovImm64(0, 0); });
-  statistic(7, [&]() { emitMovImm64(0, 0); });
+  counter(6, arm64_text::ArenaDepthOffset);
+  counter(7, arm64_text::ArenaBytesOffset);
+  counter(8, arm64_text::SlotBlocksOffset);
   emitFaultMessage("string heap statistic is not available on the native backend\n");
   const size_t doneIndex = currentWordIndex();
   for (const size_t jump : done) {
@@ -211,9 +239,19 @@ inline void Arm64Emitter::emitTextBlockSize() {
   const size_t jumpMagicOk = emitCondBranchPlaceholder(CondCode::Eq);
   emitMovImm64(11, HeapHeaderMagicPooledBytes);
   emitCompareReg(10, 11);
+  size_t jumpPooledOk = SIZE_MAX;
+  if (arenas_) {
+    jumpPooledOk = emitCondBranchPlaceholder(CondCode::Eq);
+    emitMovImm64(11, HeapHeaderMagicArena);
+    emitCompareReg(10, 11);
+  }
   const size_t jumpInvalid = emitCondBranchPlaceholder(CondCode::Ne);
   patchCondBranch(
       jumpMagicOk, static_cast<int32_t>(currentWordIndex() - jumpMagicOk), CondCode::Eq);
+  if (jumpPooledOk != SIZE_MAX) {
+    patchCondBranch(
+        jumpPooledOk, static_cast<int32_t>(currentWordIndex() - jumpPooledOk), CondCode::Eq);
+  }
   emit(encodeLdrRegBase(8, 9, 8));
   emitSubRegImm(8, 8, static_cast<uint16_t>(IrSlotBytes));
   const size_t endIndex = currentWordIndex();

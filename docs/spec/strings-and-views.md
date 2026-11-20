@@ -256,9 +256,25 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   `substr(start, end) -> String`.
 - Heap: `/std/text/stringHeapChunks()`, `stringHeapBytesInUse()`, `stringHeapBytesFree()`,
   `stringHeapLargeBlocks()`, `stringHeapLargeBytes()` and `setStringMemoryLimit(bytes)`; `heapLiveBlocks()` counts
-  the live allocations of the slot heap (vector buffers, `Function` boxes) on the VM and optexe, so a test can check
-  that a copy-and-destroy loop frees what it makes. `text` parameters are the
+  the live allocations of the slot heap (vector buffers, `Function` boxes) on the VM, optexe and the arm64 native
+  backend, so a test can check that a copy-and-destroy loop frees what it makes. `text` parameters are the
   current literal-backed `string`, read byte by byte; they become real views with TODO-5540.
+- **The string heap on the native backend** (arm64, macOS). Its figures are defined by the native heap and are not the
+  VM's, so a program compares them (a figure after minus before, a comparison, a balance of zero) and never relies on
+  an absolute chunk or free byte count. The text-size figures agree with the VM's: `stringHeapBytesInUse()`,
+  `stringHeapLargeBlocks()`, `stringHeapLargeBytes()`, `stringHeapAllocations()`, `stringArenaDepth()` and
+  `stringArenaBytes()` count text-block sizes (the VM's size classes), and `setStringMemoryLimit` counts them too. The
+  differences: `stringHeapChunks()` is the number of 256 KiB chunks of the one pool that every block shares (the VM
+  keeps chunks per size class, starting at 4 KiB); `stringHeapBytesFree()` is the bytes of freed pool blocks, class
+  sizes with headers, that sit on the pool's free lists (a block that is freed adds its class size, the next block of
+  that class takes it back; a block above 64 KiB is unmapped and counts nothing); `heapLiveBlocks()` is one counter for
+  every thread of a program, where the VM counts the heap of the running thread; it also counts the frames of tasks.
+  A `StringArena` maps its regions (256 KiB, or one block's size when that is larger) and hands blocks out by bumping;
+  ending it writes the free magic into every block it made and puts its standard regions on a list the next arena
+  reuses, so text used after its arena ended meets the heap's message for a free block ("invalid heap free address: the
+  block is already free", exit code 3) while its region is unused, and the text of the next arena once it is reused. A
+  region larger than the standard one stays mapped. A module with tasks keeps its text blocks in the pool, and its
+  `beginStringArena` and end only count (as the VM's shared heaps do).
 - `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
   program); `+` and the comparisons are the operators described under the text view below.
 - Not yet: `+=` (the language has no token), the `Result`-returning `tryReserve` and per-thread heaps. A `String` is never borrowed implicitly where a view is expected: write `s.view()`, so every borrow is visible.

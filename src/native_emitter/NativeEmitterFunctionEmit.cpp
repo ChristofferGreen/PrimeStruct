@@ -309,6 +309,12 @@ bool emitNativeFunctions(const IrModule &module,
           case NativeTextHost::SetLimit:
             emitter.emitTextHeapHost(textHost);
             break;
+          case NativeTextHost::ArenaBegin:
+            emitter.emitArenaBegin();
+            break;
+          case NativeTextHost::ArenaEnd:
+            emitter.emitArenaEnd();
+            break;
           case NativeTextHost::Free:
             emitter.emitTextFree();
             break;
