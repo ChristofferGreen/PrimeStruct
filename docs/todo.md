@@ -497,9 +497,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: signed division overflow of `i32` and `i64`; the zero divisor stays as TODO-6125 made it.
   - repro: `[i32 mut] minus_one{-1i32}`, `[i32] low{-2147483647i32 - 1i32}`, `print_line(low / minus_one)`: `./primec --emit=wasm --wasm-profile wasi` run under node gives `RuntimeError: divide result unrepresentable`, the VM prints `-2147483648`.
 
-- [ ] TODO-6126: `convert<i32>(round(x))` is "wasm emitter unsupported control-flow pattern"
+- [~] TODO-6126: `convert<i32>(round(x))` is "wasm emitter unsupported control-flow pattern"
   - owner: ai
   - status: ready
+  - claimed_by: wasm-agent (worktree-agent-a6d32f2abb10bf59e), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6090)
   - parallel_track: wasm-round-control-flow
