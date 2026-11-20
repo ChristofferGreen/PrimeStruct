@@ -696,9 +696,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the return-type diagnostic only; no new type resolution rules.
 
-- [ ] TODO-6112: An overload on `App<S>` loses to a generic `H` overload
+- [~] TODO-6112: An overload on `App<S>` loses to a generic `H` overload
   - owner: ai
   - status: ready
+  - claimed_by: overload-worker (worktree agent-af334e170c9286e2a), 2026-11-20
   - created_at: 2026-11-20
   - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
   - parallel_track: generic-struct-overload
