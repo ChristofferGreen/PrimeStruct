@@ -632,6 +632,17 @@
                       ranHelper,
                       error);
                 },
+            .structOwnsResources =
+                [&](const std::string &structPath) {
+                  return ir_lowerer::structNeedsDestroyHelpers(
+                      structPath,
+                      [&](const std::string &path) {
+                        return ir_lowerer::findStackDestroyHelper(setupStage.defMap, path);
+                      },
+                      [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                        return resolveStructSlotLayout(path, layoutOut);
+                      });
+                },
             .emitResultOkArgument = [&](const Expr &okArg,
                                         const std::string &structPath,
                                         const LocalMap &argLocals) -> std::optional<bool> {
@@ -787,6 +798,40 @@
           fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
           continue;
         }
+      }
+      // An `args<T>` pack of a struct with a `Destroy` helper owns its elements (the call site copied places into
+      // it and took temporaries over): the callee's body destroys them, first element first, when it ends.
+      if (const auto packIt = calleeLocals.find(param.name);
+          !fileScopeStack.empty() && packIt != calleeLocals.end() && packIt->second.isArgsPack &&
+          packIt->second.argsPackElementKind == LocalInfo::Kind::Value &&
+          !packIt->second.structTypeName.empty() && packIt->second.argsPackElementCount > 0 &&
+          packIt->second.structSlotCount > 0 &&
+          ir_lowerer::structNeedsDestroyHelpers(
+              packIt->second.structTypeName,
+              [&](const std::string &path) {
+                return ir_lowerer::findStackDestroyHelper(setupStage.defMap, path);
+              },
+              [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                return resolveStructSlotLayout(path, layoutOut);
+              })) {
+        const LocalInfo packInfo = packIt->second;
+        for (int32_t element = packInfo.argsPackElementCount - 1; element >= 0; --element) {
+          const int32_t elementPtrLocal = allocTempLocal();
+          const int32_t flagLocal = allocTempLocal();
+          const uint64_t offsetBytes =
+              static_cast<uint64_t>(1 + element * packInfo.structSlotCount) * IrSlotBytes;
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(packInfo.index)});
+          function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(elementPtrLocal)});
+          function.instructions.push_back({IrOpcode::PushI32, 1});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(flagLocal)});
+          setupStage.dropEntries.push_back({elementPtrLocal, flagLocal, packInfo.structTypeName});
+          fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
+        }
+        continue;
       }
       const bool ownedParam = ir_lowerer::parameterHasTransform(param, "copy") ||
                               ir_lowerer::parameterHasTransform(param, "move");

@@ -87,6 +87,9 @@ struct InlineDefinitionCallParameters {
   ActionFn emitArrayIndexOutOfBounds = {};
   // `[T copy]` parameters of a type with a `Copy` helper are filled through it.
   EmitInlineParameterStructCopyHelperFn emitStructCopyHelper = {};
+  // Whether a value of the struct path holds something to destroy (a `Destroy` helper somewhere in it). An
+  // `args<T>` pack of such a struct owns its elements: a place is copied into it and a forwarded pack is copied.
+  std::function<bool(const std::string &)> structOwnsResources = {};
   // A `Result.ok(x)` argument of a stdlib Result parameter is constructed as that sum.
   EmitInlineParameterResultOkArgumentFn emitResultOkArgument = {};
 };

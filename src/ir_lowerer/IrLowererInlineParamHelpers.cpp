@@ -355,6 +355,8 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
       parameters.emitStructCopyHelper;
   const EmitInlineParameterResultOkArgumentFn &emitResultOkArgument =
       parameters.emitResultOkArgument;
+  const std::function<bool(const std::string &)> &structOwnsResources =
+      parameters.structOwnsResources;
   for (size_t i = 0; i < callParams.size(); ++i) {
     const Expr &param = callParams[i];
     const Expr *orderedArg = (i < orderedArgs.size()) ? orderedArgs[i] : nullptr;
@@ -467,7 +469,9 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
                                          emitInstruction,
                                          error,
                                          inferExprLocalInfo,
-                                         isTemporaryCopySource)) {
+                                         isTemporaryCopySource,
+                                         emitStructCopyHelper,
+                                         structOwnsResources)) {
         return false;
       }
       continue;

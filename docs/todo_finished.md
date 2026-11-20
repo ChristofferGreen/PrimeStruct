@@ -2486,6 +2486,7 @@ are left unarchived.
 | TODO-6071 | Tests that shell out count `primec` progress | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6072 | The managed doctest shards run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6073 | The remaining CTest families run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6074 | An args pack destroys the `String`s of its elements | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6075 | A host call may yield on the deterministic VM scheduler | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6076 | `RwLock<T>`: many readers or one writer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6077 | Lowering errors carry the user location of the expression being lowered | [2026-11.md](todo_archive/2026-11.md) | - |

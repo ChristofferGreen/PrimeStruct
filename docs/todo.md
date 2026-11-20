@@ -112,7 +112,6 @@ of sync with them.
 | ID | Title | Status | Track |
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
-| TODO-6074 | An args pack destroys the `String`s of its elements | ready | lifecycle-temporaries |
 | TODO-6096 | An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys its payload | ready | lifecycle-result-auto |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5853 | A `Reference` field is bound once at construction; assigning to it is a diagnostic | ready | closures-references |
@@ -154,7 +153,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-6074 (lifecycle-temporaries): an args pack destroys the `String`s of its elements
 - TODO-6096 (lifecycle-result-auto): an `[auto]` local of a `Result` producer is the stdlib `Result` sum and destroys its payload
 - TODO-5853 (closures-references): a `Reference` field is bound once at construction; assigning to it is a diagnostic
 - TODO-5744 (runtime-faults): a runtime error in a real call ends the program on Wasm (`proc_exit(3)`) and GLSL
@@ -165,7 +163,6 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-6074
 2. TODO-6096
 3. TODO-5853
 4. TODO-5744
@@ -190,7 +187,7 @@ of sync with them.
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Closures (docs/spec/value-lifecycle.md, Lambdas): TODO-5853
-- Lifecycle of temporaries (docs/spec/value-lifecycle.md): TODO-6074, TODO-6096
+- Lifecycle of temporaries (docs/spec/value-lifecycle.md): TODO-6096
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; blocked TODO-5854 (on TODO-5853); deferred TODO-5806
@@ -198,7 +195,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-6074, TODO-6096, TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-5956 (native string arenas and statistics), TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) is blocked on TODO-5744. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-6096, TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-5956 (native string arenas and statistics), TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) is blocked on TODO-5744. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; blocked on TODO-5853: TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field). Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -234,22 +231,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - x86_64 native and the JIT run the real-call program-matrix cases (struct, `mut` and Reference parameters, struct results, runtime errors) with real calls; the JIT no longer refuses such modules
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
-
-- [~] TODO-6074: An args pack destroys the `String`s of its elements
-  - owner: ai
-  - status: ready
-  - claimed_by: pack-a (worktree-agent-a1553f15dbd68feb3), 2026-11-20
-  - created_at: 2026-11-19
-  - phase: Lifecycle (found while finishing TODO-5727)
-  - parallel_track: lifecycle-temporaries
-  - scope: `total(Box{[text] label(3i32)}, Box{[text] label(4i32)})` for `total([args<Box>] xs)` leaves both `String`s on the string heap after the call (measured on the VM: `heapLiveBlocks`/`stringHeapBytesInUse`). `emitStructPackedValueToSlots` (src/ir_lowerer/IrLowererInlinePackedArgs.cpp) copies each element into the pack slots, disarms a temporary argument (the pack takes it over) and does a shallow slot copy of a named one (no `Copy` helper, no disarm), and the callee never destroys the pack, so the pack owns what a temporary gave it and borrows what a place gave it, with no record of which.
-  - decision: 2026-11-20, option A: the pack owns every element. A named argument runs its `Copy` helper into the pack slot, like a vector push; a temporary is taken over as today; the callee destroys all elements of the pack when its body ends. This changes a named argument's cost and its `Copy` side effects (state it in docs/spec/value-lifecycle.md). Options B (a drop flag per element) and C (the caller destroys the temporaries after the call) are not taken. `[spread]` forwarding of a pack hands ownership over as a vector move does; it must copy when the source pack is still used.
-  - implementation_notes: the matrix cases copy the shape of tests/unit/program_matrix/test_program_matrix_user_at_sources.cpp. The `[auto]` `Result` half of the original leak is TODO-6096.
-  - acceptance:
-    - matrix cases for an args pack of `Box` temporaries, of named `Box` arguments (one `Copy` per element, one `destroy` per element, the original still usable) and of a forwarded pack end with the heap statistics of the start on VM and optexe
-    - docs/spec/value-lifecycle.md states the pack ownership rule
-    - full release gate green
-  - stop_rule: ownership of args-pack elements only.
 
 - [ ] TODO-6096: An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys its payload
   - owner: ai

@@ -74,7 +74,9 @@ bool emitInlinePackedCallParameter(
     const EmitInstructionFn &emitInstruction,
     std::string &error,
     const InferInlineParameterExprLocalInfoFn &inferExprLocalInfo,
-    const ExprPredicateFn &isTemporaryCopySource) {
+    const ExprPredicateFn &isTemporaryCopySource,
+    const EmitInlineParameterStructCopyHelperFn &emitStructCopyHelper,
+    const std::function<bool(const std::string &)> &structOwnsResources) {
   StructSlotLayoutInfo structLayout;
   const bool isUnsupportedStringPointerReferenceArgsPack =
       ((paramInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
@@ -469,6 +471,20 @@ bool emitInlinePackedCallParameter(
     return true;
   };
 
+  // A pack owns its elements (the callee destroys them): a place is copied into its slot through the struct's
+  // `Copy` helpers after the slot copy, like a vector push; a temporary was taken over by the slot copy.
+  auto emitPackElementCopyHelper = [&](int32_t destBaseLocal, int32_t srcPtrLocal) -> bool {
+    if (!emitStructCopyHelper || !structOwnsResources ||
+        !structOwnsResources(paramInfo.structTypeName)) {
+      return true;
+    }
+    const int32_t destPtrLocal = allocTempLocal();
+    emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal));
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+    bool ranHelper = false;
+    return emitStructCopyHelper(destPtrLocal, srcPtrLocal, paramInfo.structTypeName, ranHelper);
+  };
+
   auto emitStructPackedValueToSlots = [&](const Expr &argExpr, int32_t destBaseLocal) -> bool {
     const std::string argStruct = inferStructExprPath(argExpr, callerLocals);
     if (argStruct.empty() || argStruct != paramInfo.structTypeName) {
@@ -486,6 +502,8 @@ bool emitInlinePackedCallParameter(
     if (isTemporaryCopySource ? isTemporaryCopySource(argExpr)
                               : shouldDisarmStructCopySourceExpr(argExpr)) {
       emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, paramInfo.structTypeName);
+    } else if (!emitPackElementCopyHelper(destBaseLocal, srcPtrLocal)) {
+      return false;
     }
     return true;
   };
@@ -658,12 +676,15 @@ bool emitInlinePackedCallParameter(
       (paramInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
        paramInfo.argsPackElementKind == LocalInfo::Kind::Reference);
 
+  // A pack of an owning struct owns its elements, so a forwarded pack is copied element by element, not aliased.
+  const bool packOwnsElements =
+      isStructPack && structOwnsResources && structOwnsResources(paramInfo.structTypeName);
   if (packedArgs.size() == 1) {
     const Expr &packedArg = *packedArgs.front();
-    if (emitArgsPackAlias(packedArg, true)) {
+    if (!packOwnsElements && emitArgsPackAlias(packedArg, true)) {
       return true;
     }
-    if (packedArg.isSpread) {
+    if (packedArg.isSpread && !packOwnsElements) {
       if (error.empty()) {
         error = "native backend requires spread variadic forwarding to use an args<T> parameter";
       }
@@ -767,7 +788,8 @@ bool emitInlinePackedCallParameter(
           emitInstruction(IrOpcode::AddI64, 0);
         }
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcElementPtrLocal));
-        if (!emitStructCopySlots(destLocal, srcElementPtrLocal, structLayout.totalSlots)) {
+        if (!emitStructCopySlots(destLocal, srcElementPtrLocal, structLayout.totalSlots) ||
+            !emitPackElementCopyHelper(destLocal, srcElementPtrLocal)) {
           return false;
         }
       } else {

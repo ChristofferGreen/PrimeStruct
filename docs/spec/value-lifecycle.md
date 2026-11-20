@@ -76,6 +76,15 @@
   call, and a borrowed parameter cannot escape the call (it cannot be returned, stored, or moved). A borrowed stdlib
   collection parameter (`[Vector<T> mut]`, `[Vector<T>]`) is the caller's own record, not a copy: `count()`,
   `capacity()` and element reads see what the caller pushed, and a push through a `mut` one is seen by the caller.
+- **Args packs:** an `[args<T>]` pack of a struct that holds something to destroy (a `String` field, a `Destroy`
+  helper somewhere in it) owns every element, as a vector does. A temporary argument (`total(Box{...}, Box{...})`) is
+  taken over; a place (a binding, field or element) is copied into its pack slot through the type's `Copy` helpers, like
+  a vector push, so a named argument costs one `Copy` per element and stays usable; a `[spread]` forwarded pack is
+  copied element by element (the forwarding call never aliases the caller's pack); and the callee destroys every
+  element, first element first, when its body ends. A pack of a struct with nothing to destroy, of scalars, and of
+  `Reference`/`Pointer` elements (which own nothing) copies and destroys nothing, and a forwarded pack of such
+  elements still aliases the caller's. Forwarding always copies an owning pack: handing it over without a copy when
+  the source pack is not used afterwards is not done.
 - **Ownership:** a `move` parameter's value is destroyed when the callee's scope ends unless the callee moves it on
   (for example into a container); the caller does not destroy it. `move(...)` at the call site is optional for a `move`
   parameter. Using the caller's binding afterwards is a `use-after-move` error until it is reassigned, on every path:
