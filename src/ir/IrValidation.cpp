@@ -112,6 +112,71 @@ bool isWasmOpcodeAllowedForTarget(IrOpcode op, IrValidationTarget target) {
   return target == IrValidationTarget::WasmBrowser ? info->wasmBrowser : info->wasm;
 }
 
+// The language feature that needs an opcode Wasm does not lower, for the message of the validation error; empty when the
+// opcode is not tied to one feature.
+const char *wasmOpcodeFeature(IrOpcode op) {
+  switch (op) {
+  case IrOpcode::AddressOfLocal:
+    return "the address of a local, needed by pointers, `Reference` parameters, struct values, "
+           "arrays and closures";
+  case IrOpcode::LoadIndirect:
+  case IrOpcode::StoreIndirect:
+    return "a load or store through an address, needed by pointers, `Reference`, struct fields, "
+           "arrays and closures";
+  case IrOpcode::LoadStringByte:
+  case IrOpcode::LoadStringByteDynamic:
+  case IrOpcode::LoadStringLength:
+    return "reading a byte or the length of a string";
+  case IrOpcode::HeapAlloc:
+  case IrOpcode::HeapAllocBytes:
+  case IrOpcode::HeapFree:
+  case IrOpcode::HeapRealloc:
+    return "heap memory, needed by `vector`, `map`, `String` and other growable containers";
+  case IrOpcode::CallHost:
+    return "a host function call";
+  case IrOpcode::LoadU8:
+  case IrOpcode::StoreU8:
+  case IrOpcode::ZextU8:
+    return "`u8` values and byte memory";
+  case IrOpcode::TaskSpawn:
+  case IrOpcode::TaskWait:
+    return "tasks";
+  case IrOpcode::AtomicLoad:
+  case IrOpcode::AtomicStore:
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+  case IrOpcode::AtomicCompareExchange:
+    return "atomic operations";
+  case IrOpcode::MutexLock:
+  case IrOpcode::MutexUnlock:
+    return "mutex locks";
+  case IrOpcode::ConditionWait:
+  case IrOpcode::ConditionNotify:
+    return "condition variables";
+  default:
+    break;
+  }
+  const IrOpcodeInfo *info = irOpcodeInfo(op);
+  if (info != nullptr && info->wasm && !info->wasmBrowser) {
+    return "console and file output and program arguments, which need `--wasm-profile wasi`";
+  }
+  return "";
+}
+
+// "unsupported opcode for wasm target: AddressOfLocal (the address of a local, needed by ...)".
+std::string wasmUnsupportedOpcodeMessage(IrOpcode op, IrValidationTarget target) {
+  std::string message = "unsupported opcode for " + std::string(wasmTargetName(target)) + " target";
+  const IrOpcodeInfo *info = irOpcodeInfo(op);
+  if (info != nullptr) {
+    message += std::string(": ") + info->name;
+    const std::string feature = wasmOpcodeFeature(op);
+    if (!feature.empty()) {
+      message += " (" + feature + ")";
+    }
+  }
+  return message;
+}
+
 bool failFunction(size_t functionIndex,
                   const std::string &functionName,
                   const std::string &detail,
@@ -307,7 +372,7 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "unsupported opcode for " + std::string(wasmTargetName(target)) + " target",
+                             wasmUnsupportedOpcodeMessage(inst.op, target),
                              error);
     }
     if (isGlslTarget(target) && !isGlslOpcodeAllowed(inst.op)) {

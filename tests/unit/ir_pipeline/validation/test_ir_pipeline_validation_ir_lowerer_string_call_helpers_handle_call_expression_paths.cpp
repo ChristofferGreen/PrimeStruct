@@ -637,6 +637,25 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK_ERROR_CONTAINS(error, "unsupported opcode for wasm target");
+  // The message names the opcode and the language feature that needs it.
+  CHECK_ERROR_CONTAINS(
+      error, "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by `vector`");
+
+  // An I/O opcode is refused by the browser profile only, and the message says which profile has it.
+  primec::IrModule browserModule;
+  browserModule.entryIndex = 0;
+  primec::IrFunction browserFn;
+  browserFn.name = "/main";
+  browserFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  browserFn.instructions.push_back({primec::IrOpcode::PrintI32, 0});
+  browserFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  browserModule.functions.push_back(browserFn);
+  CHECK_FALSE(
+      primec::validateIrModule(browserModule, primec::IrValidationTarget::WasmBrowser, error));
+  CHECK_ERROR_CONTAINS(
+      error,
+      "unsupported opcode for wasm-browser target: PrintI32 (console and file output and "
+      "program arguments, which need `--wasm-profile wasi`)");
 }
 
 TEST_CASE("ir validator wasm target accepts call opcodes") {

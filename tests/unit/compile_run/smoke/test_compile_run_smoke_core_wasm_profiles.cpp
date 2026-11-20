@@ -643,7 +643,13 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("unsupported opcode for wasm target") != std::string::npos);
-  CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") != std::string::npos);
+  // The opcode and the features that need it are named.
+  CHECK(diagnostics.find(
+            "unsupported opcode for wasm target: AddressOfLocal (the address of a local, needed by "
+            "pointers, `Reference` parameters, struct values, arrays and closures)") !=
+        std::string::npos);
+  CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") !=
+        std::string::npos);
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
 }
 

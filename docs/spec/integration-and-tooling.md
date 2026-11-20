@@ -77,6 +77,14 @@ a helper function the module carries (one per operation used) that checks the di
 profile, whose division stays the wasm instruction and traps (`RuntimeError: divide by zero`) like every other
 runtime error there. Signed overflow (`INT_MIN / -1`) is not changed by the helper (TODO-6134).
 
+An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
+feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
+wasm target: AddressOfLocal (the address of a local, needed by pointers, `Reference` parameters, struct values, arrays
+and closures)`. Today that covers local addresses and indirect loads and stores (pointers, `Reference`, struct values,
+arrays, closures), heap memory (`vector`, `map`, `String`), string byte reads, host calls, `u8` and byte memory, tasks,
+atomics, mutexes and condition variables; the browser profile also refuses console and file output and program
+arguments (they need `--wasm-profile wasi`).
+
 ### Dependency List
 `primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds
 the source files the compile read, one absolute, normalized path per line, sorted bytewise, without duplicates: the
