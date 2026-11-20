@@ -589,7 +589,15 @@
   `--emit=native` and `--emit=exe` keep the frames on the process stack and have no depth check: native ran 8000 and
   failed at 20000, `exe` ran 20000 and failed at 50000, both ending with SIGSEGV (exit status 139) and, for `exe`,
   without the buffered output. A program needing more than 4096 levels is therefore portable to neither the VM nor
-  `optexe`; Wasm and GLSL were not measured (no Wasm runtime on the measuring machine).
+  `optexe`. `--emit=wasm` lowers a recursive call to a native Wasm `call`, so the limit is the host's stack, not
+  the compiler's: the same function (an `i32` parameter, `plus(depth(n - 1i32), 1i32)`) returned the right value at
+  depth 15000 and failed at 20000 under Node 24 (V8, default stack of about 1 MB), where the host raises
+  `RangeError: Maximum call stack size exceeded` (a trap; there is no `VM error:` line and no exit code 3 of the
+  module itself) and the limit differs per runtime, per frame size and per stack setting (`--stack-size`, the
+  embedder). `--emit=glsl` has no recursion at all: a recursive function is refused at compile time
+  (`GLSL-IR validation error: ... glsl target does not support recursive function calls`, exit code 2). The Linux
+  x86_64 depths of `--emit=native` and `--emit=exe` are not measured (no Linux machine was available: TODO-6142);
+  the process stack there is the `ulimit -s` of the shell, 8 MiB by default as on macOS, and frame sizes differ.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
   code generation is unavailable. Effect masks and capabilities enforce per-platform restrictions.
 

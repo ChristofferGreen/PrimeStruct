@@ -126,7 +126,8 @@ of sync with them.
 | TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
-| TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
+| TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
+| TODO-6143 | Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow` | deferred | runtime-faults |
 | TODO-6107 | `panic` and every array runtime error compile for Wasm | blocked | wasm-arrays-panic |
 | TODO-6138 | Wasm lowers local addresses and indirect loads and stores | ready | wasm-opcode-gaps |
 | TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | blocked | wasm-opcode-gaps |
@@ -160,13 +161,11 @@ of sync with them.
 
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6052 (runtime-faults): recursion limits of each backend are documented
 
 ### Immediate Next 10
 
 2. TODO-5804
 4. TODO-5603
-5. TODO-6052
 
 ### Priority Lanes
 
@@ -177,7 +176,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6052, TODO-6107 (`panic` on Wasm), TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6107 (`panic` on Wasm), TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -461,18 +460,33 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: x86_64 division only.
   - notes: deferred: needs a Linux x86_64 machine to run; the worker of the arm64 fix only had arm64 macOS, and an untested encoding is not landed.
 
-- [~] TODO-6052: Recursion limits of each backend are documented
+- [ ] TODO-6142: The recursion depth of Linux x86_64 native and `exe` is measured
   - owner: ai
-  - status: ready
-  - claimed_by: build-hash (worktree-agent-a1f688ce17b85b0ca), 2026-11-20
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5517)
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (split from TODO-5517, TODO-6052)
   - parallel_track: runtime-faults
-  - scope: vm-design.md (Errors, "Recursion limits") now states the measured limits of the VM, `optexe`, native and `exe` on macOS arm64 (4096 frames and exit 3 on the VM and `optexe`; SIGSEGV past 8000 to 20000 levels on native and 20000 to 50000 on `exe`). Still open: measure Wasm and GLSL (a Wasm runtime is needed), the Linux x86_64 native stack depth, and add the exact native and `exe` limits for the default stack of a Linux machine.
+  - scope: vm-design.md (Errors, "Recursion limits") states the macOS arm64 depths of `--emit=native` (SIGSEGV past 8000 to 20000 levels) and `--emit=exe` (20000 to 50000) and says the Linux x86_64 ones are not measured. Measure the same recursive `i32` function (`plus(depth(n - 1i32), 1i32)`) on Linux x86_64 with the default `ulimit -s` and write the two depths into the paragraph.
   - acceptance:
-    - vm-design.md states the Wasm outcome past its limit and the Linux native and `exe` depths, each measured
+    - the paragraph states the measured Linux x86_64 depths of `native` and `exe`, and the exit status past the limit
     - full release gate green
-  - stop_rule: documentation and measurement; no stack-depth checks are added to native.
+  - stop_rule: measurement and documentation; no stack-depth check is added.
+  - repro: a function `[return<i32>] depth([i32] n)` returning `plus(depth(n - 1i32), 1i32)` for `n > 0`, built with `primec --emit=native` and `--emit=exe`, run at depths 8000, 20000, 50000.
+  - notes: deferred: needs a Linux x86_64 machine (the 2026-11-20 worker had arm64 macOS only; as TODO-6051).
+
+- [ ] TODO-6143: Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (found with TODO-6052)
+  - parallel_track: runtime-faults
+  - scope: the VM, `optexe` and the JIT fault past 4096 frames with `VM error: VM call stack overflow` and exit code 3; Wasm lowers a call to a Wasm `call`, so the limit is the host's: Node 24 returned depth 15000 and raised `RangeError: Maximum call stack size exceeded` at 20000 (a trap with no PrimeStruct message). A program that needs more than 4096 levels is portable to neither the VM nor `optexe` but runs on Wasm until the host stack is gone, and what happens then depends on the runtime.
+  - options: (a) document only (done by TODO-6052); (b) a frame counter global in every Wasm function that traps at 4096 (cost: a global read and write per call, and a code-size cost); (c) leave it. The owner decides; (b) needs a measurement of the cost on the Wasm matrix.
+  - acceptance:
+    - per the decision: a depth counter with a test under node that sees the trap at the VM's limit, or the documented difference
+    - full release gate green
+  - stop_rule: the Wasm call depth only.
+  - repro: `primec --emit=wasm --wasm-profile wasi rec.prime -o rec.wasm --entry /main` for the `depth` function above at `depth(20000i32)`, run under Node 24 (`new WebAssembly.Instance(...).exports.main()`).
 
 - [ ] TODO-6124: Wasm lowers pointers, `Reference`, struct values, arrays and closures
   - owner: ai

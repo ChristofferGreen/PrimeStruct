@@ -2472,6 +2472,7 @@ are left unarchived.
 | TODO-6048 | `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6052 | Recursion limits of each backend are documented | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6054 | A discarded sum result with an owning payload is destroyed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
