@@ -87,7 +87,7 @@ TEST_CASE("emit-deps lists the stdlib files a lazy import included") {
 namespace {
 
 // `import</std/math>` splices the math files by the import resolver; the language import then asks the stdlib pass
-// for the same files (TODO-6110).
+// for the same files.
 const std::string MathBothImports =
     "import</std/math>\nimport /std/math/*\n\n[return<i32>]\nmain() {\n"
     "  return(convert<i32>(7.5f32 * linearToSrgbChannel(1.0f32) + "

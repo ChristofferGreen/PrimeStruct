@@ -1249,3 +1249,27 @@ main() {
   program.stdoutText = "14\n14\n";
   program_matrix::runProgramMatrix(program);
 }
+
+TEST_CASE("repeat with a non-positive count in a variable runs the body zero times") {
+  // docs/PrimeStruct_SyntaxSpec.md: non-positive `repeat` counts skip the body, unlike `loop(count)`, which ends the
+  // program on a negative count. A negative i32 or i64 held in a local behaves like the literal zero.
+  program_matrix::ProgramCase program;
+  program.name = "control_repeat_non_positive";
+  program.source = R"(
+[effects(io_out), return<int>]
+main() {
+  [i32] negative{0i32 - 1i32}
+  [i64] wide{0i64 - 5i64}
+  [i32 mut] total{0i32}
+  repeat(negative) { total = total + 1i32 }
+  repeat(wide) { total = total + 10i32 }
+  repeat(0i32) { total = total + 100i32 }
+  repeat(2i32) { total = total + 1000i32 }
+  print_line(total)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2000\n";
+  program_matrix::runProgramMatrix(program);
+}

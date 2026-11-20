@@ -2518,6 +2518,7 @@ are left unarchived.
 | TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6108 | `repeat` with a negative `i32` count says so at run time | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |

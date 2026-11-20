@@ -396,7 +396,7 @@ main() {
 
 TEST_CASE("a chained index read with a name first index parses in call and operand") {
   // `rows[k][j]` once failed to parse in a call argument or an operator operand, because `[k]` followed by `[`
-  // read as an argument label (TODO-6109). A literal first index never did.
+  // read as an argument label. A literal first index never did.
   program_matrix::ProgramCase program;
   program.name = "frontend_chained_index_name";
   program.source = R"(

@@ -214,7 +214,11 @@ main() {
     block with locals of its own is not covered). Different struct types are rejected with `if branches must return
     compatible types`.
 - **`loop(count) { ... }`:** statement-only loop helper. `count` must be an integer envelope (`i32`, `i64`, `u64`), and
-  the body is required. Negative counts are errors.
+  the body is required. Negative counts are errors: a negative literal is a diagnostic and a negative count held in
+  a variable ends the program with `loop count must be non-negative` and exit code 3 on every backend.
+- **`repeat(count) { ... }`:** statement-only counted loop. `count` is an integer or `bool`; unlike `loop`, a
+  non-positive count (zero, or a negative `i32` or `i64` in a literal or a variable) is not an error: the body runs
+  zero times, on every backend (docs/PrimeStruct_SyntaxSpec.md).
 - **`while(condition) { ... }`:** statement-only loop helper. `condition` must evaluate to `bool` (or a function
   returning `bool`).
 - **`for(init cond step) { ... }`:** statement-only loop helper. `init`, `cond`, and `step` are evaluated in order;

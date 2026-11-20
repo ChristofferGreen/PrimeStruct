@@ -134,7 +134,6 @@ of sync with them.
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | ready | assign-type-mismatch |
-| TODO-6108 | `repeat` with a negative `i32` count says so at run time | ready | repeat-negative-count |
 | TODO-6123 | The build command hashes the 22 MB `primec` twice per run | ready | build-compiler-hash |
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -238,19 +237,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `panic` on Wasm only; arrays stay unsupported on Wasm.
 
-- [~] TODO-6108: `repeat` with a negative `i32` count says so at run time
+- [ ] TODO-6130: An unknown type inside a templated return type is not named
   - owner: ai
   - status: ready
-  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
   - created_at: 2026-11-20
-  - phase: Runtime errors (found while doing TODO-5744)
-  - parallel_track: repeat-negative-count
-  - scope: The lowerer has a runtime error `loop count must be non-negative` (`emitLoopCountNegative`, src/ir_lowerer/IrLowererFlowLoopHelpers.cpp `emitCountedLoopPrologue`), and the semantics reject a negative literal count, but a negative count held in a variable runs zero times with no error on the VM. Either the runtime check is not reached for a `repeat(count)` over a local, or the documented rule is that a negative count means zero iterations; decide against docs/spec and make code, docs and tests agree.
-  - implementation_notes: repro: `[effects(io_out), return<int>] main() { [i32] count{0i32 - 1i32}  [i32 mut] total{0i32}  repeat(count) { total = total + 1i32 }  print_line(total)  return(0i32) }` prints `0` and exits 0 on the VM (release build, 2026-11-20); the spec text for `repeat` counts is the place to check.
+  - phase: Frontend and diagnostics (found with TODO-6111)
+  - parallel_track: unknown-type-diagnostic
+  - scope: TODO-6111 names a plain unknown return type (`unknown return type: NoSuchType on /make`). An unknown type nested in a template is still `unsupported return type on /f` without naming it: `[return<vector<NoSuchType>>] f()`, `[return<map<string, Unknown>>] wrap()` (tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp pins the old text). `resolveReturnTypeKind` in src/semantics/SemanticsReturnKindHelpers.cpp rejects the element through `isAllowedCollectionTypeArg` and gives one message for a missing type and for a resolvable but disallowed one.
+  - implementation_notes: split the check: an argument that is a plain name resolving to no builtin and no struct is `unknown return type: <arg> on /f`; a resolvable but disallowed element (for example a nested non-struct) keeps `unsupported return type`. Update the two goldens that pin the old text for `Unknown`.
   - acceptance:
-    - a negative non-literal `repeat` count either ends the program with `loop count must be non-negative` and exit code 3 on every backend, or the spec states that it runs zero times and the unused runtime-error emitter is removed
-    - matrix case; full release gate green
-  - stop_rule: the negative count of `repeat` only.
+    - `return<vector<NoSuchType>>` and `return<map<string, NoSuchType>>` name `NoSuchType`, with semantics tests; a resolvable disallowed element keeps its message
+    - full release gate green
+  - stop_rule: the return-type element diagnostic only; no new type resolution rules.
+
+- [ ] TODO-6131: The span of an unknown return type is the definition, not the type
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Frontend and diagnostics (found with TODO-6111)
+  - parallel_track: unknown-type-diagnostic
+  - scope: `unknown return type: NoSuchType on /make` is reported at the definition name (line 2, column 1 in `[return<NoSuchType>]` followed by `make() {`) because a `Transform` carries no source position of its own; TODO-6111 asked for the span of the type. The diagnostic should point at `NoSuchType` inside `[return<...>]`, as the unknown binding type of a parameter points at the parameter.
+  - implementation_notes: record the line and column of each transform and template argument in the parser (include/primec/Ast.h `Transform`), then use them in the return-kind diagnostic through the existing source-location plumbing. Mind that the AST header is included everywhere (full rebuild).
+  - acceptance:
+    - the primary span of an unknown return type is the type text, pinned with file, line and column in a stable-payload diagnostics test
+    - full release gate green
+  - stop_rule: transform positions for this one diagnostic; no change to other messages.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai

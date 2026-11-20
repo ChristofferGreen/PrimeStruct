@@ -352,7 +352,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
           contents = std::move(kept);
         }
         // A file the import resolver already spliced (`import</std/math>` without a library) is in the source
-        // once: appending it again would define everything in it twice (TODO-6110). Its nested imports are
+        // once: appending it again would define everything in it twice. Its nested imports are
         // still queued below, since the resolver expands `import<...>` only.
         if (resolverSplicedFiles.count(pathKey(absolute)) > 0) {
           // Nothing to append.
