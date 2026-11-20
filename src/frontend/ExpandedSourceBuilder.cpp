@@ -112,4 +112,24 @@ void ExpandedSourceBuilder::updateUnitRange(SourceUnit &unit, const SourceSegmen
   }
 }
 
+bool ExpandedSourceBuilder::appendLibraryInterfaceOnce(const LibraryInterfaceUnit &library) {
+  const std::string keyPrefix = library.name + ":";
+  for (const SourceUnit &unit : source_.units) {
+    if (unit.kind == SourceUnitKind::Library &&
+        unit.moduleKey.compare(0, keyPrefix.size(), keyPrefix) == 0) {
+      return false;
+    }
+  }
+  const std::size_t unitId = addUnit(SourceUnitKind::Library,
+                                     library.displayPath,
+                                     library.name + ":" + library.interfaceHash,
+                                     1,
+                                     1);
+  appendSegment(unitId, library.text, 1, 1);
+  if (!textEndsWithNewline()) {
+    appendGenerated("\n", "<import-separator>");
+  }
+  return true;
+}
+
 } // namespace primec

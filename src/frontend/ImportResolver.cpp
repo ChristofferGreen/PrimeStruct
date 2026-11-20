@@ -61,40 +61,30 @@ struct ImportEntry {
   bool isLogical = false;
 };
 
-// The library that owns the namespace root a logical import path starts with (`/ui` and `/ui/button` are in the root
-// `/ui`), or null.
-const LibraryInterfaceUnit *libraryOwning(const std::vector<LibraryInterfaceUnit> *libraries,
-                                          const std::string &path) {
+// Whether `path` is `root` or lies below it.
+bool importPathInRoot(const std::string &path, const std::string &root) {
+  return path == root || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 &&
+                          path[root.size()] == '/');
+}
+
+// The libraries that own a namespace root a logical import path overlaps: the path lies in the root (`/ui` and
+// `/ui/button` are in the root `/ui`) or above it (`/std/math` holds the roots `/std/math/ColorRGB` and
+// `/std/math/Vec2` of two libraries).
+std::vector<const LibraryInterfaceUnit *>
+librariesOwning(const std::vector<LibraryInterfaceUnit> *libraries, const std::string &path) {
+  std::vector<const LibraryInterfaceUnit *> owners;
   if (libraries == nullptr) {
-    return nullptr;
+    return owners;
   }
   for (const LibraryInterfaceUnit &library : *libraries) {
     for (const std::string &root : library.roots) {
-      if (path == root || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 &&
-                           path[root.size()] == '/')) {
-        return &library;
+      if (importPathInRoot(path, root) || importPathInRoot(root, path)) {
+        owners.push_back(&library);
+        break;
       }
     }
   }
-  return nullptr;
-}
-
-// Splices the interface of `library` once, as a unit of its own, however many imports name it.
-void spliceLibraryInterface(const LibraryInterfaceUnit &library,
-                            std::unordered_set<std::string> &expanded,
-                            ExpandedSourceBuilder &builder) {
-  if (!expanded.insert("library:" + library.name).second) {
-    return;
-  }
-  const std::size_t unitId = builder.addUnit(SourceUnitKind::Library,
-                                             library.displayPath,
-                                             library.name + ":" + library.interfaceHash,
-                                             1,
-                                             1);
-  builder.appendSegment(unitId, library.text, 1, 1);
-  if (!builder.textEndsWithNewline()) {
-    builder.appendGenerated("\n", "<import-separator>");
-  }
+  return owners;
 }
 
 bool expandImportsInternal(const std::string &baseDir,
@@ -397,8 +387,12 @@ bool expandImportsInternal(const std::string &baseDir,
     std::vector<std::filesystem::path> allImportFiles;
     for (const auto &path : paths) {
       if (path.isLogical && !requestedVersion) {
-        if (const LibraryInterfaceUnit *library = libraryOwning(libraries, path.path)) {
-          spliceLibraryInterface(*library, expanded, builder);
+        const std::vector<const LibraryInterfaceUnit *> owners =
+            librariesOwning(libraries, path.path);
+        if (!owners.empty()) {
+          for (const LibraryInterfaceUnit *library : owners) {
+            builder.appendLibraryInterfaceOnce(*library);
+          }
           continue;
         }
       }

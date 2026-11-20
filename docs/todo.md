@@ -142,26 +142,25 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-6093 | The compiler build id of a library costs less than hashing the 22 MB `primec` | ready | lib-build-id |
-| TODO-6097 | Several stdlib libraries link, and a module a linked library owns is not spliced from the stdlib source | ready | lib-stdlib-roots |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
+| TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
 
 ### Ready Now
 
-- TODO-6097 (lib-stdlib-roots): several stdlib libraries link, and an owned module is not spliced from the stdlib source
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
 
 ### Immediate Next 10
 
-1. TODO-6097
 2. TODO-5804
 4. TODO-5603
 5. TODO-6052
@@ -175,7 +174,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6097, TODO-6093; deferred TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6093; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6052, TODO-6090 (Wasm matrix config), TODO-6107 (`panic` on Wasm); deferred TODO-6059, TODO-6051
 - Frontend and diagnostics (split from TODO-5520): TODO-6080; deferred TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
@@ -195,7 +194,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; TODO-5904 (threads by default) is closed: the default stays the deterministic scheduler; TODO-6075 (a host call yields on it) is closed: it does not, a poller with workers needs `--vm-threads` with `Reentrant` host functions (docs/spec/vm-design.md, Tasks); TODO-5902 (each task on the fast kernel) landed. TODO-5903 (debug sessions run programs with tasks, the first prerequisite of docs/VmInspectorPlan.md) landed.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) landed; TODO-5926 (generics and lifecycle helpers cross the library boundary) landed; TODO-5927 (namespace ownership) landed; TODO-5928 (`--emit-uses`) landed; TODO-5929 (symbol-level rebuilds) landed; TODO-5930 (the graph builds libraries and links them) landed; archived as low-value TODO-5931 (the stdlib as a library: measured slower, see docs/todo_finished.md), ready TODO-6097 (roots below `/std`, one per module family, so several stdlib libraries link and an owned module is not spliced from the stdlib source) and TODO-6093 (the compiler build id is the linker UUID, with the full hash as the fallback; the stdlib as a library was measured again after TODO-6092 and stays archived, numbers in docs/todo_log.md; do not run the two at once, both touch src/pipeline/LibraryLink.cpp); deferred TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) landed; TODO-5926 (generics and lifecycle helpers cross the library boundary) landed; TODO-5927 (namespace ownership) landed; TODO-5928 (`--emit-uses`) landed; TODO-5929 (symbol-level rebuilds) landed; TODO-5930 (the graph builds libraries and links them) landed; archived as low-value TODO-5931 (the stdlib as a library: measured slower, see docs/todo_finished.md), TODO-6097 (roots below `/std`, so several stdlib libraries link and an owned module is not spliced from the stdlib source; measured 17.8 percent on three modules, numbers in docs/todo_log.md) landed, ready TODO-6093 (the compiler build id is the linker UUID, with the full hash as the fallback; the stdlib as a library was measured again after TODO-6092 and stays archived, numbers in docs/todo_log.md;); deferred TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -607,26 +606,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a library built by one compiler is refused by another, as the corpus tests it today
     - instructions retired of a linked library compile against an empty `main`, recorded in docs/todo_log.md
   - stop_rule: the definition of the compiler build id; no change to what an archive carries.
-  - notes: the measurements are in docs/todo_log.md, TODO-6093. TODO-6097 (roots below `/std`) also touches src/pipeline/LibraryLink.cpp; do not run the two at once.
-
-- [~] TODO-6097: Several stdlib libraries link, and a module a linked library owns is not spliced from the stdlib source
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lib-roots (worktree-agent-a15cb56cd73ca6910), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 12; from the TODO-6093 measurements in docs/todo_log.md)
-  - parallel_track: lib-stdlib-roots
-  - scope: Every stdlib library has the root `/std` (the root of a library is the first path segment of its symbols), and `loadLibraries` refuses two that own one root: `--library color.psa --library vector.psa` gives `library color and library vector both own /std`. And `import /std/math/*` splices the library interface (the root is owned) and then also the stdlib source (the stdlib pass reads `sourceStdImports` of the expanded text without asking who owns the root), so the definitions exist twice: `cannot link library color: duplicate definition of /std/math/linearToSrgbChannel`; `import /std/math/linearToSrgbChannel` gives the same. `IrLinkOptions::sharedRoots` (`/std`, src/pipeline/LibraryLink.cpp) only removes a duplicate at the link, after the front end has already paid for the source; `checkProgramDefinesNoOwnedPath` (src/pipeline/LibraryOwnership.cpp) looks at the program's own definitions and imports, not at stdlib splices.
-  - decision: 2026-11-20 (stdlib ownership): roots below `/std`, one per module family (for example `/std/math`, `/std/path`), so several stdlib libraries can be linked, and the stdlib pass skips every module a linked library owns. One `std.psa` for all of `/std` is not taken (most stdlib modules do not build with `--emit=lib`: math/matrix, math/quaternion, image, text/string, collections/map and others; the list is in docs/todo_log.md, TODO-6093).
-  - implementation_notes: the root of a library (its owned namespace) becomes the module family path instead of the first path segment, derived from the interface's public symbols or declared by the library's build step (pick the smaller; document it in docs/ModulesAndLibrariesPlan.md sections 4 and 6); `loadLibraries` refuses two libraries only when one root is a prefix of the other or equal; the stdlib pass (the reader of `sourceStdImports`) is given the set of owned roots and drops the stdlib modules below them, so `import /std/math/*` with `--library` for `/std/math` splices the interface once and no stdlib source; `sharedRoots` is deleted or narrowed to what remains. Corpus tests live under tests/unit/library (search `--library`).
-  - acceptance:
-    - `--library color.psa --library vector.psa` (stdlib math/color and math/vector built with `--emit=lib`) links and the program gives the same results as the whole-program build
-    - `import /std/math/*` plus `--library` for the same root no longer gives `duplicate definition`; the stdlib source of an owned module is not read (a test counts it)
-    - two libraries with overlapping roots are still refused with a message that names both
-    - the TODO-5931 benchmark (docs/todo_log.md, TODO-5931 and TODO-6093 tables) rerun with the real stdlib imports and recorded in docs/todo_log.md, with a note on whether the 20 percent bar of a typical program is met
-    - full release gate green
-  - stop_rule: library roots and stdlib splice skipping only; no new library shapes (TODO-6032), no `String` as a library.
-  - notes: shares src/pipeline/LibraryLink.cpp with TODO-6093; do not run the two at once.
+  - notes: the measurements are in docs/todo_log.md, TODO-6093.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
@@ -683,6 +663,34 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
+
+- [ ] TODO-6110: A logical import of a stdlib module root without a library duplicates its definitions
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Imports (docs/spec/source-pipeline.md; found with TODO-6097)
+  - parallel_track: logical-stdlib-import
+  - scope: `import</std/math>` (the logical, text-level import that splices a library interface) written in a program that is compiled without `--library` resolves to the stdlib directory and splices its sources, and the later language import `import /std/math/*` makes the stdlib pass splice them again: `Semantic error: duplicate definition: /std/math/srgbToLinearChannel`, with no hint that two imports name the same module. Repro: `import</std/math>` then `import /std/math/*` and a call of `linearToSrgbChannel` in `primec --emit=vm prog.prime --entry /main`.
+  - implementation_notes: either the stdlib pass skips a stdlib file the resolver already spliced (the moduleKey or display path is in `expandedSource.units`), or the logical import of a root that is not a library and not a project file is an error that says to use `import /std/math/*`; pick the first if programs that include a stdlib file by `import<"...">` exist, the second if none does.
+  - acceptance:
+    - the repro compiles (or fails with a message that names the two imports), with a compile-run test
+    - a stdlib file included once by `import<...>` and once by the stdlib pass is read once, checked with `--emit-deps`
+    - full release gate green
+  - stop_rule: the double splice of a stdlib file; no change to library imports.
+
+- [ ] TODO-6111: An unknown type as a return type is reported as `unsupported return type`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Frontend and diagnostics (found with TODO-6097)
+  - parallel_track: unknown-type-diagnostic
+  - scope: `[return<NoSuchType>] make() { return(NoSuchType{}) }` gives `Semantic error: unsupported return type on /make [PSC1005]` and does not name `NoSuchType`; the same unknown type as a parameter gives `unsupported binding type: NoSuchType`, which names it. A stdlib file that uses a type whose module was not imported (matrix.prime spliced without the vector interface, `unsupported return type on /std/math/mat2_mul_vec2_internal`) is therefore hard to diagnose, because the message names the function and not the missing type.
+  - implementation_notes: the return-type check lives in the semantics validator (search `unsupported return type`); when the declared type does not resolve, report `unknown return type: NoSuchType` with the span of the type, and keep `unsupported return type` for a type that resolves but cannot be returned.
+  - acceptance:
+    - the message for an unknown return type names the type, with a semantics test; a resolvable but unsupported return type keeps its message
+    - diagnostics goldens that mention the old text are updated in the same change
+    - full release gate green
+  - stop_rule: the return-type diagnostic only; no new type resolution rules.
 
 - [ ] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
   - owner: ai

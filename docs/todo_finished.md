@@ -2504,6 +2504,7 @@ are left unarchived.
 | TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6095 | Unresolvable stdlib imports are positioned diagnostics, and a robustness test feeds odd programs to `primec` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6096 | An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys... | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6097 | Several stdlib libraries link, and a module a linked library owns is not spliced from the stdlib source | [undated.md](todo_archive/undated.md) | - |
 | TODO-6098 | `init(*slot, v)` of a non-empty builtin `vector<T>` stores one slot | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6099 | Pointer arithmetic on a slot of a builtin `vector<T>` steps one slot, so a `Vector<vector<i64>>` push throu... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6100 | A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice | [2026-11.md](todo_archive/2026-11.md) | - |

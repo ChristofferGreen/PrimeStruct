@@ -181,7 +181,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                std::string &error,
                                ExpandedSource *expandedSource = nullptr,
                                const std::unordered_set<std::string> &excludedKeys = {},
-                               std::string *unresolvedImport = nullptr);
+                               std::string *unresolvedImport = nullptr,
+                               const std::vector<OwnedStdlibModule> *ownedModules = nullptr);
 
 // PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS forces lazy expansion on
 // regardless of Options::experimentalLazyStdlibImports/the CLI flag, so the

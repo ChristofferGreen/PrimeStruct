@@ -21,11 +21,22 @@ struct LibraryManifestDependency {
   std::string interfaceHash;
 };
 
+// A stdlib module the library was built from (its root file lies in the stdlib): `file` is its path from the stdlib
+// directory (`std/math/color.prime`) and `imports` the stdlib `import` paths of that file (`/std/text/*`). A program
+// that links the library does not splice the stdlib source of `file`; it splices `imports` instead.
+struct LibraryManifestStdlibModule {
+  std::string file;
+  std::vector<std::string> imports;
+};
+
 struct LibraryManifest {
   // The root file's name without its extension.
   std::string name;
-  // The namespace roots the library owns, sorted (`/ui`).
+  // The namespace roots the library owns, sorted (`/ui`; below the stdlib three segments, `/std/math/ColorRGB`,
+  // because several libraries own parts of one module family).
   std::vector<std::string> roots;
+  // Sorted by file.
+  std::vector<LibraryManifestStdlibModule> stdlibModules;
   // SHA-256 of the compiler executable that built the archive.
   std::string compilerBuildId;
   uint32_t irSchemaVersion = IrSchemaVersion;

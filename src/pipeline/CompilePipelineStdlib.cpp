@@ -76,6 +76,22 @@ bool shouldSkipMathWildcardStdlibModule(const std::vector<std::string> &sourceIm
   return !sourceReferencesNonBuiltinMathSymbols(source);
 }
 
+// The module of `ownedModules` whose stdlib file is `absoluteFile`, or null.
+static const OwnedStdlibModule *
+findOwnedStdlibModule(const std::vector<OwnedStdlibModule> *ownedModules,
+                      const std::string &absoluteFile) {
+  if (ownedModules == nullptr || ownedModules->empty()) {
+    return nullptr;
+  }
+  const std::string relative = stdlibRelativeFile(absoluteFile);
+  for (const OwnedStdlibModule &module : *ownedModules) {
+    if (module.file == relative) {
+      return &module;
+    }
+  }
+  return nullptr;
+}
+
 bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                const std::vector<std::string> &sourceImports,
                                const std::vector<std::string> &implicitKeys,
@@ -83,7 +99,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                std::string &error,
                                ExpandedSource *expandedSource,
                                const std::unordered_set<std::string> &excludedKeys,
-                               std::string *unresolvedImport) {
+                               std::string *unresolvedImport,
+                               const std::vector<OwnedStdlibModule> *ownedModules) {
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
@@ -268,6 +285,30 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
           absolute = filePath;
         }
         const std::string absoluteText = absolute.string();
+        // A module a linked library stands for: its source is not read. Its interface is spliced
+        // (once: `import</root>` may have done it), and the stdlib imports of the module are what the source would
+        // have brought.
+        if (const OwnedStdlibModule *owned = findOwnedStdlibModule(ownedModules, absoluteText)) {
+          if (!seenFiles.insert(absoluteText + "#owned").second) {
+            return true;
+          }
+          if (sourceBuilder.has_value() && owned->interface != nullptr) {
+            sourceBuilder->appendLibraryInterfaceOnce(*owned->interface);
+          }
+          for (const std::string &nestedImport : owned->imports) {
+            const std::string line = "\nimport " + nestedImport + "\n";
+            if (sourceBuilder.has_value()) {
+              sourceBuilder->appendGenerated(line, "<library-stdlib-import>");
+            } else {
+              source.append(line);
+            }
+            queueKeyChain(collectStdlibAutoIncludeKeys(nestedImport),
+                          nestedImport,
+                          /*applyMathSkip=*/false);
+          }
+          appended = true;
+          return true;
+        }
         if (!seenFiles.insert(importsOnly ? absoluteText + "#imports" : absoluteText).second) {
           return true;
         }

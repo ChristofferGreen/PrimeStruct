@@ -46,6 +46,21 @@ open-work-only scope rule as `docs/todo.md` itself.
 
   Decision: not reopened. The bar was at least 20 percent of the compile time of a typical program that imports several stdlib modules, achievable today without language changes; the best measured case sits at 20.1 percent with every other import of weight left out, and a stdlib library is not consumable without a decision about the ownership root of `/std` (and, for most of the value, `String` as a library). TODO-5931 stays archived with these numbers. Found on the way: `import /std/*` ends the compiler with an uncaught `std::out_of_range` (TODO-6094); the fixed cost left is the build id (TODO-6093).
 
+## TODO-6097
+
+- 2026-11-20 (the benchmark of TODO-5931 and TODO-6093 rerun with the real stdlib files as libraries; release build of the TODO-6097 change, macOS arm64, `primec --emit=vm`, instructions retired from `/usr/bin/time -l`, min of 5 runs). The libraries are `primec --emit=lib` of `stdlib/std/math/color.prime`, `math/vector.prime` and `path/path.prime` themselves (roots `/std/math/ColorRGB` and so on, no copy with a renamed namespace). The library runs write `import</std/math>` (and `import</std/path>`) before the imports of the source runs; the programs are the ones of the TODO-6093 table. Outputs and exit codes of every pair are equal (checked for the three-module program: 79 both ways).
+
+  | Program | Source | Libraries | Libraries / source |
+  | --- | --- | --- | --- |
+  | empty `main` | 62.3M | | |
+  | `import /std/math/*`, one `linearToSrgbChannel` call | 3313.3M | 3066.7M (color) / 2405.6M (color and vector) | 0.93 / 0.73 |
+  | the same plus one `Vec2` length | 3322.5M | 2412.5M (color and vector) | 0.73 |
+  | `import /std/text/*` and `/std/text/view/*` only | 5736.3M | | |
+  | one `is_absolute` call of path, text from source | 6591.5M | 5916.2M (path) | 0.90 |
+  | color, vector and path in one program, text from source | 10379.3M | 8532.4M (all three) | 0.82 |
+
+  Notes. (1) Several stdlib libraries now link (color and vector, and all three), and `import</std/math>` plus `import /std/math/*` no longer gives `duplicate definition`; before the change `--library color.psa --library vector.psa` was refused (`both own /std`) and one library gave `duplicate definition: /std/math/ColorRGB`. The stdlib source of an owned module is not read: `--emit-deps` of the one-library run lacks `std/math/color.prime` and lists `vector.prime`, `matrix.prime` and `quaternion.prime` (a test counts it). (2) The 20 percent bar of a typical program that imports several stdlib modules: the program with every library-able module and the text imports saves 17.8 percent, so the bar is not met; a program of `/std/math/*` alone saves 27 percent with color and vector, because the cost of that import is mostly color and vector (matrix and quaternion, which cannot be libraries, are 2.4G of the rest). One module (path) saves 10 percent, because the text modules it needs are 5.7G of its 6.6G. The build id is 62M of every run and is TODO-6093. (3) The stdlib libraries are not added to the default build or the build graph: the bar is not met and `String` (text) is not library-able (TODO-6032). Startup of `primec` without `--library` is unchanged (62.3M for an empty `main`, the 61.5M of the TODO-6093 table was another build; the only change on that path is one empty-vector argument).
+
 ## TODO-6030
 
 - 2026-11-18 (TODO-6030, release build, macOS arm64, `ctest -R PrimeStruct_vm_threads_corpus_ --parallel 1`, other agents'

@@ -89,6 +89,7 @@ bool runCompilePipelineImportStage(const Options &options,
   // `--library`: an `import</root>` of a root a library owns reads the interface of its archive.
   std::vector<LoadedLibrary> libraries;
   std::vector<LibraryInterfaceUnit> libraryInterfaces;
+  std::vector<OwnedStdlibModule> ownedModules;
   if (!options.libraryPaths.empty()) {
     if (!loadLibraries(options.libraryPaths, libraries, error)) {
       diagnosticSink.setSummary(error);
@@ -96,6 +97,7 @@ bool runCompilePipelineImportStage(const Options &options,
     }
     libraryInterfaces = libraryInterfaceUnits(libraries);
     out.libraryRoots = libraryRootOwners(libraries);
+    ownedModules = ownedStdlibModules(libraries, libraryInterfaces);
     importResolver.setLibraryInterfaces(&libraryInterfaces);
   }
   const bool imported =
@@ -143,6 +145,14 @@ bool runCompilePipelineImportStage(const Options &options,
       const std::optional<std::filesystem::path> sourceFile =
           resolveSingleFileStdlibModuleSource(options.importPaths, key);
       if (!sourceFile.has_value()) {
+        continue;
+      }
+      // A module a linked library stands for is not read, lazily or whole.
+      if (std::any_of(
+              ownedModules.begin(), ownedModules.end(), [&](const OwnedStdlibModule &owned) {
+                return owned.file ==
+                       stdlibRelativeFile(std::filesystem::absolute(*sourceFile).string());
+              })) {
         continue;
       }
       const std::optional<std::filesystem::path> manifestPath =
@@ -262,7 +272,8 @@ bool runCompilePipelineImportStage(const Options &options,
                                    error,
                                    &out.expandedSource,
                                    lazyKeys,
-                                   &unresolvedImport)) {
+                                   &unresolvedImport,
+                                   &ownedModules)) {
       if (const auto span = findImportPathSpan(out.expandedSource, unresolvedImport);
           span.has_value()) {
         DiagnosticSinkRecord record;

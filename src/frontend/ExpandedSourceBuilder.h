@@ -1,6 +1,7 @@
 #pragma once
 
 #include "primec/frontend/ExpandedSource.h"
+#include "primec/frontend/ImportResolver.h"
 
 #include <cstddef>
 #include <string>
@@ -31,6 +32,11 @@ public:
   std::size_t appendGenerated(std::string_view text, std::string moduleKey = {});
   std::size_t textSize() const;
   bool textEndsWithNewline() const;
+
+  // Appends the interface of `library` (`--library`) as a source unit of kind SourceUnitKind::Library, unless the
+  // source holds one for that library already (`import</root>` and the stdlib pass can both ask). Returns whether it
+  // appended.
+  bool appendLibraryInterfaceOnce(const LibraryInterfaceUnit &library);
 
 private:
   void advance(std::string_view text);

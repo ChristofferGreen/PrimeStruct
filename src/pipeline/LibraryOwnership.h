@@ -28,6 +28,31 @@ bool checkLibraryRootsDisjoint(const std::vector<LibraryRootOwner> &owners, std:
 // True when `path` is `root` or lies below it (`/ui/draw` is in `/ui`, `/ui2` is not).
 bool pathIsInRoot(const std::string &path, const std::string &root);
 
+// The namespace root of `path` for a library manifest: the first segment (`/ui/draw` is in `/ui`), and below the
+// stdlib the first three (`/std/math/ColorRGB/add` is in `/std/math/ColorRGB`), because several libraries own parts
+// of one stdlib module family (`/std/math` holds color and vector) and the roots of two libraries must not overlap.
+std::string libraryRootOfPath(const std::string &path);
+
+// The path of a stdlib source file from the stdlib directory (`/a/stdlib/std/math/color.prime` gives
+// `std/math/color.prime`), or empty when `file` does not lie in a `stdlib` directory.
+std::string stdlibRelativeFile(const std::string &file);
+
+// A stdlib module a linked library stands for: the stdlib pass does not read `file`; it splices `imports` and the
+// interface of the library (once, so an `import</std/math>` that did it first is enough).
+struct OwnedStdlibModule {
+  std::string file;
+  std::string library;
+  std::vector<std::string> imports;
+  // The interface of `library`; owned by the caller's vector of interface units, which outlives the stdlib pass.
+  const LibraryInterfaceUnit *interface = nullptr;
+};
+
+// The stdlib modules of the manifests of `libraries`, sorted by file; `interfaces` holds one unit per library
+// (`libraryInterfaceUnits`).
+std::vector<OwnedStdlibModule>
+ownedStdlibModules(const std::vector<LoadedLibrary> &libraries,
+                   const std::vector<LibraryInterfaceUnit> &interfaces);
+
 // Fails for a definition of the program (a source unit that is not a library interface or the stdlib) at or below
 // a root a library owns: `/ui/draw is owned by library ui`.
 bool checkProgramDefinesNoOwnedPath(const Program &program,

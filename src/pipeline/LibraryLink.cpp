@@ -137,11 +137,10 @@ bool linkProgramLibraries(IrModule &module,
     }
   }
   for (const LoadedLibrary &library : libraries) {
+    // The stdlib routines a library's code reached are the same source in the program and in every library; the
+    // stdlib definitions a library owns are not read by the program, so they do not meet a copy.
     IrLinkOptions linkOptions;
-    const std::vector<std::string> &roots = library.content.manifest.roots;
-    if (std::find(roots.begin(), roots.end(), "/std") == roots.end()) {
-      linkOptions.sharedRoots.push_back("/std");
-    }
+    linkOptions.sharedRoots.push_back("/std");
     std::string linkError;
     if (!linkIrModule(module, library.content.code, linkError, &linkOptions)) {
       error = "cannot link library " + library.content.manifest.name + ": " + linkError;

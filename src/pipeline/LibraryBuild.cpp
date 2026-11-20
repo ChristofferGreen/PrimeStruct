@@ -2,7 +2,9 @@
 
 #include "primec/ir/IrLowerer.h"
 #include "primec/ir/IrValidation.h"
+#include "CompilePipelineInternal.h"
 #include "InterfaceGenerics.h"
+#include "LibraryOwnership.h"
 #include "primec/pipeline/LibraryLink.h"
 #include "primec/pipeline/ModuleInterface.h"
 #include "primec/support/Sha256.h"
@@ -22,12 +24,6 @@ bool hasTransformNamed(const Definition &definition, const char *name) {
   return std::any_of(definition.transforms.begin(),
                      definition.transforms.end(),
                      [&](const Transform &transform) { return transform.name == name; });
-}
-
-// `/ui/button/draw` is in the root `/ui`.
-std::string rootOf(const std::string &path) {
-  const size_t slash = path.find('/', 1);
-  return slash == std::string::npos ? path : path.substr(0, slash);
 }
 
 std::string relativeToRoot(const std::filesystem::path &file,
@@ -117,7 +113,7 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
   std::vector<std::string> roots;
   std::set<std::string> rootNames;
   for (const ModuleInterfaceSymbol &symbol : moduleInterface.symbols) {
-    rootNames.insert(rootOf(symbol.path));
+    rootNames.insert(libraryRootOfPath(symbol.path));
     if (symbol.kind != "function") {
       continue;
     }
@@ -177,6 +173,18 @@ bool buildLibraryArchiveContent(CompilePipelineOutput &output,
   content = {};
   content.manifest.name = libraryNameOfRootFile(options.inputPath);
   content.manifest.roots.assign(rootNames.begin(), rootNames.end());
+  // A root file that lies in the stdlib stands for that stdlib module: a program that links the library does not
+  // read the stdlib source of the file.
+  if (const std::string stdlibFile = stdlibRelativeFile(rootFile.generic_string());
+      !stdlibFile.empty()) {
+    std::string rootText;
+    LibraryManifestStdlibModule module;
+    module.file = stdlibFile;
+    if (readTextFile(rootFile, rootText)) {
+      module.imports = compile_pipeline_detail::collectStdImportPaths(rootText);
+    }
+    content.manifest.stdlibModules.push_back(std::move(module));
+  }
   content.manifest.libraries = importedLibraries(output.expandedSource);
   content.manifest.compilerBuildId = compilerBuildId;
   content.manifest.interfaceHash = moduleInterface.interfaceHash;

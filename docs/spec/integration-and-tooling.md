@@ -207,7 +207,7 @@ the payloads in table order. Integers are little-endian. Sections are sorted by 
 | --- | --- |
 | `code` | The serialized `IrModule` (`PSIR`, `serializeIr`) |
 | `interface` | The text of `primec --emit=interface` |
-| `manifest` | Lines of words: `primestruct-library 1`, `name <name>` (the root file's name without extension), `root <path>` (each owned namespace root, sorted: the first path segment of every public symbol), `compiler <id>`, `irschema <version>`, `hash sha256`, `interface <hash>`, `library <name> <interface hash>` (each library the module imported, sorted by name) |
+| `manifest` | Lines of words: `primestruct-library 1`, `name <name>` (the root file's name without extension), `root <path>` (each owned namespace root, sorted: the first path segment of every public symbol, and below the stdlib the first three, so a stdlib library owns `/std/math/ColorRGB` and not `/std`), `stdlib <file>` and `stdimport <file> <path>` (only for a root file that lies in the stdlib: the file's path from the stdlib directory, `std/math/color.prime`, and the stdlib `import` paths it holds), `compiler <id>`, `irschema <version>`, `hash sha256`, `interface <hash>`, `library <name> <interface hash>` (each library the module imported, sorted by name) |
 | `sources` | Only with `--with-sources`: the number of files (u32), then for each, sorted by relative path: path length u32, path, size u64, text |
 | `symbols` | The text of `primec --emit=symbols` |
 
@@ -237,8 +237,9 @@ compiler build, the schema version, the interface hash, the code.
 (docs/ModulesAndLibrariesPlan.md, sections 8 and 9) and links it with their code. Each archive is loaded and verified
 as in Library Archive, Reading, with the message prefixed `cannot use library <path>:`.
 
-**Import.** `import</ui>` (a logical import path whose first segment is a namespace root the library owns; `/ui/button`
-is in the root `/ui`) splices the library's interface text into the source once, as a source unit of its own
+**Import.** `import</ui>` (a logical import path that lies in a namespace root the library owns, `/ui/button` is in the
+root `/ui`, or above one, `import</std/math>` names the roots `/std/math/ColorRGB` and `/std/math/Vec2` of two
+libraries and splices both) splices the library's interface text into the source once, as a source unit of its own
 (`SourceUnitKind::Library`, shown in diagnostics as the archive path, and listed by `--emit-deps`), however many imports
 name it. The text is then ordinary source: `import /ui/*` and full paths work as in a program that defines the module.
 An `import</root>` no library owns is `failed to read import`.
@@ -249,6 +250,15 @@ whose roots are the same, or one inside the other, are refused when the set is l
 imports, not a library interface or the stdlib) at or below a root a library owns is
 `/ui/draw is owned by library ui`, whether or not the program imports the library. A name that only starts like a root
 (`/ui2`, `/app`) is not owned. Without `--library` nothing is checked.
+
+**Stdlib libraries.** A library built from a file of the stdlib (`primec --emit=lib stdlib/std/math/color.prime`) owns
+roots below `/std`, one per entry of its module (`/std/math/ColorRGB`, `/std/math/linearToSrgbChannel`), so the libraries
+of the files of one module family (`color` and `vector` of `/std/math`) link together, and two that own overlapping roots
+are refused as above. It also stands for its stdlib file: the stdlib pass of a program that links it does not read the
+file (lazily or whole; `--emit-deps` does not list it) and splices the file's stdlib imports and the library's interface
+(once) instead, so `import /std/path/*` alone brings the interface of the path library and `/std/text/*` for its
+`StringView` parameters; `import</std/path>` before it is allowed and does the same splice first. The modules of the
+family that have no library (matrix, quaternion) come from the stdlib source as before.
 
 **The marker.** `[imported(<library>)]` declares a function the library defines. The declaration has an empty body and
 an explicit return type, is not generic, and names exactly one library; each rule is a semantic diagnostic
@@ -270,7 +280,7 @@ and `undefined symbol /ui/draw (library ui)` is reported for an import no librar
 - *Shared routines.* The archive holds the stdlib routines (`/std/...`) its roots reached as real calls, and the program
   lowers the same routines under the same names. A routine under `/std` that both define is one: the program's copy
   stays, the archive's is dropped, and the archive's callers use it. They are not compared; both come from the same
-  stdlib source. Any other name defined twice is `cannot link library ui: duplicate definition of /ui/f`.
+  stdlib source. The stdlib routines a library owns are not in this set: the program does not read their source. Any other name defined twice is `cannot link library ui: duplicate definition of /ui/f`.
 
 **Sets of libraries.** A library compiled against another (`--emit=lib --library base.psa`) keeps the calls of its
 functions as imports and records the library in its manifest. A set is checked when loaded: `library mid needs library

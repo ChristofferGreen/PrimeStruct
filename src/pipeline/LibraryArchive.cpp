@@ -102,6 +102,12 @@ std::string manifestText(const LibraryManifest &manifest) {
   for (const std::string &root : manifest.roots) {
     out += "root " + root + "\n";
   }
+  for (const LibraryManifestStdlibModule &module : manifest.stdlibModules) {
+    out += "stdlib " + module.file + "\n";
+    for (const std::string &import : module.imports) {
+      out += "stdimport " + module.file + " " + import + "\n";
+    }
+  }
   out += "compiler " + manifest.compilerBuildId + "\n";
   out += "irschema " + std::to_string(manifest.irSchemaVersion) + "\n";
   out += "hash " + manifest.hashScheme + "\n";
@@ -193,6 +199,17 @@ bool parseManifest(std::string_view text, LibraryManifest &out, std::string &err
       sawName = true;
     } else if (key == "root" && one) {
       out.roots.push_back(parts[1]);
+    } else if (key == "stdlib" && one) {
+      out.stdlibModules.push_back({parts[1], {}});
+    } else if (key == "stdimport" && parts.size() == 3 && !parts[1].empty() && !parts[2].empty()) {
+      const auto module = std::find_if(
+          out.stdlibModules.begin(),
+          out.stdlibModules.end(),
+          [&](const LibraryManifestStdlibModule &candidate) { return candidate.file == parts[1]; });
+      if (module == out.stdlibModules.end()) {
+        return damaged(error, "manifest imports for a stdlib module it does not list");
+      }
+      module->imports.push_back(parts[2]);
     } else if (key == "compiler" && one && !sawCompiler) {
       out.compilerBuildId = parts[1];
       sawCompiler = true;
@@ -250,6 +267,17 @@ bool serializeLibraryArchive(const LibraryArchiveContent &content,
       return false;
     }
   }
+  for (const LibraryManifestStdlibModule &module : manifest.stdlibModules) {
+    bool ok = isWord(module.file);
+    for (const std::string &import : module.imports) {
+      ok = ok && isWord(import);
+    }
+    if (!ok) {
+      error =
+          "stdlib module `" + module.file + "` of the library has an empty field or white space";
+      return false;
+    }
+  }
   for (const LibraryManifestDependency &library : manifest.libraries) {
     if (!isWord(library.name) || !isWord(library.interfaceHash)) {
       error = "linked library `" + library.name + "` has an empty field or one with white space";
@@ -257,6 +285,14 @@ bool serializeLibraryArchive(const LibraryArchiveContent &content,
     }
   }
   std::sort(manifest.roots.begin(), manifest.roots.end());
+  std::sort(manifest.stdlibModules.begin(),
+            manifest.stdlibModules.end(),
+            [](const LibraryManifestStdlibModule &left, const LibraryManifestStdlibModule &right) {
+              return left.file < right.file;
+            });
+  for (LibraryManifestStdlibModule &module : manifest.stdlibModules) {
+    std::sort(module.imports.begin(), module.imports.end());
+  }
   std::sort(manifest.libraries.begin(),
             manifest.libraries.end(),
             [](const LibraryManifestDependency &left, const LibraryManifestDependency &right) {

@@ -113,7 +113,7 @@ refused with a message that says to rebuild. There is no binary compatibility pr
 - **Debug information.** Local debug slots and the instruction source map are stored; source units name files relative
   to the library, so a debugger finds them in `sources` or on disk.
 - **Command line:** `primec --emit=lib <root.prime> -o <name>.psa`, with the library name and roots from the root file
-  (the name is the file's name without its extension; the roots are the first path segments of the public symbols);
+  (the name is the file's name without its extension; the roots are the first path segments of the public symbols, and the first three below `/std`);
   `--with-sources` adds the `sources` section. `--emit=interface` prints the interface text and the symbol table
   without the code, for tests and for tools.
 
@@ -211,9 +211,20 @@ the root `/std` (two of them are refused) and an `import` of a module a library 
 (duplicate definition). Still archived; the numbers, the list of modules that build and the open design points (the root of
 a stdlib library, `String`) are in `docs/todo_log.md` under TODO-6093.
 
-Decided 2026-11-20: roots below `/std`, one per module family (`/std/math`, `/std/path`), so several stdlib libraries link, and the stdlib pass
-skips every module a linked library owns (TODO-6097); the compiler build id becomes the linker's UUID with the full hash as the fallback
-(TODO-6093).
+Decided 2026-11-20: roots below `/std`, so several stdlib libraries link, and the stdlib pass skips every module a linked
+library owns (TODO-6097); the compiler build id becomes the linker's UUID with the full hash as the fallback (TODO-6093).
+
+Done 2026-11-20 (TODO-6097). The decision said one root per module family, but `/std/math` holds the files color, vector,
+matrix and quaternion, and a library is built per file, so one root per family would make color and vector refuse each
+other. The root of a library below `/std` is therefore the first three segments of its public symbols (`/std/math/ColorRGB`,
+`/std/math/linearToSrgbChannel`), derived from the interface, and the first segment elsewhere (`/ui`); two libraries conflict
+only when a root of one lies in a root of the other. A library built from a stdlib file also records that file and the
+stdlib imports it holds (`stdlib` and `stdimport` lines of the manifest), and the stdlib pass skips a recorded file without
+reading it and splices the recorded imports and the library interface (once) in its place. `import</std/math>` splices every library whose root lies in or
+below the path. `sharedRoots` stays for the stdlib routines a library's code reached, minus the rule that a library which
+owned `/std` was exempt. Measured in docs/todo_log.md under TODO-6097: color and vector together make a program that imports
+`/std/math/*` 27 percent cheaper, color, vector and path together make one that also imports the text modules 17.8 percent
+cheaper, which is under the 20 percent bar, so the stdlib libraries are consumable but nothing is added to the default build.
 
 ## 13. Backends: what IR-level libraries do not buy
 
