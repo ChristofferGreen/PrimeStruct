@@ -152,7 +152,6 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
 | TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
@@ -725,21 +724,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-6110: A logical import of a stdlib module root without a library duplicates its definitions
-  - owner: ai
-  - status: ready
-  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Imports (docs/spec/source-pipeline.md; found with TODO-6097)
-  - parallel_track: logical-stdlib-import
-  - scope: `import</std/math>` (the logical, text-level import that splices a library interface) written in a program that is compiled without `--library` resolves to the stdlib directory and splices its sources, and the later language import `import /std/math/*` makes the stdlib pass splice them again: `Semantic error: duplicate definition: /std/math/srgbToLinearChannel`, with no hint that two imports name the same module. Repro: `import</std/math>` then `import /std/math/*` and a call of `linearToSrgbChannel` in `primec --emit=vm prog.prime --entry /main`.
-  - implementation_notes: either the stdlib pass skips a stdlib file the resolver already spliced (the moduleKey or display path is in `expandedSource.units`), or the logical import of a root that is not a library and not a project file is an error that says to use `import /std/math/*`; pick the first if programs that include a stdlib file by `import<"...">` exist, the second if none does.
-  - acceptance:
-    - the repro compiles (or fails with a message that names the two imports), with a compile-run test
-    - a stdlib file included once by `import<...>` and once by the stdlib pass is read once, checked with `--emit-deps`
-    - full release gate green
-  - stop_rule: the double splice of a stdlib file; no change to library imports.
 
 - [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai

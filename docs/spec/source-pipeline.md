@@ -10,6 +10,9 @@
    With `--library <name>.psa`, an `import</root>` of a namespace root a library owns splices the interface text of the
    archive instead of a file, as a source unit of its own (`library`); see Compiling Against a Library in
    [integration-and-tooling.md](integration-and-tooling.md).
+   A stdlib file that `import</std/...>` spliced is in the stream once: the later stdlib pass for a language import
+   (`import /std/math/*`) does not append it again, so the two spellings of one module never collide as duplicate
+   definitions; the file's own nested `import /std/...` lines are still followed.
 2. **Text transforms:** the flattened stream flows through ordered token-level transforms (operator sugar, collection
    literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform
    list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same

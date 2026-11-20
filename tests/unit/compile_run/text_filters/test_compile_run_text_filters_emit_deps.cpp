@@ -84,6 +84,44 @@ TEST_CASE("emit-deps lists the stdlib files a lazy import included") {
   CHECK(run.deps.find("/std/net") == std::string::npos);
 }
 
+namespace {
+
+// `import</std/math>` splices the math files by the import resolver; the language import then asks the stdlib pass
+// for the same files (TODO-6110).
+const std::string MathBothImports =
+    "import</std/math>\nimport /std/math/*\n\n[return<i32>]\nmain() {\n"
+    "  return(convert<i32>(7.5f32 * linearToSrgbChannel(1.0f32) + "
+    "srgbToLinearChannel(0.0f32)))\n}\n";
+
+size_t countOccurrences(const std::string &text, const std::string &needle) {
+  size_t count = 0;
+  for (size_t at = text.find(needle); at != std::string::npos;
+       at = text.find(needle, at + needle.size())) {
+    ++count;
+  }
+  return count;
+}
+
+} // namespace
+
+TEST_CASE("a logical import of a stdlib module and its wildcard import splice each file once") {
+  const EmitDepsRun run = runEmitDeps("emit_deps_math_both_imports", MathBothImports);
+  CHECK(run.err.find("duplicate definition") == std::string::npos);
+  CHECK(run.err.empty());
+  CHECK(run.exitCode == 7);
+  CHECK(countOccurrences(run.deps, "/stdlib/std/math/color.prime\n") == 1);
+  CHECK(countOccurrences(run.deps, "/stdlib/std/math/vector.prime\n") == 1);
+}
+
+TEST_CASE("the wildcard import of a stdlib module alone still splices it") {
+  const EmitDepsRun run = runEmitDeps("emit_deps_math_wildcard_only",
+                                      "import /std/math/*\n\n[return<i32>]\nmain() {\n"
+                                      "  return(convert<i32>(7.5f32 * linearToSrgbChannel(1.0f32) "
+                                      "+ srgbToLinearChannel(0.0f32)))\n}\n");
+  CHECK(run.exitCode == 7);
+  CHECK(countOccurrences(run.deps, "/stdlib/std/math/color.prime\n") == 1);
+}
+
 TEST_CASE("emit-deps does not change the program output") {
   const std::string source = "[return<i32>]\nmain() {\n  return(7i32)\n}\n";
   const std::string srcPath = writeTemp("emit_deps_same_out.prime", source);

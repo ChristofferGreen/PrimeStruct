@@ -191,6 +191,20 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
   std::unordered_set<std::string> seenFiles;
   std::unordered_set<std::string> processedKeys;
+  // Files the import resolver spliced from `import<...>` entries, by canonical path.
+  const auto pathKey = [](const std::filesystem::path &path) {
+    std::error_code keyEc;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, keyEc);
+    return keyEc ? path.string() : canonical.string();
+  };
+  std::unordered_set<std::string> resolverSplicedFiles;
+  if (expandedSource != nullptr) {
+    for (const SourceUnit &unit : expandedSource->units) {
+      if (unit.kind == SourceUnitKind::Import) {
+        resolverSplicedFiles.insert(pathKey(unit.displayPath));
+      }
+    }
+  }
   std::optional<ExpandedSourceBuilder> sourceBuilder;
   if (expandedSource != nullptr) {
     sourceBuilder.emplace(*expandedSource);
@@ -337,7 +351,12 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
           }
           contents = std::move(kept);
         }
-        if (sourceBuilder.has_value()) {
+        // A file the import resolver already spliced (`import</std/math>` without a library) is in the source
+        // once: appending it again would define everything in it twice (TODO-6110). Its nested imports are
+        // still queued below, since the resolver expands `import<...>` only.
+        if (resolverSplicedFiles.count(pathKey(absolute)) > 0) {
+          // Nothing to append.
+        } else if (sourceBuilder.has_value()) {
           sourceBuilder->appendGenerated("\n", "<stdlib-separator>");
           const std::size_t unitId =
               sourceBuilder->addUnit(SourceUnitKind::Stdlib, absoluteText, key, 1, 1);
