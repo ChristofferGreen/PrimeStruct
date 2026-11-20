@@ -149,7 +149,6 @@ of sync with them.
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
-| TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | ready | generic-struct-overload |
 | TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | ready | function-call-diagnostic |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
@@ -695,20 +694,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - diagnostics goldens that mention the old text are updated in the same change
     - full release gate green
   - stop_rule: the return-type diagnostic only; no new type resolution rules.
-
-- [~] TODO-6112: An overload on `App<S>` loses to a generic `H` overload
-  - owner: ai
-  - status: ready
-  - claimed_by: overload-worker (worktree agent-af334e170c9286e2a), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
-  - parallel_track: generic-struct-overload
-  - scope: Two same-arity generic helpers `mode<S>([App<S>] h)` and `mode<H>([H] h)` in one namespace, called with an `App<i32>`, select `mode<H>` whichever is declared first (both orders print 0 below), although the spec says a concrete parameter type beats an unbound template parameter and a candidate that is more specific in one position wins. Repro (`primec --emit=vm`): `namespace a { [public struct] App<S>() { [public S mut] state } [public return<i32>] mode<S>([App<S>] h) { return(1i32) } [public return<i32>] mode<H>([H] h) { return(0i32) } }` and `main() { [/a/App<i32>] x{/a/App<i32>{3i32}}  print_line(/a/mode(x)) ... }` prints 0, expected 1; no `ambiguous call` is reported.
-  - implementation_notes: the specificity comparison treats `App<S>` as one generic marker like `H`, so the two candidates tie and the first (or last) wins; a parameter whose type is a template instance with an unbound argument should rank above a bare unbound parameter, and a tie should be the `ambiguous call to` diagnostic.
-  - acceptance:
-    - the repro prints 1 for `App<i32>` and 0 for a type that is not an `App`, with a semantics and a compile-run test; a true tie reports `ambiguous call`
-    - full release gate green
-  - stop_rule: the specificity order of same-arity generic overloads only.
 
 - [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai

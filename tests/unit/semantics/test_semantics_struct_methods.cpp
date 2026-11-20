@@ -367,4 +367,94 @@ main() {
   CHECK_MESSAGE(error.find("argument type mismatch for") != std::string::npos, error);
 }
 
+// An overload on a template instance with an unbound argument beats a bare template parameter in the same position,
+// whichever is declared first (docs/spec/language-core.md, Helper overloading). The two return different types so a
+// wrong pick fails to bind.
+
+TEST_CASE("an overload on a generic struct beats a bare template parameter declared after it") {
+  const std::string source = R"(
+[struct]
+App<S>() {
+  [S mut] state{}
+}
+
+[return<i32>]
+mode<S>([App<S>] h) {
+  return(1i32)
+}
+
+[return<bool>]
+mode<H>([H] h) {
+  return(false)
+}
+
+[return<int>]
+main() {
+  [App<i32>] app{App<i32>{3i32}}
+  [i32] picked{mode(app)}
+  [bool] other{mode(5i32)}
+  return(picked)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("an overload on a generic struct beats a bare template parameter declared before it") {
+  const std::string source = R"(
+[struct]
+App<S>() {
+  [S mut] state{}
+}
+
+[return<bool>]
+mode<H>([H] h) {
+  return(false)
+}
+
+[return<i32>]
+mode<S>([App<S>] h) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [App<i32>] app{App<i32>{3i32}}
+  [i32] picked{mode(app)}
+  [bool] other{mode(5i32)}
+  return(picked)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("overloads that are each more specific in a different position are ambiguous") {
+  const std::string source = R"(
+[struct]
+App<S>() {
+  [S mut] state{}
+}
+
+[return<i32>]
+pick<S>([App<S>] h, [S] value) {
+  return(1i32)
+}
+
+[return<i32>]
+pick<H>([H] h, [i32] value) {
+  return(2i32)
+}
+
+[return<int>]
+main() {
+  [App<i32>] app{App<i32>{3i32}}
+  return(pick(app, 4i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("ambiguous call to /pick") != std::string::npos, error);
+}
+
 TEST_SUITE_END();

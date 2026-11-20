@@ -2511,6 +2511,8 @@ are left unarchived.
 | TODO-6101 | A struct field `[uninitialized<vector<T>>]` stores the whole vector record | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | [undated.md](todo_archive/undated.md) | - |
+| TODO-6114 | A same-arity overload whose parameter spells template arguments was never viable for a matching argument | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

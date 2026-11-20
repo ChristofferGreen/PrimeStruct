@@ -500,4 +500,31 @@ main() {
   expectBackendsExit("recursion_mutual_is_even_odd", source, 1);
 }
 
+TEST_CASE("an overload on a generic struct runs instead of the bare template overload") {
+  const std::string source = R"(
+[struct]
+App<S>() {
+  [S mut] state{}
+}
+
+[return<i32>]
+mode<S>([App<S>] h) {
+  return(10i32)
+}
+
+[return<i32>]
+mode<H>([H] h) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [App<i32>] app{App<i32>{3i32}}
+  return(plus(mode(app), mode(5i32)))
+}
+)";
+
+  expectBackendsExit("generic_struct_overload_specificity", source, 11);
+}
+
 TEST_SUITE_END();

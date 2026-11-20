@@ -489,6 +489,95 @@ bool overloadTypeTextsMatch(const std::string &expected, const std::string &actu
   return expectedArgs == actualArgs && overloadTypeLeafName(expected) == overloadTypeLeafName(actual);
 }
 
+// Whether `text` names one of the template parameters of the definition, as a whole identifier.
+bool overloadTypeTextMentionsTemplateParam(const std::string &text,
+                                           const std::vector<std::string> &templateArgs) {
+  size_t i = 0;
+  while (i < text.size()) {
+    const unsigned char c = static_cast<unsigned char>(text[i]);
+    if (std::isalnum(c) != 0 || c == '_') {
+      size_t end = i;
+      while (end < text.size() &&
+             (std::isalnum(static_cast<unsigned char>(text[end])) != 0 || text[end] == '_')) {
+        ++end;
+      }
+      if (std::find(templateArgs.begin(), templateArgs.end(), text.substr(i, end - i)) !=
+          templateArgs.end()) {
+        return true;
+      }
+      i = end;
+    } else {
+      ++i;
+    }
+  }
+  return false;
+}
+
+std::string overloadTypeTextWithoutSpaces(const std::string &text) {
+  std::string out;
+  for (const char c : text) {
+    if (std::isspace(static_cast<unsigned char>(c)) == 0) {
+      out.push_back(c);
+    }
+  }
+  return out;
+}
+
+// Whether an argument type `actual` fits a parameter type `pattern` that may spell the definition's template
+// parameters inside its arguments (`App<S>`, `Pair<S, i32>`). A template parameter matches any argument type, and
+// every other part must match as overloadTypeTextsMatch does; the arguments of a nested type are compared the same
+// way. This is what makes `mode<S>([App<S>])` viable for an `App<i32>` and not for an `i32`.
+bool overloadTypePatternMatches(const std::string &pattern,
+                                const std::string &actual,
+                                const std::vector<std::string> &templateArgs) {
+  const std::string patternText = overloadTypeTextWithoutSpaces(pattern);
+  const std::string actualText = overloadTypeTextWithoutSpaces(actual);
+  if (std::find(templateArgs.begin(), templateArgs.end(), patternText) != templateArgs.end()) {
+    return true;
+  }
+  const size_t patternAngle = patternText.find('<');
+  if (patternAngle == std::string::npos ||
+      !overloadTypeTextMentionsTemplateParam(patternText, templateArgs)) {
+    return overloadTypeTextsMatch(patternText, actualText);
+  }
+  const size_t actualAngle = actualText.find('<');
+  if (actualAngle == std::string::npos || patternText.back() != '>' || actualText.back() != '>' ||
+      overloadTypeLeafName(patternText) != overloadTypeLeafName(actualText)) {
+    return false;
+  }
+  std::vector<std::string> patternArgs;
+  std::vector<std::string> actualArgs;
+  if (!semantics::splitTopLevelTemplateArgs(
+          patternText.substr(patternAngle + 1, patternText.size() - patternAngle - 2),
+          patternArgs) ||
+      !semantics::splitTopLevelTemplateArgs(
+          actualText.substr(actualAngle + 1, actualText.size() - actualAngle - 2), actualArgs) ||
+      patternArgs.size() != actualArgs.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < patternArgs.size(); ++i) {
+    if (!overloadTypePatternMatches(patternArgs[i], actualArgs[i], templateArgs)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// A value's type is often the generated struct of a template instance (`/a/App__t1f2e`); the overload parameter
+// spells it `App<i32>`. Give the instance back as the template it came from with its arguments, and leave any other
+// type text as it is.
+std::string overloadSpecializationSourceText(const std::string &typeText, const Context &ctx) {
+  const auto defIt =
+      ctx.sourceDefs.find(typeText.empty() || typeText.front() == '/' ? typeText : "/" + typeText);
+  if (defIt == ctx.sourceDefs.end() || defIt->second.instanceOfTemplate.empty()) {
+    return typeText;
+  }
+  std::string text = defIt->second.instanceOfTemplate + "<";
+  for (size_t i = 0; i < defIt->second.instanceTemplateArgs.size(); ++i) {
+    text += (i == 0 ? "" : ",") + defIt->second.instanceTemplateArgs[i];
+  }
+  return text + ">";
+}
 
 // The type of a call argument whose callee is one definition: a struct constructor is that struct, a function the
 // type it declares with `return<T>`. Anything else (an overloaded or templated callee, an inferred return type, a
@@ -606,7 +695,20 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
           // coarse here - user struct types all map to
           // semantics::ReturnKind::Unknown, so string vs PathKey style overloads
           // would never be distinguished by it.
-          if (!overloadTypeTextsMatch(expectedType, actualType)) {
+          std::string expectedFullType = expectedType;
+          if (!param.binding.typeTemplateArg.empty()) {
+            expectedFullType += "<" + param.binding.typeTemplateArg;
+            if (!param.binding.typeCapabilityArg.empty()) {
+              expectedFullType += ", " + param.binding.typeCapabilityArg;
+            }
+            expectedFullType += ">";
+          }
+          // Both spellings of an instance fit: the generated name (a parameter already specialized) or the
+          // template with its arguments (a parameter that spells `App<S>`).
+          if (!overloadTypePatternMatches(expectedFullType, actualType, def.templateArgs) &&
+              !overloadTypePatternMatches(overloadSpecializationSourceText(expectedFullType, ctx),
+                                          overloadSpecializationSourceText(actualType, ctx),
+                                          def.templateArgs)) {
             result.viable = false;
             result.decisive = true;
             result.diagnostics.push_back(
@@ -776,9 +878,8 @@ std::string selectRequirementAwareHelperOverloadPath(
     // a candidate wins only if at least as specific in every position
     // and strictly more specific in at least one, against every other
     // viable candidate. Incomparable candidates stay ambiguous.
-    auto candidateGenericMask =
-        [&](const HelperOverloadEntry *entry,
-            std::vector<bool> &maskOut) -> bool {
+    auto candidateGenericMask = [&](const HelperOverloadEntry *entry,
+                                    std::vector<int> &maskOut) -> bool {
       auto defIt = ctx.sourceDefs.find(entry->internalPath);
       if (defIt == ctx.sourceDefs.end()) {
         return false;
@@ -789,25 +890,30 @@ std::string selectRequirementAwareHelperOverloadPath(
       for (const Expr &param : def.parameters) {
         semantics::BindingInfo info;
         extractExplicitBindingType(param, info);
-        maskOut.push_back(std::find(def.templateArgs.begin(),
-                                    def.templateArgs.end(),
-                                    info.typeName) != def.templateArgs.end());
+        // Per position: 0 is a bare template parameter, 1 a type that spells a template parameter inside
+        // its arguments (`App<S>`), 2 a concrete type.
+        if (std::find(def.templateArgs.begin(), def.templateArgs.end(), info.typeName) !=
+            def.templateArgs.end()) {
+          maskOut.push_back(0);
+        } else if (!info.typeTemplateArg.empty() &&
+                   overloadTypeTextMentionsTemplateParam(info.typeTemplateArg, def.templateArgs)) {
+          maskOut.push_back(1);
+        } else {
+          maskOut.push_back(2);
+        }
       }
       return true;
     };
-    auto strictlyMoreSpecific = [](const std::vector<bool> &left,
-                                   const std::vector<bool> &right) {
+    auto strictlyMoreSpecific = [](const std::vector<int> &left, const std::vector<int> &right) {
       if (left.size() != right.size()) {
         return false;
       }
       bool strictlyBetterSomewhere = false;
       for (std::size_t i = 0; i < left.size(); ++i) {
-        const bool leftGeneric = left[i];
-        const bool rightGeneric = right[i];
-        if (leftGeneric && !rightGeneric) {
+        if (left[i] < right[i]) {
           return false;
         }
-        if (!leftGeneric && rightGeneric) {
+        if (left[i] > right[i]) {
           strictlyBetterSomewhere = true;
         }
       }
@@ -815,7 +921,7 @@ std::string selectRequirementAwareHelperOverloadPath(
     };
     const HelperOverloadEntry *winner = nullptr;
     for (const auto *candidate : viable) {
-      std::vector<bool> candidateMask;
+      std::vector<int> candidateMask;
       if (!candidateGenericMask(candidate, candidateMask)) {
         winner = nullptr;
         break;
@@ -825,7 +931,7 @@ std::string selectRequirementAwareHelperOverloadPath(
         if (other == candidate) {
           continue;
         }
-        std::vector<bool> otherMask;
+        std::vector<int> otherMask;
         if (!candidateGenericMask(other, otherMask) ||
             !strictlyMoreSpecific(candidateMask, otherMask)) {
           beatsAllOthers = false;

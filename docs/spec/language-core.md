@@ -236,7 +236,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     Same-path same-arity definitions may also coexist when their parameter-type signatures are pairwise distinct
     (an unbound template parameter counts as one generic marker); the call site then selects the candidate whose
     parameter types match the argument types exactly, with a specificity tie-break when several candidates remain
-    viable: a concrete parameter type beats an unbound template parameter in the same position, and a candidate wins
+    viable: a concrete parameter type beats an unbound template parameter in the same position, a template instance
+    with an unbound argument (`App<S>`; it accepts any `App<...>`) ranks between the two, so `mode<S>([App<S>])`
+    beats `mode<H>([H])` for an `App<i32>` whichever is declared first, and a candidate wins
     only if it is at least as specific in every position and strictly more specific in at least one. No viable
     candidate is a compile-time `no viable overload for ...` diagnostic; incomparable viable candidates are a
     compile-time `ambiguous call to ...` diagnostic. Same-path same-arity definitions with the same parameter-type

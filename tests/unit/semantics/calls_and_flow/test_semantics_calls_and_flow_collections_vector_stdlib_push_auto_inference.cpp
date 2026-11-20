@@ -233,9 +233,10 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  INFO(error);
-  CHECK(error.find("call site: /vector/count at 22:22") != std::string::npos);
+  // Each argument fits exactly one overload, including the parameterized `map<i32, i32>` and `array<i32>` ones; an
+  // overload whose parameter spelled template arguments used to be rejected for a matching argument
+  // (docs/spec/language-core.md, Helper overloading).
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical precedence") {

@@ -672,3 +672,27 @@
     - full release gate green
   - stop_rule: library roots and stdlib splice skipping only; no new library shapes (TODO-6032), no `String` as a library.
   - completed: 2026-11-20. Roots below `/std` are the first three segments of the public symbols (`/std/math/ColorRGB`), because a library is built per stdlib file and `/std/math` holds four of them (the decision said one root per family, which would refuse color and vector together; docs/ModulesAndLibrariesPlan.md section 12). A library built from a stdlib file records the file and its stdlib imports (`stdlib` and `stdimport` manifest lines); the stdlib pass skips a recorded file without reading it and splices the imports and the library interface once (`--emit-deps` shows it; `tests/unit/compile_run/text_filters/test_compile_run_text_filters_library_stdlib.cpp`, 5 cases). `import</std/math>` splices every library whose root lies in or below the path. `sharedRoots` stays for the stdlib routines a library's code reached, without the exemption for a library that owned `/std`. Benchmark (docs/todo_log.md, TODO-6097): color and vector make `import /std/math/*` 27 percent cheaper, all three libraries make a program that also imports the text modules 17.8 percent cheaper, so the 20 percent bar is not met and nothing is added to the default build.
+
+- [x] TODO-6112: An overload on `App<S>` loses to a generic `H` overload
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-20
+  - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
+  - parallel_track: generic-struct-overload
+  - scope: Two same-arity generic helpers `mode<S>([App<S>] h)` and `mode<H>([H] h)` in one namespace, called with an `App<i32>`, select `mode<H>` whichever is declared first (both orders print 0 below), although the spec says a concrete parameter type beats an unbound template parameter and a candidate that is more specific in one position wins. Repro (`primec --emit=vm`): `namespace a { [public struct] App<S>() { [public S mut] state } [public return<i32>] mode<S>([App<S>] h) { return(1i32) } [public return<i32>] mode<H>([H] h) { return(0i32) } }` and `main() { [/a/App<i32>] x{/a/App<i32>{3i32}}  print_line(/a/mode(x)) ... }` prints 0, expected 1; no `ambiguous call` is reported.
+  - implementation_notes: the specificity comparison treats `App<S>` as one generic marker like `H`, so the two candidates tie and the first (or last) wins; a parameter whose type is a template instance with an unbound argument should rank above a bare unbound parameter, and a tie should be the `ambiguous call to` diagnostic.
+  - acceptance:
+    - the repro prints 1 for `App<i32>` and 0 for a type that is not an `App`, with a semantics and a compile-run test; a true tie reports `ambiguous call`
+    - full release gate green
+  - stop_rule: the specificity order of same-arity generic overloads only.
+  - completed_at: 2026-11-20
+  - completion_note: Overload viability expands a template instance back to its template and arguments, and an unbound-argument instance (App<S>) ranks between a bare template parameter and a concrete type; spec, semantics and compile-run tests added.
+
+- [x] TODO-6114: A same-arity overload whose parameter spells template arguments was never viable for a matching argument
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-20
+  - completed_at: 2026-11-20
+  - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-6112)
+  - scope: Viability of a type-differentiated overload compared the parameter's bare type name (`map`, `array`, `App`) with the argument's full type text (`map<i32, i32>`, `/a/App__t...`), so a parameter spelled with template arguments (`/vector/count([map<i32, i32>] values)` next to a `[string]` overload) was rejected for the very argument it names, with `no viable overload ... expected map got map<i32, i32>`. Repro: the program of `vector namespaced count auto inference accepts same-path helpers on non-vector targets` (calls_flow_collections 931_940), which asserted that rejection although its title says the helpers are accepted.
+  - completion_note: viability builds the parameter's full type text (name, template arguments and capability argument), expands a generated template instance back to its template with its arguments, and matches template parameters inside arguments. The program is now accepted (it returns 21 + 22 + 23) and the test asserts that. No stdlib or example program changed behaviour in the full gate other than this one test.
