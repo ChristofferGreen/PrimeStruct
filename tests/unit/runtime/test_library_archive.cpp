@@ -6,6 +6,7 @@
 
 #include "third_party/doctest.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -241,6 +242,29 @@ TEST_CASE("library archive: a file written to disk reads back") {
       back,
       error));
   CHECK(error.find("cannot read") != std::string::npos);
+}
+
+TEST_CASE("sha256: published digests, whatever the update sizes") {
+  CHECK(primec::sha256Hex("") ==
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  CHECK(primec::sha256Hex("abc") ==
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  const std::string twoBlocks = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+  CHECK(primec::sha256Hex(twoBlocks) ==
+        "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1");
+  const std::string million(1000000, 'a');
+  const std::string expected = "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0";
+  CHECK(primec::sha256Hex(million) == expected);
+  primec::Sha256 pieces;
+  size_t at = 0;
+  size_t step = 1;
+  while (at < million.size()) {
+    const size_t take = std::min(step, million.size() - at);
+    pieces.update(million.data() + at, take);
+    at += take;
+    step = step * 3 % 211 + 1;
+  }
+  CHECK(pieces.finishHex() == expected);
 }
 
 TEST_SUITE_END();

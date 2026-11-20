@@ -155,13 +155,11 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6092 (lib-cost): where the fixed cost of a linked library goes
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6092
 
 ### Priority Lanes
 
@@ -172,7 +170,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-6075
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6092, TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6090, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
@@ -653,21 +651,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
-
-- [~] TODO-6092: Where the fixed cost of a linked library goes
-  - owner: ai
-  - status: in_progress
-  - claimed_by: libfix (worktree-agent-a2c08f7a76802122c), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md)
-  - parallel_track: lib-cost
-  - depends_on: TODO-5925
-  - scope: TODO-5931 measured a linked library at about 1.2G instructions per compile whatever it holds (80 KB color.psa: 1226M against 425M for the same file as source; empty `main` 61M). Break the time down by stage (archive load, interface splice, link, optimization of merged functions) with a local, uncommitted measurement, record it in docs/todo_log.md, and fix the dominant stage if the fix is local and safe.
-  - acceptance:
-    - the breakdown is in docs/todo_log.md under this id
-    - if one stage dominates and the fix is local: output identical to before, instructions retired before and after (alternating min-of-N)
-    - otherwise the options are written in this block and the leaf stays open
-  - stop_rule: the library link cost; no change to what an archive carries without a recorded decision.
 
 - [ ] TODO-6032: A public function of any shape is a function of a library
   - owner: ai

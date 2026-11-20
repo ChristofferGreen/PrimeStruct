@@ -4,6 +4,11 @@
 #include <cstring>
 #include <fstream>
 
+#if defined(__aarch64__) && defined(__ARM_FEATURE_SHA2)
+#include <arm_neon.h>
+#define PRIMEC_SHA256_HARDWARE 1
+#endif
+
 namespace primec {
 
 namespace {
@@ -18,9 +23,11 @@ const uint32_t RoundConstants[64] = {
     0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2};
 
+#if !defined(PRIMEC_SHA256_HARDWARE)
 uint32_t rotr(uint32_t value, unsigned bits) {
   return (value >> bits) | (value << (32 - bits));
 }
+#endif
 
 } // namespace
 
@@ -28,6 +35,38 @@ Sha256::Sha256()
     : state_{0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19},
       buffer_{} {}
 
+#if defined(PRIMEC_SHA256_HARDWARE)
+// The compression function on the arm64 SHA-2 instructions (about a tenth of the instructions of the portable one);
+// the digest is the same. `compilerBuildId` hashes the whole executable on every `--library` compile.
+void Sha256::block(const unsigned char *chunk) {
+  uint32x4_t state0 = vld1q_u32(&state_[0]);
+  uint32x4_t state1 = vld1q_u32(&state_[4]);
+  const uint32x4_t saved0 = state0;
+  const uint32x4_t saved1 = state1;
+  uint32x4_t w[4];
+  for (int i = 0; i < 4; ++i) {
+    w[i] = vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(chunk + 16 * i)));
+  }
+  for (int i = 0; i < 16; ++i) {
+    uint32x4_t current;
+    if (i < 4) {
+      current = w[i];
+    } else {
+      // w[i] from the four words before it: schedule update in a rolling window of four vectors.
+      uint32x4_t next = vsha256su0q_u32(w[i & 3], w[(i + 1) & 3]);
+      next = vsha256su1q_u32(next, w[(i + 2) & 3], w[(i + 3) & 3]);
+      w[i & 3] = next;
+      current = next;
+    }
+    const uint32x4_t sum = vaddq_u32(current, vld1q_u32(&RoundConstants[4 * i]));
+    const uint32x4_t previous = state0;
+    state0 = vsha256hq_u32(state0, state1, sum);
+    state1 = vsha256h2q_u32(state1, previous, sum);
+  }
+  vst1q_u32(&state_[0], vaddq_u32(state0, saved0));
+  vst1q_u32(&state_[4], vaddq_u32(state1, saved1));
+}
+#else
 void Sha256::block(const unsigned char *chunk) {
   uint32_t w[64];
   for (int i = 0; i < 16; ++i) {
@@ -66,6 +105,7 @@ void Sha256::block(const unsigned char *chunk) {
   state_[6] += g;
   state_[7] += h;
 }
+#endif
 
 void Sha256::update(const char *data, size_t size) {
   total_ += size;
