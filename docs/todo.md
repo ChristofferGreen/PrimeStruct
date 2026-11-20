@@ -690,9 +690,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the definition of the compiler build id; no change to what an archive carries.
   - notes: deferred: the measurements (docs/todo_log.md, TODO-6093) say a stdlib library is not worth building for this alone.
 
-- [ ] TODO-6094: `import /std/*` is a diagnostic, not an uncaught `std::out_of_range`
+- [~] TODO-6094: `import /std/*` is a diagnostic, not an uncaught `std::out_of_range`
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: import-root (worktree-agent-a1a3e668440df6dee), 2026-11-20
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics
   - parallel_track: import-root-diagnostic
