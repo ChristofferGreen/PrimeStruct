@@ -73,7 +73,9 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                                   input.validationTarget == IrValidationTarget::OptCpp;
   stateOut.runtimeErrorsTrap = stateOut.realCallAllowStructs ||
                                input.validationTarget == IrValidationTarget::Native ||
-                               input.validationTarget == IrValidationTarget::Cpp;
+                               input.validationTarget == IrValidationTarget::Cpp ||
+                               input.validationTarget == IrValidationTarget::Wasm ||
+                               input.validationTarget == IrValidationTarget::WasmBrowser;
   {
     std::vector<std::string> ordered;
     for (const std::string &path :

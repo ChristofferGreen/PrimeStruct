@@ -15,7 +15,9 @@
   message to stderr and ends the whole program with exit code 3, whichever frame it runs in. In the entry that is a
   return of 3; in a definition lowered as a real call it is `Trap 3`, which the VM, the C++ emitters (`cpp`/`exe`,
   `optcpp`/`optexe`), `--emit=native` and the Linux x86_64 JIT run (see [vm-design.md](vm-design.md), Errors). The Wasm
-  and GLSL targets do not have `Trap` yet (TODO-5744).
+  and the Wasm target run it too (WASI `proc_exit(3)`; the browser profile traps, see
+  [integration-and-tooling.md](integration-and-tooling.md), Runtime errors on Wasm and GLSL); GLSL refuses a program
+  whose called function can fail at compile time.
 - **Transform boundaries:** text/semantic rewrites decide where bodies inline; IR lowering preserves left-to-right
   argument evaluation inside the active frame.
 - **Resource handles:** handles live inside frame slots as opaque values; lifetimes follow lexical scope.

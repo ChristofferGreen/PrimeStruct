@@ -573,8 +573,8 @@
   exit code 3 from that frame; `panic` traps the same way. `Trap` (PSIR v33) runs on the VM, serialized bytecode,
   the C++ emitters (`cpp`/`exe` and `optcpp`/`optexe`: `exit` after flushing the output), `--emit=native` (the exit
   syscall: `exit` on macOS arm64, `exit_group` on Linux x86_64; output is already written) and the Linux x86_64 JIT
-  (which hands the code back to `primevm` as the program's result). The Wasm and GLSL targets never receive it; there a
-  runtime error in a called function still returns 3 to its caller (TODO-5744). **Runtime faults on every backend:**
+  (which hands the code back to `primevm` as the program's result) and Wasm (see Runtime errors on Wasm and GLSL in
+  [integration-and-tooling.md](integration-and-tooling.md)). GLSL never receives it. **Runtime faults on every backend:**
   integer division by zero (`i32`, `i64`, `u64`) is the runtime fault `division by zero in IR`: the VM, the C++
   emitters (`cpp`/`exe` and `optcpp`/`optexe`) and the Linux x86_64 JIT write `VM error: division by zero in IR` to
   stderr and exit with code 3, keeping the output printed before it. The simple C++ emitter exits 3 for all its

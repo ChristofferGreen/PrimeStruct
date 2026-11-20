@@ -20,11 +20,28 @@ class RuntimeErrorsTrapScope {
 public:
   explicit RuntimeErrorsTrapScope(bool trap);
   ~RuntimeErrorsTrapScope();
+  // True once, after a runtime error was lowered inside this scope on a target without `Trap`: the error only returns 3
+  // from the called function, so the program would carry on. The caller refuses such a program (GLSL has no host to
+  // report to and no way to end the program from a callee).
+  static bool takeFaultThatDoesNotEndProgram();
   RuntimeErrorsTrapScope(const RuntimeErrorsTrapScope &) = delete;
   RuntimeErrorsTrapScope &operator=(const RuntimeErrorsTrapScope &) = delete;
 
 private:
   bool saved_ = false;
+};
+
+// A runtime error prints its message to stderr unless the target has no output (the browser Wasm profile, which only
+// ends the program). One scope covers a whole lowering.
+class RuntimeErrorMessagesScope {
+public:
+  explicit RuntimeErrorMessagesScope(bool print);
+  ~RuntimeErrorMessagesScope();
+  RuntimeErrorMessagesScope(const RuntimeErrorMessagesScope &) = delete;
+  RuntimeErrorMessagesScope &operator=(const RuntimeErrorMessagesScope &) = delete;
+
+private:
+  bool saved_ = true;
 };
 
 struct RuntimeErrorEmitters {

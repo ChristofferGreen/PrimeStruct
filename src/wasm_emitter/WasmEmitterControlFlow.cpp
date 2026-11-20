@@ -382,7 +382,7 @@ bool emitInstructionRange(const IrFunction &function,
     }
     diverges = inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::ReturnI32 ||
                inst.op == IrOpcode::ReturnI64 || inst.op == IrOpcode::ReturnF32 ||
-               inst.op == IrOpcode::ReturnF64;
+               inst.op == IrOpcode::ReturnF64 || inst.op == IrOpcode::Trap;
     ++index;
   }
 

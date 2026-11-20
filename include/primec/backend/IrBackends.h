@@ -30,6 +30,8 @@ struct IrBackendDiagnostics {
 struct IrBackendEmitOptions {
   std::string outputPath;
   std::string inputPath;
+  // --wasm-profile browser: the wasm backend imports nothing from WASI.
+  bool wasmBrowserProfile = false;
   std::vector<std::string> programArgs;
   // Optimization level (0..3) the optexe kinds pass to the host C++ compiler.
   int hostOptimizationLevel = 2;

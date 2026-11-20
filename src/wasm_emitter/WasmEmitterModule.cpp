@@ -117,11 +117,8 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   std::vector<WasmImport> imports;
   std::vector<WasmFunctionType> types;
   WasmRuntimeContext runtime;
-  if (!buildWasiRuntimeContext(module, imports, types, runtime, error)) {
+  if (!buildWasiRuntimeContext(module, !browserProfile, imports, types, runtime, error)) {
     return false;
-  }
-  if (!runtime.enabled) {
-    runtime.functionIndexOffset = 0;
   }
 
   // A fused multiply-add is a helper function after the IR functions.

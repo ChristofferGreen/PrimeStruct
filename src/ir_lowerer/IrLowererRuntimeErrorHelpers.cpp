@@ -12,14 +12,23 @@ namespace primec::ir_lowerer {
 namespace {
 // Lowering runs on one thread per program; the flag is per thread so concurrent compiles do not share it.
 thread_local bool runtimeErrorsTrap = false;
+thread_local bool runtimeErrorsPrint = true;
+thread_local bool runtimeErrorsInCallScope = false;
+thread_local bool faultThatDoesNotEndProgram = false;
 
 void emitRuntimeError(IrFunction &function, const std::string &message, const InternRuntimeErrorStringFn &internString) {
-  uint64_t flags = encodePrintFlags(true, true);
-  int32_t msgIndex = internString(message);
-  function.instructions.push_back({IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+  if (runtimeErrorsPrint) {
+    uint64_t flags = encodePrintFlags(true, true);
+    int32_t msgIndex = internString(message);
+    function.instructions.push_back(
+        {IrOpcode::PrintString, encodePrintStringImm(static_cast<uint64_t>(msgIndex), flags)});
+  }
   if (runtimeErrorsTrap) {
     function.instructions.push_back({IrOpcode::Trap, 3});
     return;
+  }
+  if (runtimeErrorsInCallScope) {
+    faultThatDoesNotEndProgram = true;
   }
   function.instructions.push_back({IrOpcode::PushI32, 3});
   function.instructions.push_back({IrOpcode::ReturnI32, 0});
@@ -28,10 +37,27 @@ void emitRuntimeError(IrFunction &function, const std::string &message, const In
 
 RuntimeErrorsTrapScope::RuntimeErrorsTrapScope(bool trap) : saved_(runtimeErrorsTrap) {
   runtimeErrorsTrap = trap;
+  runtimeErrorsInCallScope = true;
+  faultThatDoesNotEndProgram = false;
 }
 
 RuntimeErrorsTrapScope::~RuntimeErrorsTrapScope() {
   runtimeErrorsTrap = saved_;
+  runtimeErrorsInCallScope = false;
+}
+
+bool RuntimeErrorsTrapScope::takeFaultThatDoesNotEndProgram() {
+  const bool faulted = faultThatDoesNotEndProgram;
+  faultThatDoesNotEndProgram = false;
+  return faulted;
+}
+
+RuntimeErrorMessagesScope::RuntimeErrorMessagesScope(bool print) : saved_(runtimeErrorsPrint) {
+  runtimeErrorsPrint = print;
+}
+
+RuntimeErrorMessagesScope::~RuntimeErrorMessagesScope() {
+  runtimeErrorsPrint = saved_;
 }
 
 RuntimeErrorAndStringLiteralSetup makeRuntimeErrorAndStringLiteralSetup(

@@ -19,11 +19,45 @@ process.removeAllListeners("warning");
 process.on("warning", () => {});
 const { WASI } = require("node:wasi");
 const wasi = new WASI({ version: "preview1", args: [process.argv[2]], returnOnExit: true });
-const instance = new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[2])), wasi.getImportObject());
+// `proc_exit(code)` ends the program (a runtime error calls it with 3): unwind out of the module with the code.
+class ProgramExit { constructor(code) { this.code = code; } }
+const imports = wasi.getImportObject();
+imports.wasi_snapshot_preview1.proc_exit = (code) => { throw new ProgramExit(code); };
+const instance = new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[2])), imports);
 if (instance.exports.memory) {
   wasi.initialize(instance);
 }
-process.exitCode = Number(BigInt.asUintN(8, BigInt(instance.exports.main())));
+try {
+  process.exitCode = Number(BigInt.asUintN(8, BigInt(instance.exports.main())));
+} catch (e) {
+  if (!(e instanceof ProgramExit)) {
+    // A bare wasm trap is not how the WASI profile ends a program.
+    console.error("unexpected " + e);
+    process.exit(99);
+  }
+  process.exitCode = e.code;
+}
+)";
+
+// Under the browser profile a runtime error is a wasm trap (no WASI to call): the host sees a RuntimeError.
+constexpr const char *WasmBrowserRunner = R"(
+"use strict";
+const fs = require("node:fs");
+const compiled = new WebAssembly.Module(fs.readFileSync(process.argv[2]));
+if (WebAssembly.Module.imports(compiled).length !== 0) {
+  console.error("the browser profile imports from the host");
+  process.exit(98);
+}
+const instance = new WebAssembly.Instance(compiled, {});
+try {
+  process.exitCode = Number(BigInt.asUintN(8, BigInt(instance.exports.main())));
+} catch (e) {
+  if (!(e instanceof WebAssembly.RuntimeError)) {
+    throw e;
+  }
+  console.log("trapped");
+  process.exitCode = 3;
+}
 )";
 
 bool nodeAvailable() {
@@ -51,9 +85,10 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
   const std::string vmOut = (root / "vm_stdout.txt").string();
   const std::string wasmOut = (root / "wasm_stdout.txt").string();
   const std::string wasmErr = (root / "wasm_stderr.txt").string();
+  const std::string vmErr = (root / "vm_stderr.txt").string();
 
   const int vmExit = runCommand("./primec --emit=vm " + quoteShellArg(srcPath) +
-                                " --entry /main > " + quoteShellArg(vmOut));
+                                " --entry /main > " + quoteShellArg(vmOut) + " 2> " + quoteShellArg(vmErr));
   CHECK(vmExit == expectedExitCode);
   REQUIRE(runCommand("./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                      quoteShellArg(wasmPath) + " --entry /main") == 0);
@@ -62,6 +97,31 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
                  quoteShellArg(wasmOut) + " 2> " + quoteShellArg(wasmErr));
   CHECK_MESSAGE(wasmExit == expectedExitCode, readFile(wasmErr));
   CHECK(readFile(wasmOut) == readFile(vmOut));
+  CHECK(readFile(wasmErr) == readFile(vmErr));
+}
+
+// Compiles `source` for the browser profile and runs it with no WASI host: a runtime error traps.
+void checkWasmBrowserRuntimeError(const std::string &name,
+                                  const std::string &source,
+                                  const std::string &expectedStdout) {
+  if (!nodeAvailable()) {
+    return;
+  }
+  const std::filesystem::path root = testScratchPath("") / ("primec_wasm_browser_" + name);
+  std::error_code ec;
+  std::filesystem::remove_all(root, ec);
+  std::filesystem::create_directories(root, ec);
+  REQUIRE(!ec);
+  const std::string srcPath = writeTemp("compile_wasm_browser_" + name + ".prime", source);
+  const std::string wasmPath = (root / "program.wasm").string();
+  const std::string runnerPath = writeTemp("compile_wasm_browser_runner.cjs", WasmBrowserRunner);
+  const std::string out = (root / "stdout.txt").string();
+  REQUIRE(runCommand("./primec --emit=wasm --wasm-profile browser --default-effects=none " +
+                     quoteShellArg(srcPath) + " -o " +
+                     quoteShellArg(wasmPath) + " --entry /main") == 0);
+  CHECK(runCommand("node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
+                   quoteShellArg(out)) == 3);
+  CHECK(readFile(out) == expectedStdout);
 }
 
 std::string conversionProgram(const std::vector<std::vector<std::string>> &rows) {
@@ -363,6 +423,117 @@ main() {
 }
 )",
                      0);
+}
+
+// A runtime error in a real call ends the program with exit code 3 (WASI `proc_exit`): the output before it is out, the
+// statement after the call does not run, and stderr carries the VM's message.
+TEST_CASE("wasm ends the program on a runtime error in a real call like the vm") {
+  checkWasmMatchesVm("runtime_error_real_call",
+                     R"(
+import /std/math/*
+
+[return<i32>]
+power_of_two([i32] exponent) {
+  [i32] shifted{exponent + 0i32}
+  [i32] base{2i32 * 1i32}
+  [i32] result{pow(base, shifted)}
+  [i32] doubled{result + result}
+  return(doubled - result)
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(power_of_two(3i32))
+  print_line(power_of_two(0i32 - 1i32))
+  print_line(99i32)
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm ends the program on a runtime error in a nested real call") {
+  checkWasmMatchesVm("runtime_error_nested_call",
+                     R"(
+import /std/math/*
+
+[return<i32>]
+power_of_two([i32] exponent) {
+  [i32] shifted{exponent + 0i32}
+  [i32] base{2i32 * 1i32}
+  [i32] result{pow(base, shifted)}
+  [i32] doubled{result + result}
+  return(doubled - result)
+}
+
+[return<i32>]
+scaled([i32] exponent, [i32] factor) {
+  return(power_of_two(exponent) * factor)
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(scaled(2i32, 5i32))
+  [i32] bad{scaled(0i32 - 4i32, 5i32)}
+  print_line(bad)
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm browser profile traps on a runtime error in a real call") {
+  checkWasmBrowserRuntimeError("runtime_error_trap",
+                               R"(
+import /std/math/*
+
+[return<i32>]
+power_of_two([i32] exponent) {
+  [i32] shifted{exponent + 0i32}
+  [i32] base{2i32 * 1i32}
+  [i32] result{pow(base, shifted)}
+  [i32] doubled{result + result}
+  return(doubled - result)
+}
+
+[return<int>]
+main() {
+  [i32] first{power_of_two(3i32)}
+  [i32] second{power_of_two(0i32 - 1i32)}
+  return(first + second + 100i32)
+}
+)",
+                               "trapped\n");
+}
+
+// GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
+// of letting the program carry on past the failed call.
+TEST_CASE("glsl refuses a runtime error inside a real call") {
+  const std::string srcPath = writeTemp("compile_glsl_runtime_error_call.prime",
+                                        R"(
+import /std/math/*
+
+[return<i32>]
+power_of_two([i32] exponent) {
+  [i32] shifted{exponent + 0i32}
+  [i32] base{2i32 * 1i32}
+  [i32] result{pow(base, shifted)}
+  [i32] doubled{result + result}
+  return(doubled - result)
+}
+
+[return<int>]
+main() {
+  [i32] first{power_of_two(3i32)}
+  [i32] second{power_of_two(0i32 - 1i32)}
+  return(first + second + 100i32)
+}
+)");
+  const std::string outPath = (testScratchPath("") / "primec_glsl_runtime_error_call.glsl").string();
+  const std::string errPath = (testScratchPath("") / "primec_glsl_runtime_error_call.err").string();
+  CHECK(runCommand("./primec --emit=glsl --default-effects=none " + quoteShellArg(srcPath) + " -o " +
+                   quoteShellArg(outPath) + " --entry /main 2> " + quoteShellArg(errPath)) != 0);
+  CHECK(readFile(errPath).find("cannot end the program on this target") != std::string::npos);
 }
 
 TEST_SUITE_END();

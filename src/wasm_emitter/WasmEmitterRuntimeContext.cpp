@@ -57,6 +57,7 @@ void appendDataSegmentAt(uint32_t address,
 } // namespace
 
 bool buildWasiRuntimeContext(const IrModule &module,
+                             bool wasi,
                              std::vector<WasmImport> &imports,
                              std::vector<WasmFunctionType> &types,
                              WasmRuntimeContext &runtime,
@@ -64,6 +65,9 @@ bool buildWasiRuntimeContext(const IrModule &module,
   runtime = WasmRuntimeContext{};
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
+      if (inst.op == IrOpcode::Trap) {
+        runtime.hasTrap = true;
+      }
       if (!opcodeNeedsWasiRuntime(inst.op)) {
         continue;
       }
@@ -96,7 +100,21 @@ bool buildWasiRuntimeContext(const IrModule &module,
       }
     }
   }
+  // The function with the result-less `proc_exit(code)` WASI import: the program ends with that exit code.
+  const auto addProcExitImport = [&]() {
+    if (!runtime.hasTrap || !wasi) {
+      return;
+    }
+    WasmFunctionType procExitType;
+    procExitType.params = {WasmValueTypeI32};
+    runtime.hasProcExit = true;
+    runtime.procExitImportIndex = static_cast<uint32_t>(imports.size());
+    imports.push_back({"wasi_snapshot_preview1", "proc_exit", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    types.push_back(std::move(procExitType));
+  };
   if (!runtime.enabled) {
+    addProcExitImport();
+    runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
     return true;
   }
 
@@ -196,6 +214,7 @@ bool buildWasiRuntimeContext(const IrModule &module,
     types.push_back(std::move(fdSyncType));
   }
 
+  addProcExitImport();
   runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
 
   const uint32_t memoryEnd = stringBase + static_cast<uint32_t>(stringBlob.size());

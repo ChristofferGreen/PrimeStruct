@@ -217,6 +217,7 @@ bool opSignature(IrOpcode op, OpSignature &sig) {
     sig = {{F64}, WasmTypeUnknown};
     return true;
   case IrOpcode::ReturnVoid:
+  case IrOpcode::Trap:
     sig = {{}, WasmTypeUnknown};
     return true;
   default:
@@ -543,7 +544,7 @@ bool emitTypedInstruction(const IrInstruction &inst,
   }
   const bool isReturn = inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
                         inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64 ||
-                        inst.op == IrOpcode::ReturnVoid;
+                        inst.op == IrOpcode::ReturnVoid || inst.op == IrOpcode::Trap;
   if (isReturn) {
     state.stack.clear();
   }

@@ -457,6 +457,13 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         return false;
       }
 
+      if (RuntimeErrorsTrapScope::takeFaultThatDoesNotEndProgram()) {
+        errorOut = "a runtime error inside the called function " + path +
+                   " cannot end the program on this target (it has no trap); keep the call inline or use the vm, "
+                   "native, C++ or wasm backend";
+        return false;
+      }
+
       input.outModule->functions.push_back(std::move(*input.function));
     }
 

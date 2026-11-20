@@ -11,6 +11,7 @@ namespace {
 
 constexpr uint8_t WasmValueTypeI32 = 0x7f;
 
+constexpr uint8_t WasmOpUnreachable = 0x00;
 constexpr uint8_t WasmOpIf = 0x04;
 constexpr uint8_t WasmOpElse = 0x05;
 constexpr uint8_t WasmOpEnd = 0x0b;
@@ -417,6 +418,15 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       }
       return true;
     }
+    case IrOpcode::Trap:
+      if (runtime.hasProcExit) {
+        out.push_back(WasmOpI32Const);
+        appendS32Leb(static_cast<int32_t>(inst.imm), out);
+        out.push_back(WasmOpCall);
+        appendU32Leb(runtime.procExitImportIndex, out);
+      }
+      out.push_back(WasmOpUnreachable);
+      return true;
     case IrOpcode::ReturnI32:
     case IrOpcode::ReturnI64:
     case IrOpcode::ReturnF32:

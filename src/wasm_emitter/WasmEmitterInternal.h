@@ -115,6 +115,11 @@ struct WasmRuntimeContext {
   bool hasFileOps = false;
   bool hasFileReadOps = false;
   bool hasFileWriteOps = false;
+  // The module has a `Trap` (a runtime error ends the program). On the WASI profile it calls `proc_exit(code)` first;
+  // the browser profile has no host function to call, so the trap is the `unreachable` instruction alone.
+  bool hasTrap = false;
+  bool hasProcExit = false;
+  uint32_t procExitImportIndex = 0;
   uint32_t functionIndexOffset = 0;
   // The helper functions appended after the IR functions that compute a fused multiply-add with one rounding
   // (docs/spec/vm-design.md, Fused multiply-add); present only when the module has the opcode.
@@ -247,7 +252,9 @@ bool encodeDataSection(const std::vector<WasmDataSegment> &segments,
                        std::vector<uint8_t> &payload,
                        std::string &error);
 
+// `wasi` is false for the browser profile, which imports nothing from WASI (a `Trap` becomes `unreachable` alone).
 bool buildWasiRuntimeContext(const IrModule &module,
+                             bool wasi,
                              std::vector<WasmImport> &imports,
                              std::vector<WasmFunctionType> &types,
                              WasmRuntimeContext &runtime,

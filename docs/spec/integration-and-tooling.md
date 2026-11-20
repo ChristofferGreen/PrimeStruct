@@ -43,6 +43,33 @@ main() {
 /std/collections,/std/dir,/std/glob,/std/text`, and `--profile build --allow-import /std/net` lets it through. A definition that declares
 `[effects(net_io)]` fails with `outside the allowed effects: file_read,heap_alloc,build_run`.
 
+### Runtime errors on Wasm and GLSL
+A runtime error (a guard rail such as `pow` with a negative exponent) ends the program with exit code 3 on every
+backend (docs/spec/runtime-model.md). On Wasm the IR `Trap` lowers by profile:
+
+| Profile | `Trap 3` lowers to | What the host sees |
+| --- | --- | --- |
+| `--wasm-profile wasi` (default) | import `wasi_snapshot_preview1.proc_exit` called with 3, then `unreachable` | exit code 3; output written before it is already out; the message is on stderr (`fd_write` to 2) as on the VM |
+| `--wasm-profile browser` | `unreachable` alone (no import) | a `WebAssembly.RuntimeError`; there is no stderr message and no exit code |
+
+The profiles differ by design: the browser profile imports nothing from WASI, so it has neither the message nor
+`proc_exit`. A runtime error in the entry returns 3 from `main` on both profiles. GLSL has no trap and no host to
+report to, so a program whose called (not inlined) function contains a runtime error is a compile error
+(`a runtime error inside the called function /name cannot end the program on this target`).
+
+```
+[return<i32>]
+power_of_two([i32] exponent) {
+  [i32] shifted{exponent + 0i32}
+  [i32] base{2i32 * 1i32}
+  [i32] result{pow(base, shifted)}
+  [i32] doubled{result + result}
+  return(doubled - result)
+}
+```
+`power_of_two(0i32 - 1i32)` called from `main` exits 3 under WASI (`node` with a `proc_exit` import that unwinds) and
+traps in the browser profile.
+
 ### Dependency List
 `primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds
 the source files the compile read, one absolute, normalized path per line, sorted bytewise, without duplicates: the

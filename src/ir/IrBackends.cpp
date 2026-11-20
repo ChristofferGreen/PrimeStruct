@@ -319,6 +319,7 @@ public:
             IrBackendEmitResult & /*result*/,
             std::string &error) const override {
     WasmEmitter wasmEmitter;
+    wasmEmitter.browserProfile = options.wasmBrowserProfile;
     std::vector<uint8_t> data;
     if (!wasmEmitter.emitModule(module, data, error)) {
       return false;
