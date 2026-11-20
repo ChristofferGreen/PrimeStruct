@@ -354,17 +354,17 @@ namespace primec::ir_lowerer {
         }
         return true;
       };
-      auto emitSelectedSumPayloadIntoLocal =
-          [&](const LoweredSumVariantSelection &selection,
-              const LocalMap &selectedLocals,
-              int32_t targetBaseLocal) -> bool {
+      auto emitSelectedSumPayloadIntoLocal = [&](const Definition &selectedSumDef,
+                                                 const LoweredSumVariantSelection &selection,
+                                                 const LocalMap &selectedLocals,
+                                                 int32_t targetBaseLocal) -> bool {
         if (selection.variant == nullptr) {
-          error = "native backend sum variant was not selected for " + sumDef.fullPath;
+          error = "native backend sum variant was not selected for " + selectedSumDef.fullPath;
           return false;
         }
         int32_t activeTag = 0;
         if (!resolveSemanticProductSumVariantTag(
-                sumDef, *selection.variant, "sum construction", activeTag)) {
+                selectedSumDef, *selection.variant, "sum construction", activeTag)) {
           return false;
         }
         function.instructions.push_back(
@@ -374,8 +374,8 @@ namespace primec::ir_lowerer {
           return true;
         }
         if (selection.payloadExpr == nullptr) {
-          error = "native backend sum payload was not selected for " +
-                  sumDef.fullPath + "/" + selection.variant->name;
+          error = "native backend sum payload was not selected for " + selectedSumDef.fullPath +
+                  "/" + selection.variant->name;
           return false;
         }
         if (selection.payloadIsAggregate) {
@@ -395,7 +395,7 @@ namespace primec::ir_lowerer {
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 srcPtrLocal,
                 selection.payloadStructPath);
-          } else if (!isStdlibResultSumDefinition(sumDef)) {
+          } else if (!isStdlibResultSumDefinition(selectedSumDef)) {
             // A payload taken from a place is copied like a struct field initialized from one, so
             // the sum owns its payload (docs/spec/value-lifecycle.md).
             bool ranCopyHelper = false;
@@ -525,7 +525,7 @@ namespace primec::ir_lowerer {
           error = "IR backends require Result.and_then lambdas to produce stdlib Result sums";
           return false;
         }
-        return emitSelectedSumPayloadIntoLocal(selection, resultLocals, targetBaseLocal);
+        return emitSelectedSumPayloadIntoLocal(sumDef, selection, resultLocals, targetBaseLocal);
       };
       struct StdlibResultSumSource {
         const Definition *sumDef = nullptr;
@@ -654,7 +654,7 @@ namespace primec::ir_lowerer {
             }
             return false;
           }
-          if (!emitSelectedSumPayloadIntoLocal(selection, sourceLocals, baseLocal)) {
+          if (!emitSelectedSumPayloadIntoLocal(*sourceSumDef, selection, sourceLocals, baseLocal)) {
             return false;
           }
           sourceOut.sumDef = sourceSumDef;
@@ -1042,7 +1042,7 @@ namespace primec::ir_lowerer {
         error = "native backend could not select sum variant for " + sumDef.fullPath;
         return false;
       }
-      return emitSelectedSumPayloadIntoLocal(selection, valueLocals, baseLocal);
+      return emitSelectedSumPayloadIntoLocal(sumDef, selection, valueLocals, baseLocal);
     }
 
 

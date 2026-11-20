@@ -102,6 +102,43 @@ void runHeapProgram(const std::string &name, const std::string &body, const std:
   program_matrix::runProgramMatrix(program);
 }
 
+// `[auto]` locals of `Result.ok`, `Result.map` and `Result.and_then` are the stdlib `Result` sum when `/std/result/*`
+// is imported, so the sum drop destroys the payload: the `Box` read out by `try` is the only owner left.
+std::string resultHeapProgram(const std::string &body) {
+  return "import /std/result/*\n" + HeapPrelude + R"(
+[effects(io_out)]
+handle_error([i32] err) {
+  print_line(err)
+}
+
+[effects(heap_alloc, io_out) on_error<i32, /handle_error>, return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+)" + body +
+         R"(
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+}
+
+void runResultHeapProgram(const std::string &name,
+                          const std::string &body,
+                          const std::string &stdoutText) {
+  program_matrix::ProgramCase program;
+  program.name = name;
+  program.source = resultHeapProgram(body);
+  program.exitCode = 0;
+  program.stdoutText = stdoutText;
+  // The heap statistics exist on the VM and optexe only.
+  program.onlyConfigs = vmOptexeConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 } // namespace
 
 TEST_CASE("pick on a user at result destroys its payload once") {
@@ -212,6 +249,40 @@ main() {
   program.stdoutText = "11\n11\n100\n12\n12\n200\n13\n13\n300\n14\n14\n400\n";
   program.onlyConfigs = allBackendConfigs();
   program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an auto local of Result.map yielding a Box destroys it once") {
+  runResultHeapProgram("auto_result_map_box",
+                       R"(
+    [auto] mapped{Result.map(Result.ok(1i32), []([i32] v) { return(Box{[text] label(v)}) })}
+    [Box] first{try(mapped)}
+    print_line(first_byte(first.text))
+    [Result<i32, i32>] source{Result.ok(2i32)}
+    [auto] again{Result.map(source, []([i32] v) { return(Box{[text] label(v)}) })}
+    [Box] second{try(again)}
+    print_line(first_byte(second.text))
+  )",
+                       "49\n50\n0\n0\n");
+}
+
+TEST_CASE("an auto local of Result.ok holding a Box destroys it once") {
+  runResultHeapProgram("auto_result_ok_box",
+                       R"(
+    [auto] held{Result.ok(Box{[text] label(3i32)})}
+    [Box] taken{try(held)}
+    print_line(first_byte(taken.text))
+  )",
+                       "51\n0\n0\n");
+}
+
+TEST_CASE("an auto local of Result.and_then yielding a Box destroys it once") {
+  runResultHeapProgram("auto_result_and_then_box",
+                       R"(
+    [auto] chained{Result.and_then(Result.ok(4i32), []([i32] v) { return(Result.ok(Box{[text] label(v)})) })}
+    [Box] taken{try(chained)}
+    print_line(first_byte(taken.text))
+  )",
+                       "52\n0\n0\n");
 }
 
 TEST_SUITE_END();

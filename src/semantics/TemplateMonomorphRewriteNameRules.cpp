@@ -39,6 +39,7 @@
 #include "primec/support/CollectionHelperNames.h"
 #include "TemplateMonomorphExpressionReferenceRules.h"
 #include "TemplateMonomorphExpressionRewriteContext.h"
+#include "TemplateMonomorphAutoResultBindings.h"
 
 namespace primec {
 
@@ -59,6 +60,7 @@ PhaseStatus rewriteNameAndTransforms(ExprRewriteContext &rc) {
   rewriteCallableShapes(
       expr, mapping, allowedParams, namespacePrefix, ctx, locals, params, allowMathBare);
   rc.hadExplicitTemplateArgsOnEntry = !expr.templateArgs.empty();
+  materializeAutoResultBindingType(expr, params, locals, namespacePrefix, allowMathBare, ctx);
   if (!rewriteTransforms(expr.transforms, mapping, allowedParams, namespacePrefix, ctx, error)) {
     return rc.done(false);
   }

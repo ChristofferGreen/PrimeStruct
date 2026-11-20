@@ -50,6 +50,14 @@
   `FileError.status(err)`) are converted to the sum when a stdlib-Result definition returns them. Without the import,
   the builtin `Result` keeps its packed representation (the error code in the high 32 bits, zero for ok), which
   cannot tell `ok` from an error code of `0`.
+- **Result locals:** with `/std/result/*` imported, an `[auto]` local whose initializer is `Result.ok(x)`,
+  `Result.map(source, lambda)` or `Result.and_then(source, lambda)` is the stdlib sum `Result<T, E>`, as if it were
+  declared with that type, so its drop destroys the payload (a `Box` with a `String` is freed once). `T` comes from the
+  payload or the lambda's returns and `E` from the source `Result` (`Result.ok` takes the error type of the
+  definition's `on_error` or `Result` return). When `T` or `E` cannot be read this way (a lambda with returns of
+  different types, a `Result.ok` in a definition with neither `on_error` nor a `Result` return) the local stays the
+  packed builtin `Result`, as it does without the import. A `Result.ok(x)` source of such a combinator is built as the
+  sum (`/std/result/ok<T, E>(x)`).
 - **Result arguments:** with `/std/result/*` imported, a `Result.ok(x)` written as the argument of
   a stdlib `Result` parameter builds the sum for that parameter, the same as `/std/result/ok<T, E>(x)` does.
 - **Result elements:** a `vector<Result<T, E>>` of the stdlib sum stores each element inline (the tag and payload

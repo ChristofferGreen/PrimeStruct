@@ -2500,6 +2500,7 @@ are left unarchived.
 | TODO-6092 | Where the fixed cost of a linked library goes | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6095 | Unresolvable stdlib imports are positioned diagnostics, and a robustness test feeds odd programs to `primec` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6096 | An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys... | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

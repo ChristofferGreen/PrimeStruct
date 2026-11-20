@@ -180,7 +180,9 @@
   element. A struct's own `Destroy` runs first and its fields are destroyed after it, last declared first. A sum local
   (`Maybe<T>`, a user `[sum]`, the stdlib `Result`) initialized from a fresh value destroys its active payload the same
   way (`try(r)` on a named `Result` copies the ok payload out through its `Copy` helper, so `r` and the copy each destroy
-  their own), and a payload
+  their own; an `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is that sum when `/std/result/*` is
+  imported, `Result<T, E>` with `E` from the source `Result` or, for `Result.ok`, the definition's `on_error` or
+  `Result` return, and without the import it stays the packed builtin `Result`), and a payload
   taken from a place is copied in like a struct field. A sum that holds such a payload is an owning value like a
   struct with `Destroy`: a fresh one (a call result, a constructor, a `pick` expression) passed as an argument belongs
   to the parameter and is destroyed when the callee's body ends (a method call that returns a `String` or struct by value
