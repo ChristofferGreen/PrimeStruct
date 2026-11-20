@@ -530,9 +530,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a diagnostics test where the root and the sink differ names each correctly
   - stop_rule: message of that diagnostic only.
 
-- [ ] TODO-6083: The arity and shape of an `on_error` handler are checked in semantics
+- [~] TODO-6083: The arity and shape of an `on_error` handler are checked in semantics
   - owner: ai
   - status: ready
+  - claimed_by: web-params-a (worktree-agent-ab18fa13ddf892207), 2026-11-20
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5520)
   - parallel_track: diagnostics-on-error-handler
