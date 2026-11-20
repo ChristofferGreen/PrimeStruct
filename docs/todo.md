@@ -478,9 +478,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the config and its annotations only; opcode gaps found by it (heap, strings, atomics, channels) are separate leaves.
   - notes: a matrix helper such as `check()` that returns an `if` expression could not run on Wasm until TODO-6089 (a value-yielding `if`) was fixed.
 
-- [ ] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
+- [~] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
   - owner: ai
   - status: ready
+  - claimed_by: filter-offsets (worktree-agent-aea48cb30770b2538), 2026-11-20
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5520)
   - parallel_track: diagnostics-filtered-columns
