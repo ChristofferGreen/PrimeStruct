@@ -734,9 +734,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision above is made and recorded here; then a diagnostic or a spec change with a semantics test and the full release gate green
   - stop_rule: this one decision and the diagnostic or spec line it needs; TODO-6115 and TODO-6116 carry the mechanical parts.
 
-- [ ] TODO-6115: A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method`
+- [~] TODO-6115: A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method`
   - owner: ai
   - status: ready
+  - claimed_by: lambda-field (worktree-agent-aea48cb30770b2538), 2026-11-20
   - created_at: 2026-11-20
   - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
   - parallel_track: lambda-function-field-call
