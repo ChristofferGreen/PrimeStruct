@@ -109,7 +109,10 @@ bool buildWasiRuntimeContext(const IrModule &module,
     procExitType.params = {WasmValueTypeI32};
     runtime.hasProcExit = true;
     runtime.procExitImportIndex = static_cast<uint32_t>(imports.size());
-    imports.push_back({"wasi_snapshot_preview1", "proc_exit", WasmFunctionKind, static_cast<uint32_t>(types.size())});
+    imports.push_back({"wasi_snapshot_preview1",
+                       "proc_exit",
+                       WasmFunctionKind,
+                       static_cast<uint32_t>(types.size())});
     types.push_back(std::move(procExitType));
   };
   if (!runtime.enabled) {

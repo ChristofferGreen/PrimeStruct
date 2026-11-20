@@ -87,8 +87,9 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
   const std::string wasmErr = (root / "wasm_stderr.txt").string();
   const std::string vmErr = (root / "vm_stderr.txt").string();
 
-  const int vmExit = runCommand("./primec --emit=vm " + quoteShellArg(srcPath) +
-                                " --entry /main > " + quoteShellArg(vmOut) + " 2> " + quoteShellArg(vmErr));
+  const int vmExit =
+      runCommand("./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " +
+                 quoteShellArg(vmOut) + " 2> " + quoteShellArg(vmErr));
   CHECK(vmExit == expectedExitCode);
   REQUIRE(runCommand("./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                      quoteShellArg(wasmPath) + " --entry /main") == 0);
@@ -117,8 +118,8 @@ void checkWasmBrowserRuntimeError(const std::string &name,
   const std::string runnerPath = writeTemp("compile_wasm_browser_runner.cjs", WasmBrowserRunner);
   const std::string out = (root / "stdout.txt").string();
   REQUIRE(runCommand("./primec --emit=wasm --wasm-profile browser --default-effects=none " +
-                     quoteShellArg(srcPath) + " -o " +
-                     quoteShellArg(wasmPath) + " --entry /main") == 0);
+                     quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
+                     " --entry /main") == 0);
   CHECK(runCommand("node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
                    quoteShellArg(out)) == 3);
   CHECK(readFile(out) == expectedStdout);
@@ -529,10 +530,12 @@ main() {
   return(first + second + 100i32)
 }
 )");
-  const std::string outPath = (testScratchPath("") / "primec_glsl_runtime_error_call.glsl").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_glsl_runtime_error_call.glsl").string();
   const std::string errPath = (testScratchPath("") / "primec_glsl_runtime_error_call.err").string();
-  CHECK(runCommand("./primec --emit=glsl --default-effects=none " + quoteShellArg(srcPath) + " -o " +
-                   quoteShellArg(outPath) + " --entry /main 2> " + quoteShellArg(errPath)) != 0);
+  CHECK(runCommand("./primec --emit=glsl --default-effects=none " + quoteShellArg(srcPath) +
+                   " -o " + quoteShellArg(outPath) + " --entry /main 2> " +
+                   quoteShellArg(errPath)) != 0);
   CHECK(readFile(errPath).find("cannot end the program on this target") != std::string::npos);
 }
 

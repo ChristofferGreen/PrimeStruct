@@ -168,7 +168,7 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(LoadU8, Memory, None, None, 0, 0, 0)                                                           \
   X(StoreU8, Memory, None, None, 0, 0, 0)                                                          \
   X(ZextU8, ZeroExtend, None, None, 0, 0, 0)                                                       \
-  X(Trap, Trap, None, None, 0, 1, 1)                                                             \
+  X(Trap, Trap, None, None, 0, 1, 1)                                                               \
   X(TaskSpawn, Sync, None, None, 0, 0, 0)                                                          \
   X(TaskWait, Sync, None, None, 0, 0, 0)                                                           \
   X(AtomicLoad, Sync, None, None, 0, 0, 0)                                                         \

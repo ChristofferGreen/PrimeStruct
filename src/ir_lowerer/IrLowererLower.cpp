@@ -124,7 +124,8 @@ bool IrLowerer::lower(const Program &program,
   const SemanticProductIndexCacheScope semanticIndexCacheScope;
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
-  const ir_lowerer::RuntimeErrorMessagesScope messagesScope(validationTarget != IrValidationTarget::WasmBrowser);
+  const ir_lowerer::RuntimeErrorMessagesScope messagesScope(validationTarget !=
+                                                            IrValidationTarget::WasmBrowser);
   bool loweringSucceeded = false;
   ir_lowerer::LoweringErrorLocator errorLocator(expandedSource);
   struct LoweringDiagnosticScope {
@@ -507,7 +508,8 @@ bool IrLowerer::lower(const Program &program,
                                       ownError);
                                 },
                             .runtimeErrorsTrap = setupStage.runtimeErrorsTrap,
-                            .refuseRuntimeErrorsInCalls = validationTarget == IrValidationTarget::Glsl,
+                            .refuseRuntimeErrorsInCalls =
+                                validationTarget == IrValidationTarget::Glsl,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =
