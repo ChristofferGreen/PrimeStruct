@@ -528,9 +528,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: matrix `extraConfigs` and filing leaves; no emitter change.
   - repro: `PRIMESTRUCT_MATRIX_CONFIGS=all ./PrimeStruct_program_matrix_tests` from the release build directory.
 
-- [ ] TODO-6134: Wasm `INT_MIN / -1` traps where the VM wraps
+- [~] TODO-6134: Wasm `INT_MIN / -1` traps where the VM wraps
   - owner: ai
   - status: ready
+  - claimed_by: wasm-worker (worktree-agent-a0d7bf62b14f5045f), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6125)
   - parallel_track: wasm-div-fault
