@@ -220,4 +220,44 @@ main() {
       "block_place_move_parameter", source, "2 2 1h 0h 3 3 1h 0h 2 0h 1 0h 100 1 200 100 2 300 1");
 }
 
+// A struct field `[uninitialized<vector<T>>]` is the five-slot record: `init` stores it, `take` moves it out,
+// `drop` frees it. Neither leaves an operand on the stack, so a block of the program joins cleanly.
+TEST_CASE("a struct field of an uninitialized vector stores the whole record") {
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Holder() {
+  [uninitialized<vector<i64>>] items{uninitialized<vector<i64>>()}
+  Create() {
+  }
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] start{heapLiveBlocks()}
+  if(true) {
+    [Holder mut] h{Holder{}}
+    init(h.items, vector<i64>(1i64, 2i64, 3i64))
+    print_line(heapLiveBlocks() - start)
+    [vector<i64> mut] out{take(h.items)}
+    out.push(4i64)
+    print_line(out.count())
+    print_line(out[2i32] * 10i64 + out[3i32])
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [Holder mut] h{Holder{}}
+    init(h.items, vector<i64>(5i64, 6i64))
+    print_line(heapLiveBlocks() - start)
+    drop(h.items)
+  }
+  print_line(heapLiveBlocks() - start)
+  return(0i32)
+}
+)";
+  runSlotProgram("uninitialized_vector_field", source, "1h 4 34 0h 1h 0h");
+}
+
 TEST_SUITE_END();

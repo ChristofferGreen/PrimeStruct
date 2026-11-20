@@ -147,7 +147,6 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6101 | A struct field `[uninitialized<vector<T>>]` stores the whole vector record | in_progress | lifecycle-field-slot |
 | TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | in_progress | lifecycle-struct-slot |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 
@@ -186,7 +185,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now):  (slot stride of a builtin vector) (`block() { seed }` into a `move` parameter), TODO-6101 (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
+- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now):  (slot stride of a builtin vector) (`block() { seed }` into a `move` parameter) (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -674,19 +673,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
-
-- [~] TODO-6101: A struct field `[uninitialized<vector<T>>]` stores the whole vector record
-  - owner: ai
-  - status: in_progress
-  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
-  - parallel_track: lifecycle-field-slot
-  - scope: Found with TODO-6098. A `[struct]` with `[uninitialized<vector<i64>>] items`, then `init(h.items, vector<i64>(1i64, 2i64, 3i64))` and `take(h.items)` fails IR validation on every backend: `invalid IR instruction ...: paths reach this block with different operand stack depths`. Whether this predates TODO-6098 is unknown (not tested at the parent commit).
-  - acceptance:
-    - positive: `init` into the field, `borrow` and `take` give back the elements; the live block count returns to its start (VM, optexe); values on native
-    - matrix case on every config; full release gate green
-  - stop_rule: a field of type `uninitialized<vector<T>>` of scalars; vectors of structs are TODO-6102.
 
 - [~] TODO-6102: A slot of a vector of structs copies its elements on `init` and destroys them on `drop`
   - owner: ai

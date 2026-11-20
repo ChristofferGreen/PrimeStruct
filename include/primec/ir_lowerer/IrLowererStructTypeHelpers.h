@@ -62,6 +62,9 @@ struct StructSlotFieldInfo {
   // struct path of `T`. A copy from a place gives the field its own element buffer.
   bool builtinVectorElementKnown = false;
   std::string builtinVectorElementStructPath{};
+  // An `uninitialized<T>` field: raw storage the struct never copies or destroys by itself (the program
+  // `init`s, `take`s and `drop`s it), so the struct'"'"'s copy and destroy skip it.
+  bool isUninitializedStorage = false;
 };
 
 struct StructLayoutFieldInfo {

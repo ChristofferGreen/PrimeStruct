@@ -21,11 +21,15 @@
                 }
               }
               function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              // `ptrLocal` ends up holding the field's address, and nothing stays on the operand stack.
               const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
               if (offsetBytes != 0) {
+                function.instructions.push_back(
+                    {IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
                 function.instructions.push_back({IrOpcode::PushI64, offsetBytes});
                 function.instructions.push_back({IrOpcode::AddI64, 0});
+                function.instructions.push_back(
+                    {IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
               }
               return true;
             };
@@ -102,6 +106,18 @@
                 function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
                 if (!emitStructCopyFromPtrs(destPtrLocal, ptrLocal, field.slotCount)) {
                   return false;
+                }
+                // The record moved out: its owner flag in the field is cleared, so the struct that holds the
+                // field never frees the buffer the taken vector owns now.
+                if (field.slotCount == 5 &&
+                    field.structPath == vectorBuiltinStructNormalizedPath()) {
+                  function.instructions.push_back(
+                      {IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+                  function.instructions.push_back({IrOpcode::PushI64, 4 * IrSlotBytes});
+                  function.instructions.push_back({IrOpcode::AddI64, 0});
+                  function.instructions.push_back({IrOpcode::PushI32, 0});
+                  function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+                  function.instructions.push_back({IrOpcode::Pop, 0});
                 }
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
                 return true;

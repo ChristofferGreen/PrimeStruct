@@ -359,7 +359,8 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       continue;
     }
     StructLayoutFieldInfo binding = field;
-    if (binding.typeName == "uninitialized") {
+    const bool isUninitializedField = binding.typeName == "uninitialized";
+    if (isUninitializedField) {
       if (binding.typeTemplateArg.empty()) {
         error = "uninitialized requires a template argument on " + structPath;
         layoutStack.erase(structPath);
@@ -378,6 +379,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
     StructSlotFieldInfo info;
     info.name = binding.name;
     info.slotOffset = offset;
+    info.isUninitializedStorage = isUninitializedField;
     if (!binding.typeTemplateArg.empty()) {
       if (isBuiltinVectorTypeName(binding.typeName)) {
         // A vector of structs keeps Unknown here; element access resolves the element layout from the field type.

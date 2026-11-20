@@ -121,7 +121,10 @@
           vectorInfo.isSoaVector) {
         return false;
       }
-      return ir_lowerer::isTaskVectorWait(initExpr, localsIn) ||
+      // `take(storage)` moves the vector out of uninitialized storage: the binding owns it now.
+      const bool takesFromStorage = initExpr.kind == Expr::Kind::Call && !initExpr.isMethodCall &&
+                                    isSimpleCallName(initExpr, "take") && initExpr.args.size() == 1;
+      return takesFromStorage || ir_lowerer::isTaskVectorWait(initExpr, localsIn) ||
              ir_lowerer::isFreshBuiltinVectorExpr(
                  initExpr,
                  ir_lowerer::makeCallOrMethodResolver(

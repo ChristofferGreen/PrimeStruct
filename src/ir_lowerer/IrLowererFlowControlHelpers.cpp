@@ -146,8 +146,14 @@ bool emitMoveHelperFromPtrs(
 namespace {
 
 bool isCopyableBuiltinVectorField(const StructSlotFieldInfo &field) {
-  return field.builtinVectorElementKnown && field.slotCount == 5 &&
+  return !field.isUninitializedStorage && field.builtinVectorElementKnown && field.slotCount == 5 &&
          field.structPath == vectorBuiltinStructNormalizedPath();
+}
+
+// The struct path a copy or destroy of `field` goes through: none for raw `uninitialized<T>` storage.
+const std::string &lifecyclePath(const StructSlotFieldInfo &field) {
+  static const std::string none;
+  return field.isUninitializedStorage ? none : field.structPath;
 }
 
 // `withBuiltinVectors` also counts builtin `vector<T>` fields, which a copy gives their own
@@ -175,7 +181,7 @@ bool structNeedsCopyHelpers(
     if (withBuiltinVectors && isCopyableBuiltinVectorField(field)) {
       return true;
     }
-    if (structNeedsCopyHelpers(field.structPath,
+    if (structNeedsCopyHelpers(lifecyclePath(field),
                                findCopyHelper,
                                resolveStructSlotLayout,
                                depth + 1,
@@ -440,7 +446,7 @@ bool emitStructCopyHelpersAtDepth(
     const bool builtinVector = isCopyableBuiltinVectorField(field);
     if (!builtinVector &&
         !structNeedsCopyHelpers(
-            field.structPath, findCopyHelper, resolveStructSlotLayout, depth + 1, true)) {
+            lifecyclePath(field), findCopyHelper, resolveStructSlotLayout, depth + 1, true)) {
       continue;
     }
     const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
@@ -685,7 +691,7 @@ bool emitStructDestroyHelpersAtDepth(
     const bool builtinVector = isCopyableBuiltinVectorField(*fieldIt);
     if (!builtinVector &&
         !structNeedsCopyHelpers(
-            fieldIt->structPath, findDestroyHelper, resolveStructSlotLayout, depth + 1, true)) {
+            lifecyclePath(*fieldIt), findDestroyHelper, resolveStructSlotLayout, depth + 1, true)) {
       continue;
     }
     const int32_t fieldPtrLocal = allocTempLocal();

@@ -140,11 +140,13 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       }
     }
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
-    instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+    // `ptrLocal` ends up holding the field's address, and nothing stays on the operand stack.
     const uint64_t offsetBytes = static_cast<uint64_t>(field.slotOffset) * IrSlotBytes;
     if (offsetBytes != 0) {
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
       instructions.push_back({IrOpcode::PushI64, offsetBytes});
       instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
     }
     return true;
   };

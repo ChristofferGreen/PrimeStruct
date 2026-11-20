@@ -573,6 +573,13 @@ bool resolveUninitializedFieldStorageAccessWithDefinitions(
   out.receiver = typeInfo.receiver;
   out.fieldSlot = slot;
   out.typeInfo = typeInfo.typeInfo;
+  if (slot.builtinVectorElementKnown && slot.slotCount == 5 &&
+      slot.structPath == vectorBuiltinStructNormalizedPath()) {
+    // A field of a builtin `vector<T>` is the whole record, whose elements `drop` destroys.
+    out.typeInfo.structPath = nestedBuiltinVectorElementPath(
+        slot.builtinVectorElementStructPath.empty() ? "scalar"
+                                                    : slot.builtinVectorElementStructPath);
+  }
   resolvedOut = true;
   return true;
 }

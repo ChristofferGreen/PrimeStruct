@@ -266,8 +266,10 @@
     leaves no live block when the mutex and its copies are gone. Pointer arithmetic on such a pointer (`at`,
     `at_unsafe`, `realloc`, `plus`) steps the five slots of one record, so the stdlib `Vector<vector<i64>>` (a
     `Reference<vector<vector<i64>>>` helper pushing fresh vectors) keeps each element at its own record. Slots of
-    vectors of structs or vectors, `map`, and a struct field of type `uninitialized<vector<T>>` (one slot) are not
-    covered by this rule.
+    vectors of structs or vectors and `map` are not covered by this rule.
+  - A struct field of type `uninitialized<vector<T>>` is the same five-slot record: `init(h.items, v)` stores it,
+    `borrow(h.items)` reads it and `drop(h.items)` frees it. `[vector<T> mut] out{take(h.items)}` is an owning vector
+    (the field's owner flag is cleared, so the struct never frees the buffer `out` owns); `out` may grow it.
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.
@@ -282,7 +284,7 @@
     intentionally dereference that borrowed carrier back to whole-element `T`. The storage must be initialized.
   - Any other use of an `uninitialized<T>` value is a type error.
 - **Lifetime rules:** using a storage value after `drop`/`take` is a compile-time error until it is reinitialized.
-- **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
+- **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized; the struct's implicit copy and destroy skip such a field.
 
 ## Constructor-Shaped Compatibility Inventory
 - **Default rule:** value construction uses braces (`Type{...}` or a context-typed `{...}`). A call-shaped form that
