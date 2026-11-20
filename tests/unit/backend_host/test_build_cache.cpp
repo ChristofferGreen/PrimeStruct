@@ -2,6 +2,8 @@
 // Every case builds a small project of two IR compile steps in a scratch directory: `alpha` imports a helper file and
 // `beta` reads nothing else. A run prints `built <id>` or `up to date <id>` per step, so the cases compare those lines.
 // No case depends on timestamps or sleeps: the cache compares content hashes only.
+#include "primec/pipeline/BuildGraphJson.h"
+#include "primec/pipeline/BuildRunner.h"
 #include "primec/support/Sha256.h"
 #include "primec/testing/TestScratch.h"
 
@@ -13,6 +15,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <string>
 
 TEST_SUITE_BEGIN("primestruct.backend.build_cache");
@@ -225,6 +228,48 @@ TEST_CASE("the cache file names its hash scheme and holds content hashes") {
       CHECK(readFile(entry.path().string()).find("helper.prime") == std::string::npos);
     }
   }
+}
+
+// The compiler stands for its version through `executableBuildId`. A script is no object file, so its id is the hash of
+// its text: a wrapper that runs the real `primec` is a compiler whose id the case changes by editing a comment.
+TEST_CASE("a step is rebuilt when the compiler id changes and is up to date when it does not") {
+  const std::filesystem::path dir = primec::testing::testScratchDir("build_cache_compiler_id");
+  writeFile(dir / "beta.prime", "[return<i32>]\nmain() {\n  return(2i32)\n}\n");
+  const std::filesystem::path wrapper = dir / "compiler.sh";
+  auto writeWrapper = [&](const std::string &note) {
+    writeFile(wrapper, "#!/bin/sh\n# " + note + "\nexec '" + Primec + "' \"$@\"\n");
+    std::filesystem::permissions(wrapper, std::filesystem::perms::owner_all);
+  };
+  primec::BuildStep step;
+  step.id = "compile:beta";
+  step.kind = "compile";
+  step.name = "beta";
+  step.source = "beta.prime";
+  step.output = "beta";
+  step.emitKind = "ir";
+  primec::BuildGraphData graph;
+  graph.steps.push_back(step);
+  auto build = [&]() {
+    primec::BuildRunSettings settings;
+    settings.primecPath = wrapper.string();
+    settings.projectDir = dir.string();
+    settings.outDir = (dir / "out").string();
+    settings.cacheDir = (dir / ".ps" / "cache").string();
+    settings.jobs = 1;
+    std::ostringstream out;
+    std::ostringstream err;
+    const int code = primec::runBuildGraph(graph, settings, out, err);
+    return code == 0 ? out.str() : out.str() + err.str();
+  };
+  writeWrapper("one");
+  CHECK(build() == "built compile:beta\n");
+  CHECK(build() == "up to date compile:beta\n");
+  writeWrapper("two");
+  CHECK(build() == "built compile:beta\n");
+  CHECK(build() == "up to date compile:beta\n");
+  // The same text again is the same compiler, so the entry of that id still holds.
+  writeWrapper("two");
+  CHECK(build() == "up to date compile:beta\n");
 }
 
 TEST_CASE("sha256 matches the published test vectors") {

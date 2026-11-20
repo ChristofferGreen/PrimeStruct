@@ -1875,7 +1875,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   foreach(cache_case
           "second run of an unchanged" "touching an unrelated file" "changing an imported file" "changing a compiler setting"
           "deleting or replacing an output" "gives byte-identical outputs" "outputs left in place" "failed step leaves no cache"
-          "damaged cache file" "names its hash scheme" "sha256 matches")
+          "damaged cache file" "names its hash scheme" "compiler id changes" "sha256 matches")
     string(MAKE_C_IDENTIFIER "${cache_case}" cache_id)
     primestructWatchedCommand(testCommand 600 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
               "--test-suite=primestruct.backend.build_cache"

@@ -408,16 +408,16 @@ int runBuildGraph(const BuildGraphData &given,
   };
   std::vector<Result> results(graph.steps.size());
 
-  // The compiler executable stands for the compiler version; without a readable one nothing is cached.
-  std::string compilerHash;
-  const bool caching =
-      !settings.cacheDir.empty() && sha256FileHex(settings.primecPath, compilerHash);
-  // The id a library archive records for the compiler that wrote it (the linker's UUID), which is not the
-  // hash that keys the cache above.
+  // The compiler executable stands for the compiler version: its build id (the linker's UUID, the hash of the
+  // whole file as the fallback) keys the cache and is the id a library archive records for the compiler that wrote
+  // it. Without a readable executable nothing is cached.
   std::string compilerBuildId;
   std::string compilerBuildIdError;
-  if (caching &&
-      !computeCompilerBuildId(settings.primecPath, compilerBuildId, compilerBuildIdError)) {
+  const bool caching =
+      !settings.cacheDir.empty() &&
+      computeCompilerBuildId(settings.primecPath, compilerBuildId, compilerBuildIdError);
+  const std::string &compilerHash = compilerBuildId;
+  if (!caching) {
     compilerBuildId.clear();
   }
 

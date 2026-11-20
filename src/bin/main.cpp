@@ -16,7 +16,6 @@
 #include "primec/pipeline/CliUsage.h"
 #include "primec/support/Options.h"
 #include "primec/support/OptionsParser.h"
-#include "primec/support/Sha256.h"
 
 #include <chrono>
 #include <cstdint>
@@ -583,7 +582,8 @@ int main(int argc, char **argv) {
   if (isBuildCommand && irBackend != nullptr && options.dumpStage.empty() &&
       !options.benchmarkSemanticRepeatCompileCount.has_value()) {
     std::string compilerHash;
-    if (!primec::sha256FileHex(selfPath, compilerHash)) {
+    std::string compilerHashError;
+    if (!primec::computeCompilerBuildId(selfPath, compilerHash, compilerHashError)) {
       compilerHash.clear();
     }
     scriptCache.emplace(primec::BuildScriptCache::cacheDirFor(buildPlan.projectDir),
