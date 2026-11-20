@@ -226,9 +226,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
+- [~] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: sonnet-agent (worktree-agent-ae9a0a4dfd170d0db), 2026-11-20
   - created_at: 2026-11-08
   - phase: Backend parity (found while fixing TODO-5743)
   - parallel_track: runtime-faults
