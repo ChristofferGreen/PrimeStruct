@@ -70,6 +70,13 @@ power_of_two([i32] exponent) {
 `power_of_two(0i32 - 1i32)` called from `main` exits 3 under WASI (`node` with a `proc_exit` import that unwinds) and
 traps in the browser profile.
 
+Integer division by zero (`i32`, `i64`, `u64`) is a runtime error too. On the WASI profile each division is a call of
+a helper function the module carries (one per operation used) that checks the divisor first: a zero divisor writes
+`VM error: division by zero in IR` to stderr (`fd_write` to 2) and calls `proc_exit(3)`, so a program that printed
+`before` and then divides by zero ends with exit code 3 as on the VM. The helper is not emitted for the browser
+profile, whose division stays the wasm instruction and traps (`RuntimeError: divide by zero`) like every other
+runtime error there. Signed overflow (`INT_MIN / -1`) is not changed by the helper (TODO-6134).
+
 ### Dependency List
 `primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds
 the source files the compile read, one absolute, normalized path per line, sorted bytewise, without duplicates: the

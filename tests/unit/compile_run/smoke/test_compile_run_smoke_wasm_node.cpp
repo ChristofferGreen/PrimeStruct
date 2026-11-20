@@ -517,6 +517,20 @@ main() {
                                "trapped\n");
 }
 
+// The browser profile keeps the raw wasm division: a zero divisor is a trap and the module imports nothing.
+TEST_CASE("wasm browser profile traps on integer division by zero") {
+  checkWasmBrowserRuntimeError("division_by_zero_trap",
+                               R"(
+[return<int>]
+main() {
+  [i32 mut] zero{0i32}
+  [i32] value{10i32}
+  return(value / zero)
+}
+)",
+                               "trapped\n");
+}
+
 // GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
 // of letting the program carry on past the failed call.
 TEST_CASE("glsl refuses a runtime error inside a real call") {

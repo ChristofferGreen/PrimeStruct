@@ -68,6 +68,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::Trap) {
         runtime.hasTrap = true;
       }
+      if (wasi && (inst.op == IrOpcode::DivI32 || inst.op == IrOpcode::DivI64 ||
+                   inst.op == IrOpcode::DivU64)) {
+        // The division helper writes the fault message (memory and `fd_write`) and ends the program (`proc_exit`).
+        runtime.hasDivisionFault = true;
+        runtime.hasTrap = true;
+        runtime.enabled = true;
+      }
       if (!opcodeNeedsWasiRuntime(inst.op)) {
         continue;
       }
@@ -150,8 +157,17 @@ bool buildWasiRuntimeContext(const IrModule &module,
     appendDataSegmentAt(stringBase, stringBlob, runtime.dataSegments);
   }
   appendDataSegmentAt(runtime.newlineAddr, std::vector<uint8_t>{'\n'}, runtime.dataSegments);
+  if (runtime.hasDivisionFault) {
+    static const std::string DivisionMessage = "VM error: division by zero in IR\n";
+    runtime.divisionMessageAddr = stringBase + static_cast<uint32_t>(stringBlob.size());
+    runtime.divisionMessageLength = static_cast<uint32_t>(DivisionMessage.size());
+    appendDataSegmentAt(runtime.divisionMessageAddr,
+                        std::vector<uint8_t>(DivisionMessage.begin(), DivisionMessage.end()),
+                        runtime.dataSegments);
+    stringBlob.insert(stringBlob.end(), DivisionMessage.begin(), DivisionMessage.end());
+  }
 
-  if (runtime.hasOutputOps || runtime.hasFileWriteOps) {
+  if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault) {
     WasmFunctionType fdWriteType;
     fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
     fdWriteType.results = {WasmValueTypeI32};

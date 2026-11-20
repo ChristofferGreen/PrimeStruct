@@ -61,6 +61,8 @@ struct ProgramCase {
   std::optional<std::string> nativeStderr;
   // The C++ emitters (`optexe`, `exe`) write the VM's fault messages; checked on those two configs only.
   std::optional<std::string> cppStderr;
+  // The Wasm config (`wasm-wasi`): the WASI profile writes the VM's fault message to fd 2 before `proc_exit(3)`.
+  std::optional<std::string> wasmStderr;
   std::vector<std::string> flags; // extra primec/primevm flags, e.g. --default-effects=io_out
   std::vector<std::string> skipConfigs;
   std::vector<std::string> onlyConfigs; // restrict to these when non-empty
@@ -436,10 +438,12 @@ inline void runProgramMatrix(const ProgramCase &program,
     }
     const bool cppFamily = config.backend == Backend::OptExe || config.backend == Backend::Exe;
     const std::optional<std::string> &stderrText =
-        isVmFamily(config.backend) ? program.vmStderr
-                                   : (cppFamily ? program.cppStderr : program.nativeStderr);
-    // The Wasm config checks stdout and the exit code only: it runs under node, which adds its own stderr text.
-    if (stderrText.has_value() && config.backend != Backend::Wasm) {
+        config.backend == Backend::Wasm
+            ? program.wasmStderr
+            : (isVmFamily(config.backend) ? program.vmStderr
+                                          : (cppFamily ? program.cppStderr : program.nativeStderr));
+    // The Wasm config checks stderr only when the case sets `wasmStderr` (node adds its own text to other runs).
+    if (stderrText.has_value()) {
       CHECK(outcome.err == *stderrText);
     }
   }

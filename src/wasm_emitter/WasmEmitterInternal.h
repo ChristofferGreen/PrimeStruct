@@ -108,6 +108,10 @@ struct WasmLocalLayout {
   uint32_t totalLocals = 0;
 };
 
+// The integer divisions that fault on a zero divisor (`DivI32`, `DivI64`, `DivU64`).
+enum class WasmDivisionOp : uint8_t { I32 = 0, I64 = 1, U64 = 2 };
+inline constexpr size_t WasmDivisionOpCount = 3;
+
 struct WasmRuntimeContext {
   bool enabled = false;
   bool hasArgvOps = false;
@@ -127,6 +131,14 @@ struct WasmRuntimeContext {
   bool hasFma64 = false;
   uint32_t fma32Function = 0;
   uint32_t fma64Function = 0;
+  // WASI profile only: an integer division goes through a helper function of the module that checks the divisor, so a
+  // zero divisor is the VM's runtime fault (`VM error: division by zero in IR` on stderr, `proc_exit(3)`) and not a
+  // wasm trap. `hasDivisionFault` is set when the module divides; the helpers exist per used operation.
+  bool hasDivisionFault = false;
+  bool hasDivisionHelper[WasmDivisionOpCount] = {false, false, false};
+  uint32_t divisionHelperFunction[WasmDivisionOpCount] = {0, 0, 0};
+  uint32_t divisionMessageAddr = 0;
+  uint32_t divisionMessageLength = 0;
   uint32_t fdWriteImportIndex = 0;
   uint32_t fdReadImportIndex = 0;
   uint32_t argsSizesGetImportIndex = 0;
@@ -357,6 +369,10 @@ bool emitInstructionRange(const IrFunction &function,
 
 // The code of the helper function behind `FmaF32` (`isF64` false; type (f32, f32, f32) -> f32) or `FmaF64`.
 WasmCodeBody buildWasmFmaHelperBody(bool isF64);
+
+// The code of the helper function behind an integer division on the WASI profile (type (T, T) -> T): a zero divisor
+// writes the VM's message to stderr and calls `proc_exit(3)`.
+WasmCodeBody buildWasmDivisionHelperBody(WasmDivisionOp op, const WasmRuntimeContext &runtime);
 
 // `irLocalTypes` are the inferred types of the function's IR locals (inferWasmLocalTypes).
 bool lowerFunctionCode(const IrFunction &function,

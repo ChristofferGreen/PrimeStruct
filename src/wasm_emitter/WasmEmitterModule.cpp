@@ -126,6 +126,11 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     for (const IrInstruction &inst : function.instructions) {
       runtime.hasFma32 = runtime.hasFma32 || inst.op == IrOpcode::FmaF32;
       runtime.hasFma64 = runtime.hasFma64 || inst.op == IrOpcode::FmaF64;
+      if (runtime.hasDivisionFault) {
+        runtime.hasDivisionHelper[0] = runtime.hasDivisionHelper[0] || inst.op == IrOpcode::DivI32;
+        runtime.hasDivisionHelper[1] = runtime.hasDivisionHelper[1] || inst.op == IrOpcode::DivI64;
+        runtime.hasDivisionHelper[2] = runtime.hasDivisionHelper[2] || inst.op == IrOpcode::DivU64;
+      }
     }
   }
   uint32_t nextHelperFunction =
@@ -135,6 +140,11 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
   }
   if (runtime.hasFma64) {
     runtime.fma64Function = nextHelperFunction++;
+  }
+  for (size_t op = 0; op < WasmDivisionOpCount; ++op) {
+    if (runtime.hasDivisionHelper[op]) {
+      runtime.divisionHelperFunction[op] = nextHelperFunction++;
+    }
   }
 
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
@@ -178,6 +188,19 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
     types.push_back(std::move(helperType));
     codeBodies.push_back(buildWasmFmaHelperBody(isF64));
+  }
+
+  for (size_t op = 0; op < WasmDivisionOpCount; ++op) {
+    if (!runtime.hasDivisionHelper[op]) {
+      continue;
+    }
+    const uint8_t type = op == 0 ? WasmTypeI32 : WasmTypeI64;
+    WasmFunctionType helperType;
+    helperType.params = {type, type};
+    helperType.results = {type};
+    functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+    types.push_back(std::move(helperType));
+    codeBodies.push_back(buildWasmDivisionHelperBody(static_cast<WasmDivisionOp>(op), runtime));
   }
 
   std::vector<WasmExport> exports;

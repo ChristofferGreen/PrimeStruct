@@ -156,6 +156,11 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       out.push_back(WasmOpI32Mul);
       return true;
     case IrOpcode::DivI32:
+      if (runtime.hasDivisionHelper[0]) {
+        out.push_back(WasmOpCall);
+        appendU32Leb(runtime.divisionHelperFunction[0], out);
+        return true;
+      }
       out.push_back(WasmOpI32DivS);
       return true;
     case IrOpcode::NegI32:
@@ -176,9 +181,19 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       out.push_back(WasmOpI64Mul);
       return true;
     case IrOpcode::DivI64:
+      if (runtime.hasDivisionHelper[1]) {
+        out.push_back(WasmOpCall);
+        appendU32Leb(runtime.divisionHelperFunction[1], out);
+        return true;
+      }
       out.push_back(WasmOpI64DivS);
       return true;
     case IrOpcode::DivU64:
+      if (runtime.hasDivisionHelper[2]) {
+        out.push_back(WasmOpCall);
+        appendU32Leb(runtime.divisionHelperFunction[2], out);
+        return true;
+      }
       out.push_back(WasmOpI64DivU);
       return true;
     case IrOpcode::NegI64:

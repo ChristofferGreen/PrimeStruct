@@ -576,7 +576,8 @@
   (which hands the code back to `primevm` as the program's result) and Wasm (see Runtime errors on Wasm and GLSL in
   [integration-and-tooling.md](integration-and-tooling.md)). GLSL never receives it. **Runtime faults on every backend:**
   integer division by zero (`i32`, `i64`, `u64`) is the runtime fault `division by zero in IR`: the VM, the C++
-  emitters (`cpp`/`exe` and `optcpp`/`optexe`) and the Linux x86_64 JIT write `VM error: division by zero in IR` to
+  emitters (`cpp`/`exe` and `optcpp`/`optexe`), the Linux x86_64 JIT and Wasm under the WASI profile (a checking helper
+  function before the wasm division; the browser profile keeps the trap) write `VM error: division by zero in IR` to
   stderr and exit with code 3, keeping the output printed before it. The simple C++ emitter exits 3 for all its
   runtime faults (stack underflow, invalid or unaligned address, invalid string index, string index out of bounds,
   heap misuse, host function misuse), after flushing the buffered output, with the VM's message. `INT64_MIN / -1` and

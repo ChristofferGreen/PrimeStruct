@@ -29,6 +29,8 @@ main() {
   program.vmStderr = DivisionMessage;
   program.nativeStderr = DivisionMessage;
   program.cppStderr = DivisionMessage;
+  program.wasmStderr = DivisionMessage;
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
