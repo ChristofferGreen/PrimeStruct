@@ -131,7 +131,7 @@ of sync with them.
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | ready | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
-| TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | deferred | diagnostics-on-error-handler |
+| TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | ready | diagnostics-on-error-handler |
 | TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | deferred | diagnostics-internal-errors |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
@@ -149,6 +149,7 @@ of sync with them.
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 | TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | ready | lifecycle-reference-element |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
+| TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
 
 ### Ready Now
 
@@ -484,14 +485,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6083: The arity and shape of an `on_error` handler are checked in semantics
   - owner: ai
-  - status: deferred
-  - deferred_reason: owner picks the span
+  - status: ready
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5520)
   - parallel_track: diagnostics-on-error-handler
-  - scope: `on_error<Oops, /onErr>` with `onErr([Oops] err, [i32] extra)` passes semantics and fails in lowering (`argument count mismatch for /onErr`). The check belongs in semantics with a message that names the handler and the expected shape. Options for the span: the `on_error` transform, or the handler definition, or the first `try` that uses it (with the other two as related spans). Not chosen: it is a language-level judgment.
+  - scope: `on_error<Oops, /onErr>` with `onErr([Oops] err, [i32] extra)` passes semantics and fails in lowering (`argument count mismatch for /onErr`). The check belongs in semantics with a message that names the handler and the expected shape. Span decided by the owner on 2026-11-20: option (a), the `on_error` transform that names the handler (primary span), with the handler definition as a related span. Rejected: the first `try` that uses the handler.
   - acceptance:
-    - an owner picks the span; then a semantics test for a wrong arity and a wrong first parameter type, with file, line and column
+    - a semantics test for a wrong arity and a wrong first parameter type, with file, line and column
   - stop_rule: semantic diagnostics of `on_error` handlers only.
 
 - [ ] TODO-6084: Internal lowering errors (`missing semantic-product ...`) say so
@@ -687,6 +687,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - positive: reading `v[i]`, `v[i].count()` and `v[i][j]` through a `Reference<vector<vector<i64>>>` parameter leaves the owner's buffers alone (heap statistics unchanged, values right) on the VM and optexe; values on native
     - matrix case on every config; full release gate green
   - stop_rule: element reads of builtin vectors of vectors through a `Reference`; no change to the stdlib `Vector<T>`.
+
+- [ ] TODO-6105: `*field = value` writes through a `mut` `Reference` field
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
+  - parallel_track: reference-field-write
+  - scope: Decided by the owner on 2026-11-20: it should work. A `Reference<T>` field is construction-only (TODO-5853), so `this.kept = v` is a diagnostic. Writing the referent today needs `[Reference<i64> mut] target{location(this.kept)}` and `target = value`. Make `*kept = value` (and `*this.kept = value`) in a struct member write through the reference to the referent on every backend, as assigning to a reference member does in C++; it never rebinds the field.
+  - acceptance:
+    - positive: a `[Reference<i64> mut]` field written with `*kept = value` changes the referent (values on the VM, native and optexe); a read through the same spelling still works
+    - negative: `*kept = value` on a field that is not `mut` is a diagnostic with file, line and column
+    - docs/spec updated; matrix case on every config; full release gate green
+  - stop_rule: write-through of `Reference` fields only; no change to `Pointer` assignment.
 
 - [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
   - owner: ai
