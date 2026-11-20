@@ -293,9 +293,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5854: A `Mutex` or `Atomic` handle does not keep the value it was made from
+- [~] TODO-5854: A `Mutex` or `Atomic` handle does not keep the value it was made from
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: mt-a (worktree-agent-a62e8ffb18ecbfa15), 2026-11-20
   - created_at: 2026-11-10
   - phase: Multithreading (docs/MultithreadingPrototype.md, Mutex)
   - parallel_track: mt-primitives
