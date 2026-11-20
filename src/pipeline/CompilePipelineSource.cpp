@@ -228,8 +228,9 @@ void emitProgramHeapEstimate(const Program &program,
   primec::support::emitBenchmarkLine(line.str());
 }
 
-std::vector<std::string> collectImportPaths(const std::string &source, bool stdOnly) {
-  std::vector<std::string> imports;
+std::vector<ImportPathOccurrence> collectImportPathOccurrences(const std::string &source,
+                                                               bool stdOnly) {
+  std::vector<ImportPathOccurrence> imports;
   Lexer lexer(source);
   const std::vector<Token> tokens = lexer.tokenize();
   auto skipIgnorableTokens = [&](size_t cursor) {
@@ -258,12 +259,36 @@ std::vector<std::string> collectImportPaths(const std::string &source, bool stdO
         ++cursor;
       }
       if (!stdOnly || path.rfind("/std/", 0) == 0 || path == "/std") {
-        imports.push_back(std::move(path));
+        imports.push_back({std::move(path), tokens[scan].line, tokens[scan].column});
       }
       cursor = skipIgnorableTokens(cursor);
     }
   }
   return imports;
+}
+
+std::vector<std::string> collectImportPaths(const std::string &source, bool stdOnly) {
+  std::vector<std::string> paths;
+  for (ImportPathOccurrence &occurrence : collectImportPathOccurrences(source, stdOnly)) {
+    paths.push_back(std::move(occurrence.path));
+  }
+  return paths;
+}
+
+std::optional<DiagnosticSpan> findImportPathSpan(const ExpandedSource &source,
+                                                 const std::string &importPath) {
+  for (const ImportPathOccurrence &occurrence : collectImportPathOccurrences(source.text, false)) {
+    if (occurrence.path != importPath) {
+      continue;
+    }
+    DiagnosticSpan span;
+    span.line = occurrence.line;
+    span.column = occurrence.column;
+    span.endLine = occurrence.line;
+    span.endColumn = occurrence.column + 6;
+    return SourceLocationMapper(source).mapDiagnosticSpanToSourceUnit(span);
+  }
+  return std::nullopt;
 }
 
 std::vector<std::string> collectStdImportPaths(const std::string &source) {

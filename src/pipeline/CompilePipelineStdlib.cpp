@@ -82,7 +82,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                std::string &source,
                                std::string &error,
                                ExpandedSource *expandedSource,
-                               const std::unordered_set<std::string> &excludedKeys) {
+                               const std::unordered_set<std::string> &excludedKeys,
+                               std::string *unresolvedImport) {
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
@@ -386,6 +387,16 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   }
   if (!appended) {
     error = "stdlib import requested but matching stdlib modules were not found";
+    // Name the first import that asked for a module, so the caller can point at it.
+    for (const auto &importPath : sourceImports) {
+      if (!collectStdlibAutoIncludeKeys(importPath).empty()) {
+        error += ": import " + importPath;
+        if (unresolvedImport != nullptr) {
+          *unresolvedImport = importPath;
+        }
+        break;
+      }
+    }
     return false;
   }
   if (expandedSource != nullptr) {

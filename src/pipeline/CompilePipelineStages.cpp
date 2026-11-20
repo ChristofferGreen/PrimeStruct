@@ -254,13 +254,23 @@ bool runCompilePipelineImportStage(const Options &options,
   }
 
   if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
+    std::string unresolvedImport;
     if (!appendStdlibModuleSources(options.importPaths,
                                    out.sourceStdImports,
                                    out.implicitStdlibKeys,
                                    out.source,
                                    error,
                                    &out.expandedSource,
-                                   lazyKeys)) {
+                                   lazyKeys,
+                                   &unresolvedImport)) {
+      if (const auto span = findImportPathSpan(out.expandedSource, unresolvedImport);
+          span.has_value()) {
+        DiagnosticSinkRecord record;
+        record.message = error;
+        record.primarySpan = *span;
+        record.hasPrimarySpan = true;
+        diagnosticSink.setRecords({std::move(record)});
+      }
       diagnosticSink.setSummary(error);
       return false;
     }

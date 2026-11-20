@@ -108,7 +108,21 @@ bool isIgnorableImportToken(TokenKind kind);
 void emitProgramHeapEstimate(const Program &program,
                              std::string_view stage);
 
+struct ImportPathOccurrence {
+  std::string path;
+  // The position of the `import` keyword of the statement (the lexer places slash-path tokens past their text).
+  int line = 0;
+  int column = 0;
+};
+
+std::vector<ImportPathOccurrence> collectImportPathOccurrences(const std::string &source,
+                                                               bool stdOnly);
+
 std::vector<std::string> collectImportPaths(const std::string &source, bool stdOnly);
+
+// The span of the first `import` of `importPath` in the expanded text, mapped to its source file.
+std::optional<DiagnosticSpan> findImportPathSpan(const ExpandedSource &source,
+                                                 const std::string &importPath);
 
 std::vector<std::string> collectStdImportPaths(const std::string &source);
 
@@ -166,7 +180,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                std::string &source,
                                std::string &error,
                                ExpandedSource *expandedSource = nullptr,
-                               const std::unordered_set<std::string> &excludedKeys = {});
+                               const std::unordered_set<std::string> &excludedKeys = {},
+                               std::string *unresolvedImport = nullptr);
 
 // PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS forces lazy expansion on
 // regardless of Options::experimentalLazyStdlibImports/the CLI flag, so the

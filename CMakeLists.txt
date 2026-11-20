@@ -2548,6 +2548,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_core_lists.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_stable_multi_parse.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_robustness.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_intra_def_multi_semantic.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_wrapper_index_arg_type.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_wrapper_method_count_missing_arg.cpp

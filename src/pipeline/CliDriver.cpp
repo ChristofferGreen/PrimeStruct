@@ -122,6 +122,7 @@ CliFailure describeCompilePipelineFailureDetails(
       failure.code = DiagnosticCode::ImportError;
       failure.plainPrefix = "Import error: ";
       failure.notes = {"stage: import"};
+      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
       break;
     case CompilePipelineErrorStage::Transform:
       failure.code = DiagnosticCode::TransformError;
