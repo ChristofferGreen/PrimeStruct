@@ -823,4 +823,54 @@ main() {
   CHECK(found.column == 51);
 }
 
+TEST_CASE("a Function field of a lambda parameter is called through the parameter") {
+  const std::string box = R"(
+[struct]
+Box() {
+  [Function<i32, i32> mut] f{}
+  [i32] base{0i32}
+}
+)";
+  SUBCASE("a lambda parameter by value") {
+    const std::string source = box + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  g{[]([Box] b) { return(b.f(b.base)) }}
+  return(g(b0))
+}
+)";
+    std::string error;
+    CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  }
+  SUBCASE("a Reference lambda parameter") {
+    const std::string source = box + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  g{[]([Reference<Box>] b) { return(b.f(b.base)) }}
+  return(g(location(b0)))
+}
+)";
+    std::string error;
+    CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  }
+  SUBCASE("a lambda nested in a generic Body call") {
+    const std::string source = box + R"(
+[return<int>]
+run<Body>([Body mut] body, [Box] box) {
+  return(body(box))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  return(run([]([Box] b) { return(b.f(b.base)) }, b0))
+}
+)";
+    std::string error;
+    CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  }
+}
+
 TEST_SUITE_END();

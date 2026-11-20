@@ -52,6 +52,26 @@ bool isCallableStructTypeName(const std::string &typeName, const std::string &na
   }
 }
 
+// The struct a type name written in a method names, as its full path. A method and the `call` method of a closure are
+// written in a struct's namespace (`/main__lambda0/call`) but see the names of the namespaces around that struct, so
+// the search continues at the namespace that holds it, as a lambda parameter `[Box] b` needs.
+std::string resolveStructTypeVisibleFromMethod(const std::string &typeName,
+                                               const std::string &namespacePrefix,
+                                               const Context &ctx) {
+  std::string scope = namespacePrefix;
+  while (true) {
+    std::string path = resolveStructLikeTypePathForTemplatedVectorFallback(typeName, scope, ctx);
+    if (!path.empty()) {
+      return path;
+    }
+    const auto owner = ctx.sourceDefs.find(scope);
+    if (owner == ctx.sourceDefs.end() || !isStructDefinition(owner->second) || scope.empty()) {
+      return {};
+    }
+    scope.erase(scope.find_last_of('/'));
+  }
+}
+
 // `receiver.field(x)` where `field` is a field of a callable struct type (and the receiver's struct has no method
 // of that name) becomes `receiver.field.call(x)`.
 void rewriteCallableFieldCall(Expr &expr,
@@ -88,8 +108,7 @@ void rewriteCallableFieldCall(Expr &expr,
       if (receiverPath.empty() || receiverPath.front() != '/') {
         if (!declaredType.empty() && declaredType.front() != '/' &&
             (borrowed || receiverInfo.typeTemplateArg.empty())) {
-          receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
-              declaredType, namespacePrefix, ctx);
+          receiverPath = resolveStructTypeVisibleFromMethod(declaredType, namespacePrefix, ctx);
         }
       }
     }
@@ -100,10 +119,11 @@ void rewriteCallableFieldCall(Expr &expr,
     if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall && receiver.args.size() == 2 &&
         (receiver.name == "at" || receiver.name == "at_unsafe")) {
       semantics::BindingInfo collectionInfo;
-      if (inferBindingTypeForMonomorph(receiver.args.front(), params, locals, allowMathBare, ctx, collectionInfo) &&
+      if (inferBindingTypeForMonomorph(
+              receiver.args.front(), params, locals, allowMathBare, ctx, collectionInfo) &&
           !collectionInfo.typeTemplateArg.empty()) {
-        receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(collectionInfo.typeTemplateArg,
-                                                                           namespacePrefix, ctx);
+        receiverPath = resolveStructTypeVisibleFromMethod(
+            collectionInfo.typeTemplateArg, namespacePrefix, ctx);
       }
       // `this.items[i].field(x)`: the collection is a field; its element type is in the field's declaration.
       const Expr &collection = receiver.args.front();
@@ -119,7 +139,7 @@ void rewriteCallableFieldCall(Expr &expr,
         if (ownerPath.empty() &&
             inferBindingTypeForMonomorph(owner, params, locals, allowMathBare, ctx, ownerInfo)) {
           const bool borrowed = ownerInfo.typeName == "Reference" || ownerInfo.typeName == "Pointer";
-          ownerPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+          ownerPath = resolveStructTypeVisibleFromMethod(
               borrowed ? ownerInfo.typeTemplateArg : ownerInfo.typeName, namespacePrefix, ctx);
         }
         const auto ownerIt = ownerPath.empty() ? ctx.sourceDefs.end() : ctx.sourceDefs.find(ownerPath);
@@ -130,7 +150,7 @@ void rewriteCallableFieldCall(Expr &expr,
             }
             for (const Transform &transform : field.transforms) {
               if (!isFieldQualifierTransformName(transform.name) && transform.templateArgs.size() == 1) {
-                receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
+                receiverPath = resolveStructTypeVisibleFromMethod(
                     transform.templateArgs.front(), ownerIt->second.namespacePrefix, ctx);
                 break;
               }

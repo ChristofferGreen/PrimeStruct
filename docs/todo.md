@@ -152,7 +152,6 @@ of sync with them.
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
 | TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
-| TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | ready | lambda-function-field-call |
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
@@ -733,19 +732,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - the decision above is made and recorded here; then a diagnostic or a spec change with a semantics test and the full release gate green
   - stop_rule: this one decision and the diagnostic or spec line it needs; TODO-6115 and TODO-6116 carry the mechanical parts.
-
-- [~] TODO-6115: A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method`
-  - owner: ai
-  - status: ready
-  - claimed_by: lambda-field (worktree-agent-aea48cb30770b2538), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
-  - parallel_track: lambda-function-field-call
-  - scope: `[struct] Box() { [Function<i32, i32> mut] f{} [i32] base{0i32} }` and `run<Body>([Body mut] body, [Box] box) { return(body(box)) }`; `run([]([Box] b) { return(b.f(b.base)) }, b0)` reports `unknown method: /Box/f [PSC1005]`, while `read_it([Box] b) { return(b.f(b.base)) }` as a free function compiles and runs (prints 5 for `f` adding one to 4). The `b.f(x)` to `b.f.call(x)` rewrite in `TemplateMonomorphCallableRewrites.cpp` (the field-callable rewrite, around line 140 to 190) resolves the owner of `f` through the locals and parameters it is given, and the parameters of a lambda are not in that scope, so the call stays a method call of `/Box`. The same call with the `RwLock<Box>.read` lambda of TODO-5804 fails the same way.
-  - acceptance:
-    - the repro prints 5 for a lambda parameter, a lambda parameter that is a `Reference<Box>`, and a lambda nested in a generic `Body` call, with semantics and compile-run tests
-    - full release gate green
-  - stop_rule: resolving the owner type of a field call inside a lambda body; whether a read-only `Function` may be called is TODO-6113 and TODO-6116.
 
 - [ ] TODO-6116: Calling a `Function` through a read-only place is accepted although `call` is `mut`
   - owner: ai

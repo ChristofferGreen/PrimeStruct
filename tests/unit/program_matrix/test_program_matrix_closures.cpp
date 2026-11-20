@@ -1756,6 +1756,32 @@ main() {
                     110);
 }
 
+TEST_CASE("a Function field of a lambda parameter is called through the parameter") {
+  runClosureProgram("lambda_parameter_function_field",
+                    R"(
+[struct]
+Box() {
+  [Function<i32, i32> mut] f{}
+  [i32] base{0i32}
+}
+
+[return<int>]
+run<Body>([Body mut] body, [Box] box) {
+  return(body(box))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(x + 1i32) }, [base] 4i32}}
+  by_value{[]([Box] b) { return(b.f(b.base)) }}
+  by_reference{[]([Reference<Box>] b) { return(b.f(b.base) * 10i32) }}
+  nested{run([]([Box] b) { return(b.f(b.base) * 100i32) }, b0)}
+  return(by_value(b0) + by_reference(location(b0)) + nested)
+}
+)",
+                    555);
+}
+
 // Routers of `Function` handlers, `Result.map` lambdas and imported holders. (a suite and CTest entry of its own, so each entry stays short under a loaded gate).
 TEST_SUITE_END();
 TEST_SUITE_BEGIN("primestruct.program_matrix.closures_routers");
