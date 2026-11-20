@@ -239,9 +239,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `panic` on Wasm only; arrays stay unsupported on Wasm.
   - decision: 2026-11-20 (owner): option (a), wait for TODO-6138; no lowerer intrinsic and no emitter pattern match. `panic` compiles for Wasm when arrays do.
 
-- [ ] TODO-6130: An unknown type inside a templated return type is not named
+- [~] TODO-6130: An unknown type inside a templated return type is not named
   - owner: ai
   - status: ready
+  - claimed_by: build-hash (worktree-agent-a1f688ce17b85b0ca), 2026-11-20
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (found with TODO-6111)
   - parallel_track: unknown-type-diagnostic
