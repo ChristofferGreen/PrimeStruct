@@ -20,6 +20,7 @@
 
 #include "primec/testing/TestScratch.h"
 
+#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -377,10 +378,47 @@ inline void runThreadsCorpus(const ProgramCase &program, int repeats) {
   }
 }
 
+// Counting mode (PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1): every case compiles for `--emit=wasm --wasm-profile wasi`
+// and nothing runs, not even the other configs. One line per case goes to stderr, `wasm-compile: <name>: ok` or
+// `wasm-compile: <name>: refused: <first line of the error>`, so the programs Wasm refuses can be counted per opcode.
+inline bool wasmCompileOnly() {
+  const char *value = std::getenv("PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY");
+  return value != nullptr && *value != '\0';
+}
+
+inline void reportWasmCompile(const ProgramCase &program) {
+  const std::filesystem::path source = programSourcePath(program);
+  std::filesystem::create_directories(source.parent_path());
+  {
+    std::ofstream file(source);
+    file << program.source;
+  }
+  std::string flags;
+  for (const std::string &flag : program.flags) {
+    flags += " " + quote(flag);
+  }
+  const std::filesystem::path module = source.parent_path() / "wasm-count.wasm";
+  const Outcome compile =
+      runCaptured("./primec --emit=wasm --wasm-profile wasi " + quote(source.string()) + " -o " +
+                      quote(module.string()) + " --entry /main" + flags,
+                  source.parent_path() / "wasm-count.compile");
+  std::string line = "wasm-compile: " + program.name + ": ";
+  if (compile.exitCode == 0) {
+    line += "ok";
+  } else {
+    line += "refused: " + compile.err.substr(0, compile.err.find('\n'));
+  }
+  std::fprintf(stderr, "%s\n", line.c_str());
+}
+
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
 inline void runProgramMatrix(const ProgramCase &program,
                              std::vector<ExecutionConfig> configs = allConfigs()) {
+  if (wasmCompileOnly()) {
+    reportWasmCompile(program);
+    return;
+  }
   if (corpusOnly()) {
     // Corpus mode runs the programs that have a threads config, and nothing else.
     for (const ExecutionConfig &config : configs) {
