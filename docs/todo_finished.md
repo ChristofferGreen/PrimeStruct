@@ -2503,6 +2503,7 @@ are left unarchived.
 | TODO-6087 | A block-form call of a user function does not break a later call of the same function | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6088 | A bare statement call of a user function named `vector` or `map` runs the user function | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6089 | A value-yielding `if` validates and runs on Wasm | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6090 | The program matrix runs the programs Wasm supports on a Wasm config | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6091 | A method with an explicit `self` keeps its parameter count through a library interface | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6092 | Where the fixed cost of a linked library goes | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6093 | The compiler build id of a library costs less than hashing the 22 MB `primec` | [undated.md](todo_archive/undated.md) | - |

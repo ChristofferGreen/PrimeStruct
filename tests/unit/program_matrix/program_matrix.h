@@ -13,6 +13,8 @@
 // Configs a program cannot run on are named in `skipConfigs`, with the reason as
 // a comment at the case, so a backend gap stays visible instead of disappearing.
 // PRIMESTRUCT_MATRIX_CONFIGS=all adds the slow configs (optexe, exe) to every case.
+// The Wasm config (`wasm-wasi`, run under node) is opt-in per case: a program that Wasm supports lists it in
+// `extraConfigs` and then agrees with the VM on stdout and exit code; a machine without node skips it with a message.
 
 #include "third_party/doctest.h"
 
@@ -32,7 +34,7 @@
 
 namespace program_matrix {
 
-enum class Backend { VmStep, Vm, Native, OptExe, Exe };
+enum class Backend { VmStep, Vm, Native, OptExe, Exe, Wasm };
 
 struct ExecutionConfig {
   std::string name;
@@ -43,6 +45,9 @@ struct ExecutionConfig {
   bool slow = false;
   // Extra primevm flags of a VM config, e.g. a task schedule seed.
   std::vector<std::string> vmFlags = {};
+  // Runs only for a case that lists the config in `extraConfigs` or `onlyConfigs`, never by default or with
+  // PRIMESTRUCT_MATRIX_CONFIGS=all: the Wasm config, whose supported programs are listed one by one (TODO-6090).
+  bool optIn = false;
 };
 
 struct ProgramCase {
@@ -59,6 +64,9 @@ struct ProgramCase {
   std::vector<std::string> flags; // extra primec/primevm flags, e.g. --default-effects=io_out
   std::vector<std::string> skipConfigs;
   std::vector<std::string> onlyConfigs; // restrict to these when non-empty
+  // Opt-in configs (`wasm-wasi`) that run in addition to the default set; a program lists it here when Wasm supports
+  // it, and an unsupported program stays visible as the absence of the entry (TODO-6090).
+  std::vector<std::string> extraConfigs;
 };
 
 struct Outcome {
@@ -133,8 +141,46 @@ inline std::vector<ExecutionConfig> allConfigs() {
   }
   configs.push_back({"optexe-O2", Backend::OptExe, 2, true});
   configs.push_back({"exe", Backend::Exe, 0, true});
+  ExecutionConfig wasm{"wasm-wasi", Backend::Wasm, 0, true};
+  wasm.optIn = true;
+  configs.push_back(wasm);
   return configs;
 }
+
+// Whether node (the host of the Wasm config) is on the PATH; checked once.
+inline bool nodeAvailable() {
+  static const bool available = std::system("node --version > /dev/null 2>&1") == 0;
+  return available;
+}
+
+// Runs the exported `main` of a `--wasm-profile wasi` module under Node's built-in WebAssembly and WASI, as the VM
+// would run the program: stdout through `fd_write`, `proc_exit` (a runtime error calls it with 3) as the exit code, and
+// the result of `main` modulo 256 otherwise (a `void` main exits 0).
+constexpr const char *WasmNodeRunner = R"(
+"use strict";
+const fs = require("node:fs");
+process.removeAllListeners("warning");
+process.on("warning", () => {});
+const { WASI } = require("node:wasi");
+const wasi = new WASI({ version: "preview1", args: [process.argv[2]], returnOnExit: true });
+class ProgramExit { constructor(code) { this.code = code; } }
+const imports = wasi.getImportObject();
+imports.wasi_snapshot_preview1.proc_exit = (code) => { throw new ProgramExit(code); };
+const instance = new WebAssembly.Instance(new WebAssembly.Module(fs.readFileSync(process.argv[2])), imports);
+if (instance.exports.memory) {
+  wasi.initialize(instance);
+}
+try {
+  const result = instance.exports.main();
+  process.exitCode = result === undefined ? 0 : Number(BigInt.asUintN(8, BigInt(result)));
+} catch (e) {
+  if (!(e instanceof ProgramExit)) {
+    console.error("unexpected " + e);
+    process.exit(99);
+  }
+  process.exitCode = e.code;
+}
+)";
 
 inline bool includeSlowConfigs() {
   const char *value = std::getenv("PRIMESTRUCT_MATRIX_CONFIGS");
@@ -227,6 +273,24 @@ inline Outcome runConfigUnnormalized(const ProgramCase &program, const Execution
       return failed;
     }
     return runCaptured(quote(binary.string()), stem);
+  }
+  case Backend::Wasm: {
+    const std::filesystem::path module = dir / (config.name + ".wasm");
+    const Outcome compile = runCaptured("./primec --emit=wasm --wasm-profile wasi " + src + " -o " +
+                                            quote(module.string()) + entry + flags,
+                                        dir / (config.name + ".compile"));
+    if (compile.exitCode != 0) {
+      Outcome failed = compile;
+      failed.ran = false;
+      failed.note = "compile failed: " + compile.err;
+      return failed;
+    }
+    const std::filesystem::path runner = dir / "wasm_runner.cjs";
+    {
+      std::ofstream file(runner);
+      file << WasmNodeRunner;
+    }
+    return runCaptured("node " + quote(runner.string()) + " " + quote(module.string()), stem);
   }
   }
   return {};
@@ -332,13 +396,23 @@ inline void runProgramMatrix(const ProgramCase &program,
     if (listed(program.skipConfigs, config.name)) {
       continue;
     }
-    if (!program.onlyConfigs.empty() && !listed(program.onlyConfigs, config.name)) {
+    if (!program.onlyConfigs.empty() && !listed(program.onlyConfigs, config.name) &&
+        !listed(program.extraConfigs, config.name)) {
       continue;
     }
-    if (config.slow && !slow && !listed(program.onlyConfigs, config.name)) {
+    const bool asked =
+        listed(program.onlyConfigs, config.name) || listed(program.extraConfigs, config.name);
+    if ((config.optIn || (config.slow && !slow)) && !asked) {
+      continue;
+    }
+    if (config.backend == Backend::Wasm && !nodeAvailable()) {
+      MESSAGE("SKIP: node is unavailable; ", config.name, " did not run ", program.name);
       continue;
     }
     selected.push_back(config);
+  }
+  if (selected.empty() && !nodeAvailable() && listed(program.onlyConfigs, "wasm-wasi")) {
+    return; // only the Wasm config was asked for and node is missing: skipped above with a message
   }
   REQUIRE_MESSAGE(!selected.empty(), "no execution configs selected for ", program.name);
 
@@ -364,7 +438,8 @@ inline void runProgramMatrix(const ProgramCase &program,
     const std::optional<std::string> &stderrText =
         isVmFamily(config.backend) ? program.vmStderr
                                    : (cppFamily ? program.cppStderr : program.nativeStderr);
-    if (stderrText.has_value()) {
+    // The Wasm config checks stdout and the exit code only: it runs under node, which adds its own stderr text.
+    if (stderrText.has_value() && config.backend != Backend::Wasm) {
       CHECK(outcome.err == *stderrText);
     }
   }

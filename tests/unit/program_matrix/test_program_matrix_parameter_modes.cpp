@@ -9,6 +9,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.parameter_modes");
 TEST_CASE("copy mut scalar parameter does not write back") {
   program_matrix::ProgramCase program;
   program.name = "copy_mut_scalar_parameter";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [i32]
 bump([i32 copy mut] value) {

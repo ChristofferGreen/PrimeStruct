@@ -34,6 +34,10 @@ void runConversionRows(const std::string &name,
   program.exitCode = 0;
   program.stdoutText = expected;
   program.skipConfigs = skipConfigs;
+  // Wasm runs the rows of these programs; the u8 rows need the byte conversions it lacks (TODO-6127).
+  if (name != "conv_integer_to_u8" && name != "conv_float_to_u8") {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 
@@ -84,6 +88,7 @@ TEST_CASE("narrowing a u64 to i32 wraps modulo 2^32") {
 TEST_CASE("a narrowed i32 equals the same literal and widens to its wrapped value") {
   program_matrix::ProgramCase program;
   program.name = "conv_narrowed_i32_value";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [effects(io_out), return<int>]
 main() {

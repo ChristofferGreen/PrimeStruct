@@ -8,6 +8,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.frontend_accept");
 TEST_CASE("an unused wildcard import of a stdlib module is not an error") {
   program_matrix::ProgramCase program;
   program.name = "frontend_unused_stdlib_imports";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/maybe/*

@@ -15,6 +15,10 @@ void runMathProgram(const std::string &name,
                     bool nativeRoundsOnce = true) {
   program_matrix::ProgramCase program;
   program.name = name;
+  // Wasm runs these two programs; the others use opcodes it lacks.
+  if (name == "math_atan2_angles" || name == "math_fma_fused") {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program.source = R"(
 import /std/math/*
 

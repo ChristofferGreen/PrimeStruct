@@ -12,6 +12,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.control");
 TEST_CASE("native void executable") {
   program_matrix::ProgramCase program;
   program.name = "native_void_executable_0";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<void>]
 main() {
@@ -25,6 +26,7 @@ main() {
 TEST_CASE("native explicit void return") {
   program_matrix::ProgramCase program;
   program.name = "native_explicit_void_return_1";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<void>]
 main() {
@@ -38,6 +40,7 @@ main() {
 TEST_CASE("native exe reads and reassigns a mut local") {
   program_matrix::ProgramCase program;
   program.name = "native_exe_reads_and_reassigns_a_mut_local_2";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -53,6 +56,7 @@ main() {
 TEST_CASE("native if/else selects the right branch") {
   program_matrix::ProgramCase program;
   program.name = "native_if_else_selects_the_right_branch_3";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -71,6 +75,7 @@ main() {
 TEST_CASE("native repeat() loop runs a fixed count") {
   program_matrix::ProgramCase program;
   program.name = "native_repeat_loop_runs_a_fixed_count_4";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -88,6 +93,7 @@ main() {
 TEST_CASE("native for binding condition") {
   program_matrix::ProgramCase program;
   program.name = "native_for_binding_condition_5";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -105,6 +111,7 @@ main() {
 TEST_CASE("native shared_scope for binding condition") {
   program_matrix::ProgramCase program;
   program.name = "native_shared_scope_for_binding_condition_6";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -125,6 +132,7 @@ main() {
 TEST_CASE("native shared_scope while loop") {
   program_matrix::ProgramCase program;
   program.name = "native_shared_scope_while_loop_7";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -177,6 +185,7 @@ main() {
 TEST_CASE("default effects token enables io output") {
   program_matrix::ProgramCase program;
   program.name = "default_effects_token_enables_io_output_10";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -193,6 +202,7 @@ main() {
 TEST_CASE("entry defaults apply to helpers") {
   program_matrix::ProgramCase program;
   program.name = "entry_defaults_apply_to_helpers_11";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -214,6 +224,7 @@ log() {
 TEST_CASE("default effects allow capabilities in native") {
   program_matrix::ProgramCase program;
   program.name = "default_effects_allow_capabilities_in_native_12";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> capabilities(io_out)]
 main() {
@@ -230,6 +241,7 @@ main() {
 TEST_CASE("native implicit utf8 strings") {
   program_matrix::ProgramCase program;
   program.name = "native_implicit_utf8_strings_13";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -245,6 +257,7 @@ main() {
 TEST_CASE("native implicit utf8 single-quoted strings") {
   program_matrix::ProgramCase program;
   program.name = "native_implicit_utf8_single_quoted_strings_14";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -260,6 +273,7 @@ main() {
 TEST_CASE("native escaped utf8 strings") {
   program_matrix::ProgramCase program;
   program.name = "native_escaped_utf8_strings_15";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -275,6 +289,7 @@ main() {
 TEST_CASE("native raw utf8 single-quoted strings") {
   program_matrix::ProgramCase program;
   program.name = "native_raw_utf8_single_quoted_strings_16";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -290,6 +305,7 @@ main() {
 TEST_CASE("native string binding print") {
   program_matrix::ProgramCase program;
   program.name = "native_string_binding_print_17";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -306,6 +322,7 @@ main() {
 TEST_CASE("native raw string literal output") {
   program_matrix::ProgramCase program;
   program.name = "native_raw_string_literal_output_18";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -321,6 +338,7 @@ main() {
 TEST_CASE("native raw single-quoted string output") {
   program_matrix::ProgramCase program;
   program.name = "native_raw_single_quoted_string_output_19";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -336,6 +354,7 @@ main() {
 TEST_CASE("native string binding copy") {
   program_matrix::ProgramCase program;
   program.name = "native_string_binding_copy_20";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -373,6 +392,7 @@ main() {
 TEST_CASE("i32 arithmetic wraps and compares after overflow") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_basic";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -403,6 +423,7 @@ main() {
 TEST_CASE("guarded constant adds stay exact when emitted branchless") {
   program_matrix::ProgramCase program;
   program.name = "guarded_constant_adds";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -542,6 +563,7 @@ main() {
 TEST_CASE("register allocation spills under pressure and stays exact") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_spills";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 mix([i32] a, [i32] b, [i32] c) {
@@ -617,6 +639,7 @@ main() {
 TEST_CASE("register allocation keeps float values and call results exact") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_floats";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<f64>]
 scale([f64] x, [f64] factor) {
@@ -678,6 +701,7 @@ main() {
 TEST_CASE("register allocation spills and saves xmm registers") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_xmm_pressure";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<f64>]
 blend([f64] a, [f64] b) {
@@ -775,6 +799,7 @@ main() {
 TEST_CASE("register allocation passes call arguments in registers") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_call_arguments";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 seven() {
@@ -834,6 +859,7 @@ main() {
 TEST_CASE("float comparisons are false on NaN except not-equal") {
   program_matrix::ProgramCase program;
   program.name = "nan_comparisons";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 flags([f64] a, [f64] b) {
@@ -979,6 +1005,7 @@ main() {
 TEST_CASE("i32 loops keep wrapping in promoted locals and fused updates") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_loops";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int> effects(io_out)]
 main() {
@@ -1013,6 +1040,7 @@ main() {
 TEST_CASE("i32 increment, decrement, abs and pow wrap like plus and multiply") {
   program_matrix::ProgramCase program;
   program.name = "i32_wrap_builtins";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/math/*
 
@@ -1043,6 +1071,7 @@ main() {
 TEST_CASE("i32 lerp, saturate, clamp, min, max and sign agree at the limits") {
   program_matrix::ProgramCase program;
   program.name = "i32_limit_builtins";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/math/*
 

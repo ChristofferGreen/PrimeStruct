@@ -66,6 +66,7 @@ main() {
 TEST_CASE("user functions named push, vector and map are ordinary calls") {
   program_matrix::ProgramCase program;
   program.name = "shadow_builtin_names_calls";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 push([i32] left, [i32] right) {
@@ -98,6 +99,7 @@ main() {
 TEST_CASE("user vector and map functions take a block") {
   program_matrix::ProgramCase program;
   program.name = "shadow_builtin_names_blocks";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 vector([i32] value) {
@@ -132,6 +134,7 @@ main() {
 TEST_CASE("a block-form call and a value call of one user function share a body") {
   program_matrix::ProgramCase program;
   program.name = "user_call_block_and_value_calls";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 twice([i32] value) {
@@ -179,6 +182,7 @@ main() {
 TEST_CASE("a bare statement call of a user vector, map or array function runs it") {
   program_matrix::ProgramCase program;
   program.name = "user_shadow_statement_calls";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [effects(io_out), return<int>]
 vector([i32] value) {

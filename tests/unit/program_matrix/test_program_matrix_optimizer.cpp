@@ -12,6 +12,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.optimizer");
 TEST_CASE("short-circuit conditions and nested loops") {
   program_matrix::ProgramCase program;
   program.name = "branches_loops";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int> effects(io_out)]
 main() {
   [i32 mut] total{0i32}
@@ -78,6 +79,7 @@ main() {
 TEST_CASE("helper calls in a loop") {
   program_matrix::ProgramCase program;
   program.name = "helper_calls";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<i64>]
 square([i64] x) {
   return(multiply(x, x))
@@ -110,6 +112,7 @@ main() {
 TEST_CASE("early return from a loop") {
   program_matrix::ProgramCase program;
   program.name = "early_return";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int>]
 find_first([i32] limit) {
   [i32 mut] i{1i32}
@@ -137,6 +140,7 @@ main() {
 TEST_CASE("floating point accumulation") {
   program_matrix::ProgramCase program;
   program.name = "float_loop";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int> effects(io_out)]
 main() {
   [f64 mut] x{0.5f64}
@@ -163,6 +167,7 @@ main() {
 TEST_CASE("printing inside a loop keeps locals") {
   program_matrix::ProgramCase program;
   program.name = "print_in_loop";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int> effects(io_out)]
 main() {
   [i32 mut] a{1i32}
@@ -189,6 +194,7 @@ main() {
 TEST_CASE("recursive function") {
   program_matrix::ProgramCase program;
   program.name = "recursion";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int>]
 fib([i32] n) {
   if(less_than(n, 2i32)) {

@@ -22,6 +22,9 @@ void runMethodProgram(const std::string &name, const std::string &source, int ex
   program.source = source;
   program.exitCode = exitCode;
   program.onlyConfigs = methodConfigs();
+  if (name == "struct_methods_unused_tuple_import") {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 

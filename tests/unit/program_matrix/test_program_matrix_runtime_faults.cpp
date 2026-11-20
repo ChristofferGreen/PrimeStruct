@@ -49,6 +49,7 @@ TEST_CASE("u64 division by zero faults with exit 3 and keeps earlier output") {
 TEST_CASE("a division by a non-zero value and a float division by zero do not fault") {
   program_matrix::ProgramCase program;
   program.name = "fault_div_no_fault";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [effects(io_out), return<int>]
 main() {

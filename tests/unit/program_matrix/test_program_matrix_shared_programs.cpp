@@ -103,6 +103,7 @@ main() {
 TEST_CASE("runs vm with import alias") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_import_alias_5";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /util
 namespace util {
@@ -124,6 +125,7 @@ main() {
 TEST_CASE("runs vm with multiple imports") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_multiple_imports_6";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /util, /std/math/*
 namespace util {
@@ -145,6 +147,7 @@ main() {
 TEST_CASE("runs vm with qualified math names") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_qualified_math_names_7";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -239,6 +242,7 @@ main() {
 TEST_CASE("runs vm with uninitialized local storage") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_uninitialized_local_storage_11";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -346,6 +350,7 @@ TEST_CASE(
   // the math builtin (include/primec/support/MathNames.h).
   program_matrix::ProgramCase program;
   program.name = "user_function_named_like_math_builtin";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 /mylib/min([int] a, [int] b) {

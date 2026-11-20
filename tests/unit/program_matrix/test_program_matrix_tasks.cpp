@@ -51,7 +51,8 @@ bool inFamily(const program_matrix::ExecutionConfig &config, TaskFamily family) 
 void runTaskProgram(program_matrix::ProgramCase program, TaskFamily family = TaskFamily::All) {
   // Every config but the old C++ emitter (`exe`), which is only run with PRIMESTRUCT_MATRIX_CONFIGS=all.
   for (const program_matrix::ExecutionConfig &config : taskConfigs()) {
-    if (config.name != "exe" && inFamily(config, family)) {
+    // The opt-in Wasm config is not a task config either: Wasm has no tasks.
+    if (config.name != "exe" && !config.optIn && inFamily(config, family)) {
       program.onlyConfigs.push_back(config.name);
     }
   }
