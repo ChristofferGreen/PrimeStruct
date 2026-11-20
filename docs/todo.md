@@ -470,9 +470,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [ ] TODO-6124: Wasm lowers pointers, `Reference`, struct values, arrays and closures
+- [~] TODO-6124: Wasm lowers pointers, `Reference`, struct values, arrays and closures
   - owner: ai
   - status: ready
+  - claimed_by: wasm-agent (worktree-agent-a6d32f2abb10bf59e), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6090, TODO-6105)
   - parallel_track: wasm-opcode-gaps
