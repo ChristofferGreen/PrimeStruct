@@ -451,6 +451,11 @@ bool SemanticsValidator::resolveStructFieldBinding(const std::vector<ParameterIn
       if (isCompileTimeTypeBinding(stmt) || stmt.name != bindingFieldName) {
         continue;
       }
+      if (isUnstoredConstructionField(stmt)) {
+        return failFieldResolutionDiagnostic(
+            receiver,
+            "construction-only field is not stored: " + def.fullPath + "/" + bindingFieldName);
+      }
       if (isStaticField(stmt) && !allowStatic) {
         return false;
       }

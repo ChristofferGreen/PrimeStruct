@@ -346,4 +346,51 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a ctor_only field is built by braces, read by the defaults after it and not stored") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_ctor_only_field";
+  program.source = R"(
+[struct]
+Counter() {
+  [ctor_only i64] start{0i64}
+  [i64 mut] total{start + 1i64}
+  [i64 mut] doubled{start * 2i64}
+
+  [return<i64>]
+  sum() {
+    return(this.total + this.doubled)
+  }
+}
+
+[struct]
+Weights() {
+  [i64] first{3i64}
+  [i64] second{4i64}
+}
+
+[struct]
+Reading() {
+  [ctor_only Weights] weights
+  [i64] sum{weights.first + weights.second}
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Counter] five{Counter{5i64}}
+  [Counter] none{Counter{}}
+  [Weights] shared{Weights{}}
+  [Reading] fresh{Reading{Weights{}}}
+  [Reading] copied{Reading{shared}}
+  print_line(five.sum())
+  print_line(none.sum())
+  print_line(fresh.sum)
+  print_line(copied.sum)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "16\n1\n7\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

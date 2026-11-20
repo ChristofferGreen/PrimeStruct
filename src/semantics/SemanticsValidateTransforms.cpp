@@ -1,5 +1,6 @@
 #include "SemanticsValidateTransforms.h"
 
+#include "SemanticsFieldModifiers.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateTransformsInternal.h"
 #include "primec/support/TransformRegistry.h"
@@ -25,11 +26,12 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "unsafe" || name == "unsafe_api" || name == "pod" || name == "handle" ||
          name == "gpu_lane" || name == "no_padding" || name == "platform_independent_padding" ||
          name == "sum" || name == "namespace" || name == "public" || name == "private" ||
-         name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
-         name == "buffer" || name == "spawn" || name == "ast" || name == "reflect" ||
-         name == "generate" || name == "Additive" || name == "Multiplicative" ||
-         name == "Comparable" || name == "Indexable" || name == "collection_type" ||
-         name == "key_value_type" || name == "sendable" || name == "summary";
+         name == "static" || name == "ctor_only" || name == "single_type_to_return" ||
+         name == "stack" || name == "heap" || name == "buffer" || name == "spawn" ||
+         name == "ast" || name == "reflect" || name == "generate" || name == "Additive" ||
+         name == "Multiplicative" || name == "Comparable" || name == "Indexable" ||
+         name == "collection_type" || name == "key_value_type" || name == "sendable" ||
+         name == "summary";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {
@@ -1069,6 +1071,12 @@ bool applySemanticTransforms(Program &program,
         return false;
       }
     }
+  }
+
+  if (std::string placementError = constructionOnlyPlacementError(program);
+      !placementError.empty()) {
+    error = std::move(placementError);
+    return false;
   }
 
   for (auto &def : program.definitions) {

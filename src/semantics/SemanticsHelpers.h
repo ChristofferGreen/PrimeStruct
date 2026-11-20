@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "primec/ast/Ast.h"
+#include "primec/ast/AstFieldModifiers.h"
 #include "primec/support/CallNames.h"
 #include "primec/support/TypeText.h"
 
@@ -49,6 +50,8 @@ struct BindingInfo {
   // element): a read-only view sharing that place's storage, borrowed from `referenceRoot` until
   // its last use. It owns nothing, so pushing it copies it.
   bool isContainerView = false;
+  // A struct field marked `ctor_only`: construction supplies it, the struct does not store it.
+  bool isConstructionOnly = false;
   bool isEntryArgString = false;
   bool isUnsafeReference = false;
   std::string referenceRoot;

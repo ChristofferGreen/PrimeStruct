@@ -35,8 +35,9 @@ bool isFunctionBoxPath(const std::string &path) {
 }
 
 bool isQualifierTransform(const std::string &name) {
-  return name == "mut" || name == "public" || name == "private" || name == "static" || name == "copy" ||
-         name == "move" || name == "restrict" || name == "unsafe";
+  return name == "mut" || name == "public" || name == "private" || name == "static" ||
+         name == "ctor_only" || name == "copy" || name == "move" || name == "restrict" ||
+         name == "unsafe";
 }
 
 std::string transformTypeText(const Transform &transform) {

@@ -332,7 +332,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     if (expr.isFieldAccess && expr.args.size() == 1) {
       auto isStaticField = [](const Expr &stmt) -> bool {
         for (const auto &transform : stmt.transforms) {
-          if (transform.name == "static") {
+          if (transform.name == "static" || transform.name == "ctor_only") {
             return true;
           }
         }

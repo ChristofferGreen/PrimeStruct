@@ -35,7 +35,7 @@ bool isClosureStruct(const Definition &def) {
 
 bool isStaticField(const Expr &fieldStmt) {
   for (const Transform &transform : fieldStmt.transforms) {
-    if (transform.name == "static") {
+    if (transform.name == "static" || transform.name == "ctor_only") {
       return true;
     }
   }

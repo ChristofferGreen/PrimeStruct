@@ -230,7 +230,8 @@ bool isValidFloatLiteral(const std::string &text) {
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
          name == "align_bytes" || name == "align_kbytes" || name == "pod" || name == "handle" ||
-         name == "gpu_lane" || name == "public" || name == "private" || name == "static";
+         name == "gpu_lane" || name == "public" || name == "private" || name == "static" ||
+         name == "ctor_only";
 }
 
 bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {

@@ -32,6 +32,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.struct_methods
   primestruct.semantics.text_views
   primestruct.semantics.type_aliases
+  primestruct.semantics.construction_only_fields
   primestruct.semantics.maybe
   primestruct.semantics.type_resolution_graph
   primestruct.semantics.move
@@ -293,7 +294,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.mutexes"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 7
+  TOTAL_CASES 9
   SHARD_PREFIX "calls_flow_mutexes"
 )
 
@@ -340,6 +341,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 6
   SHARD_PREFIX "type_aliases"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.construction_only_fields"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 9
+  SHARD_PREFIX "construction_only_fields"
 )
 
 addPrimeStructManagedDoctestSuite(

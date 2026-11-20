@@ -177,9 +177,9 @@ namespace std {
     return(cell)
   }
 
-  // The heap cell of the value a mutex owns, holding a copy of `value`.
+  // The heap cell of the value a mutex owns: `value` moves into it.
   [unsafe effects(heap_alloc), return<Pointer<uninitialized<T>>>]
-  mutexValueAlloc<T>([T copy] value) {
+  mutexValueAlloc<T>([T move] value) {
     [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<T>>(1i32)}
     init(*slot, value)
     return(slot)
@@ -214,7 +214,7 @@ namespace std {
   // `Mutex<Tally>{Tally{}}` makes a mutex owning a copy of that value. `T` is a sendable type.
   [public struct sendable]
   Mutex<T>() {
-    [T mut] initial
+    [ctor_only T move] initial
     [private Pointer<i64> mut] cell{mutexCellAlloc()}
     [private Pointer<uninitialized<T>> mut] value{mutexValueAlloc<T>(initial)}
     [private bool mut] live{true}
@@ -329,7 +329,7 @@ namespace std {
   // `RwLock<Tally>{Tally{}}` makes a lock owning a copy of that value. `T` is a sendable type.
   [public struct sendable]
   RwLock<T>() {
-    [T mut] initial
+    [ctor_only T move] initial
     [private Pointer<i64> mut] cell{rwlockCellAlloc()}
     [private Pointer<uninitialized<T>> mut] value{mutexValueAlloc<T>(initial)}
     [private bool mut] live{true}
@@ -556,13 +556,13 @@ namespace std {
   // `Atomic<i64>{0i64}` makes a cell holding 0. `T` is i32 or i64.
   [public struct sendable]
   Atomic<T>() {
-    [T mut] initial{convert<T>(0i32)}
+    [ctor_only T] initial{convert<T>(0i32)}
     [private Pointer<i64> mut] cell{atomicCellAlloc(convert<i64>(initial))}
     [private bool mut] live{true}
 
     [effects(atomic), return<T>]
     load() {
-      [T] width{this.initial}
+      [T] width{convert<T>(0i32)}
       return(atomicLoad(this.cell, width))
     }
 
@@ -591,7 +591,6 @@ namespace std {
 
     [mut]
     Copy([Reference<Self>] other) {
-      this.initial = other.initial
       this.cell = other.cell
       this.live = other.live
       if(other.live) {
@@ -601,7 +600,6 @@ namespace std {
 
     [mut]
     Move([Reference<Self>] other) {
-      this.initial = other.initial
       this.cell = other.cell
       this.live = other.live
       other.live = false

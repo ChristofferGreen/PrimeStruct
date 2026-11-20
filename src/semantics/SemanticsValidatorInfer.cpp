@@ -301,7 +301,8 @@ ReturnKind SemanticsValidator::inferExprReturnKindImpl(const Expr &expr,
           if (!stmt.isBinding || isCompileTimeTypeBinding(stmt)) {
             continue;
           }
-          if (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt)) {
+          if (isUnstoredConstructionField(stmt) ||
+              (isTypeReceiver ? !isStaticField(stmt) : isStaticField(stmt))) {
             continue;
           }
           if (stmt.name != fieldName) {

@@ -2288,6 +2288,7 @@ are left unarchived.
 | TODO-5851 | A `[ref]` closure written in a generic call infers the closure type | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5852 | `wait(a, b)` takes `Task<void>` handles | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5853 | A `Reference` field is bound once at construction; assigning to it is a diagnostic | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5854 | A `Mutex` or `Atomic` handle does not keep the value it was made from | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5855 | A method call on a `pick` payload of struct type lowers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5856 | `pick` on a call result frees an owning payload | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5857 | A `vector<T>` payload of a sum reads its count and elements in a `pick` arm | [2026-11.md](todo_archive/2026-11.md) | - |

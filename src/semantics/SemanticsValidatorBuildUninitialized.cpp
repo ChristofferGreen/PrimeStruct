@@ -190,7 +190,7 @@ bool SemanticsValidator::resolveUninitializedStorageBinding(const std::vector<Pa
   }
   auto isStaticField = [](const Expr &stmt) -> bool {
     for (const auto &transform : stmt.transforms) {
-      if (transform.name == "static") {
+      if (transform.name == "static" || transform.name == "ctor_only") {
         return true;
       }
     }

@@ -215,7 +215,7 @@ std::string structText(const Definition &definition,
 const Transform *typeTransformOf(const Expr &binding) {
   for (const Transform &transform : binding.transforms) {
     if (transform.name != "public" && transform.name != "private" && transform.name != "static" &&
-        transform.name != "mut") {
+        transform.name != "ctor_only" && transform.name != "mut") {
       return &transform;
     }
   }

@@ -380,8 +380,9 @@ bool rewriteAssignmentSite(Expr &expr,
 } // namespace
 
 bool isFieldQualifierTransformName(const std::string &name) {
-  return name == "mut" || name == "public" || name == "private" || name == "static" || name == "copy" ||
-         name == "move" || name == "restrict" || name == "unsafe";
+  return name == "mut" || name == "public" || name == "private" || name == "static" ||
+         name == "ctor_only" || name == "copy" || name == "move" || name == "restrict" ||
+         name == "unsafe";
 }
 
 const Transform *bindingTypeTransform(const Expr &binding) {

@@ -46,7 +46,7 @@ bool isBindingQualifierName(const std::string &name) {
 bool isBindingAuxTransformName(const std::string &name) {
   return name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
          name == "align_bytes" || name == "align_kbytes" || name == "pod" || name == "handle" ||
-         name == "gpu_lane" || isBindingQualifierName(name);
+         name == "gpu_lane" || name == "ctor_only" || isBindingQualifierName(name);
 }
 
 std::string experimentalCollectionTypePathLocal(std::string_view collectionName,

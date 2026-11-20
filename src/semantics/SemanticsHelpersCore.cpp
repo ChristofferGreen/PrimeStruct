@@ -231,6 +231,18 @@ bool parseBindingInfo(const Expr &expr,
       }
       continue;
     }
+    if (transform.name == "ctor_only") {
+      if (!transform.templateArgs.empty()) {
+        error = "binding transforms do not take template arguments";
+        return false;
+      }
+      if (!transform.arguments.empty()) {
+        error = "binding transforms do not take arguments";
+        return false;
+      }
+      info.isConstructionOnly = true;
+      continue;
+    }
     if (transform.name == "pod" || transform.name == "gpu_lane") {
       if (!transform.templateArgs.empty()) {
         error = "binding transforms do not take template arguments";

@@ -22,7 +22,7 @@ bool SemanticsValidator::validateRequirementPredicates() {
     return false;
   };
   auto isStaticField = [&](const Expr &stmt) {
-    return hasTransform(stmt.transforms, "static");
+    return hasTransform(stmt.transforms, "static") || hasTransform(stmt.transforms, "ctor_only");
   };
   auto appendStructCategoryTraits =
       [&](RequirementPredicateDefinitionContext &context, const Definition &definition) {

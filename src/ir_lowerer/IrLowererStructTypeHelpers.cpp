@@ -307,7 +307,7 @@ void appendStructLayoutFieldsFromFieldBindings(
 
   auto isStaticFieldBinding = [](const Expr &fieldExpr) {
     for (const auto &transform : fieldExpr.transforms) {
-      if (transform.name == "static") {
+      if (transform.name == "static" || transform.name == "ctor_only") {
         return true;
       }
     }

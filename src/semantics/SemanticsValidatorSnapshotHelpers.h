@@ -478,7 +478,7 @@ inline std::vector<std::string> snapshotCapabilities(const std::vector<Transform
 
 inline bool isStaticFieldStatement(const Expr &stmt) {
   for (const auto &transform : stmt.transforms) {
-    if (transform.name == "static") {
+    if (transform.name == "static" || transform.name == "ctor_only") {
       return true;
     }
   }

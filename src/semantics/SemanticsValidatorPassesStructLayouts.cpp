@@ -203,7 +203,7 @@ bool SemanticsValidator::validateStructLayouts() {
     DefinitionContextScope definitionScope(*this, def);
     auto isStaticField = [&](const Expr &stmt) -> bool {
       for (const auto &transform : stmt.transforms) {
-        if (transform.name == "static") {
+        if (transform.name == "static" || transform.name == "ctor_only") {
           return true;
         }
       }

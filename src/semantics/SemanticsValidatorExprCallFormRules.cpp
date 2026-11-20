@@ -105,7 +105,7 @@ SemanticsValidator::pendingFieldViewNameFromRewrittenHelper(ExprCallContext &cc)
   for (const auto &fieldStmt : defIt->second->statements) {
     bool isStaticField = false;
     for (const auto &transform : fieldStmt.transforms) {
-      if (transform.name == "static") {
+      if (transform.name == "static" || transform.name == "ctor_only") {
         isStaticField = true;
         break;
       }

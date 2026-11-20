@@ -597,9 +597,10 @@ bool appendStructLayoutField(const std::string &structPath,
 }
 
 bool isLayoutQualifierName(const std::string &name) {
-  return name == "public" || name == "private" || name == "static" || name == "mut" ||
-         name == "copy" || name == "move" || name == "restrict" || name == "align_bytes" ||
-         name == "align_kbytes" || name == "pod" || name == "handle" || name == "gpu_lane";
+  return name == "public" || name == "private" || name == "static" || name == "ctor_only" ||
+         name == "mut" || name == "copy" || name == "move" || name == "restrict" ||
+         name == "align_bytes" || name == "align_kbytes" || name == "pod" || name == "handle" ||
+         name == "gpu_lane";
 }
 
 IrStructFieldCategory fieldCategory(const Expr &expr) {
@@ -640,8 +641,9 @@ IrStructVisibility fieldVisibility(const Expr &expr) {
 }
 
 bool isStaticField(const Expr &expr) {
+  // A `ctor_only` field is not stored either: like a static field it has no slot in the struct.
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "static") {
+    if (transform.name == "static" || transform.name == "ctor_only") {
       return true;
     }
   }

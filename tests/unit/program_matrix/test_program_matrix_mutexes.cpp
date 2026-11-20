@@ -164,9 +164,9 @@ main() {
 }
 
 TEST_CASE("locked returns the body's value and a body borrows the caller's locals") {
-  // `Noisy` reports its copies and destroys. Making the mutex copies the value into its cell; each handle also
-  // keeps the value it was made from, so a handle copy copies that one. The cell's value and the two handles' values
-  // are the three destroys.
+  // `Noisy` reports its copies and destroys. Making the mutex moves the value into its cell: the handle keeps
+  // nothing (its `initial` field is construction-only), so a handle copy copies nothing and the cell's value is the
+  // one destroy.
   program_matrix::ProgramCase program;
   program.name = "mutex_locked_values";
   program.source = R"(
@@ -239,10 +239,99 @@ main() {
 }
 )";
   program.exitCode = 0;
-  program.stdoutText = "copy\nmade\n10\ncopy\ncopied\n10\ndestroy\ndestroy\ndestroy\n3\n0\n";
+  program.stdoutText = "made\n10\ncopied\n10\ndestroy\n3\n0\n";
   // The native backend has no heap statistics.
   program.skipConfigs = {"native-O0", "native-O2"};
   runMutexProgram(program);
+}
+
+TEST_CASE("a mutex made from a local copies it once and the cell owns the only copy") {
+  // `cell{Mutex<Noisy>{n}}` copies the place `n` into the cell (one `copy`); `n` and the cell's value are the two
+  // destroys, and the handle holds nothing of its own.
+  program_matrix::ProgramCase program;
+  program.name = "mutex_made_from_local";
+  program.source = R"(
+import /std/sync/*
+import /std/text/*
+
+[struct]
+Noisy() {
+  [i64 mut] value{0i64}
+
+  [mut effects(io_out)]
+  Copy([Reference<Self>] other) {
+    this.value = other.value
+    print_line("copy"utf8)
+  }
+
+  [mut effects(io_out)]
+  Destroy() {
+    print_line("destroy"utf8)
+  }
+}
+
+[effects(lock, heap_alloc, io_out), return<int>]
+main() {
+  [Noisy] n{Noisy{[value] 4i64}}
+  cell{Mutex<Noisy>{n}}
+  other{cell}
+  print_line("made"utf8)
+  print_line(other.locked([]([Reference<Noisy>] state) { return(state.value) }))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "copy\nmade\n4\ndestroy\ndestroy\n";
+  runMutexProgram(program);
+}
+
+TEST_CASE("a Mutex or Atomic handle is two pointers and a flag, whatever it holds") {
+  if (program_matrix::corpusOnly()) {
+    return; // not a concurrent program run (TODO-5900)
+  }
+  // The value a handle was made from is a construction-only field: the struct layout has no slot for it, so a
+  // `Mutex` of a 64-byte struct is the same 24 bytes as a `Mutex<i64>`, and an `Atomic` is 16.
+  const std::filesystem::path sourcePath = writeSource("mutex_handle_layout", R"(
+import /std/sync/*
+
+[struct]
+Wide() {
+  [i64] a{1i64}
+  [i64] b{2i64}
+  [i64] c{3i64}
+  [i64] d{4i64}
+  [i64] e{5i64}
+  [i64] f{6i64}
+  [i64] g{7i64}
+  [i64] h{8i64}
+}
+
+[effects(lock, atomic, heap_alloc), return<int>]
+main() {
+  wide{Mutex<Wide>{Wide{}}}
+  small{Mutex<i64>{1i64}}
+  counter{Atomic<i64>{2i64}}
+  return(0i32)
+}
+)");
+  const program_matrix::Outcome dump = program_matrix::runCaptured(
+      "./primec --dump-stage ir-lowered " + program_matrix::quote(sourcePath.string()),
+      sourcePath.parent_path() / "dump");
+  CHECK_MESSAGE(dump.exitCode == 0, dump.err);
+  size_t mutexLayouts = 0;
+  size_t atomicLayouts = 0;
+  std::istringstream lines(dump.out);
+  for (std::string line; std::getline(lines, line);) {
+    if (line.find("/std/sync/Mutex__t") != std::string::npos) {
+      CHECK_MESSAGE(line.find(" size=24 align=8 ") != std::string::npos, line);
+      ++mutexLayouts;
+    } else if (line.find("/std/sync/Atomic__t") != std::string::npos) {
+      CHECK_MESSAGE(line.find(" size=16 align=8 ") != std::string::npos, line);
+      ++atomicLayouts;
+    }
+  }
+  CHECK(mutexLayouts == 2);
+  CHECK(atomicLayouts == 1);
 }
 
 TEST_CASE("locking a mutex again inside its own body faults") {

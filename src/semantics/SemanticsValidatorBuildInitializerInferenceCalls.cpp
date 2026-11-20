@@ -714,7 +714,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     for (const auto &fieldStmt : structIt->second->statements) {
       bool isStaticField = false;
       for (const auto &transform : fieldStmt.transforms) {
-        if (transform.name == "static") {
+        if (transform.name == "static" || transform.name == "ctor_only") {
           isStaticField = true;
           break;
         }

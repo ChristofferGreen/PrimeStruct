@@ -65,6 +65,39 @@ main() {
                 "mutex operation requires lock effect: ");
 }
 
+TEST_CASE("a Mutex made without a value is a diagnostic") {
+  // `initial` is a construction-only field with no default, so the brace needs the value the mutex takes in.
+  checkRejected(R"(
+import /std/sync/*
+
+[struct]
+Tally() {
+  [i64] count
+}
+
+[effects(lock, heap_alloc), return<int>]
+main() {
+  cell{Mutex<Tally>{}}
+  return(0i32)
+}
+)",
+                "argument count mismatch for /std/sync/Mutex");
+}
+
+TEST_CASE("a Mutex handle has no field that holds the value it was made from") {
+  checkRejected(R"(
+import /std/sync/*
+
+[effects(lock, heap_alloc), return<int>]
+main() {
+  cell{Mutex<i64>{1i64}}
+  [i64] first{cell.initial}
+  return(0i32)
+}
+)",
+                "construction-only field is not stored");
+}
+
 TEST_CASE("a Mutex of a non-sendable builtin is rejected") {
   checkRejected(R"(
 import /std/sync/*

@@ -4,10 +4,10 @@
         for (const auto &transform : paramExpr.transforms) {
           if (transform.name == "mut" || transform.name == "public" ||
               transform.name == "private" || transform.name == "static" ||
-              transform.name == "shared" || transform.name == "placement" ||
-              transform.name == "align" || transform.name == "packed" ||
-              transform.name == "reflection" || transform.name == "effects" ||
-              transform.name == "capabilities") {
+              transform.name == "ctor_only" || transform.name == "shared" ||
+              transform.name == "placement" || transform.name == "align" ||
+              transform.name == "packed" || transform.name == "reflection" ||
+              transform.name == "effects" || transform.name == "capabilities") {
             continue;
           }
           if (!transform.arguments.empty()) {

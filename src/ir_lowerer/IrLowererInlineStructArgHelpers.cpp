@@ -1,5 +1,6 @@
 #include "primec/ir_lowerer/IrLowererInlineStructArgHelpers.h"
 
+#include "primec/ast/AstFieldModifiers.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 
@@ -169,6 +170,83 @@ void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
   fieldInfo.index = baseLocal + field.slotOffset;
 }
 
+// A `ctor_only` field is read by the defaults that follow it, but the struct does not store it: its value lives
+// in locals of the constructing frame, outside the struct's block, and is copied from the argument the way a
+// stored field is (a temporary argument is moved in, a place is copied).
+struct UnstoredFieldEmitter {
+  const ResolveInlineStructSlotLayoutFn &resolveStructSlotLayout;
+  const InferInlineStructExprPathFn &inferStructExprPath;
+  const ExprLocalsPredicateFn &emitExpr;
+  const InferInlineStructFieldLocalInfoFn &inferFieldLocalInfo;
+  const EmitInlineStructCopySlotsFn &emitStructCopySlots;
+  const Int32ProviderFn &allocTempLocal;
+  const EmitInstructionFn &emitInstruction;
+  const std::function<bool(int32_t, int32_t, const StructSlotFieldInfo &)> &emitPlaceCopyHelpers;
+  const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryCopySource;
+  int32_t &nextLocal;
+
+  bool emit(const std::string &calleePath,
+            const Expr &param,
+            const Expr &arg,
+            const LocalMap &argLocals,
+            LocalMap &structLocals,
+            std::string &error) const {
+    LocalInfo fieldInfo;
+    if (!inferFieldLocalInfo(param, structLocals, fieldInfo, error)) {
+      return false;
+    }
+    std::string structPath = fieldInfo.structTypeName;
+    if (structPath.empty()) {
+      structPath = inferStructExprPath(arg, argLocals);
+    }
+    if (structPath.empty()) {
+      if (!emitExpr(arg, argLocals)) {
+        return false;
+      }
+      fieldInfo.index = allocTempLocal();
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(fieldInfo.index));
+      structLocals[param.name] = std::move(fieldInfo);
+      return true;
+    }
+    StructSlotLayoutInfo layout;
+    if (!resolveStructSlotLayout(structPath, layout) || layout.totalSlots <= 0) {
+      error = "internal error: no struct layout for the construction-only field " + calleePath +
+              "::" + param.name;
+      return false;
+    }
+    StructSlotFieldInfo field;
+    field.name = param.name;
+    field.slotOffset = 0;
+    field.slotCount = layout.totalSlots;
+    field.structPath = structPath;
+    const int32_t baseLocal = nextLocal;
+    nextLocal += layout.totalSlots;
+    if (!emitExpr(arg, argLocals)) {
+      return false;
+    }
+    const int32_t srcPtrLocal = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal));
+    if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
+      return false;
+    }
+    const bool temporaryArg = isTemporaryCopySource ? isTemporaryCopySource(arg, argLocals)
+                                                    : shouldDisarmStructCopySourceExpr(arg);
+    if (temporaryArg) {
+      emitDisarmTemporaryStructAfterCopy(emitInstruction, srcPtrLocal, structPath);
+    } else if (emitPlaceCopyHelpers) {
+      const int32_t destPtrLocal = allocTempLocal();
+      emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+      if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, field)) {
+        return false;
+      }
+    }
+    materializeInlineStructFieldLocal(field, baseLocal, nextLocal, fieldInfo, emitInstruction);
+    structLocals[param.name] = std::move(fieldInfo);
+    return true;
+  }
+};
+
 } // namespace
 
 bool emitInlineStructDefinitionArguments(
@@ -194,14 +272,30 @@ bool emitInlineStructDefinitionArguments(
   if (!resolveStructSlotLayout(calleePath, layout)) {
     return false;
   }
-  if (static_cast<int32_t>(orderedArgs.size()) != static_cast<int32_t>(layout.fields.size())) {
+  size_t unstoredCount = 0;
+  for (const Expr &param : params) {
+    if (isUnstoredConstructionField(param)) {
+      ++unstoredCount;
+    }
+  }
+  if (orderedArgs.size() != layout.fields.size() + unstoredCount) {
     error = "argument count mismatch";
     return false;
   }
-  if (params.size() != layout.fields.size()) {
+  if (params.size() != layout.fields.size() + unstoredCount) {
     error = "internal error: struct field parameter mismatch";
     return false;
   }
+  const UnstoredFieldEmitter unstoredEmitter{resolveStructSlotLayout,
+                                             inferStructExprPath,
+                                             emitExpr,
+                                             inferFieldLocalInfo,
+                                             emitStructCopySlots,
+                                             allocTempLocal,
+                                             emitInstruction,
+                                             emitPlaceCopyHelpers,
+                                             isTemporaryCopySource,
+                                             nextLocal};
   const int32_t baseLocal = destBaseLocal.value_or(nextLocal);
   if (!destBaseLocal.has_value()) {
     nextLocal += layout.totalSlots;
@@ -212,15 +306,8 @@ bool emitInlineStructDefinitionArguments(
   }
 
   LocalMap structLocals = callerLocals;
-  for (size_t i = 0; i < layout.fields.size(); ++i) {
-    const StructSlotFieldInfo &field = layout.fields[i];
-    size_t paramIndex = i;
-    for (size_t candidate = 0; candidate < params.size(); ++candidate) {
-      if (params[candidate].name == field.name) {
-        paramIndex = candidate;
-        break;
-      }
-    }
+  size_t storedIndex = 0;
+  for (size_t paramIndex = 0; paramIndex < params.size(); ++paramIndex) {
     const Expr *arg = orderedArgs[paramIndex];
     const Expr &param = params[paramIndex];
     if (!arg) {
@@ -229,6 +316,13 @@ bool emitInlineStructDefinitionArguments(
     }
     const bool usesDefaultInitializer = !param.args.empty() && arg == &param.args.front();
     const LocalMap &argLocals = usesDefaultInitializer ? structLocals : callerLocals;
+    if (isUnstoredConstructionField(param)) {
+      if (!unstoredEmitter.emit(calleePath, param, *arg, argLocals, structLocals, error)) {
+        return false;
+      }
+      continue;
+    }
+    const StructSlotFieldInfo &field = layout.fields[storedIndex++];
 
     if (field.structPath.empty()) {
       LocalInfo::ValueKind argKind = inferExprKind(*arg, argLocals);

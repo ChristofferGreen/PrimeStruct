@@ -2810,6 +2810,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/type_resolution/test_semantics_type_resolution_return_solver.cpp
     tests/unit/semantics/test_semantics_symbol_interner.cpp
     tests/unit/semantics/test_semantics_uninitialized_fields.cpp
+    tests/unit/semantics/test_semantics_construction_only_fields.cpp
     tests/unit/semantics/entry/test_semantics_entry_parameters.cpp
     tests/unit/semantics/entry/test_semantics_entry_return_inference.cpp
     tests/unit/semantics/entry/test_semantics_entry_resolution.cpp
@@ -2998,6 +2999,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.struct_methods
     primestruct.semantics.text_views
     primestruct.semantics.type_aliases
+    primestruct.semantics.construction_only_fields
     primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.move
@@ -4316,7 +4318,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=13 closures_callables=11 closures_references=8 closures_fields=17 closures_routers=11 container_copies=22
-    control=37 conversions=8 early_returns=10 error_handlers=8 element_assign=4 element_copies=10 element_receivers=8 frontend_accept=9 lifecycle=26 math=4 runtime_faults=4 mutexes=7 rwlocks=5 optimizer=16 pack_owners=5 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=21 pick_values=24 recursion=6 results=19 shared_programs=17
+    control=37 conversions=8 early_returns=10 error_handlers=8 element_assign=4 element_copies=10 element_receivers=8 frontend_accept=10 lifecycle=26 math=4 runtime_faults=4 mutexes=9 rwlocks=5 optimizer=16 pack_owners=5 parameter_modes=9 pick_returns=8 pick_value_arms=6 pick_subjects=21 pick_values=24 recursion=6 results=19 shared_programs=17
     shared_strings=5 struct_methods=12 sum_owners=12 tasks=34 text_views=7 user_at_sources=7 user_shadows=6 variadic_packs=5 vector_owners=50 vm_threads=4 vm_sync_replay=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

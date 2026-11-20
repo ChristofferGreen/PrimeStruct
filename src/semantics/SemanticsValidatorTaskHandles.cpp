@@ -486,7 +486,7 @@ SendableTypeLookup SemanticsValidator::sendableTypeLookup() {
   };
   lookup.fieldType =
       [this](const Definition &structDef, const Expr &fieldStmt, std::string &typeTextOut) {
-        if (isCompileTimeTypeBinding(fieldStmt)) {
+        if (isCompileTimeTypeBinding(fieldStmt) || isUnstoredConstructionField(fieldStmt)) {
           return false;
         }
         BindingInfo fieldBinding;

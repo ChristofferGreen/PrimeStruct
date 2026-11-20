@@ -705,7 +705,20 @@ helper over `value` (docs/spec/transforms.md).
     (`keeper.kept = value`) is the diagnostic `Reference field cannot be reassigned: kept`. A write through the field
     uses a method that binds a `Reference` local to `location(this.kept)` and assigns that local. The validator asks one component (`fieldBindingFor`,
     `src/semantics/SemanticsFieldModifiers.h`) whether a field is set only by construction, so a later field modifier
-    with the same rule (a construction-only parameter that is not stored) extends that one place.
+    with a related rule extends that one place.
+  - **Construction-only fields (`ctor_only`):** a field marked `[ctor_only T] name` (a modifier like `[mut]`, `[public]`;
+    stdlib surface syntax, valid only on a field of a `[struct]`) takes the brace argument like any field, and the
+    defaults of the fields after it read it by name, but the struct does not store it. It has no layout slot and no
+    entry in the semantic product's field metadata (a `Mutex<T>` handle is the same size for every `T`), the struct's
+    implicit `Destroy` and `Copy` skip it, and reading it after construction (`handle.name`, `this.name`) is the
+    diagnostic `construction-only field is not stored: /Type/name`. The argument is held in locals of the constructing
+    frame: a temporary is moved in, a place is copied, and the defaults that follow own the value from there (a
+    `[ctor_only T move] initial` read as `makeCell<T>(initial)` hands it to a `[T move]` parameter; a value no default
+    takes is not destroyed, so a `ctor_only` field that no later default reads is rejected: `ctor_only field is never
+    read by a later field default`). A field without a default is required (`Mutex<T>{}` is `argument count mismatch`).
+    `ctor_only` on a local, a parameter, a field of a struct without `[struct]`, or together with `static` is the
+    diagnostic `ctor_only is only valid on struct fields` (or `cannot be combined with static`). The stdlib uses it for
+    `Mutex<T>`, `RwLock<T>` and `Atomic<T>` (docs/MultithreadingPrototype.md, Mutex).
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
   - `return<Reference<T>>` accepts either a direct `Reference<T>` parameter (`return(paramRef)`) or a direct
     parameter-rooted borrowed carrier such as `return(borrow(dereference(slot)))` when the borrowed storage is

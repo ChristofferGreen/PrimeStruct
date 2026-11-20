@@ -461,6 +461,7 @@ CompileTimeIfCandidateFacts buildCompileTimeIfCandidateFacts(
     }
     for (const Expr &stmt : candidate.statements) {
       if (!stmt.isBinding || isTransformNamed(stmt.transforms, "static") ||
+          isTransformNamed(stmt.transforms, "ctor_only") ||
           semantics::isCompileTimeTypeBinding(stmt)) {
         continue;
       }

@@ -1206,8 +1206,8 @@ operations are IR opcodes (docs/spec/vm-design.md, Atomics); native, Wasm and GL
 the program with `atomic operations are not supported by the native backend`.
 
 `Mutex<T>` owns a value of a sendable type `T` in a heap cell and lets one task at a time reach it
-(docs/MultithreadingPrototype.md, Mutex). `Mutex<Tally>{Tally{}}` makes one holding a copy of that value. It is a
-handle like `Atomic`: a copy shares the value, so a spawned call that takes one works on the same value as its
+(docs/MultithreadingPrototype.md, Mutex). `Mutex<Tally>{Tally{}}` makes one holding that value (a temporary moves in, a place is copied once). It is a
+handle like `Atomic`, two pointers and a flag whatever `T` is (the value is a `ctor_only` field, which the struct does not store): a copy shares the value, so a spawned call that takes one works on the same value as its
 spawner, and the last handle destroyed destroys the value. The type is `[sendable]`.
 
 Its one method is `locked(body)`: it locks, calls the closure `body` with a `Reference<T>` to the value, unlocks

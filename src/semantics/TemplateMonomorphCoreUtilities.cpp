@@ -21,9 +21,10 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "struct" || name == "enum" || name == "unsafe" || name == "unsafe_api" ||
          name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
-         name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
-         name == "buffer" || name == "spawn" || name == "Additive" || name == "Multiplicative" ||
-         name == "Comparable" || name == "Indexable" || name == "sendable";
+         name == "static" || name == "ctor_only" || name == "single_type_to_return" ||
+         name == "stack" || name == "heap" || name == "buffer" || name == "spawn" ||
+         name == "Additive" || name == "Multiplicative" || name == "Comparable" ||
+         name == "Indexable" || name == "sendable";
 }
 
 

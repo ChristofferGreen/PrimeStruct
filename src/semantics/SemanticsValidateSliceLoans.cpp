@@ -425,8 +425,9 @@ struct Checker {
     }
     for (const Transform &transform : statement.transforms) {
       const std::string &name = transform.name;
-      if (name != "mut" && name != "public" && name != "private" && name != "static" && name != "copy" &&
-          name != "move" && name != "restrict" && name != "unsafe") {
+      if (name != "mut" && name != "public" && name != "private" && name != "static" &&
+          name != "ctor_only" && name != "copy" && name != "move" && name != "restrict" &&
+          name != "unsafe") {
         return false;  // an explicit type that is not a carrier
       }
     }

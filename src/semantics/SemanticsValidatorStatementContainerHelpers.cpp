@@ -109,7 +109,8 @@ bool SemanticsValidator::isDropTrivialContainerElementType(const std::string &ty
   }
 
   for (const auto &fieldStmt : structDef->statements) {
-    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
+    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+        isUnstoredConstructionField(fieldStmt)) {
       continue;
     }
     BindingInfo fieldBinding;
@@ -201,7 +202,8 @@ bool SemanticsValidator::isRelocationTrivialContainerElementType(const std::stri
   }
 
   for (const auto &fieldStmt : structDef->statements) {
-    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
+    if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+        isUnstoredConstructionField(fieldStmt)) {
       continue;
     }
     BindingInfo fieldBinding;
@@ -514,7 +516,8 @@ bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,
     }
     const Definition &structDef = *defIt->second;
     for (const auto &fieldStmt : structDef.statements) {
-      if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt)) {
+      if (!fieldStmt.isBinding || isCompileTimeTypeBinding(fieldStmt) ||
+          isUnstoredConstructionField(fieldStmt)) {
         continue;
       }
       BindingInfo fieldBinding;

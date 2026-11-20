@@ -1,4 +1,5 @@
 #include "primec/ir_lowerer/IrLowererStructFieldBindingHelpers.h"
+#include "primec/ast/AstFieldModifiers.h"
 
 #include <functional>
 
@@ -231,7 +232,8 @@ bool collectStructLayoutFieldBindings(
         continue;
       }
       LayoutFieldBinding binding;
-      if (useSemanticProductFields && !isStaticFieldBinding(stmt)) {
+      if (useSemanticProductFields && !isStaticFieldBinding(stmt) &&
+          !isUnstoredConstructionField(stmt)) {
         if (semanticIndex >= semanticFields.size()) {
           errorOut = "internal error: mismatched struct field info for " + def.fullPath;
           return false;

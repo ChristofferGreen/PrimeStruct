@@ -40,9 +40,10 @@ bool isSupportedScalarTypeName(const std::string &typeName) {
 std::string extractParameterTypeNameStatic(const Expr &paramExpr) {
   for (const auto &transform : paramExpr.transforms) {
     if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-        transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-        transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-        transform.name == "effects" || transform.name == "capabilities" || transform.name == "args") {
+        transform.name == "static" || transform.name == "ctor_only" || transform.name == "shared" ||
+        transform.name == "placement" || transform.name == "align" || transform.name == "packed" ||
+        transform.name == "reflection" || transform.name == "effects" ||
+        transform.name == "capabilities" || transform.name == "args") {
       continue;
     }
     if (!transform.arguments.empty() || !transform.templateArgs.empty()) {
@@ -602,10 +603,10 @@ bool isAddressAbiParameter(
       paramHasTransformNamed(param, "copy") || paramHasTransformNamed(param, "move");
   for (const Transform &transform : param.transforms) {
     if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-        transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-        transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-        transform.name == "effects" || transform.name == "capabilities" ||
-        transform.name == "copy" || transform.name == "move") {
+        transform.name == "static" || transform.name == "ctor_only" || transform.name == "shared" ||
+        transform.name == "placement" || transform.name == "align" || transform.name == "packed" ||
+        transform.name == "reflection" || transform.name == "effects" ||
+        transform.name == "capabilities" || transform.name == "copy" || transform.name == "move") {
       continue;
     }
     if (isBuiltinVectorType(transform, def.namespacePrefix, structNames)) {
@@ -818,10 +819,10 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
 const Transform *taskParameterTypeTransform(const Expr &param) {
   for (const Transform &transform : param.transforms) {
     if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-        transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
-        transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
-        transform.name == "effects" || transform.name == "capabilities" ||
-        transform.name == "copy" || transform.name == "move") {
+        transform.name == "static" || transform.name == "ctor_only" || transform.name == "shared" ||
+        transform.name == "placement" || transform.name == "align" || transform.name == "packed" ||
+        transform.name == "reflection" || transform.name == "effects" ||
+        transform.name == "capabilities" || transform.name == "copy" || transform.name == "move") {
       continue;
     }
     return &transform;
@@ -851,11 +852,12 @@ bool resolveTaskSpawnShape(const Definition &def,
     const Transform *typeTransform = nullptr;
     for (const Transform &transform : param.transforms) {
       if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
-          transform.name == "static" || transform.name == "shared" ||
-          transform.name == "placement" || transform.name == "align" ||
-          transform.name == "packed" || transform.name == "reflection" ||
-          transform.name == "effects" || transform.name == "capabilities" ||
-          transform.name == "copy" || transform.name == "move") {
+          transform.name == "static" || transform.name == "ctor_only" ||
+          transform.name == "shared" || transform.name == "placement" ||
+          transform.name == "align" || transform.name == "packed" ||
+          transform.name == "reflection" || transform.name == "effects" ||
+          transform.name == "capabilities" || transform.name == "copy" ||
+          transform.name == "move") {
         continue;
       }
       typeTransform = &transform;

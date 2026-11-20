@@ -910,8 +910,13 @@ docs/spec/stdlib-reference.md, Shared state.
   of the mutex's control cell; the unlock is the `Destroy` of a local of `locked`. On `optexe` an uncontended
   lock or unlock is one atomic operation on that slot and a waiter sleeps on a condition variable, where the
   first sketch said `std::mutex`: the slot has to hold the holder for the locked-again fault either way.
-- Each handle also keeps the value it was made from (the struct's `initial` field), so a `Mutex<T>` handle is as
-  large as a `T` plus two pointers and a `T` is destroyed with each handle (TODO-5854).
+- The handle keeps nothing of the value it was made from. The struct's first field is `[ctor_only T move] initial`:
+  the brace argument is read by the field default `value{mutexValueAlloc<T>(initial)}`, which moves it into the heap
+  cell, and the struct stores no slot for it (docs/spec/type-system.md, Construction-only fields). A `Mutex<T>` handle
+  is two pointers and a flag (24 bytes) for every `T`, a copy of the handle copies no `T`, and the one `T` in the cell
+  is destroyed once, by the last handle. `RwLock<T>` and `Atomic<T>` are built the same way (the `Atomic` argument is
+  an integer, so only its size mattered). `Channel<T>` keeps no value it was made from (its stored `capacity` is an
+  `i32`), and a `SharedString` is filled after it is made, so neither has the field.
 - Effect `lock`; making one needs `heap_alloc`.
 
 ### RwLock

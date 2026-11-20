@@ -159,7 +159,7 @@ RequirementPredicateDefinitionContext makeRequirementPredicateDefinitionContext(
     }
     for (const auto &stmt : candidate.statements) {
       if (!stmt.isBinding || hasTransform(stmt.transforms, "static") ||
-          isCompileTimeTypeBinding(stmt)) {
+          hasTransform(stmt.transforms, "ctor_only") || isCompileTimeTypeBinding(stmt)) {
         continue;
       }
       BindingInfo binding;
