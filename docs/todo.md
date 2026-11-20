@@ -461,9 +461,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: x86_64 division only.
   - notes: deferred: needs a Linux x86_64 machine to run; the worker of the arm64 fix only had arm64 macOS, and an untested encoding is not landed.
 
-- [ ] TODO-6052: Recursion limits of each backend are documented
+- [~] TODO-6052: Recursion limits of each backend are documented
   - owner: ai
   - status: ready
+  - claimed_by: build-hash (worktree-agent-a1f688ce17b85b0ca), 2026-11-20
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5517)
   - parallel_track: runtime-faults
