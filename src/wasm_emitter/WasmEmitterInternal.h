@@ -83,7 +83,18 @@ struct WasmTypeState {
   std::vector<std::vector<uint8_t>> *observedParams = nullptr;
 };
 
+// A `block` the emitter opened around an `if`/`else` so that a jump inside it to the end of the construct (an early
+// exit of one arm) is a `br`. `depth` is the number of wasm control frames open inside the block's own frame.
+struct WasmJumpLabel {
+  size_t irTarget = 0;
+  uint32_t depth = 0;
+};
+
 struct WasmLocalLayout {
+  // The wasm control frames (`block`, `loop`, `if`) open around the instruction being emitted, and the labels of the
+  // enclosing structured constructs a jump may leave (WasmEmitterControlFlow.cpp).
+  uint32_t controlDepth = 0;
+  std::vector<WasmJumpLabel> jumpLabels;
   uint32_t irLocalCount = 0;
   uint32_t parameterCount = 0;
   // The wasm type of every local: the parameters, the IR locals, then the emitter's helper locals.

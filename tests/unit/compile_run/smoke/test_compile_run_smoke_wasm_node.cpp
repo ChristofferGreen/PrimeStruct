@@ -349,6 +349,27 @@ main() {
 }
 
 // An `if` expression leaves its arm's value on the stack at the join, so the Wasm `if` block has that value's type.
+// `round` lowers to nested if/else arms that leave the enclosing arm early (a jump to the end of the construct).
+TEST_CASE("wasm runs round and its early exits from an if arm like the vm") {
+  checkWasmMatchesVm("round_early_exit",
+                     R"(
+import /std/math/*
+
+[return<int> effects(io_out)]
+main() {
+  [f64] up{2.5f64}
+  [f64] down{-2.5f64}
+  [f64] small{0.4f64}
+  print_line(convert<i32>(round(up)))
+  print_line(convert<i32>(round(down)))
+  print_line(convert<i32>(round(small)))
+  print_line(convert<i32>(round(-0.5f64)))
+  return(convert<i32>(round(up)))
+}
+)",
+                     3);
+}
+
 TEST_CASE("wasm runs a value yielding if with i32 arms and calls like the vm") {
   checkWasmMatchesVm("value_if_i32",
                      R"(

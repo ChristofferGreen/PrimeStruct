@@ -89,12 +89,133 @@ bool detectCanonicalLoopRegion(
   return true;
 }
 
+constexpr size_t NoExitTarget = static_cast<size_t>(-1);
+
+// The innermost label a jump to IR index `target` leaves by, or null.
+const WasmJumpLabel *findJumpLabel(const WasmLocalLayout &layout, size_t target) {
+  for (size_t i = layout.jumpLabels.size(); i > 0; --i) {
+    if (layout.jumpLabels[i - 1].irTarget == target) {
+      return &layout.jumpLabels[i - 1];
+    }
+  }
+  return nullptr;
+}
+
+void appendBranchToLabel(const WasmLocalLayout &layout,
+                         const WasmJumpLabel &label,
+                         std::vector<uint8_t> &out) {
+  out.push_back(WasmOpBr);
+  appendU32Leb(layout.controlDepth - label.depth, out);
+}
+
+// Whether [start, end) holds a jump to `target` that leaves the construct it is written in: the early exit of an arm
+// of the `if`/`else` that ends at `target`. A jump that closes an `if`/`else` nested in an else arm (the end of the
+// arm is `target` itself) is not one; the instruction before the jump's index is the target of that `if`'s
+// `JumpIfZero`.
+bool hasEscapingJump(const IrFunction &function, size_t start, size_t end, size_t target) {
+  for (size_t p = start; p < end; ++p) {
+    const IrInstruction &inst = function.instructions[p];
+    if (inst.op != IrOpcode::Jump || inst.imm != target) {
+      continue;
+    }
+    if (end < target) {
+      return true;
+    }
+    bool closesNestedIf = false;
+    for (size_t q = start; q < p && !closesNestedIf; ++q) {
+      const IrInstruction &guard = function.instructions[q];
+      closesNestedIf = guard.op == IrOpcode::JumpIfZero && guard.imm == p + 1;
+    }
+    if (!closesNestedIf) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// `JumpIfZero` at `conditionIndex` whose body [conditionIndex + 1, bodyEnd) ends in a jump out of the enclosing
+// construct (to `label`): wasm `if` of the body followed by `br`; the code from the jump-over target on follows it.
+bool emitIfThenBranch(const IrFunction &function,
+                      size_t bodyStart,
+                      size_t bodyEnd,
+                      const WasmJumpLabel &label,
+                      WasmLocalLayout &localLayout,
+                      const std::vector<WasmFunctionType> &functionTypes,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out,
+                      std::string &error) {
+  if (!consumeWasmCondition(localLayout, out, error, function.name)) {
+    return false;
+  }
+  std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
+  ++localLayout.controlDepth;
+  std::vector<uint8_t> body;
+  if (!emitInstructionRange(
+          function, bodyStart, bodyEnd, localLayout, functionTypes, runtime, body, error)) {
+    return false;
+  }
+  if (!localLayout.typeState.stack.empty()) {
+    error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+    return false;
+  }
+  appendBranchToLabel(localLayout, label, body);
+  --localLayout.controlDepth;
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  out.insert(out.end(), body.begin(), body.end());
+  out.push_back(WasmOpEnd);
+  leaveWasmBlock(localLayout, std::move(outerStack));
+  return true;
+}
+
+// One arm of an `if`/`else` that ends at IR index `exitTarget`. An arm with a jump to `exitTarget` inside it (an
+// early exit) is wrapped in a `block` the jump leaves by `br`: the end of the block is the end of the arm, and the end
+// of the arm is the end of the construct. Such an arm yields no value.
+bool emitIfArm(const IrFunction &function,
+               size_t start,
+               size_t end,
+               size_t exitTarget,
+               WasmLocalLayout &localLayout,
+               const std::vector<WasmFunctionType> &functionTypes,
+               const WasmRuntimeContext &runtime,
+               std::vector<uint8_t> &out,
+               std::string &error,
+               bool *outDiverges) {
+  const bool wrap = exitTarget != NoExitTarget && hasEscapingJump(function, start, end, exitTarget);
+  if (!wrap) {
+    return emitInstructionRange(
+        function, start, end, localLayout, functionTypes, runtime, out, error, outDiverges);
+  }
+  ++localLayout.controlDepth;
+  localLayout.jumpLabels.push_back({exitTarget, localLayout.controlDepth});
+  std::vector<uint8_t> body;
+  if (!emitInstructionRange(
+          function, start, end, localLayout, functionTypes, runtime, body, error, nullptr)) {
+    return false;
+  }
+  localLayout.jumpLabels.pop_back();
+  --localLayout.controlDepth;
+  if (!localLayout.typeState.stack.empty()) {
+    error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+    return false;
+  }
+  out.push_back(WasmOpBlock);
+  out.push_back(WasmBlockTypeVoid);
+  out.insert(out.end(), body.begin(), body.end());
+  out.push_back(WasmOpEnd);
+  if (outDiverges != nullptr) {
+    *outDiverges = false;
+  }
+  return true;
+}
+
 bool emitIfRegion(const IrFunction &function,
                   size_t conditionIndex,
                   size_t trueStart,
                   size_t trueEnd,
                   size_t falseStart,
                   size_t falseEnd,
+                  size_t exitTarget,
                   WasmLocalLayout &localLayout,
                   const std::vector<WasmFunctionType> &functionTypes,
                   const WasmRuntimeContext &runtime,
@@ -108,17 +229,19 @@ bool emitIfRegion(const IrFunction &function,
   // Both arms are emitted apart first: a value an arm leaves on the stack gives the `if` its result type, which the
   // block type in front of the arms must name.
   std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
+  ++localLayout.controlDepth;
   std::vector<uint8_t> trueCode;
   bool trueDiverges = false;
-  if (!emitInstructionRange(function,
-                            trueStart,
-                            trueEnd,
-                            localLayout,
-                            functionTypes,
-                            runtime,
-                            trueCode,
-                            error,
-                            &trueDiverges)) {
+  if (!emitIfArm(function,
+                 trueStart,
+                 trueEnd,
+                 exitTarget,
+                 localLayout,
+                 functionTypes,
+                 runtime,
+                 trueCode,
+                 error,
+                 &trueDiverges)) {
     return false;
   }
   const std::vector<uint8_t> trueStack = localLayout.typeState.stack;
@@ -128,19 +251,21 @@ bool emitIfRegion(const IrFunction &function,
   bool falseDiverges = false;
   if (hasElse) {
     localLayout.typeState.stack.clear();
-    if (!emitInstructionRange(function,
-                              falseStart,
-                              falseEnd,
-                              localLayout,
-                              functionTypes,
-                              runtime,
-                              falseCode,
-                              error,
-                              &falseDiverges)) {
+    if (!emitIfArm(function,
+                   falseStart,
+                   falseEnd,
+                   exitTarget,
+                   localLayout,
+                   functionTypes,
+                   runtime,
+                   falseCode,
+                   error,
+                   &falseDiverges)) {
       return false;
     }
     falseStack = localLayout.typeState.stack;
   }
+  --localLayout.controlDepth;
 
   uint8_t resultType = WasmBlockTypeVoid;
   if (hasElse) {
@@ -224,6 +349,7 @@ bool emitInstructionRange(const IrFunction &function,
       out.push_back(WasmOpLoop);
       out.push_back(WasmBlockTypeVoid);
       std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
+      localLayout.controlDepth += 2;
 
       if (!emitInstructionRange(
               function,
@@ -258,6 +384,7 @@ bool emitInstructionRange(const IrFunction &function,
       appendU32Leb(0, out);
       out.push_back(WasmOpEnd);
       out.push_back(WasmOpEnd);
+      localLayout.controlDepth -= 2;
       leaveWasmBlock(localLayout, std::move(outerStack));
 
       index = loopRegion.endIndex;
@@ -286,8 +413,26 @@ bool emitInstructionRange(const IrFunction &function,
             return false;
           }
           if (jumpTarget > end) {
-            error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
-            return false;
+            // The body ends in a jump out of the enclosing `if`/`else` (an early exit of one of its arms).
+            const WasmJumpLabel *label = findJumpLabel(localLayout, jumpTarget);
+            if (label == nullptr) {
+              error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+              return false;
+            }
+            if (!emitIfThenBranch(function,
+                                  index + 1,
+                                  target - 1,
+                                  *label,
+                                  localLayout,
+                                  functionTypes,
+                                  runtime,
+                                  out,
+                                  error)) {
+              return false;
+            }
+            diverges = false;
+            index = target;
+            continue;
           }
 
           // wasm's `if` executes its then-slot when the popped condition is
@@ -309,6 +454,7 @@ bool emitInstructionRange(const IrFunction &function,
                             index + 1,
                             target - 1,
                             target,
+                            jumpTarget,
                             jumpTarget,
                             localLayout,
                             functionTypes,
@@ -348,6 +494,7 @@ bool emitInstructionRange(const IrFunction &function,
                         target,
                         target,
                         target,
+                        NoExitTarget,
                         localLayout,
                         functionTypes,
                         runtime,
@@ -369,6 +516,12 @@ bool emitInstructionRange(const IrFunction &function,
       }
       if (target == index + 1) {
         // A jump to the next instruction (the end of an inlined body that returns a value) does nothing.
+        ++index;
+        continue;
+      }
+      if (const WasmJumpLabel *label = findJumpLabel(localLayout, target)) {
+        appendBranchToLabel(localLayout, *label, out);
+        diverges = true;
         ++index;
         continue;
       }

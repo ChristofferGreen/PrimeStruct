@@ -2528,6 +2528,7 @@ are left unarchived.
 | TODO-6120 | The snippet of a diagnostic in an imported file is cut from the primary file's text | [undated.md](todo_archive/undated.md) | - |
 | TODO-6122 | The library cutoff of the build runner passed the cache hash as the compiler build id | [undated.md](todo_archive/undated.md) | - |
 | TODO-6125 | Integer division by zero under the WASI profile ends with `proc_exit(3)` and the VM's message | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6126 | `convert<i32>(round(x))` is "wasm emitter unsupported control-flow pattern" | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6132 | Gate entries that pass alone but fail in the gate (watchdog silence or hard cap) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 
