@@ -95,6 +95,7 @@ list(APPEND PrimeStructManagedTextFilterSuites
   primestruct.text_filters.pipeline.implicit_utf8
   primestruct.text_filters.pipeline.implicit_i32
   primestruct.text_filters.pipeline.collections
+  primestruct.text_filters.offset_map
   primestruct.text_filters.helpers
 )
 
@@ -132,6 +133,13 @@ addPrimeStructManagedDoctestSuite("primestruct.text_filters.pipeline.collections
   LABEL "parallel-safe"
   TOTAL_CASES 15
   CASES_PER_SHARD 10
+)
+addPrimeStructManagedDoctestSuite("primestruct.text_filters.offset_map"
+  TARGET PrimeStruct_text_filter_tests
+  TIMEOUT 300
+  LABEL "parallel-safe"
+  TOTAL_CASES 7
+  CASES_PER_SHARD 7
 )
 addPrimeStructManagedDoctestSuite("primestruct.text_filters.helpers"
   TARGET PrimeStruct_text_filter_tests

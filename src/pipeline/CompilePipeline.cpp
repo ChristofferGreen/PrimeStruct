@@ -272,6 +272,9 @@ bool runCompilePipeline(const Options &options,
   }
 
   output.filteredSource = preParseStage.filteredSource;
+  // The parser reads the filtered text, so its positions are mapped back to the expanded source from here on.
+  importStage.expandedSource.textFilterOptions = preParseStage.textFilterOptions;
+  output.expandedSource.textFilterOptions = preParseStage.textFilterOptions;
 
   const DumpStage dumpStage = parseDumpStage(options.dumpStage);
 

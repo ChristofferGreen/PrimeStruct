@@ -110,10 +110,16 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
 
 namespace {
 
-CliFailure describeCompilePipelineFailureDetails(
-    const CompilePipelineFailure &pipelineFailure,
-    bool hasSemanticProgram,
-    const std::string &filteredSource) {
+// The text a diagnostic's snippet is cut from: the source the user wrote when the parser read a filtering of it (its
+// positions are mapped back to that text), else the text the parser read.
+const std::string &diagnosticSnippetSource(const ExpandedSource &expandedSource,
+                                           const std::string &filteredSource) {
+  return expandedSource.textFilterOptions != nullptr ? expandedSource.text : filteredSource;
+}
+
+CliFailure describeCompilePipelineFailureDetails(const CompilePipelineFailure &pipelineFailure,
+                                                 bool hasSemanticProgram,
+                                                 const std::string &snippetSource) {
   CliFailure failure;
 
   failure.message = pipelineFailure.message;
@@ -134,7 +140,7 @@ CliFailure describeCompilePipelineFailureDetails(
       failure.plainPrefix = "Parse error: ";
       failure.notes = {"stage: parse"};
       failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
-      failure.sourceText = filteredSource;
+      failure.sourceText = snippetSource;
       break;
     case CompilePipelineErrorStage::UnsupportedDumpStage:
       failure.code = DiagnosticCode::UnsupportedDumpStage;
@@ -149,7 +155,7 @@ CliFailure describeCompilePipelineFailureDetails(
         failure.notes.push_back("semantic-product: available");
       }
       failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
-      failure.sourceText = filteredSource;
+      failure.sourceText = snippetSource;
       break;
     case CompilePipelineErrorStage::None:
     default:
@@ -173,12 +179,16 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
   }
 
   return describeCompilePipelineFailureDetails(
-      output.failure, output.hasSemanticProgram, output.filteredSource);
+      output.failure,
+      output.hasSemanticProgram,
+      diagnosticSnippetSource(output.expandedSource, output.filteredSource));
 }
 
 CliFailure describeCompilePipelineFailure(const CompilePipelineFailureResult &output) {
   return describeCompilePipelineFailureDetails(
-      output.failure, output.hasSemanticProgram, output.filteredSource);
+      output.failure,
+      output.hasSemanticProgram,
+      diagnosticSnippetSource(output.expandedSource, output.filteredSource));
 }
 
 std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics, std::string_view stage) {

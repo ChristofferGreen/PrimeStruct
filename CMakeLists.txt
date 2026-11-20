@@ -468,6 +468,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/text_filter/TextFilterPipelinePass.cpp
   src/text_filter/TextFilterPipelineScan.cpp
   src/text_filter/TextFilterPipeline.cpp
+  src/text_filter/TextFilterOffsetMap.cpp
   src/frontend/StdlibSymbolManifest.cpp
 )
 
@@ -2578,6 +2579,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_emit_structured_semantic.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_stdlib_span.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_lowering_locations.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_source_columns.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp
@@ -2850,6 +2852,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/text_filter/test_text_filter_pipeline_implicit_utf8.cpp
     tests/unit/text_filter/test_text_filter_pipeline_implicit_i32.cpp
     tests/unit/text_filter/test_text_filter_pipeline_collections.cpp
+    tests/unit/text_filter/test_text_filter_offset_map.cpp
   )
   target_include_directories(PrimeStruct_text_filter_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_text_filter_tests PRIVATE primec_frontend_lib)
@@ -3037,6 +3040,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.text_filters.pipeline.implicit_utf8
     primestruct.text_filters.pipeline.implicit_i32
     primestruct.text_filters.pipeline.collections
+    primestruct.text_filters.offset_map
     primestruct.text_filters.helpers
   )
 

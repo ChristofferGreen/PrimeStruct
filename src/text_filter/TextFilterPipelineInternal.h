@@ -1,9 +1,14 @@
 #pragma once
 
+#include "TrackedText.h"
+
 #include <string>
 #include <vector>
 
 namespace primec {
+
+// The text a filter reads and writes: a `std::string` that can also remember where each byte came from.
+using Text = text_filter::Text;
 
 struct TextFilterOptions;
 struct TextTransformRule;
@@ -13,17 +18,15 @@ struct TransformListScan {
   std::vector<std::string> textTransforms;
 };
 
-bool applyPass(const std::string &input,
-               std::string &output,
+bool applyPass(const Text &input,
+               Text &output,
                std::string &error,
                const TextFilterOptions &options);
 
-bool rewriteBinaryOperatorsWithPrecedence(const std::string &input,
-                                          std::string &output,
-                                          std::string &error);
+bool rewriteBinaryOperatorsWithPrecedence(const Text &input, Text &output, std::string &error);
 
-bool applyPerEnvelope(const std::string &input,
-                      std::string &output,
+bool applyPerEnvelope(const Text &input,
+                      Text &output,
                       std::string &error,
                       const std::vector<std::string> &filters,
                       const std::vector<TextTransformRule> &rules,
@@ -47,6 +50,6 @@ bool scanEnvelopeAfterList(const std::string &input, size_t start, size_t &envel
 size_t
 findNextTransformListStart(const std::string &input, size_t start, bool lambdasJoinCalls = false);
 bool isCallParenAt(const std::string &input, size_t openIndex);
-bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error);
+bool appendOperatorsTransform(const Text &input, Text &output, std::string &error);
 
 } // namespace primec

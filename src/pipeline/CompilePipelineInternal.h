@@ -31,6 +31,7 @@
 #include <fstream>
 #include <iostream>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <string_view>
@@ -290,6 +291,9 @@ struct CompilePipelineImportStageState {
 
 struct CompilePipelinePreParseStageState {
   std::string filteredSource;
+  // The filters `filteredSource` came from, so that positions in it map back to the expanded source
+  // (`ExpandedSource::textFilterOptions`); null when the filtered text is not a filtering of the expanded text.
+  std::shared_ptr<const TextFilterOptions> textFilterOptions;
   std::vector<std::string> sourceImports;
 };
 

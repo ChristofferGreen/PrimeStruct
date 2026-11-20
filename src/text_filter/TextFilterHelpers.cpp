@@ -360,7 +360,7 @@ size_t findRightTokenEnd(const std::string &text, size_t start) {
   return pos;
 }
 
-std::string stripOuterParens(const std::string &text) {
+Text stripOuterParens(const Text &text) {
   if (text.size() < 2 || text.front() != '(' || text.back() != ')') {
     return text;
   }
@@ -371,13 +371,24 @@ std::string stripOuterParens(const std::string &text) {
   return text.substr(1, text.size() - 2);
 }
 
-std::string normalizeUnaryOperand(const std::string &operand) {
+std::string stripOuterParens(const std::string &text) {
+  return stripOuterParens(Text(text));
+}
+
+Text normalizeUnaryOperand(const Text &operand) {
   if (operand.size() > 1 && operand[0] == '-' && !isDigitChar(operand[1])) {
-    std::string inner = operand.substr(1);
-    inner = stripOuterParens(inner);
-    return "negate(" + inner + ")";
+    const Text inner = stripOuterParens(operand.substr(1));
+    Text negated;
+    negated.append("negate(");
+    negated.append(inner);
+    negated.append(")");
+    return negated;
   }
   return operand;
+}
+
+std::string normalizeUnaryOperand(const std::string &operand) {
+  return normalizeUnaryOperand(Text(operand));
 }
 
 namespace {
@@ -489,7 +500,7 @@ bool looksLikeTemplateListClose(const std::string &input, size_t index) {
   return false;
 }
 
-std::string maybeAppendI32(const std::string &token) {
+Text maybeAppendI32(const Text &token) {
   if (token.empty()) {
     return token;
   }
@@ -515,7 +526,9 @@ std::string maybeAppendI32(const std::string &token) {
     }
   }
   if (isDecimal) {
-    return token + "i32";
+    Text typed = token;
+    typed.append("i32");
+    return typed;
   }
   if (token.size() > start + 2 && token[start] == '0' && (token[start + 1] == 'x' || token[start + 1] == 'X')) {
     for (size_t i = start + 2; i < token.size(); ++i) {
@@ -531,12 +544,18 @@ std::string maybeAppendI32(const std::string &token) {
         return token;
       }
     }
-    return token + "i32";
+    Text typed = token;
+    typed.append("i32");
+    return typed;
   }
   return token;
 }
 
-std::string maybeAppendUtf8(const std::string &token) {
+std::string maybeAppendI32(const std::string &token) {
+  return maybeAppendI32(Text(token));
+}
+
+Text maybeAppendUtf8(const Text &token) {
   if (token.empty()) {
     return token;
   }
@@ -548,7 +567,13 @@ std::string maybeAppendUtf8(const std::string &token) {
   if (!suffix.empty()) {
     return token;
   }
-  return token + "utf8";
+  Text typed = token;
+  typed.append("utf8");
+  return typed;
+}
+
+std::string maybeAppendUtf8(const std::string &token) {
+  return maybeAppendUtf8(Text(token));
 }
 
 } // namespace primec::text_filter

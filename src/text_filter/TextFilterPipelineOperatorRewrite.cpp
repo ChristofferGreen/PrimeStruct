@@ -86,13 +86,10 @@ bool matchBinaryOperator(const std::string &input, size_t pos, BinaryOperatorInf
   return false;
 }
 
-bool parseExpressionWithPrecedence(const std::string &input,
-                                   size_t &pos,
-                                   int minPrec,
-                                   std::string &out,
-                                   std::string &error);
+bool parseExpressionWithPrecedence(
+    const Text &input, size_t &pos, int minPrec, Text &out, std::string &error);
 
-bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &out, std::string &error) {
+bool parsePrimaryExpression(const Text &input, size_t &pos, Text &out, std::string &error) {
   size_t start = pos;
   if (start >= input.size()) {
     return false;
@@ -103,12 +100,15 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
       error = "unterminated parenthesis";
       return false;
     }
-    std::string inner = input.substr(start + 1, close - (start + 1));
-    std::string rewritten;
+    const Text inner = input.substr(start + 1, close - (start + 1));
+    Text rewritten;
     if (!rewriteBinaryOperatorsWithPrecedence(inner, rewritten, error)) {
       return false;
     }
-    out = "(" + rewritten + ")";
+    out.clear();
+    out.pushCopy(input, start);
+    out.append(rewritten);
+    out.pushCopy(input, close);
     pos = close + 1;
     return true;
   }
@@ -165,7 +165,7 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
     pos = end;
     return true;
   }
-  std::string token;
+  Text token;
   if (input[start] == '/' && !isCommentStart(input, start)) {
     if (start == 0 || isSeparator(input[start - 1]) || input[start - 1] == '.') {
       size_t end = start + 1;
@@ -227,21 +227,21 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
         error = "unterminated brace construction";
         return false;
       }
-      std::string inner = input.substr(scan + 1, close - (scan + 1));
-      std::string rewritten;
+      const Text inner = input.substr(scan + 1, close - (scan + 1));
+      Text rewritten;
       if (!rewriteBinaryOperatorsWithPrecedence(inner, rewritten, error)) {
         return false;
       }
-      token.push_back('{');
+      token.pushCopy(input, scan);
       token.append(rewritten);
-      token.push_back('}');
+      token.pushCopy(input, close);
       pos = close + 1;
       continue;
     }
     // `?` after an operand is the postfix try: it binds tighter than any binary operator (`x? + 1`,
     // `1 + x?`), so it belongs to the operand.
     if (scan == pos && scan < input.size() && input[scan] == '?') {
-      token.push_back('?');
+      token.pushCopy(input, scan);
       pos = scan + 1;
       continue;
     }
@@ -268,14 +268,14 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
         error = openChar == '(' ? "unterminated call arguments" : "unterminated index expression";
         return false;
       }
-      std::string inner = input.substr(scan + 1, close - (scan + 1));
-      std::string rewritten;
+      const Text inner = input.substr(scan + 1, close - (scan + 1));
+      Text rewritten;
       if (!rewriteBinaryOperatorsWithPrecedence(inner, rewritten, error)) {
         return false;
       }
-      token.push_back(openChar);
+      token.pushCopy(input, scan);
       token.append(rewritten);
-      token.push_back(closeChar);
+      token.pushCopy(input, close);
       pos = close + 1;
       // `pick(subject) { arms }`: the arms block is part of the operand, also when its brace opens on a later
       // line, so the whole `pick` is the right side of `name = pick(...) { ... }`.
@@ -292,15 +292,15 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
             error = "unterminated pick arms";
             return false;
           }
-          std::string arms;
+          Text arms;
           if (!rewriteBinaryOperatorsWithPrecedence(
                   input.substr(armsStart + 1, armsClose - (armsStart + 1)), arms, error)) {
             return false;
           }
           token.append(input.substr(pos, armsStart - pos));
-          token.push_back('{');
+          token.pushCopy(input, armsStart);
           token.append(arms);
-          token.push_back('}');
+          token.pushCopy(input, armsClose);
           pos = armsClose + 1;
           break;
         }
@@ -313,11 +313,8 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
   return true;
 }
 
-bool parseExpressionWithPrecedence(const std::string &input,
-                                   size_t &pos,
-                                   int minPrec,
-                                   std::string &out,
-                                   std::string &error) {
+bool parseExpressionWithPrecedence(
+    const Text &input, size_t &pos, int minPrec, Text &out, std::string &error) {
   size_t startPos = pos;
   while (pos < input.size() && std::isspace(static_cast<unsigned char>(input[pos]))) {
     ++pos;
@@ -325,7 +322,7 @@ bool parseExpressionWithPrecedence(const std::string &input,
   if (pos < input.size() && isCommentStart(input, pos)) {
     return false;
   }
-  std::string left;
+  Text left;
   if (!parsePrimaryExpression(input, pos, left, error)) {
     return false;
   }
@@ -366,14 +363,21 @@ bool parseExpressionWithPrecedence(const std::string &input,
     if (pos < input.size() && isCommentStart(input, pos)) {
       return false;
     }
-    std::string right;
+    Text right;
     int nextMin = op.precedence + (op.rightAssociative ? 0 : 1);
     if (!parseExpressionWithPrecedence(input, pos, nextMin, right, error)) {
       return false;
     }
-    std::string leftValue = stripOuterParens(left);
-    std::string rightValue = stripOuterParens(right);
-    left = std::string(op.name) + "(" + leftValue + ", " + rightValue + ")";
+    const Text leftValue = stripOuterParens(left);
+    const Text rightValue = stripOuterParens(right);
+    Text call;
+    call.append(op.name);
+    call.append("(");
+    call.append(leftValue);
+    call.append(", ");
+    call.append(rightValue);
+    call.append(")");
+    left = std::move(call);
   }
   if (pos == startPos) {
     return false;
@@ -384,13 +388,13 @@ bool parseExpressionWithPrecedence(const std::string &input,
 
 } // namespace
 
-bool rewriteBinaryOperatorsWithPrecedence(const std::string &input, std::string &output, std::string &error) {
+bool rewriteBinaryOperatorsWithPrecedence(const Text &input, Text &output, std::string &error) {
   output.clear();
   size_t pos = 0;
   while (pos < input.size()) {
     std::string_view keyword;
     if (matchNonOperandKeyword(input, pos, keyword)) {
-      output.append(keyword);
+      output.append(input.substr(pos, keyword.size()));
       pos += keyword.size();
       if (keyword == "import") {
         size_t end = pos;
@@ -400,7 +404,7 @@ bool rewriteBinaryOperatorsWithPrecedence(const std::string &input, std::string 
         output.append(input.substr(pos, end - pos));
         pos = end;
         if (pos < input.size() && input[pos] == ';') {
-          output.push_back(';');
+          output.pushCopy(input, pos);
           ++pos;
         }
       }
@@ -429,18 +433,18 @@ bool rewriteBinaryOperatorsWithPrecedence(const std::string &input, std::string 
       }
     }
     if (std::isspace(static_cast<unsigned char>(input[pos]))) {
-      output.push_back(input[pos]);
+      output.pushCopy(input, pos);
       ++pos;
       continue;
     }
     size_t exprPos = pos;
-    std::string rewritten;
+    Text rewritten;
     if (parseExpressionWithPrecedence(input, exprPos, 1, rewritten, error)) {
       output.append(rewritten);
       pos = exprPos;
       continue;
     }
-    output.push_back(input[pos]);
+    output.pushCopy(input, pos);
     ++pos;
   }
   return true;

@@ -74,6 +74,7 @@ inline std::uint64_t nextExpandedSourceGeneration() {
 }
 
 class SourceLocationMapper;
+struct TextFilterOptions;
 
 // Per-source cache of the SourceLocationMapper. Building a mapper
 // sorts every segment of the import-expanded source, and the free mapping
@@ -102,6 +103,11 @@ struct ExpandedSource {
   std::string text;
   std::vector<SourceUnit> units = {};
   std::vector<SourceSegment> segments = {};
+  // Set when the parser read `text` after the text filters, so that the positions of a diagnostic are those of the
+  // filtered text: the source location mapper maps the spans of a diagnostic back to `text`
+  // (src/text_filter/TextFilterOffsetMap.h, built on the first diagnostic) before it looks for the unit. Null for a
+  // source whose positions are already those of `text`.
+  std::shared_ptr<const TextFilterOptions> textFilterOptions = {};
   std::uint64_t generation = nextExpandedSourceGeneration();
   mutable SourceLocationMapperCache mapperCache = {};
 };

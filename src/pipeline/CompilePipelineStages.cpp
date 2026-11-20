@@ -17,6 +17,7 @@
 #include "primec/support/SourceLocationMapper.h"
 #include "primec/support/StdlibSurfaceRegistry.h"
 #include "primec/frontend/StdlibSymbolManifest.h"
+#include "primec/support/CompileArena.h"
 #include "primec/support/TextFilterPipeline.h"
 #include "primec/support/TransformRules.h"
 #include "../semantics/TypeResolutionGraph.h"
@@ -310,6 +311,11 @@ bool runCompilePipelineTransformStage(
     return false;
   }
 
+  if (importStage.source.size() == importStage.expandedSource.text.size()) {
+    // The options outlive the compile scope: the source location mapper reads them when a diagnostic is made.
+    SystemHeapScope systemHeapGuard;
+    out.textFilterOptions = std::make_shared<const TextFilterOptions>(textOptions);
+  }
   out.sourceImports = importStage.sourceImports;
   return true;
 }

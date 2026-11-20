@@ -10,8 +10,8 @@
 namespace primec {
 using namespace text_filter;
 
-bool applyPerEnvelope(const std::string &input,
-                      std::string &output,
+bool applyPerEnvelope(const Text &input,
+                      Text &output,
                       std::string &error,
                       const std::vector<std::string> &filters,
                       const std::vector<TextTransformRule> &rules,
@@ -30,22 +30,22 @@ namespace {
 // filter is safe because a leaf chunk's filtered text never depends on any
 // other chunk's content - only the order filters are applied *to this one
 // chunk* matters, and that order (filterSequence's order) is unchanged.
-bool applyFiltersToChunk(const std::string &input,
-                         std::string &output,
+bool applyFiltersToChunk(const Text &input,
+                         Text &output,
                          std::string &error,
                          const std::vector<std::string> &filterSequence) {
   if (filterSequence.empty()) {
     output = input;
     return true;
   }
-  std::string current = input;
+  Text current = input;
   for (const auto &filter : filterSequence) {
     if (filter.empty()) {
       continue;
     }
     TextFilterOptions passOptions;
     passOptions.enabledFilters = {filter};
-    std::string next;
+    Text next;
     if (!applyPass(current, next, error, passOptions)) {
       return false;
     }
@@ -72,8 +72,8 @@ bool applyFiltersToChunk(const std::string &input,
 // instead of looping the whole structural walk, keeps the exact same
 // per-chunk filter application order while performing the walk itself only
 // once per distinct filter *set* instead of once per filter.
-bool applyPerEnvelopeFilterPass(const std::string &input,
-                                std::string &output,
+bool applyPerEnvelopeFilterPass(const Text &input,
+                                Text &output,
                                 std::string &error,
                                 const std::vector<std::string> &filterSequence,
                                 const std::vector<std::string> &activeFilters,
@@ -178,13 +178,13 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
         }
       }
     }
-    std::string chunk = input.substr(pos, envelopeStartPos - pos);
-    std::string filteredChunk;
+    const Text chunk = input.substr(pos, envelopeStartPos - pos);
+    Text filteredChunk;
     if (!applyFiltersToChunk(chunk, filteredChunk, error, filterSequence)) {
       return false;
     }
     output.append(filteredChunk);
-    std::string envelope = input.substr(envelopeStartPos, envelopeEnd - envelopeStartPos + 1);
+    const Text envelope = input.substr(envelopeStartPos, envelopeEnd - envelopeStartPos + 1);
     const std::vector<std::string> *autoFilters = &activeFilters;
     if (envelopeIsDefinition || envelopeIsLambda) {
       autoFilters = &baseFilters;
@@ -199,7 +199,7 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     const std::vector<std::string> &envelopeFilters =
         explicitTransforms.empty() ? *autoFilters : explicitTransforms;
     const bool inheritsFilters = envelope_internal::filtersEqual(envelopeFilters, activeFilters);
-    std::string filteredEnvelope;
+    Text filteredEnvelope;
     const std::string &nextDefinitionPrefix = envelopeIsDefinition ? definitionFullPath : baseDefinitionPrefix;
     if (inheritsFilters) {
       if (!applyPerEnvelopeFilterPass(envelope,
@@ -236,8 +236,8 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
     scanPos = pos;
     suppress = false;
   }
-  std::string tail = input.substr(pos);
-  std::string filteredTail;
+  const Text tail = input.substr(pos);
+  Text filteredTail;
   if (!applyFiltersToChunk(tail, filteredTail, error, filterSequence)) {
     return false;
   }
@@ -247,8 +247,8 @@ bool applyPerEnvelopeFilterPass(const std::string &input,
 
 } // namespace
 
-bool applyPerEnvelope(const std::string &input,
-                      std::string &output,
+bool applyPerEnvelope(const Text &input,
+                      Text &output,
                       std::string &error,
                       const std::vector<std::string> &filters,
                       const std::vector<TextTransformRule> &rules,
@@ -285,7 +285,7 @@ bool applyPerEnvelope(const std::string &input,
   // filters run in that next round; already-applied filters are never
   // reapplied.
   std::unordered_set<std::string> applied;
-  std::string current = input;
+  Text current = input;
   bool allowExplicitRecursion = true;
   size_t consideredCount = 0;
   while (consideredCount < activeFilters.size()) {
@@ -299,7 +299,7 @@ bool applyPerEnvelope(const std::string &input,
     if (roundFilters.empty()) {
       continue;
     }
-    std::string next;
+    Text next;
     if (!applyPerEnvelopeFilterPass(current,
                                     next,
                                     error,

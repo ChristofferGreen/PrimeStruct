@@ -2,6 +2,7 @@
 #include "primec/support/Ascii.h"
 
 #include "TextFilterHelpers.h"
+#include "TextFilterUnaryRewrites.h"
 #include "primec/support/TextFilterPipeline.h"
 
 #include <cctype>
@@ -15,7 +16,7 @@ namespace {
 // `array<u8>` is stored as packed bytes: a header (count, capacity) and a byte region, which is the layout of
 // `vector<u8>`, so the spelling `array<u8>` names that type (docs/spec/type-system.md). Strings and comments are left
 // alone, and so is a longer name that ends in `array<u8>`.
-bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
+bool aliasPackedByteArrays(const Text &input, Text &aliased) {
   constexpr std::string_view spelling = "array<u8>";
   if (input.find(spelling) == std::string::npos) {
     return false;
@@ -28,7 +29,7 @@ bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
     if (c == '"' || c == '\'') {
       const size_t end = skipQuotedForward(input, index);
       const size_t stop = end == std::string::npos ? input.size() : end;
-      aliased.append(input, index, stop - index);
+      aliased.append(input.substr(index, stop - index));
       index = stop;
       continue;
     }
@@ -37,7 +38,7 @@ bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
       // An import line (`import /std/text/*` has a `/*` that is not a comment).
       const size_t newline = input.find('\n', index);
       const size_t stop = newline == std::string::npos ? input.size() : newline;
-      aliased.append(input, index, stop - index);
+      aliased.append(input.substr(index, stop - index));
       index = stop;
       continue;
     }
@@ -50,19 +51,19 @@ bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
         const size_t close = input.find("*/", index + 2);
         stop = close == std::string::npos ? input.size() : close + 2;
       }
-      aliased.append(input, index, stop - index);
+      aliased.append(input.substr(index, stop - index));
       index = stop;
       continue;
     }
     if (input.compare(index, spelling.size(), spelling) == 0 &&
         (index == 0 || !(std::isalnum(static_cast<unsigned char>(input[index - 1])) || input[index - 1] == '_' ||
                          input[index - 1] == '/' || input[index - 1] == '.'))) {
-      aliased += "vector<u8>";
+      aliased.append("vector<u8>");
       index += spelling.size();
       replaced = true;
       continue;
     }
-    aliased.push_back(c);
+    aliased.pushCopy(input, index);
     ++index;
   }
   return replaced;
@@ -70,12 +71,12 @@ bool aliasPackedByteArrays(const std::string &input, std::string &aliased) {
 
 } // namespace
 
-bool applyPass(const std::string &input,
-               std::string &output,
+bool applyPass(const Text &input,
+               Text &output,
                std::string &error,
                const primec::TextFilterOptions &options) {
   if (options.hasFilter("collections")) {
-    std::string aliased;
+    Text aliased;
     if (aliasPackedByteArrays(input, aliased)) {
       return applyPass(aliased, output, error, options);
     }
@@ -163,13 +164,13 @@ bool applyPass(const std::string &input,
 	        error = "unterminated collection literal";
 	        return false;
 	      }
-	      std::string inner = input.substr(pos + 1, closeBrace - (pos + 1));
-      std::string filteredInner;
-      std::string innerError;
-      if (!applyPass(inner, filteredInner, innerError, options)) {
-        error = innerError;
-        return false;
-      }
+              const Text inner = input.substr(pos + 1, closeBrace - (pos + 1));
+              Text filteredInner;
+              std::string innerError;
+              if (!applyPass(inner, filteredInner, innerError, options)) {
+                error = innerError;
+                return false;
+              }
       output.append(input.substr(index, pos - index));
       output.append("{");
       output.append(filteredInner);
@@ -514,7 +515,7 @@ bool applyPass(const std::string &input,
         }
         size_t literalEnd = i;
         if (digitsStart == digitsEnd) {
-          output.push_back(input[start]);
+          output.pushCopy(input, start);
           i = start;
           continue;
         }
@@ -591,10 +592,10 @@ bool applyPass(const std::string &input,
       }
     }
 
-    output.push_back(input[i]);
+    output.pushCopy(input, i);
   }
   if (enableOperators) {
-    std::string stage1 = std::move(output);
+    Text stage1 = std::move(output);
     if (!rewriteBinaryOperatorsWithPrecedence(stage1, output, error)) {
       return false;
     }

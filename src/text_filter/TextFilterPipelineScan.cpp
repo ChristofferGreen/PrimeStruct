@@ -458,7 +458,7 @@ size_t findNextTransformListStart(const std::string &input, size_t start, bool l
   return std::string::npos;
 }
 
-bool appendOperatorsTransform(const std::string &input, std::string &output, std::string &error) {
+bool appendOperatorsTransform(const Text &input, Text &output, std::string &error) {
   output = input;
   size_t scanPos = 0;
   while (scanPos < output.size()) {
@@ -499,6 +499,5 @@ bool appendOperatorsTransform(const std::string &input, std::string &output, std
   }
   return true;
 }
-
 
 } // namespace primec

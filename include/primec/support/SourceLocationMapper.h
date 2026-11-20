@@ -2,8 +2,10 @@
 
 #include "primec/support/Diagnostics.h"
 #include "primec/frontend/ExpandedSource.h"
+#include "primec/support/TextFilterOffsetMap.h"
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -35,6 +37,12 @@ public:
       int flattenedLine,
       int flattenedColumn) const;
 
+  // The same for a position of the parser's text (`ExpandedSource::textFilterOptions`): it is moved to the text the
+  // user wrote first, which builds the offset map on the first call. Diagnostics use this; the instruction source
+  // ranges of the lowerer keep `mapExpandedSourceLocation` and never build the map.
+  std::optional<SourceUnitLocation> mapFilteredSourceLocation(int filteredLine,
+                                                              int filteredColumn) const;
+
   DiagnosticSpan mapDiagnosticSpanToSourceUnit(
       const DiagnosticSpan &span) const;
 
@@ -58,6 +66,10 @@ private:
 
   const LineBucket *bucketForLine(int line) const;
 
+  // Moves a position of the text-filtered source to the same place in the source text (see
+  // `ExpandedSource::textFilterOptions`); a position the map does not know stays as it is.
+  void unfilterPosition(int &line, int &column) const;
+
   std::optional<std::size_t> findSegmentIndexForPoint(
       int line,
       int column) const;
@@ -69,6 +81,8 @@ private:
   const ExpandedSource &source_;
   std::vector<LineBucket> lineBuckets_;
   mutable SourceLocationMapperLookupStats lookupStats_;
+  mutable bool filterMapBuilt_ = false;
+  mutable std::unique_ptr<TextFilterOffsetMap> filterMap_;
 };
 
 std::optional<SourceUnitLocation> mapExpandedSourceLocation(

@@ -1,6 +1,6 @@
-#include "TextFilterHelpers.h"
+#include "TextFilterUnaryRewrites.h"
 
-#include "TextFilterPipelineInternal.h"
+#include "TextFilterHelpers.h"
 
 namespace primec::text_filter {
 namespace {
@@ -38,11 +38,11 @@ size_t extendPostfixOperandEnd(const std::string &text, size_t end) {
 
 // A unary operand is copied into the output whole, so prefix operators nested inside it (`!(f(!x))`,
 // `-f(-x)`) are rewritten here, by running the same operator pass over the operand text.
-std::string rewriteNestedOperators(const std::string &operand, const TextFilterOptions &options) {
+Text rewriteNestedOperators(const Text &operand, const TextFilterOptions &options) {
   if (!options.hasFilter("operators") || operand.find_first_of("!&*-+") == std::string::npos) {
     return operand;
   }
-  std::string rewritten;
+  Text rewritten;
   std::string error;
   if (!primec::applyPass(operand, rewritten, error, options)) {
     return operand;
@@ -50,8 +50,8 @@ std::string rewriteNestedOperators(const std::string &operand, const TextFilterO
   return rewritten;
 }
 
-bool rewriteUnaryMutation(const std::string &input,
-                          std::string &output,
+bool rewriteUnaryMutation(const Text &input,
+                          Text &output,
                           size_t &index,
                           const TextFilterOptions &options,
                           char op,
@@ -76,7 +76,7 @@ bool rewriteUnaryMutation(const std::string &input,
     if (rightEnd == rightStart) {
       return false;
     }
-    std::string right = input.substr(rightStart, rightEnd - rightStart);
+    Text right = input.substr(rightStart, rightEnd - rightStart);
     right = stripOuterParens(right);
     right = normalizeUnaryOperand(right);
     if (options.hasFilter("implicit-i32")) {
@@ -106,7 +106,7 @@ bool rewriteUnaryMutation(const std::string &input,
   if (start == end) {
     return false;
   }
-  std::string left = output.substr(start, end - start);
+  Text left = output.substr(start, end - start);
   left = stripOuterParens(left);
   left = normalizeUnaryOperand(left);
   if (options.hasFilter("implicit-i32")) {
@@ -126,8 +126,8 @@ bool rewriteUnaryMutation(const std::string &input,
 
 } // namespace
 
-bool rewriteUnaryNot(const std::string &input,
-                     std::string &output,
+bool rewriteUnaryNot(const Text &input,
+                     Text &output,
                      size_t &index,
                      const TextFilterOptions &options) {
   if (input[index] != '!') {
@@ -160,7 +160,7 @@ bool rewriteUnaryNot(const std::string &input,
   if (rightEnd == rightStart) {
     return false;
   }
-  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  Text right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
   right = rewriteNestedOperators(right, options);
@@ -181,8 +181,8 @@ bool rewriteUnaryNot(const std::string &input,
   return true;
 }
 
-bool rewriteUnaryAddressOf(const std::string &input,
-                           std::string &output,
+bool rewriteUnaryAddressOf(const Text &input,
+                           Text &output,
                            size_t &index,
                            const TextFilterOptions &options) {
   if (input[index] != '&' || index + 1 >= input.size() || input[index + 1] == '&') {
@@ -207,7 +207,7 @@ bool rewriteUnaryAddressOf(const std::string &input,
     return false;
   }
   rightEnd = extendPostfixOperandEnd(input, rightEnd);
-  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  Text right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
   right = rewriteNestedOperators(right, options);
@@ -218,8 +218,8 @@ bool rewriteUnaryAddressOf(const std::string &input,
   return true;
 }
 
-bool rewriteUnaryDeref(const std::string &input,
-                       std::string &output,
+bool rewriteUnaryDeref(const Text &input,
+                       Text &output,
                        size_t &index,
                        const TextFilterOptions &options) {
   if (input[index] != '*' || index + 1 >= input.size()) {
@@ -241,7 +241,7 @@ bool rewriteUnaryDeref(const std::string &input,
     return false;
   }
   rightEnd = extendPostfixOperandEnd(input, rightEnd);
-  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  Text right = input.substr(rightStart, rightEnd - rightStart);
   right = stripOuterParens(right);
   right = normalizeUnaryOperand(right);
   right = rewriteNestedOperators(right, options);
@@ -252,22 +252,22 @@ bool rewriteUnaryDeref(const std::string &input,
   return true;
 }
 
-bool rewriteUnaryIncrement(const std::string &input,
-                           std::string &output,
+bool rewriteUnaryIncrement(const Text &input,
+                           Text &output,
                            size_t &index,
                            const TextFilterOptions &options) {
   return rewriteUnaryMutation(input, output, index, options, '+', "increment");
 }
 
-bool rewriteUnaryDecrement(const std::string &input,
-                           std::string &output,
+bool rewriteUnaryDecrement(const Text &input,
+                           Text &output,
                            size_t &index,
                            const TextFilterOptions &options) {
   return rewriteUnaryMutation(input, output, index, options, '-', "decrement");
 }
 
-bool rewriteUnaryMinus(const std::string &input,
-                       std::string &output,
+bool rewriteUnaryMinus(const Text &input,
+                       Text &output,
                        size_t &index,
                        const TextFilterOptions &options) {
   if (input[index] != '-') {
@@ -295,7 +295,7 @@ bool rewriteUnaryMinus(const std::string &input,
     return false;
   }
   rightEnd = extendPostfixOperandEnd(input, rightEnd);
-  std::string right = input.substr(rightStart, rightEnd - rightStart);
+  Text right = input.substr(rightStart, rightEnd - rightStart);
   right = rewriteNestedOperators(right, options);
   if (options.hasFilter("implicit-i32")) {
     right = maybeAppendI32(right);
@@ -308,6 +308,76 @@ bool rewriteUnaryMinus(const std::string &input,
   output.append(")");
   index = rightEnd - 1;
   return true;
+}
+
+// The `std::string` forms of the rewrites (the testing API): the same rewrite over text that tracks nothing.
+namespace {
+
+template <typename Rewrite>
+bool rewriteStringText(const std::string &input,
+                       std::string &output,
+                       size_t &index,
+                       Rewrite rewrite) {
+  Text textOutput(output);
+  const bool rewrote = rewrite(Text(input), textOutput, index);
+  output = std::move(static_cast<std::string &>(textOutput));
+  return rewrote;
+}
+
+} // namespace
+
+bool rewriteUnaryNot(const std::string &input,
+                     std::string &output,
+                     size_t &index,
+                     const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryNot(in, out, at, options);
+  });
+}
+
+bool rewriteUnaryAddressOf(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryAddressOf(in, out, at, options);
+  });
+}
+
+bool rewriteUnaryDeref(const std::string &input,
+                       std::string &output,
+                       size_t &index,
+                       const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryDeref(in, out, at, options);
+  });
+}
+
+bool rewriteUnaryIncrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryIncrement(in, out, at, options);
+  });
+}
+
+bool rewriteUnaryDecrement(const std::string &input,
+                           std::string &output,
+                           size_t &index,
+                           const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryDecrement(in, out, at, options);
+  });
+}
+
+bool rewriteUnaryMinus(const std::string &input,
+                       std::string &output,
+                       size_t &index,
+                       const TextFilterOptions &options) {
+  return rewriteStringText(input, output, index, [&](const Text &in, Text &out, size_t &at) {
+    return rewriteUnaryMinus(in, out, at, options);
+  });
 }
 
 } // namespace primec::text_filter

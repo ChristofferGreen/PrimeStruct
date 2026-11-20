@@ -129,8 +129,7 @@ DiagnosticRecordOrderKey orderKeyForRecord(const SourceLocationMapper &mapper,
   key.line = diagnosticOrderCoordinate(record.primarySpan.line);
   key.column = diagnosticOrderCoordinate(record.primarySpan.column);
   const std::optional<SourceUnitLocation> location =
-      mapper.mapExpandedSourceLocation(record.primarySpan.line,
-                                       record.primarySpan.column);
+      mapper.mapFilteredSourceLocation(record.primarySpan.line, record.primarySpan.column);
   if (!location.has_value()) {
     return key;
   }
@@ -302,6 +301,27 @@ SourceUnitLocation SourceLocationMapper::mapLocationWithinSegment(
   return location;
 }
 
+void SourceLocationMapper::unfilterPosition(int &line, int &column) const {
+  if (source_.textFilterOptions == nullptr) {
+    return;
+  }
+  if (!filterMapBuilt_) {
+    filterMapBuilt_ = true;
+    // The map outlives the compile scope the first diagnostic is made in (see cachedMapperFor).
+    SystemHeapScope systemHeapGuard;
+    filterMap_ = std::make_unique<TextFilterOffsetMap>();
+    if (!filterMap_->build(source_.text, *source_.textFilterOptions)) {
+      filterMap_.reset();
+    }
+  }
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  if (filterMap_ != nullptr && filterMap_->mapToSource(line, column, sourceLine, sourceColumn)) {
+    line = sourceLine;
+    column = sourceColumn;
+  }
+}
+
 std::optional<SourceUnitLocation> SourceLocationMapper::mapExpandedSourceLocation(
     int flattenedLine,
     int flattenedColumn) const {
@@ -315,10 +335,15 @@ std::optional<SourceUnitLocation> SourceLocationMapper::mapExpandedSourceLocatio
                                   flattenedColumn);
 }
 
+std::optional<SourceUnitLocation>
+SourceLocationMapper::mapFilteredSourceLocation(int filteredLine, int filteredColumn) const {
+  unfilterPosition(filteredLine, filteredColumn);
+  return mapExpandedSourceLocation(filteredLine, filteredColumn);
+}
+
 DiagnosticSpan SourceLocationMapper::mapDiagnosticSpanToSourceUnit(
     const DiagnosticSpan &span) const {
-  const std::optional<SourceUnitLocation> start =
-      mapExpandedSourceLocation(span.line, span.column);
+  const std::optional<SourceUnitLocation> start = mapFilteredSourceLocation(span.line, span.column);
   if (!start.has_value()) {
     return span;
   }
@@ -330,8 +355,7 @@ DiagnosticSpan SourceLocationMapper::mapDiagnosticSpanToSourceUnit(
 
   const int endLine = span.endLine > 0 ? span.endLine : span.line;
   const int endColumn = span.endColumn > 0 ? span.endColumn : span.column;
-  const std::optional<SourceUnitLocation> end =
-      mapExpandedSourceLocation(endLine, endColumn);
+  const std::optional<SourceUnitLocation> end = mapFilteredSourceLocation(endLine, endColumn);
   if (end.has_value() && end->unitId == start->unitId) {
     mapped.endLine = end->line;
     mapped.endColumn = end->column;
