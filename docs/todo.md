@@ -149,7 +149,9 @@ of sync with them.
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
-| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | ready | function-call-diagnostic |
+| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
+| TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | ready | lambda-function-field-call |
+| TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
@@ -695,18 +697,42 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the return-type diagnostic only; no new type resolution rules.
 
-- [~] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
+- [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai
-  - status: ready
-  - claimed_by: overload-worker (worktree agent-af334e170c9286e2a), 2026-11-20
+  - status: deferred
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Function values; found with TODO-5804)
   - parallel_track: function-call-diagnostic
-  - scope: In `lock.read([]([Box] b) { return(b.f(b.base)) })` with `Box{[Function<i32, i32> mut] f ...}` the call `b.f(x)` reports `unknown method: /Box/f [PSC1005]`. `Function.call` is `mut`, so the real reason is that `b` is read-only; the message should say so and name the fix (hold a clone in a `mut` local: `[Function<i32, i32> mut] h{b.f}`, which compiles).
+  - scope: In `lock.read([]([Box] b) { return(b.f(b.base)) })` with `Box{[Function<i32, i32> mut] f ...}` the call `b.f(x)` reports `unknown method: /Box/f [PSC1005]`. The block assumed the reason is that `Function.call` is `mut` and `b` is read-only.
+  - open_questions: found 2026-11-20 on the first attempt (nothing implemented; the premise of the block is wrong and the right fix is a language decision). Measured with primec on the VM: (1) the same call in a free function, `read_it([Box] b) { return(b.f(b.base)) }`, compiles and runs, and so do `b0.f(1i32)` on a read-only local `[Box] b0` and `g(1i32)` on a read-only `[Function<i32, i32>] g`; a stateful closure (`[mut n{0i32}]`) called through them changes its own state (prints 2, 3, 2). So the spec line "`call` is `mut`, hold the `Function` in a `mut` binding" (docs/spec/value-lifecycle.md, Function values) is not enforced anywhere (TODO-6116). (2) The `unknown method` message is not a mutability check: the `b.f(x)` to `b.f.call(x)` rewrite in the template monomorphizer (`TemplateMonomorphCallableRewrites.cpp`, the field-callable rewrite) finds the owner's type through the locals and parameters it knows, and a parameter of a lambda is not among them, so the call stays a method call `/Box/f` that does not exist (TODO-6115). Only calls inside lambdas fail; nothing about read-only values does.
+  - options_to_decide: (a) enforce the spec: calling a `Function` through a read-only place (a non-`mut` local, parameter or field, a `[T]` lambda parameter) is `calling a Function needs a mutable place: hold a clone in a mut local, [Function<...> mut] h{b.f}`, for every call site; this is what makes concurrent readers of an `RwLock<T>` safe (a closure's state cannot be written through a shared read-only `T`), but it rejects programs that compile today (the gate shows which). Needs TODO-6115 first so lambdas and functions agree. (b) relax the spec: a `Function` is callable through a read-only place; then a state-carrying closure held in a read-only `T` races under `RwLock.read`, so TODO-5804 would need its per-request clone anyway. (c) leave the spec as written and fix only TODO-6115 (lambdas behave like functions), with TODO-6116 tracking the missing check. Option (a) is the one the spec and the language direction (well-defined behavior) point to; it is a breaking change, so it is the user's call.
   - acceptance:
-    - the diagnostic for calling a `Function` field through a read-only value says that calling a `Function` needs a mutable place and suggests a `mut` local copy; semantics test; goldens updated
+    - the decision above is made and recorded here; then a diagnostic or a spec change with a semantics test and the full release gate green
+  - stop_rule: this one decision and the diagnostic or spec line it needs; TODO-6115 and TODO-6116 carry the mechanical parts.
+
+- [ ] TODO-6115: A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
+  - parallel_track: lambda-function-field-call
+  - scope: `[struct] Box() { [Function<i32, i32> mut] f{} [i32] base{0i32} }` and `run<Body>([Body mut] body, [Box] box) { return(body(box)) }`; `run([]([Box] b) { return(b.f(b.base)) }, b0)` reports `unknown method: /Box/f [PSC1005]`, while `read_it([Box] b) { return(b.f(b.base)) }` as a free function compiles and runs (prints 5 for `f` adding one to 4). The `b.f(x)` to `b.f.call(x)` rewrite in `TemplateMonomorphCallableRewrites.cpp` (the field-callable rewrite, around line 140 to 190) resolves the owner of `f` through the locals and parameters it is given, and the parameters of a lambda are not in that scope, so the call stays a method call of `/Box`. The same call with the `RwLock<Box>.read` lambda of TODO-5804 fails the same way.
+  - acceptance:
+    - the repro prints 5 for a lambda parameter, a lambda parameter that is a `Reference<Box>`, and a lambda nested in a generic `Body` call, with semantics and compile-run tests
     - full release gate green
-  - stop_rule: this one diagnostic.
+  - stop_rule: resolving the owner type of a field call inside a lambda body; whether a read-only `Function` may be called is TODO-6113 and TODO-6116.
+
+- [ ] TODO-6116: Calling a `Function` through a read-only place is accepted although `call` is `mut`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
+  - parallel_track: function-call-mutability
+  - scope: docs/spec/value-lifecycle.md says a `Function`'s `call` is `mut` and the `Function` is held in a `mut` binding, field or parameter, but `[Function<i32, i32>] g{[mut n{0i32}]([i32] x) { n = plus(n, 1i32)  return(plus(x, n)) }}  print_line(g(1i32))` and the same call through a field of a read-only `[Box] b0` compile and change the closure's state. Repro on the VM: a `[mut n{0i32}]` closure in a read-only `[Box] b0` prints 2 then 3 for `b0.f(1i32)` twice. Blocked on the decision in TODO-6113 (enforce the spec, or change the spec).
+  - acceptance:
+    - per the decision of TODO-6113: either the call through a read-only place is a diagnostic that names the `mut` local clone as the fix, with semantics tests and every existing program that relied on it updated, or the spec line is changed and the unenforced rule removed
+    - full release gate green
+  - stop_rule: the mutability check of a `Function` call only.
 
 - [ ] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
   - owner: ai
