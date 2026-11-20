@@ -145,6 +145,8 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
+| TODO-6093 | The compiler build id of a library costs less than hashing the 22 MB `primec` | deferred | lib-build-id |
+| TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | deferred | import-root-diagnostic |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -170,7 +172,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-6075
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5932, TODO-5933, TODO-6032, TODO-6093
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6090, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
@@ -190,7 +192,7 @@ Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the st
 
 VM threads (docs/MultithreadingPrototype.md, VM Threads), after the startup lane: the VM gets a threads mode next to its deterministic scheduler. TODO-5896 (`--vm-threads`, a thread and a heap arena per task) and TODO-5897 (Atomic, Mutex and Channel on real primitives, with the deadlock fault) and TODO-5898 (reentrant and main-thread-only host functions) and TODO-5899 (`RunOptions::threads`, fault and cancel through the embed API) and TODO-5900 (the concurrent corpus repeated under `--vm-threads` and under ThreadSanitizer) and TODO-5901 (`--vm-record-sync` and `--vm-replay-sync`, the synchronization order of a threaded run replayed on the deterministic scheduler) landed; TODO-5904 (threads by default) is closed: the default stays the deterministic scheduler; TODO-5902 (each task on the fast kernel) landed. TODO-5903 (debug sessions run programs with tasks, the first prerequisite of docs/VmInspectorPlan.md) landed.
 
-Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) landed; TODO-5926 (generics and lifecycle helpers cross the library boundary) landed; TODO-5927 (namespace ownership) landed; TODO-5928 (`--emit-uses`) landed; TODO-5929 (symbol-level rebuilds) landed; TODO-5930 (the graph builds libraries and links them) landed; archived as low-value TODO-5931 (the stdlib as a library: measured slower, see docs/todo_finished.md), deferred TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library).
+Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (directory listing and file metadata, `/std/dir`) and TODO-5915 (incremental builds) landed. TODO-5907 (glob, `/std/glob`) and TODO-6009 (a changed glob listing re-runs a step) and TODO-5918 (staged builds, `Graph.run` and the `build_run` effect) landed; TODO-5916 (subprojects, `b.subproject`) and TODO-5917 (options, `b.option`) landed; TODO-5920 (PrimeScroll builds with `make.prime`) landed; TODO-5919 (function steps, `b.step`) landed; ready: TODO-6019 (person measures startup); and the modules and libraries lane, which splits static libraries (docs/ModulesAndLibrariesPlan.md): TODO-5922 (`primevm --link` merges two IR modules) landed; TODO-6031 (lowering marks string literal pushes, so a library's strings always relocate) landed; TODO-5923 (`--emit=interface`) landed; TODO-5924 (`--emit=lib`) landed; TODO-5925 (`--library` and the link in the pipeline) landed; TODO-5926 (generics and lifecycle helpers cross the library boundary) landed; TODO-5927 (namespace ownership) landed; TODO-5928 (`--emit-uses`) landed; TODO-5929 (symbol-level rebuilds) landed; TODO-5930 (the graph builds libraries and links them) landed; archived as low-value TODO-5931 (the stdlib as a library: measured slower, see docs/todo_finished.md), deferred TODO-5932 (libraries that carry back-end code), TODO-5933 (the embed API loads a library), TODO-6032 (public functions of any shape in a library), TODO-6093 (a cheaper compiler build id; the stdlib as a library was measured again after TODO-6092 and stays archived, numbers in docs/todo_log.md).
 
 
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
@@ -666,6 +668,41 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: function shapes in the library ABI; no change to generics or to the link.
   - notes: deferred: not committed; follows when a real library needs a shape that is refused today.
+
+- [ ] TODO-6093: The compiler build id of a library costs less than hashing the 22 MB `primec`
+  - owner: human
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 6)
+  - parallel_track: lib-build-id
+  - depends_on: TODO-5925
+  - scope: `currentCompilerBuildId` (src/pipeline/LibraryLink.cpp) hashes the whole `primec` executable once per compile that has `--library`; since TODO-6092 that is 14 ms on arm64 (SHA-2 instructions) and still most of the 129M instructions a linked library costs over an empty `main` (61.5M against about 190M); on x86_64 and Linux the portable routine is about 5 times slower. What the id is belongs to the owner: it makes an archive refuse a compiler that did not write it, and that meaning must survive. Options, none implemented:
+    - A. A sidecar next to the executable (`primec.buildid`: the SHA-256, the file size and the modification time in nanoseconds), written on first use, read when size and time still match. Cost after the first compile: one `stat` and a 100-byte read. Meaning: unchanged for an ordinary rebuild or replace; weaker where a binary is swapped with the same size and time (`rsync -t`, a restored backup, `touch -r`), where a stale id is accepted, and the install directory must be writable (else it hashes as today). Same trust as `make`.
+    - B. A stamp embedded at link time: the build hashes its own link inputs (object files, flags) into a generated source constant, and the id is that string. Cost zero. Meaning shifts from "this binary" to "this build recipe": it needs the stamp to change whenever any object does (a custom target that depends on every object, which also serializes the link), and a hand-patched or re-signed binary keeps its id.
+    - C. The linker's own UUID (`LC_UUID` on macOS, the GNU `.note.gnu.build-id` with `--build-id`, `lld --build-id=sha1`): read from the first kilobytes of the executable. Cost near zero, no sidecar, no build-graph step, and the linker derives it from the content, so it changes with the code. Meaning: stays content-derived, but depends on the toolchain (`-no_uuid` or a deterministic-build flag drops it; fall back to the full hash when it is absent) and a PE build has no equivalent; ad hoc code signing does not change it.
+    - D. The same SHA-256 over a hash tree (the digests of 1 MB blocks, hashed in threads, then hashed together). Not a plain digest of the file, so a new id format; about 3 to 4 times faster on 11 cores, not zero, and it spends threads at the start of every compile.
+    - E. No check when the build graph (`primec build`) compiled and linked with the one compiler it runs: it passes the id it computed once per graph. Cost zero per compile in a graph, but a hand-run `primec --library` still pays, and the graph's trust in its own compiler is a new rule.
+    Recommendation for the owner to confirm: C with a fallback to the full hash (kept meaning, no moving parts), then A if a toolchain without a UUID matters.
+  - acceptance:
+    - the owner picks the definition of the build id (an option above or another) in this block before code
+    - a library built by one compiler is refused by another, as the corpus tests it today
+    - instructions retired of a linked library compile against an empty `main`, recorded in docs/todo_log.md
+  - stop_rule: the definition of the compiler build id; no change to what an archive carries.
+  - notes: deferred: the measurements (docs/todo_log.md, TODO-6093) say a stdlib library is not worth building for this alone.
+
+- [ ] TODO-6094: `import /std/*` is a diagnostic, not an uncaught `std::out_of_range`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Frontend and diagnostics
+  - parallel_track: import-root-diagnostic
+  - scope: found measuring TODO-5931: a program that starts with `import /std/*` (`import /std/*` then a `main` that returns 0) ends `primec --emit=vm` with `libc++abi: terminating due to uncaught exception of type std::out_of_range: basic_string`, with or without `--library`. The parser already says `import /std/math is not supported; use import /std/math/* or /std/math/<name>` for a path without a star. Find the `substr` or `at` in the stdlib import path code (collectStdImportPaths and the module-root lookup in the compile pipeline) and give the diagnostic that says what is supported.
+  - acceptance:
+    - the program above gives a diagnostic with a source position and exit code 2 on every `--emit`
+    - a negative test covers it
+    - full release gate green
+  - stop_rule: the one import shape; no change to which imports are supported.
+  - notes: deferred: not committed; filed from a measurement.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

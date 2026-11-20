@@ -202,6 +202,15 @@ Measured 2026-11-20 (TODO-5931): no gain. A linked library costs about 1.2G inst
 same stdlib file from source (color: 1226M against 425M; vector: 1247M against 759M), and most stdlib modules do not build
 with `--emit=lib` yet. Not built; see `docs/todo_finished.md`.
 
+Measured again 2026-11-20 after the build id was hashed with SHA-2 instructions on arm64 (TODO-6092): a linked library now
+costs 120M to 140M instructions over an empty `main` (61.5M), so a one-module library is 2 to 3.3 times cheaper than its
+source (color 182M against 380M, vector 200M against 657M). A program that imports several modules is dominated by
+`/std/text/*` (5750M of 7508M, `String`, which cannot be a library yet), and with text from source three libraries save
+20.1 percent of it, one (path) 9 percent. The real stdlib is also not consumable as a library: every stdlib library owns
+the root `/std` (two of them are refused) and an `import` of a module a library owns still splices the stdlib source
+(duplicate definition). Still archived; the numbers, the list of modules that build and the open design points (the root of
+a stdlib library, `String`) are in `docs/todo_log.md` under TODO-6093.
+
 ## 13. Backends: what IR-level libraries do not buy
 
 Linking at the IR level saves the front end (parse, validate, lower) and gives early cutoff. It does not save the back
