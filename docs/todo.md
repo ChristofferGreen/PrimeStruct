@@ -683,9 +683,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-6104: An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer
+- [~] TODO-6104: An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worker-6104 (worktree agent-a45f689ff4406d883), 2026-11-20
   - created_at: 2026-11-20
   - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
   - parallel_track: lifecycle-reference-element
