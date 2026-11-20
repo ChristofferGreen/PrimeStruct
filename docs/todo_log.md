@@ -7,29 +7,6 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
-## TODO-6139
-
-- 2026-11-20 (TODO-6137, release build, macOS arm64, `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests` from `build-release/`, which compiles every matrix case with `--emit=wasm --wasm-profile wasi`, never runs it, and prints one `wasm-compile:` line per case to stderr): 504 programs, 63 compile, 441 are refused. A program counts once, under the first refusal of the compile (the validator stops at the first opcode it refuses):
-
-  | first refusal | programs |
-  | --- | --- |
-  | `AddressOfLocal` (local addresses: pointers, `Reference`, struct values, arrays, closures) | 325 |
-  | `HeapAlloc` (every `vector`) | 42 |
-  | unsupported effect mask bits (tasks and the lock effect, TODO-6128) | 23 |
-  | atomic operations (the message names no opcode, TODO-6140; TODO-6128) | 18 |
-  | channel operations (no opcode named, TODO-6140; TODO-6128) | 16 |
-  | recursive calls that a real call cannot take (a vector, struct or `Function` parameter keeps the definition inline) | 9 |
-  | `LoadStringByte` | 2 |
-  | u8 and byte memory opcodes (no opcode named; TODO-6127) | 2 |
-  | frontend diagnostic before Wasm (`frontend_if_struct_mismatch`, `vector_mut_parameter_alias_rejected`: expected errors, not refusals) | 2 |
-  | graphics stdlib runtime substrate unavailable for the wasm-wasi target (`result_buffer_payload_reads_ok`) | 1 |
-  | host calls (`string_arenas_limit`, TODO-6127) | 1 |
-  | compiles (63; each still has to agree with the VM when it runs, which is TODO-6139's count) | 63 |
-
-  `AddressOfLocal` alone is 325 of the 441 refusals (74 %), so TODO-6138 comes first. These are first refusals: a program that passes the local-address opcodes can meet `HeapAlloc` (TODO-6141, 42 programs on their own and probably more of the 325, since a `vector` program also takes a local address) or a task opcode next. Run the count again after TODO-6138 for the opcode each program meets next.
-
-- 2026-11-21 (TODO-6138, release build, same command): 514 programs, 126 compile (63 before) and all 126 agree with the VM under node (`PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests`, 77 of them not yet listing `wasm-wasi`: TODO-6139). First refusals of the other 388: `HeapAlloc` 136 (TODO-6141), host calls 111 (TODO-6127; every `String` and `vector<String>` program), `wasm emitter unsupported control-flow pattern` 38 (TODO-6146), unsupported effect mask bits 32 (TODO-6128), atomic operations 18 and channel operations 16 (TODO-6128), `HeapRealloc` 14 and `HeapFree` 5 (TODO-6141), recursive calls a real call cannot take 9 (TODO-6140), `LoadStringByte` 2, u8 and byte memory 2, the struct parameter prologue 2 (TODO-6145), an expected frontend diagnostic 2, the graphics substrate 1.
-
 ## TODO-5931
 
 - 2026-11-20 (TODO-5931, release build, macOS arm64, `primec --emit=vm`, loaded machine, alternating runs, min of 20, instructions retired via `/usr/bin/time -l`; twice, identical instruction counts):

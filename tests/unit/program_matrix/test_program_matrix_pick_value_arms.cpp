@@ -127,6 +127,7 @@ main() {
 TEST_CASE("nested pick expressions destroy each arm's locals where that arm ends, native included") {
   program_matrix::ProgramCase program;
   program.name = "pick_value_arm_nested";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = NoisyPrelude + R"(
 [effects(io_out) return<i32>]
 nested([Maybe<i32>] a, [Maybe<i32>] b) {

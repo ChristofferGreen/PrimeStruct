@@ -292,6 +292,7 @@ main() {
 TEST_CASE("struct parameters and results make one real call") {
   program_matrix::ProgramCase program;
   program.name = "struct_real_calls";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = structCallProgram(6);
   // Per call i: weight(i) = sum(i..i+2) - (12 - (i + 3)); right.start - left.stop = 0.
   int expected = 100;
@@ -377,6 +378,7 @@ TEST_CASE("struct real calls keep the native program from growing with the call 
 TEST_CASE("struct fields through a local address") {
   program_matrix::ProgramCase program;
   program.name = "sroa_struct_fields";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([struct]
 Point() {
   [i64 mut] x{0i64}
@@ -446,6 +448,7 @@ main() {
 TEST_CASE("a local address passed to a call stays in memory") {
   program_matrix::ProgramCase program;
   program.name = "sroa_address_to_call";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([struct]
 Counter() {
   [i64 mut] hits{0i64}
@@ -484,6 +487,7 @@ TEST_CASE("an address outside the frame keeps its function in memory") {
   // `far` points past the frame; it is never dereferenced at run time, but the function keeps all of its addresses.
   program_matrix::ProgramCase program;
   program.name = "sroa_out_of_frame";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([effects(io_out)]
 report_far([i32] flag) {
   [i64 mut] first{11i64}
@@ -516,6 +520,7 @@ TEST_CASE("a struct result outlives the callee frame that built it") {
   // in the dead frame would read back clobbered values (docs/spec/vm-design.md, Real calls).
   program_matrix::ProgramCase program;
   program.name = "struct_result_outlives_callee_frame";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([struct]
 Pair() {
   [i32] a{0i32}

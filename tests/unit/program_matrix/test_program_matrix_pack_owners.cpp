@@ -126,6 +126,7 @@ TEST_CASE("a pack forwarded with a leading temporary and a kept pack stays usabl
 TEST_CASE("an args pack of a struct with nothing to destroy copies and destroys nothing") {
   program_matrix::ProgramCase program;
   program.name = "pack_plain_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Point {

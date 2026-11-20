@@ -33,6 +33,7 @@ main() {
 TEST_CASE("copy mut struct parameter does not write back") {
   program_matrix::ProgramCase program;
   program.name = "copy_mut_struct_parameter";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Tally() {
@@ -76,6 +77,7 @@ main() {
 TEST_CASE("copy parameter runs the Copy helper unless the argument is moved") {
   program_matrix::ProgramCase program;
   program.name = "copy_parameter_copy_helper";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Tracked() {
@@ -207,6 +209,7 @@ main() {
 TEST_CASE("a runtime error inside a real call stops the program") {
   program_matrix::ProgramCase program;
   program.name = "real_call_runtime_error";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<i32>]
 pick([i32] index, [i32] offset) {
@@ -229,6 +232,7 @@ main() {
   program.stdoutText = "20\n30\n";
   program.vmStderr = "array index out of bounds\n";
   program.nativeStderr = "array index out of bounds\n";
+  program.wasmStderr = "array index out of bounds\n";
   program_matrix::runProgramMatrix(program);
 }
 

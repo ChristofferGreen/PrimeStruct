@@ -167,6 +167,7 @@ main() {
 TEST_CASE("runs vm with Maybe some and pick") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_maybe_some_and_pick_8";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -191,6 +192,7 @@ main() {
 TEST_CASE("runs vm with pick used as a bare statement") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_pick_used_as_a_bare_statement_9";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -217,6 +219,7 @@ main() {
 TEST_CASE("runs vm with mutable pick arm binding assigned through") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_mutable_pick_arm_binding_assigned_through_10";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -279,6 +282,7 @@ main() {
 TEST_CASE("runs vm with reference-backed uninitialized storage") {
   program_matrix::ProgramCase program;
   program.name = "runs_vm_with_reference_backed_uninitialized_storage_13";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {

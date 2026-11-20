@@ -278,6 +278,7 @@ main() {
 TEST_CASE("a struct whose fields share one scalar type is copied and destroyed") {
   program_matrix::ProgramCase program;
   program.name = "destroy_uniform_field_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Solo() {
@@ -557,6 +558,7 @@ main() {
 TEST_CASE("unbound temporaries are destroyed once at the end of their expression") {
   program_matrix::ProgramCase program;
   program.name = "unbound_temporaries_destroyed";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -1307,6 +1309,7 @@ main() {
 TEST_CASE("a mut Reference field is written through and never rebound") {
   program_matrix::ProgramCase program;
   program.name = "reference_field_write_through";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Keeper() {

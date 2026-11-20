@@ -179,6 +179,7 @@ main() {
 TEST_CASE("read-only binding of an owning struct gets its own copy") {
   program_matrix::ProgramCase program;
   program.name = "readonly_binding_owning_struct_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Tracked() {

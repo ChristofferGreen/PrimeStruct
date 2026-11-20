@@ -39,6 +39,7 @@ main() {
 TEST_CASE("user array at and at_unsafe methods shadow the builtin ones") {
   program_matrix::ProgramCase program;
   program.name = "shadow_array_at_methods";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {

@@ -198,6 +198,7 @@ TEST_CASE("a user at result feeds a parameter and a copy parameter as a temporar
   // destroys it once, at the end of the callee, whether it borrows or copies.
   program_matrix::ProgramCase program;
   program.name = "user_at_noisy_parameters";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {

@@ -27,6 +27,7 @@ main() {
 TEST_CASE("return of a moved local and of a constructor given a moved local") {
   program_matrix::ProgramCase program;
   program.name = "frontend_return_move";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Holder {
@@ -63,6 +64,7 @@ main() {
 TEST_CASE("a sum local takes a new variant by assign and by =") {
   program_matrix::ProgramCase program;
   program.name = "frontend_sum_local_assignment";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -121,6 +123,7 @@ main() {
 TEST_CASE("an if yields struct values in a binding, a return and an argument") {
   program_matrix::ProgramCase program;
   program.name = "frontend_if_yields_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Point {
@@ -162,6 +165,7 @@ main() {
 TEST_CASE("an if of struct temporaries with a Destroy helper destroys the chosen value once") {
   program_matrix::ProgramCase program;
   program.name = "frontend_if_struct_destroy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Res {
@@ -221,6 +225,7 @@ main() {
 TEST_CASE("a struct holds sum fields: read, pick, replace and copy") {
   program_matrix::ProgramCase program;
   program.name = "frontend_sum_struct_field";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -321,6 +326,7 @@ main() {
 TEST_CASE("a Reference field is built by braces and written through a Reference local") {
   program_matrix::ProgramCase program;
   program.name = "frontend_reference_field_construction_only";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Keeper() {

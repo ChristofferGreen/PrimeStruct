@@ -13,6 +13,16 @@ void runPack(const char *name, const char *source, int exitCode) {
   program.name = name;
   program.source = source;
   program.exitCode = exitCode;
+  // Wasm runs the packs of arrays and of references and pointers to scalars and structs; the vector and map packs need the
+  // heap.
+  static const std::vector<std::string> wasmPrograms = {"variadic_array_pack",
+                                                        "variadic_borrowed_array_pack",
+                                                        "variadic_scalar_pointer_pack",
+                                                        "variadic_scalar_reference_pack",
+                                                        "variadic_struct_reference_pack"};
+  if (program_matrix::listed(wasmPrograms, name)) {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 

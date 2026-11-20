@@ -236,6 +236,7 @@ TEST_CASE("a user at that returns a new value is moved in, not copied") {
   // Noisy: the binding takes it over (no 1000 added) and destroys it once.
   program_matrix::ProgramCase program;
   program.name = "user_at_result_is_a_temporary";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -438,6 +439,7 @@ TEST_CASE("an assignment to a plain int struct local is a copy") {
   // binding in the same slots on every iteration (the shape of PrimeScroll's restore_session).
   program_matrix::ProgramCase program;
   program.name = "assign_scalar_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Point() {

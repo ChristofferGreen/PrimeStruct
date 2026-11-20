@@ -155,6 +155,7 @@ main() {
 TEST_CASE("native pointer helpers") {
   program_matrix::ProgramCase program;
   program.name = "native_pointer_helpers_8";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -171,6 +172,7 @@ main() {
 TEST_CASE("native plus() on a pointer offsets by zero") {
   program_matrix::ProgramCase program;
   program.name = "native_plus_on_a_pointer_offsets_by_zero_9";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {
@@ -487,6 +489,7 @@ main() {
 TEST_CASE("register allocation keeps frame locals, calls and prints in a loop exact") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_frame_locals";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 mix([i32] a, [i32] b, [i32] c) {
@@ -950,6 +953,7 @@ main() {
 TEST_CASE("register allocation inlines division, indirect access and long argument lists") {
   program_matrix::ProgramCase program;
   program.name = "register_allocation_inline_templates";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<i64>]
 weigh([i64] a, [f64] b, [i64] c, [i32] d, [f64] e, [i64] f) {
@@ -1100,6 +1104,7 @@ main() {
 TEST_CASE("a void function that returns early from a branch still returns at its end") {
   program_matrix::ProgramCase program;
   program.name = "void_early_return_falls_through";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {
@@ -1158,6 +1163,7 @@ main() {
 TEST_CASE("a discarded call result inside a nested block is dropped") {
   program_matrix::ProgramCase program;
   program.name = "discarded_call_in_nested_block";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Pair() {
@@ -1209,6 +1215,7 @@ main() {
 TEST_CASE("struct methods overload by arity in the body and with self") {
   program_matrix::ProgramCase program;
   program.name = "struct_method_arity_overloads";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Meter() {
@@ -1255,6 +1262,7 @@ TEST_CASE("repeat with a non-positive count in a variable runs the body zero tim
   // program on a negative count. A negative i32 or i64 held in a local behaves like the literal zero.
   program_matrix::ProgramCase program;
   program.name = "control_repeat_non_positive";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [effects(io_out), return<int>]
 main() {

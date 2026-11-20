@@ -22,7 +22,15 @@ void runMethodProgram(const std::string &name, const std::string &source, int ex
   program.source = source;
   program.exitCode = exitCode;
   program.onlyConfigs = methodConfigs();
-  if (name == "struct_methods_unused_tuple_import") {
+  // Wasm runs these programs; the others use opcodes it lacks.
+  static const std::vector<std::string> wasmPrograms = {
+      "struct_methods_generic_struct_parameter",
+      "struct_methods_imported_static_helper",
+      "struct_methods_infer_through_generic_struct",
+      "struct_methods_namespaced_sum",
+      "struct_methods_overload_arguments",
+      "struct_methods_unused_tuple_import"};
+  if (program_matrix::listed(wasmPrograms, name)) {
     program.extraConfigs = {"wasm-wasi"};
   }
   program_matrix::runProgramMatrix(program);

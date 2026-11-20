@@ -23,6 +23,24 @@ void runClosureProgram(const std::string &name, const std::string &source, int e
   program.source = source;
   program.exitCode = exitCode;
   program.onlyConfigs = closureConfigs();
+  // Wasm runs these programs; the others use opcodes it lacks.
+  static const std::vector<std::string> wasmPrograms = {
+      "closure_callable_struct",
+      "closure_capture_all_used_names",
+      "closure_generic_mut_parameter",
+      "closure_init_capture_counter",
+      "closure_local_value_capture",
+      "closure_method_calls_root_generic",
+      "closure_mut_value_capture",
+      "closure_namespace_struct_parameter",
+      "closure_nested_lambda",
+      "closure_ref_capture_in_generic_call",
+      "closure_ref_capture_writes",
+      "closure_return_type_with_captures",
+      "generic_imported_callable_reference_param"};
+  if (program_matrix::listed(wasmPrograms, name)) {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 
@@ -622,6 +640,7 @@ main() {
 TEST_CASE("lambdas in generic definitions and generic struct methods name the type parameters") {
   program_matrix::ProgramCase program;
   program.name = "lambda_names_type_parameters";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [effects(io_out), return<i32>]
 apply_value<T>([T] seed, [i32] extra) {

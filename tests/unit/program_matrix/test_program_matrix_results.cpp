@@ -244,6 +244,7 @@ main() {
 TEST_CASE("stdlib Result helper calls pass as arguments") {
   program_matrix::ProgramCase program;
   program.name = "result_helper_call_arguments";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -280,6 +281,7 @@ main() {
 TEST_CASE("Result.ok calls pass as stdlib Result arguments") {
   program_matrix::ProgramCase program;
   program.name = "result_ok_call_arguments";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -683,6 +685,7 @@ main() {
 TEST_CASE("a return builds a stdlib Result from a brace constructor") {
   program_matrix::ProgramCase program;
   program.name = "result_return_brace_constructor";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -739,6 +742,7 @@ main() {
 TEST_CASE("field access reads the struct payload of a try and of a question mark") {
   program_matrix::ProgramCase program;
   program.name = "result_try_struct_payload_field";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/file/*
 
