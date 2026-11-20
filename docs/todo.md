@@ -569,9 +569,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the chosen lowering or diagnostic, with matrix coverage
   - stop_rule: the decision and its first slice; no change to the VM or native task models.
 
-- [ ] TODO-6123: The build command hashes the 22 MB `primec` twice per run
+- [~] TODO-6123: The build command hashes the 22 MB `primec` twice per run
   - owner: ai
   - status: ready
+  - claimed_by: build-hash (worktree-agent-a1f688ce17b85b0ca), 2026-11-20
   - created_at: 2026-11-20
   - phase: Modules and libraries (found with TODO-6093)
   - parallel_track: build-compiler-hash
