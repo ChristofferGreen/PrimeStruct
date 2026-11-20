@@ -183,6 +183,30 @@ bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, 
   out.keyValueKeyKind = local.keyValueKeyKind;
   out.keyValueValueKind = local.keyValueValueKind;
   out.structPath = local.structTypeName;
+  if (local.pointerToVector && !local.isSoaVector) {
+    // A slot of a builtin `vector<T>` of scalars is the whole five-slot record. A local names no record
+    // or the builtin `/vector`; a record named by the element type's hash is the stdlib vector's.
+    constexpr LocalInfo::ValueKind ScalarKinds[] = {LocalInfo::ValueKind::Int32,
+                                                    LocalInfo::ValueKind::Int64,
+                                                    LocalInfo::ValueKind::UInt64,
+                                                    LocalInfo::ValueKind::Float32,
+                                                    LocalInfo::ValueKind::Float64,
+                                                    LocalInfo::ValueKind::Bool,
+                                                    LocalInfo::ValueKind::UInt8};
+    for (const LocalInfo::ValueKind kind : ScalarKinds) {
+      const std::string elementType = typeNameForValueKind(kind);
+      const bool namedByLocalKind = (local.structTypeName.empty() ||
+                                     local.structTypeName == vectorBuiltinStructNormalizedPath()) &&
+                                    local.valueKind == kind;
+      if (namedByLocalKind ||
+          (!local.structTypeName.empty() &&
+           local.structTypeName ==
+               specializedCollectionVectorRecordPathForElementType(elementType))) {
+        out.structPath = nestedBuiltinVectorElementPath(elementType);
+        break;
+      }
+    }
+  }
   return true;
 }
 

@@ -458,4 +458,122 @@ TEST_CASE("the Wasm backend rejects a program with a mutex by name") {
                 wasm.err);
 }
 
+// `init(*slot, v)` of a builtin `vector<T>` stores the whole five-slot record (count, capacity, data, owner flag): a
+// named owner and a temporary hand their buffer to the slot (a temporary's owner flag is cleared), a view or a borrowed
+// parameter is copied with its elements. Dropping the slot frees the buffer, so the live block count of the slot heap
+// is back where it started. The heap statistic exists on the VM and optexe only; the values case below runs on every
+// config.
+TEST_CASE("init of a builtin vector into uninitialized storage stores the whole record") {
+  program_matrix::ProgramCase program;
+  program.name = "init_builtin_vector_slot";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+import /std/sync/*
+
+[unsafe effects(heap_alloc), return<void>]
+release([Pointer<uninitialized<vector<i64>>> mut] slot) {
+  drop(*slot)
+  /std/intrinsics/memory/free(slot)
+}
+
+[effects(heap_alloc), return<vector<i64>>]
+make() {
+  return(vector<i64>(7i64, 8i64, 9i64, 10i64))
+}
+
+[effects(heap_alloc), return<void>]
+store_borrowed([Pointer<uninitialized<vector<i64>>> mut] slot, [vector<i64> mut] borrowed) {
+  init(*slot, borrowed)
+}
+
+[effects(heap_alloc), return<void>]
+store_view([Pointer<uninitialized<vector<i64>>> mut] slot, [vector<i64>] shared) {
+  init(*slot, shared)
+}
+
+[effects(heap_alloc, lock, io_out), return<int>]
+main() {
+  [i32] start{heapLiveBlocks()}
+  if(true) {
+    [Pointer<uninitialized<vector<i64>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<i64>>>(1i32)}
+    init(*slot, make())
+    [Reference<vector<i64>>] stored{borrow(*slot)}
+    print_line(stored.count() * 100i32 + convert<i32>(stored[3i32]))
+    release(slot)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [vector<i64> mut] owner{vector<i64>(1i64, 2i64, 3i64)}
+    [Pointer<uninitialized<vector<i64>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<i64>>>(1i32)}
+    init(*slot, owner)
+    [Reference<vector<i64>>] stored{borrow(*slot)}
+    print_line(stored.count() * 100i32 + convert<i32>(stored[2i32]))
+    release(slot)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [vector<i64> mut] a{vector<i64>(1i64, 2i64, 3i64)}
+    [Pointer<uninitialized<vector<i64>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<i64>>>(1i32)}
+    store_borrowed(slot, a)
+    [Reference<vector<i64>> mut] stored{borrow(*slot)}
+    stored.push(4i64)
+    a.push(9i64)
+    a.push(10i64)
+    print_line(a.count() * 100i32 + stored.count())
+    release(slot)
+    print_line(a[4i32])
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [vector<i64>] shared{vector<i64>(5i64, 6i64)}
+    [Pointer<uninitialized<vector<i64>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<i64>>>(1i32)}
+    store_view(slot, shared)
+    [Reference<vector<i64>>] stored{borrow(*slot)}
+    print_line(stored.count() * 10i32 + shared.count())
+    release(slot)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    cell{Mutex<vector<i64>>{vector<i64>(1i64, 2i64, 3i64)}}
+    copy{cell}
+    print_line(cell.locked([]([Reference<vector<i64>> mut] values) { values.push(4i64) return(values.count()) }))
+    print_line(copy.locked([]([Reference<vector<i64>>] values) { return(values[3i32]) }))
+  }
+  print_line(heapLiveBlocks() - start)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "410\n0\n303\n0\n"
+                       "504\n10\n0\n"
+                       "22\n0\n"
+                       "4\n4\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a Mutex made from a non-empty vector reads its elements back") {
+  program_matrix::ProgramCase program;
+  program.name = "mutex_vector_from_elements";
+  program.source = R"(
+import /std/collections/*
+import /std/sync/*
+
+[effects(heap_alloc, lock, io_out), return<int>]
+main() {
+  [vector<i64> mut] seed{vector<i64>(4i64, 5i64, 6i64)}
+  cell{Mutex<vector<i64>>{seed}}
+  copy{cell}
+  print_line(cell.locked([]([Reference<vector<i64>>] values) { return(values.count()) }))
+  print_line(copy.locked([]([Reference<vector<i64>> mut] values) { values.push(7i64) return(values[2i32]) }))
+  print_line(cell.locked([]([Reference<vector<i64>>] values) { return(values[3i32]) }))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "3\n6\n7\n";
+  runMutexProgram(program);
+}
+
 TEST_SUITE_END();

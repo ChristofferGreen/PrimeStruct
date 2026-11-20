@@ -4,7 +4,9 @@
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererHelpers.h"
 #include "primec/ir_lowerer/IrLowererIndexKindHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeCollectionHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStringCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererStringLiteralHelpers.h"
 #include "primec/ir_lowerer/IrLowererUninitializedTypeHelpers.h"
@@ -100,7 +102,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
-    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr) {
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr,
+    const EmitBuiltinVectorSlotInitForStatementFn &emitBuiltinVectorSlotInit) {
   (void)resolveDefinitionCall;
   if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall ||
       (!isSimpleCallName(stmt, "init") && !isSimpleCallName(stmt, "drop"))) {
@@ -216,6 +219,23 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
   }
 
   const Expr &valueExpr = stmt.args.back();
+  // A builtin `vector<T>` slot holds the whole five-slot record: copy it, then settle who owns the buffer.
+  auto emitStructOrVectorCopy = [&](int32_t destPtrLocal,
+                                    int32_t srcPtrLocal,
+                                    int32_t slotCount,
+                                    const std::string &structPath,
+                                    const std::string &fieldElementPath) -> bool {
+    if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount)) {
+      return false;
+    }
+    std::string elementPath = fieldElementPath;
+    const bool isVectorSlot = emitBuiltinVectorSlotInit && slotCount == 5 &&
+                              (isNestedBuiltinVectorElementPath(structPath, &elementPath) ||
+                               structPath == vectorBuiltinStructNormalizedPath());
+    return !isVectorSlot ||
+           emitBuiltinVectorSlotInit(valueExpr, localsIn, destPtrLocal, srcPtrLocal, elementPath);
+  };
+
   if (access.location == UninitializedStorageAccessInfo::Location::Local) {
     const LocalInfo &storageInfo = *access.local;
     if (!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()) {
@@ -256,7 +276,11 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       }
       const int32_t srcPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-      if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, field.slotCount)) {
+      if (!emitStructOrVectorCopy(ptrLocal,
+                                  srcPtrLocal,
+                                  field.slotCount,
+                                  field.structPath,
+                                  field.builtinVectorElementStructPath)) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       return UninitializedStorageInitDropEmitResult::Emitted;
@@ -293,7 +317,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
       }
       const int32_t srcPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
-      if (!emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, layout.totalSlots)) {
+      if (!emitStructOrVectorCopy(
+              ptrLocal, srcPtrLocal, layout.totalSlots, access.typeInfo.structPath, "")) {
         return UninitializedStorageInitDropEmitResult::Error;
       }
       return UninitializedStorageInitDropEmitResult::Emitted;

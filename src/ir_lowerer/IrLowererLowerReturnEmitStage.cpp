@@ -409,6 +409,48 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         error);
   };
 
+  // After `init(slot, v)` slot-copied the five-slot record of a builtin vector into uninitialized storage: a named
+  // owner (its drop flag is released at the call) and a temporary hand their buffer over, a place gets a copy of
+  // its elements (docs/spec/value-lifecycle.md, Uninitialized Storage).
+  auto emitBuiltinVectorSlotInit = [&](const Expr &valueExpr,
+                                       const LocalMap &locals,
+                                       int32_t destPtrLocal,
+                                       int32_t srcPtrLocal,
+                                       const std::string &elementStructPath) {
+    if (valueExpr.kind == Expr::Kind::Name) {
+      const auto sourceIt = locals.find(valueExpr.name);
+      if (sourceIt != locals.end() && sourceIt->second.dropFlagLocal >= 0) {
+        return true;
+      }
+    }
+    auto &instructions = function.instructions;
+    if (stateOut.isTemporaryStructCopySource(valueExpr, locals)) {
+      instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+      instructions.push_back({IrOpcode::PushI64, 4 * IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+      instructions.push_back({IrOpcode::PushI32, 0});
+      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({IrOpcode::Pop, 0});
+      return true;
+    }
+    return ir_lowerer::emitBuiltinVectorCopyFromPtrs(
+        destPtrLocal,
+        srcPtrLocal,
+        elementStructPath,
+        [&](const std::string &path) -> const Definition * {
+          auto copyIt = defMap.find(path + "/Copy");
+          return copyIt == defMap.end() ? nullptr : copyIt->second;
+        },
+        [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+          return resolveStructSlotLayout(path, layoutOut);
+        },
+        [&]() { return allocTempLocal(); },
+        instructions,
+        locals,
+        emitInlineDefinitionCall,
+        error);
+  };
+
   // The struct (or nested builtin vector) path of a vector element type that `pop` or `clear`
   // destroys when it drops an element; empty when the element owns nothing.
   auto resolveDroppedVectorElementStructPath = [&](const std::string &elementText,

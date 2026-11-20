@@ -624,74 +624,82 @@
         function.instructions.push_back({op, imm});
       });
     }
-    const auto uninitializedInitDropResult = ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
-        stmt,
-        localsIn,
-        function.instructions,
-        [&](const Expr &storageExpr,
-            const LocalMap &valueLocals,
-            ir_lowerer::UninitializedStorageAccessInfo &accessOut,
-            bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
-        [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
-        [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
-          if (const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(structPath)) {
-            int32_t totalSlots = 0;
-            if (!sumHelpers.loweredSumSlotCount(*sumDef, totalSlots)) {
-              return false;
-            }
-            layoutOut = {};
-            layoutOut.structPath = sumDef->fullPath;
-            layoutOut.totalSlots = totalSlots;
-            return true;
-          }
-          return resolveStructSlotLayout(structPath, layoutOut);
-        },
-        [&]() { return allocTempLocal(); },
-        [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
-          return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
-        },
-        [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
-        error,
-        [&](const ir_lowerer::UninitializedStorageAccessInfo &access,
-            int32_t valuePtrLocal,
-            bool &handledOut) {
-          handledOut = false;
-          const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(access.typeInfo.structPath);
-          if (sumDef == nullptr) {
-            // A struct value dropped from storage (a container slot) runs its destroy helpers.
-            const std::string &structPath = access.typeInfo.structPath;
-            const auto findDestroyHelper = [&](const std::string &path) {
-              return ir_lowerer::findStackDestroyHelper(defMap, path);
-            };
-            const auto resolveLayout = [&](const std::string &path,
-                                           StructSlotLayoutInfo &layoutOut) {
-              return resolveStructSlotLayout(path, layoutOut);
-            };
-            if (structPath.empty() || !ir_lowerer::structNeedsDestroyHelpers(
-                                          structPath, findDestroyHelper, resolveLayout)) {
-              return true;
-            }
-            handledOut = true;
-            if (valuePtrLocal < 0) {
-              return true;
-            }
-            return ir_lowerer::emitStructDestroyHelpersFromPtr(
-                valuePtrLocal,
-                structPath,
-                findDestroyHelper,
-                resolveLayout,
-                [&]() { return allocTempLocal(); },
-                function.instructions,
-                localsIn,
-                emitInlineDefinitionCall,
-                error);
-          }
-          handledOut = true;
-          if (valuePtrLocal < 0) {
-            return true;
-          }
-          return sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(*sumDef, valuePtrLocal, localsIn);
-        });
+    const auto uninitializedInitDropResult =
+        ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            stmt,
+            localsIn,
+            function.instructions,
+            [&](const Expr &storageExpr,
+                const LocalMap &valueLocals,
+                ir_lowerer::UninitializedStorageAccessInfo &accessOut,
+                bool &resolvedOut) {
+              return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut);
+            },
+            [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+              return emitExpr(valueExpr, valueLocals);
+            },
+            [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+              if (const Definition *sumDef = sumHelpers.resolveSumDefinitionByPath(structPath)) {
+                int32_t totalSlots = 0;
+                if (!sumHelpers.loweredSumSlotCount(*sumDef, totalSlots)) {
+                  return false;
+                }
+                layoutOut = {};
+                layoutOut.structPath = sumDef->fullPath;
+                layoutOut.totalSlots = totalSlots;
+                return true;
+              }
+              return resolveStructSlotLayout(structPath, layoutOut);
+            },
+            [&]() { return allocTempLocal(); },
+            [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
+              return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
+            },
+            [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+            error,
+            [&](const ir_lowerer::UninitializedStorageAccessInfo &access,
+                int32_t valuePtrLocal,
+                bool &handledOut) {
+              handledOut = false;
+              const Definition *sumDef =
+                  sumHelpers.resolveSumDefinitionByPath(access.typeInfo.structPath);
+              if (sumDef == nullptr) {
+                // A struct value dropped from storage (a container slot) runs its destroy helpers.
+                const std::string &structPath = access.typeInfo.structPath;
+                const auto findDestroyHelper = [&](const std::string &path) {
+                  return ir_lowerer::findStackDestroyHelper(defMap, path);
+                };
+                const auto resolveLayout = [&](const std::string &path,
+                                               StructSlotLayoutInfo &layoutOut) {
+                  return resolveStructSlotLayout(path, layoutOut);
+                };
+                if (structPath.empty() || !ir_lowerer::structNeedsDestroyHelpers(
+                                              structPath, findDestroyHelper, resolveLayout)) {
+                  return true;
+                }
+                handledOut = true;
+                if (valuePtrLocal < 0) {
+                  return true;
+                }
+                return ir_lowerer::emitStructDestroyHelpersFromPtr(
+                    valuePtrLocal,
+                    structPath,
+                    findDestroyHelper,
+                    resolveLayout,
+                    [&]() { return allocTempLocal(); },
+                    function.instructions,
+                    localsIn,
+                    emitInlineDefinitionCall,
+                    error);
+              }
+              handledOut = true;
+              if (valuePtrLocal < 0) {
+                return true;
+              }
+              return sumHelpers.emitActiveSumPayloadDestroyFromSumPtr(
+                  *sumDef, valuePtrLocal, localsIn);
+            },
+            emitBuiltinVectorSlotInit);
     if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Error) {
       return false;
     }

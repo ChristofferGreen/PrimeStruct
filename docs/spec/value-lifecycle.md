@@ -257,6 +257,12 @@
   - `storage` must be `uninitialized<T>` or `dereference(ptr)` where `ptr` is `Pointer<uninitialized<T>>` or
     `Reference<uninitialized<T>>`, and it must be definitely uninitialized at the call site.
   - `value` is consumed (move-by-default); use `clone(value)` to duplicate.
+  - A slot of a builtin `vector<T>` of scalars (`Pointer<uninitialized<vector<i64>>>`) holds the whole five-slot
+    record (count, capacity, data, owner flag). `init` of a named owner or a temporary hands its buffer to the slot (a
+    temporary's owner flag is cleared); a view, a borrowed parameter or any other place is copied with its elements.
+    `drop` of the slot frees the buffer, so `Mutex<vector<i64>>{v}` of a non-empty vector holds its elements and
+    leaves no live block when the mutex and its copies are gone. Slots of vectors of structs or vectors, `map`, and a
+    struct field of type `uninitialized<vector<T>>` (one slot) are not covered by this rule.
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.

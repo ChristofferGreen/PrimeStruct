@@ -38,6 +38,16 @@ using EmitUninitializedStorageDropFromPtrForStatementFn =
 using EmitPrintArgForStatementFn = std::function<bool(const Expr &, const LocalMap &, const PrintBuiltin &)>;
 using ResolveDefinitionCallForStatementFn = std::function<const Definition *(const Expr &)>;
 
+// Runs after the five-slot record of a builtin `vector<T>` value was slot-copied into uninitialized
+// storage: a moved owner or temporary hands its buffer over, a place gets a copy of its elements.
+// `elementStructPath` is empty for scalar elements.
+using EmitBuiltinVectorSlotInitForStatementFn =
+    std::function<bool(const Expr &valueExpr,
+                       const LocalMap &locals,
+                       int32_t destPtrLocal,
+                       int32_t srcPtrLocal,
+                       const std::string &elementStructPath)>;
+
 enum class UninitializedStorageInitDropEmitResult {
   NotMatched,
   Emitted,
@@ -188,7 +198,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
     std::string &error,
-    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {});
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {},
+    const EmitBuiltinVectorSlotInitForStatementFn &emitBuiltinVectorSlotInit = {});
 UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

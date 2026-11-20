@@ -185,6 +185,32 @@ struct UnstoredFieldEmitter {
   const std::function<bool(const Expr &, const LocalMap &)> &isTemporaryCopySource;
   int32_t &nextLocal;
 
+  // The element struct path of the builtin `vector<T>` a place argument names (empty for scalars), when the
+  // argument is a local (`Type{v}` parses it as `block() { v }`) whose element type is known.
+  static std::optional<std::string> vectorPlaceElementPath(const Expr &arg,
+                                                           const LocalMap &argLocals) {
+    const Expr *place = &arg;
+    if (place->kind == Expr::Kind::Call && place->name == "block" && place->args.empty() &&
+        place->bodyArguments.size() == 1) {
+      place = &place->bodyArguments.front();
+    }
+    if (place->kind != Expr::Kind::Name) {
+      return std::nullopt;
+    }
+    const auto argIt = argLocals.find(place->name);
+    if (argIt == argLocals.end() || argIt->second.kind != LocalInfo::Kind::Vector ||
+        argIt->second.isSoaVector) {
+      return std::nullopt;
+    }
+    if (argIt->second.vectorElementLifecyclePath.has_value()) {
+      return *argIt->second.vectorElementLifecyclePath;
+    }
+    if (argIt->second.valueKind != LocalInfo::ValueKind::Unknown) {
+      return std::string{};
+    }
+    return std::nullopt;
+  }
+
   bool emit(const std::string &calleePath,
             const Expr &param,
             const Expr &arg,
@@ -237,6 +263,24 @@ struct UnstoredFieldEmitter {
       const int32_t destPtrLocal = allocTempLocal();
       emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal));
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal));
+      // A builtin `vector<T>` place gets a buffer of its own, with a copy of each element.
+      if (fieldInfo.kind == LocalInfo::Kind::Vector && !fieldInfo.isSoaVector &&
+          layout.totalSlots == 5) {
+        if (const auto elementPath = vectorPlaceElementPath(arg, argLocals);
+            elementPath.has_value()) {
+          StructSlotFieldInfo vectorField = field;
+          vectorField.structPath = vectorBuiltinStructNormalizedPath();
+          vectorField.builtinVectorElementKnown = true;
+          vectorField.builtinVectorElementStructPath = *elementPath;
+          if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, vectorField)) {
+            return false;
+          }
+          materializeInlineStructFieldLocal(
+              field, baseLocal, nextLocal, fieldInfo, emitInstruction);
+          structLocals[param.name] = std::move(fieldInfo);
+          return true;
+        }
+      }
       if (!emitPlaceCopyHelpers(destPtrLocal, srcPtrLocal, field)) {
         return false;
       }
