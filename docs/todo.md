@@ -147,6 +147,11 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
+| TODO-6099 | Pointer arithmetic on a slot of a builtin `vector<T>` steps one slot, so a `Vector<vector<i64>>` push through a `Reference` faults | in_progress | lifecycle-slot-stride |
+| TODO-6100 | A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice | in_progress | lifecycle-block-place |
+| TODO-6101 | A struct field `[uninitialized<vector<T>>]` stores the whole vector record | in_progress | lifecycle-field-slot |
+| TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | in_progress | lifecycle-struct-slot |
+| TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 
 ### Ready Now
 
@@ -183,6 +188,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
+- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now): TODO-6099 (slot stride of a builtin vector), TODO-6100 (`block() { seed }` into a `move` parameter), TODO-6101 (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -670,6 +676,73 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
+
+- [~] TODO-6099: Pointer arithmetic on a slot of a builtin `vector<T>` steps one slot, so a `Vector<vector<i64>>` push through a `Reference` faults
+  - owner: ai
+  - status: in_progress
+  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
+  - parallel_track: lifecycle-slot-stride
+  - scope: Found with TODO-6098. `[Reference<vector<vector<i64>>> mut] v` then `v.push(vector<i64>(7i64))` twice in a helper (a plain program, no `init` in the source) loses the first element and ends with `VM error: invalid heap free address in IR` on the VM and optexe (a `[vector<vector<i64>> mut]` parameter works: that push is the builtin one). A `Reference<vector<T>>` receiver resolves `push` to the stdlib `vectorPush<T>` over `Vector<T>`, which grows by moving each slot into a new buffer with `bufferOffsetUnsafe<uninitialized<T>>(dst, index)`, that is `at_unsafe` on a `Pointer<uninitialized<vector<i64>>>`. `at`, `at_unsafe`, `realloc` and pointer `plus` find the element size from the pointer's struct path (`inferPointerStructTypePath`), which is empty for a `vector<T>` pointee, so the stride is one slot where the element is a five-slot record: slot 1 overwrites the count of slot 0. `alloc<uninitialized<vector<T>>>` already knows the record. Same for `Mutex<vector<vector<i64>>>`.
+  - implementation_notes: reproduce with a ten-line `main` (`at_unsafe` on a two-slot `alloc<uninitialized<vector<i64>>>(2i32)` then `init` both). src/ir_lowerer/IrLowererOperatorMemoryPointerHelpers.cpp (`inferPointerTargetStructPathFromTypeText`).
+  - acceptance:
+    - positive: a helper taking `Reference<vector<vector<i64>>>` pushes fresh vectors three times and each is readable (counts and values), `heapLiveBlocks()` returns to its start (VM, optexe); values on native
+    - positive: two `at_unsafe` slots of a `Pointer<uninitialized<vector<i64>>>` hold two vectors
+    - matrix case on every config; docs/spec/value-lifecycle.md says the stride of a slot of a builtin vector; full release gate green
+  - stop_rule: the stride of pointer arithmetic on a builtin vector pointee; no change to `Vector<T>`.
+
+- [~] TODO-6100: A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice
+  - owner: ai
+  - status: in_progress
+  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Block expressions)
+  - parallel_track: lifecycle-block-place
+  - scope: Found with TODO-6098. `consume(block() { h })` with `[Holder move] h` (a struct with a `vector<i64>` field) and `consume([vector<i64> move] v)` with `block() { v }` hand the caller's record to the callee without a copy and without releasing the caller's drop flag, so the callee frees the buffer and the owner frees it again (`invalid heap free address`). `Type{x}` parses its argument as `block() { x }`, so this is the general shape. The spec already decides it: a block value that is a local of an outer scope is a place the outer scope keeps owning, and the receiver gets a copy (Block expressions); a bare `consume(h)` moves `h`, and `consume(move(h))` too. The lowering copied that shape only for brace constructors.
+  - acceptance:
+    - positive: a `move` parameter given `block() { place }` gets its own copy (struct with a vector field, `vector<i64>`, struct with `Destroy`): the callee destroys its copy once and the owner destroys the place once; `heapLiveBlocks()` returns to its start (VM, optexe); a bare name and `move(x)` still move
+    - negative: none (no new diagnostic; `consume(seed)` stays moved-from)
+    - matrix case on every config; docs/spec/value-lifecycle.md Block expressions names the `move` parameter; full release gate green
+  - stop_rule: inline calls (a real call whose body owns the parameter is not covered); no change to the semantics move checker.
+
+- [~] TODO-6101: A struct field `[uninitialized<vector<T>>]` stores the whole vector record
+  - owner: ai
+  - status: in_progress
+  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
+  - parallel_track: lifecycle-field-slot
+  - scope: Found with TODO-6098. A `[struct]` with `[uninitialized<vector<i64>>] items`, then `init(h.items, vector<i64>(1i64, 2i64, 3i64))` and `take(h.items)` fails IR validation on every backend: `invalid IR instruction ...: paths reach this block with different operand stack depths`. Whether this predates TODO-6098 is unknown (not tested at the parent commit).
+  - acceptance:
+    - positive: `init` into the field, `borrow` and `take` give back the elements; the live block count returns to its start (VM, optexe); values on native
+    - matrix case on every config; full release gate green
+  - stop_rule: a field of type `uninitialized<vector<T>>` of scalars; vectors of structs are TODO-6102.
+
+- [~] TODO-6102: A slot of a vector of structs copies its elements on `init` and destroys them on `drop`
+  - owner: ai
+  - status: in_progress
+  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
+  - parallel_track: lifecycle-struct-slot
+  - scope: Found with TODO-6098. `init(*slot, v)` for a `Pointer<uninitialized<vector<Noisy>>>` (a struct with a `Destroy` helper and a `vector<i64>` field) keeps the shallow five-slot record copy: `drop(*slot)` runs no `Destroy` and frees nothing, so the elements' buffers and the vector's own buffer leak (3 blocks for two elements). TODO-6098 typed only slots of scalar vectors as the nested vector record (`resolveUninitializedTypeInfoFromPointerTargetLocal`). A slot local of a vector of structs knows no element path.
+  - acceptance:
+    - positive: after `init(*slot, v)` of a named owner, a temporary and a place, the slot holds the elements (count, a field, a nested vector field); `drop(*slot)` destroys each element once (the `Destroy` prints once per element) and frees every buffer; `heapLiveBlocks()` returns to its start (VM, optexe); values on native
+    - matrix case on every config; docs/spec/value-lifecycle.md updated; full release gate green
+  - stop_rule: slots of vectors of structs; a vector of vectors, `map` and `soa` are TODO-6103.
+
+- [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-20
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
+  - parallel_track: lifecycle-collection-slots
+  - scope: Found with TODO-6098, checked with the right spellings (`soa</Particle>`, `map<i32, i32>`, `String`). A `String` slot works (`init(*slot, s)`, `borrow`, `drop`: the count reads back and the heap returns to its start on the VM and optexe). `alloc<uninitialized<map<i32, i32>>>` is a clear lowering error on every backend: `does not support alloc target type: map<i32, i32>` (VM, optexe, native). `init(*slot, ps)` of a `soa</Particle>` into `Pointer<uninitialized<soa</Particle>>>` is the semantic error `init value type mismatch`. So `Mutex<map<..>>` and a `soa` in a slot do not exist yet; this leaf is deferred until a program needs one.
+  - acceptance:
+    - a slot of a `map<K, V>` and of a `soa<T>` lowers, `init` stores the whole value, `drop` frees it
+    - or: each stays a clear diagnostic that names the type and the way out, documented in docs/spec/value-lifecycle.md
+  - stop_rule: `alloc`/`init`/`drop` of those slots only.
 
 - [ ] TODO-5987: The lowerer's include-only fragments become components
   - owner: ai
