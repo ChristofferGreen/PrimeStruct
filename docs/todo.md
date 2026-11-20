@@ -232,9 +232,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6096: An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys its payload
+- [~] TODO-6096: An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys its payload
   - owner: ai
   - status: ready
+  - claimed_by: result-auto (worktree-agent-a5d8afef2494382b6), 2026-11-20
   - created_at: 2026-11-20
   - phase: Lifecycle (split from TODO-6074)
   - parallel_track: lifecycle-result-auto
