@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsFieldModifiers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include <algorithm>
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -715,22 +716,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       return false;
     };
-    auto isNamedFieldTarget =
-        [&](const Expr &candidate, std::string_view rootName) -> bool {
-      if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess ||
-          candidate.args.size() != 1) {
-        return false;
-      }
-      const Expr *receiver = &candidate.args.front();
-      while (receiver->kind == Expr::Kind::Call && receiver->isFieldAccess &&
-             receiver->args.size() == 1) {
-        receiver = &receiver->args.front();
-      }
-      return receiver->kind == Expr::Kind::Name &&
-             receiver->name == rootName;
-    };
-    auto resolveFieldTargetRootName =
-        [&](const Expr &candidate, std::string &rootNameOut) -> bool {
+    auto resolveFieldTargetRootName = [&](const Expr &candidate, std::string &rootNameOut) -> bool {
       if (candidate.kind != Expr::Kind::Call || !candidate.isFieldAccess ||
           candidate.args.size() != 1) {
         return false;
@@ -746,11 +732,14 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       rootNameOut = receiver->name;
       return true;
     };
+    auto isNamedFieldTarget = [&](const Expr &candidate, std::string_view rootName) -> bool {
+      std::string root;
+      return resolveFieldTargetRootName(candidate, root) && root == rootName;
+    };
     auto validateMutableFieldAccessTarget = [&](const Expr &fieldTarget) -> bool {
       if (fieldTarget.kind != Expr::Kind::Call || !fieldTarget.isFieldAccess ||
           fieldTarget.args.size() != 1) {
-        return failMutationBorrowDiagnostic(
-            "assign target must be a mutable binding");
+        return failMutationBorrowDiagnostic("assign target must be a mutable binding");
       }
       std::string fieldViewName;
       if (isBuiltinSoaFieldViewExpr(fieldTarget, params, locals,
@@ -788,6 +777,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
               "assign target must be a mutable binding");
         }
         return false;
+      }
+      if (const auto message = fieldAssignmentDiagnostic(fieldBinding, fieldTarget.name)) {
+        return failMutationBorrowDiagnostic(*message);
       }
       std::string fieldTargetRootName;
       const bool allowMutableReceiverFieldWrite =

@@ -950,15 +950,26 @@ bool SemanticsValidator::inferDefinitionReturnKindGraphStep(const Definition &de
       if (inferenceState.inferred != ReturnKind::Unknown) {
         applyKnownReturn(inferenceState.inferred,
                          inferenceState.inferredStructPath,
-                         inferenceState.hasInferredBinding ? &inferenceState.inferredBinding : nullptr);
+                         inferenceState.hasInferredBinding ? &inferenceState.inferredBinding
+                                                           : nullptr);
       }
       return true;
     }
+    if (!componentHasCycle) {
+      for (const Expr &stmt : def.statements) {
+        if (stmt.kind == Expr::Kind::Call && stmt.name == "return" && stmt.args.size() == 1 &&
+            stmt.args.front().kind == Expr::Kind::Call && stmt.args.front().name == "location") {
+          return failExprDiagnostic(
+              stmt.args.front(),
+              "unable to infer return type on " + def.fullPath +
+                  " (location of a Reference parameter has no inferable type; "
+                  "declare the return type, or return the value)");
+        }
+      }
+    }
     return failInferGraphDiagnostic(
-        componentHasCycle
-            ? "return type inference requires explicit annotation on " +
-                  def.fullPath
-            : "unable to infer return type on " + def.fullPath);
+        componentHasCycle ? "return type inference requires explicit annotation on " + def.fullPath
+                          : "unable to infer return type on " + def.fullPath);
   }
 
   applyKnownReturn(inferenceState.inferred,

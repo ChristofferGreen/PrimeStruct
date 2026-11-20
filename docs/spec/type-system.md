@@ -701,6 +701,11 @@ helper over `value` (docs/spec/transforms.md).
   - Last-use analysis is conservative across complex control flow: if later use cannot be proven absent, the borrow
     stays active.
   - Borrowing a field borrows the whole struct value (no field-splitting in v1).
+  - A field of type `Reference<T>` is construction-only: brace construction binds it once, and an assignment to it
+    (`keeper.kept = value`) is the diagnostic `Reference field cannot be reassigned: kept`. A write through the field
+    uses a method that binds a `Reference` local to `location(this.kept)` and assigns that local. The validator asks one component (`fieldBindingFor`,
+    `src/semantics/SemanticsFieldModifiers.h`) whether a field is set only by construction, so a later field modifier
+    with the same rule (a construction-only parameter that is not stored) extends that one place.
   - Borrowed bindings cannot be reassigned or moved until all borrows end.
   - `return<Reference<T>>` accepts either a direct `Reference<T>` parameter (`return(paramRef)`) or a direct
     parameter-rooted borrowed carrier such as `return(borrow(dereference(slot)))` when the borrowed storage is

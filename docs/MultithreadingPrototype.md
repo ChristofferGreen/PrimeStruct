@@ -895,9 +895,10 @@ docs/spec/stdlib-reference.md, Shared state.
 - The `Reference<T>` is a borrowed parameter of `body`, so the existing rules (`borrowed parameter escapes via
   return` / `via assignment`) keep it inside. As implemented: a body whose parameter is the value type borrowed
   (`[vector<i64>] values`) and returns it gets `borrowed parameter escapes via return: values`; a body that
-  returns its `Reference<T>` parameter returns a copy of the value, and a `Reference<T>` binding of the result is
-  refused (`Reference bindings require location(...)`). Storing the reference into a struct field a `[ref]`
-  capture reaches is not diagnosed yet (TODO-5853).
+  returns its `Reference<T>` parameter gets the same diagnostic (`borrowed parameter escapes via return: value`),
+  and a `Reference<T>` binding of the result is refused (`Reference bindings require location(...)`). Storing the
+  reference into a struct field a `[ref]` capture reaches is `Reference field cannot be reassigned: kept`: a
+  `Reference` field is bound once by brace construction.
 - **Copying a `Mutex` shares it:** the handle carries an atomic count, and the last copy destroys `T`. A spawn
   argument is a copy, which is how a task gets the mutex.
 - `T` must be sendable. Locking a mutex again inside its own `locked` body faults with `mutex locked again by the

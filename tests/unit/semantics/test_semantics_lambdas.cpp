@@ -701,4 +701,126 @@ main() {
   CHECK(error.find("return type mismatch") != std::string::npos);
 }
 
+namespace {
+
+struct ReferenceFieldDiagnostic {
+  std::string message;
+  int line = 0;
+  int column = 0;
+};
+
+ReferenceFieldDiagnostic firstDiagnostic(const std::string &source) {
+  std::string error;
+  primec::SemanticDiagnosticInfo info;
+  CHECK_FALSE(validateProgramCollectingDiagnostics(source, "/main", error, info));
+  ReferenceFieldDiagnostic found;
+  if (!info.records.empty()) {
+    found.message = info.records.front().message;
+    found.line = info.records.front().primarySpan.line;
+    found.column = info.records.front().primarySpan.column;
+  }
+  return found;
+}
+
+} // namespace
+
+TEST_CASE("a Reference field is built by braces and read through") {
+  const std::string source = R"(
+[struct]
+Keeper() {
+  [Reference<i64>] kept
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper] keeper{Keeper{location(target)}}
+  [i64] got{dereference(keeper.kept)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("assigning to a Reference field is a diagnostic naming the field") {
+  const std::string source = R"(
+[struct]
+Keeper() {
+  [Reference<i64>] kept
+}
+
+[return<int>]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  assign(keeper.kept, location(target))
+  return(0i32)
+}
+)";
+  const ReferenceFieldDiagnostic found = firstDiagnostic(source);
+  CHECK(found.message.find("Reference field cannot be reassigned: kept") == 0);
+  CHECK(found.line == 11);
+  CHECK(found.column == 3);
+}
+
+TEST_CASE("a closure that assigns a Reference parameter to a Reference field is a diagnostic") {
+  const std::string source = R"(
+import /std/sync/*
+
+[struct]
+Keeper() {
+  [Reference<i64> mut] kept
+}
+
+[effects(lock, heap_alloc), return<int>]
+main() {
+  cell{Mutex<i64>{1i64}}
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  cell.locked([ref keeper]([Reference<i64>] value) { keeper.kept = value })
+  return(0i32)
+}
+)";
+  const ReferenceFieldDiagnostic found = firstDiagnostic(source);
+  CHECK(found.message.find("Reference field cannot be reassigned: kept") == 0);
+  CHECK(found.line == 14);
+  CHECK(found.column == 54);
+}
+
+TEST_CASE("a closure that returns its Reference parameter is a diagnostic with a position") {
+  const std::string source = R"(
+import /std/sync/*
+
+[effects(lock, heap_alloc), return<int>]
+main() {
+  cell{Mutex<i64>{1i64}}
+  [i64] got{cell.locked([]([Reference<i64>] value) { return(value) })}
+  return(0i32)
+}
+)";
+  const ReferenceFieldDiagnostic found = firstDiagnostic(source);
+  CHECK(found.message.find("borrowed parameter escapes via return: value") == 0);
+  CHECK(found.line == 7);
+  CHECK(found.column == 54);
+}
+
+TEST_CASE(
+    "a closure that returns location of its Reference parameter is a diagnostic with a position") {
+  const std::string source = R"(
+import /std/sync/*
+
+[effects(lock, heap_alloc), return<int>]
+main() {
+  cell{Mutex<i64>{1i64}}
+  cell.locked([]([Reference<i64>] value) { return(location(value)) })
+  return(0i32)
+}
+)";
+  const ReferenceFieldDiagnostic found = firstDiagnostic(source);
+  CHECK(found.message.find("unable to infer return type") == 0);
+  CHECK(found.line == 7);
+  CHECK(found.column == 51);
+}
+
 TEST_SUITE_END();

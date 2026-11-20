@@ -317,4 +317,33 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a Reference field is built by braces and written through a Reference local") {
+  program_matrix::ProgramCase program;
+  program.name = "frontend_reference_field_construction_only";
+  program.source = R"(
+[struct]
+Keeper() {
+  [Reference<i64> mut] kept
+
+  [mut return<void>]
+  store([i64] value) {
+    [Reference<i64> mut] target{location(this.kept)}
+    target = value
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] target{1i64}
+  [Keeper mut] keeper{Keeper{location(target)}}
+  keeper.store(7i64)
+  print_line(target)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

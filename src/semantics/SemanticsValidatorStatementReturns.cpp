@@ -455,6 +455,17 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
         isOwningBorrowedParameter(params, returnExpr, namespacePrefix)) {
       return failReturnEscapeDiagnostic(borrowedParameterEscapeMessage("return", returnExpr.name));
     }
+    // A closure's `Reference<T>` parameter is valid only inside the call (a `locked` body); returning it by
+    // value would copy the referent out of its guard (docs/spec/value-lifecycle.md, Lambdas).
+    if (!expectedReferenceReturnTarget.has_value() && returnExpr.kind == Expr::Kind::Name &&
+        currentValidationState_.context.definitionPath.find("__lambda") != std::string::npos) {
+      const BindingInfo *referenceParam = findParamBinding(params, returnExpr.name);
+      if (referenceParam != nullptr && referenceParam->typeName == "Reference" &&
+          !referenceParam->isCopy && !referenceParam->isMove) {
+        return failReturnEscapeDiagnostic(
+            borrowedParameterEscapeMessage("return", returnExpr.name));
+      }
+    }
     // The payload binding of a `pick` on a sum somebody else owns stands for their storage too.
     if (!expectedReferenceReturnTarget.has_value() && returnExpr.kind == Expr::Kind::Name &&
         currentValidationState_.lentPickPayloadBinders.count(returnExpr.name) > 0) {

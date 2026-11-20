@@ -407,6 +407,13 @@ bad_set() {
   A body that reads an enclosing binding it does not capture is `unknown identifier: name (the lambda does not
   capture it; add [name])`; writing a non-`mut` capture is `assign target must be a mutable binding`. A `[ref name]`
   of a binding that already is a `Reference` or `Pointer` copies that reference.
+
+  A `Reference<T>` parameter of a closure (the body of `Mutex<T>.locked`) is valid only inside the call. A closure
+  cannot keep it. `keeper.kept = value` with `kept` a `Reference<T>` field is `Reference field cannot be reassigned:
+  kept`: a `Reference` field is bound once by brace construction (`Keeper{value}`), and a method writes through it
+  with a local, `[Reference<T> mut] target{location(this.kept)}` and `target = value`. Returning the parameter by
+  value is `borrowed parameter escapes via return: value`, and `return(location(value))` is `unable to infer
+  return type` at the position of the `location(...)` call; declare the return type to name the pointer you mean.
 - **Return type:** a lambda states its return type with the `return<T>` transform a definition uses, written inside the
   capture list: `[return<Result<i32, i32>>]([i32] x) { ... }`, `[base, return<i32>]([i32] x) { ... }`. It may stand
   anywhere among the captures, at most once, and takes exactly one type, which may name a type parameter of the
