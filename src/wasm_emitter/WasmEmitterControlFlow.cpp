@@ -404,7 +404,20 @@ bool emitInstructionRange(const IrFunction &function,
         return false;
       }
 
-      if (target > 0 && target - 1 > index) {
+      // `first || (a && b)`: the chain becomes one condition value, and the then-part starts where the chain ends.
+      size_t thenStart = index + 1;
+      WasmShortCircuitCondition shortCircuit;
+      if (target == index + 2 &&
+          findWasmShortCircuitCondition(function, index, end, shortCircuit)) {
+        if (!emitWasmShortCircuitCondition(
+                function, shortCircuit, localLayout, functionTypes, runtime, out, error)) {
+          return false;
+        }
+        thenStart = shortCircuit.thenStart;
+        target = shortCircuit.elseStart;
+      }
+
+      if (target > 0 && target - 1 >= thenStart) {
         const IrInstruction &tail = function.instructions[target - 1];
         if (tail.op == IrOpcode::Jump) {
           const size_t jumpTarget = static_cast<size_t>(tail.imm);
@@ -420,7 +433,7 @@ bool emitInstructionRange(const IrFunction &function,
               return false;
             }
             if (!emitIfThenBranch(function,
-                                  index + 1,
+                                  thenStart,
                                   target - 1,
                                   *label,
                                   localLayout,
@@ -451,7 +464,7 @@ bool emitInstructionRange(const IrFunction &function,
           bool ifDiverges = false;
           if (!emitIfRegion(function,
                             index,
-                            index + 1,
+                            thenStart,
                             target - 1,
                             target,
                             jumpTarget,
@@ -490,7 +503,7 @@ bool emitInstructionRange(const IrFunction &function,
       // correct here.
       if (!emitIfRegion(function,
                         index,
-                        index + 1,
+                        thenStart,
                         target,
                         target,
                         target,

@@ -378,6 +378,37 @@ bool emitInstructionRange(const IrFunction &function,
                           std::string &error,
                           bool *outDiverges = nullptr);
 
+// One operand of a short-circuit chain: the IR range [start, end) computes the condition, and the `JumpIfZero` at
+// `end` leaves the chain for the else-part when it is false.
+struct WasmShortCircuitOperand {
+  size_t start = 0;
+  size_t end = 0;
+};
+
+// A condition `first || (a && b && ...)` as the IR lowers it: `JumpIfZero -> second`, `Jump -> thenStart`, then the
+// operands of the chain, each ending in a `JumpIfZero -> elseStart`, then the then-part at `thenStart`.
+struct WasmShortCircuitCondition {
+  size_t thenStart = 0;
+  size_t elseStart = 0;
+  std::vector<WasmShortCircuitOperand> operands;
+};
+
+// Whether the `JumpIfZero` at `conditionIndex` (whose range ends at `end`) is the first operand of a short-circuit
+// `||` (WasmEmitterShortCircuit.cpp).
+bool findWasmShortCircuitCondition(const IrFunction &function,
+                                   size_t conditionIndex,
+                                   size_t end,
+                                   WasmShortCircuitCondition &condition);
+
+// Emits the condition as one `i32` value (the first operand is on the type stack; the value replaces it).
+bool emitWasmShortCircuitCondition(const IrFunction &function,
+                                   const WasmShortCircuitCondition &condition,
+                                   WasmLocalLayout &localLayout,
+                                   const std::vector<WasmFunctionType> &functionTypes,
+                                   const WasmRuntimeContext &runtime,
+                                   std::vector<uint8_t> &out,
+                                   std::string &error);
+
 // The code of the helper function behind `FmaF32` (`isF64` false; type (f32, f32, f32) -> f32) or `FmaF64`.
 WasmCodeBody buildWasmFmaHelperBody(bool isF64);
 

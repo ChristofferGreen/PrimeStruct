@@ -679,6 +679,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/native_emitter/NativeEmitterRegAlloc.cpp
   src/wasm_emitter/WasmEmitter.cpp
   src/wasm_emitter/WasmEmitterControlFlow.cpp
+  src/wasm_emitter/WasmEmitterShortCircuit.cpp
   src/wasm_emitter/WasmEmitterDivisionFault.cpp
   src/wasm_emitter/WasmEmitterFma.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp

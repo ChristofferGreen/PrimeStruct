@@ -581,6 +581,69 @@ main() {
                        7);
 }
 
+// A short-circuit `||` whose second operand is a chain of `&&`: the IR jumps from the first operand into the middle
+// of the then-part. Every combination of the operands runs like the VM, with and without an else-part.
+TEST_CASE("wasm runs a short-circuit or with an and chain like the vm") {
+  checkWasmMatchesVm("short_circuit_or_chain",
+                     R"(
+[return<i32>]
+with_else([i32] a, [i32] b, [i32] c) {
+  if(a > 0i32 || (b > 0i32 && c > 0i32)) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+
+[return<i32>]
+three_chain([i32] a, [i32] b, [i32] c) {
+  if(a > 0i32 || (b > 0i32 && c > 0i32 && a == b)) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+
+[return<i32>]
+plain_or([i32] a, [i32] b) {
+  if(a > 0i32 || b > 0i32) {
+    return(1i32)
+  } else {
+    return(2i32)
+  }
+}
+
+[return<i32> effects(io_out)]
+without_else([i32] a, [i32] b, [i32] c) {
+  [i32 mut] hits{0i32}
+  if(a > 0i32 || (b > 0i32 && c > 0i32)) {
+    hits = 10i32
+  }
+  return(hits + 1i32)
+}
+
+[return<i32> effects(io_out)]
+main() {
+  [i32 mut] a{0i32}
+  while(a < 2i32) {
+    [i32 mut] b{0i32}
+    while(b < 2i32) {
+      [i32 mut] c{0i32}
+      while(c < 2i32) {
+        print_line(with_else(a, b, c) * 100i32 + three_chain(a, b, c) * 10i32 + without_else(a, b, c))
+        c = c + 1i32
+      }
+      print_line(plain_or(a, b))
+      b = b + 1i32
+    }
+    a = a + 1i32
+  }
+  return(0i32)
+}
+)",
+                     0);
+}
+
 // GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
 // of letting the program carry on past the failed call.
 TEST_CASE("glsl refuses a runtime error inside a real call") {

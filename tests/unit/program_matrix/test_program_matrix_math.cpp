@@ -16,7 +16,8 @@ void runMathProgram(const std::string &name,
   program_matrix::ProgramCase program;
   program.name = name;
   // Wasm runs these programs; the others use opcodes it lacks.
-  if (name == "math_atan2_angles" || name == "math_fma_fused" || name == "math_round_half_away") {
+  if (name == "math_atan2_angles" || name == "math_fma_fused" || name == "math_round_half_away" ||
+      name == "math_copysign_zero_sign") {
     program.extraConfigs = {"wasm-wasi"};
   }
   program.source = R"(
