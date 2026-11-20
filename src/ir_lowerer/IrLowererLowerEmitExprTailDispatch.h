@@ -393,11 +393,14 @@
             // scalar-element access pattern instead of the user's own
             // body, corrupting the IR for any subsequent struct handling
             // (see TODO-4804).
+            std::string borrowedAccessName;
             const Definition *directCallee =
                 tailDispatchHelpers.resolveTailDispatchDirectHelperDefinition(inlineDispatchExpr);
+            // The stdlib's borrowed accessor has a body too, but reads the element like a builtin vector.
             if (directCallee != nullptr &&
-                (!directCallee->statements.empty() ||
-                 directCallee->hasReturnStatement ||
+                !ir_lowerer::borrowedVectorElementAccessName(directCallee->fullPath,
+                                                             borrowedAccessName) &&
+                (!directCallee->statements.empty() || directCallee->hasReturnStatement ||
                  directCallee->returnExpr.has_value())) {
               return std::nullopt;
             }

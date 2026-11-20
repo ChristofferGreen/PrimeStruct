@@ -406,6 +406,12 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   if (normalized.rfind(stdVectorPrefix, 0) == 0) {
     helperNameOut = classifierStripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
+    // The borrowed accessors a `Reference<vector<T>>` receiver rewrites to read an element like `at`.
+    if (helperNameOut == "vectorAtRef") {
+      helperNameOut = "at";
+    } else if (helperNameOut == "vectorAtUnsafeRef") {
+      helperNameOut = "at_unsafe";
+    }
     return true;
   }
   if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {

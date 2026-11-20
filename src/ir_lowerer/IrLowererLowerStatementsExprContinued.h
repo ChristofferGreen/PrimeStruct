@@ -431,9 +431,12 @@
                   isSimpleCallName(expr, "at_unsafe")) &&
                 (vectorAccessName = expr.name, true))) &&
             (vectorAccessName == "at" || vectorAccessName == "at_unsafe")) {
+            std::string borrowedAccessName;
             if (const Definition *directVectorAccessCallee =
-              statementsExprHelpers.resolveDirectHelperDefinition(expr);
-              directVectorAccessCallee != nullptr) {
+                    statementsExprHelpers.resolveDirectHelperDefinition(expr);
+                directVectorAccessCallee != nullptr &&
+                !ir_lowerer::borrowedVectorElementAccessName(directVectorAccessCallee->fullPath,
+                                                             borrowedAccessName)) {
               return emitInlineDefinitionCall(
                 expr, *directVectorAccessCallee, localsIn, true);
             }
@@ -553,9 +556,12 @@
             // body, corrupting the IR for any subsequent struct handling
             // (see TODO-4804). Mirrors the same guard already applied to
             // the method-call form immediately above.
+            std::string borrowedAccessName;
             if (const Definition *directVectorAccessCallee =
-              statementsExprHelpers.resolveDirectHelperDefinition(expr);
-              directVectorAccessCallee != nullptr) {
+                    statementsExprHelpers.resolveDirectHelperDefinition(expr);
+                directVectorAccessCallee != nullptr &&
+                !ir_lowerer::borrowedVectorElementAccessName(directVectorAccessCallee->fullPath,
+                                                             borrowedAccessName)) {
               return emitInlineDefinitionCall(
                 expr, *directVectorAccessCallee, localsIn, true);
             }

@@ -148,7 +148,7 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | ready | lifecycle-reference-element |
+| TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
 
@@ -185,7 +185,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Lifecycle bugs found with TODO-6098 (outside Ready Now): ready TODO-6104 (an element read through a `Reference<vector<vector<i64>>>`); deferred TODO-6103 (`map` and `soa` slots)
+- Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -683,19 +683,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [~] TODO-6104: An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer
+- [ ] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
   - owner: ai
-  - status: in_progress
-  - claimed_by: worker-6104 (worktree agent-a45f689ff4406d883), 2026-11-20
+  - status: ready
   - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
-  - parallel_track: lifecycle-reference-element
-  - scope: Found with TODO-6099. `peek([Reference<vector<vector<i64>>>] v) { return(v[0i32].count()) }` called on a local `vector<vector<i64>>` with one pushed vector frees the element's buffer (the live block count drops by one) and the owner's destroy at scope end then faults with `VM error: invalid heap free address in IR`. The same read through a read-only `[vector<vector<i64>>] v` parameter or a local is fine. The IR copies the five-slot element record into a temporary, clears the source's owner flag (`[record + 4 slots]`) and destroys the temporary: the element is treated as a temporary the copy takes over. `isBuiltinVectorElementHelperCall` (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp) answers false for a receiver local that is a `Reference` with a struct path and no `referenceToVector` flag, which is what a `Reference<vector<T>>` parameter of a builtin vector of vectors has, so the `at` it resolves to is read as a call returning a value. Hits `Mutex<vector<vector<i64>>>` (a `locked` lambda reading `rows[0i32][0i32]` through its `Reference` parameter).
-  - implementation_notes: reproduce with the `peek` helper above and `heapLiveBlocks()` (VM, optexe); compare the IR of `peek` taking `[vector<vector<i64>>]`.
+  - phase: Surface syntax (docs/spec/syntax-and-lexing.md)
+  - parallel_track: chained-index-parse
+  - scope: Found with TODO-6104. Two chained index reads where the first index is a name fail to parse inside a call argument or an operator operand: `[vector<vector<i64>> mut] rows{vector<vector<i64>>()}` `[i32] k{0i32}` then `print_line(rows[k][1i32])` or `total = total + rows[k][j]` give `Parse error: expected identifier after \`[...]\`` (or `expected transform identifier`) at the end of the expression. `rows[0i32][j]` (a literal first index) and the binding `[i64] one{rows[k][1i32]}` parse and run. The text filter rewrites `plus(total, rows[k][j])` and then reads `[k][j]` as a transform list.
+  - implementation_notes: reproduce with `primevm` on the program above; compare `--dump-stage pre_ast` for `rows[0i32][j]` and `rows[k][j]`.
   - acceptance:
-    - positive: reading `v[i]`, `v[i].count()` and `v[i][j]` through a `Reference<vector<vector<i64>>>` parameter leaves the owner's buffers alone (heap statistics unchanged, values right) on the VM and optexe; values on native
+    - positive: `rows[k][j]` parses and reads the same value as `rows[0i32][j]` in a call argument, as an operand of `+`, and as an assignment right side, for a local, a by-value parameter and a `Reference` parameter
+    - negative: a genuine transform list `[mut] x` after an expression still reports its diagnostic
     - matrix case on every config; full release gate green
-  - stop_rule: element reads of builtin vectors of vectors through a `Reference`; no change to the stdlib `Vector<T>`.
+  - stop_rule: the parse of chained index reads; no change to how index reads lower.
 
 - [ ] TODO-6105: `*field = value` writes through a `mut` `Reference` field
   - owner: ai

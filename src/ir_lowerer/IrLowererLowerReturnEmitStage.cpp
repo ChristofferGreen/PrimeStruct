@@ -255,8 +255,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         if (generated != std::string::npos) {
           path.resize(generated);
         }
+        std::string borrowedAccessName;
         if (path != primec::collection_helpers::kCanonicalVectorAt &&
-            path != primec::collection_helpers::kCanonicalVectorAtUnsafe) {
+            path != primec::collection_helpers::kCanonicalVectorAtUnsafe &&
+            !ir_lowerer::borrowedVectorElementAccessName(path, borrowedAccessName)) {
           return false;
         }
         // A local of the stdlib vector struct calls the helper, which returns a copy of the element.

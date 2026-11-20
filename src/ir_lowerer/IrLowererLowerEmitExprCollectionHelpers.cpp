@@ -613,6 +613,14 @@ std::optional<bool> tryLowerEmitExprCollectionHelpers(
       materializedInfo.valueKind = ir_lowerer::LocalInfo::ValueKind::Int64;
       materializedInfo.structTypeName = collectionStructPath;
       materializedInfo.structSlotCount = layout.totalSlots;
+      // The slots of the vector's own record are not the slots of one element: a primitive element is one slot.
+      if (collectionName == "vector" && collectionArgs.size() == 1) {
+        const auto elementKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+        if (elementKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+            elementKind != ir_lowerer::LocalInfo::ValueKind::String) {
+          materializedInfo.vectorStructElementSlotCount = 1;
+        }
+      }
       if (collectionArgs.size() == 2) {
         materializedInfo.keyValueKeyKind =
             ir_lowerer::valueKindFromTypeName(collectionArgs.front());

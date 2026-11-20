@@ -332,4 +332,64 @@ main() {
                  "2 900 11 22 901 0h 910 33 44 911 0h 920 55 66 921 55 66 0h");
 }
 
+// `rows[i]`, `rows[i].count()` and `rows[i][j]` read an element of a builtin vector of vectors through a
+// `Reference<vector<vector<i64>>>` parameter in place (TODO-6104): the owner keeps every buffer, so repeated reads leave
+// the heap alone and the owner's destroy at scope end frees each buffer once.
+TEST_CASE("an element of a vector of vectors read through a Reference stays owned") {
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[effects(heap_alloc), return<i32>]
+peek_count([Reference<vector<vector<i64>>>] rows, [i32] index) {
+  return(rows[index].count())
+}
+
+[effects(heap_alloc), return<i64>]
+peek_value([Reference<vector<vector<i64>>>] rows, [i32] index, [i32] at) {
+  return(rows[index][at])
+}
+
+[effects(heap_alloc), return<i64>]
+peek_sum([Reference<vector<vector<i64>>>] rows) {
+  [i64 mut] total{0i64}
+  for([i32 mut] i{0i32}, i < rows.count(), i++) {
+    for([i32 mut] j{0i32}, j < rows[i].count(), j++) {
+      [i64] value{rows[i][j]}
+      total = total + value
+    }
+  }
+  return(total)
+}
+
+[effects(heap_alloc), return<i32>]
+peek_bound([Reference<vector<vector<i64>>>] rows) {
+  [vector<i64>] copied{rows[1i32]}
+  return(copied.count())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] start{heapLiveBlocks()}
+  if(true) {
+    [vector<vector<i64>> mut] rows{vector<vector<i64>>()}
+    rows.push(vector<i64>(7i64, 8i64))
+    rows.push(vector<i64>(9i64, 10i64, 11i64))
+    print_line(peek_count(rows, 0i32))
+    print_line(heapLiveBlocks() - start)
+    print_line(peek_count(rows, 1i32))
+    print_line(peek_value(rows, 1i32, 2i32))
+    print_line(peek_value(rows, 0i32, 0i32))
+    print_line(peek_sum(rows))
+    print_line(peek_bound(rows))
+    print_line(heapLiveBlocks() - start)
+    print_line(rows[0i32].count() + rows[1i32].count())
+  }
+  print_line(heapLiveBlocks() - start)
+  return(0i32)
+}
+)";
+  runSlotProgram("reference_vector_element_reads", source, "2 3h 3 11 7 45 3 3h 5 0h");
+}
+
 TEST_SUITE_END();
