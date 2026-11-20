@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.transforms");
 
-TEST_CASE("unsupported return type fails") {
+TEST_CASE("unknown return type fails and names the type") {
   const std::string source = R"(
 [return<u32>]
 main() {
@@ -11,7 +11,41 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unsupported return type") != std::string::npos);
+  CHECK(error == "unknown return type: u32 on /main");
+}
+
+TEST_CASE("unknown struct-like return type names the missing type") {
+  const std::string source = R"(
+[return<NoSuchType>]
+make() {
+  return(NoSuchType{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error == "unknown return type: NoSuchType on /make");
+}
+
+TEST_CASE("resolvable but unsupported return type keeps its message") {
+  const std::string source = R"(
+[return<map<string, Unknown>>]
+wrap() {
+  return(map<string, i32>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unsupported return type on /wrap") != std::string::npos);
 }
 
 TEST_CASE("array return requires template argument") {

@@ -483,10 +483,13 @@ main() {
   CHECK(diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown return type: MissingType on /badUnknown\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badNoType\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badArray\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badUnknown\"") != std::string::npos);
+  // The unknown type is named and the span is the definition that declares it (line 11, column 1).
+  CHECK(diagnostics.find("\"line\":11,\"column\":1") != std::string::npos);
 
   size_t semanticCount = 0;
   size_t scan = 0;
@@ -499,7 +502,8 @@ main() {
   const size_t firstMessage = diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"");
   const size_t secondMessage =
       diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"");
-  const size_t thirdMessage = diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"");
+  const size_t thirdMessage =
+      diagnostics.find("\"message\":\"unknown return type: MissingType on /badUnknown\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   REQUIRE(thirdMessage != std::string::npos);
@@ -540,7 +544,8 @@ main() {
   CHECK(diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"") != std::string::npos);
   CHECK(diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"") !=
         std::string::npos);
-  CHECK(diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"") != std::string::npos);
+  CHECK(diagnostics.find("\"message\":\"unknown return type: MissingType on /badUnknown\"") !=
+        std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badNoType\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badArray\"") != std::string::npos);
   CHECK(diagnostics.find("\"label\":\"definition: /badUnknown\"") != std::string::npos);
@@ -556,7 +561,8 @@ main() {
   const size_t firstMessage = diagnostics.find("\"message\":\"return transform requires a type on /badNoType\"");
   const size_t secondMessage =
       diagnostics.find("\"message\":\"array return type requires exactly one template argument on /badArray\"");
-  const size_t thirdMessage = diagnostics.find("\"message\":\"unsupported return type on /badUnknown\"");
+  const size_t thirdMessage =
+      diagnostics.find("\"message\":\"unknown return type: MissingType on /badUnknown\"");
   REQUIRE(firstMessage != std::string::npos);
   REQUIRE(secondMessage != std::string::npos);
   REQUIRE(thirdMessage != std::string::npos);

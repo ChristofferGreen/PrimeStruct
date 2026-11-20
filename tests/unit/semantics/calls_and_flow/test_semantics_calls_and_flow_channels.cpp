@@ -226,7 +226,7 @@ main() {
   return(0i32)
 }
 )",
-                "unsupported return type on /std/sync/channelItemsAlloc");
+                "unknown return type: Other on /std/sync/channelItemsAlloc");
 }
 
 TEST_SUITE_END();

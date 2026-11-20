@@ -256,7 +256,13 @@ ReturnKind getReturnKind(const Definition &def,
         }
       }
       if (resolvedType.empty()) {
-        error = "unsupported return type on " + def.fullPath;
+        // A plain name that is neither a builtin type nor a struct: name it, so a missing import is findable
+        // (the binding check says the same for a parameter). A templated spelling keeps the generic message.
+        if (normalizedType.find('<') == std::string::npos) {
+          error = "unknown return type: " + normalizedType + " on " + def.fullPath;
+        } else {
+          error = "unsupported return type on " + def.fullPath;
+        }
         return ReturnKind::Unknown;
       }
       return ReturnKind::Array;

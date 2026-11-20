@@ -153,7 +153,6 @@ of sync with them.
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
-| TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
 | TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
@@ -741,21 +740,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a stdlib file included once by `import<...>` and once by the stdlib pass is read once, checked with `--emit-deps`
     - full release gate green
   - stop_rule: the double splice of a stdlib file; no change to library imports.
-
-- [~] TODO-6111: An unknown type as a return type is reported as `unsupported return type`
-  - owner: ai
-  - status: ready
-  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Frontend and diagnostics (found with TODO-6097)
-  - parallel_track: unknown-type-diagnostic
-  - scope: `[return<NoSuchType>] make() { return(NoSuchType{}) }` gives `Semantic error: unsupported return type on /make [PSC1005]` and does not name `NoSuchType`; the same unknown type as a parameter gives `unsupported binding type: NoSuchType`, which names it. A stdlib file that uses a type whose module was not imported (matrix.prime spliced without the vector interface, `unsupported return type on /std/math/mat2_mul_vec2_internal`) is therefore hard to diagnose, because the message names the function and not the missing type.
-  - implementation_notes: the return-type check lives in the semantics validator (search `unsupported return type`); when the declared type does not resolve, report `unknown return type: NoSuchType` with the span of the type, and keep `unsupported return type` for a type that resolves but cannot be returned.
-  - acceptance:
-    - the message for an unknown return type names the type, with a semantics test; a resolvable but unsupported return type keeps its message
-    - diagnostics goldens that mention the old text are updated in the same change
-    - full release gate green
-  - stop_rule: the return-type diagnostic only; no new type resolution rules.
 
 - [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai

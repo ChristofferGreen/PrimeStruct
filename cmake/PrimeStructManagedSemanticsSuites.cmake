@@ -136,7 +136,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.transforms"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 50
+  TOTAL_CASES 52
   SHARD_PREFIX "transforms"
 )
 
