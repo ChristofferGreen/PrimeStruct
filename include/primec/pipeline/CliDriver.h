@@ -7,6 +7,7 @@
 #include "primec/support/TransformRegistry.h"
 
 #include <iosfwd>
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -21,6 +22,9 @@ struct CliFailure {
   std::vector<std::string> notes;
   std::optional<DiagnosticSinkReport> diagnosticInfo;
   std::optional<std::string> sourceText;
+  // The text of each imported unit by the file a span names (the snippets of spans in those files), see
+  // DiagnosticSnippets.h; `sourceText` is then the primary file's own text.
+  std::map<std::string, std::string> unitTexts;
 };
 
 using IrLoweringErrorNormalizer = void (*)(std::string &error);

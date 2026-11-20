@@ -1,6 +1,7 @@
 #include "primec/pipeline/CliDriver.h"
 
 #include "primec/ir/IrModulePrinter.h"
+#include "primec/pipeline/DiagnosticSnippets.h"
 #include "primec/support/Diagnostics.h"
 
 #include <algorithm>
@@ -100,7 +101,17 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
   });
   if (hasLocation) {
     const std::string *sourceText = failure.sourceText.has_value() ? &*failure.sourceText : nullptr;
-    err << formatDiagnosticsText(diagnostics, failure.plainPrefix, sourceText);
+    // A span in an imported file is a line of that file: its snippet comes from that file's text.
+    err << formatDiagnosticsTextWithSources(
+        diagnostics, failure.plainPrefix, [&](const DiagnosticSpan &span) -> const std::string * {
+          if (span.file != options.inputPath) {
+            const auto unit = failure.unitTexts.find(span.file);
+            if (unit != failure.unitTexts.end()) {
+              return &unit->second;
+            }
+          }
+          return sourceText;
+        });
     return failure.exitCode;
   }
 
@@ -119,50 +130,58 @@ const std::string &diagnosticSnippetSource(const ExpandedSource &expandedSource,
 
 CliFailure describeCompilePipelineFailureDetails(const CompilePipelineFailure &pipelineFailure,
                                                  bool hasSemanticProgram,
-                                                 const std::string &snippetSource) {
+                                                 const ExpandedSource &expandedSource,
+                                                 const std::string &filteredSource) {
   CliFailure failure;
+  const std::string &snippetSource = diagnosticSnippetSource(expandedSource, filteredSource);
+  // A program with imports cuts each snippet from the text of the file the span names.
+  SourceUnitTexts unitTexts = sourceUnitTexts(expandedSource, snippetSource);
+  const std::string &primaryText =
+      unitTexts.primary.has_value() ? *unitTexts.primary : snippetSource;
 
   failure.message = pipelineFailure.message;
   switch (pipelineFailure.stage) {
-    case CompilePipelineErrorStage::Import:
-      failure.code = DiagnosticCode::ImportError;
-      failure.plainPrefix = "Import error: ";
-      failure.notes = {"stage: import"};
-      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
-      break;
-    case CompilePipelineErrorStage::Transform:
-      failure.code = DiagnosticCode::TransformError;
-      failure.plainPrefix = "Transform error: ";
-      failure.notes = {"stage: transform"};
-      break;
-    case CompilePipelineErrorStage::Parse:
-      failure.code = DiagnosticCode::ParseError;
-      failure.plainPrefix = "Parse error: ";
-      failure.notes = {"stage: parse"};
-      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
-      failure.sourceText = snippetSource;
-      break;
-    case CompilePipelineErrorStage::UnsupportedDumpStage:
-      failure.code = DiagnosticCode::UnsupportedDumpStage;
-      failure.plainPrefix = "Unsupported dump stage: ";
-      failure.notes = {"stage: dump-stage"};
-      break;
-    case CompilePipelineErrorStage::Semantic:
-      failure.code = DiagnosticCode::SemanticError;
-      failure.plainPrefix = "Semantic error: ";
-      failure.notes = {"stage: semantic"};
-      if (hasSemanticProgram) {
-        failure.notes.push_back("semantic-product: available");
-      }
-      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
-      failure.sourceText = snippetSource;
-      break;
-    case CompilePipelineErrorStage::None:
-    default:
-      failure.code = DiagnosticCode::EmitError;
-      failure.plainPrefix = "Compile pipeline error: ";
-      failure.notes = {"stage: compile-pipeline"};
-      break;
+  case CompilePipelineErrorStage::Import:
+    failure.code = DiagnosticCode::ImportError;
+    failure.plainPrefix = "Import error: ";
+    failure.notes = {"stage: import"};
+    failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
+    break;
+  case CompilePipelineErrorStage::Transform:
+    failure.code = DiagnosticCode::TransformError;
+    failure.plainPrefix = "Transform error: ";
+    failure.notes = {"stage: transform"};
+    break;
+  case CompilePipelineErrorStage::Parse:
+    failure.code = DiagnosticCode::ParseError;
+    failure.plainPrefix = "Parse error: ";
+    failure.notes = {"stage: parse"};
+    failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
+    failure.sourceText = primaryText;
+    failure.unitTexts = unitTexts.byFile;
+    break;
+  case CompilePipelineErrorStage::UnsupportedDumpStage:
+    failure.code = DiagnosticCode::UnsupportedDumpStage;
+    failure.plainPrefix = "Unsupported dump stage: ";
+    failure.notes = {"stage: dump-stage"};
+    break;
+  case CompilePipelineErrorStage::Semantic:
+    failure.code = DiagnosticCode::SemanticError;
+    failure.plainPrefix = "Semantic error: ";
+    failure.notes = {"stage: semantic"};
+    if (hasSemanticProgram) {
+      failure.notes.push_back("semantic-product: available");
+    }
+    failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
+    failure.sourceText = primaryText;
+    failure.unitTexts = unitTexts.byFile;
+    break;
+  case CompilePipelineErrorStage::None:
+  default:
+    failure.code = DiagnosticCode::EmitError;
+    failure.plainPrefix = "Compile pipeline error: ";
+    failure.notes = {"stage: compile-pipeline"};
+    break;
   }
   return failure;
 }
@@ -179,19 +198,16 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
   }
 
   return describeCompilePipelineFailureDetails(
-      output.failure,
-      output.hasSemanticProgram,
-      diagnosticSnippetSource(output.expandedSource, output.filteredSource));
+      output.failure, output.hasSemanticProgram, output.expandedSource, output.filteredSource);
 }
 
 CliFailure describeCompilePipelineFailure(const CompilePipelineFailureResult &output) {
   return describeCompilePipelineFailureDetails(
-      output.failure,
-      output.hasSemanticProgram,
-      diagnosticSnippetSource(output.expandedSource, output.filteredSource));
+      output.failure, output.hasSemanticProgram, output.expandedSource, output.filteredSource);
 }
 
-std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics, std::string_view stage) {
+std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics,
+                                            std::string_view stage) {
   std::vector<std::string> notes;
   notes.reserve(stage.empty() ? 1 : 2);
   notes.push_back("backend: " + std::string(diagnostics.backendTag));

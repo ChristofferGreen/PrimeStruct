@@ -410,9 +410,9 @@ std::string encodeDiagnosticsJson(const std::vector<DiagnosticRecord> &diagnosti
   return out.str();
 }
 
-std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
-                                 const std::string &messagePrefix,
-                                 const std::string *sourceText) {
+std::string formatDiagnosticTextWithSources(const DiagnosticRecord &diagnostic,
+                                            const std::string &messagePrefix,
+                                            const DiagnosticSnippetSources &sources) {
   std::ostringstream out;
   const std::string severity = diagnostic.severity.empty() ? "error" : diagnostic.severity;
   const std::string message = messagePrefix + diagnostic.message;
@@ -424,19 +424,21 @@ std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
       out << " [" << diagnostic.code << "]";
     }
     out << "\n";
-    appendSpanSnippet(out, diagnostic.primarySpan, sourceText);
+    appendSpanSnippet(
+        out, diagnostic.primarySpan, sources ? sources(diagnostic.primarySpan) : nullptr);
   } else {
     out << message << "\n";
   }
 
   for (const auto &related : diagnostic.relatedSpans) {
     if (spanHasLocation(related.span)) {
-      out << spanFileText(related.span) << ":" << related.span.line << ":" << related.span.column << ": note";
+      out << spanFileText(related.span) << ":" << related.span.line << ":" << related.span.column
+          << ": note";
       if (!related.label.empty()) {
         out << ": " << related.label;
       }
       out << "\n";
-      appendSpanSnippet(out, related.span, sourceText);
+      appendSpanSnippet(out, related.span, sources ? sources(related.span) : nullptr);
       continue;
     }
     if (!related.label.empty()) {
@@ -453,17 +455,31 @@ std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
   return out.str();
 }
 
-std::string formatDiagnosticsText(const std::vector<DiagnosticRecord> &diagnostics,
-                                  const std::string &messagePrefix,
-                                  const std::string *sourceText) {
+std::string formatDiagnosticsTextWithSources(const std::vector<DiagnosticRecord> &diagnostics,
+                                             const std::string &messagePrefix,
+                                             const DiagnosticSnippetSources &sources) {
   std::ostringstream out;
   for (size_t i = 0; i < diagnostics.size(); ++i) {
     if (i != 0) {
       out << "\n";
     }
-    out << formatDiagnosticText(diagnostics[i], messagePrefix, sourceText);
+    out << formatDiagnosticTextWithSources(diagnostics[i], messagePrefix, sources);
   }
   return out.str();
+}
+
+std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
+                                 const std::string &messagePrefix,
+                                 const std::string *sourceText) {
+  return formatDiagnosticTextWithSources(
+      diagnostic, messagePrefix, [sourceText](const DiagnosticSpan &) { return sourceText; });
+}
+
+std::string formatDiagnosticsText(const std::vector<DiagnosticRecord> &diagnostics,
+                                  const std::string &messagePrefix,
+                                  const std::string *sourceText) {
+  return formatDiagnosticsTextWithSources(
+      diagnostics, messagePrefix, [sourceText](const DiagnosticSpan &) { return sourceText; });
 }
 
 } // namespace primec

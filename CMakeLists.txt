@@ -488,6 +488,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/BuildRunner.cpp
   src/pipeline/BuildScriptCache.cpp
   src/pipeline/CliDriver.cpp
+  src/pipeline/DiagnosticSnippets.cpp
   src/pipeline/CliUsage.cpp
   src/pipeline/CompilePipeline.cpp
   src/pipeline/CompilePipelineSource.cpp
@@ -2587,6 +2588,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_stdlib_span.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_lowering_locations.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_source_columns.cpp
+    tests/unit/compile_run/text_filters/test_compile_run_text_filters_diagnostics_imported_snippets.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_dumps_part2.cpp
     tests/unit/compile_run/text_filters/test_compile_run_text_filters_misc.cpp

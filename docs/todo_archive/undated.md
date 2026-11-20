@@ -725,3 +725,19 @@
     - the cutoff and the used-symbols record get the id `computeCompilerBuildId` gives
     - the seven failing tests pass
   - stop_rule: the id passed to the cutoff; the cache key is TODO-6123.
+
+- [x] TODO-6120: The snippet of a diagnostic in an imported file is cut from the primary file's text
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (found with TODO-6080)
+  - parallel_track: diagnostics-import-snippet
+  - scope: The location of a diagnostic in a file the program imports is mapped to that file (`lib.prime:3:22`), but the snippet under it is cut from the primary file's text at that line number: `CliDriver` passes one `sourceText` (the expanded source) to `formatDiagnosticsText`, and the unit-relative line is not a line of it. Repro: `lib.prime` is `[return<int>]` / `helper([i32] a) {` / `  [i32] b{a + 2i32 * nope}` / `  return(b)` / `}`, and `main2.prime` is `main()` calling `helper(x)` (four lines of body) followed by `import<"<path>/lib.prime">` at the end of the file. `primevm main2.prime` prints `lib.prime:3:22: error: Semantic error: unknown identifier: nope` and under it ` 3 |   [i32] x{1i32 + 2i32}` (line 3 of main2.prime) with the caret at column 22. The same program with the import first shows the right line only because the imported text starts at line 1 of the expanded source. A diagnostic in a stdlib file has the same shape.
+  - implementation_notes: the text belongs to the span's source unit: cut the unit's lines out of the expanded text through the `SourceUnit` and `SourceSegment` ranges (`include/primec/frontend/ExpandedSource.h`), or read the file the span names; `formatDiagnosticText` takes one `sourceText` today, so the lookup is per span (a resolver callback or a map from file to text). Do not touch the semantics diagnostic builder (TODO-5977).
+  - acceptance:
+    - a diagnostics test with an error inside an imported project file placed after the primary file's own code asserts file, line, column and the snippet of the imported file
+    - a related span (`note: definition: ...`) in the imported file gets the imported file's snippet too
+    - diagnostics of programs without imports are unchanged
+    - full release gate green
+  - stop_rule: which text a snippet is cut from; spans and columns are TODO-6080.
+  - completed: 2026-11-20. `sourceUnitTexts` (src/pipeline/DiagnosticSnippets.cpp) cuts each unit's own text out of the expanded text through the segments; `CliFailure::unitTexts` carries it and `formatDiagnosticsTextWithSources` picks the text by the file a span names. A program without imports is unchanged (the expanded text is used as before); with imports the primary file's snippets are also cut from the primary unit's own text.

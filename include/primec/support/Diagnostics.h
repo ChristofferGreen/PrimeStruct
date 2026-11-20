@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -125,5 +126,17 @@ std::string formatDiagnosticText(const DiagnosticRecord &diagnostic,
 std::string formatDiagnosticsText(const std::vector<DiagnosticRecord> &diagnostics,
                                   const std::string &messagePrefix = {},
                                   const std::string *sourceText = nullptr);
+
+// The text a span's snippet is cut from: the text of the file the span names, whose line numbers are the span's (a
+// span in an imported file is a line of that file, not of the primary file). Null gives the span no snippet.
+using DiagnosticSnippetSources = std::function<const std::string *(const DiagnosticSpan &)>;
+
+std::string formatDiagnosticTextWithSources(const DiagnosticRecord &diagnostic,
+                                            const std::string &messagePrefix,
+                                            const DiagnosticSnippetSources &sources);
+
+std::string formatDiagnosticsTextWithSources(const std::vector<DiagnosticRecord> &diagnostics,
+                                             const std::string &messagePrefix,
+                                             const DiagnosticSnippetSources &sources);
 
 } // namespace primec
