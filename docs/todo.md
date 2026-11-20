@@ -155,15 +155,13 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-6052 (runtime-faults): recursion limits of each backend are documented
-- TODO-6091 (lib-shapes): a method with an explicit `self` keeps its parameter count through a library interface
 - TODO-6092 (lib-cost): where the fixed cost of a linked library goes
 
 ### Immediate Next 10
 
 1. TODO-5603
 2. TODO-6052
-3. TODO-6091
-4. TODO-6092
+3. TODO-6092
 
 ### Priority Lanes
 
@@ -174,7 +172,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - VM threads (docs/MultithreadingPrototype.md, VM Threads; after the startup lane): TODO-6075
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6091, TODO-6092, TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6092, TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6059, TODO-6051, TODO-6052, TODO-6090, TODO-5744
 - Frontend and diagnostics (split from TODO-5520): ; deferred TODO-6080, TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
@@ -655,21 +653,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
-
-- [~] TODO-6091: A method with an explicit `self` keeps its parameter count through a library interface
-  - owner: ai
-  - status: in_progress
-  - claimed_by: libfix (worktree-agent-a2c08f7a76802122c), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md)
-  - parallel_track: lib-shapes
-  - depends_on: TODO-5925
-  - scope: found measuring TODO-5931: `primec --emit=lib` of `stdlib/std/math/vector.prime`, then a program using `Vec2` with `--library vector.psa`, sees `/std/math/Vec2/dot` with one parameter too many (`argument count mismatch`), and the link says the function takes 3 parameters in one module and 2 in the other. Find where the interface (src/pipeline/ModuleInterface.cpp, DeclarationText.cpp) or the library link adds an implicit `this` to a helper written as `/Type/Name` with an explicit `self`.
-  - acceptance:
-    - a library that holds a struct with such methods, consumed by a program that calls them, gives the whole-program result on the VM (and on `optexe` when libraries run there)
-    - a library test covers it
-    - full release gate green
-  - stop_rule: parameter counts of methods through the interface; no change to the link format.
 
 - [~] TODO-6092: Where the fixed cost of a linked library goes
   - owner: ai

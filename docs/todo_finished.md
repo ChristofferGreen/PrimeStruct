@@ -2493,6 +2493,7 @@ are left unarchived.
 | TODO-6087 | A block-form call of a user function does not break a later call of the same function | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6088 | A bare statement call of a user function named `vector` or `map` runs the user function | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6089 | A value-yielding `if` validates and runs on Wasm | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6091 | A method with an explicit `self` keeps its parameter count through a library interface | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

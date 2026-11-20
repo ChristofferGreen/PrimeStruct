@@ -303,6 +303,19 @@ std::string sectionOf(const std::string &path, const std::set<std::string> &stru
   return section;
 }
 
+// The section a definition is printed in. A member of a namespace that shares its path with a struct (`namespace Vec2`
+// next to `struct Vec2`, helpers that take an explicit `self`) is not a helper nested in the struct, so it keeps that
+// namespace as its section: printed in the section above under its full path, a reader would take it for a helper
+// of the struct and give it an implicit `this`.
+std::string sectionOfDefinition(const Definition &definition,
+                                const std::set<std::string> &structPaths) {
+  const std::string parent = parentDefinitionPath(definition.fullPath);
+  if (!definition.isNested && !parent.empty() && structPaths.count(parent) != 0) {
+    return parent;
+  }
+  return sectionOf(definition.fullPath, structPaths);
+}
+
 // What the printer adds to a function declaration: the library it is imported from.
 std::string importedWord(const std::string &libraryName) {
   return "imported(" + libraryName + ")";
@@ -316,7 +329,7 @@ bool buildItem(const Definition &definition,
                Item &item,
                std::string &error) {
   item.definition = &definition;
-  item.section = sectionOf(definition.fullPath, structPaths);
+  item.section = sectionOfDefinition(definition, structPaths);
   const auto summary = facts.summaries.find(definition.fullPath);
   item.summary = summary == facts.summaries.end() ? "" : summary->second;
   const std::string displayName = parentDefinitionPath(definition.fullPath) == item.section
@@ -395,6 +408,7 @@ void printNode(std::string &out,
                const Node &node,
                const std::string &path,
                const DefinitionFacts &facts,
+               const std::set<std::string> &structPaths,
                int depth,
                bool &first) {
   for (const Item *item : node.items) {
@@ -404,7 +418,9 @@ void printNode(std::string &out,
   }
   for (const auto &child : node.children) {
     const std::string childPath = path + "/" + child.first;
-    const auto summary = facts.summaries.find(childPath);
+    // A namespace that shares its path with a struct has the transform `namespace` alone; the struct keeps the summary.
+    const auto summary =
+        structPaths.count(childPath) != 0 ? facts.summaries.end() : facts.summaries.find(childPath);
     out += first ? "" : "\n";
     first = false;
     const std::string header = summary == facts.summaries.end()
@@ -412,7 +428,7 @@ void printNode(std::string &out,
                                    : "[namespace " + summaryWord(summary->second) + "] ";
     appendIndented(out, header + child.first + " {", depth);
     bool innerFirst = true;
-    printNode(out, child.second, childPath, facts, depth + 1, innerFirst);
+    printNode(out, child.second, childPath, facts, structPaths, depth + 1, innerFirst);
     appendIndented(out, "}", depth);
   }
 }
@@ -551,7 +567,7 @@ bool buildModuleInterface(const Program &program,
       Item item;
       item.definition = &definition;
       item.kind = hasTransform(definition.transforms, "struct") ? "struct" : "function";
-      item.section = sectionOf(definition.fullPath, structPaths);
+      item.section = sectionOfDefinition(definition, structPaths);
       const std::string displayName = parentDefinitionPath(definition.fullPath) == item.section
                                           ? lastSegment(definition.fullPath)
                                           : definition.fullPath;
@@ -635,7 +651,7 @@ bool buildModuleInterface(const Program &program,
     }
   }
   bool first = true;
-  printNode(out.text, root, "", facts, 0, first);
+  printNode(out.text, root, "", facts, structPaths, 0, first);
 
   std::unordered_map<std::string, std::string> contentCache;
   for (const Item &item : items) {

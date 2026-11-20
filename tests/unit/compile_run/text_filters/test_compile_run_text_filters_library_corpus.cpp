@@ -441,6 +441,24 @@ import /ui/*
   [Guard] g{Guard{4i32}}
   return(id_of(g))
 })"},
+    {"explicit_self_methods",
+     R"([namespace] ui {
+  [public struct summary("A pair.")] Pair() {
+    [public i32] a{1i32}
+    [public i32] b{2i32}
+  }
+  [namespace] Pair {
+    [public return<i32>] dot([Pair] self, [Pair] other) { return(self.a * other.a + self.b * other.b) }
+    [public return<Pair>] add([Pair] self, [Pair] other) { return(Pair{self.a + other.a, self.b + other.b}) }
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32>] main() {
+  [Pair] p{Pair{3i32, 4i32}}
+  [Pair] q{Pair{1i32, 2i32}}
+  return(p.dot(q) + p.add(q).dot(q))
+})"},
 };
 
 constexpr size_t CorpusSize = sizeof(Corpus) / sizeof(Corpus[0]);
@@ -574,7 +592,11 @@ TEST_CASE("library corpus on the vm: struct with a Destroy helper") {
 }
 
 TEST_CASE("library corpus on the vm: lifecycle helpers reaching a private function") {
-  checkRange(27, CorpusSize, "vm");
+  checkRange(27, 28, "vm");
+}
+
+TEST_CASE("library corpus on the vm: methods with an explicit self") {
+  checkRange(28, CorpusSize, "vm");
 }
 
 TEST_CASE("library corpus on optexe: structs and methods") {
@@ -622,7 +644,11 @@ TEST_CASE("library corpus on optexe: struct with a Destroy helper") {
 }
 
 TEST_CASE("library corpus on optexe: lifecycle helpers reaching a private function") {
-  checkRange(27, CorpusSize, "optexe");
+  checkRange(27, 28, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: methods with an explicit self") {
+  checkRange(28, CorpusSize, "optexe");
 }
 
 TEST_SUITE_END();
