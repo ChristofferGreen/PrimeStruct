@@ -638,3 +638,19 @@
     - full release gate green
   - stop_rule: the spawn binding inference only.
   - notes: completed 2026-11-19: `inferTaskSpawnCallBinding` answers `void` for a user definition without a `return` transform whose inferred return kind is void; a `Task<i32>` binding of it is a type mismatch.
+
+- [x] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-08
+  - phase: Backend parity (found while fixing TODO-5743)
+  - parallel_track: runtime-faults
+  - scope: TODO-5743 made a runtime error (a bounds check, `panic`) inside a real-call body end the program with `Trap 3` on the VM, optcpp/optexe, `--emit=native` and the Linux JIT. The simple C++ emitters (`cpp`, `exe`), Wasm and GLSL have no `Trap` (IrValidation rejects it there), so `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) still returns 3 from the callee and the caller carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 on `--emit=exe` (the slow `exe` matrix config, not in the default gate). Lower `Trap` in Wasm (a WASI `proc_exit`, or keep such bodies inline), and decide GLSL (no calls that can fault, or inline). The simple C++ emitters (`cpp`, `exe`) run `Trap` since TODO-5839.
+  - decision: 2026-11-20, option A: a WASI `proc_exit(3)` import for the WASI profile and an `unreachable` trap for the browser profile. `Trap` lowers in the Wasm emitter (new import `proc_exit`; output written before it is already out, matching the VM's exit 3 and its stderr text); a browser host sees a `WebAssembly.RuntimeError` instead of an exit code, and the two profiles differ by design (record that in docs/spec/integration-and-tooling.md). GLSL: no recursion and no output, so a call that can fault is a diagnostic or is inlined (the leaf picks the smaller; a runtime error there has no host to report to). Options B, C and D are not taken.
+  - implementation_notes: `Trap` is validated away for Wasm and GLSL (IrValidation); the Wasm emitter now infers local types and has a Node runner in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp, so a Trap lowering can be checked by running the program. The matrix program of the original text uses arrays, which Wasm does not support yet, so the acceptance uses a faulting program without arrays (an explicit `panic` or a failing check in a real call that takes and returns scalars).
+  - acceptance:
+    - a faulting program without arrays (a `panic` or runtime error inside a real call, output before it, a statement after the call that must not run) exits 3 under WASI where node or wasmtime is available and prints what the VM prints before the fault; the browser profile traps (`unreachable`); GLSL gives the chosen diagnostic
+    - docs/spec/integration-and-tooling.md records the exit code and the profile difference
+    - full release gate green
+  - stop_rule: runtime errors in real calls on Wasm and GLSL only.
+  - done_note: 2026-11-20. `Trap` lowers on Wasm: the WASI profile calls `wasi_snapshot_preview1.proc_exit(3)` then `unreachable` (the import exists only when the module has a `Trap`); the browser profile emits `unreachable` alone and the lowering drops the stderr message there (no WASI output). The lowerer treats Wasm as a `Trap` target, so a faulting callee is a real call that ends the program. GLSL: `RuntimeErrorsTrapScope::takeFaultThatDoesNotEndProgram` makes a runtime error inside a real-call body a compile error on targets without `Trap` (chosen over inlining: smaller). Tests in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp (WASI exit 3 and VM stderr parity, nested call, browser `RuntimeError`, GLSL diagnostic). Spec: docs/spec/integration-and-tooling.md (Runtime errors on Wasm and GLSL).

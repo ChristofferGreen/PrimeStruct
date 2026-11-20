@@ -89,6 +89,9 @@ struct LowerStatementsCallsStageInput {
   // A runtime error in a real-call body ends the program with `Trap 3` (targets that run `Trap`: the VM, the optimizing
   // C++ emitters and native) instead of returning 3 to the caller.
   bool runtimeErrorsTrap = false;
+  // GLSL: no trap and no host to report to, so a runtime error in a real-call body is a compile error (the other
+  // targets without a trap, serialized IR, keep returning 3 from the callee).
+  bool refuseRuntimeErrorsInCalls = false;
 
   // Points at LowerSetupStageState::setupLocalsOrchestration.entryReturnConfig.returnsVoid
   // - the return-statement lowering machinery reached via `emitStatement`

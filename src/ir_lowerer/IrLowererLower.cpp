@@ -507,6 +507,7 @@ bool IrLowerer::lower(const Program &program,
                                       ownError);
                                 },
                             .runtimeErrorsTrap = setupStage.runtimeErrorsTrap,
+                            .refuseRuntimeErrorsInCalls = validationTarget == IrValidationTarget::Glsl,
                             .entryReturnsVoidStorage =
                                 &setupStage.setupLocalsOrchestration.entryReturnConfig.returnsVoid,
                             .realCallStructReturnStorage =

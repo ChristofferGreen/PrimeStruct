@@ -126,8 +126,9 @@ of sync with them.
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6052 | Recursion limits of each backend are documented | ready | runtime-faults |
-| TODO-6090 | The program matrix runs the programs Wasm supports on a Wasm config | blocked | wasm-matrix |
-| TODO-5744 | A runtime error in a real call ends the program on Wasm and GLSL | ready | runtime-faults |
+| TODO-6090 | The program matrix runs the programs Wasm supports on a Wasm config | ready | wasm-matrix |
+| TODO-6105 | `panic` and every array runtime error compile for Wasm | ready | wasm-arrays-panic |
+| TODO-6106 | `repeat` with a negative `i32` count says so at run time | ready | repeat-negative-count |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | ready | diagnostics-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
@@ -153,7 +154,6 @@ of sync with them.
 
 ### Ready Now
 
-- TODO-5744 (runtime-faults): a runtime error in a real call ends the program on Wasm (`proc_exit(3)`) and GLSL
 - TODO-6097 (lib-stdlib-roots): several stdlib libraries link, and an owned module is not spliced from the stdlib source
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
@@ -161,9 +161,8 @@ of sync with them.
 
 ### Immediate Next 10
 
-1. TODO-5744
-2. TODO-6097
-3. TODO-5804
+1. TODO-6097
+2. TODO-5804
 4. TODO-5603
 5. TODO-6052
 6. TODO-5956
@@ -178,7 +177,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6097, TODO-6093; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-5744, TODO-6052; blocked TODO-6090 (on TODO-5744); deferred TODO-6059, TODO-6051
+- Backend parity: TODO-6052, TODO-6090 (Wasm matrix config), TODO-6105 (`panic` on Wasm); deferred TODO-6059, TODO-6051
 - Frontend and diagnostics (split from TODO-5520): TODO-6080; deferred TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -190,7 +189,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-5956 (native string arenas and statistics), TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) is blocked on TODO-5744. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-5956 (native string arenas and statistics), TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) and TODO-6105 (`panic` on Wasm) are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -227,21 +226,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [~] TODO-5744: A runtime error in a real call ends the program on Wasm and GLSL
+- [ ] TODO-6105: `panic` and every array runtime error compile for Wasm
   - owner: ai
-  - status: in_progress
-  - claimed_by: sonnet-agent (worktree-agent-ae9a0a4dfd170d0db), 2026-11-20
-  - created_at: 2026-11-08
-  - phase: Backend parity (found while fixing TODO-5743)
-  - parallel_track: runtime-faults
-  - scope: TODO-5743 made a runtime error (a bounds check, `panic`) inside a real-call body end the program with `Trap 3` on the VM, optcpp/optexe, `--emit=native` and the Linux JIT. The simple C++ emitters (`cpp`, `exe`), Wasm and GLSL have no `Trap` (IrValidation rejects it there), so `emitRuntimeError` (src/ir_lowerer/IrLowererRuntimeErrorHelpers.cpp) still returns 3 from the callee and the caller carries on: the program of "a runtime error inside a real call stops the program" (tests/unit/program_matrix/test_program_matrix_parameter_modes.cpp) prints `20 30`, the error, `3`, `99` and exits 0 on `--emit=exe` (the slow `exe` matrix config, not in the default gate). Lower `Trap` in Wasm (a WASI `proc_exit`, or keep such bodies inline), and decide GLSL (no calls that can fault, or inline). The simple C++ emitters (`cpp`, `exe`) run `Trap` since TODO-5839.
-  - decision: 2026-11-20, option A: a WASI `proc_exit(3)` import for the WASI profile and an `unreachable` trap for the browser profile. `Trap` lowers in the Wasm emitter (new import `proc_exit`; output written before it is already out, matching the VM's exit 3 and its stderr text); a browser host sees a `WebAssembly.RuntimeError` instead of an exit code, and the two profiles differ by design (record that in docs/spec/integration-and-tooling.md). GLSL: no recursion and no output, so a call that can fault is a diagnostic or is inlined (the leaf picks the smaller; a runtime error there has no host to report to). Options B, C and D are not taken.
-  - implementation_notes: `Trap` is validated away for Wasm and GLSL (IrValidation); the Wasm emitter now infers local types and has a Node runner in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp, so a Trap lowering can be checked by running the program. The matrix program of the original text uses arrays, which Wasm does not support yet, so the acceptance uses a faulting program without arrays (an explicit `panic` or a failing check in a real call that takes and returns scalars).
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Backend parity (found while doing TODO-5744)
+  - parallel_track: wasm-arrays-panic
+  - scope: `/std/panic/panic` is `let empty = array(); /at(empty, code)`, so any program that calls it is refused by Wasm with `Wasm IR validation error: invalid IR instruction 15 in /pick: unsupported opcode for wasm target` (the array opcodes `AddressOfLocal`, `LoadIndirect`). A runtime error that `Trap` ends works on Wasm now (TODO-5744), but the documented way to raise one (`panic`) cannot be written for Wasm. Give `panic` a Wasm lowering that does not need arrays: for example lower the call to a `Trap` with the code, printing the VM's `array index out of bounds` text first on WASI, or make the stdlib helper a builtin the lowerer turns into the runtime-error sequence.
+  - implementation_notes: repro: `import /std/panic/*`, `[return<i32>] pick([i32] value) { if(value > 0i32) { return(value * 2i32) } panic(7i32) }`, `main` printing `pick(3i32)` then `pick(0i32)`; `primec --emit=vm` prints `6`, the message, exits 3; `primec --emit=wasm --wasm-profile wasi` fails as above.
   - acceptance:
-    - a faulting program without arrays (a `panic` or runtime error inside a real call, output before it, a statement after the call that must not run) exits 3 under WASI where node or wasmtime is available and prints what the VM prints before the fault; the browser profile traps (`unreachable`); GLSL gives the chosen diagnostic
-    - docs/spec/integration-and-tooling.md records the exit code and the profile difference
+    - the repro above compiles for Wasm (WASI and browser) and under node exits 3 (browser: `RuntimeError`) with the VM's stdout, a node case beside the TODO-5744 cases
     - full release gate green
-  - stop_rule: runtime errors in real calls on Wasm and GLSL only.
+  - stop_rule: `panic` on Wasm only; arrays stay unsupported on Wasm.
+
+- [ ] TODO-6106: `repeat` with a negative `i32` count says so at run time
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Runtime errors (found while doing TODO-5744)
+  - parallel_track: repeat-negative-count
+  - scope: The lowerer has a runtime error `loop count must be non-negative` (`emitLoopCountNegative`, src/ir_lowerer/IrLowererFlowLoopHelpers.cpp `emitCountedLoopPrologue`), and the semantics reject a negative literal count, but a negative count held in a variable runs zero times with no error on the VM. Either the runtime check is not reached for a `repeat(count)` over a local, or the documented rule is that a negative count means zero iterations; decide against docs/spec and make code, docs and tests agree.
+  - implementation_notes: repro: `[effects(io_out), return<int>] main() { [i32] count{0i32 - 1i32}  [i32 mut] total{0i32}  repeat(count) { total = total + 1i32 }  print_line(total)  return(0i32) }` prints `0` and exits 0 on the VM (release build, 2026-11-20); the spec text for `repeat` counts is the place to check.
+  - acceptance:
+    - a negative non-literal `repeat` count either ends the program with `loop count must be non-negative` and exit code 3 on every backend, or the spec states that it runs zero times and the unused runtime-error emitter is removed
+    - matrix case; full release gate green
+  - stop_rule: the negative count of `repeat` only.
 
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
@@ -428,12 +437,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6090: The program matrix runs the programs Wasm supports on a Wasm config
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-5744
+  - status: ready
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10
   - parallel_track: wasm-matrix
-  - depends_on: TODO-5744
+  - depends_on: TODO-5744 (done)
   - scope: `PRIMESTRUCT_MATRIX_CONFIGS` (tests/unit/program_matrix/program_matrix.h) has no Wasm config. A survey (every raw-string program of tests/unit/program_matrix/test_program_matrix_*.cpp compiled with `--emit=wasm --wasm-profile wasi` and run under node, 365 programs, 2026-11-20) found 47 that already print and exit as the VM does (27 of control, 6 optimizer, 5 shared_programs, 4 user_shadows, 1 each of conversions, frontend_accept, parameter_modes, runtime_faults, struct_methods), 2 that only differ because the runner reads the result of a `void` main, and 316 that do not compile for Wasm (about 200 `unsupported opcode for wasm target`, 23 `unsupported effect mask bits`, 19 atomics, 18 channels, the rest frontend errors of programs that need a flag or are fragments).
   - decision: 2026-11-20, option (a): the Wasm config is slow and opt-in (`PRIMESTRUCT_MATRIX_CONFIGS=all`) and runs only the cases that list it in `onlyConfigs` (about 47 annotations, so a backend gap stays visible as the absence of the annotation). Options (b) (about 316 `skipConfigs`) and (c) (`wasmUnsupported`) are not taken. The config adds `Backend::Wasm` to `ExecutionConfig` and `runConfigUnnormalized`: `primec --emit=wasm --wasm-profile wasi ... -o x.wasm`, then `node` with a runner like `WasmNodeRunner` in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp; a `void` main is exit code 0; a Wasm trap is a fault outcome (exit 3 under WASI once TODO-5744 lands, which this leaf depends on); a machine without node skips the config with a message (`hasNode`).
   - acceptance:
