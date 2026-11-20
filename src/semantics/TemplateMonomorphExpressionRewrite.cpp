@@ -611,10 +611,15 @@ bool rewriteStructOperatorCallToMethod(Expr &expr,
     expr.sourceName = expr.name;
   }
   // A chain of three or more Strings is one call: `a + b + c` and `a + (b + c)` become
-  // a.opPlusMany(b, c), which sums the counts and allocates once. The chain is flattened (text `+` is
-  // associative) and the parts are evaluated left to right, as they are written.
+  // a.opPlusMany(b.view(), c.view()), which sums the counts and allocates once. The chain is flattened (text `+` is
+  // associative) and the parts are evaluated left to right, as they are written. The parts after the first are
+  // passed as views: a pack of `String`s owns its elements, so a pack of views lets the call borrow the parts.
   if (name == "plus" && base == "/std/text/String" && hasMember("opPlusMany")) {
-    std::vector<Expr> leaves;
+    struct Leaf {
+      Expr expr;
+      bool viewed = false;
+    };
+    std::vector<Leaf> leaves;
     auto collectLeaves = [&](const Expr &part, auto &&self) -> void {
       if (part.kind == Expr::Kind::Call && part.isMethodCall && part.name == "opPlus" &&
           part.args.size() == 2) {
@@ -624,19 +629,38 @@ bool rewriteStructOperatorCallToMethod(Expr &expr,
       }
       if (part.kind == Expr::Kind::Call && part.isMethodCall && part.name == "opPlusMany" &&
           !part.args.empty()) {
-        self(part.args[0], self);
+        leaves.push_back(Leaf{part.args[0], false});
         for (size_t k = 1; k < part.args.size(); ++k) {
-          self(part.args[k], self);
+          leaves.push_back(Leaf{part.args[k], true});
         }
         return;
       }
-      leaves.push_back(part);
+      leaves.push_back(Leaf{part, false});
     };
     collectLeaves(expr.args[0], collectLeaves);
     collectLeaves(expr.args[1], collectLeaves);
     if (leaves.size() >= 3) {
-      expr.args = std::move(leaves);
+      expr.args.clear();
       expr.argNames.clear();
+      for (size_t index = 0; index < leaves.size(); ++index) {
+        if (index == 0 || leaves[index].viewed) {
+          expr.args.push_back(std::move(leaves[index].expr));
+          continue;
+        }
+        Expr view;
+        view.kind = Expr::Kind::Call;
+        view.name = "view";
+        view.sourceName = "view";
+        view.namespacePrefix = leaves[index].expr.namespacePrefix;
+        view.isMethodCall = true;
+        view.sourceIsMethodCall = true;
+        view.sourceLine = leaves[index].expr.sourceLine;
+        view.sourceColumn = leaves[index].expr.sourceColumn;
+        view.args.push_back(std::move(leaves[index].expr));
+        view.argNames.push_back(std::nullopt);
+        expr.args.push_back(std::move(view));
+      }
+      expr.argNames.assign(expr.args.size(), std::nullopt);
       expr.name = "opPlusMany";
       expr.isMethodCall = true;
       return true;

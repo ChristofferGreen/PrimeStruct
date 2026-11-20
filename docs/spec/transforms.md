@@ -124,7 +124,7 @@ or a semicolon if you intended to index.
   (a `bool`), `.count()` and `[i]`. A literal index outside the literal is a compile error. Only operations on literals
   fold; nothing else is evaluated at compile time.
 - Text chains: a chain of three or more `String` operands joined by `+` (`a + b + c`, `a + (b + c)`) is rewritten to one
-  call `a.opPlusMany(b, c)`. This is a guaranteed rewrite, not an optimization: the chain is flattened (`+` on text is
+  call `a.opPlusMany(b.view(), c.view())` (the parts after the first are views, because an `[args<String>]` pack owns and copies its elements, see `value-lifecycle.md`). This is a guaranteed rewrite, not an optimization: the chain is flattened (`+` on text is
   associative), the parts are evaluated left to right as written, the counts are summed, one block is allocated and each
   part is copied in order. Named parts are not copied and call results stay alive for the call. A chain of two parts is
   `a.opPlus(b)`, which also allocates once.

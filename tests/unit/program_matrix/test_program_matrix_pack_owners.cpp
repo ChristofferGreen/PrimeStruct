@@ -61,7 +61,9 @@ forward_mixed([args<Box>] xs) {
 )";
 
 // Each `body` runs in a scope of its own between readings of the heap statistics, which are printed after it.
-void runPackProgram(const std::string &name, const std::string &body, const std::string &stdoutText) {
+void runPackProgram(const std::string &name,
+                    const std::string &body,
+                    const std::string &stdoutText) {
   program_matrix::ProgramCase program;
   program.name = name;
   program.source = PackPrelude + R"(
@@ -87,14 +89,16 @@ main() {
 } // namespace
 
 TEST_CASE("an args pack of struct temporaries destroys its elements once") {
-  runPackProgram("pack_temporaries", R"(
+  runPackProgram("pack_temporaries",
+                 R"(
     print_line(total(Box{[text] label(3i32)}, Box{[text] label(4i32)}))
 )",
                  "8051\n8052\n103\n0\n0\n");
 }
 
 TEST_CASE("an args pack of named structs copies each element and leaves the originals usable") {
-  runPackProgram("pack_named", R"(
+  runPackProgram("pack_named",
+                 R"(
     [Box] a{Box{[text] label(1i32)}}
     [Box] b{Box{[text] label(2i32)}}
     print_line(total(a, b))
@@ -104,14 +108,16 @@ TEST_CASE("an args pack of named structs copies each element and leaves the orig
 }
 
 TEST_CASE("a forwarded args pack is copied and every pack destroys its elements once") {
-  runPackProgram("pack_forwarded", R"(
+  runPackProgram("pack_forwarded",
+                 R"(
     print_line(forward(Box{[text] label(5i32)}, Box{[text] label(6i32)}))
 )",
                  "7053\n7054\n8053\n8054\n8053\n8054\n107\n0\n0\n");
 }
 
 TEST_CASE("a pack forwarded with a leading temporary and a kept pack stays usable") {
-  runPackProgram("pack_forwarded_mixed", R"(
+  runPackProgram("pack_forwarded_mixed",
+                 R"(
     print_line(forward_mixed(Box{[text] label(1i32)}))
 )",
                  "7049\n8057\n8049\n8049\n106\n0\n0\n");
