@@ -272,13 +272,3 @@ open-work-only scope rule as `docs/todo.md` itself.
   entries of 2 to 40 s are not explained by CPU load alone (memory pressure or a stalled disk are the suspects). The owner chose a liveness watchdog
   (TODO-6053) over a priority change.
 
-## TODO-6053
-
-- 2026-11-19 (loaded-gate record, from the TODO-6072 leaf history): a full release gate with the watchdog around the managed doctest suites and shards ran at
-  a natural load average of 80 to 110 (several gates and builds on one 11-core machine, `nice -n 10`): 2823 passed, 0 killed by the watchdog, slowest
-  entry 59 s. TODO-6073 then put the rest of the doctest entries with a `TIMEOUT` of 300 s or more behind the wrapper (see docs/TestWatchdog.md for
-  what stays plain and why); its gate result is in that commit message.
-- 2026-11-19: there is no "before" gate. The plain-command gates that preceded the watchdog were not run at a recorded load above 40, so the acceptance
-  line "recorded before and after" has its "after" half only; the "before" evidence is TODO-6026/TODO-6028 above (entries of 2 to 40 s reaching their
-  300 s `TIMEOUT` at load 124). A "before" gate would need a pre-watchdog commit gated at the same kind of load, which the load of one machine
-  does not reproduce on request. TODO-6053 stays open for that line.

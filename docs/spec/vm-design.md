@@ -91,6 +91,12 @@
   with a splitmix64 generator seeded by `n`, so the same seed gives the same run; tests run several seeds and expect
   the same output to show a program is free of races. When no task can run the VM faults with `deadlock: every task
   is waiting` (exit code 3); the main task's return ends the program, and a `Trap` in any task ends it with its code.
+  A host call is not a switch point: it never hands over to another task, with or without a seed. A program that polls a
+  host function in a loop (a server accepting connections while workers serve them) therefore cannot let its workers
+  run on the deterministic scheduler, because the poller keeps the one OS thread. Such a program runs with
+  `--vm-threads` and `Reentrant` host functions (Tasks on threads, Host calls), so a blocking call blocks only its own
+  task; a test that must stay on the deterministic scheduler blocks its poller's stop closure on a `Channel` the
+  handlers fill (decided 2026-11-20).
   The vm and optimized C++ targets and serialized bytecode accept the task opcodes; validation also rejects a
   `TaskWait` whose operand is not a `TaskSpawn` result on every path (through locals and `Dup`). A module with task opcodes runs under that
   scheduler with every task on the flat loop (Execution kernels), the native JIT declines it, and a debug session runs them on the same

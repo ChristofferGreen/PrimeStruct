@@ -211,6 +211,10 @@ the root `/std` (two of them are refused) and an `import` of a module a library 
 (duplicate definition). Still archived; the numbers, the list of modules that build and the open design points (the root of
 a stdlib library, `String`) are in `docs/todo_log.md` under TODO-6093.
 
+Decided 2026-11-20: roots below `/std`, one per module family (`/std/math`, `/std/path`), so several stdlib libraries link, and the stdlib pass
+skips every module a linked library owns (TODO-6097); the compiler build id becomes the linker's UUID with the full hash as the fallback
+(TODO-6093).
+
 ## 13. Backends: what IR-level libraries do not buy
 
 Linking at the IR level saves the front end (parse, validate, lower) and gives early cutoff. It does not save the back

@@ -622,6 +622,10 @@ has. The deterministic scheduler stays; it is not replaced.
   mutable state is `Mutex`, `Atomic` and `Channel`. Their opcodes become real atomic operations, and lock and notify
   block the thread, with waiting threads parked by address. When every thread is waiting the run faults with
   `deadlock: every task is waiting`, as on `optexe` since TODO-5846.
+- **A host call does not yield on the deterministic scheduler** (decided 2026-11-20): the eager and seeded schedules switch
+  only at a spawn, a wait, a block and a task's end, so a poller that calls a host function in a loop keeps the one OS
+  thread and its workers never run. A poller with workers on the VM needs `--vm-threads` with `Reentrant` host functions;
+  the scripted server tests keep a blocking closure on a `Channel` the handler fills (tests/unit/runtime/test_vm_serve_workers.cpp).
 - **Host calls** take one global lock at first. A host function registered as reentrant runs without it, and a call
   that blocks (`poll`, `recv`) then blocks only its own task, which lifts the limit stated for the deterministic
   scheduler. A host function registered as main-thread only (the native UI) faults with `<name> called off the main
@@ -943,7 +947,7 @@ add([RwLock<i64>] cell, [i64] amount) {
   also waits for ever while a writer waits between the two. Do not nest them.
 - It is stdlib code over the lock and condition opcodes of `Channel` (no new opcode or host function): one control
   cell of six slots (the lock, the handle count, the condition, the readers inside, whether a writer is inside, the
-  writers that wait). The `RwLock` of the server is TODO-5804 (how a handler says it only reads is open question 5).
+  writers that wait). The `RwLock` of the server is TODO-5804 (a handler says it only reads by registering with `app.view(...)`, decided 2026-11-20; open question 5).
 
 ### Atomic
 
@@ -1127,7 +1131,7 @@ entry points check the thread at run time.
 3. **Threads.** Recommended: one OS thread per task now, no pool, because tasks block on locks and channels.
 4. **Handlers serialized in the first server.** Recommended: accept that page rendering runs one request at a time
    until TODO-5804, since it keeps every existing app correct with no change.
-5. **How a handler says it only reads.** Recommended: by its state parameter, `[State] state` (a read-only borrow)
+5. **How a handler says it only reads.** Decided 2026-11-20: a separately named registration, `app.view(pattern, handler)`, whose state parameter is `[State] state`; `get`/`post`/`route` keep `[Reference<State>] state`. The options below were not taken. Was: by its state parameter, `[State] state` (a read-only borrow)
    against `[Reference<State>] state`, which needs overloads by `Function` type (same-arity struct method overloads resolve by argument type since TODO-5735; a lambda's type is not known there); the alternative is a
    separately named registration such as `app.view(pattern, handler)`.
 6. **VM default schedule.** Recommended: eager (today's order) by default, seeds on request; the alternative is a

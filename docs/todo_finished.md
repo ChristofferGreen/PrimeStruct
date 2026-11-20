@@ -2467,6 +2467,7 @@ are left unarchived.
 | TODO-6048 | `fma` is fused: IR opcodes `FmaF32`/`FmaF64`, the VM and constant folding | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6049 | The C++ emitter (`cpp`/`exe`) reports runtime faults as the VM does | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6050 | Native arm64 division by zero is the VM's runtime fault | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6053 | Tests report progress and a watchdog replaces wall-clock timeouts | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6054 | A discarded sum result with an owning payload is destroyed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6055 | Integer narrowing wraps modulo 2^N on every backend | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6056 | Float to integer conversion saturates on the VM and the C++ emitters | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2485,6 +2486,7 @@ are left unarchived.
 | TODO-6071 | Tests that shell out count `primec` progress | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6072 | The managed doctest shards run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6073 | The remaining CTest families run under the watchdog | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6075 | A host call may yield on the deterministic VM scheduler | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6076 | `RwLock<T>`: many readers or one writer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6077 | Lowering errors carry the user location of the expression being lowered | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6078 | A lowering error names the backend that lowers | [2026-11.md](todo_archive/2026-11.md) | - |
