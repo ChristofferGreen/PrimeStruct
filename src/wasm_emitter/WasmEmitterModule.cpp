@@ -126,9 +126,10 @@ bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, 
     for (const IrInstruction &inst : function.instructions) {
       runtime.hasFma32 = runtime.hasFma32 || inst.op == IrOpcode::FmaF32;
       runtime.hasFma64 = runtime.hasFma64 || inst.op == IrOpcode::FmaF64;
+      // Signed division always goes through a helper (`INT_MIN / -1` wraps); `DivU64` only has the zero check.
+      runtime.hasDivisionHelper[0] = runtime.hasDivisionHelper[0] || inst.op == IrOpcode::DivI32;
+      runtime.hasDivisionHelper[1] = runtime.hasDivisionHelper[1] || inst.op == IrOpcode::DivI64;
       if (runtime.hasDivisionFault) {
-        runtime.hasDivisionHelper[0] = runtime.hasDivisionHelper[0] || inst.op == IrOpcode::DivI32;
-        runtime.hasDivisionHelper[1] = runtime.hasDivisionHelper[1] || inst.op == IrOpcode::DivI64;
         runtime.hasDivisionHelper[2] = runtime.hasDivisionHelper[2] || inst.op == IrOpcode::DivU64;
       }
     }

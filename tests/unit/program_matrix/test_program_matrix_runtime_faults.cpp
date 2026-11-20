@@ -69,4 +69,27 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// `INT_MIN / -1` wraps to `INT_MIN` on every backend (docs/spec/vm-design.md, Errors): no fault and no trap.
+TEST_CASE("i32 and i64 division of the minimum by -1 wrap") {
+  program_matrix::ProgramCase program;
+  program.name = "div_min_by_minus_one";
+  program.extraConfigs = {"wasm-wasi"};
+  program.source = R"(
+[effects(io_out), return<int>]
+main() {
+  [i32 mut] minusOne32{-1i32}
+  [i32] low32{-2147483647i32 - 1i32}
+  [i64 mut] minusOne64{-1i64}
+  [i64] low64{-9223372036854775807i64 - 1i64}
+  print_line(low32 / minusOne32)
+  print_line(low64 / minusOne64)
+  print_line(low32 / 2i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "-2147483648\n-9223372036854775808\n-1073741824\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

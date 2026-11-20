@@ -102,9 +102,10 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
 }
 
 // Compiles `source` for the browser profile and runs it with no WASI host: a runtime error traps.
-void checkWasmBrowserRuntimeError(const std::string &name,
-                                  const std::string &source,
-                                  const std::string &expectedStdout) {
+void checkWasmBrowserExit(const std::string &name,
+                          const std::string &source,
+                          const std::string &expectedStdout,
+                          int expectedExit) {
   if (!nodeAvailable()) {
     return;
   }
@@ -121,8 +122,14 @@ void checkWasmBrowserRuntimeError(const std::string &name,
                      quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                      " --entry /main") == 0);
   CHECK(runCommand("node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
-                   quoteShellArg(out)) == 3);
+                   quoteShellArg(out)) == expectedExit);
   CHECK(readFile(out) == expectedStdout);
+}
+
+void checkWasmBrowserRuntimeError(const std::string &name,
+                                  const std::string &source,
+                                  const std::string &expectedStdout) {
+  checkWasmBrowserExit(name, source, expectedStdout, 3);
 }
 
 std::string conversionProgram(const std::vector<std::vector<std::string>> &rows) {
@@ -550,6 +557,28 @@ main() {
 }
 )",
                                "trapped\n");
+}
+
+// `INT_MIN / -1` wraps to `INT_MIN` (the VM, native and C++ do), where the raw wasm `div_s` traps.
+TEST_CASE("wasm browser profile wraps signed division overflow") {
+  checkWasmBrowserExit("division_overflow_wraps",
+                       R"(
+[return<int>]
+main() {
+  [i32 mut] minus_one32{-1i32}
+  [i32] low32{-2147483647i32 - 1i32}
+  [i64 mut] minus_one64{-1i64}
+  [i64] low64{-9223372036854775807i64 - 1i64}
+  [i32] a{low32 / minus_one32}
+  [i64] b{low64 / minus_one64}
+  if(a == low32 && b == low64) {
+    return(7i32)
+  }
+  return(1i32)
+}
+)",
+                       "",
+                       7);
 }
 
 // GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
