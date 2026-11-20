@@ -289,6 +289,10 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
   if (key.size() >= 2 && key.compare(key.size() - 2, 2, "/*") == 0) {
     key.erase(key.size() - 2);
   }
+  if (key == "/std") {
+    // The bare root names no module; the parser reports the import.
+    return keys;
+  }
   if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(key);
       metadata != nullptr &&
       (metadata->domain == StdlibSurfaceDomain::File ||

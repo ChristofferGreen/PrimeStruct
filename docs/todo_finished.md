@@ -2495,6 +2495,7 @@ are left unarchived.
 | TODO-6089 | A value-yielding `if` validates and runs on Wasm | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6091 | A method with an explicit `self` keeps its parameter count through a library interface | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6092 | Where the fixed cost of a linked library goes | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

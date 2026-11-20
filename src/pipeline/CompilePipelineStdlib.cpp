@@ -230,6 +230,10 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
         }
       }
       if (!appendSpecificFile) {
+        // The bare "/std" root names no module; the parser reports it.
+        if (key.size() <= std::string("/std/").size()) {
+          continue;
+        }
         const std::string relative = key.substr(std::string("/std/").size());
         moduleRoot = root / "std" / relative;
       }

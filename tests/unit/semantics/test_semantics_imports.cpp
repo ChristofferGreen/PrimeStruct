@@ -596,6 +596,21 @@ main() {
   CHECK(error.find("import /std/math is not supported; use import /std/math/* or /std/math/<name>") != std::string::npos);
 }
 
+TEST_CASE("import of the bare /std root is a parse error") {
+  for (const char *spelling : {"/std", "/std/*"}) {
+    const std::string source = std::string("import ") + spelling + R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    std::string error;
+    CHECK_FALSE(parseProgramWithError(source, error));
+    CHECK(error.find("is not supported: /std is a namespace root, not a module") !=
+          std::string::npos);
+  }
+}
+
 TEST_CASE("import accepts whitespace-separated paths") {
   const std::string source = R"(
 import /util /std/math/*

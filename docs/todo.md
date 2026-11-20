@@ -146,7 +146,6 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
 | TODO-6093 | The compiler build id of a library costs less than hashing the 22 MB `primec` | deferred | lib-build-id |
-| TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | deferred | import-root-diagnostic |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -689,21 +688,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - instructions retired of a linked library compile against an empty `main`, recorded in docs/todo_log.md
   - stop_rule: the definition of the compiler build id; no change to what an archive carries.
   - notes: deferred: the measurements (docs/todo_log.md, TODO-6093) say a stdlib library is not worth building for this alone.
-
-- [~] TODO-6094: `import /std/*` is a diagnostic, not an uncaught `std::out_of_range`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: import-root (worktree-agent-a1a3e668440df6dee), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Frontend and diagnostics
-  - parallel_track: import-root-diagnostic
-  - scope: found measuring TODO-5931: a program that starts with `import /std/*` (`import /std/*` then a `main` that returns 0) ends `primec --emit=vm` with `libc++abi: terminating due to uncaught exception of type std::out_of_range: basic_string`, with or without `--library`. The parser already says `import /std/math is not supported; use import /std/math/* or /std/math/<name>` for a path without a star. Find the `substr` or `at` in the stdlib import path code (collectStdImportPaths and the module-root lookup in the compile pipeline) and give the diagnostic that says what is supported.
-  - acceptance:
-    - the program above gives a diagnostic with a source position and exit code 2 on every `--emit`
-    - a negative test covers it
-    - full release gate green
-  - stop_rule: the one import shape; no change to which imports are supported.
-  - notes: deferred: not committed; filed from a measurement.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

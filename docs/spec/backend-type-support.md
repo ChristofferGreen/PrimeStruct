@@ -105,7 +105,9 @@
     definition is a diagnostic. `import /foo` is shorthand for `import /foo/*` (except `/std/math`, which is unsupported
     without `/*` or an explicit name). `import /std/math/*` brings all math builtins into the root namespace, or import
     a subset via `import /std/math/sin /std/math/pi`; `import /std/math` without a wildcard or explicit name is not
-    supported. Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or
+    supported. `/std` itself is a namespace root, not a module: `import /std` and `import /std/*` are parse diagnostics
+    (with a source position) that name the supported forms `import /std/<module>/*` and `import /std/<module>/<name>`.
+    Imports are resolved after source imports and can be listed as `import /std/math/*, /util/*` or
     whitespace-separated paths. A wildcard import of a module that holds only public templates (`/std/tuple/*`) is
     valid whether or not the program instantiates one; a path that no module defines is `unknown import path`.
   - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make

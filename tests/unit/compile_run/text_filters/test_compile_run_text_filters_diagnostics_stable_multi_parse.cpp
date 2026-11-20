@@ -82,6 +82,51 @@ main() {
   CHECK(firstMessage < secondMessage);
 }
 
+TEST_CASE("primec reports import of the bare /std root with a position") {
+  const std::string source = R"(import /std/*
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("primec_import_std_root.prime", source);
+  const std::string errPath = (testScratchPath("") / "primec_import_std_root_err.txt").string();
+  for (const char *emit : {"vm", "native"}) {
+    const std::string outPath = (testScratchPath("") / "primec_import_std_root_out").string();
+    const std::string cmd = std::string("./primec --emit=") + emit + " " + quoteShellArg(srcPath) +
+                            " --entry /main -o " + quoteShellArg(outPath) + " 2> " +
+                            quoteShellArg(errPath);
+    CHECK(runCommand(cmd) == 2);
+    const std::string diagnostics = readFile(errPath);
+    CHECK(diagnostics.find(
+              "primec_import_std_root.prime:2:1: error: Parse error: import /std/* is not "
+              "supported: /std is a namespace root, not a module") != std::string::npos);
+    CHECK(diagnostics.find("terminating") == std::string::npos);
+  }
+}
+
+TEST_CASE("primec ends odd import shapes with a diagnostic, not a crash") {
+  const std::string errPath = (testScratchPath("") / "primec_odd_import_err.txt").string();
+  for (const char *spelling : {"/*", "/std/", "//x", "/std", "/std/*", "/std//x"}) {
+    const std::string source = std::string("import ") + spelling + R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+    const std::string srcPath = writeTemp("primec_odd_import.prime", source);
+    for (const char *flag : {"", " --library"}) {
+      const std::string cmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main" +
+                              flag + " 2> " + quoteShellArg(errPath);
+      CHECK(runCommand(cmd) == 2);
+      const std::string diagnostics = readFile(errPath);
+      CHECK(diagnostics.find("terminating") == std::string::npos);
+      CHECK(diagnostics.find("out_of_range") == std::string::npos);
+      CHECK(diagnostics.find("error") != std::string::npos);
+    }
+  }
+}
+
 TEST_CASE("primec collect-diagnostics keeps first duplicate-definition payload") {
   const std::string source = R"(
 [return<int>]

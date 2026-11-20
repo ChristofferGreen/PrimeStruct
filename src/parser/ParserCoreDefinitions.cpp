@@ -87,6 +87,11 @@ bool Parser::parseImport(Program &program) {
     if (pathText == "/std/math") {
       return fail("import /std/math is not supported; use import /std/math/* or /std/math/<name>");
     }
+    if (pathText == "/std" || pathText == "/std/*") {
+      return fail("import " + pathText +
+                  " is not supported: /std is a namespace root, not a module; "
+                  "use import /std/<module>/* or /std/<module>/<name>");
+    }
     if (pathText.find('/', 1) == std::string::npos) {
       pathText += "/*";
     }
