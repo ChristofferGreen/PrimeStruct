@@ -9,6 +9,14 @@ constexpr uint8_t WasmValueTypeI64 = 0x7e;
 constexpr uint8_t WasmOpEnd = 0x0b;
 constexpr uint8_t WasmOpI32Const = 0x41;
 constexpr uint32_t WasmNumericScratchBytes = 32u;
+// The shadow stack of local frames (WasmEmitterMemory.cpp): 16 pages of 8-byte slots, aligned to the slot address stride.
+constexpr uint32_t WasmSlotBytes = 8u;
+constexpr uint32_t WasmShadowStackAlignment = 16u;
+constexpr uint32_t WasmShadowStackSlots = 16u * 65536u / WasmSlotBytes;
+
+uint32_t shadowStackPages(uint32_t shadowBase) {
+  return (shadowBase + WasmShadowStackSlots * WasmSlotBytes) / 65536u + 1u;
+}
 
 bool opcodeNeedsWasiRuntime(IrOpcode op) {
   switch (op) {
@@ -63,6 +71,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
                              WasmRuntimeContext &runtime,
                              std::string &error) {
   runtime = WasmRuntimeContext{};
+  runtime.hasLocalMemory = wasmModuleUsesLocalMemory(module);
+  if (wasi && runtime.hasLocalMemory) {
+    // The address check writes the VM's fault message (memory and `fd_write`) and ends the program (`proc_exit`).
+    runtime.hasMemoryFault = true;
+    runtime.hasTrap = true;
+    runtime.enabled = true;
+  }
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::Trap) {
@@ -125,6 +140,12 @@ bool buildWasiRuntimeContext(const IrModule &module,
   if (!runtime.enabled) {
     addProcExitImport();
     runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
+    if (runtime.hasLocalMemory) {
+      // The browser profile: a memory for the shadow stack alone, no WASI data.
+      runtime.shadowBase = WasmShadowStackAlignment;
+      runtime.shadowSlots = WasmShadowStackSlots;
+      runtime.memories.push_back(WasmMemoryLimit{shadowStackPages(runtime.shadowBase), false, 0});
+    }
     return true;
   }
 
@@ -167,7 +188,22 @@ bool buildWasiRuntimeContext(const IrModule &module,
     stringBlob.insert(stringBlob.end(), DivisionMessage.begin(), DivisionMessage.end());
   }
 
-  if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault) {
+  if (runtime.hasMemoryFault) {
+    static const std::string UnalignedMessage = "VM error: unaligned indirect address in IR: ";
+    static const std::string InvalidMessage = "VM error: invalid indirect address in IR: ";
+    const auto appendMessage = [&](const std::string &message, uint32_t &addr, uint32_t &length) {
+      addr = stringBase + static_cast<uint32_t>(stringBlob.size());
+      length = static_cast<uint32_t>(message.size());
+      appendDataSegmentAt(
+          addr, std::vector<uint8_t>(message.begin(), message.end()), runtime.dataSegments);
+      stringBlob.insert(stringBlob.end(), message.begin(), message.end());
+    };
+    appendMessage(UnalignedMessage, runtime.unalignedMessageAddr, runtime.unalignedMessageLength);
+    appendMessage(InvalidMessage, runtime.invalidMessageAddr, runtime.invalidMessageLength);
+  }
+
+  if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault ||
+      runtime.hasMemoryFault) {
     WasmFunctionType fdWriteType;
     fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
     fdWriteType.results = {WasmValueTypeI32};
@@ -236,7 +272,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
   addProcExitImport();
   runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
 
-  const uint32_t memoryEnd = stringBase + static_cast<uint32_t>(stringBlob.size());
+  uint32_t memoryEnd = stringBase + static_cast<uint32_t>(stringBlob.size());
+  if (runtime.hasLocalMemory) {
+    runtime.shadowBase = (memoryEnd + WasmShadowStackAlignment - 1u) / WasmShadowStackAlignment *
+                         WasmShadowStackAlignment;
+    runtime.shadowSlots = WasmShadowStackSlots;
+    memoryEnd = runtime.shadowBase + WasmShadowStackSlots * WasmSlotBytes;
+  }
   const uint32_t requiredPages = (memoryEnd / 65536u) + 1u;
   if (requiredPages > runtime.memories[0].minPages) {
     runtime.memories[0].minPages = requiredPages;

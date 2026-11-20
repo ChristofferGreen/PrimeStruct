@@ -625,11 +625,12 @@ TEST_CASE("primec options parse benchmark semantic repeat count flag") {
 
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
-[return<int>]
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
 main() {
-  [i32 mut] value{1i32}
-  [Reference<i32>] ref{location(value)}
-  return(dereference(ref))
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.count())
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
@@ -644,10 +645,10 @@ main() {
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("unsupported opcode for wasm target") != std::string::npos);
   // The opcode and the features that need it are named.
-  CHECK(diagnostics.find(
-            "unsupported opcode for wasm target: AddressOfLocal (the address of a local, needed by "
-            "pointers, `Reference` parameters, struct values, arrays and closures)") !=
-        std::string::npos);
+  CHECK(
+      diagnostics.find(
+          "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by `vector`, `map`, "
+          "`String` and other growable containers)") != std::string::npos);
   CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") !=
         std::string::npos);
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
@@ -662,24 +663,28 @@ TEST_CASE("primec emit-diagnostics rejects unsupported wasm IR features with sta
 
   const std::vector<NegativeCase> cases = {
       {
-          "unsupported_opcode_reference",
+          "unsupported_opcode_heap_vector",
           R"(
-[return<int>]
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
 main() {
-  [i32 mut] value{1i32}
-  [Reference<i32>] ref{location(value)}
-  return(dereference(ref))
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.count())
 }
 )",
           "unsupported opcode for wasm target",
       },
       {
-          "unsupported_opcode_reference_alias",
+          "unsupported_opcode_heap_push",
           R"(
-[return<int>]
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
 main() {
-  [i32 mut] value{1i32}
-  return(dereference(location(value)))
+  [vector<i32> mut] values{vector<i32>()}
+  values.push(1i32)
+  return(values.count())
 }
 )",
           "unsupported opcode for wasm target",

@@ -683,6 +683,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitterDivisionFault.cpp
   src/wasm_emitter/WasmEmitterFma.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
+  src/wasm_emitter/WasmEmitterMemory.cpp
   src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp
   src/wasm_emitter/WasmEmitterRuntimeContext.cpp

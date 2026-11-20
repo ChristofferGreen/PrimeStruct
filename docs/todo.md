@@ -128,11 +128,13 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6143 | Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow` | deferred | runtime-faults |
-| TODO-6107 | `panic` and every array runtime error compile for Wasm | blocked | wasm-arrays-panic |
-| TODO-6138 | Wasm lowers local addresses and indirect loads and stores | ready | wasm-opcode-gaps |
-| TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | blocked | wasm-opcode-gaps |
+| TODO-6107 | `panic` and every array runtime error compile for Wasm | ready | wasm-arrays-panic |
+| TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | ready | wasm-opcode-gaps |
 | TODO-6140 | Wasm refusals of atomics, channels, u8 and host calls name the opcode | ready | wasm-opcode-gaps |
-| TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | blocked | wasm-opcode-gaps |
+| TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | ready | wasm-opcode-gaps |
+| TODO-6146 | Wasm structured control flow for an early return out of an inlined body with cleanup | ready | wasm-opcode-gaps |
+| TODO-6147 | The Wasm shadow stack is fixed at 131072 slots | ready | wasm-opcode-gaps |
+| TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -176,7 +178,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
-- Backend parity: TODO-6107 (`panic` on Wasm), TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6107 (`panic` on Wasm), TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141, with TODO-6145, TODO-6146 and TODO-6147 found by TODO-6138); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -187,7 +189,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup); the Wasm leaves found by the Wasm matrix config, TODO-6138 and TODO-6140, are ready and TODO-6107 (`panic` on Wasm) waits for TODO-6138 (TODO-6124 tracks them). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup); the Wasm leaves found by the Wasm matrix config are ready: TODO-6139 (matrix programs list `wasm-wasi`), TODO-6140, TODO-6141 (the heap), TODO-6145, TODO-6146 and TODO-6147, and TODO-6107 (`panic` on Wasm) follows TODO-6139 (TODO-6124 tracks them). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -226,8 +228,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6107: `panic` and every array runtime error compile for Wasm
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6138
+  - status: ready
   - created_at: 2026-11-20
   - phase: Backend parity (found while doing TODO-5744)
   - parallel_track: wasm-arrays-panic
@@ -503,25 +504,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: local-address and indirect memory opcodes only; the heap (`vector`, `String`), atomics and channels, tasks, u8 and host calls are separate leaves.
   - repro: `printf '[return<int>]\nmain() {\n  [i32 mut] v{4i32}\n  [Pointer<i32>] p{location(v)}\n  return(*p)\n}\n' > p.prime; ./primec --emit=wasm --wasm-profile wasi p.prime -o p.wasm --entry /main` now fails with `unsupported opcode for wasm target: AddressOfLocal (...)`.
 
-- [~] TODO-6138: Wasm lowers local addresses and indirect loads and stores
-  - owner: ai
-  - status: ready
-  - claimed_by: wasm-memory-agent (worktree-agent-a6b5a37c0f5e64766), 2026-11-21
-  - created_at: 2026-11-20
-  - phase: Correctness audit 2026-10 (split from TODO-6124)
-  - parallel_track: wasm-opcode-gaps
-  - scope: Give Wasm `AddressOfLocal`, `LoadIndirect` and `StoreIndirect` on its linear memory: a local whose address is taken lives in a shadow-stack frame of the module's memory (a stack pointer global, the frame reserved at function entry and released at every return and `Trap`), the address is an `i32` offset widened to the VM's slot numbering where the IR stores it as `i64`, and an indirect access loads or stores the 8-byte slot at the address. Design questions to settle in the block before code: how an IR address (the VM numbers local slots from 1, `docs/spec/vm-design.md` line 71 says Wasm keeps its own numbering from 0) maps to a byte offset, the alignment and invalid-address faults (`VM error: ...` and exit 3 on the VM; Wasm needs a bounds check or documents the difference), and whether struct values and arrays (which the lowerer lays out as consecutive slots) need anything beyond these three opcodes. Write the options into this block and stop if the design is not settled by `vm-design.md`.
-  - acceptance:
-    - the `Pointer` repro of TODO-6124 returns 4 under node; a `Reference<i64> mut` written through `*r = value`, a struct with two fields read back and an `array<i32>` indexed run on Wasm like the VM; tests of each
-    - an unaligned or invalid address is the VM's fault with exit 3, or the difference is documented in vm-design.md with a test
-    - full release gate green
-  - stop_rule: local-address and indirect memory opcodes only; the heap (`vector`, `String`), atomics and channels, tasks, u8 and host calls are separate leaves.
-  - repro: the repro of TODO-6124.
-
 - [ ] TODO-6139: Matrix programs Wasm runs after TODO-6138 list `wasm-wasi`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6138
+  - status: ready
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (split from TODO-6124)
   - parallel_track: wasm-opcode-gaps
@@ -531,6 +516,45 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: matrix `extraConfigs` and filing leaves; no emitter change.
   - repro: `PRIMESTRUCT_MATRIX_CONFIGS=all ./PrimeStruct_program_matrix_tests` from the release build directory.
+
+- [ ] TODO-6145: Wasm real calls whose struct parameters are stored to non-leading locals
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6138)
+  - parallel_track: wasm-opcode-gaps
+  - scope: The Wasm emitter takes a function's parameters as its wasm parameters 0..n-1 and skips the leading `StoreLocal (n-1) ... StoreLocal 0` of the IR (`lowerFunctionCode`, src/wasm_emitter/WasmEmitterFunctionBodies.cpp). A real-call function that receives a struct by value (the receiver of a method called twice) starts `StoreLocal 3, StoreLocal 2, StoreLocal 1` (the struct's slots) and then `AddressOfLocal 1; StoreLocal 0`: three parameters stored to locals 3, 2 and 1, not 2, 1 and 0. The emitter refuses it with `wasm emitter: function /Counter/sum declares parameters but its leading instructions do not match the expected StoreLocal prologue` (matrix programs `frontend_ctor_only_field` and `pick_payload_struct_method`, found by the matrix probe after TODO-6138). Accept any prologue of distinct `StoreLocal`s: wasm parameter i belongs to the i-th store from the end, so the body renames or copies the parameters into the locals the prologue names instead of assuming local i.
+  - acceptance:
+    - both matrix programs compile for Wasm and agree with the VM, and list `wasm-wasi`; a test of a struct method called twice
+    - full release gate green
+  - stop_rule: the parameter prologue only; no other emitter change.
+  - repro: `./primec --emit=wasm --wasm-profile wasi c.prime -o c.wasm --entry /main` of `[struct] Counter() { [i64 mut] total{1i64} [i64 mut] doubled{2i64} [return<i64>] sum() { return(this.total + this.doubled) } }` and a `main` that prints `five.sum()` and `none.sum()` of two `Counter` locals.
+
+- [ ] TODO-6146: Wasm structured control flow for an early return out of an inlined body with cleanup
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6138)
+  - parallel_track: wasm-opcode-gaps
+  - scope: Once local addresses lower, 38 matrix programs are first refused by `wasm emitter unsupported control-flow pattern in function: /main` (and `/walk`, `/early`, `/status`): every program with an early `return` or a `?`/handler exit inside an inlined body that has cleanup (a `Destroy` helper, a `Result` payload drop, a `pick` arm scope: `destroy_scope_end`, `destroy_nested_return`, `handler_flows_into_if`, `pick_return_nested`, `result_try_call_argument`, `sum_real_call_destroy_payload`, ...). The IR leaves the body with a `Jump` to the cleanup block that follows the whole inlined body (`if(leave) { return(1i32) }` becomes `JumpIfZero -> 18; ...; Jump -> 21; Jump -> 18; ...; Jump -> 21` and the cleanup, then the `ReturnI32`, at 21), and `emitInstructionRange` (src/wasm_emitter/WasmEmitterControlFlow.cpp) recovers only the `if`/`else`, `loop` and early-exit-of-an-arm shapes it knows. Recognize a jump to a forward join point that lies after the enclosing construct as a `br` out of a `block` that spans the construct (the join is a `block` end, as `emitIfArm` already does for the end of an arm), so the cleanup code follows the block.
+  - acceptance:
+    - the repro below compiles and agrees with the VM under node; the matrix programs that then run list `wasm-wasi` (TODO-6139) or name their next gap
+    - full release gate green
+  - stop_rule: the forward-join shape only; a general stackifier is out of scope (TODO-6126 chose the pattern recoverer).
+  - repro: `[struct] Noisy() { [i32 mut] id{0i32} [public effects(io_out)] Destroy() { print_line(this.id) } }`, `[effects(io_out) return<i32>] early([bool] leave) { [Noisy] guard{Noisy{4i32}} if(leave) { return(1i32) } return(2i32) }` and `[effects(io_out) return<int>] main() { return(early(true)) }` with `./primec --emit=wasm --wasm-profile wasi c.prime -o c.wasm --entry /main`.
+
+- [ ] TODO-6147: The Wasm shadow stack is fixed at 131072 slots
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6138)
+  - parallel_track: wasm-opcode-gaps
+  - scope: TODO-6138 keeps the locals of a function that takes an address in a shadow stack of 16 pages (131072 8-byte slots) after the module's static data. The VM has no such bound on locals (its call depth is 4096 frames, a frame holds as many slots as the function uses), so a program legal on the VM that needs more slots (an `array` of 100000 elements in a local, 2000 levels of a recursion with a 100-slot frame) reaches a frame that does not fit and ends in a wasm trap (`unreachable`, also under the WASI profile, with no `VM error:` line and no exit code 3 of the module), and a single function whose frame exceeds the stack is refused at compile time (`frame of N slots does not fit the shadow stack`). Grow the memory with `memory.grow` when a frame does not fit (a limit that matches the VM's, with the VM's fault `VM call stack overflow` or an out-of-memory fault when the host refuses), keep the checked helper cheap, and settle in the block how it relates to the heap pages of TODO-6141 (one memory: the shadow stack grows up from its base and the heap would need its own region).
+  - acceptance:
+    - a recursion whose frames need more than 131072 slots in total, and a local array of 200000 `i32`, run on Wasm like the VM; a stack that cannot grow is the VM's fault text with exit 3 on the WASI profile
+    - full release gate green
+  - stop_rule: the shadow stack's size and growth only; the heap allocator belongs to TODO-6141 and the recursion depth of native calls to TODO-6143.
+  - repro: `[return<i64>] deep([i64] n) { [i64 mut] local{n} [Pointer<i64> mut] p{location(local)} if(n <= 0i64, then() { return(0i64) }, else() { }) return(dereference(p) + deep(n - 1i64)) }` with `main` returning `convert<i32>(deep(3000i64))` stays under the limit; a local `array<i32>` of 200000 elements does not.
 
 - [ ] TODO-6140: Wasm refusals of atomics, channels, u8 and host calls name the opcode
   - owner: ai
@@ -549,8 +573,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6141: Wasm lowers the heap opcodes and string byte reads (`vector`, `String`)
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6138
+  - status: ready
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6137)
   - parallel_track: wasm-opcode-gaps

@@ -53,9 +53,9 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(PushI64, ConstInt, None, I64, 1, 1, 1)                                                         \
   X(LoadLocal, Local, None, None, 1, 1, 1)                                                         \
   X(StoreLocal, Local, None, None, 1, 1, 1)                                                        \
-  X(AddressOfLocal, Local, None, None, 1, 0, 0)                                                    \
-  X(LoadIndirect, Memory, None, None, 1, 0, 0)                                                     \
-  X(StoreIndirect, Memory, None, None, 1, 0, 0)                                                    \
+  X(AddressOfLocal, Local, None, None, 1, 1, 1)                                                    \
+  X(LoadIndirect, Memory, None, None, 1, 1, 1)                                                     \
+  X(StoreIndirect, Memory, None, None, 1, 1, 1)                                                    \
   X(Dup, Stack, None, None, 1, 1, 1)                                                               \
   X(Pop, Stack, None, None, 1, 1, 1)                                                               \
   X(AddI32, IntArith, Add, I32, 1, 1, 1)                                                           \

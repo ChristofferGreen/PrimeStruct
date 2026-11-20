@@ -380,7 +380,8 @@ bool emitIoInstruction(const IrInstruction &inst,
       appendS32Leb(static_cast<int32_t>(runtime.byteScratchAddr), out);
       out.push_back(WasmOpI32Load8U);
       appendI8MemArg(0, out);
-      if (localLayout.localTypes[static_cast<size_t>(inst.imm)] == WasmTypeI64) {
+      if (localLayout.localTypes[static_cast<size_t>(inst.imm)] == WasmTypeI64 ||
+          localLayout.localTypes[static_cast<size_t>(inst.imm)] == WasmTypeSlot) {
         out.push_back(WasmOpI64ExtendI32U);
       }
       out.push_back(WasmOpLocalSet);

@@ -116,13 +116,6 @@ bool isWasmOpcodeAllowedForTarget(IrOpcode op, IrValidationTarget target) {
 // opcode is not tied to one feature.
 const char *wasmOpcodeFeature(IrOpcode op) {
   switch (op) {
-  case IrOpcode::AddressOfLocal:
-    return "the address of a local, needed by pointers, `Reference` parameters, struct values, "
-           "arrays and closures";
-  case IrOpcode::LoadIndirect:
-  case IrOpcode::StoreIndirect:
-    return "a load or store through an address, needed by pointers, `Reference`, struct fields, "
-           "arrays and closures";
   case IrOpcode::LoadStringByte:
   case IrOpcode::LoadStringByteDynamic:
   case IrOpcode::LoadStringLength:
@@ -163,7 +156,7 @@ const char *wasmOpcodeFeature(IrOpcode op) {
   return "";
 }
 
-// "unsupported opcode for wasm target: AddressOfLocal (the address of a local, needed by ...)".
+// "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by ...)".
 std::string wasmUnsupportedOpcodeMessage(IrOpcode op, IrValidationTarget target) {
   std::string message = "unsupported opcode for " + std::string(wasmTargetName(target)) + " target";
   const IrOpcodeInfo *info = irOpcodeInfo(op);

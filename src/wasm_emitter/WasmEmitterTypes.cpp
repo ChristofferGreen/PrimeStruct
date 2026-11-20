@@ -21,6 +21,11 @@ bool isInteger(uint8_t type) {
   return type == WasmTypeI32 || type == WasmTypeI64;
 }
 
+// Whether a value of type `from` converts to `to` at all: the two integer widths, and a raw slot to or from any type.
+bool isConvertible(uint8_t from, uint8_t to) {
+  return (isInteger(from) && isInteger(to)) || from == WasmTypeSlot || to == WasmTypeSlot;
+}
+
 // The operand and result types of an instruction with a fixed signature; operands run from the bottom of the stack to
 // the top. False for an instruction the typed emitter handles itself or does not know.
 struct OpSignature {
@@ -245,9 +250,7 @@ void pushType(WasmLocalLayout &layout, uint8_t type) {
 }
 
 uint32_t acquireScratch(WasmLocalLayout &layout, uint8_t type) {
-  if (type == WasmTypeUnknown) {
-    type = WasmTypeI32;
-  }
+  type = wasmValueTypeByte(type);
   for (WasmScratchSlot &slot : layout.typeState.scratch) {
     if (!slot.inUse && slot.type == type) {
       slot.inUse = true;
@@ -276,6 +279,10 @@ bool emitConversion(uint8_t from,
                     std::string &error,
                     const std::string &fn) {
   if (from == WasmTypeUnknown || to == WasmTypeUnknown || from == to) {
+    return true;
+  }
+  if (from == WasmTypeSlot || to == WasmTypeSlot) {
+    emitWasmSlotConversion(from, to, out);
     return true;
   }
   if (from == WasmTypeI64 && to == WasmTypeI32) {
@@ -314,7 +321,7 @@ bool coerceOperands(WasmLocalLayout &layout,
     return true;
   }
   for (size_t k = firstMismatch; k < count; ++k) {
-    if (needsConversion(actual[k], wanted[k]) && !(isInteger(actual[k]) && isInteger(wanted[k]))) {
+    if (needsConversion(actual[k], wanted[k]) && !isConvertible(actual[k], wanted[k])) {
       error = "wasm emitter value type mismatch in function: " + fn;
       return false;
     }
@@ -381,6 +388,11 @@ bool mergeWasmTypes(uint8_t current, uint8_t incoming, uint8_t &merged) {
     merged = current;
     return true;
   }
+  if (current == WasmTypeSlot || incoming == WasmTypeSlot) {
+    // A raw slot takes any value (an integer is widened, a float is its bits).
+    merged = WasmTypeSlot;
+    return true;
+  }
   if (isInteger(current) && isInteger(incoming)) {
     merged = WasmTypeI64;
     return true;
@@ -411,7 +423,7 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
                           std::string &error,
                           const std::string &functionName) {
   const uint8_t type = stackType(localLayout, 0);
-  if (type == WasmTypeI64) {
+  if (type == WasmTypeI64 || type == WasmTypeSlot) {
     // A 64-bit condition is true when it is not zero.
     out.push_back(WasmOpI64Const);
     appendS64Leb(0, out);
@@ -421,6 +433,24 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
     return false;
   }
   popTypes(localLayout, 1);
+  return true;
+}
+
+// `LoadLocal` of a function with a frame: the slot is read as its raw bits and becomes the type of the local.
+static bool emitFrameLoadLocal(const IrInstruction &inst,
+                               WasmLocalLayout &layout,
+                               std::vector<uint8_t> &out,
+                               std::string &error,
+                               const std::string &fn) {
+  if (inst.imm >= layout.irLocalCount) {
+    error = "wasm emitter local index out of range in function: " + fn;
+    return false;
+  }
+  const uint8_t localType = layout.localTypes[static_cast<size_t>(inst.imm)];
+  const uint8_t type = localType == WasmTypeUnknown ? WasmTypeSlot : localType;
+  emitWasmFrameLoad(inst.imm, layout, out);
+  emitWasmSlotConversion(WasmTypeSlot, type, out);
+  pushType(layout, type);
   return true;
 }
 
@@ -435,6 +465,9 @@ bool emitTypedInstruction(const IrInstruction &inst,
   releaseScratch(localLayout);
   switch (inst.op) {
   case IrOpcode::LoadLocal: {
+    if (localLayout.addressed) {
+      return emitFrameLoadLocal(inst, localLayout, out, error, functionName);
+    }
     if (!emitSimpleInstruction(
             inst, localLayout, functionTypes, runtime, out, error, functionName)) {
       return false;
@@ -458,6 +491,17 @@ bool emitTypedInstruction(const IrInstruction &inst,
                                error,
                                functionName)) {
       return false;
+    }
+    if (localLayout.addressed) {
+      const uint8_t localType = localLayout.localTypes[static_cast<size_t>(inst.imm)];
+      emitWasmSlotConversion(
+          localType == WasmTypeUnknown ? valueType : localType, WasmTypeSlot, out);
+      const uint32_t raw = acquireScratch(localLayout, WasmTypeSlot);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(raw, out);
+      emitWasmFrameStore(inst.imm, raw, localLayout, out);
+      popTypes(localLayout, 1);
+      return true;
     }
     if (!emitSimpleInstruction(
             inst, localLayout, functionTypes, runtime, out, error, functionName)) {
@@ -518,6 +562,36 @@ bool emitTypedInstruction(const IrInstruction &inst,
     }
     return true;
   }
+  case IrOpcode::AddressOfLocal:
+    if (!localLayout.addressed || inst.imm >= localLayout.irLocalCount) {
+      error = "wasm emitter local index out of range in function: " + functionName;
+      return false;
+    }
+    emitWasmAddressOfLocal(inst.imm, localLayout, out);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  case IrOpcode::LoadIndirect:
+    if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    emitWasmIndirectLoad(runtime, out);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeSlot);
+    return true;
+  case IrOpcode::StoreIndirect: {
+    // The value goes to the slot as its raw bits and stays on the stack (as a slot, which converts back to its type).
+    if (!coerceOperands(localLayout, {WasmTypeI64, WasmTypeUnknown}, out, error, functionName)) {
+      return false;
+    }
+    emitWasmSlotConversion(stackType(localLayout, 0), WasmTypeSlot, out);
+    const uint32_t raw = acquireScratch(localLayout, WasmTypeSlot);
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(raw, out);
+    emitWasmIndirectStore(raw, runtime, out);
+    popTypes(localLayout, 2);
+    pushType(localLayout, WasmTypeSlot);
+    return true;
+  }
   default:
     break;
   }
@@ -537,6 +611,18 @@ bool emitTypedInstruction(const IrInstruction &inst,
   }
   if (!emitSimpleInstruction(inst, localLayout, functionTypes, runtime, out, error, functionName)) {
     return false;
+  }
+  if (inst.op == IrOpcode::FileReadByte && localLayout.addressed &&
+      inst.imm < localLayout.irLocalCount) {
+    // The instruction sets the wasm local; the slot of the frame follows it.
+    const uint32_t raw = acquireScratch(localLayout, WasmTypeSlot);
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(static_cast<uint32_t>(inst.imm), out);
+    emitWasmSlotConversion(
+        localLayout.localTypes[static_cast<size_t>(inst.imm)], WasmTypeSlot, out);
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(raw, out);
+    emitWasmFrameStore(inst.imm, raw, localLayout, out);
   }
   popTypes(localLayout, sig.operands.size());
   if (sig.result != WasmTypeUnknown) {

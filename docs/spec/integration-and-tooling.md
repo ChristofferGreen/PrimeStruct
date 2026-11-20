@@ -77,11 +77,15 @@ a helper function the module carries (one per operation used) that checks the di
 profile, whose division stays the wasm instruction and traps (`RuntimeError: divide by zero`) like every other
 runtime error there. Signed overflow (`INT_MIN / -1`) is not changed by the helper (TODO-6134).
 
+Local addresses and indirect loads and stores (pointers, `Reference`, struct values, arrays, closures) run on a shadow
+stack in the module's linear memory with the VM's address numbering and faults (docs/spec/vm-design.md, Frames &
+stack): a null, unaligned or out-of-frame address writes `VM error: invalid indirect address in IR: <address>` (or
+`unaligned ...`) to stderr and exits 3 under the WASI profile, and traps in the browser profile.
+
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
-wasm target: AddressOfLocal (the address of a local, needed by pointers, `Reference` parameters, struct values, arrays
-and closures)`. Today that covers local addresses and indirect loads and stores (pointers, `Reference`, struct values,
-arrays, closures), heap memory (`vector`, `map`, `String`), string byte reads, host calls, `u8` and byte memory, tasks,
+wasm target: HeapAlloc (heap memory, needed by `vector`, `map`, `String` and other growable containers)`. Today that
+covers heap memory (`vector`, `map`, `String`), string byte reads, host calls, `u8` and byte memory, tasks,
 atomics, mutexes and condition variables; the browser profile also refuses console and file output and program
 arguments (they need `--wasm-profile wasi`).
 

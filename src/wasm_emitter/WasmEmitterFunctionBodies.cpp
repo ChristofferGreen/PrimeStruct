@@ -16,7 +16,11 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
   uint64_t maxLocalIndex = 0;
   bool hasLocal = false;
   for (const IrInstruction &inst : function.instructions) {
-    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal || inst.op == IrOpcode::FileReadByte) {
+    if (inst.op == IrOpcode::AddressOfLocal) {
+      layout.addressed = true;
+    }
+    if (inst.op == IrOpcode::LoadLocal || inst.op == IrOpcode::StoreLocal ||
+        inst.op == IrOpcode::FileReadByte || inst.op == IrOpcode::AddressOfLocal) {
       maxLocalIndex = std::max(maxLocalIndex, inst.imm);
       hasLocal = true;
     }
@@ -64,6 +68,11 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
     layout.fileDigitsLenLocal = static_cast<uint32_t>(totalCount + 1);
     layout.fileDigitsNegLocal = static_cast<uint32_t>(totalCount + 2);
     totalCount += 3;
+  }
+  if (layout.addressed) {
+    layout.frameBaseLocal = static_cast<uint32_t>(totalCount);
+    layout.framePtrLocal = static_cast<uint32_t>(totalCount + 1);
+    totalCount += 2;
   }
   // wasm's function signature already provides locals 0..parameterCount-1
   // (see inferFunctionType in WasmEmitterModule.cpp) - the real-call
@@ -115,9 +124,7 @@ void appendLocalDecls(const WasmLocalLayout &layout, std::vector<uint8_t> &out) 
   }
   std::vector<std::pair<uint32_t, uint8_t>> runs;
   for (uint8_t type : types) {
-    if (type == WasmTypeUnknown) {
-      type = WasmTypeI32;
-    }
+    type = wasmValueTypeByte(type);
     if (!runs.empty() && runs.back().second == type) {
       runs.back().first += 1;
     } else {
@@ -141,6 +148,12 @@ bool lowerFunctionCode(const IrFunction &function,
                        std::string &error) {
   WasmLocalLayout localLayout = computeLocalLayout(function, irLocalTypes, error);
   if (!error.empty()) {
+    return false;
+  }
+
+  if (localLayout.addressed && localLayout.irLocalCount > runtime.shadowSlots) {
+    error = "wasm emitter frame of " + std::to_string(localLayout.irLocalCount) +
+            " slots does not fit the shadow stack in function: " + function.name;
     return false;
   }
 
@@ -180,6 +193,9 @@ bool lowerFunctionCode(const IrFunction &function,
     startIndex = function.parameterCount;
   }
 
+  if (localLayout.addressed) {
+    emitWasmFramePrologue(localLayout, runtime, outBody.instructions);
+  }
   if (!emitInstructionRange(
           function,
           startIndex,
@@ -264,9 +280,12 @@ bool inferWasmLocalTypes(const IrModule &module,
     }
     if (!changed) {
       for (size_t f = 0; f < functionCount; ++f) {
+        // A slot of a frame that nothing stores a typed value to holds whatever an indirect store wrote.
+        const uint8_t untyped =
+            wasmFunctionTakesLocalAddress(module.functions[f]) ? WasmTypeSlot : WasmTypeI32;
         for (uint8_t &type : irLocalTypes[f]) {
           if (type == WasmTypeUnknown) {
-            type = WasmTypeI32;
+            type = untyped;
           }
         }
         for (size_t k = 0; k < module.functions[f].parameterCount; ++k) {

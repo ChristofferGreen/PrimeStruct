@@ -644,6 +644,177 @@ main() {
                      0);
 }
 
+// Local addresses and indirect loads and stores (docs/spec/vm-design.md, Frames & stack): a function that takes an
+// address keeps its locals in a frame of a shadow stack in the module's memory, with the VM's address numbering.
+TEST_CASE("wasm reads and writes through pointers and Reference parameters like the vm") {
+  checkWasmMatchesVm("memory_pointers",
+                     R"(
+[effects(io_out)]
+write_through([Reference<i64> mut] target, [i64] value) {
+  assign(dereference(target), value)
+}
+
+[effects(io_out), return<int>]
+main() {
+  [i64 mut] a{1i64}
+  write_through(a, 123456789012i64)
+  print_line(a)
+  [i32 mut] n{-5i32}
+  [Pointer<i32> mut] np{location(n)}
+  dereference(np) = dereference(np) - 7i32
+  print_line(n)
+  [f64 mut] f{1.5f64}
+  [Pointer<f64> mut] fp{location(f)}
+  dereference(fp) = dereference(fp) * 2.0f64
+  print_line(convert<i32>(f))
+  [f32 mut] g{0.5f32}
+  [Pointer<f32> mut] gp{location(g)}
+  dereference(gp) = dereference(gp) + 1.25f32
+  print_line(convert<i32>(g * 4.0f32))
+  [i64 mut] first{11i64}
+  [i64 mut] second{22i64}
+  [Pointer<i64> mut] near{plus(location(first), 16i64)}
+  print_line(dereference(near))
+  return(0i32)
+}
+)",
+                     0);
+}
+
+TEST_CASE("wasm runs struct values and arrays in memory like the vm") {
+  checkWasmMatchesVm("memory_struct_array",
+                     R"(
+[struct]
+Point() {
+  [i32 mut] x{0i32}
+  [i32 mut] y{0i32}
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Point mut] p{Point{3i32, 4i32}}
+  print_line(p.x + p.y)
+  p.x = 10i32
+  print_line(p.x * p.y)
+  [array<i32>] t{array<i32>(5i32, 6i32, 7i32)}
+  print_line(t[1i32] + t[2i32])
+  return(0i32)
+}
+)",
+                     0);
+}
+
+// A called function reaches the caller's local through the address it is passed, keeps its own locals in a frame that
+// it gives back at every return (50000 rounds of five frames each would overflow a shadow stack that kept them), and a
+// recursive function stacks one frame per level.
+TEST_CASE("wasm gives the frame of a called function back at every return") {
+  checkWasmMatchesVm("memory_frames",
+                     R"(
+[effects(io_out)]
+bump([Reference<i64> mut] total, [i64] step) {
+  [i64 mut] scratch{step}
+  [Pointer<i64> mut] p{location(scratch)}
+  dereference(p) = dereference(p) + 1i64
+  total = total + dereference(p)
+  if(total > 1000000000000i64, then() { print_line(total) }, else() { })
+}
+
+[i64]
+depth_sum([i64] n) {
+  [i64 mut] local{n}
+  [Pointer<i64> mut] p{location(local)}
+  if(n <= 0i64, then() { return(0i64) }, else() { })
+  return(dereference(p) + depth_sum(n - 1i64))
+}
+
+[effects(io_out), return<int>]
+main() {
+  [i64 mut] total{0i64}
+  [i32 mut] i{0i32}
+  while(i < 50000i32) {
+    bump(total, 2i64)
+    total = total + depth_sum(4i64)
+    i = i + 1i32
+  }
+  print_line(total)
+  print_line(depth_sum(300i64))
+  return(0i32)
+}
+)",
+                     0);
+}
+
+// The faults of an address are the VM's, message and exit code 3 under the WASI profile (the message names the address
+// as the VM numbers it): beyond the live frames, not a multiple of 16, and address 0.
+TEST_CASE("wasm faults on an address beyond the live frames like the vm") {
+  checkWasmMatchesVm("memory_fault_beyond_frames",
+                     R"(
+[return<int> effects(io_out)]
+main() {
+  [i64] value{5i64}
+  [Pointer<i64>] bad{plus(location(value), 16000i64)}
+  print_line("before"utf8)
+  print_line(dereference(bad))
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm faults on an unaligned address like the vm") {
+  checkWasmMatchesVm("memory_fault_unaligned",
+                     R"(
+[return<int> effects(io_out)]
+main() {
+  [i64] value{5i64}
+  [Pointer<i64>] bad{plus(location(value), 8i64)}
+  print_line(dereference(bad))
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm faults on address 0 like the vm") {
+  checkWasmMatchesVm("memory_fault_null",
+                     R"(
+[return<int> effects(io_out)]
+main() {
+  [i64 mut] value{5i64}
+  [Pointer<i64> mut] bad{minus(location(value), 16i64)}
+  dereference(bad) = 7i64
+  print_line(value)
+  return(0i32)
+}
+)",
+                     3);
+}
+
+// The browser profile imports nothing: pointers run on the shadow stack there too, and a bad address traps.
+TEST_CASE("wasm browser profile runs pointers and traps on a bad address") {
+  checkWasmBrowserExit("memory_pointer",
+                       R"(
+[return<int>]
+main() {
+  [i32 mut] v{4i32}
+  [Pointer<i32>] p{location(v)}
+  return(dereference(p))
+}
+)",
+                       "",
+                       4);
+  checkWasmBrowserRuntimeError("memory_trap",
+                               R"(
+[return<int>]
+main() {
+  [i64] value{5i64}
+  [Pointer<i64>] bad{plus(location(value), 16000i64)}
+  return(convert<i32>(dereference(bad)))
+}
+)",
+                               "trapped\n");
+}
+
 // GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
 // of letting the program carry on past the failed call.
 TEST_CASE("glsl refuses a runtime error inside a real call") {

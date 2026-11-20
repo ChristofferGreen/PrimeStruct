@@ -15,6 +15,7 @@ inline constexpr uint8_t WasmSectionType = 1;
 inline constexpr uint8_t WasmSectionImport = 2;
 inline constexpr uint8_t WasmSectionFunction = 3;
 inline constexpr uint8_t WasmSectionMemory = 5;
+inline constexpr uint8_t WasmSectionGlobal = 6;
 inline constexpr uint8_t WasmSectionExport = 7;
 inline constexpr uint8_t WasmSectionCode = 10;
 inline constexpr uint8_t WasmSectionData = 11;
@@ -61,6 +62,10 @@ inline constexpr uint8_t WasmTypeF32 = 0x7d;
 inline constexpr uint8_t WasmTypeF64 = 0x7c;
 // A value whose type is not known yet (type inference, WasmEmitterTypes.cpp); never in the output.
 inline constexpr uint8_t WasmTypeUnknown = 0;
+// The 64 raw bits of an IR slot: what an indirect load yields and what a local of an unknown type holds. It is an `i64`
+// in wasm; an operand that wants another type converts it (WasmEmitterMemory.cpp). Never in the output as a type byte
+// (`wasmValueTypeByte`).
+inline constexpr uint8_t WasmTypeSlot = 1;
 
 // A local the emitter allocates while it emits one instruction (a value waiting while a deeper operand is converted,
 // the copy of a `Dup`). Slots are reused by later instructions of the same function.
@@ -97,6 +102,12 @@ struct WasmLocalLayout {
   std::vector<WasmJumpLabel> jumpLabels;
   uint32_t irLocalCount = 0;
   uint32_t parameterCount = 0;
+  // The function takes the address of a local: all its IR locals live in a frame of the shadow stack
+  // (WasmEmitterMemory.cpp). `frameBaseLocal` holds the number of slots below the frame, `framePtrLocal` the memory
+  // address of its first slot.
+  bool addressed = false;
+  uint32_t frameBaseLocal = 0;
+  uint32_t framePtrLocal = 0;
   // The wasm type of every local: the parameters, the IR locals, then the emitter's helper locals.
   std::vector<uint8_t> localTypes;
   WasmTypeState typeState;
@@ -150,6 +161,18 @@ struct WasmRuntimeContext {
   uint32_t divisionHelperFunction[WasmDivisionOpCount] = {0, 0, 0};
   uint32_t divisionMessageAddr = 0;
   uint32_t divisionMessageLength = 0;
+  // The module takes a local address or reads or writes through one: a mutable `i32` global (index 0) holds the number
+  // of live slots of the shadow stack, which occupies `shadowSlots` 8-byte slots of the memory from `shadowBase`, and
+  // the helper function `slotAddress` checks an address and maps it to the memory (WasmEmitterMemory.cpp).
+  bool hasLocalMemory = false;
+  bool hasMemoryFault = false;
+  uint32_t shadowBase = 0;
+  uint32_t shadowSlots = 0;
+  uint32_t slotAddressFunction = 0;
+  uint32_t unalignedMessageAddr = 0;
+  uint32_t unalignedMessageLength = 0;
+  uint32_t invalidMessageAddr = 0;
+  uint32_t invalidMessageLength = 0;
   uint32_t fdWriteImportIndex = 0;
   uint32_t fdReadImportIndex = 0;
   uint32_t argsSizesGetImportIndex = 0;
@@ -262,6 +285,9 @@ bool encodeFunctionSection(const std::vector<uint32_t> &functionTypeIndexes,
 bool encodeMemorySection(const std::vector<WasmMemoryLimit> &memories,
                          std::vector<uint8_t> &payload,
                          std::string &error);
+
+// One mutable `i32` global, initially 0 (the number of live slots of the shadow stack).
+bool encodeShadowStackGlobalSection(std::vector<uint8_t> &payload, std::string &error);
 
 bool encodeExportSection(const std::vector<WasmExport> &exports,
                          std::vector<uint8_t> &payload,
@@ -447,6 +473,31 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
                           std::vector<uint8_t> &out,
                           std::string &error,
                           const std::string &functionName);
+
+// Local addresses and indirect memory access (WasmEmitterMemory.cpp).
+bool wasmFunctionTakesLocalAddress(const IrFunction &function);
+bool wasmModuleUsesLocalMemory(const IrModule &module);
+// The type byte of the output for a type of the emitter (`WasmTypeSlot` is an `i64`, an unknown type an `i32`).
+uint8_t wasmValueTypeByte(uint8_t type);
+void emitWasmSlotConversion(uint8_t from, uint8_t to, std::vector<uint8_t> &out);
+void emitWasmFramePrologue(const WasmLocalLayout &layout,
+                           const WasmRuntimeContext &runtime,
+                           std::vector<uint8_t> &out);
+void emitWasmFrameEpilogue(const WasmLocalLayout &layout, std::vector<uint8_t> &out);
+void emitWasmFrameLoad(uint64_t slot, const WasmLocalLayout &layout, std::vector<uint8_t> &out);
+void emitWasmFrameStore(uint64_t slot,
+                        uint32_t valueLocal,
+                        const WasmLocalLayout &layout,
+                        std::vector<uint8_t> &out);
+void emitWasmAddressOfLocal(uint64_t slot,
+                            const WasmLocalLayout &layout,
+                            std::vector<uint8_t> &out);
+void emitWasmIndirectLoad(const WasmRuntimeContext &runtime, std::vector<uint8_t> &out);
+void emitWasmIndirectStore(uint32_t valueLocal,
+                           const WasmRuntimeContext &runtime,
+                           std::vector<uint8_t> &out);
+// The code of the helper `slotAddress` (type (i64) -> i32).
+WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime);
 
 // A structured block (`if`, `loop`) cannot reach the values below it: its code starts with an empty tracked stack and
 // the outer stack comes back at the end.

@@ -447,6 +447,10 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
     case IrOpcode::ReturnF32:
     case IrOpcode::ReturnF64:
     case IrOpcode::ReturnVoid:
+      if (localLayout.addressed) {
+        // The frame's slots go back to the shadow stack; the result stays below.
+        emitWasmFrameEpilogue(localLayout, out);
+      }
       out.push_back(WasmOpReturn);
       return true;
     case IrOpcode::Jump:

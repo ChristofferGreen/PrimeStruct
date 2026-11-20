@@ -310,7 +310,7 @@ bool emitIfRegion(const IrFunction &function,
   }
 
   out.push_back(WasmOpIf);
-  out.push_back(resultType);
+  out.push_back(resultType == WasmBlockTypeVoid ? resultType : wasmValueTypeByte(resultType));
   out.insert(out.end(), trueCode.begin(), trueCode.end());
   if (hasElse) {
     out.push_back(WasmOpElse);

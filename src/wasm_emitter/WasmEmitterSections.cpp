@@ -49,12 +49,25 @@ bool encodeTypeSection(const std::vector<WasmFunctionType> &types,
     if (!appendLength(type.params.size(), payload, error)) {
       return false;
     }
-    payload.insert(payload.end(), type.params.begin(), type.params.end());
+    for (const uint8_t param : type.params) {
+      payload.push_back(wasmValueTypeByte(param));
+    }
     if (!appendLength(type.results.size(), payload, error)) {
       return false;
     }
     payload.insert(payload.end(), type.results.begin(), type.results.end());
   }
+  return true;
+}
+
+bool encodeShadowStackGlobalSection(std::vector<uint8_t> &payload, std::string &) {
+  payload.clear();
+  appendU32Leb(1, payload);
+  payload.push_back(WasmTypeI32);
+  payload.push_back(0x01); // mutable
+  payload.push_back(0x41); // i32.const 0
+  appendS32Leb(0, payload);
+  payload.push_back(0x0b); // end
   return true;
 }
 

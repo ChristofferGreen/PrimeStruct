@@ -68,7 +68,19 @@
   its caller's base plus the caller's local count (the entry frame's base is 0): the live frames' locals form one
   numbering that starts at the second slot, so address 0 (a null reference or pointer) names no local, so an address of a caller's local names the same slot in every callee, which reads and writes it through
   `LoadIndirect`/`StoreIndirect`. An address below the first slot (0) or beyond the live frames faults (`invalid indirect address in IR`). The simple
-  C++ emitters, Wasm and GLSL keep their own local numbering from 0 and do not fault on address 0.
+  C++ emitters and GLSL keep their own local numbering from 0 and do not fault on address 0. **Wasm** keeps the VM's
+  numbering and faults over a shadow stack in its linear memory: a mutable `i32` global holds the number of live
+  slots, a function that takes an address (every slot of its frame is then reachable) keeps all its IR locals in a
+  frame of the shadow stack (8 bytes per slot, the raw bits of the VM's slot: an `i32` sign-extended, an `f32` zero-extended)
+  instead of in wasm locals, reserves the frame at entry and gives it back at every return, and a function that takes no
+  address uses no memory. A local address is `(base + index + 1) * 16` with `base` the live slots below the frame, as on
+  the VM, so a callee reads and writes a caller's local through the address it was passed and `plus(location(v), 16i64)`
+  names the next slot. A helper function of the module (`slotAddress`) checks every `LoadIndirect`/`StoreIndirect` address in
+  the VM's order (an address that is not a multiple of 16 is `unaligned indirect address in IR: <address>`; address 0, an
+  address beyond the live slots and a heap address are `invalid indirect address in IR: <address>`), writes `VM error: ...`
+  and the address in decimal to stderr and calls `proc_exit(3)` on the WASI profile, and traps (`unreachable`) on the browser
+  profile. The shadow stack has 131072 slots (16 pages after the module's static data); a frame that does not fit is a wasm
+  trap on both profiles, not the VM's `VM call stack overflow` (TODO-6143). Frames are not zeroed: a slot is written before it is read.
   Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
   and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
   locals arena is laid out that way, and generated C++ registers each addressable frame). The arm64 native backend

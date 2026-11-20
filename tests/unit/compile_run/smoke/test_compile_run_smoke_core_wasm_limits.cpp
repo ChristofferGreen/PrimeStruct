@@ -261,11 +261,12 @@ main([array<string>] args) {
           "wasi_rejects_unsupported_opcode",
           "wasi",
           R"(
-[return<int>]
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
 main() {
-  [i32 mut] value{1i32}
-  [Reference<i32>] ref{location(value)}
-  return(dereference(ref))
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(values.count())
 }
 )",
           "unsupported opcode for wasm target",

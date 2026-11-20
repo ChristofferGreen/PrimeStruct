@@ -411,12 +411,43 @@ inline void reportWasmCompile(const ProgramCase &program) {
   std::fprintf(stderr, "%s\n", line.c_str());
 }
 
+// Probe mode (PRIMESTRUCT_MATRIX_WASM_RUN=1): every case runs on the VM (`vm-O2`) and on Wasm under node, and nothing
+// is checked. One line per case goes to stderr, `wasm-run: <name>: agree`, `wasm-run: <name>: differ (...)` or
+// `wasm-run: <name>: refused`, so the programs that may list `wasm-wasi` in `extraConfigs` can be found.
+inline bool wasmRunProbe() {
+  const char *value = std::getenv("PRIMESTRUCT_MATRIX_WASM_RUN");
+  return value != nullptr && *value != '\0';
+}
+
+inline void reportWasmRun(const ProgramCase &program) {
+  const Outcome oracle = runConfig(program, ExecutionConfig{"vm-O2", Backend::Vm, 2, false});
+  const Outcome wasm = runConfig(program, ExecutionConfig{"wasm-wasi", Backend::Wasm, 0, true});
+  std::string line = "wasm-run: " + program.name + ": ";
+  if (!oracle.ran) {
+    line += "no vm run";
+  } else if (!wasm.ran) {
+    line += "refused";
+  } else if (wasm.exitCode != oracle.exitCode) {
+    line += "differ (exit " + std::to_string(wasm.exitCode) + " not " +
+            std::to_string(oracle.exitCode) + ")";
+  } else if (wasm.out != oracle.out) {
+    line += "differ (stdout)";
+  } else {
+    line += "agree";
+  }
+  std::fprintf(stderr, "%s\n", line.c_str());
+}
+
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
 inline void runProgramMatrix(const ProgramCase &program,
                              std::vector<ExecutionConfig> configs = allConfigs()) {
   if (wasmCompileOnly()) {
     reportWasmCompile(program);
+    return;
+  }
+  if (wasmRunProbe()) {
+    reportWasmRun(program);
     return;
   }
   if (corpusOnly()) {
