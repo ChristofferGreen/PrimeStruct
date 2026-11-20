@@ -503,9 +503,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: local-address and indirect memory opcodes only; the heap (`vector`, `String`), atomics and channels, tasks, u8 and host calls are separate leaves.
   - repro: `printf '[return<int>]\nmain() {\n  [i32 mut] v{4i32}\n  [Pointer<i32>] p{location(v)}\n  return(*p)\n}\n' > p.prime; ./primec --emit=wasm --wasm-profile wasi p.prime -o p.wasm --entry /main` now fails with `unsupported opcode for wasm target: AddressOfLocal (...)`.
 
-- [ ] TODO-6138: Wasm lowers local addresses and indirect loads and stores
+- [~] TODO-6138: Wasm lowers local addresses and indirect loads and stores
   - owner: ai
   - status: ready
+  - claimed_by: wasm-memory-agent (worktree-agent-a6b5a37c0f5e64766), 2026-11-21
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (split from TODO-6124)
   - parallel_track: wasm-opcode-gaps
