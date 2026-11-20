@@ -303,9 +303,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
+- [~] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
   - status: ready
+  - claimed_by: worker-mt-view (worktree-agent-ac6feea2a49c6a3ad), 2026-11-20
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
