@@ -527,9 +527,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: matrix `extraConfigs` and filing leaves; no emitter change.
   - repro: `PRIMESTRUCT_MATRIX_CONFIGS=all ./PrimeStruct_program_matrix_tests` from the release build directory.
 
-- [ ] TODO-6135: Wasm refuses a short-circuit `||` whose first operand jumps into the then-part (`copysign`)
+- [~] TODO-6135: Wasm refuses a short-circuit `||` whose first operand jumps into the then-part (`copysign`)
   - owner: ai
   - status: ready
+  - claimed_by: wasm-worker (worktree-agent-a0d7bf62b14f5045f), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6126)
   - parallel_track: wasm-short-circuit-flow
