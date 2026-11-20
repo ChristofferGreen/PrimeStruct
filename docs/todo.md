@@ -695,9 +695,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the return-type diagnostic only; no new type resolution rules.
 
-- [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
+- [~] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai
   - status: ready
+  - claimed_by: overload-worker (worktree agent-af334e170c9286e2a), 2026-11-20
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Function values; found with TODO-5804)
   - parallel_track: function-call-diagnostic
