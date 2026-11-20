@@ -149,6 +149,8 @@ of sync with them.
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | ready | logical-stdlib-import |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
+| TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | ready | generic-struct-overload |
+| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | ready | function-call-diagnostic |
 | TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | ready | reference-field-write |
@@ -303,10 +305,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [~] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
+- [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
   - status: ready
-  - claimed_by: worker-mt-view (worktree-agent-ac6feea2a49c6a3ad), 2026-11-20
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
@@ -318,6 +319,8 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a `view` handler that writes its state is a compile error (test); a `view` handler and a `get` handler of one app both answer, and a `get` after a `post` sees the change
     - full release gate green
   - stop_rule: the `view` registration and read-lock dispatch only; no sessions, no new method names.
+  - open_questions: found 2026-11-20 on the first attempt (nothing implemented; the block's design needs two decisions). Facts measured with primec: (1) a `Function` value's `call` is `mut` (docs/spec/value-lifecycle.md, Function values), so a `view` handler stored as a `Function` in the read-only `T` of `RwLock<T>.read` cannot be called there (`b.f(x)` on a `[T]` parameter is `unknown method: /Box/f`, TODO-6113); copying it first (`[Function<...> mut] h{b.f}` inside `read`, a closure clone with its own state) works and runs on the VM, so concurrent readers each get a private clone of the handler, at one small heap block per request. (2) `serveWorkers<Handler>` receives the whole app (`todo_web` passes `withRequestLog(todo_app())`, a lambda that wraps it), erased today into one `Function` in a `Mutex<RequestHandler>`; the server must learn the mode of a request before it takes a lock, and the language has no way to ask an arbitrary `Handler` for an optional method: overloads `mode<S>([App<S>])` next to `mode<H>([H])` always pick the generic one (TODO-6112), so a free-function protocol that `AppRouter`, `WebApp` and middleware specialise cannot be written today. Erasing the app into a `Function` is not possible either: a read lock over a `Function` that holds the app would have to clone the app's state per request.
+  - options_to_decide: (a) fix TODO-6112 (a concrete generic struct parameter beats an unbound `H`), then `readsOnly(handler, request)` and `callView(handler, ...)` are overloads for `AppRouter<State>` and `WebApp<State>` with a generic default of "writes"; `withRequestLog` becomes a struct `RequestLog<Next>` with the same overloads that forward to `next`; the workers become generic over `Handler` (a generic `[spawn]` call works) and hold `RwLock<Handler>`; `AppRouter` gains a `views` route table whose handlers are `Function<void, State, Request, Reference<Response>>` cloned per request. (b) Make `readsOnly(request)` and `callView(...)` required methods of every handler `serveWorkers` takes: `Router`, `AppRouter`, `WebApp` and `RequestLog` get them, and a bare lambda passed to `serveWorkers` is wrapped by `asHandler(lambda)` (breaking for callers that pass a lambda or a struct with only `call`). (c) A separate entry `serveWorkersApp` for apps with views, leaving `serveWorkers` as it is (the block's "serveWorkers takes the read lock for a view handler" then does not hold by name). Option (a) keeps the block's text; (b) is the smallest compiler-free change.
 
 - [ ] TODO-5806: Sessions: a cookie and per-session state
   - owner: ai
@@ -692,6 +695,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - diagnostics goldens that mention the old text are updated in the same change
     - full release gate green
   - stop_rule: the return-type diagnostic only; no new type resolution rules.
+
+- [ ] TODO-6112: An overload on `App<S>` loses to a generic `H` overload
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
+  - parallel_track: generic-struct-overload
+  - scope: Two same-arity generic helpers `mode<S>([App<S>] h)` and `mode<H>([H] h)` in one namespace, called with an `App<i32>`, select `mode<H>` whichever is declared first (both orders print 0 below), although the spec says a concrete parameter type beats an unbound template parameter and a candidate that is more specific in one position wins. Repro (`primec --emit=vm`): `namespace a { [public struct] App<S>() { [public S mut] state } [public return<i32>] mode<S>([App<S>] h) { return(1i32) } [public return<i32>] mode<H>([H] h) { return(0i32) } }` and `main() { [/a/App<i32>] x{/a/App<i32>{3i32}}  print_line(/a/mode(x)) ... }` prints 0, expected 1; no `ambiguous call` is reported.
+  - implementation_notes: the specificity comparison treats `App<S>` as one generic marker like `H`, so the two candidates tie and the first (or last) wins; a parameter whose type is a template instance with an unbound argument should rank above a bare unbound parameter, and a tie should be the `ambiguous call to` diagnostic.
+  - acceptance:
+    - the repro prints 1 for `App<i32>` and 0 for a type that is not an `App`, with a semantics and a compile-run test; a true tie reports `ambiguous call`
+    - full release gate green
+  - stop_rule: the specificity order of same-arity generic overloads only.
+
+- [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Function values; found with TODO-5804)
+  - parallel_track: function-call-diagnostic
+  - scope: In `lock.read([]([Box] b) { return(b.f(b.base)) })` with `Box{[Function<i32, i32> mut] f ...}` the call `b.f(x)` reports `unknown method: /Box/f [PSC1005]`. `Function.call` is `mut`, so the real reason is that `b` is read-only; the message should say so and name the fix (hold a clone in a `mut` local: `[Function<i32, i32> mut] h{b.f}`, which compiles).
+  - acceptance:
+    - the diagnostic for calling a `Function` field through a read-only value says that calling a `Function` needs a mutable place and suggests a `mut` local copy; semantics test; goldens updated
+    - full release gate green
+  - stop_rule: this one diagnostic.
 
 - [ ] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
   - owner: ai
