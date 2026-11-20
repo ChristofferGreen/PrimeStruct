@@ -241,9 +241,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `panic` on Wasm only; arrays stay unsupported on Wasm.
 
-- [ ] TODO-6108: `repeat` with a negative `i32` count says so at run time
+- [~] TODO-6108: `repeat` with a negative `i32` count says so at run time
   - owner: ai
   - status: ready
+  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
   - created_at: 2026-11-20
   - phase: Runtime errors (found while doing TODO-5744)
   - parallel_track: repeat-negative-count
@@ -727,9 +728,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-6110: A logical import of a stdlib module root without a library duplicates its definitions
+- [~] TODO-6110: A logical import of a stdlib module root without a library duplicates its definitions
   - owner: ai
   - status: ready
+  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
   - created_at: 2026-11-20
   - phase: Imports (docs/spec/source-pipeline.md; found with TODO-6097)
   - parallel_track: logical-stdlib-import
@@ -741,9 +743,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the double splice of a stdlib file; no change to library imports.
 
-- [ ] TODO-6111: An unknown type as a return type is reported as `unsupported return type`
+- [~] TODO-6111: An unknown type as a return type is reported as `unsupported return type`
   - owner: ai
   - status: ready
+  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (found with TODO-6097)
   - parallel_track: unknown-type-diagnostic
@@ -780,9 +783,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the mutability check of a `Function` call only.
 
-- [ ] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
+- [~] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
   - owner: ai
   - status: ready
+  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
   - created_at: 2026-11-20
   - phase: Surface syntax (docs/spec/syntax-and-lexing.md)
   - parallel_track: chained-index-parse
