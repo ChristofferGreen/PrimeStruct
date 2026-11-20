@@ -147,7 +147,7 @@ of sync with them.
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | in_progress | lifecycle-struct-slot |
+| TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | ready | lifecycle-reference-element |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 
 ### Ready Now
@@ -185,7 +185,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872, TODO-5804; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Lifecycle bugs found with TODO-6098 (one worker, outside Ready Now):  (slot stride of a builtin vector) (`block() { seed }` into a `move` parameter) (`uninitialized<vector<T>>` struct field), TODO-6102 (slots of vectors of structs); deferred TODO-6103 (`map` and `soa` slots)
+- Lifecycle bugs found with TODO-6098 (outside Ready Now): ready TODO-6104 (an element read through a `Reference<vector<vector<i64>>>`); deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -674,18 +674,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [~] TODO-6102: A slot of a vector of structs copies its elements on `init` and destroys them on `drop`
+- [ ] TODO-6104: An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer
   - owner: ai
-  - status: in_progress
-  - claimed_by: lifecycle-bugs (worktree-agent-aa9512acd813c609f), 2026-11-20
+  - status: ready
   - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
-  - parallel_track: lifecycle-struct-slot
-  - scope: Found with TODO-6098. `init(*slot, v)` for a `Pointer<uninitialized<vector<Noisy>>>` (a struct with a `Destroy` helper and a `vector<i64>` field) keeps the shallow five-slot record copy: `drop(*slot)` runs no `Destroy` and frees nothing, so the elements' buffers and the vector's own buffer leak (3 blocks for two elements). TODO-6098 typed only slots of scalar vectors as the nested vector record (`resolveUninitializedTypeInfoFromPointerTargetLocal`). A slot local of a vector of structs knows no element path.
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
+  - parallel_track: lifecycle-reference-element
+  - scope: Found with TODO-6099. `peek([Reference<vector<vector<i64>>>] v) { return(v[0i32].count()) }` called on a local `vector<vector<i64>>` with one pushed vector frees the element's buffer (the live block count drops by one) and the owner's destroy at scope end then faults with `VM error: invalid heap free address in IR`. The same read through a read-only `[vector<vector<i64>>] v` parameter or a local is fine. The IR copies the five-slot element record into a temporary, clears the source's owner flag (`[record + 4 slots]`) and destroys the temporary: the element is treated as a temporary the copy takes over. `isBuiltinVectorElementHelperCall` (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp) answers false for a receiver local that is a `Reference` with a struct path and no `referenceToVector` flag, which is what a `Reference<vector<T>>` parameter of a builtin vector of vectors has, so the `at` it resolves to is read as a call returning a value. Hits `Mutex<vector<vector<i64>>>` (a `locked` lambda reading `rows[0i32][0i32]` through its `Reference` parameter).
+  - implementation_notes: reproduce with the `peek` helper above and `heapLiveBlocks()` (VM, optexe); compare the IR of `peek` taking `[vector<vector<i64>>]`.
   - acceptance:
-    - positive: after `init(*slot, v)` of a named owner, a temporary and a place, the slot holds the elements (count, a field, a nested vector field); `drop(*slot)` destroys each element once (the `Destroy` prints once per element) and frees every buffer; `heapLiveBlocks()` returns to its start (VM, optexe); values on native
-    - matrix case on every config; docs/spec/value-lifecycle.md updated; full release gate green
-  - stop_rule: slots of vectors of structs; a vector of vectors, `map` and `soa` are TODO-6103.
+    - positive: reading `v[i]`, `v[i].count()` and `v[i][j]` through a `Reference<vector<vector<i64>>>` parameter leaves the owner's buffers alone (heap statistics unchanged, values right) on the VM and optexe; values on native
+    - matrix case on every config; full release gate green
+  - stop_rule: element reads of builtin vectors of vectors through a `Reference`; no change to the stdlib `Vector<T>`.
 
 - [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
   - owner: ai

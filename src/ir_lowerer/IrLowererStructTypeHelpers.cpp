@@ -247,6 +247,34 @@ bool resolveBuiltinVectorElementStructPath(const std::string &elementText,
   return false;
 }
 
+void applyUninitializedVectorSlotElementPath(const Expr &binding,
+                                             const ResolveStructTypeNameFn &resolveStructTypeName,
+                                             LocalInfo &info) {
+  for (const auto &transform : binding.transforms) {
+    if (transform.name != "Pointer" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string pointee;
+    if (!extractTopLevelUninitializedTypeText(trimTemplateTypeText(transform.templateArgs.front()),
+                                              pointee)) {
+      return;
+    }
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(pointee, base, arg) ||
+        !isBuiltinCollectionTypeName(trimTemplateTypeText(base), "vector")) {
+      return;
+    }
+    std::string elementPath;
+    if (resolveBuiltinVectorElementStructPath(
+            arg, binding.namespacePrefix, resolveStructTypeName, elementPath) &&
+        !elementPath.empty()) {
+      info.vectorElementLifecyclePath = elementPath;
+    }
+    return;
+  }
+}
+
 ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, std::string> &importAliases) {

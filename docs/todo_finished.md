@@ -2507,6 +2507,7 @@ are left unarchived.
 | TODO-6099 | Pointer arithmetic on a slot of a builtin `vector<T>` steps one slot, so a `Vector<vector<i64>>` push throu... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6100 | A `block() { seed }` argument of a `[T move]` parameter is copied, not destroyed twice | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6101 | A struct field `[uninitialized<vector<T>>]` stores the whole vector record | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

@@ -260,4 +260,76 @@ main() {
   runSlotProgram("uninitialized_vector_field", source, "1h 4 34 0h 1h 0h");
 }
 
+// A slot of a vector of structs: `init` of a named owner or a temporary hands the buffer over, of a place copies each
+// element; `drop` destroys each element once (`Destroy` prints its id) and frees every buffer.
+TEST_CASE("a slot of a vector of structs copies on init and destroys on drop") {
+  const std::string source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Noisy() {
+  [i32] id{0i32}
+  [vector<i64>] data{vector<i64>()}
+  Destroy() { print_line(this.id) }
+}
+
+[effects(heap_alloc), return<vector<Noisy>>]
+make([i32] first, [i32] second) {
+  [vector<Noisy> mut] out{vector<Noisy>()}
+  out.push(Noisy{first, vector<i64>(5i64)})
+  out.push(Noisy{second, vector<i64>(6i64)})
+  return(out)
+}
+
+[effects(heap_alloc), return<void>]
+store_copy([Pointer<uninitialized<vector<Noisy>>> mut] slot, [vector<Noisy>] shared) {
+  init(*slot, shared)
+}
+
+[unsafe effects(heap_alloc), return<void>]
+release([Pointer<uninitialized<vector<Noisy>>> mut] slot) {
+  drop(*slot)
+  /std/intrinsics/memory/free(slot)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] start{heapLiveBlocks()}
+  if(true) {
+    [vector<Noisy> mut] owner{make(11i32, 22i32)}
+    [Pointer<uninitialized<vector<Noisy>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<Noisy>>>(1i32)}
+    init(*slot, owner)
+    [Reference<vector<Noisy>>] stored{borrow(*slot)}
+    print_line(stored.count())
+    print_line(900i32)
+    release(slot)
+    print_line(901i32)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [Pointer<uninitialized<vector<Noisy>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<Noisy>>>(1i32)}
+    init(*slot, make(33i32, 44i32))
+    print_line(910i32)
+    release(slot)
+    print_line(911i32)
+  }
+  print_line(heapLiveBlocks() - start)
+  if(true) {
+    [vector<Noisy> mut] place{make(55i32, 66i32)}
+    [Pointer<uninitialized<vector<Noisy>>> mut] slot{/std/intrinsics/memory/alloc<uninitialized<vector<Noisy>>>(1i32)}
+    store_copy(slot, place)
+    print_line(920i32)
+    release(slot)
+    print_line(921i32)
+  }
+  print_line(heapLiveBlocks() - start)
+  return(0i32)
+}
+)";
+  runSlotProgram("slot_of_vector_of_structs",
+                 source,
+                 "2 900 11 22 901 0h 910 33 44 911 0h 920 55 66 921 55 66 0h");
+}
+
 TEST_SUITE_END();

@@ -183,7 +183,11 @@ bool resolveUninitializedTypeInfoFromPointerTargetLocal(const LocalInfo &local, 
   out.keyValueKeyKind = local.keyValueKeyKind;
   out.keyValueValueKind = local.keyValueValueKind;
   out.structPath = local.structTypeName;
-  if (local.pointerToVector && !local.isSoaVector) {
+  if (local.pointerToVector && !local.isSoaVector && local.vectorElementLifecyclePath.has_value() &&
+      !local.vectorElementLifecyclePath->empty()) {
+    // A slot of a builtin vector of structs (or of vectors): the record, with the path its elements go through.
+    out.structPath = nestedBuiltinVectorElementPath(*local.vectorElementLifecyclePath);
+  } else if (local.pointerToVector && !local.isSoaVector) {
     // A slot of a builtin `vector<T>` of scalars is the whole five-slot record. A local names no record
     // or the builtin `/vector`; a record named by the element type's hash is the stdlib vector's.
     constexpr LocalInfo::ValueKind ScalarKinds[] = {LocalInfo::ValueKind::Int32,

@@ -123,6 +123,12 @@ std::string nestedBuiltinVectorElementPath(const std::string &innerElementPath);
 // path of its own elements (empty for scalars).
 bool isNestedBuiltinVectorElementPath(const std::string &path,
                                       std::string *innerElementStructPathOut = nullptr);
+// A `Pointer<uninitialized<vector<T>>>` slot of a vector of structs (or of vectors) records the struct path of its
+// elements in `vectorElementLifecyclePath`, so `init` copies and `drop` destroys them (docs/spec/value-lifecycle.md,
+// Uninitialized Storage).
+void applyUninitializedVectorSlotElementPath(const Expr &binding,
+                                             const ResolveStructTypeNameFn &resolveStructTypeName,
+                                             LocalInfo &info);
 // Resolves the element type text of a builtin `vector<T>`: true with the struct path of `T`, the
 // synthetic path of a builtin vector `T`, or an empty path for a scalar; false otherwise.
 bool resolveBuiltinVectorElementStructPath(const std::string &elementText,

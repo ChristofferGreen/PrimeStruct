@@ -259,17 +259,21 @@
   - `storage` must be `uninitialized<T>` or `dereference(ptr)` where `ptr` is `Pointer<uninitialized<T>>` or
     `Reference<uninitialized<T>>`, and it must be definitely uninitialized at the call site.
   - `value` is consumed (move-by-default); use `clone(value)` to duplicate.
-  - A slot of a builtin `vector<T>` of scalars (`Pointer<uninitialized<vector<i64>>>`) holds the whole five-slot
-    record (count, capacity, data, owner flag). `init` of a named owner or a temporary hands its buffer to the slot (a
-    temporary's owner flag is cleared); a view, a borrowed parameter or any other place is copied with its elements.
-    `drop` of the slot frees the buffer, so `Mutex<vector<i64>>{v}` of a non-empty vector holds its elements and
-    leaves no live block when the mutex and its copies are gone. Pointer arithmetic on such a pointer (`at`,
-    `at_unsafe`, `realloc`, `plus`) steps the five slots of one record, so the stdlib `Vector<vector<i64>>` (a
-    `Reference<vector<vector<i64>>>` helper pushing fresh vectors) keeps each element at its own record. Slots of
-    vectors of structs or vectors and `map` are not covered by this rule.
+  - A slot of a builtin `vector<T>` (`Pointer<uninitialized<vector<i64>>>`, also of structs and of vectors) holds the
+    whole five-slot record (count, capacity, data, owner flag). `init` of a named owner or a temporary hands its buffer
+    to the slot (a temporary's owner flag is cleared); a view, a borrowed parameter or any other place is copied with
+    its elements, each element through its type's `Copy` helpers. `drop` of the slot destroys each element (a struct's
+    `Destroy` and the buffers of its fields, an inner vector's buffer) once and frees the buffer, so
+    `Mutex<vector<i64>>{v}` of a non-empty vector holds its elements and leaves no live block when the mutex and its
+    copies are gone. Pointer arithmetic on such a pointer (`at`, `at_unsafe`, `realloc`, `plus`) steps the five slots of
+    one record, so the stdlib `Vector<vector<i64>>` (a `Reference<vector<vector<i64>>>` helper pushing fresh vectors)
+    keeps each element at its own record.
   - A struct field of type `uninitialized<vector<T>>` is the same five-slot record: `init(h.items, v)` stores it,
     `borrow(h.items)` reads it and `drop(h.items)` frees it. `[vector<T> mut] out{take(h.items)}` is an owning vector
     (the field's owner flag is cleared, so the struct never frees the buffer `out` owns); `out` may grow it.
+  - A `String` slot works the same way. `alloc<uninitialized<map<K, V>>>` is a lowering error (`does not support alloc
+    target type`) on every backend, and `init` of a `soa<T>` into a `Pointer<uninitialized<soa<T>>>` is the semantic
+    error `init value type mismatch`; neither slot exists yet.
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.

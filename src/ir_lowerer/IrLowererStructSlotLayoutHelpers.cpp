@@ -914,6 +914,7 @@ ExprLocalInfoVisitorFn makeApplyStructValueInfoFromBinding(
 void applyStructValueInfoFromBinding(const Expr &expr,
                                      const ResolveStructTypeNameFn &resolveStructTypeName,
                                      LocalInfo &info) {
+  applyUninitializedVectorSlotElementPath(expr, resolveStructTypeName, info);
   if (!info.structTypeName.empty()) {
     return;
   }
