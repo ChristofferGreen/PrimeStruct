@@ -479,9 +479,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the config and its annotations only; opcode gaps found by it (heap, strings, atomics, channels) are separate leaves.
   - notes: a matrix helper such as `check()` that returns an `if` expression could not run on Wasm until TODO-6089 (a value-yielding `if`) was fixed.
 
-- [ ] TODO-6120: The snippet of a diagnostic in an imported file is cut from the primary file's text
+- [~] TODO-6120: The snippet of a diagnostic in an imported file is cut from the primary file's text
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: lib-id-agent (worktree-agent-a0c813bb559c19011), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6080)
   - parallel_track: diagnostics-import-snippet
@@ -636,9 +637,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: function shapes in the library ABI; no change to generics or to the link.
   - notes: deferred: not committed; follows when a real library needs a shape that is refused today.
 
-- [ ] TODO-6093: The compiler build id of a library costs less than hashing the 22 MB `primec`
+- [~] TODO-6093: The compiler build id of a library costs less than hashing the 22 MB `primec`
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: lib-id-agent (worktree-agent-a0c813bb559c19011), 2026-11-20
   - created_at: 2026-11-20
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 6)
   - parallel_track: lib-build-id
