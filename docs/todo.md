@@ -291,9 +291,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrow tracking for Pointer roots and aliases.
   - notes: deferred: queued behind the Ready Now cap.
 
-- [ ] TODO-6098: `init(*slot, v)` of a non-empty builtin `vector<T>` stores one slot
+- [~] TODO-6098: `init(*slot, v)` of a non-empty builtin `vector<T>` stores one slot
   - owner: ai
   - status: ready
+  - claimed_by: init-vector (worktree-agent-a22fbcf4bf638bbf8), 2026-11-20
   - created_at: 2026-11-20
   - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
   - parallel_track: vector-init
