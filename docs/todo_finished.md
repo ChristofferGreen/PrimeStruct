@@ -2527,6 +2527,8 @@ are left unarchived.
 | TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6120 | The snippet of a diagnostic in an imported file is cut from the primary file's text | [undated.md](todo_archive/undated.md) | - |
 | TODO-6122 | The library cutoff of the build runner passed the cache hash as the compiler build id | [undated.md](todo_archive/undated.md) | - |
+| TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6132 | Gate entries that pass alone but fail in the gate (watchdog silence or hard cap) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 
 <!-- INDEX-END -->
 
