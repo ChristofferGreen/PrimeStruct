@@ -358,9 +358,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: measurement only.
   - notes: step (3) needs a quiet machine and a person (or an agent allowed to show windows) at the Mac; the guard counts images, not milliseconds.
 
-- [ ] TODO-5956: Native string arenas and the remaining string heap statistics
+- [~] TODO-5956: Native string arenas and the remaining string heap statistics
   - owner: ai
   - status: ready
+  - claimed_by: string-arenas (worktree agent-ad3f1a3afe8d1ebc3), 2026-11-20
   - created_at: 2026-11-12
   - phase: Native PrimeScroll (docs/NativeUiPlan.md; follows TODO-5586)
   - parallel_track: native-backend-strings
