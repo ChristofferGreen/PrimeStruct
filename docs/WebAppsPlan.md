@@ -10,7 +10,7 @@ parameter, static files), `/std/http/server`, `/std/json` and `/std/html` (an es
 vocabulary) exist and run on the VM and `--emit=optexe` (docs/spec/stdlib-reference.md). Servers are optexe binaries, on one thread (`serve`) or with worker threads (`serveWorkers`: Concurrency below); containers are out of scope. The server
 waits on all of its open connections at once with `poll`, so an idle connection does not stall the others
 (TODO-5705). One file may import both `/std/html` and `/std/json`; both export `Writer`, so each is
-named by its full path. Repeated parameters give their first value and path parameters are not decoded (TODO-5718).
+named by its full path. `queryParam` and `formParam` give the first value of a repeated parameter (`queryParamCount`/`queryParamAt` and the form pair give all), and `pathParam` is not decoded (`pathParamDecoded` decodes `%XX`; TODO-5718).
 `examples/apps/todo_web/main.prime` is the first app with pages, forms and buttons: an `AppRouter<TodoList>` whose
 POST routes change the list and redirect back (TODO-5704), since moved to a `WebApp<TodoList>` for fragments.
 `/std/ui/events` holds the event values handlers receive, `PointerEvent`, `KeyEvent`, `ChangeEvent` with

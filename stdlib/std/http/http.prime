@@ -133,12 +133,34 @@ namespace http {
       return(path_param(this.route, this.path, name))
     }
 
+    // The segment of `pathParam`, decoded: "%XX" is the byte XX and "+" stays a plus (a plus in a path is a literal
+    // plus). Empty when the segment is missing, holds a "%" not followed by two hex digits or decodes to bytes that
+    // are not UTF-8; `pathParam` tells a missing segment from an empty one.
+    [return<String> effects(heap_alloc)]
+    pathParamDecoded([StringView] name) {
+      return(percent_decode(path_param(this.route, this.path, name)))
+    }
+
     // The first query parameter called `name`, decoded ("+" is a space, "%XX" the byte XX). Empty when the parameter
     // is missing, has no value, holds a malformed escape or decodes to bytes that are not UTF-8; `hasQueryParam` tells
     // a missing parameter from an empty one. A name is compared with the decoded parameter names.
     [return<String> effects(heap_alloc)]
     queryParam([StringView] name) {
       return(urlencoded_value(urlencoded_pair(this.query, name)))
+    }
+
+    // How many query parameters are called `name`, for a repeated parameter (`?tag=a&tag=b`). Read the values with
+    // `queryParamAt`.
+    [return<i32>]
+    queryParamCount([StringView] name) {
+      return(urlencoded_count(this.query, name))
+    }
+
+    // The value of the `index`th (from 0, in the order sent) query parameter called `name`, decoded as `queryParam`
+    // decodes. Empty when `index` is out of range. Each call scans the query again.
+    [return<String> effects(heap_alloc)]
+    queryParamAt([StringView] name, [i32] index) {
+      return(urlencoded_value(urlencoded_pair_at(this.query, name, index)))
     }
 
     // Whether the query has a parameter called `name`, with or without a value.
@@ -156,6 +178,26 @@ namespace http {
         return(String{})
       }
       return(urlencoded_value(urlencoded_pair(this.body, name)))
+    }
+
+    // How many parameters of the form body are called `name` (0 when the body is not a form). Read the values with
+    // `formParamAt`.
+    [return<i32>]
+    formParamCount([StringView] name) {
+      if(!this.isFormBody()) {
+        return(0i32)
+      }
+      return(urlencoded_count(this.body, name))
+    }
+
+    // The value of the `index`th (from 0, in the order sent) form parameter called `name`, decoded as `formParam`
+    // decodes. Empty when `index` is out of range or the body is not a form.
+    [return<String> effects(heap_alloc)]
+    formParamAt([StringView] name, [i32] index) {
+      if(!this.isFormBody()) {
+        return(String{})
+      }
+      return(urlencoded_value(urlencoded_pair_at(this.body, name, index)))
     }
 
     // Whether the body is a form with a parameter called `name`, with or without a value.
@@ -222,7 +264,17 @@ namespace http {
   // empty view. A pair that matches is never empty, since an empty pair is skipped.
   [return<StringView>]
   urlencoded_pair([StringView] text, [StringView] name) {
+    return(urlencoded_pair_at(text, name, 0i32))
+  }
+
+  // The `index`th (from 0) pair of `text` whose decoded name is `name`, or an empty view when there are fewer.
+  [return<StringView>]
+  urlencoded_pair_at([StringView] text, [StringView] name, [i32] index) {
+    if(index < 0i32) {
+      return(StringView{})
+    }
     [i32 mut] start{0i32}
+    [i32 mut] seen{0i32}
     while(start < text.count()) {
       [i32] found{text.indexOfFrom("&", start)}
       [i32] end{if(found < 0i32, then() { text.count() }, else() { found })}
@@ -232,12 +284,45 @@ namespace http {
         [i32] keyEnd{if(equals < 0i32, then() { pair.count() }, else() { equals })}
         [StringView] key{pair.slice(0i32, keyEnd)}
         if(urlencoded_equals(key, name)) {
-          return(pair)
+          if(seen == index) {
+            return(pair)
+          }
+          seen = seen + 1i32
         }
       }
       start = end + 1i32
     }
     return(StringView{})
+  }
+
+  // How many pairs of `text` have the decoded name `name`.
+  [return<i32>]
+  urlencoded_count([StringView] text, [StringView] name) {
+    [i32 mut] count{0i32}
+    while(!urlencoded_pair_at(text, name, count).empty()) {
+      count = count + 1i32
+    }
+    return(count)
+  }
+
+  // `segment` with each "%XX" replaced by the byte XX and every other byte (a "+" too) kept. Empty when a "%" is not
+  // followed by two hex digits or the result is not UTF-8.
+  [return<String> effects(heap_alloc)]
+  percent_decode([StringView] segment) {
+    [String mut] out{String{}}
+    [i32 mut] index{0i32}
+    while(index < segment.count()) {
+      [i32] byte{percent_byte_at(segment, index)}
+      if(byte < 0i32) {
+        return(String{})
+      }
+      out.pushByte(convert<u8>(byte))
+      index = index + urlencoded_width_at(segment, index)
+    }
+    if(utf8ErrorOffset(out.data, out.count()) >= 0i32) {
+      return(String{})
+    }
+    return(out)
   }
 
   // The decoded value of `pair` (the part after its first "="), or an empty String when it has none, holds a
@@ -291,6 +376,14 @@ namespace http {
     if(byte == 43u8) {
       return(32i32)
     }
+    return(percent_byte_at(text, index))
+  }
+
+  // The byte that the encoding at `index` of `text` stands for without a plus rule: XX for "%XX", else the byte
+  // itself; -1 for a "%" not followed by two hex digits.
+  [return<i32>]
+  percent_byte_at([StringView] text, [i32] index) {
+    [u8] byte{text.byteAt(index)}
     if(byte != 37u8) {
       return(convert<i32>(byte))
     }

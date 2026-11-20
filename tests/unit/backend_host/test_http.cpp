@@ -310,6 +310,20 @@ TEST_CASE("query and form parameters decode the same through optexe") {
                                      << " failed (tests/fixtures/http/query_params.prime)");
 }
 
+TEST_CASE("repeated query and form parameters and decoded path parameters on the VM") {
+  const int failed = runOnVm("repeated_params");
+  CHECK_MESSAGE(failed == 0,
+                "repeated_params case " << failed
+                                        << " failed (tests/fixtures/http/repeated_params.prime)");
+}
+
+TEST_CASE("repeated query and form parameters and decoded path parameters through optexe") {
+  const int failed = runThroughOptexe("repeated_params");
+  CHECK_MESSAGE(failed == 0,
+                "repeated_params case " << failed
+                                        << " failed (tests/fixtures/http/repeated_params.prime)");
+}
+
 TEST_CASE("serve answers routed, missing, malformed, oversized and silent clients over loopback") {
   if (!socketsPermitted()) {
     MESSAGE("skipped: socket() is not permitted here (EPERM or EACCES)");

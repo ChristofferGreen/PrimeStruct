@@ -716,7 +716,12 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   - The value is empty when the parameter is missing, has no value (`a=` or `a`), holds a malformed escape (a `%` not
     followed by two hex digits) or decodes to bytes that are not UTF-8. Reading a parameter never faults.
   - `hasQueryParam(name)` and `hasFormParam(name)` tell a missing parameter from an empty one: they are true for `a=`
-    and `a`, and for a parameter whose value is malformed. With repeated parameters the first wins, as with headers.
+    and `a`, and for a parameter whose value is malformed. With repeated parameters (`?tag=a&tag=b`) `queryParam` and
+    `formParam` give the first, as with headers.
+  - All values of a name are read by count and index, like the header accessors: `queryParamCount(name) -> i32` and
+    `queryParamAt(name, index) -> String`, and `formParamCount` and `formParamAt` for a form body. The index counts
+    from 0 in the order sent; each call rescans the text and allocates only the returned `String`; an index that is
+    out of range (negative or at least the count) gives an empty `String`, and a body that is not a form has count 0.
   - A body is a form when `isFormBody()`: its `Content-Type` is `application/x-www-form-urlencoded`, compared ASCII
     case-insensitively after dropping parameters such as `; charset=utf-8` and surrounding white space. For any other
     body `formParam` is empty and `hasFormParam` false. Multipart bodies are not decoded.
@@ -724,6 +729,8 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   ```prime
   [String] name{request.queryParam("name")}         // "/hello?name=Ada%20L" gives "Ada L"
   [String] title{request.formParam("title")}        // a body "title=Buy+milk" gives "Buy milk"
+  [i32] tags{request.queryParamCount("tag")}        // "/p?tag=a&tag=b" gives 2
+  [String] second{request.queryParamAt("tag", 1i32)} // and "b"
   ```
 - `Response` is built by a handler and serialized by the server:
   - `status` is 200 unless set, and `body` is a `String`;
@@ -760,7 +767,10 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   expected, such as `serve`, middleware or a generic parameter.
 
   `request.pathParam(name)` is the request path's segment at the place of the `:name` segment, a `StringView` into the
-  path as sent (not percent-decoded), or an empty view when the matched pattern has no such segment. Before it calls
+  path as sent (not percent-decoded), or an empty view when the matched pattern has no such segment.
+  `request.pathParamDecoded(name)` gives the same segment as an owned `String` with `%XX` decoded and `+` left alone (a
+  `+` in a path is a literal plus, RFC 3986, unlike in a query); a `%` not followed by two hex digits, or bytes that are
+  not UTF-8 after decoding, give an empty `String`, and `pathParam` still tells a missing segment. Before it calls
   the handler, `call` sets the request's `route` field to the matched pattern, and `pathParam` walks that pattern and
   the path again. The request is passed by value, so the handler gets its own copy with `route` set. Keeping the
   pattern rather than a table of captured segments keeps `Request` a small carrier of views with no limit on the
