@@ -263,6 +263,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: transform positions for this one diagnostic; no change to other messages.
 
+- [~] TODO-6132: Gate entries that pass alone but fail in the gate (watchdog silence or hard cap)
+  - owner: ai
+  - status: ready
+  - claimed_by: worker-assign-flaky (worktree agent-af590ee4265af7e2e), 2026-11-20
+  - created_at: 2026-11-20
+  - phase: Test reliability (found in gates of tree 91abaaf19)
+  - parallel_track: gate-flaky-entries
+  - scope: two gates of the 91abaaf19 lineage failed entries that passed when rerun alone: `semantics_move_cases_22_24` (hard cap 25 s), `smoke_wasm_node_6_6` (295 s hard cap), `vm_maps_map_helpers_4` (55 s hard cap) in one run, and `pick_values_9_9`, `vector_owners_11_11`, `12_12`, `17_17`, `38_38` in another (watchdog: 180 s silence at the `primec: run clang++` step). Under the "No flaky tests" rule this is a bug in the tests or the code; load is not a cause and no timeout is raised. Investigate where the time goes per entry (cases per shard, `clang++` runs per case, beats per unit), and fix by splitting or cheapening, by beats from the work loop, or by a beat before and after the native-compile step so silence rather than the cap governs.
+  - acceptance:
+    - per entry, the measured time split and the cause recorded here
+    - each cause fixed (split shard, cheaper test, or liveness beat) with no timeout raised; any hard-cap change documented with its reason in docs/TestWatchdog.md
+    - full release gate green
+  - stop_rule: the eight named entries and what they share; if a cause cannot be found, write down exactly what was measured here and stop; no test is deleted without cause.
+
 - [ ] TODO-5688: Calls require the callee's whole active effect set
   - owner: ai
   - status: deferred
@@ -522,9 +536,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the chosen lowering or diagnostic, with matrix coverage
   - stop_rule: the decision and its first slice; no change to the VM or native task models.
 
-- [ ] TODO-6129: Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted
+- [~] TODO-6129: Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted
   - owner: ai
   - status: ready
+  - claimed_by: worker-assign-flaky (worktree agent-af590ee4265af7e2e), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6105)
   - parallel_track: assign-type-mismatch
