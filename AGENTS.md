@@ -317,6 +317,7 @@ build and layout solidify.
 - Reproduce and validate bugs in release mode first (`./scripts/compile.sh --release`, `build-release/ctest`, or the matching `build-release` test binary). Use debug-mode reruns only when the release path does not provide enough information to finish the fix.
 - If the current `./scripts/compile.sh --release` or focused release `ctest` run has failing targets, prioritize reducing those failures before starting new TODO implementation slices.
 - Do not claim a bug is fixed unless you can no longer reproduce it after the change.
+- File a `TODO-XXXX` leaf in `docs/todo.md` (with `scope`, `acceptance`, `stop_rule` and a repro) for every bug you find, whether or not you fix it in the same change, before you report. Check id collisions against `origin/master` right before filing. A bug that is only mentioned in a report or a commit message is lost; list each one in the report with its TODO id.
 
 ## Git commit guidelines
 - Work directly on `master` and push there (`git push origin HEAD:master`
