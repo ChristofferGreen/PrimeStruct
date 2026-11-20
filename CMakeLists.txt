@@ -164,6 +164,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/OptionsVmFlags.cpp
   src/support/ProcessRunner.cpp
   src/support/Sha256.cpp
+  src/support/ExecutableBuildId.cpp
   src/support/BenchmarkSink.cpp
   src/support/ReceiverElementFamilyClassifier.cpp
   src/support/SourceLocationMapper.cpp
@@ -968,6 +969,11 @@ if(PRIMESTRUCT_MIMALLOC_LINKED)
   target_link_libraries(primec PRIVATE mimalloc)
 endif()
 primestructEnableWarnings(primec)
+# The compiler build id of a library is the linker's identifier (src/support/ExecutableBuildId.cpp). Apple's linker
+# writes LC_UUID by default; GNU ld and lld need --build-id. Without one the id falls back to the hash of the file.
+if(NOT APPLE AND NOT WIN32)
+  target_link_options(primec PRIVATE -Wl,--build-id)
+endif()
 
 # Standalone generator for TODO-5224's per-module stdlib symbol manifests -
 # see docs/LibrarySymbolManifestLazyImports.md. Only needs the frontend
@@ -1465,6 +1471,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_ir_link_instantiations.cpp
     tests/unit/runtime/test_ir_link_cli.cpp
     tests/unit/runtime/test_library_archive.cpp
+    tests/unit/runtime/test_executable_build_id.cpp
   )
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)

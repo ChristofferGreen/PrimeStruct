@@ -7,7 +7,7 @@
 #include "primec/ir/IrLinker.h"
 #include "primec/ir/IrValidation.h"
 #include "primec/pipeline/LibraryArchive.h"
-#include "primec/support/Sha256.h"
+#include "primec/support/ExecutableBuildId.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
@@ -105,7 +105,10 @@ std::string primecOutput(const std::filesystem::path &dir, const std::string &ki
 
 std::string compilerBuildId() {
   std::string id;
-  REQUIRE(primec::sha256FileHex("./primec", id));
+  std::string idError;
+  REQUIRE_MESSAGE(
+      primec::executableBuildId("./primec", primec::BuildIdSource::LinkerIdFirst, id, idError),
+      idError);
   return id;
 }
 

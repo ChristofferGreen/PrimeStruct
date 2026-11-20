@@ -3,7 +3,7 @@
 #include "test_compile_run_text_filters_helpers.h"
 
 #include "primec/pipeline/LibraryArchive.h"
-#include "primec/support/Sha256.h"
+#include "primec/support/ExecutableBuildId.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
@@ -93,7 +93,11 @@ buildLibrary(const std::filesystem::path &dir, const std::string &name, const st
 
 primec::LibraryArchiveExpectations expectations() {
   primec::LibraryArchiveExpectations expected;
-  REQUIRE(primec::sha256FileHex("./primec", expected.compilerBuildId));
+  std::string idError;
+  REQUIRE_MESSAGE(
+      primec::executableBuildId(
+          "./primec", primec::BuildIdSource::LinkerIdFirst, expected.compilerBuildId, idError),
+      idError);
   return expected;
 }
 

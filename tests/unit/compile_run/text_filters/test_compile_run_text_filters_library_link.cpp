@@ -4,7 +4,7 @@
 #include "test_compile_run_text_filters_helpers.h"
 
 #include "primec/pipeline/LibraryArchive.h"
-#include "primec/support/Sha256.h"
+#include "primec/support/ExecutableBuildId.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
@@ -172,7 +172,11 @@ TEST_CASE("library link: a function the archive does not define is an undefined 
   const std::filesystem::path dir = testScratchPath("library_link_undefined");
   const std::string ui = buildLibrary(dir, "ui", UiSource);
   primec::LibraryArchiveExpectations expected;
-  REQUIRE(primec::sha256FileHex("./primec", expected.compilerBuildId));
+  std::string idError;
+  REQUIRE_MESSAGE(
+      primec::executableBuildId(
+          "./primec", primec::BuildIdSource::LinkerIdFirst, expected.compilerBuildId, idError),
+      idError);
   primec::LibraryArchiveContent content;
   std::string error;
   REQUIRE_MESSAGE(primec::readLibraryArchiveFile(ui, expected, content, error), error);
@@ -200,7 +204,11 @@ TEST_CASE("library link: a library compiled against a library links when both ar
                                        "{\n  return(base_value() + 1i32)\n}\n",
                                        "--library " + quoteShellArg(base));
   primec::LibraryArchiveExpectations expected;
-  REQUIRE(primec::sha256FileHex("./primec", expected.compilerBuildId));
+  std::string idError;
+  REQUIRE_MESSAGE(
+      primec::executableBuildId(
+          "./primec", primec::BuildIdSource::LinkerIdFirst, expected.compilerBuildId, idError),
+      idError);
   primec::LibraryArchiveContent content;
   std::string error;
   REQUIRE_MESSAGE(primec::readLibraryArchiveFile(mid, expected, content, error), error);

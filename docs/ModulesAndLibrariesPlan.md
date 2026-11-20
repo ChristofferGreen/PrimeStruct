@@ -274,8 +274,8 @@ harness of slice 9 is part of the acceptance of TODO-5925 and TODO-5926, not a l
    Lowering takes the public functions as roots through `IrLowerer::lower(..., libraryRoots)`: each is reserved as a
    real call with the VM target's address ABI, behind a stub entry that is removed afterwards. A root whose shape the
    real-call ABI cannot take is a diagnostic (TODO-6032 for the shapes). The archive holds the stdlib functions its roots
-   reached as real calls, which slice 4 must merge or leave out. The compiler build id is the SHA-256 of the `primec`
-   executable, the manifest is lines of words, and the container is a table of sections with a SHA-256 each.
+   reached as real calls, which slice 4 must merge or leave out. The compiler build id was the SHA-256 of the `primec`
+   executable (now the linker's UUID with that hash as the fallback), the manifest is lines of words, and the container is a table of sections with a SHA-256 each.
 4. **Compiling against a library.** `--library`, the resolver reading the interface, `[imported]` declarations,
    lowering of imported calls, the link in the pipeline, the version and interface-hash checks.
    Landed (TODO-5925, in three parts, with a differential corpus of 23 programs on the VM and optexe): documented in `docs/spec/integration-and-tooling.md`,

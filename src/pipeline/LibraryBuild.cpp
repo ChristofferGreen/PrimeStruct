@@ -7,7 +7,7 @@
 #include "LibraryOwnership.h"
 #include "primec/pipeline/LibraryLink.h"
 #include "primec/pipeline/ModuleInterface.h"
-#include "primec/support/Sha256.h"
+#include "primec/support/ExecutableBuildId.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -74,11 +74,7 @@ bool readTextFile(const std::filesystem::path &path, std::string &text) {
 bool computeCompilerBuildId(const std::string &executablePath,
                             std::string &id,
                             std::string &error) {
-  if (!sha256FileHex(executablePath, id)) {
-    error = "cannot read the compiler executable to identify its build: " + executablePath;
-    return false;
-  }
-  return true;
+  return executableBuildId(executablePath, BuildIdSource::LinkerIdFirst, id, error);
 }
 
 bool buildLibraryArchiveContent(CompilePipelineOutput &output,

@@ -11,8 +11,8 @@
 
 namespace primec {
 
-// The compiler build id of the running executable: the SHA-256 of the file at `executablePath` (BuildRunner's
-// selfExecutablePath). False, with `error` set, when the file cannot be read.
+// The compiler build id of the running executable at `executablePath` (BuildRunner's selfExecutablePath): its linker
+// identifier (`uuid-<hex>`), or the SHA-256 of the file (`sha256-<hex>`) when it has none; see ExecutableBuildId.h. False, with `error` set, when the file cannot be read.
 bool computeCompilerBuildId(const std::string &executablePath, std::string &id, std::string &error);
 
 // Builds the archive content of the module `output` holds (a program validated with an entry stub, see

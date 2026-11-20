@@ -8,6 +8,7 @@
 #include "primec/pipeline/BuildLibraryLinks.h"
 #include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/pipeline/BuildSubprojects.h"
+#include "primec/pipeline/LibraryBuild.h"
 #include "primec/support/Sha256.h"
 
 #include <algorithm>
@@ -91,7 +92,7 @@ std::vector<std::string> libraryArchivePaths(const BuildStep &step,
 // cannot be read is a change, so the compile runs and reports it.
 bool libraryUsesAreCurrent(const BuildStep &step,
                            const BuildRunSettings &settings,
-                           const std::string &compilerHash,
+                           const std::string &compilerBuildId,
                            const BuildCacheEntry &entry) {
   if (step.libraries.empty()) {
     return true;
@@ -99,7 +100,7 @@ bool libraryUsesAreCurrent(const BuildStep &step,
   BuildLibrarySymbols symbols;
   std::string error;
   return loadBuildLibrarySymbols(
-             libraryArchivePaths(step, settings), compilerHash, symbols, error) &&
+             libraryArchivePaths(step, settings), compilerBuildId, symbols, error) &&
          buildLibraryUsesUnchanged(entry.uses, symbols);
 }
 
@@ -109,7 +110,7 @@ bool libraryUsesAreCurrent(const BuildStep &step,
 // A step whose inputs cannot all be hashed gets no entry and runs again next time.
 void storeBuildCacheEntry(const BuildStep &step,
                           const BuildRunSettings &settings,
-                          const std::string &compilerHash,
+                          const std::string &compilerBuildId,
                           const std::string &cacheFile,
                           const std::string &key,
                           const std::string &outputPath) {
@@ -130,7 +131,7 @@ void storeBuildCacheEntry(const BuildStep &step,
     BuildLibrarySymbols symbols;
     std::string error;
     if (!readBuildUsesList(cacheFile + ".uses", entry.uses) ||
-        !loadBuildLibrarySymbols(archives, compilerHash, symbols, error) ||
+        !loadBuildLibrarySymbols(archives, compilerBuildId, symbols, error) ||
         !completeBuildLibraryUses(entry.uses, symbols)) {
       return;
     }
@@ -411,6 +412,14 @@ int runBuildGraph(const BuildGraphData &given,
   std::string compilerHash;
   const bool caching =
       !settings.cacheDir.empty() && sha256FileHex(settings.primecPath, compilerHash);
+  // The id a library archive records for the compiler that wrote it (the linker's UUID), which is not the
+  // hash that keys the cache above.
+  std::string compilerBuildId;
+  std::string compilerBuildIdError;
+  if (caching &&
+      !computeCompilerBuildId(settings.primecPath, compilerBuildId, compilerBuildIdError)) {
+    compilerBuildId.clear();
+  }
 
   std::atomic<bool> stop{false};
 
@@ -520,7 +529,7 @@ int runBuildGraph(const BuildGraphData &given,
       BuildCacheEntry entry;
       if (readBuildCacheEntry(cacheFile, entry) &&
           buildCacheEntryIsCurrent(entry, key, outputPath) &&
-          libraryUsesAreCurrent(step, settings, compilerHash, entry)) {
+          libraryUsesAreCurrent(step, settings, compilerBuildId, entry)) {
         result.state = State::UpToDate;
         return;
       }
@@ -540,7 +549,7 @@ int runBuildGraph(const BuildGraphData &given,
     const int status = runProgramCaptured(arguments, settings.projectDir, capturedOut, capturedErr);
     result.diagnostics = capturedErr + capturedOut;
     if (caching && status == 0) {
-      storeBuildCacheEntry(step, settings, compilerHash, cacheFile, key, outputPath);
+      storeBuildCacheEntry(step, settings, compilerBuildId, cacheFile, key, outputPath);
     }
     if (caching) {
       std::error_code ec;

@@ -696,3 +696,32 @@
   - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-6112)
   - scope: Viability of a type-differentiated overload compared the parameter's bare type name (`map`, `array`, `App`) with the argument's full type text (`map<i32, i32>`, `/a/App__t...`), so a parameter spelled with template arguments (`/vector/count([map<i32, i32>] values)` next to a `[string]` overload) was rejected for the very argument it names, with `no viable overload ... expected map got map<i32, i32>`. Repro: the program of `vector namespaced count auto inference accepts same-path helpers on non-vector targets` (calls_flow_collections 931_940), which asserted that rejection although its title says the helpers are accepted.
   - completion_note: viability builds the parameter's full type text (name, template arguments and capability argument), expands a generated template instance back to its template with its arguments, and matches template parameters inside arguments. The program is now accepted (it returns 21 + 22 + 23) and the test asserts that. No stdlib or example program changed behaviour in the full gate other than this one test.
+
+- [x] TODO-6093: The compiler build id of a library costs less than hashing the 22 MB `primec`
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-20
+  - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 6)
+  - parallel_track: lib-build-id
+  - scope: `currentCompilerBuildId` (src/pipeline/LibraryLink.cpp) hashes the whole `primec` executable once per compile that has `--library`; since TODO-6092 that is 14 ms on arm64 (SHA-2 instructions) and still most of the 129M instructions a linked library costs over an empty `main` (61.5M against about 190M); on x86_64 and Linux the portable routine is about 5 times slower. The id makes an archive refuse a compiler that did not write it, and that meaning must survive. Options considered: a sidecar next to the executable (A), a stamp embedded at link time (B), a hash tree (D) and no check inside a build graph (E).
+  - decision: 2026-11-20, option C: the id is the linker's own UUID (`LC_UUID` on macOS, the GNU `.note.gnu.build-id` with `--build-id`, `lld --build-id=sha1`), read from the first kilobytes of the executable. Cost near zero, no sidecar and no build-graph step, and the linker derives it from the content, so it changes with the code. Fall back to the full SHA-256 of the executable when the executable carries no UUID or build-id note (`-no_uuid`, a deterministic-build flag, a PE build); the two forms are distinguishable in the id text so an archive written under one is refused by a compiler that computes the other. Make sure the release and debug builds link with a UUID (`--build-id` on Linux). Option A may be added later if a toolchain without a UUID matters.
+  - acceptance:
+    - the build id of `primec` is its linker UUID or build-id note when present and the full hash otherwise (both paths tested; the fallback by a test hook or a stripped copy)
+    - a library built by one compiler is refused by another, as the corpus tests it today
+    - instructions retired of a linked library compile against an empty `main`, recorded in docs/todo_log.md
+  - stop_rule: the definition of the compiler build id; no change to what an archive carries.
+  - notes: the measurements are in docs/todo_log.md, TODO-6093.
+  - completed: 2026-11-20. `executableBuildId` (src/support/ExecutableBuildId.cpp) reads `LC_UUID` / the GNU build-id note from the headers; ids are `uuid-<hex>` or `sha256-<hex>`; primec links with `--build-id` off macOS. The build runner passes the library id, not the cache hash, to the cutoff (a regression of the first version, TODO-6122). Numbers in docs/todo_log.md.
+
+- [x] TODO-6122: The library cutoff of the build runner passed the cache hash as the compiler build id
+  - owner: ai
+  - status: done
+  - created_at: 2026-11-20
+  - completed: 2026-11-20
+  - phase: Modules and libraries (found by the gate of TODO-6093)
+  - parallel_track: lib-build-id
+  - scope: `BuildRunner.cpp` handed `compilerHash` (the SHA-256 of `primec`, the cache key) to `loadBuildLibrarySymbols` as the compiler build id an archive must record; once the id became the linker UUID every library step of a build graph read its archive as "another compiler build" and rebuilt (seven `build_library_cutoff` and `build_library_graph` tests failed). Repro: `ctest -R build_library_cutoff` on the first version of TODO-6093.
+  - acceptance:
+    - the cutoff and the used-symbols record get the id `computeCompilerBuildId` gives
+    - the seven failing tests pass
+  - stop_rule: the id passed to the cutoff; the cache key is TODO-6123.

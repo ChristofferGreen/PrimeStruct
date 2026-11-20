@@ -211,7 +211,11 @@ the payloads in table order. Integers are little-endian. Sections are sorted by 
 | `sources` | Only with `--with-sources`: the number of files (u32), then for each, sorted by relative path: path length u32, path, size u64, text |
 | `symbols` | The text of `primec --emit=symbols` |
 
-`compiler` is the SHA-256 of the `primec` executable that wrote the archive. There is no timestamp, no absolute path
+`compiler` identifies the `primec` executable that wrote the archive: `uuid-<hex>` is the linker's own build identifier
+(`LC_UUID` of a Mach-O file, the `NT_GNU_BUILD_ID` note of an ELF file; the linker derives it from the content, so it
+changes with the code), and `sha256-<64 hex>` is the SHA-256 of the whole executable, used when the executable carries no
+identifier (a link with `-no_uuid`, without `--build-id`, a fat Mach-O or a PE file). The prefix keeps the two forms
+apart: an archive written under one is refused by a compiler that computes the other. There is no timestamp, no absolute path
 and no host name in the file: two builds of one source, and builds from two checkouts, are byte-identical. A library is
 usable only by the compiler build and the IR schema version recorded in it; there is no binary compatibility promise.
 

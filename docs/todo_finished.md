@@ -2503,6 +2503,7 @@ are left unarchived.
 | TODO-6089 | A value-yielding `if` validates and runs on Wasm | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6091 | A method with an explicit `self` keeps its parameter count through a library interface | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6092 | Where the fixed cost of a linked library goes | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6093 | The compiler build id of a library costs less than hashing the 22 MB `primec` | [undated.md](todo_archive/undated.md) | - |
 | TODO-6094 | `import /std/*` is a diagnostic, not an uncaught `std::out_of_range` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6095 | Unresolvable stdlib imports are positioned diagnostics, and a robustness test feeds odd programs to `primec` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6096 | An `[auto]` local of `Result.ok`, `Result.map` or `Result.and_then` is the stdlib `Result` sum and destroys... | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2516,6 +2517,7 @@ are left unarchived.
 | TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | [undated.md](todo_archive/undated.md) | - |
 | TODO-6114 | A same-arity overload whose parameter spells template arguments was never viable for a matching argument | [undated.md](todo_archive/undated.md) | - |
 | TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6122 | The library cutoff of the build runner passed the cache hash as the compiler build id | [undated.md](todo_archive/undated.md) | - |
 
 <!-- INDEX-END -->
 

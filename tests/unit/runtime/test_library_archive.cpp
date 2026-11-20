@@ -175,6 +175,21 @@ TEST_CASE("library archive: another compiler build is refused with its own messa
   CHECK(mentionsRebuild(error));
 }
 
+TEST_CASE("library archive: a build id of the other form is refused") {
+  // `uuid-<hex>` (the linker identifier) and `sha256-<hex>` (the fallback hash) never equal each other.
+  LibraryArchiveContent content = sampleContent();
+  content.manifest.compilerBuildId = std::string("uuid-") + BuildId;
+  const std::vector<uint8_t> bytes = bytesOf(content);
+  LibraryArchiveExpectations other = expectations();
+  other.compilerBuildId = std::string("sha256-") + BuildId;
+  LibraryArchiveContent out;
+  std::string error;
+  CHECK_FALSE(deserializeLibraryArchive(bytes, other, out, error));
+  CHECK(error.find("another compiler build") != std::string::npos);
+  other.compilerBuildId = content.manifest.compilerBuildId;
+  CHECK(deserializeLibraryArchive(bytes, other, out, error));
+}
+
 TEST_CASE("library archive: another IR schema version is refused with its own message") {
   LibraryArchiveContent content = sampleContent();
   content.manifest.irSchemaVersion = IrSchemaVersion - 1u;
