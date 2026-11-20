@@ -138,7 +138,7 @@ main() {
                                   .string();
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") !=
+  CHECK(readFile(errPath).find("unknown return type: Unknown on /wrapMapUnknownValue") !=
         std::string::npos);
 }
 

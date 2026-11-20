@@ -31,9 +31,60 @@ main() {
   CHECK(error == "unknown return type: NoSuchType on /make");
 }
 
+TEST_CASE("unknown type inside a Task return type is named") {
+  const std::string source = R"(
+[return<Task<NoSuchType>>]
+wrap() {
+  return(vector<i32>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error == "unknown return type: NoSuchType on /wrap");
+}
+
+TEST_CASE("unknown type inside a map return type is named") {
+  const std::string valueSource = R"(
+[return<map<string, NoSuchType>>]
+wrap() {
+  return(map<string, i32>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(valueSource, "/main", error));
+  CHECK(error == "unknown return type: NoSuchType on /wrap");
+}
+
+TEST_CASE("unknown type nested two templates deep in a map is named") {
+  const std::string source = R"(
+[return<map<string, vector<NoSuchType>>>]
+wrap() {
+  return(map<string, i32>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error == "unknown return type: NoSuchType on /wrap");
+}
+
 TEST_CASE("resolvable but unsupported return type keeps its message") {
   const std::string source = R"(
-[return<map<string, Unknown>>]
+[return<map<string, void>>]
 wrap() {
   return(map<string, i32>{})
 }
@@ -46,6 +97,66 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unsupported return type on /wrap") != std::string::npos);
+}
+
+TEST_CASE("vector return of an enum, a struct and a primitive stays accepted") {
+  const std::string source = R"(
+[enum]
+Colors() {
+  Red
+  Green
+}
+
+[struct]
+Point() {
+  [i32] x{0i32}
+}
+
+[return<vector<Colors>>]
+colors() {
+  return(vector<Colors>{})
+}
+
+[return<vector<Point>>]
+points() {
+  return(vector<Point>{})
+}
+
+[return<array<i32>>]
+numbers() {
+  return(array<i32>{1i32})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a defined sum inside a map return type is not called unknown") {
+  const std::string source = R"(
+[sum]
+Item {
+  [i32] plain
+}
+
+[return<map<string, Item>>]
+wrap() {
+  return(map<string, i32>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown return type") == std::string::npos);
+  CHECK(error.find("on /wrap") != std::string::npos);
 }
 
 TEST_CASE("array return requires template argument") {

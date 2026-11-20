@@ -148,10 +148,13 @@ bool restrictMatchesBinding(const std::string &restrictType,
                             bool typeHasTemplate,
                             const std::string &namespacePrefix);
 ReturnKind returnKindForTypeName(const std::string &name);
+// `sumNames` (optional) lists the `[sum]` types: a name inside a collection return type that is one of them is not
+// reported as unknown.
 ReturnKind getReturnKind(const Definition &def,
                          const std::unordered_set<std::string> &structNames,
                          const std::unordered_map<std::string, std::string> &importAliases,
-                         std::string &error);
+                         std::string &error,
+                         const std::unordered_set<std::string> *sumNames = nullptr);
 bool definitionHasNeverReturn(const Definition &def);
 
 bool getBuiltinOperatorName(const Expr &expr, std::string &out);

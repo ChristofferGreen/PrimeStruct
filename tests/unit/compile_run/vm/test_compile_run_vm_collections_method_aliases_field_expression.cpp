@@ -643,7 +643,7 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unsupported return type on /wrapMapUnknownValue") !=
+  CHECK(readFile(errPath).find("unknown return type: Unknown on /wrapMapUnknownValue") !=
         std::string::npos);
 }
 

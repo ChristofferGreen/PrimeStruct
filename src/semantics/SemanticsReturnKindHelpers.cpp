@@ -1,5 +1,6 @@
 #include "SemanticsHelpers.h"
 
+#include <algorithm>
 #include <cctype>
 #include <functional>
 
@@ -8,7 +9,8 @@ namespace primec::semantics {
 ReturnKind getReturnKind(const Definition &def,
                          const std::unordered_set<std::string> &structNames,
                          const std::unordered_map<std::string, std::string> &importAliases,
-                         std::string &error) {
+                         std::string &error,
+                         const std::unordered_set<std::string> *sumNames) {
   auto containsUninitializedType = [](const std::string &text) -> bool {
     auto trim = [](const std::string &value) -> std::string {
       size_t start = 0;
@@ -146,6 +148,54 @@ ReturnKind getReturnKind(const Definition &def,
       }
       return false;
     };
+    // The first plain name inside `typeArg` that is neither a builtin type, a template parameter nor a struct, so
+    // a missing import or a typo is named. Empty when every plain name resolves (the element is then disallowed
+    // for another reason and keeps the generic message).
+    std::function<std::string(const std::string &)> findUnknownTypeName =
+        [&](const std::string &typeArg) -> std::string {
+      const std::string normalizedArg = normalizeBindingTypeName(typeArg);
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalizedArg, base, arg)) {
+        if (isPrimitiveBindingTypeName(normalizedArg) ||
+            returnKindForTypeName(normalizedArg) != ReturnKind::Unknown ||
+            std::find(def.templateArgs.begin(), def.templateArgs.end(), normalizedArg) !=
+                def.templateArgs.end() ||
+            !resolveStructTypePath(normalizedArg, def.namespacePrefix, structNames).empty()) {
+          return "";
+        }
+        auto importIt = importAliases.find(normalizedArg);
+        if (importIt != importAliases.end() && structNames.count(importIt->second) > 0) {
+          return "";
+        }
+        if (sumNames != nullptr &&
+            (!resolveStructTypePath(normalizedArg, def.namespacePrefix, *sumNames).empty() ||
+             (importIt != importAliases.end() && sumNames->count(importIt->second) > 0))) {
+          return "";
+        }
+        return normalizedArg;
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args)) {
+        return "";
+      }
+      for (const std::string &nested : args) {
+        const std::string unknown = findUnknownTypeName(nested);
+        if (!unknown.empty()) {
+          return unknown;
+        }
+      }
+      return "";
+    };
+    auto unsupportedElementError = [&](const std::vector<std::string> &elementArgs) -> std::string {
+      for (const std::string &element : elementArgs) {
+        const std::string unknown = findUnknownTypeName(element);
+        if (!unknown.empty()) {
+          return "unknown return type: " + unknown + " on " + def.fullPath;
+        }
+      }
+      return "unsupported return type on " + def.fullPath;
+    };
     std::function<ReturnKind(const std::string &)> resolveReturnTypeKind =
         [&](const std::string &candidateType) -> ReturnKind {
       const std::string normalizedType = normalizeBindingTypeName(candidateType);
@@ -183,7 +233,7 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         if (!isAllowedCollectionTypeArg(args.front())) {
-          error = "unsupported return type on " + def.fullPath;
+          error = unsupportedElementError(args);
           return ReturnKind::Unknown;
         }
         return ReturnKind::Array;
@@ -195,7 +245,7 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         if (!isAllowedCollectionTypeArg(args.front())) {
-          error = "unsupported return type on " + def.fullPath;
+          error = unsupportedElementError(args);
           return ReturnKind::Unknown;
         }
         return ReturnKind::Array;
@@ -210,7 +260,7 @@ ReturnKind getReturnKind(const Definition &def,
           return ReturnKind::Unknown;
         }
         if (!isAllowedCollectionTypeArg(args.front()) || !isAllowedCollectionTypeArg(args.back())) {
-          error = "unsupported return type on " + def.fullPath;
+          error = unsupportedElementError(args);
           return ReturnKind::Unknown;
         }
         return ReturnKind::Array;

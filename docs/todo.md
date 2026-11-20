@@ -239,19 +239,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `panic` on Wasm only; arrays stay unsupported on Wasm.
   - decision: 2026-11-20 (owner): option (a), wait for TODO-6138; no lowerer intrinsic and no emitter pattern match. `panic` compiles for Wasm when arrays do.
 
-- [~] TODO-6130: An unknown type inside a templated return type is not named
+- [ ] TODO-6144: An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked
   - owner: ai
   - status: ready
-  - claimed_by: build-hash (worktree-agent-a1f688ce17b85b0ca), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Frontend and diagnostics (found with TODO-6111)
+  - created_at: 2026-11-21
+  - phase: Frontend and diagnostics (found with TODO-6130)
   - parallel_track: unknown-type-diagnostic
-  - scope: TODO-6111 names a plain unknown return type (`unknown return type: NoSuchType on /make`). An unknown type nested in a template is still `unsupported return type on /f` without naming it: `[return<vector<NoSuchType>>] f()`, `[return<map<string, Unknown>>] wrap()` (tests/unit/compile_run/native_backend/test_compile_run_native_backend_collections_shims_maps_vector_method_access.cpp pins the old text). `resolveReturnTypeKind` in src/semantics/SemanticsReturnKindHelpers.cpp rejects the element through `isAllowedCollectionTypeArg` and gives one message for a missing type and for a resolvable but disallowed one.
-  - implementation_notes: split the check: an argument that is a plain name resolving to no builtin and no struct is `unknown return type: <arg> on /f`; a resolvable but disallowed element (for example a nested non-struct) keeps `unsupported return type`. Update the two goldens that pin the old text for `Unknown`.
+  - scope: `returnKindForTypeName` (src/semantics/SemanticsBindingTypeHelpers.cpp) returns `Array` for any `vector<X>`, `array<X>`, `soa<X>` or `Buffer<X>` of one argument, so `resolveReturnTypeKind` in src/semantics/SemanticsReturnKindHelpers.cpp never reaches its own `vector` and `array` element checks (they are dead code but for the experimental backing types). `[return<vector<NoSuchType>>] f()` and `[return<array<NoSuchType>>]` pass semantics and fail later (`VM lowering error: vm backend does not support return type on /f`, or a body mismatch `return type mismatch: expected vector`). TODO-6130 found it: an element check that names plain names unknown, added at that shortcut, reported 6 false positives in the release gate because `[sum]` types are not in `structNames` (`vector<Item>` of a `[sum]` in tests/unit/program_matrix/test_program_matrix_vector_owners.cpp) and it cannot see the template parameters of an enclosing generic struct. `getReturnKind` now takes an optional `sumNames`; the vector check needs that plus the enclosing struct's template parameters, enum and alias names, and every caller of `getReturnKind`.
+  - implementation_notes: reuse `findUnknownTypeName` in `getReturnKind` for a shape-resolved collection once the caller passes the sum names (SemanticsValidatorBuildReturnKinds.cpp already does) and `def`'s enclosing template parameters; run the whole gate, the stdlib and the program matrix are the false-positive tests.
   - acceptance:
-    - `return<vector<NoSuchType>>` and `return<map<string, NoSuchType>>` name `NoSuchType`, with semantics tests; a resolvable disallowed element keeps its message
+    - `return<vector<NoSuchType>>` and `return<array<NoSuchType>>` give `unknown return type: NoSuchType on /f`, with semantics tests; vectors of structs, enums, sums, template parameters of the definition and of the enclosing struct still compile
     - full release gate green
-  - stop_rule: the return-type element diagnostic only; no new type resolution rules.
+  - stop_rule: the element name of these four shapes; no new type resolution rules.
+  - repro: `printf '[return<vector<NoSuchType>>]\nwrap() {\n  return(vector<i32>{})\n}\n\n[return<int>]\nmain() {\n  return(1i32)\n}\n' > t.prime; ./primec --emit=vm t.prime --entry /main` prints `VM lowering error: vm backend does not support return type on /wrap`.
 
 - [ ] TODO-6131: The span of an unknown return type is the definition, not the type
   - owner: ai
