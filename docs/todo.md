@@ -235,9 +235,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6074: An args pack destroys the `String`s of its elements
+- [~] TODO-6074: An args pack destroys the `String`s of its elements
   - owner: ai
   - status: ready
+  - claimed_by: pack-a (worktree-agent-a1553f15dbd68feb3), 2026-11-20
   - created_at: 2026-11-19
   - phase: Lifecycle (found while finishing TODO-5727)
   - parallel_track: lifecycle-temporaries
