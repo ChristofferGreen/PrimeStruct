@@ -2803,6 +2803,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_type_aliases.cpp
     tests/unit/semantics/test_semantics_move.cpp
     tests/unit/semantics/test_semantics_intra_body_call_diagnostics.cpp
+    tests/unit/semantics/test_semantics_on_error_handler_shape.cpp
     tests/unit/semantics/test_semantics_collection_path_predicates.cpp
     tests/unit/semantics/test_semantics_type_text.cpp
     tests/unit/semantics/test_semantics_math_names.cpp
@@ -3020,6 +3021,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.traits
     primestruct.semantics.move
     primestruct.semantics.intra_body_call_diagnostics
+    primestruct.semantics.on_error_handler_shape
     primestruct.semantics.collection_path_predicates
     primestruct.semantics.type_text
     primestruct.semantics.math_names

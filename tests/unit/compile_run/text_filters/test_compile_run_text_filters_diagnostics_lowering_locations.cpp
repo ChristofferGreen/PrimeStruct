@@ -112,7 +112,7 @@ TEST_CASE("a lowering error names a generic type the way the program spells it")
   CHECK(diagnostics.find("__arity") == std::string::npos);
 }
 
-TEST_CASE("a wrong on_error handler arity is reported at the try that reaches it") {
+TEST_CASE("a wrong on_error handler arity is reported at the on_error transform") {
   const std::string source = R"(import /std/result/*
 
 [struct]
@@ -144,10 +144,12 @@ main() {
   const std::string diagnostics =
       diagnosticsJsonOf("lowering_location_on_error_arity", source, srcPath);
   INFO(diagnostics);
-  CHECK(diagnostics.find("\"message\":\"argument count mismatch for /onErr\"") !=
+  CHECK(diagnostics.find(
+            "on_error handler argument count mismatch: /onErr takes 2 parameters, expected 1") !=
         std::string::npos);
   CHECK(diagnostics.find("\"primary_span\":{\"file\":\"" + srcPath +
-                         "\",\"line\":24,\"column\":11,") != std::string::npos);
+                         "\",\"line\":22,\"column\":14,") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /onErr\"") != std::string::npos);
 }
 
 TEST_CASE("a lowering error prints its location in the text form") {

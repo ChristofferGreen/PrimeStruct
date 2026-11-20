@@ -1065,6 +1065,17 @@ bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &tra
     if (transform.name != "on_error") {
       continue;
     }
+    // A handler whose shape is wrong is reported at the `on_error` transform that names it, with the handler's
+    // definition as a related span.
+    auto failOnErrorHandlerShape = [&](const Definition &handlerDef, std::string message) -> bool {
+      if (error_.empty()) {
+        clearStructuredDiagnosticContext();
+      }
+      capturePrimarySpanIfUnset(transform.sourceLine, transform.sourceColumn);
+      captureRelatedSpan(
+          handlerDef.sourceLine, handlerDef.sourceColumn, "definition: " + handlerDef.fullPath);
+      return resultSink_.fail(std::move(message));
+    };
     if (out.has_value()) {
       return failOnErrorTransformDiagnostic("duplicate on_error transform on " +
                                             context);
@@ -1086,14 +1097,25 @@ bool SemanticsValidator::parseOnErrorTransform(const std::vector<Transform> &tra
     }
     auto paramIt = paramsByDef_.find(handler.handlerPath);
     if (paramIt == paramsByDef_.end() || paramIt->second.empty()) {
-      return failOnErrorTransformDiagnostic(
-          "on_error handler requires an error parameter: " +
-          handler.handlerPath);
+      return failOnErrorTransformDiagnostic("on_error handler requires an error parameter: " +
+                                            handler.handlerPath);
     }
     const BindingInfo &paramBinding = paramIt->second.front().binding;
     if (!errorTypesMatch(handler.errorType, paramBinding.typeName, namespacePrefix)) {
-      return failOnErrorTransformDiagnostic(
-          "on_error handler error type mismatch: " + handler.handlerPath);
+      return failOnErrorHandlerShape(
+          *defMap_.at(handler.handlerPath),
+          "on_error handler error type mismatch: " + handler.handlerPath + " takes " +
+              paramBinding.typeName + " as its first parameter, expected the error type " +
+              handler.errorType);
+    }
+    const size_t expectedParams = 1 + transform.arguments.size();
+    if (paramIt->second.size() != expectedParams) {
+      return failOnErrorHandlerShape(
+          *defMap_.at(handler.handlerPath),
+          "on_error handler argument count mismatch: " + handler.handlerPath + " takes " +
+              std::to_string(paramIt->second.size()) + " parameters, expected " +
+              std::to_string(expectedParams) + " (the error of type " + handler.errorType +
+              " and " + std::to_string(transform.arguments.size()) + " bound arguments)");
     }
     handler.boundArgs.reserve(transform.arguments.size());
     for (const auto &argText : transform.arguments) {

@@ -134,7 +134,6 @@ of sync with them.
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
-| TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | ready | diagnostics-on-error-handler |
 | TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | deferred | diagnostics-internal-errors |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
@@ -178,7 +177,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6123; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6052, TODO-6090 (Wasm matrix config), TODO-6107 (`panic` on Wasm); deferred TODO-6059, TODO-6051
-- Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
+- Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
@@ -512,18 +511,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - a diagnostics test where the root and the sink differ names each correctly
   - stop_rule: message of that diagnostic only.
-
-- [~] TODO-6083: The arity and shape of an `on_error` handler are checked in semantics
-  - owner: ai
-  - status: ready
-  - claimed_by: web-params-a (worktree-agent-ab18fa13ddf892207), 2026-11-20
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5520)
-  - parallel_track: diagnostics-on-error-handler
-  - scope: `on_error<Oops, /onErr>` with `onErr([Oops] err, [i32] extra)` passes semantics and fails in lowering (`argument count mismatch for /onErr`). The check belongs in semantics with a message that names the handler and the expected shape. Span decided by the owner on 2026-11-20: option (a), the `on_error` transform that names the handler (primary span), with the handler definition as a related span. Rejected: the first `try` that uses the handler.
-  - acceptance:
-    - a semantics test for a wrong arity and a wrong first parameter type, with file, line and column
-  - stop_rule: semantic diagnostics of `on_error` handlers only.
 
 - [ ] TODO-6084: Internal lowering errors (`missing semantic-product ...`) say so
   - owner: ai

@@ -79,6 +79,9 @@
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
+  - **A handler has a fixed shape.** Its first parameter is the error (of `ErrorType`) and it has one more
+    parameter for each bound `args...`. Semantics rejects a handler with another parameter count or another first
+    parameter type at the `on_error` transform that names it (the handler's definition is a related span).
   - **Handlers flow into nested blocks.** The handler a definition declares applies to every block nested in its body:
     `if` branches, loop bodies (`loop`, `while`, `for`, `repeat`), `pick` arms, statement blocks (`block() { ... }`)
     and block arguments. A `?` in a nested block needs no `on_error` of its own.
