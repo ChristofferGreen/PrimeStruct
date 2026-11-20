@@ -609,9 +609,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the definition of the compiler build id; no change to what an archive carries.
   - notes: the measurements are in docs/todo_log.md, TODO-6093. TODO-6097 (roots below `/std`) also touches src/pipeline/LibraryLink.cpp; do not run the two at once.
 
-- [ ] TODO-6097: Several stdlib libraries link, and a module a linked library owns is not spliced from the stdlib source
+- [~] TODO-6097: Several stdlib libraries link, and a module a linked library owns is not spliced from the stdlib source
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: lib-roots (worktree-agent-a15cb56cd73ca6910), 2026-11-20
   - created_at: 2026-11-20
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 12; from the TODO-6093 measurements in docs/todo_log.md)
   - parallel_track: lib-stdlib-roots
