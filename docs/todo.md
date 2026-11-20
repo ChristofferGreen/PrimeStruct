@@ -444,9 +444,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: documentation and measurement; no stack-depth checks are added to native.
 
-- [ ] TODO-6090: The program matrix runs the programs Wasm supports on a Wasm config
+- [~] TODO-6090: The program matrix runs the programs Wasm supports on a Wasm config
   - owner: ai
   - status: ready
+  - claimed_by: wasm-matrix-agent (worktree-agent-a095f6cf908123bcd), 2026-11-20
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10
   - parallel_track: wasm-matrix
@@ -727,9 +728,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - matrix case on every config; full release gate green
   - stop_rule: the parse of chained index reads; no change to how index reads lower.
 
-- [ ] TODO-6105: `*field = value` writes through a `mut` `Reference` field
+- [~] TODO-6105: `*field = value` writes through a `mut` `Reference` field
   - owner: ai
   - status: ready
+  - claimed_by: wasm-matrix-agent (worktree-agent-a095f6cf908123bcd), 2026-11-20
   - created_at: 2026-11-20
   - phase: Value lifecycle (docs/spec/value-lifecycle.md, Copies and places)
   - parallel_track: reference-field-write
