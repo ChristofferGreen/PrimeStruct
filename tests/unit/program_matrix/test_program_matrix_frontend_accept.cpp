@@ -394,4 +394,52 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a chained index read with a name first index parses in call and operand") {
+  // `rows[k][j]` once failed to parse in a call argument or an operator operand, because `[k]` followed by `[`
+  // read as an argument label (TODO-6109). A literal first index never did.
+  program_matrix::ProgramCase program;
+  program.name = "frontend_chained_index_name";
+  program.source = R"(
+import /std/collections/*
+
+[return<i64>]
+by_value([vector<vector<i64>>] rows, [i32] k, [i32] j) {
+  return(rows[k][j] + rows[0i32][j])
+}
+
+[return<i64>]
+by_reference([Reference<vector<vector<i64>>>] rows, [i32] k, [i32] j) {
+  [i64 mut] total{0i64}
+  total = total + rows[k][j]
+  return(total)
+}
+
+[effects(io_out), return<int>]
+main() {
+  [vector<vector<i64>> mut] rows{vector<vector<i64>>{}}
+  [vector<i64> mut] first{vector<i64>{}}
+  first.push(10i64)
+  first.push(20i64)
+  [vector<i64> mut] second{vector<i64>{}}
+  second.push(30i64)
+  second.push(40i64)
+  rows.push(first)
+  rows.push(second)
+  [i32] k{1i32}
+  [i32] j{1i32}
+  [i64 mut] total{1i64}
+  print_line(rows[k][j])
+  total = total + rows[k][j]
+  print_line(total)
+  print_line(by_value(rows, k, j))
+  print_line(by_reference(location(rows), k, j))
+  print_line(plus(rows[k][0i32], rows[0i32][j]))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "40\n41\n60\n40\n50\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

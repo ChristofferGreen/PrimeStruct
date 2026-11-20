@@ -584,6 +584,65 @@ main() {
   CHECK(*call.argNames[1] == "value");
 }
 
+TEST_CASE("parses a chained index read with a name as the first index in a call argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(mix(rows[k][j]))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &call = *program.definitions[0].returnExpr;
+  REQUIRE(call.args.size() == 1);
+  CHECK_FALSE(call.argNames[0].has_value());
+  const auto &outer = call.args[0];
+  REQUIRE(outer.kind == primec::Expr::Kind::Call);
+  CHECK(outer.name == "at");
+  REQUIRE(outer.args.size() == 2);
+  CHECK(outer.args[1].name == "j");
+  REQUIRE(outer.args[0].kind == primec::Expr::Kind::Call);
+  CHECK(outer.args[0].name == "at");
+  REQUIRE(outer.args[0].args.size() == 2);
+  CHECK(outer.args[0].args[0].name == "rows");
+  CHECK(outer.args[0].args[1].name == "k");
+}
+
+TEST_CASE("parses a chained index read as an operand and keeps a following labeled argument") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(mix(plus(total, rows[k][j]) [value] 1i32))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &call = *program.definitions[0].returnExpr;
+  REQUIRE(call.args.size() == 2);
+  REQUIRE(call.argNames[1].has_value());
+  CHECK(*call.argNames[1] == "value");
+  REQUIRE(call.args[0].args.size() == 2);
+  CHECK(call.args[0].args[1].name == "at");
+}
+
+TEST_CASE("parses a label before a lambda argument after an expression") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(mix(base [value] [captured]([i32] x) { return(x) }))
+}
+)";
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  REQUIRE(program.definitions[0].returnExpr.has_value());
+  const auto &call = *program.definitions[0].returnExpr;
+  REQUIRE(call.args.size() == 2);
+  REQUIRE(call.argNames[1].has_value());
+  CHECK(*call.argNames[1] == "value");
+}
+
 TEST_CASE("parses call arguments separated by semicolons") {
   const std::string source = R"(
 [return<int>]

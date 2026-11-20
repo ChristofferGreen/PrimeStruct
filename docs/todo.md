@@ -156,7 +156,6 @@ of sync with them.
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | ready | unknown-type-diagnostic |
 | TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
-| TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | ready | chained-index-parse |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 
 ### Ready Now
@@ -782,21 +781,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - per the decision of TODO-6113: either the call through a read-only place is a diagnostic that names the `mut` local clone as the fix, with semantics tests and every existing program that relied on it updated, or the spec line is changed and the unenforced rule removed
     - full release gate green
   - stop_rule: the mutability check of a `Function` call only.
-
-- [~] TODO-6109: `rows[i][j]` with a name as the first index is a parse error in a call argument
-  - owner: ai
-  - status: ready
-  - claimed_by: fix-worker (worktree-agent-a318ffb4455721829), 2026-11-20
-  - created_at: 2026-11-20
-  - phase: Surface syntax (docs/spec/syntax-and-lexing.md)
-  - parallel_track: chained-index-parse
-  - scope: Found with TODO-6104. Two chained index reads where the first index is a name fail to parse inside a call argument or an operator operand: `[vector<vector<i64>> mut] rows{vector<vector<i64>>()}` `[i32] k{0i32}` then `print_line(rows[k][1i32])` or `total = total + rows[k][j]` give `Parse error: expected identifier after \`[...]\`` (or `expected transform identifier`) at the end of the expression. `rows[0i32][j]` (a literal first index) and the binding `[i64] one{rows[k][1i32]}` parse and run. The text filter rewrites `plus(total, rows[k][j])` and then reads `[k][j]` as a transform list.
-  - implementation_notes: reproduce with `primevm` on the program above; compare `--dump-stage pre_ast` for `rows[0i32][j]` and `rows[k][j]`.
-  - acceptance:
-    - positive: `rows[k][j]` parses and reads the same value as `rows[0i32][j]` in a call argument, as an operand of `+`, and as an assignment right side, for a local, a by-value parameter and a `Reference` parameter
-    - negative: a genuine transform list `[mut] x` after an expression still reports its diagnostic
-    - matrix case on every config; full release gate green
-  - stop_rule: the parse of chained index reads; no change to how index reads lower.
 
 - [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
   - owner: ai

@@ -98,6 +98,36 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     afterLabel = scan + 1;
     return true;
   };
+  // After `expr[name]`, a following `[...]` is a second index (`rows[k][j]`) rather than the value of a
+  // labeled argument (`f(a [b] [c] x)`) unless that bracket group is itself followed on the same line by
+  // a name or `(`: the value forms that start with `[` are `[T] name...` and `[captures](params)`.
+  auto isChainedIndexRead = [&](size_t bracketIndex) -> bool {
+    if (bracketIndex >= tokens_.size() || tokens_[bracketIndex].kind != TokenKind::LBracket) {
+      return false;
+    }
+    size_t scan = bracketIndex;
+    int depth = 0;
+    while (scan < tokens_.size()) {
+      if (tokens_[scan].kind == TokenKind::LBracket) {
+        ++depth;
+      } else if (tokens_[scan].kind == TokenKind::RBracket && --depth == 0) {
+        break;
+      }
+      ++scan;
+    }
+    if (scan >= tokens_.size()) {
+      return false;
+    }
+    const int closeLine = tokens_[scan].line;
+    ++scan;
+    while (scan < tokens_.size() && isIgnorableToken(tokens_[scan].kind)) {
+      ++scan;
+    }
+    if (scan >= tokens_.size() || tokens_[scan].line != closeLine) {
+      return true;
+    }
+    return tokens_[scan].kind != TokenKind::Identifier && tokens_[scan].kind != TokenKind::LParen;
+  };
   auto isPrimitiveBraceType = [&](const std::string &name) -> bool {
     if (name.empty() || name.find('/') != std::string::npos) {
       return false;
@@ -751,7 +781,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
           while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
             ++nextIndex;
           }
-          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+          if (nextIndex < tokens_.size() && isArgumentLabelValueStart(tokens_[nextIndex].kind) &&
+              !isChainedIndexRead(nextIndex)) {
             break;
           }
         }

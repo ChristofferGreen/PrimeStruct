@@ -2518,6 +2518,7 @@ are left unarchived.
 | TODO-6102 | A slot of a vector of structs copies its elements on `init` and destroys them on `drop` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6104 | An element of a vector of vectors read through a `Reference<vector<vector<i64>>>` frees the element's buffer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6105 | `*field = value` writes through a `mut` `Reference` field | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6109 | `rows[i][j]` with a name as the first index is a parse error in a call argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | [undated.md](todo_archive/undated.md) | - |
 | TODO-6114 | A same-arity overload whose parameter spells template arguments was never viable for a matching argument | [undated.md](todo_archive/undated.md) | - |
 | TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | [2026-11.md](todo_archive/2026-11.md) | - |
