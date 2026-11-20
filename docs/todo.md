@@ -131,7 +131,8 @@ of sync with them.
 | TODO-6090 | The program matrix runs the programs Wasm supports on a Wasm config | ready | wasm-matrix |
 | TODO-6107 | `panic` and every array runtime error compile for Wasm | ready | wasm-arrays-panic |
 | TODO-6108 | `repeat` with a negative `i32` count says so at run time | ready | repeat-negative-count |
-| TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | ready | diagnostics-filtered-columns |
+| TODO-6120 | The snippet of a diagnostic in an imported file is cut from the primary file's text | ready | diagnostics-import-snippet |
+| TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | ready | diagnostics-on-error-handler |
@@ -168,7 +169,7 @@ of sync with them.
 2. TODO-5804
 4. TODO-5603
 5. TODO-6052
-7. TODO-6080
+7. TODO-6120
 
 ### Priority Lanes
 
@@ -180,7 +181,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6093; deferred TODO-5932, TODO-5933, TODO-6032
 - Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
 - Backend parity: TODO-6052, TODO-6090 (Wasm matrix config), TODO-6107 (`panic` on Wasm); deferred TODO-6059, TODO-6051
-- Frontend and diagnostics (split from TODO-5520): TODO-6080; deferred TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
+- Frontend and diagnostics (split from TODO-5520): TODO-6120, TODO-6121; deferred TODO-6081, TODO-6082, TODO-6083, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Web apps (docs/WebAppsPlan.md; built with `--emit=optexe`): TODO-5718
@@ -191,7 +192,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6080 (columns and snippets of the user's source), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) and TODO-6107 (`panic` on Wasm) are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6120 (the snippet of a diagnostic in an imported file), TODO-6121 (debugger columns of rewritten expressions), TODO-6093, TODO-5718 (repeated and decoded web parameters), TODO-6019 (a person measures startup); TODO-6090 (the Wasm matrix config) and TODO-6107 (`panic` on Wasm) are ready. Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -478,21 +479,34 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the config and its annotations only; opcode gaps found by it (heap, strings, atomics, channels) are separate leaves.
   - notes: a matrix helper such as `check()` that returns an `if` expression could not run on Wasm until TODO-6089 (a value-yielding `if`) was fixed.
 
-- [~] TODO-6080: A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form
+- [ ] TODO-6120: The snippet of a diagnostic in an imported file is cut from the primary file's text
   - owner: ai
   - status: ready
-  - claimed_by: filter-offsets (worktree-agent-aea48cb30770b2538), 2026-11-20
-  - created_at: 2026-11-19
-  - phase: Correctness audit 2026-10 (split from TODO-5520)
-  - parallel_track: diagnostics-filtered-columns
-  - scope: A semantic error in `[i32] b{a + 2i32 * nope}` prints line 4 column 34 and the snippet `plus(a, multiply(2i32, nope))`; `nope` is at column 22 of the file. The text filters rewrite operators into calls and keep no offset map.
-  - decision: 2026-11-20, option (a): the text filter records each rewrite as an edit (original range, filtered range), an offset map from the filtered text back to the user's source, and spans, columns and snippets map back through the edits, so a diagnostic shows the user's text and true columns. The token-aligning heuristic (b) and printing both lines (c) are not taken.
-  - implementation_notes: the filters are in src/text_filter (search the operator and call rewrites); the edit list is carried by the parsed program or its source record so `primec` diagnostics, `--collect-diagnostics` and the semantic product spans use it; imports and stdlib text keep their own maps.
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (found with TODO-6080)
+  - parallel_track: diagnostics-import-snippet
+  - scope: The location of a diagnostic in a file the program imports is mapped to that file (`lib.prime:3:22`), but the snippet under it is cut from the primary file's text at that line number: `CliDriver` passes one `sourceText` (the expanded source) to `formatDiagnosticsText`, and the unit-relative line is not a line of it. Repro: `lib.prime` is `[return<int>]` / `helper([i32] a) {` / `  [i32] b{a + 2i32 * nope}` / `  return(b)` / `}`, and `main2.prime` is `main()` calling `helper(x)` (four lines of body) followed by `import<"<path>/lib.prime">` at the end of the file. `primevm main2.prime` prints `lib.prime:3:22: error: Semantic error: unknown identifier: nope` and under it ` 3 |   [i32] x{1i32 + 2i32}` (line 3 of main2.prime) with the caret at column 22. The same program with the import first shows the right line only because the imported text starts at line 1 of the expanded source. A diagnostic in a stdlib file has the same shape.
+  - implementation_notes: the text belongs to the span's source unit: cut the unit's lines out of the expanded text through the `SourceUnit` and `SourceSegment` ranges (`include/primec/frontend/ExpandedSource.h`), or read the file the span names; `formatDiagnosticText` takes one `sourceText` today, so the lookup is per span (a resolver callback or a map from file to text). Do not touch the semantics diagnostic builder (TODO-5977).
   - acceptance:
-    - a diagnostics test asserts file, line, column and the snippet of an error inside an operator expression and a rewritten call, and of an error after a rewritten span on the same line
-    - diagnostics of programs without rewrites are unchanged
+    - a diagnostics test with an error inside an imported project file placed after the primary file's own code asserts file, line, column and the snippet of the imported file
+    - a related span (`note: definition: ...`) in the imported file gets the imported file's snippet too
+    - diagnostics of programs without imports are unchanged
     - full release gate green
-  - stop_rule: spans and snippets only.
+  - stop_rule: which text a snippet is cut from; spans and columns are TODO-6080.
+
+- [ ] TODO-6121: The VM debugger reports the column of the text-filtered source for a rewritten expression
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-20
+  - phase: Correctness audit 2026-10 (found with TODO-6080)
+  - parallel_track: debugger-filtered-columns
+  - scope: TODO-6080 maps the spans of diagnostics back to the text the user wrote, but the IR source map keeps the parser's positions: `IrLowererLowerReturnEmitStage.cpp` (instruction source ranges) and `IrLowererLowerSetupStage.cpp` (function syntax provenance) call `mapExpandedSourceLocation`, which finds the source unit and the line but takes the column of the text-filtered source. `VmDebugAdapter.cpp` and `VmDebugDap.cpp` report that column for stack frames and match breakpoints against it, so a breakpoint written at the user's column of `nope` in `[i32] b{a + 2i32 * x}` (column 22) does not match the instruction, whose recorded column is the filtered `plus(a, multiply(2i32, x))` one. Not run: found by reading the call sites while closing TODO-6080; the repro is a DAP `setBreakpoints` with a column and a `stackTrace` over a statement that contains an operator.
+  - implementation_notes: `SourceLocationMapper::mapFilteredSourceLocation` (TODO-6080) moves a position to the user's text, but building the offset map costs a second, tracking run of the text filters (about +30 percent instructions on a program that imports collections, measured as the first version of TODO-6080 did), so the lowerer must not call it per instruction. Options to decide: (a) record the filter's offsets in the `ExpandedSource` while the first run is made, at the price of one origin per byte on every compile (a startup cost); (b) build the map only when a debugger or `--emit` mode that writes the source map asks for it; (c) leave the debugger on the filtered column and document it. The owner decides; do not pick one without a measurement of startup instructions.
+  - acceptance:
+    - per the decision: a test that reads the column of a stack frame and of a breakpoint over a rewritten expression, or the documented limitation
+    - startup instructions of a program that compiles are measured and not worse
+    - full release gate green
+  - stop_rule: the columns of the IR source map only.
 
 - [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
   - owner: ai

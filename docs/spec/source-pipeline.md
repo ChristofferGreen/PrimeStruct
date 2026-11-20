@@ -14,6 +14,11 @@
    literals, implicit suffixes, project-specific macros, etc.). Text transforms apply to the entire envelope (transform
    list, templates, parameters, and body). Executions are treated as envelopes with an implicit empty body, so the same
    rule applies. Text transforms may append additional text transforms to the same node.
+   Every byte of the filtered text keeps the offset of the source byte it was copied from (a byte a transform wrote,
+   such as the `plus(` of `a + b`, takes the position of the next copied byte), so a diagnostic of the parser, the
+   validator or the lowerer is reported at the line and column of the text the user wrote, and its snippet is cut from
+   that text. The map is built from a second, tracking run of the filters when the first diagnostic is made, so a
+   program that compiles pays nothing for it (`TextFilterOffsetMap`).
 3. **AST builder:** once text transforms finish, the parser builds the canonical AST.
 4. **Template & semantic resolver:** monomorphise templates, resolve namespaces, and apply semantic transforms (effects)
    so the tree is fully resolved and contains only concrete envelopes.

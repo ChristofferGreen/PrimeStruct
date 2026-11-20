@@ -499,8 +499,9 @@ A lowering error is located at the code the user wrote: the primary span is the 
 innermost expression whose lowering failed (`IrLowerer::lower` records it through `ir_lowerer::LoweringErrorLocator`).
 An expression of the standard library that was inlined into a call of the user's is passed over for that call. The text
 form prints it as `file:line:column`, and `--emit-diagnostics` as `primary_span`. A failure that no expression
-reported, for example one found while the lowerer sets up the program, has no span. The column is that of the
-text-filtered source when a text filter rewrote the line (an operator written as `a + b` is lowered as `plus(a, b)`).
+reported, for example one found while the lowerer sets up the program, has no span. The line and column are those of
+the text the user wrote, also when a text filter rewrote the line (an operator written as `a + b` is lowered as
+`plus(a, b)`; see the text transforms in [source-pipeline.md](source-pipeline.md)).
 
 A generated name does not reach a message: a definition the compiler made for a template instance
 (`/std/result/Result__arity2__t...`, `/std/collections/vector/Vector__t...`) is spelled as the program writes the type
