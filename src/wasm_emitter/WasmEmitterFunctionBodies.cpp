@@ -8,6 +8,17 @@ namespace primec {
 namespace {
 
 constexpr uint8_t WasmOpEnd = 0x0b;
+constexpr uint8_t WasmOpUnreachable = 0x00;
+
+bool wasmFunctionReturnsValue(const IrFunction &function) {
+  for (const IrInstruction &inst : function.instructions) {
+    if (inst.op == IrOpcode::ReturnI32 || inst.op == IrOpcode::ReturnI64 ||
+        inst.op == IrOpcode::ReturnF32 || inst.op == IrOpcode::ReturnF64) {
+      return true;
+    }
+  }
+  return false;
+}
 
 WasmLocalLayout computeLocalLayout(const IrFunction &function,
                                    const std::vector<uint8_t> &irLocalTypes,
@@ -196,16 +207,22 @@ bool lowerFunctionCode(const IrFunction &function,
   if (localLayout.addressed) {
     emitWasmFramePrologue(localLayout, runtime, outBody.instructions);
   }
-  if (!emitInstructionRange(
-          function,
-          startIndex,
-          function.instructions.size(),
-          localLayout,
-          functionTypes,
-          runtime,
-          outBody.instructions,
-          error)) {
+  bool endsInReturn = false;
+  if (!emitInstructionRange(function,
+                            startIndex,
+                            function.instructions.size(),
+                            localLayout,
+                            functionTypes,
+                            runtime,
+                            outBody.instructions,
+                            error,
+                            &endsInReturn)) {
     return false;
+  }
+  if (!endsInReturn && wasmFunctionReturnsValue(function)) {
+    // A path that runs off the end of a function with a result (the last instruction is a load whose bounds check
+    // always faults before it, as in `panic`) never gets there; wasm still wants the stack at the end to match.
+    outBody.instructions.push_back(WasmOpUnreachable);
   }
   outBody.instructions.push_back(WasmOpEnd);
   // The scratch locals are known only after the body is emitted.

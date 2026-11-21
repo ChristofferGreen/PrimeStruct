@@ -81,6 +81,7 @@ Local addresses and indirect loads and stores (pointers, `Reference`, struct val
 stack in the module's linear memory with the VM's address numbering and faults (docs/spec/vm-design.md, Frames &
 stack): a null, unaligned or out-of-frame address writes `VM error: invalid indirect address in IR: <address>` (or
 `unaligned ...`) to stderr and exits 3 under the WASI profile, and traps in the browser profile.
+An array index error and `panic` (which is an index of an empty array) are the same runtime error: `array index out of bounds` on stderr and exit code 3 under the WASI profile, a trap in the browser profile.
 
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for

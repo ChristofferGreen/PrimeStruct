@@ -815,6 +815,80 @@ main() {
                                "trapped\n");
 }
 
+// `panic` is `/at` of an empty array with the code as the index, so it needs the array opcodes; it ends the program
+// with the VM's text and exit code 3.
+TEST_CASE("wasm runs panic like the vm") {
+  checkWasmMatchesVm("memory_panic",
+                     R"(
+import /std/panic/*
+
+[return<i32>]
+pick([i32] value) {
+  if(value > 0i32) {
+    return(value * 2i32)
+  }
+  panic(7i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  print_line(pick(3i32))
+  print_line(pick(0i32))
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm array index errors end the program like the vm") {
+  checkWasmMatchesVm("memory_array_index_high",
+                     R"(
+[effects(io_out), return<int>]
+main() {
+  [array<i32>] t{array<i32>(5i32, 6i32, 7i32)}
+  [i32 mut] i{2i32}
+  print_line(t[i])
+  i = i + 1i32
+  print_line(t[i])
+  return(0i32)
+}
+)",
+                     3);
+  checkWasmMatchesVm("memory_array_index_negative",
+                     R"(
+[effects(io_out), return<int>]
+main() {
+  [array<i32>] t{array<i32>(5i32, 6i32, 7i32)}
+  [i32 mut] i{0i32}
+  i = i - 1i32
+  print_line(t[i])
+  return(0i32)
+}
+)",
+                     3);
+}
+
+TEST_CASE("wasm browser profile traps on panic") {
+  checkWasmBrowserRuntimeError("memory_panic",
+                               R"(
+import /std/panic/*
+
+[return<i32>]
+pick([i32] value) {
+  if(value > 0i32) {
+    return(value * 2i32)
+  }
+  panic(7i32)
+}
+
+[return<int>]
+main() {
+  return(pick(3i32) + pick(0i32))
+}
+)",
+                               "trapped\n");
+}
+
 // GLSL has no trap and no host to report to, so a runtime error inside a real call is refused at compile time instead
 // of letting the program carry on past the failed call.
 TEST_CASE("glsl refuses a runtime error inside a real call") {
