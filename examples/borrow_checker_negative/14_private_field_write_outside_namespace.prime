@@ -1,0 +1,16 @@
+// Writing a `[private]` field from outside the struct's namespace is rejected, so a field that guards an
+// invariant cannot be set from the caller.
+namespace counter {
+  [public struct]
+  Counter() {
+    [private i32 mut] hits{0i32}
+    [public i32 mut] label{1i32}
+  }
+}
+
+[return<int>]
+main() {
+  [/counter/Counter mut] c{/counter/Counter{}}
+  c.hits = 1000i32
+  return(c.label)
+}

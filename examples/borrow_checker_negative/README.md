@@ -8,7 +8,9 @@ spawned task (`04_spawn_argument_not_sendable`), a view captured by a closure th
 (`07_container_slot_helper_requires_unsafe`, `08_container_free_requires_unsafe`, `11_soa_slot_helper_requires_unsafe`), a pointer used after its
 root moved (`09_pointer_used_after_move`), and a view whose container is changed through a `Reference` argument
 (`10_view_changed_through_reference_argument`), and a view of `dereference(<Reference parameter>)` that is
-cleared through the parameter (`12_view_of_dereferenced_parameter_cleared`).
+cleared through the parameter (`12_view_of_dereferenced_parameter_cleared`), and a `[private]` field read, written or brace-initialized from outside its struct's namespace
+(`13_private_field_read_outside_namespace`, `14_private_field_write_outside_namespace`,
+`15_private_field_brace_outside_namespace`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

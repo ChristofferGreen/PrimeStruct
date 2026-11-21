@@ -1,0 +1,15 @@
+// Brace-initializing a `[private]` field from outside the struct's namespace is rejected. Leaving it out
+// (`Counter{}`) uses its default and is fine.
+namespace counter {
+  [public struct]
+  Counter() {
+    [private i32 mut] hits{0i32}
+    [public i32 mut] label{1i32}
+  }
+}
+
+[return<int>]
+main() {
+  [/counter/Counter] c{/counter/Counter{5i32, 2i32}}
+  return(c.label)
+}

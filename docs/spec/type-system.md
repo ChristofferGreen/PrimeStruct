@@ -820,7 +820,11 @@ helper over `value` (docs/spec/transforms.md).
 - **Field visibility:** stack-value declarations accept `[public]` or `[private]` transforms (default: public); they are
   mutually exclusive. The compiler records `visibility` metadata per field so tooling and backends enforce access rules
   consistently. Field visibility is in-language field-access metadata; it does not make a field a package-importable API
-  symbol.
+  symbol. A `[private]` field may be named by the struct's own body and by every definition in the struct's namespace
+  and the namespaces nested in it (the rule private type aliases follow); a struct at the root has the whole program as
+  its namespace. Reading it (`b.secret`), writing it, taking `location(b.secret)` and passing an explicit
+  brace-constructor argument for it from any other definition is `private field is not accessible: <struct>/<field>`.
+  Leaving it out of a brace constructor (`Box{}`) uses its default.
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform.
   Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one
   storage slot exists per struct definition.

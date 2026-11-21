@@ -2147,4 +2147,69 @@ main() {
   CHECK(error.empty());
 }
 
+namespace {
+
+const char *PrivateFieldBoxPrelude = R"(
+namespace box {
+  [public struct]
+  Box() {
+    [private i32 mut] secret{7i32}
+    [public i32 mut] open{1i32}
+
+    [public return<int>]
+    peek() {
+      return(this.secret)
+    }
+  }
+
+  [return<int>]
+  sibling([/box/Box] b) {
+    return(b.secret)
+  }
+
+  namespace inner {
+    [return<int>]
+    nested([/box/Box mut] b) {
+      assign(b.secret, 3i32)
+      return(b.secret)
+    }
+  }
+}
+)";
+
+std::string privateFieldMain(const std::string &body) {
+  return std::string(PrivateFieldBoxPrelude) +
+         "\n[return<int>]\nmain() {\n  [/box/Box mut] b{/box/Box{}}\n" + body +
+         "\n  return(0i32)\n}\n";
+}
+
+} // namespace
+
+TEST_CASE("private fields are rejected outside the struct namespace") {
+  // docs/spec/type-system.md, Field visibility.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"read", "  [i32] x{b.secret}"},
+      {"write", "  assign(b.secret, 9i32)"},
+      {"location", "  [Pointer<i32> mut] p{location(b.secret)}"},
+      {"brace", "  [/box/Box] c{/box/Box{8i32, 2i32}}"},
+  };
+  for (const auto &[name, use] : uses) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(privateFieldMain(use), "/main", error));
+    CHECK(error.find("private field is not accessible: /box/Box/secret") != std::string::npos);
+  }
+}
+
+TEST_CASE("private fields stay usable inside the struct namespace") {
+  std::string error;
+  // Public fields, the struct body, a sibling definition and a nested namespace.
+  CHECK(validateProgram(
+      privateFieldMain("  assign(b.open, 4i32)\n  [i32] x{b.peek()}\n  [i32] y{/box/sibling(b)}\n  "
+                       "[i32] z{/box/inner/nested(b)}\n  [/box/Box] c{/box/Box{[open] 2i32}}"),
+      "/main",
+      error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

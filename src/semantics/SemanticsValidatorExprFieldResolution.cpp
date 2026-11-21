@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsPrivateFieldAccess.h"
 #include "primec/support/Hash.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -45,7 +46,29 @@ bool SemanticsValidator::validateExprFieldAccess(const std::vector<ParameterInfo
     return failExprDiagnostic(expr, error_);
   }
   error_.clear();
-  return true;
+  return checkPrivateFieldAccess(params, locals, expr.args.front(), expr.name, expr);
+}
+
+bool SemanticsValidator::checkPrivateFieldAccess(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &receiver,
+    const std::string &fieldName,
+    const Expr &diagnosticExpr) {
+  std::string structPath;
+  if (!resolveStructFieldReceiverPath(params, locals, receiver, structPath)) {
+    return true;
+  }
+  const std::string &accessPath = currentValidationState_.context.definitionPath;
+  const std::string violation =
+      privateFieldViolation(defMap_,
+                            structPath,
+                            fieldName,
+                            accessPath.empty() ? diagnosticExpr.namespacePrefix : accessPath);
+  if (violation.empty()) {
+    return true;
+  }
+  return failExprDiagnostic(diagnosticExpr, violation);
 }
 
 bool SemanticsValidator::resolveStructFieldReceiverPath(const std::vector<ParameterInfo> &params,

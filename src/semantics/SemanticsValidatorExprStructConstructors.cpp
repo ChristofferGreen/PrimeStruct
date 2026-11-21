@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsPrivateFieldAccess.h"
 
 #include <string>
 #include <unordered_set>
@@ -69,6 +70,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   }
 
   std::vector<ParameterInfo> fieldParams;
+  std::vector<const Expr *> fieldStatements;
   fieldParams.reserve(context.resolvedDefinition->statements.size());
   auto isStaticField = [](const Expr &stmt) -> bool {
     for (const auto &transform : stmt.transforms) {
@@ -103,6 +105,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       hasMissingDefaults = true;
     }
     fieldParams.push_back(field);
+    fieldStatements.push_back(&stmt);
   }
 
   if (hasMissingDefaults && expr.args.empty() && !hasNamedArguments(expr.argNames)) {
@@ -175,6 +178,13 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
       continue;
     }
     const ParameterInfo &fieldParam = fieldParams[argIndex];
+    if (isPrivateFieldBinding(*fieldStatements[argIndex])) {
+      const std::string &accessPath = currentValidationState_.context.definitionPath;
+      if (!isPrivateFieldAccessible(resolved,
+                                    accessPath.empty() ? expr.namespacePrefix : accessPath)) {
+        return failStructConstructorDiagnostic(privateFieldDiagnostic(resolved, fieldParam.name));
+      }
+    }
     const std::string expectedTypeText =
         this->expectedBindingTypeText(fieldParam.binding);
     if (!this->validateArgumentTypeAgainstParam(

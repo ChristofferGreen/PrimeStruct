@@ -289,6 +289,13 @@
                                       const std::unordered_map<std::string, BindingInfo> &locals,
                                       const Expr &receiver,
                                       std::string &structPathOut);
+  // `private field is not accessible` when the field of the receiver's struct
+  // is private and the current definition is outside that struct's namespace.
+  bool checkPrivateFieldAccess(const std::vector<ParameterInfo> &params,
+                               const std::unordered_map<std::string, BindingInfo> &locals,
+                               const Expr &receiver,
+                               const std::string &fieldName,
+                               const Expr &diagnosticExpr);
   bool isTypeNamespaceFieldReceiver(const std::vector<ParameterInfo> &params,
                                     const std::unordered_map<std::string, BindingInfo> &locals,
                                     const Expr &receiver,

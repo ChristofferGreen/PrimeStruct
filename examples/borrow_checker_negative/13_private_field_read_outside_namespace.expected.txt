@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"private field is not accessible: /counter/Counter/hits"
+"line":14,"column":10
+"notes":["stage: semantic"]

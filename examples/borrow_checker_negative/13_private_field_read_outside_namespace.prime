@@ -1,0 +1,15 @@
+// A `[private]` field may be named only by the struct's own body and by definitions in its namespace.
+// Reading it from `main`, which is outside `counter`, is rejected.
+namespace counter {
+  [public struct]
+  Counter() {
+    [private i32 mut] hits{0i32}
+    [public i32 mut] label{1i32}
+  }
+}
+
+[return<int>]
+main() {
+  [/counter/Counter mut] c{/counter/Counter{}}
+  return(c.hits)
+}
