@@ -195,7 +195,16 @@ TEST_CASE("waiting for a child keeps its exit code and beats once outside the wa
     watchedCode = primec::systemProcessRunner().run({"python3", "-c", "raise SystemExit(7)"});
   }
   CHECK(watchedCode == 7);
-  CHECK(readAvailable(pipeFds[0]) == "primec: run python3\n");
+  // The run beat comes first. A loaded machine can stretch the child's start past the one-second look, which adds
+  // "is running" beats (the child's CPU time advanced), so the test does not count them.
+  const std::string watchedBeats = readAvailable(pipeFds[0]);
+  const std::string runBeat = "primec: run python3\n";
+  CHECK(watchedBeats.compare(0, runBeat.size(), runBeat) == 0);
+  for (size_t at = runBeat.size(); at < watchedBeats.size();) {
+    const size_t end = watchedBeats.find('\n', at);
+    CHECK(watchedBeats.substr(at, end - at) == "primec: python3 is running");
+    at = end == std::string::npos ? watchedBeats.size() : end + 1;
+  }
   BeatEnvironment unset(nullptr);
   CHECK(primec::systemProcessRunner().run({"python3", "-c", "raise SystemExit(5)"}) == 5);
   CHECK(readAvailable(pipeFds[0]).empty());

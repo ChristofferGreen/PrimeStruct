@@ -133,6 +133,7 @@ of sync with them.
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
 | TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
 | TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
+| TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | ready | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -530,6 +531,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
+- [ ] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-21
+  - phase: Tests (found by the release gate of TODO-6140)
+  - parallel_track: flaky-tests
+  - scope: One `./scripts/compile.sh --release` run (a second heavy gate was probably running on the machine; the run took 2037 s against 572 s for an earlier run of nearly the same tree) failed these tests, all among the first 150 to finish, with `test_watchdog: killed at the hard cap of 295 s` and the last beat a `primec` command or `clang++ is running` 180 to 294 s old: `compile_run_vm_core_result_exit_codes_1_4` and `_5_8`, `compile_run_vm_outputs_ir_and_output_modes_argv_arrays_77_86_part2_49_49`, `program_matrix_tasks_10_10`, `_15_15`, `_30_30`, `_31_31`, `_32_32`, `program_matrix_text_views_1_1`, `program_matrix_element_assign_2_2`, `_4_4` and `program_matrix_element_receivers_3_3`. Rerun alone they pass in 6 to 11 s each (`nice ctest --parallel 2 -R ...`), so each is a test that does not survive a stalled or oversubscribed machine. The cause is not found: the silence limit never fires (the beats of the `primec` children arrive), only the hard cap does, so the tests ran, slowly, together. Find what was slow (a first-use cost all tests of the window shared, such as the `clang++` runtime or the stdlib import cache, or plain CPU starvation) and make those tests cheaper or the shared cost paid once; raising a timeout is not the fix.
+  - acceptance:
+    - the cause of the 295 s stall is named in this block (measure `ctest --parallel` at 2x and 4x the core count on an otherwise idle machine, and with a second gate running)
+    - the tests above no longer need more than a fraction of the cap under that load, or the shared cost is gone
+    - full release gate green
+  - stop_rule: the tests and shared costs named here; no timeout is raised and no test is retried.
+  - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log`.
+
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred
