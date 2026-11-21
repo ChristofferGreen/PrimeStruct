@@ -279,9 +279,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: tracker; the work is in the leaves.
   - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
 
-- [ ] TODO-6160: The SoA slot helpers are `[unsafe]`, so safe code can call them
+- [~] TODO-6160: The SoA slot helpers are `[unsafe]`, so safe code can call them
   - owner: ai
-  - status: deferred
+  - status: in_progress
+  - claimed_by: safety-worker (worktree-agent-a9b602a9d3706b5ef), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5511)
   - parallel_track: safety-stdlib
