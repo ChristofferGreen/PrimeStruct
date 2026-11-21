@@ -295,9 +295,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
 
 
-- [ ] TODO-6165: A container is changed through a `Reference` parameter that is not `mut`
+- [~] TODO-6165: A container is changed through a `Reference` parameter that is not `mut`
   - owner: ai
   - status: ready
+  - claimed_by: worker-borrows (worktree agent-a72c88cd6a1a56274), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5512)
   - parallel_track: safety-borrows
@@ -314,9 +315,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - C. Only the builtin containers (`vector`, `map`, `soa_vector` and their stdlib structs) need `mut` for structural changes through a `Reference`; other structs keep B. Narrow and matches this leaf's acceptance, but gives containers a rule structs do not have.
     Recommendation: B (the declared idiom wins, and TODO-6159's existing check already needs to cover a plain `Reference` argument under B); if the owner wants A or C, say so and the leaf is a validator change in SemanticsValidatorMoveOnly.cpp plus the stdlib audit of plain `Reference` parameters.
 
-- [ ] TODO-6166: A plain `Reference<vector<T>>` argument can change the container a live view reads
+- [~] TODO-6166: A plain `Reference<vector<T>>` argument can change the container a live view reads
   - owner: ai
   - status: ready
+  - claimed_by: worker-borrows (worktree agent-a72c88cd6a1a56274), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6165)
   - parallel_track: safety-borrows
@@ -330,9 +332,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: TODO-6165 decided option B (2026-11-21): the callee-effect analysis of the acceptance applies.
 
 
-- [ ] TODO-6168: Assigning to a local that a view borrows names the local as the sink
+- [~] TODO-6168: Assigning to a local that a view borrows names the local as the sink
   - owner: ai
   - status: deferred
+  - claimed_by: worker-borrows (worktree agent-a72c88cd6a1a56274), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6167)
   - parallel_track: safety-borrows
