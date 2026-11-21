@@ -570,6 +570,24 @@ bool emitTypedInstruction(const IrInstruction &inst,
     emitWasmAddressOfLocal(inst.imm, localLayout, out);
     pushType(localLayout, WasmTypeI64);
     return true;
+  case IrOpcode::LoadStringByte: {
+    if (!runtime.hasStringByteFault || inst.imm >= runtime.stringPtrs.size()) {
+      error = "wasm emitter invalid string index in function: " + functionName;
+      return false;
+    }
+    if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    const size_t stringIndex = static_cast<size_t>(inst.imm);
+    emitWasmStringByteLoad(acquireScratch(localLayout, WasmTypeI64),
+                           runtime.stringPtrs[stringIndex],
+                           runtime.stringLens[stringIndex],
+                           runtime,
+                           out);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeI32);
+    return true;
+  }
   case IrOpcode::LoadIndirect:
     if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
       return false;

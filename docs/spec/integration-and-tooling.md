@@ -86,9 +86,11 @@ An array index error and `panic` (which is an index of an empty array) are the s
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
 wasm target: HeapAlloc (heap memory, needed by `vector`, `map`, `String` and other growable containers)`. Today that
-covers heap memory (`vector`, `map`, `String`), string byte reads, host calls, `u8` and byte memory, tasks,
-atomics, mutexes and condition variables; the browser profile also refuses console and file output and program
-arguments (they need `--wasm-profile wasi`).
+covers heap memory (`vector`, `map`, `String`), the length of a string and the bytes of a run-time `String`, host
+calls, `u8` and byte memory, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
+and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
+profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position
+past the end is `string index out of bounds` on stderr and exit code 3, as on the VM.
 
 ### Dependency List
 `primec` and `primevm` take `--emit-deps <file>` (or `--emit-deps=<file>`): after a successful compile the file holds

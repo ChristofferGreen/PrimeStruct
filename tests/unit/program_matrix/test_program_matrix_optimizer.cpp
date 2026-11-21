@@ -49,6 +49,7 @@ main() {
 TEST_CASE("string scan loop") {
   program_matrix::ProgramCase program;
   program.name = "string_scan";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"([return<int> effects(io_out)]
 main() {
   [string] text{"banana bandana"utf8}

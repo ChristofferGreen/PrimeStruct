@@ -39,10 +39,19 @@ void appendStoreI32(uint32_t address, uint32_t value, std::vector<uint8_t> &out)
   appendI32MemArg(0, out);
 }
 
-// The runtime-error sequence of the WASI profile: the VM's message to stderr, then `proc_exit(3)`.
 void appendDivisionFault(const WasmRuntimeContext &runtime, std::vector<uint8_t> &out) {
-  appendStoreI32(runtime.iovAddr, runtime.divisionMessageAddr, out);
-  appendStoreI32(runtime.iovAddr + 4, runtime.divisionMessageLength, out);
+  emitWasmRuntimeFault(runtime, runtime.divisionMessageAddr, runtime.divisionMessageLength, out);
+}
+
+} // namespace
+
+// The runtime-error sequence of the WASI profile: the VM's message to stderr, then `proc_exit(3)`.
+void emitWasmRuntimeFault(const WasmRuntimeContext &runtime,
+                          uint32_t messageAddr,
+                          uint32_t messageLength,
+                          std::vector<uint8_t> &out) {
+  appendStoreI32(runtime.iovAddr, messageAddr, out);
+  appendStoreI32(runtime.iovAddr + 4, messageLength, out);
   appendI32Const(static_cast<int32_t>(StderrFd), out);
   appendI32Const(static_cast<int32_t>(runtime.iovAddr), out);
   appendI32Const(1, out);
@@ -55,8 +64,6 @@ void appendDivisionFault(const WasmRuntimeContext &runtime, std::vector<uint8_t>
   appendU32Leb(runtime.procExitImportIndex, out);
   out.push_back(WasmOpUnreachable);
 }
-
-} // namespace
 
 // A signed division by -1 is a wrapping negation: wasm's `div_s` traps on `INT_MIN / -1` where the VM wraps.
 static void appendMinusOneDivisor(bool is32, std::vector<uint8_t> &out) {

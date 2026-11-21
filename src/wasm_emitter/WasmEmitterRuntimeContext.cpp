@@ -83,6 +83,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::Trap) {
         runtime.hasTrap = true;
       }
+      if (wasi && inst.op == IrOpcode::LoadStringByte) {
+        runtime.hasStringByteFault = true;
+        runtime.hasTrap = true;
+        runtime.enabled = true;
+      }
       if (wasi && (inst.op == IrOpcode::DivI32 || inst.op == IrOpcode::DivI64 ||
                    inst.op == IrOpcode::DivU64)) {
         // The division helper writes the fault message (memory and `fd_write`) and ends the program (`proc_exit`).
@@ -188,6 +193,16 @@ bool buildWasiRuntimeContext(const IrModule &module,
     stringBlob.insert(stringBlob.end(), DivisionMessage.begin(), DivisionMessage.end());
   }
 
+  if (runtime.hasStringByteFault) {
+    static const std::string StringByteMessage = "VM error: string index out of bounds in IR\n";
+    runtime.stringByteMessageAddr = stringBase + static_cast<uint32_t>(stringBlob.size());
+    runtime.stringByteMessageLength = static_cast<uint32_t>(StringByteMessage.size());
+    appendDataSegmentAt(runtime.stringByteMessageAddr,
+                        std::vector<uint8_t>(StringByteMessage.begin(), StringByteMessage.end()),
+                        runtime.dataSegments);
+    stringBlob.insert(stringBlob.end(), StringByteMessage.begin(), StringByteMessage.end());
+  }
+
   if (runtime.hasMemoryFault) {
     static const std::string UnalignedMessage = "VM error: unaligned indirect address in IR: ";
     static const std::string InvalidMessage = "VM error: invalid indirect address in IR: ";
@@ -203,7 +218,7 @@ bool buildWasiRuntimeContext(const IrModule &module,
   }
 
   if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault ||
-      runtime.hasMemoryFault) {
+      runtime.hasMemoryFault || runtime.hasStringByteFault) {
     WasmFunctionType fdWriteType;
     fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
     fdWriteType.results = {WasmValueTypeI32};

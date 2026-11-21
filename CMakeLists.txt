@@ -687,6 +687,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp
   src/wasm_emitter/WasmEmitterParameterLocals.cpp
+  src/wasm_emitter/WasmEmitterStringBytes.cpp
   src/wasm_emitter/WasmEmitterRuntimeContext.cpp
   src/wasm_emitter/WasmEmitterSections.cpp
   src/wasm_emitter/WasmEmitterTypes.cpp

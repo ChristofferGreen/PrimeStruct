@@ -2543,6 +2543,7 @@ are left unarchived.
 | TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6146 | Wasm structured control flow for an early return out of an inlined body with cleanup | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6148 | Wasm `LoadStringByte` reads a byte of a module string | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 
 <!-- INDEX-END -->
 

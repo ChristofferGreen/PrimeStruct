@@ -1069,4 +1069,46 @@ main() {
                      0);
 }
 
+TEST_CASE("wasm reads the bytes of a string literal by a computed index like the vm") {
+  checkWasmMatchesVm("string_byte_scan",
+                     R"(
+[return<int> effects(io_out)]
+main() {
+  [string] text{"banana bandana"utf8}
+  [string] other{"zebra"utf8}
+  [i32 mut] a{0i32}
+  [i64 mut] total{0i64}
+  [i32] len{text.count()}
+  for([i32 mut] i{0i32}, i < len, i++) {
+    [i32] c{text[i]}
+    if(c == 97i32) {
+      a = a + 1i32
+    }
+    total = total + convert<i64>(c)
+  }
+  print_line(a)
+  print_line(total)
+  print_line(other[4i32])
+  return(a)
+}
+)",
+                     6);
+}
+
+TEST_CASE("wasm ends the program on a string index past the end like the vm") {
+  checkWasmMatchesVm("string_byte_past_end",
+                     R"(
+[return<int> effects(io_out)]
+main() {
+  [string] text{"abc"utf8}
+  [i32 mut] i{2i32}
+  print_line(text[i])
+  i = i + 3i32
+  print_line(text[i])
+  return(0i32)
+}
+)",
+                     3);
+}
+
 TEST_SUITE_END();

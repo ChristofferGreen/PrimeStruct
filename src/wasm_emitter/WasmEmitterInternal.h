@@ -161,6 +161,11 @@ struct WasmRuntimeContext {
   uint32_t divisionHelperFunction[WasmDivisionOpCount] = {0, 0, 0};
   uint32_t divisionMessageAddr = 0;
   uint32_t divisionMessageLength = 0;
+  // WASI profile only: `LoadStringByte` checks the position against the length of the string and ends the program with
+  // the VM's message (`string index out of bounds in IR`) and `proc_exit(3)` when it is not below it.
+  bool hasStringByteFault = false;
+  uint32_t stringByteMessageAddr = 0;
+  uint32_t stringByteMessageLength = 0;
   // The module takes a local address or reads or writes through one: a mutable `i32` global (index 0) holds the number
   // of live slots of the shadow stack, which occupies `shadowSlots` 8-byte slots of the memory from `shadowBase`, and
   // the helper function `slotAddress` checks an address and maps it to the memory (WasmEmitterMemory.cpp).
@@ -441,6 +446,21 @@ WasmCodeBody buildWasmFmaHelperBody(bool isF64);
 // The code of the helper function behind an integer division on the WASI profile (type (T, T) -> T): a zero divisor
 // writes the VM's message to stderr and calls `proc_exit(3)`.
 WasmCodeBody buildWasmDivisionHelperBody(WasmDivisionOp op, const WasmRuntimeContext &runtime);
+
+// Writes `messageLength` bytes at `messageAddr` to stderr and ends the program with `proc_exit(3)`: a runtime error of
+// the WASI profile. The code never falls through.
+void emitWasmRuntimeFault(const WasmRuntimeContext &runtime,
+                          uint32_t messageAddr,
+                          uint32_t messageLength,
+                          std::vector<uint8_t> &out);
+
+// `LoadStringByte`: the position (an `i64` on the stack) becomes the byte of the string at `pointer` of `length` bytes,
+// as an `i32`; a position that is not below the length is the VM's fault. `positionLocal` is an `i64` scratch local.
+void emitWasmStringByteLoad(uint32_t positionLocal,
+                            uint32_t pointer,
+                            uint32_t length,
+                            const WasmRuntimeContext &runtime,
+                            std::vector<uint8_t> &out);
 
 // Whether the leading `StoreLocal`s of the function (its parameter prologue) store the parameters anywhere but to the
 // locals 0..parameterCount-1, which are the wasm parameters (a struct passed by value keeps its slots in the locals

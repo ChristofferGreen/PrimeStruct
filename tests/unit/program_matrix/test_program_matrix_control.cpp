@@ -374,6 +374,7 @@ main() {
 TEST_CASE("native string count and indexing") {
   program_matrix::ProgramCase program;
   program.name = "native_string_count_and_indexing_21";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [return<int>]
 main() {

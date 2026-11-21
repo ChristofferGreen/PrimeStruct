@@ -97,7 +97,7 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(PushArgc, Other, None, None, 1, 1, 0)                                                          \
   X(PrintArgv, Io, None, None, 1, 1, 0)                                                            \
   X(PrintArgvUnsafe, Io, None, None, 1, 1, 0)                                                      \
-  X(LoadStringByte, Memory, None, None, 1, 0, 0)                                                   \
+  X(LoadStringByte, Memory, None, None, 1, 1, 0)                                                   \
   X(LoadStringLength, Memory, None, None, 1, 0, 0)                                                 \
   X(FileOpenRead, Io, None, None, 1, 1, 0)                                                         \
   X(FileOpenWrite, Io, None, None, 1, 1, 0)                                                        \

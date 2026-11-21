@@ -131,7 +131,6 @@ of sync with them.
 | TODO-6140 | Wasm refusals of atomics, channels, u8 and host calls name the opcode | ready | wasm-opcode-gaps |
 | TODO-6147 | The Wasm shadow stack is fixed at 131072 slots | ready | wasm-opcode-gaps |
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
-| TODO-6148 | Wasm `LoadStringByte` reads a byte of a module string | ready | wasm-opcode-gaps |
 | TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
 | TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
@@ -533,20 +532,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
 
 
-- [~] TODO-6148: Wasm `LoadStringByte` reads a byte of a module string
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (split from TODO-6141)
-  - parallel_track: wasm-opcode-gaps
-  - scope: `LoadStringByte #index` pops a byte position and pushes the byte of the module-table string `#index` at that position, zero-extended (the VM: `string index out of bounds in IR` when the position is not below the string's length, as an unsigned 64-bit value, so a negative `i32` position faults too). Wasm refuses it (`unsupported opcode for wasm target: LoadStringByte`). The WASI profile already keeps the string table in a data segment (`stringPtrs`, `stringLens`): compare the position with the length, write the VM's message to stderr and `proc_exit(3)` on a fault (the way the division fault does), else `i32.load8_u` at the string's address plus the position. The browser profile has no data segment for strings and no message channel; it keeps refusing the opcode with the same message, which this block settles as documented behavior in docs/spec/integration-and-tooling.md (Wasm).
-  - acceptance:
-    - a program that reads the bytes of a string literal by a computed index (the two matrix programs refused for `LoadStringByte`) runs on Wasm under node like the VM and lists `wasm-wasi`; an index past the end ends with the VM's message and exit 3 under WASI; a node case of each
-    - full release gate green
-  - stop_rule: `LoadStringByte` of a table string on the WASI profile; `LoadStringByteDynamic` (run-time `String`, VM only) and the string heap are separate (TODO-6127).
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep LoadStringByte` from the release build directory.
-
 - [ ] TODO-6149: Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses
   - owner: ai
   - status: deferred
@@ -567,7 +552,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (split from TODO-6141)
   - parallel_track: wasm-opcode-gaps
-  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so the 111 matrix programs that read it (the leak checks of the vector, sum-owner and task programs) are refused with `host calls are only supported by the vm target, ...`. Once TODO-6149 has an allocator, answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
+  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so a matrix program that reads it (the leak checks of the vector, sum-owner and task programs) is refused with `host calls are only supported by the vm target, ...` (of the 111 programs refused for a host call, 87 read `heapLiveBlocks()` or a string heap statistic; the other 24 use `String` itself). Once TODO-6149 has an allocator, answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
   - acceptance:
     - a program that prints `heapLiveBlocks() - blocks` around a copy-and-destroy loop prints what the VM prints; the matrix programs that then agree list `wasm-wasi`
     - full release gate green
