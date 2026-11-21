@@ -261,9 +261,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
 
-- [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
+- [~] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
   - status: deferred
+  - claimed_by: safety-a (worktree-agent-a58bec85c3cadf782), 2026-11-21
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
@@ -274,9 +275,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: visibility and unsafe marking; no container redesign.
   - notes: deferred: queued behind the Ready Now cap; large, split before starting.
 
-- [ ] TODO-5512: Pointers and aliases count as borrows of their root
+- [~] TODO-5512: Pointers and aliases count as borrows of their root
   - owner: ai
   - status: deferred
+  - claimed_by: safety-a (worktree-agent-a58bec85c3cadf782), 2026-11-21
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-borrows
