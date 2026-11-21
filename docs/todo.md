@@ -131,6 +131,9 @@ of sync with them.
 | TODO-6140 | Wasm refusals of atomics, channels, u8 and host calls name the opcode | ready | wasm-opcode-gaps |
 | TODO-6147 | The Wasm shadow stack is fixed at 131072 slots | ready | wasm-opcode-gaps |
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
+| TODO-6148 | Wasm `LoadStringByte` reads a byte of a module string | ready | wasm-opcode-gaps |
+| TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
+| TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -514,19 +517,62 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the message text only; no new Wasm opcode.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep "atomic operations"` from the release build directory.
 
-- [ ] TODO-6141: Wasm lowers the heap opcodes and string byte reads (`vector`, `String`)
+- [~] TODO-6141: Wasm lowers the heap opcodes and string byte reads (`vector`, `String`)
   - owner: ai
   - status: ready
+  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6137)
   - parallel_track: wasm-opcode-gaps
   - scope: After the local-address opcodes, the refusals counted by TODO-6137 are `HeapAlloc` (42 matrix programs as the first refusal: every `vector` program) and `LoadStringByte` (2 programs), then the opcodes behind them (`HeapFree`, `HeapRealloc` and the string heap). TODO-6138's stop rule leaves the heap to a leaf of its own and none existed. Give Wasm `HeapAlloc`, `HeapFree`, `HeapRealloc` on the module's linear memory (a bump allocator with a free list over the pages the shadow stack of TODO-6138 does not use, `memory.grow` when it runs out; out of memory is the VM's fault) and `LoadStringByte` on the data segment of the string table. Settle in the block, before code, how the VM's allocator limits and fault texts map (docs/spec/vm-design.md, Memory) and write the options here if they are not settled.
+  - split: 2026-11-21 into TODO-6148 (`LoadStringByte`, 2 programs; done first because nothing about it is open), TODO-6149 (`HeapAlloc`, `HeapFree`, `HeapRealloc` and the heap addresses: 136 + 14 + 5 programs; the address and fault-text question is written there as options, not decided) and TODO-6150 (`heapLiveBlocks()` and the other `__pstext_stat` readings). This block is the tracker and closes when the three do.
   - acceptance:
-    - a `vector<i32>` that is pushed to, indexed, popped and read by `count` runs on Wasm like the VM, and a program that scans a string by byte index; tests of each
+    - TODO-6148, TODO-6149 and TODO-6150 are finished: a `vector<i32>` that is pushed to, indexed, popped and read by `count` runs on Wasm like the VM, and a program that scans a string by byte index; tests of each
     - full release gate green
   - stop_rule: the heap opcodes and string byte reads only; atomics, channels, tasks, u8 and host calls stay separate leaves.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
 
+
+- [~] TODO-6148: Wasm `LoadStringByte` reads a byte of a module string
+  - owner: ai
+  - status: ready
+  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (split from TODO-6141)
+  - parallel_track: wasm-opcode-gaps
+  - scope: `LoadStringByte #index` pops a byte position and pushes the byte of the module-table string `#index` at that position, zero-extended (the VM: `string index out of bounds in IR` when the position is not below the string's length, as an unsigned 64-bit value, so a negative `i32` position faults too). Wasm refuses it (`unsupported opcode for wasm target: LoadStringByte`). The WASI profile already keeps the string table in a data segment (`stringPtrs`, `stringLens`): compare the position with the length, write the VM's message to stderr and `proc_exit(3)` on a fault (the way the division fault does), else `i32.load8_u` at the string's address plus the position. The browser profile has no data segment for strings and no message channel; it keeps refusing the opcode with the same message, which this block settles as documented behavior in docs/spec/integration-and-tooling.md (Wasm).
+  - acceptance:
+    - a program that reads the bytes of a string literal by a computed index (the two matrix programs refused for `LoadStringByte`) runs on Wasm under node like the VM and lists `wasm-wasi`; an index past the end ends with the VM's message and exit 3 under WASI; a node case of each
+    - full release gate green
+  - stop_rule: `LoadStringByte` of a table string on the WASI profile; `LoadStringByteDynamic` (run-time `String`, VM only) and the string heap are separate (TODO-6127).
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep LoadStringByte` from the release build directory.
+
+- [ ] TODO-6149: Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (split from TODO-6141)
+  - parallel_track: wasm-opcode-gaps
+  - scope: 136 matrix programs (every `vector`) are first refused for `HeapAlloc`, 14 more for `HeapRealloc` and 5 for `HeapFree`. The VM's heap (docs/spec/vm-design.md, Heap; `include/primec/runtime/VmHeapCore.h`, `VmHeapCoreBody.inc`) hands out addresses `bit 63 | generation << 48 | slot * 16`, serves a request from the smallest free run that fits (lowest base among equal sizes), else extends the free run at the end of the heap, else takes new slots; merges adjacent free runs; zeroes freed slots; gives reused slots the next generation (15 bits, wraps after 32,768 reuses); grows a `HeapRealloc` in place when the next slots are free; and faults with `VM error: invalid indirect address in IR: <address>`, `invalid heap free address in IR: <address>`, `invalid heap realloc address in IR: <address>` and `VM heap allocation overflow` (exit 3). Wasm would keep the slot storage and a per-slot state (generation, live) in its linear memory after the shadow stack (TODO-6147 settles how the two grow), serve `LoadIndirect`/`StoreIndirect` of a heap address through the state check, and write the same messages. The open question is how exact the port must be. Options: (A) a bit-exact port of the single-arena `VmHeapCore` algorithm (same policy, so the same addresses and the same fault texts, `stderr` byte for byte; the free runs need an ordered structure, so the helper functions are hand-assembled wasm of a few hundred instructions, or a sorted array scanned linearly); (B) the same address encoding and the same observable rules (stale and double-freed addresses fault, `heapLiveBlocks()` counts live allocations) with a simpler allocator, so an address printed by a program, or inside a fault text, can differ from the VM's after a free and a reuse; (C) Wasm's own addresses and its own fault texts without numbers, as the arm64 native backend has (`invalid heap free address: the block is already free`), documented as a per-backend difference. The user's direction (identical behavior on every backend) favors (A); (C) has the arm64 backend as precedent. Decide before code.
+  - acceptance:
+    - the option chosen is written here with a `decision:` line; then a `vector<i32>` that is pushed to, indexed, popped and read by `count`, a double free, a stale address and a `HeapRealloc` of a freed block run on Wasm under node like the VM (stdout, exit code and, for (A), stderr), the matrix programs that then agree list `wasm-wasi`, and an allocation that cannot be served ends with `VM heap allocation overflow` and exit 3
+    - full release gate green
+  - stop_rule: the slot heap only; byte regions (`HeapAllocBytes`, `LoadU8`) stay with TODO-6127 and the statistic `heapLiveBlocks()` with TODO-6150.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
+
+- [ ] TODO-6150: `heapLiveBlocks()` and the string heap statistics on Wasm
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6149
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (split from TODO-6141)
+  - parallel_track: wasm-opcode-gaps
+  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so the 111 matrix programs that read it (the leak checks of the vector, sum-owner and task programs) are refused with `host calls are only supported by the vm target, ...`. Once TODO-6149 has an allocator, answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
+  - acceptance:
+    - a program that prints `heapLiveBlocks() - blocks` around a copy-and-destroy loop prints what the VM prints; the matrix programs that then agree list `wasm-wasi`
+    - full release gate green
+  - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred
