@@ -285,7 +285,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend does not support return type on /wrapUnknown") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown return type: Unknown on /wrapUnknown") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map wrapper temporary key mismatch") {

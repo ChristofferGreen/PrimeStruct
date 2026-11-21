@@ -31,6 +31,70 @@ main() {
   CHECK(error == "unknown return type: NoSuchType on /make");
 }
 
+TEST_CASE("unknown type inside a collection return type is named") {
+  const char *shapes[] = {"vector<NoSuchType>",
+                          "array<NoSuchType>",
+                          "Buffer<NoSuchType>",
+                          "vector<vector<NoSuchType>>"};
+  for (const char *shape : shapes) {
+    const std::string source = std::string("[return<") + shape +
+                               ">]\nwrap() {\n  return(vector<i32>{})\n}\n\n" +
+                               "[return<int>]\nmain() {\n  return(1i32)\n}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error == "unknown return type: NoSuchType on /wrap");
+  }
+}
+
+TEST_CASE("collection return types of known element types still validate") {
+  const std::string source = R"(
+[struct]
+Item() {
+  [i32] value{1i32}
+}
+
+[enum]
+Color() {
+  Red
+  Green
+}
+
+[sum]
+Shape {
+  [i32] number
+  [bool] flag
+}
+
+[return<vector<Item>> effects(heap_alloc)]
+items() {
+  return(vector<Item>{})
+}
+
+[return<vector<Shape>> effects(heap_alloc)]
+shapes() {
+  return(vector<Shape>{})
+}
+
+[return<vector<Color>> effects(heap_alloc)]
+colors() {
+  return(vector<Color>{})
+}
+
+[return<vector<T>> effects(heap_alloc)]
+generic<T>() {
+  return(vector<T>{})
+}
+
+[return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("unknown type inside a Task return type is named") {
   const std::string source = R"(
 [return<Task<NoSuchType>>]

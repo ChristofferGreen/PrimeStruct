@@ -205,6 +205,26 @@ ReturnKind getReturnKind(const Definition &def,
         return ReturnKind::Void;
       }
       ReturnKind resolvedKind = returnKindForTypeName(normalizedType);
+      if (resolvedKind == ReturnKind::Array && sumNames != nullptr) {
+        // `returnKindForTypeName` accepts any element of `vector`, `array`, `soa` and `Buffer`; name an element
+        // that is not a type.
+        std::string collectionBase;
+        std::string collectionArg;
+        std::vector<std::string> collectionArgs;
+        if (splitTemplateTypeName(normalizedType, collectionBase, collectionArg) &&
+            splitTopLevelTemplateArgs(collectionArg, collectionArgs) &&
+            collectionArgs.size() == 1) {
+          collectionBase = normalizeBindingTypeName(collectionBase);
+          if (collectionBase == "vector" || collectionBase == "array" || collectionBase == "soa" ||
+              collectionBase == "Buffer") {
+            const std::string unknown = findUnknownTypeName(collectionArgs.front());
+            if (!unknown.empty()) {
+              error = "unknown return type: " + unknown + " on " + def.fullPath;
+              return ReturnKind::Unknown;
+            }
+          }
+        }
+      }
       if (resolvedKind != ReturnKind::Unknown) {
         return resolvedKind;
       }
