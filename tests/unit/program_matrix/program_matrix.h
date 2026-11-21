@@ -380,7 +380,8 @@ inline void runThreadsCorpus(const ProgramCase &program, int repeats) {
 
 // Counting mode (PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1): every case compiles for `--emit=wasm --wasm-profile wasi`
 // and nothing runs, not even the other configs. One line per case goes to stderr, `wasm-compile: <name>: ok` or
-// `wasm-compile: <name>: refused: <first line of the error>`, so the programs Wasm refuses can be counted per opcode.
+// `wasm-compile: <name>: refused: <first line of the error>`, so the programs Wasm refuses can be counted per opcode;
+// PRIMESTRUCT_MATRIX_WASM_DUMP_DIR=<dir> also copies each program's source to `<dir>/<name>.prime`.
 inline bool wasmCompileOnly() {
   const char *value = std::getenv("PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY");
   return value != nullptr && *value != '\0';
@@ -392,6 +393,13 @@ inline void reportWasmCompile(const ProgramCase &program) {
   {
     std::ofstream file(source);
     file << program.source;
+  }
+  if (const char *dumpDir = std::getenv("PRIMESTRUCT_MATRIX_WASM_DUMP_DIR");
+      dumpDir != nullptr && *dumpDir != '\0') {
+    // The program sources, one `<name>.prime` each, for reading the IR of a refused program.
+    std::filesystem::create_directories(dumpDir);
+    std::ofstream copy(std::filesystem::path(dumpDir) / (program.name + ".prime"));
+    copy << program.source;
   }
   std::string flags;
   for (const std::string &flag : program.flags) {
@@ -413,7 +421,8 @@ inline void reportWasmCompile(const ProgramCase &program) {
 
 // Probe mode (PRIMESTRUCT_MATRIX_WASM_RUN=1): every case runs on the VM (`vm-O2`) and on Wasm under node, and nothing
 // is checked. One line per case goes to stderr, `wasm-run: <name>: agree`, `wasm-run: <name>: differ (...)` or
-// `wasm-run: <name>: refused`, so the programs that may list `wasm-wasi` in `extraConfigs` can be found.
+// `wasm-run: <name>: refused` (`agree (listed)` when the case already lists `wasm-wasi`), so the programs that may list
+// `wasm-wasi` in `extraConfigs` can be found.
 inline bool wasmRunProbe() {
   const char *value = std::getenv("PRIMESTRUCT_MATRIX_WASM_RUN");
   return value != nullptr && *value != '\0';
@@ -434,6 +443,9 @@ inline void reportWasmRun(const ProgramCase &program) {
     line += "differ (stdout)";
   } else {
     line += "agree";
+    if (listed(program.extraConfigs, "wasm-wasi") || listed(program.onlyConfigs, "wasm-wasi")) {
+      line += " (listed)";
+    }
   }
   std::fprintf(stderr, "%s\n", line.c_str());
 }

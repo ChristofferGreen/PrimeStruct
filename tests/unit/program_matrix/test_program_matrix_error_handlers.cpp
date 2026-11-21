@@ -53,6 +53,7 @@ void runHandlerProgram(const std::string &name, const std::string &definitions, 
                    "  return(0i32)\n}\n";
   program.exitCode = 0;
   program.stdoutText = stdoutText;
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 

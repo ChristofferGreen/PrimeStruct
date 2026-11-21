@@ -921,4 +921,99 @@ main() {
   CHECK(readFile(errPath).find("cannot end the program on this target") != std::string::npos);
 }
 
+TEST_CASE("wasm leaves an inlined body early to the cleanup that follows it like the vm") {
+  // `early` is called once, so it is inlined: the `return` inside the `if` is a jump to the cleanup of `guard`.
+  checkWasmMatchesVm("early_return_cleanup",
+                     R"(
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<i32>]
+early([bool] leave) {
+  [Noisy] guard{Noisy{4i32}}
+  if(leave) {
+    return(1i32)
+  }
+  return(2i32)
+}
+
+[effects(io_out) return<int>]
+main() {
+  return(early(true))
+}
+)",
+                     1);
+}
+
+TEST_CASE("wasm leaves several inlined bodies in one expression like the vm") {
+  // Each call leaves by its own join; the sum is pending on the wasm stack while the next body runs.
+  checkWasmMatchesVm("early_return_cleanup_sum",
+                     R"(
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<i32>]
+early_a([bool] leave) {
+  [Noisy] guard{Noisy{1i32}}
+  if(leave) {
+    return(10i32)
+  }
+  return(20i32)
+}
+
+[effects(io_out) return<i32>]
+early_b([i32] limit) {
+  [Noisy] guard{Noisy{2i32}}
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32}, i < 5i32, i++) {
+    [Noisy] each{Noisy{3i32}}
+    if(i == limit) {
+      return(total)
+    }
+    total = total + i
+  }
+  return(100i32)
+}
+
+[effects(io_out) return<int>]
+main() {
+  return(early_a(true) + early_b(3i32) + early_a(false) + early_b(9i32))
+}
+)",
+                     133);
+}
+
+TEST_CASE("wasm leaves an inlined body that ends in a panic like the vm") {
+  checkWasmMatchesVm("early_return_panic_join",
+                     R"(
+import /std/panic/*
+
+[return<i32>]
+pick_positive([i32] value) {
+  if(value > 0i32) {
+    return(value * 2i32)
+  }
+  panic(7i32)
+}
+
+[return<int>]
+main() {
+  return(pick_positive(0i32))
+}
+)",
+                     3);
+}
+
 TEST_SUITE_END();

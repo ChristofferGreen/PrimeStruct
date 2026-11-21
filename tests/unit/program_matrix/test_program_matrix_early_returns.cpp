@@ -344,6 +344,7 @@ TEST_CASE("pick arms are scopes: an arm's locals are destroyed where the arm end
   // never set, and on the native backend a frame is not zeroed). No heap statistics, so native runs it too.
   program_matrix::ProgramCase program;
   program.name = "early_return_pick_arm_scopes";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -399,6 +400,7 @@ TEST_CASE("exits with different live sets run the same on every fast config, nat
   // and the native backend. The loop exit, the nested exits and the final exit share chains.
   program_matrix::ProgramCase program;
   program.name = "early_return_all_configs";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {

@@ -296,3 +296,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 
 - 2026-11-20 (release build, macOS arm64, instructions retired from `/usr/bin/time -l`, an up-to-date `primec build <dir> --jobs 1` of a one-step `ir` project, three runs each). Before (the step key and the script key each SHA-256 the 22 MB `primec`): 145.4M, 145.5M, 145.8M. After (both keys read `executableBuildId`, the linker UUID): 60.4M, 61.1M (the first run after the change is a rebuild: the old keys miss once). The 85M saved is the two hashes (about 42M each) and nothing else changed. `build` is not the compile path, so startup of a plain compile is not touched.
 
+
+## TODO-6124 (Wasm refusals per leaf)
+
+- 2026-11-21 (after TODO-6146, `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1` and `PRIMESTRUCT_MATRIX_WASM_RUN=1` of `PrimeStruct_program_matrix_tests`, 514 programs): 164 compile for Wasm, run under node and agree with the VM (none differs, all list `wasm-wasi`). The 350 refusals, first refusal each: `HeapAlloc` 136, `HeapRealloc` 14, `HeapFree` 5, `LoadStringByte` 2 (TODO-6141); host calls 111 and u8 2 (TODO-6127); `unsupported effect mask bits` 32, atomics 18, channels 16 (TODO-6128); recursive calls a real call cannot take 9 (TODO-6140); the struct parameter prologue 2 (TODO-6145); the graphics substrate 1 (by design) and 2 expected frontend diagnostics. No `unsupported control-flow pattern` refusal is left (38 before TODO-6146).

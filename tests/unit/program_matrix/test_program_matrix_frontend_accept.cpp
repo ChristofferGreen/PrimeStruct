@@ -288,6 +288,7 @@ main() {
 TEST_CASE("a sum field destroys the owning payload it replaces and the one it ends with") {
   program_matrix::ProgramCase program;
   program.name = "frontend_sum_struct_field_destroy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Res {

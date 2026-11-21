@@ -1,5 +1,7 @@
 #include "WasmEmitterInternal.h"
 
+#include <algorithm>
+#include <functional>
 #include <utility>
 
 namespace primec {
@@ -89,6 +91,12 @@ bool detectCanonicalLoopRegion(
   return true;
 }
 
+// The refusal of a jump shape the emitter does not recover; `index` is the IR instruction the shape starts at.
+std::string unsupportedControlFlow(const IrFunction &function, size_t index) {
+  return "wasm emitter unsupported control-flow pattern in function: " + function.name +
+         " (IR instruction " + std::to_string(index) + ")";
+}
+
 constexpr size_t NoExitTarget = static_cast<size_t>(-1);
 
 // The innermost label a jump to IR index `target` leaves by, or null.
@@ -133,6 +141,174 @@ bool hasEscapingJump(const IrFunction &function, size_t start, size_t end, size_
   return false;
 }
 
+// An `if` that is the last thing of an arm ending at `end` (the arm's own closing `Jump` is the instruction at `end`)
+// skips that `Jump` too: its `JumpIfZero` targets the instruction after it. The `if` ends where the arm does.
+size_t clampSharedJoin(const IrFunction &function, size_t target, size_t end) {
+  if (target == end + 1 && end < function.instructions.size() &&
+      function.instructions[end].op == IrOpcode::Jump && function.instructions[end].imm == target) {
+    return end;
+  }
+  return target;
+}
+
+// The end of the construct that starts at `index`: an `if`/`else` ends where its arms join, a loop after its tail jump,
+// any other instruction after itself. Returns `index + 1` for a shape the main loop refuses.
+size_t constructEnd(const IrFunction &function, size_t index, size_t end, const LoopRegion *loop) {
+  if (loop != nullptr) {
+    return loop->endIndex;
+  }
+  const IrInstruction &inst = function.instructions[index];
+  if (inst.op != IrOpcode::JumpIfZero) {
+    return index + 1;
+  }
+  size_t target = clampSharedJoin(function, static_cast<size_t>(inst.imm), end);
+  size_t thenStart = index + 1;
+  WasmShortCircuitCondition shortCircuit;
+  if (target == index + 2 && findWasmShortCircuitCondition(function, index, end, shortCircuit)) {
+    thenStart = shortCircuit.thenStart;
+    target = clampSharedJoin(function, shortCircuit.elseStart, end);
+  }
+  if (target <= index || target > end) {
+    return index + 1;
+  }
+  if (target > 0 && target - 1 >= thenStart) {
+    const IrInstruction &tail = function.instructions[target - 1];
+    if (tail.op == IrOpcode::Jump && tail.imm > target - 1 && tail.imm <= end) {
+      return static_cast<size_t>(tail.imm);
+    }
+  }
+  return target;
+}
+
+// The join points after the construct [index, constructEnd) that a jump inside the construct goes to, farthest first:
+// the targets of `Jump`s that neither end an `if`/`else` arm (a `JumpIfZero` of the construct targets the instruction
+// after it) nor go to the next instruction, and that land after the construct and before `end`. An early return out
+// of an inlined body leaves this way: the jump goes to the cleanup that follows the whole body, so the construct and
+// the code up to that point are written in a `block` the jump leaves.
+std::vector<size_t> findEscapeJoins(const IrFunction &function,
+                                    const WasmLocalLayout &localLayout,
+                                    size_t index,
+                                    size_t constructEnd,
+                                    size_t end) {
+  // Whether the `Jump` at `p` leaves toward a join past `after` that a block has to end at.
+  const auto escapesPast = [&](size_t p, size_t after) {
+    const IrInstruction &inst = function.instructions[p];
+    if (inst.op != IrOpcode::Jump || inst.imm <= after || inst.imm >= end ||
+        findJumpLabel(localLayout, static_cast<size_t>(inst.imm)) != nullptr) {
+      return false;
+    }
+    for (size_t q = index; q < p; ++q) {
+      const IrInstruction &guard = function.instructions[q];
+      if (guard.op == IrOpcode::JumpIfZero && guard.imm == p + 1) {
+        return false;
+      }
+    }
+    return true;
+  };
+  std::vector<size_t> joins;
+  // The code between the construct and its farthest join sits in the blocks too, so its own jumps past that join need
+  // blocks that enclose the construct as well.
+  size_t covered = constructEnd;
+  size_t scanFrom = index;
+  size_t threshold = constructEnd;
+  while (scanFrom < covered) {
+    const size_t scanTo = covered;
+    for (size_t p = scanFrom; p < scanTo; ++p) {
+      if (escapesPast(p, threshold)) {
+        joins.push_back(static_cast<size_t>(function.instructions[p].imm));
+        covered = std::max(covered, joins.back());
+      }
+    }
+    scanFrom = scanTo;
+    threshold = covered;
+  }
+  std::sort(joins.begin(), joins.end(), std::greater<size_t>());
+  joins.erase(std::unique(joins.begin(), joins.end()), joins.end());
+  return joins;
+}
+
+// Where the main loop of `emitInstructionRange` stood before it took the instruction at `irIndex`: the output size
+// and the number of values on the wasm stack there.
+struct RangeBoundary {
+  size_t irIndex = 0;
+  size_t outSize = 0;
+  size_t stackSize = 0;
+};
+
+// The latest boundary of `boundaries` at which `keep` values were on the stack and that no jump lies between and
+// `index`: the instructions from there to `index` (the operands of a condition) can move into a `block` that opens at
+// the boundary.
+const RangeBoundary *findBlockStart(const IrFunction &function,
+                                    const std::vector<RangeBoundary> &boundaries,
+                                    size_t index,
+                                    size_t keep) {
+  for (size_t i = boundaries.size(); i > 0; --i) {
+    const RangeBoundary &boundary = boundaries[i - 1];
+    if (boundary.stackSize != keep) {
+      continue;
+    }
+    for (size_t p = boundary.irIndex; p < index; ++p) {
+      const IrOpcode op = function.instructions[p].op;
+      if (op == IrOpcode::Jump || op == IrOpcode::JumpIfZero) {
+        return nullptr;
+      }
+    }
+    return &boundary;
+  }
+  return nullptr;
+}
+
+// The code from `boundary` (already in `out`: the operands of the construct at `index`) to the farthest join point of
+// `joins` in nested `block`s, one per join, each ending at its join: a jump inside to a join is a `br`. The values the
+// boundary had on the stack stay below the blocks, where the code inside cannot reach them.
+bool emitJoinBlocks(const IrFunction &function,
+                    size_t index,
+                    const std::vector<size_t> &joins,
+                    const RangeBoundary &boundary,
+                    WasmLocalLayout &localLayout,
+                    const std::vector<WasmFunctionType> &functionTypes,
+                    const WasmRuntimeContext &runtime,
+                    std::vector<uint8_t> &out,
+                    std::string &error) {
+  std::vector<uint8_t> &stack = localLayout.typeState.stack;
+  const std::vector<uint8_t> below(stack.begin(),
+                                   stack.begin() + static_cast<std::ptrdiff_t>(boundary.stackSize));
+  stack.erase(stack.begin(), stack.begin() + static_cast<std::ptrdiff_t>(boundary.stackSize));
+  const size_t labelBase = localLayout.jumpLabels.size();
+  for (const size_t join : joins) {
+    ++localLayout.controlDepth;
+    localLayout.jumpLabels.push_back({join, localLayout.controlDepth});
+  }
+  // The innermost block ends at the nearest join; each outer block then continues to its own join.
+  std::vector<uint8_t> body;
+  size_t from = index;
+  for (size_t i = joins.size(); i > 0; --i) {
+    if (!emitInstructionRange(
+            function, from, joins[i - 1], localLayout, functionTypes, runtime, body, error)) {
+      return false;
+    }
+    if (!stack.empty()) {
+      error = unsupportedControlFlow(function, index);
+      return false;
+    }
+    body.push_back(WasmOpEnd);
+    localLayout.jumpLabels.pop_back();
+    --localLayout.controlDepth;
+    from = joins[i - 1];
+  }
+  localLayout.jumpLabels.resize(labelBase);
+  std::vector<uint8_t> opening;
+  for (size_t i = 0; i < joins.size(); ++i) {
+    opening.push_back(WasmOpBlock);
+    opening.push_back(WasmBlockTypeVoid);
+  }
+  out.insert(
+      out.begin() + static_cast<std::ptrdiff_t>(boundary.outSize), opening.begin(), opening.end());
+  out.insert(out.end(), body.begin(), body.end());
+  stack = below;
+  return true;
+}
+
 // `JumpIfZero` at `conditionIndex` whose body [conditionIndex + 1, bodyEnd) ends in a jump out of the enclosing
 // construct (to `label`): wasm `if` of the body followed by `br`; the code from the jump-over target on follows it.
 bool emitIfThenBranch(const IrFunction &function,
@@ -155,7 +331,7 @@ bool emitIfThenBranch(const IrFunction &function,
     return false;
   }
   if (!localLayout.typeState.stack.empty()) {
-    error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+    error = unsupportedControlFlow(function, bodyStart);
     return false;
   }
   appendBranchToLabel(localLayout, label, body);
@@ -196,7 +372,7 @@ bool emitIfArm(const IrFunction &function,
   localLayout.jumpLabels.pop_back();
   --localLayout.controlDepth;
   if (!localLayout.typeState.stack.empty()) {
-    error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+    error = unsupportedControlFlow(function, start);
     return false;
   }
   out.push_back(WasmOpBlock);
@@ -279,7 +455,7 @@ bool emitIfRegion(const IrFunction &function,
         continue;
       }
       if (yielding > 0 && stack->size() != valueCount) {
-        error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+        error = unsupportedControlFlow(function, trueStart);
         return false;
       }
       valueCount = stack->size();
@@ -290,7 +466,7 @@ bool emitIfRegion(const IrFunction &function,
       }
     }
     if (valueCount > 1) {
-      error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+      error = unsupportedControlFlow(function, trueStart);
       return false;
     }
     if (valueCount == 1) {
@@ -340,10 +516,46 @@ bool emitInstructionRange(const IrFunction &function,
                           bool *outDiverges) {
   size_t index = start;
   bool diverges = false;
+  std::vector<RangeBoundary> boundaries;
   while (index < end) {
     diverges = false;
+    boundaries.push_back({index, out.size(), localLayout.typeState.stack.size()});
     LoopRegion loopRegion;
-    if (detectCanonicalLoopRegion(function, index, end, loopRegion, error)) {
+    const bool isLoop = detectCanonicalLoopRegion(function, index, end, loopRegion, error);
+    const IrOpcode firstOp = function.instructions[index].op;
+    if (isLoop || firstOp == IrOpcode::JumpIfZero || firstOp == IrOpcode::Jump) {
+      const size_t operands = firstOp == IrOpcode::JumpIfZero ? 1 : 0;
+      const size_t stackSize = localLayout.typeState.stack.size();
+      const RangeBoundary *blockStart =
+          stackSize >= operands ? findBlockStart(function, boundaries, index, stackSize - operands)
+                                : nullptr;
+      const std::vector<size_t> joins =
+          blockStart == nullptr
+              ? std::vector<size_t>()
+              : findEscapeJoins(function,
+                                localLayout,
+                                index,
+                                constructEnd(function, index, end, isLoop ? &loopRegion : nullptr),
+                                end);
+      if (!joins.empty()) {
+        const RangeBoundary boundary = *blockStart;
+        if (!emitJoinBlocks(function,
+                            index,
+                            joins,
+                            boundary,
+                            localLayout,
+                            functionTypes,
+                            runtime,
+                            out,
+                            error)) {
+          return false;
+        }
+        boundaries.clear();
+        index = joins.front();
+        continue;
+      }
+    }
+    if (isLoop) {
       out.push_back(WasmOpBlock);
       out.push_back(WasmBlockTypeVoid);
       out.push_back(WasmOpLoop);
@@ -399,8 +611,9 @@ bool emitInstructionRange(const IrFunction &function,
         error = "wasm emitter malformed jump target in function: " + function.name;
         return false;
       }
+      target = clampSharedJoin(function, target, end);
       if (target <= index || target > end) {
-        error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+        error = unsupportedControlFlow(function, index);
         return false;
       }
 
@@ -414,7 +627,7 @@ bool emitInstructionRange(const IrFunction &function,
           return false;
         }
         thenStart = shortCircuit.thenStart;
-        target = shortCircuit.elseStart;
+        target = clampSharedJoin(function, shortCircuit.elseStart, end);
       }
 
       if (target > 0 && target - 1 >= thenStart) {
@@ -422,14 +635,14 @@ bool emitInstructionRange(const IrFunction &function,
         if (tail.op == IrOpcode::Jump) {
           const size_t jumpTarget = static_cast<size_t>(tail.imm);
           if (jumpTarget <= target - 1) {
-            error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+            error = unsupportedControlFlow(function, index);
             return false;
           }
           if (jumpTarget > end) {
             // The body ends in a jump out of the enclosing `if`/`else` (an early exit of one of its arms).
             const WasmJumpLabel *label = findJumpLabel(localLayout, jumpTarget);
             if (label == nullptr) {
-              error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+              error = unsupportedControlFlow(function, index);
               return false;
             }
             if (!emitIfThenBranch(function,
@@ -538,7 +751,7 @@ bool emitInstructionRange(const IrFunction &function,
         ++index;
         continue;
       }
-      error = "wasm emitter unsupported control-flow pattern in function: " + function.name;
+      error = unsupportedControlFlow(function, index);
       return false;
     }
 

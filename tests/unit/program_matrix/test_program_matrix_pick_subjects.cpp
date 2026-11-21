@@ -895,6 +895,7 @@ main() {
 TEST_CASE("some of a fresh struct destroys the argument and the payload copy once each") {
   program_matrix::ProgramCase program;
   program.name = "pick_subject_some_argument_and_payload";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 

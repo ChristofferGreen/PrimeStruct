@@ -9,6 +9,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.lifecycle");
 TEST_CASE("Destroy runs at scope end in reverse order, and for a moved value in the callee") {
   program_matrix::ProgramCase program;
   program.name = "destroy_scope_end";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {
@@ -78,6 +79,7 @@ main() {
 TEST_CASE("a return from a nested block destroys the enclosing locals") {
   program_matrix::ProgramCase program;
   program.name = "destroy_nested_return";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {
@@ -803,6 +805,7 @@ main() {
 TEST_CASE("a Maybe payload is copied in and destroyed once") {
   program_matrix::ProgramCase program;
   program.name = "maybe_payload_destroyed_once";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -901,6 +904,7 @@ main() {
 TEST_CASE("a move parameter is destroyed by the callee on every exit") {
   program_matrix::ProgramCase program;
   program.name = "move_parameter_destroyed_on_every_exit";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Noisy() {
@@ -943,6 +947,7 @@ main() {
 TEST_CASE("a Result local destroys its struct payload once and try copies it out") {
   program_matrix::ProgramCase program;
   program.name = "result_payload_try_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/result/*
 
 [struct]
@@ -991,6 +996,7 @@ main() {
 TEST_CASE("a Result local destroys an unread or failed payload exactly once") {
   program_matrix::ProgramCase program;
   program.name = "result_payload_unread_error";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/result/*
 
 [struct]

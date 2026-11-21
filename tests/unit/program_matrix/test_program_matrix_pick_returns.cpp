@@ -91,6 +91,15 @@ void runPickReturnProgram(const std::string &name, const std::string &source, in
   program.name = name;
   program.source = source;
   program.exitCode = exitCode;
+  // Wasm runs these programs; the others use opcodes it lacks.
+  static const std::vector<std::string> wasmPrograms = {"pick_return_unit_and_payload",
+                                                        "pick_return_result_ok_arm",
+                                                        "pick_return_nested",
+                                                        "pick_return_loop_and_value",
+                                                        "pick_return_after_binding"};
+  if (program_matrix::listed(wasmPrograms, name)) {
+    program.extraConfigs = {"wasm-wasi"};
+  }
   program_matrix::runProgramMatrix(program);
 }
 

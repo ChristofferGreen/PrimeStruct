@@ -9,6 +9,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.results");
 TEST_CASE("stdlib Result named locals, forwarded calls and parameters return sum storage") {
   program_matrix::ProgramCase program;
   program.name = "result_named_forwarded_params";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -67,6 +68,7 @@ main() {
 TEST_CASE("stdlib Result error code zero stays an error") {
   program_matrix::ProgramCase program;
   program.name = "result_error_code_zero";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -107,6 +109,7 @@ main() {
 TEST_CASE("stdlib Result keeps i64 and f64 payloads and errors") {
   program_matrix::ProgramCase program;
   program.name = "result_wide_payloads";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -163,6 +166,7 @@ main() {
 TEST_CASE("stdlib Result keeps string payloads and errors") {
   program_matrix::ProgramCase program;
   program.name = "result_string_payloads";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -201,6 +205,7 @@ main() {
 TEST_CASE("status-only stdlib Result propagates its error through try") {
   program_matrix::ProgramCase program;
   program.name = "result_status_only_propagation";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -405,6 +410,7 @@ main() {
 TEST_CASE("int-backed error struct payload reads through pick and Result.why") {
   program_matrix::ProgramCase program;
   program.name = "result_error_struct_pick_why";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/collections/*
@@ -437,6 +443,7 @@ main() {
 TEST_CASE("int-backed error struct payload reaches an on_error handler through try") {
   program_matrix::ProgramCase program;
   program.name = "result_error_struct_try_on_error";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/collections/*
@@ -631,6 +638,7 @@ main() {
 TEST_CASE("try as an argument of a user function reports through the caller's on_error") {
   program_matrix::ProgramCase program;
   program.name = "result_try_call_argument";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -779,6 +787,7 @@ main() {
 TEST_CASE("field access on a try takes the error path of the handler") {
   program_matrix::ProgramCase program;
   program.name = "result_try_struct_payload_field_error";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 

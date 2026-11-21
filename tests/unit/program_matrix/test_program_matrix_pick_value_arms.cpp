@@ -82,6 +82,7 @@ TEST_CASE("the locals of a pick expression arm are destroyed where the arm ends,
   // `pick` to destroy: `inner` (2) is destroyed before `print_line(r)`, not at the exit of the body.
   program_matrix::ProgramCase program;
   program.name = "pick_value_arm_scopes";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = NoisyPrelude + R"(
 [effects(io_out)]
 note([i32] value) {

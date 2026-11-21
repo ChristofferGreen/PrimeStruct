@@ -303,6 +303,7 @@ main() {
 TEST_CASE("a real call returns a Result, a Maybe and a user sum through the caller's block") {
   program_matrix::ProgramCase program;
   program.name = "sum_real_call_scalar_results";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/maybe/*
@@ -486,6 +487,7 @@ show_fetched([Result<String, i32>] value) {
 TEST_CASE("a real call that returns a sum moves a payload with a Destroy to its caller once") {
   program_matrix::ProgramCase program;
   program.name = "sum_real_call_destroy_payload";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 
@@ -541,6 +543,7 @@ main() {
 TEST_CASE("a definition that returns a Result and uses try stays inline") {
   program_matrix::ProgramCase program;
   program.name = "sum_result_with_try_stays_inline";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 
@@ -641,6 +644,7 @@ fetch_inline([i32] id) {
 TEST_CASE("a discarded user sum with a Destroy payload destroys it once") {
   program_matrix::ProgramCase program;
   program.name = "sum_discarded_destroy_payload";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 

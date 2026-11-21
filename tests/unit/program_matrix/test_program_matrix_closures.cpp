@@ -36,6 +36,7 @@ void runClosureProgram(const std::string &name, const std::string &source, int e
       "closure_nested_lambda",
       "closure_ref_capture_in_generic_call",
       "closure_ref_capture_writes",
+      "closure_result_map_return",
       "closure_return_type_with_captures",
       "generic_imported_callable_reference_param"};
   if (program_matrix::listed(wasmPrograms, name)) {
