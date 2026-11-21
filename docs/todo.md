@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
 | TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | ready | safety-borrows |
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | ready | safety-borrows |
-| TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | ready | safety-borrows |
 | TODO-6168 | Assigning to a local that a view borrows names the local as the sink | deferred | safety-borrows |
 | TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
@@ -330,19 +329,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `[effects(heap_alloc), return<void>] wipe([Reference<vector<i32>>] target) { dereference(target).clear() } [effects(heap_alloc), return<int>] main() { [vector<i32> mut] v{vector<i32>(1i32, 2i32)} [vector<i32>] view{v} wipe(location(v)) return(view.count()) }` compiles.
   - notes: TODO-6165 decided option B (2026-11-21): the callee-effect analysis of the acceptance applies.
 
-- [~] TODO-6167: A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-private (worktree-agent-aff951f79450d966f), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-5512)
-  - parallel_track: safety-borrows
-  - scope: A view of `dereference(r)` is rooted at the `Reference` local `r` (TODO-6164), and `r` aliases the local it was made from (`[Reference<vector<i32>>] r{location(v)}`). Changing `v` directly (`v.clear()`, `v.push(x)`, `v = ...`) looks for views and borrows rooted at `v`, finds none once `r` is no longer used, and compiles although the view reads `v`'s old storage: `[vector<i32> mut] v{vector<i32>(1i32, 2i32)} [Reference<vector<i32>>] r{location(v)} [vector<i32>] view{dereference(r)} v.clear() return(view.count())`.
-  - acceptance:
-    - the repro, and the `push` and `v = ...` variants, are `borrowed binding: v (root: v, sink: view)`; a view used before the change, a `mut` view (own copy) and no view are accepted; the stdlib and corpus compile; negative example with line and column
-    - full release gate green
-  - stop_rule: the roots a view of a `Reference` local counts for (`liveContainerViewOf`, `activeBorrowSinkOf`); no new borrow kinds.
-  - repro: the program in scope compiles and exits 0.
 
 - [ ] TODO-6168: Assigning to a local that a view borrows names the local as the sink
   - owner: ai

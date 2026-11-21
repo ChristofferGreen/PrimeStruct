@@ -1,0 +1,13 @@
+// `view` reads the vector `r` refers to (`r` was made from `location(values)`), so changing `values` directly
+// while `view` is used later would leave it on freed storage. `r` itself is not used after `view` is made, but
+// the view still counts as a borrow of `values`.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [Reference<vector<i32>>] r{location(values)}
+  [vector<i32>] view{dereference(r)}
+  values.clear()
+  return(view.count())
+}

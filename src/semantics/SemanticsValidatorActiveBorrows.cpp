@@ -27,6 +27,16 @@ SemanticsValidator::activeBorrowSinkOf(const std::vector<ParameterInfo> &params,
     if (root.empty() && includePointers && binding.typeName == "Pointer") {
       root = binding.referenceRoot;
     }
+    // A view of `dereference(r)` is rooted at the `Reference` local `r`, which aliases `name` when it was made from it
+    // (`[Reference<vector<i32>>] r{location(v)}`): the view reads `name`'s storage even after `r`'s last use.
+    if (binding.isContainerView && !root.empty() && root != name) {
+      if (const auto aliasIt = locals.find(root);
+          aliasIt != locals.end() && !aliasIt->second.isContainerView &&
+          aliasIt->second.referenceRoot == name &&
+          normalizeBindingTypeName(aliasIt->second.typeName) == "Reference") {
+        root = name;
+      }
+    }
     // Several borrows can hold the root: report the smallest name so the diagnostic is stable.
     if (root == name && (sink.empty() || borrowName < sink)) {
       sink = borrowName;

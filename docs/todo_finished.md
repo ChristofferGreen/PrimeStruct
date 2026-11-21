@@ -2560,6 +2560,7 @@ are left unarchived.
 | TODO-6161 | A `[private]` field is readable and writable from anywhere | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6164 | A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

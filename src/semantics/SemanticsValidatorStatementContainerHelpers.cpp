@@ -427,9 +427,20 @@ SemanticsValidator::liveContainerViewOf(const std::vector<ParameterInfo> &params
   if (rootName.empty() || currentValidationState_.context.definitionIsUnsafe) {
     return {};
   }
+  // A view of `dereference(r)` is rooted at the `Reference` local `r`; `r` aliases the place it was made from
+  // (`[Reference<vector<i32>>] r{location(v)}`), so the view also reads `rootName`'s storage when `r` aliases it.
+  std::unordered_set<std::string> aliasNames;
+  for (const auto &[name, binding] : locals) {
+    if (!binding.isContainerView && !binding.referenceRoot.empty() &&
+        binding.referenceRoot == rootName &&
+        normalizeBindingTypeName(binding.typeName) == "Reference") {
+      aliasNames.insert(name);
+    }
+  }
   std::string viewName;
   for (const auto &[name, binding] : locals) {
-    if (binding.isContainerView && binding.referenceRoot == rootName &&
+    if (binding.isContainerView &&
+        (binding.referenceRoot == rootName || aliasNames.count(binding.referenceRoot) > 0) &&
         currentValidationState_.endedReferenceBorrows.count(name) == 0 &&
         (viewName.empty() || name < viewName)) {
       viewName = name;

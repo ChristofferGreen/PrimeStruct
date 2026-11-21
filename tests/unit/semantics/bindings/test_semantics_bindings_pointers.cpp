@@ -2127,6 +2127,47 @@ Bag() {
   }
 }
 
+TEST_CASE("a view of a Reference alias blocks changing the local it aliases") {
+  // docs/spec/type-system.md, Memory safety: the view reads the aliased local's storage after the alias's last use.
+  const std::string prelude = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [Reference<vector<i32>>] r{location(values)}
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {"clear",
+       "  [vector<i32>] view{dereference(r)}\n  values.clear()\n  return(view.count())\n}\n"},
+      {"push",
+       "  [vector<i32>] view{dereference(r)}\n  values.push(3i32)\n  return(view.count())\n}\n"},
+      {"assign",
+       "  [vector<i32>] view{dereference(r)}\n  assign(values, vector<i32>(9i32))\n  "
+       "return(view.count())\n}\n"},
+  };
+  for (const auto &[name, body] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(prelude + body, "/main", error));
+    CHECK(error.find("borrowed binding: values (root: values, sink: ") != std::string::npos);
+  }
+  const std::vector<std::pair<std::string, std::string>> accepted = {
+      {"last use first",
+       "  [vector<i32>] view{dereference(r)}\n  [i32] seen{view.count()}\n  values.clear()\n  "
+       "return(seen)\n}\n"},
+      {"mut view copies",
+       "  [vector<i32> mut] view{dereference(r)}\n  values.clear()\n  return(view.count())\n}\n"},
+      {"no view", "  values.clear()\n  return(dereference(r).count())\n}\n"},
+  };
+  for (const auto &[name, body] : accepted) {
+    INFO(name);
+    std::string error;
+    CHECK(validateProgram(prelude + body, "/main", error));
+    CHECK(error.empty());
+  }
+}
+
 TEST_CASE("vector and map public helpers stay callable from safe code") {
   const std::string source = R"(
 import /std/collections/*

@@ -779,7 +779,9 @@ helper over `value` (docs/spec/transforms.md).
     `[Reference<T> mut]` parameter while a read-only view of `x` is used later is the same diagnostic
     (`sink: <view>`), because the callee may grow, shrink or clear the container the view reads. A view of `dereference(r)` (or of its field) for a `Reference` parameter or local `r` is rooted at `r`: changing the
     container through `r` (`dereference(r).clear()`, `r.push(x)`) while the view is used later is `borrowed binding: r
-    (root: r, sink: <view>)`.
+    (root: r, sink: <view>)`. When `r` aliases a local (`[Reference<vector<i32>>] r{location(v)}`), such a view also borrows
+    that local: changing `v` directly (`v.clear()`, `v.push(x)`, `v = ...`) while the view is used later is `borrowed
+    binding: v (root: v, sink: <view>)`, even when `r` is not used again.
   - Copying a container copies its elements; two containers never share storage in safe code.
   - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error
     (implemented for `if` branches, where a branch ending in `return` does not reach the code after it, and for loops,
