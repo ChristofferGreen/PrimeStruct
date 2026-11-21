@@ -501,9 +501,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the parameter prologue only; no other emitter change.
   - repro: `./primec --emit=wasm --wasm-profile wasi c.prime -o c.wasm --entry /main` of `[struct] Counter() { [i64 mut] total{1i64} [i64 mut] doubled{2i64} [return<i64>] sum() { return(this.total + this.doubled) } }` and a `main` that prints `five.sum()` and `none.sum()` of two `Counter` locals.
 
-- [ ] TODO-6146: Wasm structured control flow for an early return out of an inlined body with cleanup
+- [~] TODO-6146: Wasm structured control flow for an early return out of an inlined body with cleanup
   - owner: ai
   - status: ready
+  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6138)
   - parallel_track: wasm-opcode-gaps
