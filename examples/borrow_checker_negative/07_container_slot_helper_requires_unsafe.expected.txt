@@ -1,0 +1,5 @@
+"code":"PSC1005"
+"message":"calling /std/collections/vector/vectorBorrowSlot__
+requires an unsafe definition"
+"line":9,"column":25
+"notes":["stage: semantic"]

@@ -1,0 +1,5 @@
+"code":"PSC1005"
+"message":"calling /std/collections/vector/vectorFreeStorage__
+requires an unsafe definition"
+"line":8,"column":3
+"notes":["stage: semantic"]

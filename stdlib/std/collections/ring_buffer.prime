@@ -153,7 +153,7 @@ namespace std {
     }
   }
 
-  [unsafe return<Pointer<uninitialized<T>>>]
+  [unsafe_api return<Pointer<uninitialized<T>>>]
   slotUnsafe<T>([RingBuffer<T>] values, [i32] index) {
     if(index < 0 || index >= values.field_count()) {
       panic(index)
@@ -162,7 +162,7 @@ namespace std {
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, physical))
   }
 
-  [public return<T>]
+  [public unsafe return<T>]
   at<T>([RingBuffer<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{slotUnsafe<T>(values, index)}
     [Reference<T>] ref{borrow(*slot)}

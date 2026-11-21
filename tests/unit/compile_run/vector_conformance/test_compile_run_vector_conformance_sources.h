@@ -155,7 +155,7 @@ inline std::string makeCanonicalVectorIndexedRemovalOwnershipConformanceSource()
   source += "Wrapper() {\n";
   source += "  [Owned] value{Owned()}\n";
   source += "}\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += "[unsafe effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [Vector<Owned> mut] removed{/std/collections/vector/vector<Owned>()}\n";
   source += "  /std/collections/vector/push<Owned>(removed, Owned(4i32))\n";

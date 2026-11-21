@@ -12,7 +12,7 @@ namespace std {
     return(bufferAlloc<T>(count))
   }
 
-  [unsafe effects(heap_alloc), return<void>]
+  [unsafe_api effects(heap_alloc), return<void>]
   vectorFreeStorage<T>([Pointer<uninitialized<T>>] ptr) {
     bufferFreeUninitialized<T>(ptr)
   }
@@ -50,7 +50,7 @@ namespace std {
       this.fieldCapacity = value
     }
 
-    [mut effects(heap_alloc)]
+    [unsafe mut effects(heap_alloc)]
     Copy([Reference<Self>] other) {
       [i32] itemCount{other.fieldCount}
       [mut] allocCount{other.fieldCapacity}
@@ -75,7 +75,7 @@ namespace std {
       other.ownsData = false
     }
 
-    [mut effects(heap_alloc)]
+    [unsafe mut effects(heap_alloc)]
     Destroy() {
       if(this.ownsData) {
         [Pointer<uninitialized<T>>] dataPtr{this.data}
@@ -90,7 +90,7 @@ namespace std {
 
   }
 
-  [unsafe return<Pointer<uninitialized<T>>>]
+  [unsafe_api return<Pointer<uninitialized<T>>>]
   vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(index < 0 || index >= values.field_capacity()) {
@@ -105,31 +105,31 @@ namespace std {
     return(value)
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   vectorDropSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     drop(*slot)
   }
 
-  [return<T>]
+  [unsafe_api return<T>]
   vectorTakeSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     return(take(*slot))
   }
 
-  [return<Reference<T>>]
+  [unsafe_api return<Reference<T>>]
   vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
     return(borrow(*slot))
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   vectorDropRange<T>([Vector<T> mut] values, [i32] limit) {
     vectorCheckShape<T>(values)
     if(limit < 0 || limit > values.field_capacity()) {
@@ -140,7 +140,7 @@ namespace std {
     }
   }
 
-  [unsafe effects(heap_alloc), return<void>]
+  [unsafe_api effects(heap_alloc), return<void>]
   vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [Vector<T> mut] values, [i32] limit) {
     for([i32 mut] index{0}, index < limit, index++) {
       [Pointer<uninitialized<T>> mut] nextSlot{
@@ -179,7 +179,7 @@ namespace std {
     }
   }
 
-  [effects(heap_alloc), return<void>]
+  [unsafe effects(heap_alloc), return<void>]
   vectorReserveInternal<T>([Vector<T> mut] values, [i32] capacity) {
     vectorCheckShape<T>(values)
     if(capacity < 0) {
@@ -203,7 +203,7 @@ namespace std {
     }
   }
 
-  [public effects(heap_alloc), return<Vector<T>>]
+  [public unsafe effects(heap_alloc), return<Vector<T>>]
   vector<T>([args<T>] values) {
     [i32] valueCount{values.count()}
     [mut] out{vectorAlloc<T>(valueCount, valueCount)}
@@ -244,7 +244,7 @@ namespace std {
     vectorReserveInternal<T>(values, capacity)
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe effects(heap_alloc), return<void>]
   vectorPush<T>([Vector<T> mut] values, [T move] value) {
     vectorCheckShape<T>(values)
     if(values.field_count() == values.field_capacity()) {
@@ -264,7 +264,7 @@ namespace std {
     values.fieldCount = values.fieldCount + 1
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe effects(heap_alloc), return<void>]
   vectorPop<T>([Vector<T> mut] values) {
     vectorCheckShape<T>(values)
     if(values.field_count() == 0) {
@@ -276,14 +276,14 @@ namespace std {
     }
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe effects(heap_alloc), return<void>]
   vectorClear<T>([Vector<T> mut] values) {
     vectorCheckShape<T>(values)
     vectorDropRange<T>(values, values.field_count())
     values.fieldCount = 0
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe effects(heap_alloc), return<void>]
   vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     lastIndex{values.field_count() - 1}
@@ -294,7 +294,7 @@ namespace std {
     values.fieldCount = lastIndex
   }
 
-  [public effects(heap_alloc), return<void>]
+  [public unsafe effects(heap_alloc), return<void>]
   vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     lastIndex{values.field_count() - 1}
@@ -340,13 +340,13 @@ namespace std {
     vectorRemoveSwap<T>(values, index)
   }
 
-  [public return<T>]
+  [public unsafe return<T>]
   vectorAt<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     return(*(vectorBorrowSlot<T>(values, index)))
   }
 
-  [public return<T>]
+  [public unsafe return<T>]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
     return(*(vectorBorrowSlot<T>(values, index)))
   }

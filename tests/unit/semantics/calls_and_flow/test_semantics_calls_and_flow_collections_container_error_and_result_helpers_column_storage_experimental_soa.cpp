@@ -438,7 +438,7 @@ TEST_CASE("experimental vector borrow-slot helper validates reference return") {
   const std::string source = R"(
 import /std/collections/vector/*
 
-[return<Reference<i32>>]
+[unsafe return<Reference<i32>>]
 borrow_second([Vector<i32>] values) {
   return(vectorBorrowSlot<i32>(values, 1i32))
 }

@@ -339,6 +339,14 @@
   std::string liveContainerViewOf(const std::vector<ParameterInfo> &params,
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const std::string &rootName);
+  // The name of a borrow of the binding `name` that is still used later (a `Reference`, a view or an SoA field view;
+  // with `includePointers` also a `Pointer` rooted at it), or empty. The smallest such name, so a diagnostic is stable.
+  // `ignoreBorrowName` is a borrow that does not count (the one the current expression is made from).
+  std::string activeBorrowSinkOf(const std::vector<ParameterInfo> &params,
+                                 const std::unordered_map<std::string, BindingInfo> &locals,
+                                 const std::string &name,
+                                 const std::string &ignoreBorrowName,
+                                 bool includePointers);
   // Whether values of `binding`'s type own resources: a container, a type that defines `Destroy`,
   // or one holding either. Such values are moved, not copied, when passed to a `move` parameter.
   bool bindingOwnsResources(const BindingInfo &binding, const std::string &namespacePrefix);

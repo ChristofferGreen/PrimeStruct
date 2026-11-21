@@ -1,0 +1,16 @@
+// `view` reads `values`' storage. Passing `location(values)` to a `[Reference<T> mut]` parameter lets `wipe` clear the vector,
+// which frees that storage while `view` is still used below. The change waits until the view's last use.
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+wipe([Reference<vector<i32>> mut] target) {
+  dereference(target).clear()
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{values}
+  wipe(location(values))
+  return(view.count())
+}

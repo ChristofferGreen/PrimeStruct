@@ -167,7 +167,7 @@ namespace std {
     return(limit)
   }
 
-  [return<void>]
+  [unsafe return<void>]
   overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Reference<T> mut] slot{vectorBorrowSlot<T>(values, index)}
     *slot = value

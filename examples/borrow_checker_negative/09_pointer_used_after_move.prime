@@ -1,0 +1,17 @@
+// A pointer to a local is a borrow of that local: `take(move(values))` hands the vector's storage to `take`, which
+// frees it, so reading through `first` afterwards would read freed memory. The pointer's last use has to come before
+// the move.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+take([vector<i32> move] items) {
+  return(items.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [Pointer<vector<i32>>] first{location(values)}
+  take(move(values))
+  return(dereference(first).count())
+}

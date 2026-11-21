@@ -436,6 +436,12 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (binding == nullptr || !bindingOwnsResources(*binding, expr.namespacePrefix)) {
       continue;
     }
+    // A reference, view or pointer to the argument that is used after the call would dangle once the callee owns it.
+    if (const std::string sink = activeBorrowSinkOf(params, locals, arg->name, "", true);
+        !sink.empty()) {
+      return failResolvedCallArgumentDiagnostic("borrowed binding: " + arg->name +
+                                                " (root: " + arg->name + ", sink: " + sink + ")");
+    }
     for (size_t otherIndex = 0; otherIndex < orderedArgs.size(); ++otherIndex) {
       const Expr *other = orderedArgs[otherIndex];
       if (otherIndex != paramIndex && other != nullptr && other->kind == Expr::Kind::Name &&
@@ -524,21 +530,39 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    // A `[Reference<T> mut]` parameter is the one the callee may write through; a plain `Reference<T>` is read-only.
+    const bool takesReference =
+        normalizeBindingTypeName(param.binding.typeName) == "Reference" && param.binding.isMutable;
     if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
-        (!param.binding.isMove && !isMutableBorrowParam(param))) {
+        (!param.binding.isMove && !isMutableBorrowParam(param) && !takesReference)) {
       continue;
     }
     const Expr *root = arg;
+    std::string builtinPointerName;
+    if (takesReference && root->kind == Expr::Kind::Call && root->args.size() == 1 &&
+        getBuiltinPointerName(*root, builtinPointerName) && builtinPointerName == "location") {
+      root = &root->args.front();
+    }
     while (root->kind == Expr::Kind::Call && root->isFieldAccess && root->args.size() == 1) {
       root = &root->args.front();
     }
     if (root->kind != Expr::Kind::Name) {
       continue;
     }
-    const std::string view = liveContainerViewOf(params, locals, root->name);
+    std::string rootName = root->name;
+    if (takesReference && root == arg) {
+      // A `Reference` local passed on is the place it aliases (`[Reference<vector<i32>>] r{location(v)}`, `wipe(r)`).
+      const BindingInfo *aliasBinding = bindingForName(rootName);
+      if (aliasBinding != nullptr &&
+          normalizeBindingTypeName(aliasBinding->typeName) == "Reference" &&
+          !aliasBinding->referenceRoot.empty()) {
+        rootName = aliasBinding->referenceRoot;
+      }
+    }
+    const std::string view = liveContainerViewOf(params, locals, rootName);
     if (!view.empty()) {
-      return failResolvedCallArgumentDiagnostic("borrowed binding: " + root->name +
-                                                " (root: " + root->name + ", sink: " + view + ")");
+      return failResolvedCallArgumentDiagnostic("borrowed binding: " + rootName +
+                                                " (root: " + rootName + ", sink: " + view + ")");
     }
   }
 

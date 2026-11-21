@@ -321,6 +321,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorSnapshotLocals.cpp
   src/semantics/SemanticsValidatorValidationContext.cpp
   src/semantics/SemanticsValidatorDiagnostics.cpp
+  src/semantics/SemanticsValidatorActiveBorrows.cpp
   src/semantics/SemanticsValidatorBorrowExpiry.cpp
   src/semantics/SemanticsValidatorResultHelpers.cpp
   src/semantics/SemanticsValidatorBuild.cpp

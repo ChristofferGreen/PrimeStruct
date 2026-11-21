@@ -1,0 +1,12 @@
+// `vectorBorrowSlot` hands out a Reference into the vector's storage that nothing tracks, so `reserve` below could
+// move the storage while `slot` still points into it. The slot helpers are `[unsafe_api]`: only `[unsafe]` code
+// may call them, safe code reads elements through `at` and the borrow rules.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [Reference<i32>] slot{/std/collections/vector/vectorBorrowSlot<i32>(values, 0i32)}
+  values.reserve(100i32)
+  return(slot)
+}

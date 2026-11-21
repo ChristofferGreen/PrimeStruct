@@ -123,7 +123,12 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-5512 | Pointers and aliases count as borrows of their root | deferred | safety-borrows |
+| TODO-6160 | The SoA slot helpers are `[unsafe]`, so safe code can call them | deferred | safety-stdlib |
+| TODO-6161 | A `[private]` field is readable and writable from anywhere | deferred | safety-stdlib |
+| TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | blocked | safety-stdlib |
+| TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
+| TODO-6164 | A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs | deferred | safety-borrows |
+| TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -163,8 +168,8 @@ of sync with them.
 
 ### Immediate Next 10
 
-2. TODO-5804
-4. TODO-5603
+1. TODO-5804
+2. TODO-5603
 
 ### Priority Lanes
 
@@ -174,7 +179,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): TODO-5511, TODO-5512
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6160 (SoA slot helpers), TODO-6161 (private fields, decision needed), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -261,33 +266,99 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
 
-- [~] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
+- [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
   - status: deferred
-  - claimed_by: safety-a (worktree-agent-a58bec85c3cadf782), 2026-11-21
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
-  - scope: Safe code frees or aliases container storage through stdlib internals: `[unsafe]` helpers are callable from safe code (`vectorFreeStorage`, `vectorSlotUnsafe`, `vectorBorrowSlot` returning an untracked `Reference`, `vectorTakeSlot`/`DropSlot`/`InitSlot`, ring-buffer and SoA slot helpers), non-public helpers are callable by absolute path, `Vector`'s `data`/`fieldCount`/`fieldCapacity` fields are public and writable (double free, out-of-bounds read), its brace constructor accepts arbitrary storage, and Map exposes `keys`/`payloads`/`inner`. Make those helpers `[unsafe_api]` (or private and enforced), make container fields private or read-only, and keep the stdlib compiling.
+  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156). Open: the SoA slot helpers (TODO-6160), field privacy that is enforced (TODO-6161, decision needed) and then making the `Vector`, `Map` and `SoaColumn` fields private with a brace constructor that takes no storage (TODO-6162), and non-public helpers callable by absolute path (TODO-6163, decision needed).
   - acceptance:
-    - each repro (free via helper, borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
+    - TODO-6160, TODO-6161, TODO-6162 and TODO-6163 are done; each repro (free via helper, borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
     - full release gate green
-  - stop_rule: visibility and unsafe marking; no container redesign.
-  - notes: deferred: queued behind the Ready Now cap; large, split before starting.
+  - stop_rule: tracker; the work is in the leaves.
+  - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
 
-- [~] TODO-5512: Pointers and aliases count as borrows of their root
+- [ ] TODO-6160: The SoA slot helpers are `[unsafe]`, so safe code can call them
   - owner: ai
   - status: deferred
-  - claimed_by: safety-a (worktree-agent-a58bec85c3cadf782), 2026-11-21
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: safety-borrows
-  - scope: `[Pointer<vector<i32>>] p{location(v)}` stays usable after `move(v)` or passing `v` to a move parameter (only References are tracked); a read-only view `[vector<i32>] view{v}` stays live while `v` is grown or cleared through a `Reference` alias passed to a helper (the view check only matches root names).
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5511)
+  - parallel_track: safety-stdlib
+  - scope: `soaColumnSlotUnsafe`, `soaColumnFieldSlotUnsafe` and the slot init/drop/take/borrow helpers of stdlib/std/collections/soa_storage.prime (and soa_storage/geometry.prime) are `[unsafe]` (or `[unsafe public]`), which safe code may call, so safe code gets a `Pointer` into a column's storage by absolute path. Same fix as TODO-6156 for `Vector`: `[unsafe_api]` on the helpers, `[unsafe]` on their callers (the public SoA operations).
   - acceptance:
-    - both are rejected with borrow diagnostics; negative + positive semantics tests
+    - a safe `main` that calls `/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, 0i32)` is `calling ... requires an unsafe definition` (a case in tests/unit/semantics/bindings/test_semantics_bindings_pointers.cpp and a negative example); the SoA corpus still compiles
     - full release gate green
-  - stop_rule: borrow tracking for Pointer roots and aliases.
-  - notes: deferred: queued behind the Ready Now cap.
+  - stop_rule: the SoA slot helpers; fields stay as they are (TODO-6162).
+  - repro: `[Pointer<uninitialized<i32>>] p{/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, 0i32)}` in a safe definition compiles.
+
+- [ ] TODO-6161: A `[private]` field is readable and writable from anywhere
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5511)
+  - parallel_track: safety-stdlib
+  - scope: docs/spec/type-system.md (Field visibility) says a field may be `[private]` and that the compiler enforces it, but `b.secret = 9i32; return(b.secret)` on a `[private i32 mut] secret` field of a struct in another namespace compiles and runs (exit 9). `inferStructFieldBinding` (src/semantics/SemanticsValidatorExprFieldResolution.cpp) has the diagnostic `private field is not accessible: <struct>/<field>` but its only caller passes `allowPrivate = true`. Nothing stops code outside the struct from reading `data` of a `Mutex`, `SharedString` or `String`, and TODO-6162 cannot make container fields private before this is enforced.
+  - decision_needed: who may name a private field. (A) Only the struct's own body: member functions and lifecycle helpers (C++ `private`). Cleanest and matches the C++ legacy, but the stdlib containers reach their fields from free functions in the same namespace (`vectorCheckShape`, `vectorReserveInternal`, ...), so every such function would become a member or an `[unsafe]` accessor first. (B) The struct's body and every definition in the struct's namespace and the namespaces inside it. This is the rule type aliases already have (docs/spec/type-system.md: a private alias is private to its namespace), it needs no stdlib rewrite, and `std::collections::vector` can keep its free helpers while user code outside `/std/collections/vector` cannot name `data`. (C) Keep fields public and make only the dangerous container fields need an unsafe definition to read or write. Smallest change, but a new kind of field marker. Recommendation: B, it is the existing precedent, closes the Vector, Map and SoaColumn repros once TODO-6162 marks the fields private, and breaks no stdlib code. The same rule would apply to private definitions (TODO-6163).
+  - acceptance:
+    - the chosen rule is in docs/spec/type-system.md (Field visibility) and enforced: reading, writing, taking `location` of and brace-initializing a private field from outside is `private field is not accessible: <struct>/<field>`; the stdlib and every example still compile; a negative example with line and column
+    - full release gate green
+  - stop_rule: enforcing field privacy; no field is made private by this leaf (TODO-6162).
+  - repro: `namespace box { [public struct] Box() { [private i32 mut] secret{7i32} } }` and `[return<int>] main() { [/box/Box mut] b{/box/Box{}} b.secret = 9i32 return(b.secret) }` exits 9.
+
+- [ ] TODO-6162: `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6161
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5511)
+  - parallel_track: safety-stdlib
+  - scope: With `[/std/collections/vector/Vector<i32> mut] v{...}`, safe code can write `w.data = v.data` (two vectors that free the same storage: `invalid heap free address`), `v.fieldCount = 1000i32; v.at(500i32)` (`invalid indirect address`) and `Vector<i32>{5i32, 5i32, v.data}` (a vector around another's storage), because `data`, `fieldCount`, `fieldCapacity` are `[public]` in stdlib/std/collections/vector.prime; `MapValue` has public `keys` and `payloads`, `SoaColumn` public `count`, `capacity` and `data`. Make them `[private]` (after TODO-6161 enforces it) and give the types a brace constructor that takes only what a user may choose (a capacity), keeping every stdlib file compiling. A user-facing `vector<i32>` binding does not expose the fields (`field access requires struct receiver`), only the explicit `Vector<T>` type does.
+  - acceptance:
+    - each of the three repros above is `private field is not accessible` (or a constructor `argument count mismatch`) outside `/std/collections`; the stdlib and corpus compile
+    - full release gate green
+  - stop_rule: visibility of the container fields and their constructors; no container redesign.
+  - repro: see scope; `w.data = v.data` runs and ends with `VM error: invalid heap free address in IR`.
+
+- [ ] TODO-6163: Non-public stdlib helpers are callable by absolute path
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5511)
+  - parallel_track: safety-stdlib
+  - scope: docs/spec/backend-type-support.md (Exports) says a definition without `[public]` is private to its module but still callable within the same compilation unit; visibility only affects imports. `/std/collections/vector/vectorCheckShape<i32>(v)` and every other helper without `[public]` therefore compile in user code written by absolute path. The dangerous ones are `[unsafe_api]` now (TODO-6156), so this is about the rest: internal invariants (`vectorReserveInternal`, `vectorAlloc`, the checks) callable out of order.
+  - decision_needed: does `[private]` (and the default of no `[public]`) stop an absolute-path call from another module? (A) Yes: a call to a non-public definition from a definition outside its namespace is `<path> is private`, with the stdlib and examples fixed up. Matches C++ and the C++-legacy direction, and makes `[public]` mean what it says. Costs a sweep of the stdlib for helpers that other modules call without `[public]`. (B) No, keep the spec as it is and mark every helper that can break an invariant `[unsafe_api]`. No new rule, but the marker then means two things (memory unsafe, and internal). Recommendation: A for definitions in `/std`, enforced together with the field rule of TODO-6161 so that `private` has one meaning; the spec sentence in Exports changes in the same commit.
+  - acceptance:
+    - the chosen rule is in docs/spec/backend-type-support.md (Exports) and enforced, with a negative example; stdlib and examples compile
+    - full release gate green
+  - stop_rule: call-site visibility of definitions; no new visibility keywords.
+  - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
+
+- [ ] TODO-6164: A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5512)
+  - parallel_track: safety-borrows
+  - scope: TODO-6159 rejects a view of a local that is cleared through a `Reference` argument, but inside the callee `shrink([Reference<vector<i32>>] r) { [vector<i32>] view{dereference(r)} dereference(r).clear() return(view.count()) }` still compiles and reads the cleared vector: a view whose source is `dereference(<Reference parameter>)` has no root (`markContainerViewBinding` roots a view at a name, `containerPlaceRoot` stops at the call). The same holds for a view of a `Reference` parameter's field.
+  - acceptance:
+    - the repro is `borrowed binding: r (root: r, sink: view)`; the stdlib and corpus compile; negative example with line and column
+    - full release gate green
+  - stop_rule: roots of views through `dereference` of a parameter; no new borrow kinds.
+  - repro: `[effects(heap_alloc), return<int>] shrink([Reference<vector<i32>>] r, [i32] extra) { [vector<i32>] view{dereference(r)} dereference(r).clear() return(view.count()) } [effects(heap_alloc), return<int>] main() { [vector<i32> mut] v{vector<i32>(1i32, 2i32)} return(shrink(location(v), 0i32)) }` compiles.
+
+- [ ] TODO-6165: A container is changed through a `Reference` parameter that is not `mut`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5512)
+  - parallel_track: safety-borrows
+  - scope: `assign(target, 5i32)` through a plain `[Reference<i32>] target` is `assign target must be a mutable binding: target`, but `dereference(target).clear()` and `target.push(7i32)` through a plain `[Reference<vector<i32>>] target` compile and change the caller's vector. The stdlib marks the writing references `mut` (`insert_ref`, `overwriteSlot`), so the rule "a `Reference` without `mut` is read-only" is already how the code is written; structural changes are the hole. The borrow checks of TODO-6159 can only trust `mut` because of this.
+  - acceptance:
+    - a structural change (`clear`, `push`, `pop`, `reserve`, `remove_*`, `insert`) of a container through a `Reference` binding or parameter that is not `mut` is `mutating call requires a mutable place` (or the diagnostic the same call on a non-`mut` local gives); the stdlib and corpus compile
+    - full release gate green
+  - stop_rule: structural mutation through non-`mut` references; no new reference kinds.
+  - repro: `[effects(heap_alloc), return<void>] wipe([Reference<vector<i32>>] target) { dereference(target).clear() }` with `wipe(location(v))` compiles and clears `v`.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai

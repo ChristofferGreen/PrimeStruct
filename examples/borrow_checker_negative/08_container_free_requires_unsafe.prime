@@ -1,0 +1,10 @@
+// Freeing a vector's storage while the vector still owns it is a double free when the vector is destroyed.
+// `vectorFreeStorage` is `[unsafe_api]`, so safe code cannot call it.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/collections/vector/Vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32, 2i32)}
+  /std/collections/vector/vectorFreeStorage<i32>(values.data)
+  return(0i32)
+}

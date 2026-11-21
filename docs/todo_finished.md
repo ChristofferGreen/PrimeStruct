@@ -2002,6 +2002,7 @@ are left unarchived.
 | TODO-5508 | User Copy helpers work for structs with owning fields | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5509 | Self-assignment, user-Destroy fields, Maybe payloads and move parameters destroy correctly | [2026-10.md](todo_archive/2026-10.md) | 2026-10-06 |
 | TODO-5510 | `return` returns from unit-variant pick arms correctly | [undated.md](todo_archive/undated.md) | - |
+| TODO-5512 | Pointers and aliases count as borrows of their root | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5513 | Methods through a dereferenced vector pointer read the right fields | [undated.md](todo_archive/undated.md) | - |
 | TODO-5514 | Native file I/O writes newlines and reports errno | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5515 | Native Result.ok(Buffer) reads as ok | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
@@ -2551,6 +2552,10 @@ are left unarchived.
 | TODO-6152 | `progress_beat` counted the beats of a loaded run and failed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6154 | Wasm refuses an early return of an array element in a recursive function as mixed return kinds | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6155 | The new kill-message case of the watchdog self-test raced the exit of its child | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6156 | Safe code calls the `Vector` and ring buffer slot helpers and frees container storage | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6157 | A pointer to a local stays usable after the local is moved | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6158 | Passing a borrowed binding to a `move` parameter ignores a live `Reference` alias or view | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6159 | A `Reference` argument changes the container a live read-only view reads | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 
 <!-- INDEX-END -->
 

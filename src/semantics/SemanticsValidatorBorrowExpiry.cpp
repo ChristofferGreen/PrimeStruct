@@ -239,6 +239,15 @@ void SemanticsValidator::expireReferenceBorrowsForRanges(const std::vector<Param
     return false;
   };
   auto updateName = [&](const std::string &bindingName, const BindingInfo &binding) {
+    // A pointer rooted at a binding is a borrow of it until the pointer's last use (a move of the root checks it).
+    if (binding.typeName == "Pointer" && !binding.referenceRoot.empty()) {
+      if (rangesUseName(bindingName)) {
+        currentValidationState_.endedReferenceBorrows.erase(bindingName);
+      } else {
+        currentValidationState_.endedReferenceBorrows.insert(bindingName);
+      }
+      return;
+    }
     const std::string referenceRoot = referenceRootForBinding(bindingName, binding);
     if (referenceRoot.empty()) {
       return;

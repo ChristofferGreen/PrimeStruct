@@ -101,52 +101,8 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
   };
 
   auto hasActiveBorrowForBinding =
-      [&](const std::string &name,
-          const std::string &ignoreBorrowName = std::string()) -> bool {
-    if (currentValidationState_.context.definitionIsUnsafe) {
-      return false;
-    }
-    auto isSoaFieldViewBindingType = [&](const BindingInfo &binding) -> bool {
-      return isSoaFieldViewTypePath(binding.typeName);
-    };
-    auto referenceRootForBinding = [&](const std::string &bindingName,
-                                       const BindingInfo &binding) -> std::string {
-      if (binding.typeName != "Reference" && !isSoaFieldViewBindingType(binding) &&
-          !(binding.typeName == "auto" && !binding.referenceRoot.empty()) &&
-          !binding.isContainerView) {
-        return "";
-      }
-      if (!binding.referenceRoot.empty()) {
-        return binding.referenceRoot;
-      }
-      return bindingName;
-    };
-    auto hasBorrowFrom =
-        [&](const std::string &borrowName, const BindingInfo &binding) -> bool {
-      if (borrowName == name) {
-        return false;
-      }
-      if (!ignoreBorrowName.empty() && borrowName == ignoreBorrowName) {
-        return false;
-      }
-      if (currentValidationState_.endedReferenceBorrows.count(borrowName) >
-          0) {
-        return false;
-      }
-      const std::string root = referenceRootForBinding(borrowName, binding);
-      return !root.empty() && root == name;
-    };
-    for (const auto &param : params) {
-      if (hasBorrowFrom(param.name, param.binding)) {
-        return true;
-      }
-    }
-    for (const auto &entry : locals) {
-      if (hasBorrowFrom(entry.first, entry.second)) {
-        return true;
-      }
-    }
-    return false;
+      [&](const std::string &name, const std::string &ignoreBorrowName = std::string()) -> bool {
+    return !activeBorrowSinkOf(params, locals, name, ignoreBorrowName, false).empty();
   };
   auto findNamedBinding = [&](const std::string &name) -> const BindingInfo * {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
@@ -527,6 +483,11 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
     }
     if (hasActiveBorrowForBinding(target.name)) {
       return failBorrowedBindingDiagnostic(target.name, target.name);
+    }
+    // A pointer to the binding that is used later would dangle once the value is moved away.
+    if (const std::string pointerSink = activeBorrowSinkOf(params, locals, target.name, "", true);
+        !pointerSink.empty()) {
+      return failBorrowedBindingDiagnostic(target.name, pointerSink);
     }
     if (currentValidationState_.lentPickPayloadBinders.count(target.name) > 0) {
       return failMutationBorrowDiagnostic("borrowed pick payload cannot be moved: " + target.name);

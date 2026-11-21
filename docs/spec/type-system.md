@@ -737,7 +737,7 @@ helper over `value` (docs/spec/transforms.md).
 - **Unsafe calls:** `[unsafe]` definitions may be called from safe code; the call does not taint the caller as long as
   unsafe-created references do not escape. `[unsafe_api]` definitions (unsafe to call, like the raw stdlib buffer
   wrappers) may only be called from `[unsafe]` or `[unsafe_api]` definitions.
-- **Memory safety (partly implemented; open work TODO-5511, TODO-5512):** safe code cannot read or write memory that has been freed. The
+- **Memory safety (partly implemented; open work TODO-5511):** safe code cannot read or write memory that has been freed. The
   compiler enforces it with these rules; code that breaks the guarantee from inside an `[unsafe]` definition (or a safe
   API built on one incorrectly) is the author's responsibility.
   - Freeing and reinterpreting memory is unsafe: `/std/intrinsics/memory/free`, `realloc`, `at_unsafe` and
@@ -747,8 +747,13 @@ helper over `value` (docs/spec/transforms.md).
     container helper, a view, an iterator) borrows the container: the container cannot be structurally changed
     (grown, shrunk, cleared, moved or destroyed) while the borrow is live. Implemented for SoA field views and element
     references and for read-only collection views (a non-`mut` `vector`/`map`/`soa_vector` binding initialized from a
-    place); a borrow ends at its last use. Element references of the other containers are only reachable through
-    `[unsafe]` stdlib helpers today.
+    place); a borrow ends at its last use. The helpers that free, take, drop, initialize or borrow a slot of a
+    container's storage (`vectorFreeStorage`, `vectorSlotUnsafe`, `vectorBorrowSlot`, `vectorTakeSlot`,
+    `vectorDropSlot`, `vectorInitSlot`, `vectorDropRange` and the ring buffer's `slotUnsafe`) are `[unsafe_api]`: only
+    `[unsafe]` code may call them, so safe code cannot hold an untracked reference into container storage. The
+    public container operations built on them (`push`, `pop`, `at`, `reserve`, ...) are `[unsafe]` definitions that
+    safe code may call. The SoA slot helpers, the public `Vector` and `Map` fields, and calls by absolute path to
+    non-public helpers are still open (TODO-5511).
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a
@@ -762,6 +767,12 @@ helper over `value` (docs/spec/transforms.md).
     `mut` borrow of a longer-lived place (a parameter, or a local declared in an enclosing block, such as the vector in
     `vectorPush(outer, location(x))`) is `pointer escapes via argument to <callee> (root: x)`. Locals declared in the
     same block as `x`, or in blocks nested inside it, may hold it.
+  - A `Pointer` rooted at a binding (`[Pointer<T>] p{location(x)}`, or `location(x.field)`) is a borrow of `x` until
+    the pointer's last use, for moves: `move(x)` and passing `x` to a `move` parameter while `p` is used later is `borrowed binding: x (root: x, sink: p)`. Writing `x` while a pointer to
+    it is live stays allowed (a pointer is not an exclusive borrow). A `Reference` alias or a read-only view of `x`
+    that is used later blocks the same move. Passing `location(x)`, or a `Reference` local aliasing `x`, to a
+    `[Reference<T> mut]` parameter while a read-only view of `x` is used later is the same diagnostic
+    (`sink: <view>`), because the callee may grow, shrink or clear the container the view reads.
   - Copying a container copies its elements; two containers never share storage in safe code.
   - Use-after-move is tracked per control-flow path: a binding moved on any path reaching a use is a compile error
     (implemented for `if` branches, where a branch ending in `return` does not reach the code after it, and for loops,

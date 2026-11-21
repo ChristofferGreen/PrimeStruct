@@ -192,7 +192,8 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
     source += "  Destroy() {\n";
     source += "  }\n";
     source += "}\n\n";
-    source += "[effects(heap_alloc), return<int>]\n";
+    source += validateWithInternalTake ? "[unsafe effects(heap_alloc), return<int>]\n"
+                                       : "[effects(heap_alloc), return<int>]\n";
     source += "main() {\n";
     source += "  [vector<Owned> mut] values{vector<Owned>()}\n";
     source += "  /std/collections/vector/push<Owned>(values, Owned())\n";
@@ -221,7 +222,8 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
   source += "Wrapper() {\n";
   source += "  [Mover] value{Mover()}\n";
   source += "}\n\n";
-  source += "[effects(heap_alloc), return<int>]\n";
+  source += validateWithInternalTake ? "[unsafe effects(heap_alloc), return<int>]\n"
+                                     : "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   source += "  [vector<Wrapper> mut] values{vector<Wrapper>()}\n";
   source += "  /std/collections/vector/push<Wrapper>(values, Wrapper(Mover(1i32)))\n";

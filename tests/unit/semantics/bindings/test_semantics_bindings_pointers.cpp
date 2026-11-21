@@ -1859,4 +1859,175 @@ unsafe_keep() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector storage helpers are only callable from unsafe definitions") {
+  // docs/spec/type-system.md, Memory safety: a helper that frees or aliases a container's storage is `[unsafe_api]`.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"vectorBorrowSlot",
+       "[Reference<i32>] slot{/std/collections/vector/vectorBorrowSlot<i32>(values, 0i32)}"},
+      {"vectorSlotUnsafe",
+       "[Pointer<uninitialized<i32>>] slot{/std/collections/vector/vectorSlotUnsafe<i32>(values, "
+       "0i32)}"},
+      {"vectorTakeSlot", "[i32] taken{/std/collections/vector/vectorTakeSlot<i32>(values, 0i32)}"},
+      {"vectorDropSlot", "/std/collections/vector/vectorDropSlot<i32>(values, 0i32)"},
+      {"vectorInitSlot", "/std/collections/vector/vectorInitSlot<i32>(values, 0i32, 3i32)"},
+      {"vectorFreeStorage", "/std/collections/vector/vectorFreeStorage<i32>(values.data)"},
+  };
+  for (const auto &[name, use] : uses) {
+    INFO(name);
+    for (const bool unsafeMain : {false, true}) {
+      const std::string source = std::string("import /std/collections/*\n\n[") +
+                                 (unsafeMain ? "unsafe " : "") +
+                                 "effects(heap_alloc), return<int>]\n"
+                                 "main() {\n"
+                                 "  [/std/collections/vector/Vector<i32> mut] "
+                                 "values{/std/collections/vector/vector<i32>(1i32)}\n"
+                                 "  " +
+                                 use +
+                                 "\n"
+                                 "  return(0i32)\n"
+                                 "}\n";
+      std::string error;
+      if (unsafeMain) {
+        CHECK(validateProgram(source, "/main", error));
+        CHECK(error.empty());
+      } else {
+        CHECK_FALSE(validateProgram(source, "/main", error));
+        CHECK(error.find("calling /std/collections/vector/" + name + "__") != std::string::npos);
+        CHECK(error.find("requires an unsafe definition") != std::string::npos);
+      }
+    }
+  }
+}
+
+TEST_CASE("a pointer used after its root moves is rejected") {
+  // docs/spec/type-system.md, Memory safety: a pointer to a binding is a borrow of it until the pointer's last use.
+  const std::string prelude = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+take([vector<i32> move] items) {
+  return(items.count())
+}
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {"move builtin", "  take(move(v))\n  return(dereference(p).count())\n"},
+      {"implicit move argument", "  take(v)\n  return(dereference(p).count())\n"},
+  };
+  for (const auto &[name, tail] : rejected) {
+    INFO(name);
+    const std::string source = prelude +
+                               "\n[effects(heap_alloc), return<int>]\nmain() {\n"
+                               "  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}\n"
+                               "  [Pointer<vector<i32>>] p{location(v)}\n" +
+                               tail + "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("borrowed binding: v (root: v, sink: p)") != std::string::npos);
+  }
+}
+
+TEST_CASE("a pointer that is not used after the move of its root is accepted") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+take([vector<i32> move] items) {
+  return(items.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  [Pointer<vector<i32>>] p{location(v)}
+  [i32] before{dereference(p).count()}
+  [i32] moved{take(move(v))}
+  [i32 mut] x{1i32}
+  [Pointer<i32>] q{location(x)}
+  x = 5i32
+  return(plus(plus(before, moved), dereference(q)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("a Reference alias is a borrow when its root is passed to a move parameter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+take([vector<i32> move] items) {
+  return(items.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  [Reference<vector<i32>>] r{location(v)}
+  take(v)
+  return(r.count())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: v (root: v, sink: r)") != std::string::npos);
+}
+
+TEST_CASE("a Reference argument changes the container a live view reads") {
+  const std::string prelude = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+wipe([Reference<vector<i32>> mut] target) {
+  dereference(target).clear()
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{v}
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {"location argument", "  wipe(location(v))\n  return(view.count())\n}\n"},
+      {"alias argument",
+       "  [Reference<vector<i32>>] r{location(v)}\n  wipe(r)\n  return(view.count())\n}\n"},
+  };
+  for (const auto &[name, tail] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(prelude + tail, "/main", error));
+    CHECK(error.find("borrowed binding: v (root: v, sink: view)") != std::string::npos);
+  }
+  // The view's last use comes first, so the change is fine.
+  std::string error;
+  CHECK(validateProgram(prelude +
+                            "  [i32] seen{view.count()}\n  wipe(location(v))\n  return(seen)\n}\n",
+                        "/main",
+                        error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("vector and map public helpers stay callable from safe code") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32)}
+  values.push(4i32)
+  values.remove_at(0i32)
+  values.remove_swap(0i32)
+  values.pop()
+  [map<i32, i32> mut] table{map<i32, i32>()}
+  table.insert(1i32, 5i32)
+  table.insert(1i32, 9i32)
+  return(plus(values[0i32], table.at(1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
