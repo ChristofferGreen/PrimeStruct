@@ -54,6 +54,48 @@
   scopes they may also be initialized from pointer-like expressions (`Pointer<T>`/`Reference<T>` values and pointer
   arithmetic results) when the target type matches. References behave like `*Pointer<T>` in use. Use `mut` on the
   reference binding to allow `assign(ref, value)`.
+- **What a plain `Reference<T>` may do (decided):** `mut` on a reference binding or parameter gates only whole-value
+  `assign(ref, value)`. A plain `[Reference<Struct>]` parameter may still change the fields of the struct it refers to
+  (`state.total = ...`) and call `[mut]` helpers on it (`state.bump()`), including the structural helpers of the
+  stdlib struct containers (`Vector`, `Map`, `SoaColumn`: `push`, `clear`, `pop`); `Reference<vector<T>>` is no
+  different. A plain `Reference` is therefore not a read-only reference: it only cannot be re-pointed at a different
+  value. Write `[Reference<T> mut]` when the callee replaces the whole value, and document a callee that changes
+  its referent structurally. The borrow checks account for this: passing a live view's root to a plain
+  `Reference<container>` parameter whose body changes it structurally (directly or through callees) is a
+  `borrowed binding` error while the view is still read afterwards; read-only `Reference` parameters are fine.
+  - Runnable example (exit code 15: the struct changes through a plain reference, the `i32` needs `mut`):
+    ```
+    [struct]
+    Tally() {
+      [i32 mut] total{0i32}
+
+      [mut return<void>]
+      bump() {
+        this.total = plus(this.total, 1i32)
+      }
+    }
+
+    [return<void>]
+    add_five([Reference<Tally>] state) {
+      state.total = plus(state.total, 5i32)
+      state.bump()
+    }
+
+    [return<void>]
+    replace([Reference<i32> mut] target) {
+      assign(target, 9i32)
+    }
+
+    [return<i32>]
+    main() {
+      [Tally mut] tally{Tally{}}
+      add_five(location(tally))
+      [i32 mut] value{1i32}
+      replace(location(value))
+      return(plus(tally.total, value))
+    }
+    ```
+    Dropping `mut` from `replace`'s parameter is rejected with `assign target must be a mutable binding: target`.
 - **Array pointers:** `Pointer<array<T>>` is allowed for location-backed locals/parameters and participates in the same
   read-only array receiver API (`count`/`at`/indexing) that value and reference arrays use.
 - **Array references:** `Reference<array<T>>` is allowed; treat the reference like an array value for `count`/`at` and

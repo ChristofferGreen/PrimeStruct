@@ -699,6 +699,8 @@ helper over `value` (docs/spec/transforms.md).
 - References cannot be moved.
 - **Borrow rules (safe scope):**
   - A `Reference<T>` is a borrow of a storage location.
+  - `mut` on a `Reference` gates only whole-value `assign`; a plain `Reference<Struct>` may change fields and call
+    `[mut]` helpers (see Pointers and references: what a plain `Reference<T>` may do).
   - Many immutable borrows are allowed, or one mutable borrow; they may not overlap.
   - Borrows can end at last use before lexical scope exit (non-lexical lifetimes), including alias tracking through
     `location(ref)`.

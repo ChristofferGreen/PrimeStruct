@@ -1258,7 +1258,8 @@ main() {
 This prints `7` on the VM, under every schedule seed, and on `optexe`.
 
 - A body that assigns to a scalar value declares its parameter `[Reference<i64> mut] value`; fields of a struct
-  are assigned through a plain `[Reference<Tally>] state`.
+  are assigned through a plain `[Reference<Tally>] state`. A plain `Reference` gates only whole-value `assign`
+  (see Pointers and references: what a plain `Reference<T>` may do).
 - A body may capture by reference. It is written in the call (`tally.locked([ref seen]([Reference<Tally>] state) { seen = state.total })`)
   or bound to a local first and passed by name (`[mut] look{[ref seen]([Reference<Tally>] state) { ... }}` then
   `tally.locked(look)`), which is how a body that runs more than once is written.
