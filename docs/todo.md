@@ -133,7 +133,6 @@ of sync with them.
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
 | TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
 | TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
-| TODO-6151 | Wasm refuses an early return out of an inlined body whose condition is a short-circuit chain | ready | wasm-opcode-gaps |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -559,20 +558,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
-- [~] TODO-6151: Wasm refuses an early return out of an inlined body whose condition is a short-circuit chain
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6146)
-  - parallel_track: wasm-opcode-gaps
-  - scope: TODO-6146 opens the `block` of an early-exit join where the operands of the construct begin, and refuses the shape when a jump lies between that point and the construct. A condition that is itself a value-yielding `&&` or `||` has such jumps (`JumpIfZero -> else; ...; Jump -> join; else: PushI32 0; join: JumpIfZero -> ...`), so `if(a > 0i32 && b > 0i32) { return(1i32) }` in an inlined body that has cleanup is still `wasm emitter unsupported control-flow pattern in function: /main`. The jumps that start and end inside the operands do not leave them, so they can move into the block as they are: only a jump that lands past the construct's operands blocks the move.
-  - acceptance:
-    - the repro below compiles for Wasm and agrees with the VM under node (a node case with an `&&` and an `||` condition)
-    - full release gate green
-  - stop_rule: the operand scan of `findBlockStart` (src/wasm_emitter/WasmEmitterControlFlow.cpp) only.
-  - repro: `[struct] Noisy() { [i32 mut] id{0i32} [public effects(io_out)] Destroy() { print_line(this.id) } }`, `[effects(io_out) return<i32>] early([i32] a, [i32] b) { [Noisy] guard{Noisy{4i32}} if(a > 0i32 && b > 0i32) { return(1i32) } if(a < 0i32 || b < 0i32) { return(2i32) } return(3i32) }` and `[effects(io_out) return<int>] main() { return(early(-1i32, 1i32)) }` with `./primec --emit=wasm --wasm-profile wasi c.prime -o c.wasm --entry /main`.
-
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred

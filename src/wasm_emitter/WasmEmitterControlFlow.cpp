@@ -235,9 +235,10 @@ struct RangeBoundary {
   size_t stackSize = 0;
 };
 
-// The latest boundary of `boundaries` at which `keep` values were on the stack and that no jump lies between and
-// `index`: the instructions from there to `index` (the operands of a condition) can move into a `block` that opens at
-// the boundary.
+// The latest boundary of `boundaries` at which `keep` values were on the stack and that no jump between it and `index`
+// lands past `index`: the instructions from there to `index` (the operands of a condition, which may hold a
+// short-circuit chain with jumps of its own) can move into a `block` that opens at the boundary, since their jumps do
+// not leave them.
 const RangeBoundary *findBlockStart(const IrFunction &function,
                                     const std::vector<RangeBoundary> &boundaries,
                                     size_t index,
@@ -248,8 +249,8 @@ const RangeBoundary *findBlockStart(const IrFunction &function,
       continue;
     }
     for (size_t p = boundary.irIndex; p < index; ++p) {
-      const IrOpcode op = function.instructions[p].op;
-      if (op == IrOpcode::Jump || op == IrOpcode::JumpIfZero) {
+      const IrInstruction &inst = function.instructions[p];
+      if ((inst.op == IrOpcode::Jump || inst.op == IrOpcode::JumpIfZero) && inst.imm > index) {
         return nullptr;
       }
     }

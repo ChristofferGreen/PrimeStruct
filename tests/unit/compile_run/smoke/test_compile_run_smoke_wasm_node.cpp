@@ -1111,4 +1111,43 @@ main() {
                      3);
 }
 
+TEST_CASE("wasm leaves an inlined body early from a short-circuit condition like the vm") {
+  // The `&&` and `||` of the conditions have jumps inside their operands; the join block opens before them.
+  checkWasmMatchesVm("early_return_short_circuit",
+                     R"(
+[struct]
+Noisy() {
+  [i32 mut] id{0i32}
+  [public effects(io_out)]
+  Destroy() {
+    print_line(this.id)
+  }
+}
+
+[effects(io_out) return<i32>]
+early_and([i32] a, [i32] b) {
+  [Noisy] guard{Noisy{4i32}}
+  if(a > 0i32 && b > 0i32) {
+    return(1i32)
+  }
+  return(2i32)
+}
+
+[effects(io_out) return<i32>]
+early_or([i32] a, [i32] b) {
+  [Noisy] guard{Noisy{5i32}}
+  if(a < 0i32 || b < 0i32) {
+    return(10i32)
+  }
+  return(20i32)
+}
+
+[effects(io_out) return<int>]
+main() {
+  return(early_and(1i32, 1i32) + early_or(0i32, -1i32))
+}
+)",
+                     11);
+}
+
 TEST_SUITE_END();
