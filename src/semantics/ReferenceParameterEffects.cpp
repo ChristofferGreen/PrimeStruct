@@ -1,5 +1,6 @@
 #include "ReferenceParameterEffects.h"
 
+#include <algorithm>
 #include <string_view>
 
 namespace primec::semantics {
@@ -96,45 +97,81 @@ bool ReferenceParameterEffects::analyze(const std::string &definitionPath, size_
     assumedCycle_ = true;
     return false;
   }
-  std::unordered_set<std::string> tracked{parameter.name};
+  Subject subject;
+  subject.tracked.insert(parameter.name);
+  subject.parameterName = parameter.name;
+  if (parameter.binding.typeName == "Reference") {
+    subject.structTypeText = parameter.binding.typeTemplateArg;
+    subject.namespacePrefix = definition->second->namespacePrefix;
+  }
   bool changes = false;
   for (const Expr &statement : definition->second->statements) {
-    if (exprChanges(statement, tracked)) {
+    if (exprChanges(statement, subject)) {
       changes = true;
       break;
     }
   }
   if (!changes && definition->second->returnExpr.has_value()) {
-    changes = exprChanges(*definition->second->returnExpr, tracked);
+    changes = exprChanges(*definition->second->returnExpr, subject);
   }
   active_.erase(key);
   return changes;
 }
 
-bool ReferenceParameterEffects::exprChanges(const Expr &expr, std::unordered_set<std::string> &tracked) {
-  if (expr.isBinding && expr.args.size() == 1 && isTracked(expr.args.front(), tracked) &&
+bool ReferenceParameterEffects::exprChanges(const Expr &expr, Subject &subject) {
+  if (expr.isBinding && expr.args.size() == 1 && isTracked(expr.args.front(), subject.tracked) &&
       (isLocationOf(expr.args.front()) || declaresReferenceOrPointer(expr))) {
-    tracked.insert(expr.name); // an alias of the parameter's place
+    subject.tracked.insert(expr.name); // an alias of the parameter's place
   }
-  if (expr.kind == Expr::Kind::Call && !expr.isBinding && callChanges(expr, tracked)) {
+  if (expr.kind == Expr::Kind::Call && !expr.isBinding && callChanges(expr, subject)) {
     return true;
   }
   for (const Expr &arg : expr.args) {
-    if (exprChanges(arg, tracked)) {
+    if (exprChanges(arg, subject)) {
       return true;
     }
   }
   for (const Expr &body : expr.bodyArguments) {
-    if (exprChanges(body, tracked)) {
+    if (exprChanges(body, subject)) {
       return true;
     }
   }
   return false;
 }
 
-bool ReferenceParameterEffects::callChanges(const Expr &call, const std::unordered_set<std::string> &tracked) {
+// `parameter.f.g = value` where the field `g` owns a container: the assignment destroys the old container, so a
+// view of it ends. The place must be a plain chain of field accesses (and dereferences) on the parameter itself; an
+// element, an alias or a scalar field is not reported.
+bool ReferenceParameterEffects::assignReplacesContainerField(const Expr &call,
+                                                             const Subject &subject) const {
+  if (!isAssignCall(call) || call.args.size() != 2 || !fieldOwnsContainer_ ||
+      subject.structTypeText.empty()) {
+    return false;
+  }
+  std::vector<std::string> fields;
+  const Expr *place = &call.args.front();
+  while (place->kind == Expr::Kind::Call) {
+    if (place->isFieldAccess && place->args.size() == 1) {
+      fields.push_back(place->name);
+    } else if (!(place->args.size() == 1 && isSimpleCallName(*place, "dereference"))) {
+      return false;
+    }
+    place = &place->args.front();
+  }
+  if (fields.empty() || place->kind != Expr::Kind::Name || place->name != subject.parameterName) {
+    return false;
+  }
+  std::reverse(fields.begin(), fields.end());
+  return fieldOwnsContainer_(subject.structTypeText, subject.namespacePrefix, fields);
+}
+
+bool ReferenceParameterEffects::callChanges(const Expr &call, const Subject &subject) {
   if (call.args.empty()) {
     return false;
+  }
+  const std::unordered_set<std::string> &tracked = subject.tracked;
+  if (assignReplacesContainerField(call, subject)) {
+    return true;
   }
   const std::string &calleePath = !call.resolvedCallPath.empty() ? call.resolvedCallPath : call.name;
   const bool userDefinition = definitions_.count(calleePath) > 0 && calleePath.rfind("/std/", 0) != 0;

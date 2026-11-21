@@ -1,0 +1,23 @@
+// `view` reads the storage of `bag.items`. `reset` takes a plain `[Reference<Bag>]` and assigns a new vector to
+// that field, which frees the storage `view` reads. Replacing a field that owns a container counts as a structural
+// change, just like `push` or `clear`; assigning a scalar field does not.
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+}
+
+[effects(heap_alloc), return<void>]
+reset([Reference<Bag>] bag) {
+  bag.items = vector<i32>(7i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(1i32)
+  [vector<i32>] view{bag.items}
+  reset(location(bag))
+  return(view.count())
+}

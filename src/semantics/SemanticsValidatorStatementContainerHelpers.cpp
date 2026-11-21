@@ -549,3 +549,58 @@ bool SemanticsValidator::bindingOwnsResources(const BindingInfo &binding,
 }
 
 } // namespace primec::semantics
+
+namespace primec::semantics {
+
+bool SemanticsValidator::fieldChainOwnsContainer(const std::string &structTypeText,
+                                                 const std::string &namespacePrefix,
+                                                 const std::vector<std::string> &fields) {
+  std::string typeText = structTypeText;
+  std::string typeNamespace = namespacePrefix;
+  for (size_t index = 0; index < fields.size(); ++index) {
+    std::string base = normalizeBindingTypeName(typeText);
+    std::string argText;
+    if (splitTemplateTypeName(base, base, argText)) {
+      base = normalizeBindingTypeName(base);
+    }
+    if (base == "Pointer" || base == "Reference") {
+      return false; // assigning through one reaches a place this analysis does not follow
+    }
+    std::string structPath = resolveStructTypePath(base, typeNamespace, structNames_);
+    if (structPath.empty()) {
+      if (const auto importIt = importAliases_.find(base); importIt != importAliases_.end()) {
+        structPath = importIt->second;
+      } else if (!base.empty() && base.front() == '/') {
+        structPath = base;
+      }
+    }
+    if (structPath.empty() || structNames_.count(structPath) == 0) {
+      return false;
+    }
+    const auto defIt = defMap_.find(structPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return false;
+    }
+    const Definition &structDef = *defIt->second;
+    const Expr *fieldStmt = nullptr;
+    for (const Expr &statement : structDef.statements) {
+      if (statement.isBinding && statement.name == fields[index] &&
+          !isCompileTimeTypeBinding(statement)) {
+        fieldStmt = &statement;
+        break;
+      }
+    }
+    BindingInfo fieldBinding;
+    if (fieldStmt == nullptr || !resolveStructFieldBinding(structDef, *fieldStmt, fieldBinding)) {
+      return false;
+    }
+    if (index + 1 == fields.size()) {
+      return bindingOwnsResources(fieldBinding, structDef.namespacePrefix);
+    }
+    typeText = expectedBindingTypeText(fieldBinding);
+    typeNamespace = structDef.namespacePrefix;
+  }
+  return false;
+}
+
+} // namespace primec::semantics

@@ -63,6 +63,10 @@
   its referent structurally. The borrow checks account for this: passing a live view's root to a plain
   `Reference<container>` parameter whose body changes it structurally (directly or through callees) is a
   `borrowed binding` error while the view is still read afterwards; read-only `Reference` parameters are fine.
+  Assigning a field that owns a container (`state.items = vector<i32>(7i32)`) counts as a structural change of the
+  struct, because it frees the storage a view of the old field reads; assigning a scalar field does not. A lambda
+  or a `Function` value that changes the container is not followed yet (TODO-6171, a lambda or `Function` value
+  that changes a viewed container).
   - Runnable example (exit code 15: the struct changes through a plain reference, the `i32` needs `mut`):
     ```
     [struct]

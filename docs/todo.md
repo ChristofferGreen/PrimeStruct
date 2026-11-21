@@ -125,7 +125,7 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
 | TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
-| TODO-6170 | A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it | ready | safety-borrows |
+| TODO-6171 | A view stays live across a lambda or a `Function` value that changes its container | deferred | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -176,7 +176,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6169 (private fields of a root struct), TODO-6170 (callee replaces a container field through a plain `Reference`)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6169 (private fields of a root struct), TODO-6171 (a lambda or `Function` value changes a viewed container)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -307,20 +307,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: privacy of root-level structs; no new visibility keywords.
   - repro: `[public struct] Counter() { [private i32 mut] hits{0i32} } [return<int>] main() { [Counter mut] c{Counter{}} c.hits = 5i32 return(c.hits) }` exits 5.
 
-- [~] TODO-6170: A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it
+- [ ] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
   - owner: ai
-  - status: ready
-  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
+  - status: deferred
   - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6166)
+  - phase: Correctness audit 2026-10 (found with TODO-6170)
   - parallel_track: safety-borrows
-  - scope: the callee-effect analysis of src/semantics/ReferenceParameterEffects.cpp counts `push`, `pop`, `clear`, `reserve`, `remove_at`, `remove_swap` and `insert` on a place rooted at the parameter (and passing it to a callee that does), but not a field assignment that replaces a container (`bag.items = vector<i32>(7i32)`), which frees the old storage a view of `bag.items` reads. A plain `Reference<Struct>` may assign its fields (docs/spec/pointers-and-references.md), so the call site needs the same view check. Also unhandled: a lambda body that changes the parameter, and a callee reached only through an unresolved call.
+  - scope: the callee-effect analysis (src/semantics/ReferenceParameterEffects.cpp) reads definition bodies and the definitions a call resolves to. Two ways of changing a viewed container escape it. (1) A lambda: its body is hoisted into a definition of its own (`/reset_via_lambda__lambda0/call`) that holds the captures, so a plain `Reference` parameter captured by a lambda that replaces or pushes to what it reaches is not counted when the callee calls the lambda. (2) A callee reached only through an unresolved call: a call of a `Function` value (`f(bag)` where `f` is a `Function<void, Reference<Bag>>`) has no definition, so passing the parameter to it is not counted. Counting every pass to such a call as a change would reject read-only callbacks (a false positive on stdlib and UI code), so it needs either the capture list of the hoisted lambda (case 1, sound) or a decision for case 2.
+  - decision_needed: case 2 (a `Function` value call): (A) leave it open and document it as a limit of the view check (it cannot see through type erasure); (B) treat a plain `Reference` passed to a `Function` value as a change unless the argument is a non-`mut` read-only parameter type, which needs the `Function` signature to say `mut` (a language change: `Function<void, Reference<Bag> mut>`); (C) require a `Function` value that takes a `Reference` to be called with a `mut` reference only. Recommendation: do case 1 (the hoisted lambda's capture list is known) and A for case 2 until a program needs it.
   - acceptance:
-    - an assignment (`=` or `assign`) of a field whose type is a container (or owns one) through a parameter that is a plain `Reference`, directly or in a callee, counts as a structural change in the analysis; assigning a scalar field does not
-    - negative example with line and column; the stdlib, examples, UI and web code compile (no false positives)
+    - case 1: a lambda in the callee that replaces a container field of a captured plain `Reference` parameter, or calls `push` on it, counts as a change; a lambda that only reads does not; negative example with line and column; the stdlib, examples, UI and web code compile
+    - case 2 decided and, if B or C, enforced with a negative example
     - full release gate green
-  - stop_rule: the callee-effect analysis; no new borrow kinds.
-  - repro: `[struct] Bag() { [vector<i32> mut] items{vector<i32>()} } [effects(heap_alloc), return<void>] reset([Reference<Bag>] bag) { bag.items = vector<i32>(7i32) } [effects(heap_alloc), return<int>] main() { [Bag mut] bag{Bag{}} bag.items.push(1i32) [vector<i32>] view{bag.items} reset(location(bag)) return(view.count()) }` (with `import /std/collections/*`) compiles.
+  - stop_rule: lambdas and `Function` values in the callee-effect analysis; no new borrow kinds.
+  - repro: (1) `import /std/collections/*  [struct] Bag() { [vector<i32> mut] items{vector<i32>()} } [effects(heap_alloc), return<void>] reset_via_lambda([Reference<Bag>] bag) { [auto] f{[bag]() { bag.items = vector<i32>(7i32) }} f() } [effects(heap_alloc), return<int>] main() { [Bag mut] bag{Bag{}} bag.items.push(1i32) [vector<i32>] view{bag.items} reset_via_lambda(location(bag)) return(view.count()) }` compiles. (2) the same with `reset_via_function([Reference<Bag>] bag, [Function<void, Reference<Bag>>] f) { f(bag) }` called with `Function<void, Reference<Bag>>{swap_items}` where `swap_items([Reference<Bag> mut] bag)` assigns `bag.items`, compiles.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai

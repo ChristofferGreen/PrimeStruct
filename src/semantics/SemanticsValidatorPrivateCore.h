@@ -357,6 +357,11 @@
   // Whether values of `binding`'s type own resources: a container, a type that defines `Destroy`,
   // or one holding either. Such values are moved, not copied, when passed to a `move` parameter.
   bool bindingOwnsResources(const BindingInfo &binding, const std::string &namespacePrefix);
+  // Whether the field reached through `fields` from a struct of type `structTypeText` has a type that owns
+  // resources (see bindingOwnsResources): assigning it destroys the old value.
+  bool fieldChainOwnsContainer(const std::string &structTypeText,
+                               const std::string &namespacePrefix,
+                               const std::vector<std::string> &fields);
   // The struct path of a move-only type (it defines `Destroy` and no `Copy`) when `value` is a place of that type (a
   // binding, parameter, field or element, not a `Reference`), so using it as a value would copy it; else empty.
   // Reports the copy of a move-only place as a diagnostic on `diagnosticExpr`; true when it did.

@@ -2285,6 +2285,93 @@ main() {
   }
 }
 
+TEST_CASE("a plain Reference parameter that replaces a container field ends a live view") {
+  const std::string helpers = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+  [i32 mut] hits{0i32}
+}
+
+[struct]
+Shelf() {
+  [Bag mut] bag{Bag{}}
+}
+
+[effects(heap_alloc), return<void>]
+reset([Reference<Bag>] target) {
+  target.items = vector<i32>(7i32)
+}
+
+[effects(heap_alloc), return<void>]
+reset_assign_call([Reference<Bag>] target) {
+  assign(target.items, vector<i32>(7i32))
+}
+
+[effects(heap_alloc), return<void>]
+reset_nested([Reference<Shelf>] target) {
+  target.bag.items = vector<i32>(7i32)
+}
+
+[effects(heap_alloc), return<void>]
+reset_through_callee([Reference<Bag>] target) {
+  reset(target)
+}
+
+[return<void>]
+bump([Reference<Bag>] target) {
+  target.hits = 3i32
+}
+
+[return<int>]
+read_items([Reference<Bag>] target) {
+  return(target.items.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(1i32)
+  [Shelf mut] shelf{Shelf{}}
+  shelf.bag.items.push(1i32)
+  [vector<i32>] view{bag.items}
+  [vector<i32>] shelfView{shelf.bag.items}
+)";
+  const std::vector<std::tuple<std::string, std::string, std::string>> rejected = {
+      {"field assignment", "  reset(location(bag))\n  return(view.count())\n}\n", "bag"},
+      {"assign call", "  reset_assign_call(location(bag))\n  return(view.count())\n}\n", "bag"},
+      {"through callee",
+       "  reset_through_callee(location(bag))\n  return(view.count())\n}\n",
+       "bag"},
+      {"nested field",
+       "  reset_nested(location(shelf))\n  return(shelfView.count())\n}\n",
+       "shelf"},
+  };
+  for (const auto &[name, tail, root] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(helpers + tail, "/main", error));
+    CHECK(error.find("borrowed binding: " + root + " (root: " + root + ", sink: ") !=
+          std::string::npos);
+  }
+  const std::vector<std::pair<std::string, std::string>> accepted = {
+      {"scalar field",
+       "  bump(location(bag))\n  return(plus(view.count(), shelfView.count()))\n}\n"},
+      {"read only", "  return(plus(read_items(location(bag)), view.count()))\n}\n"},
+      {"view ends first",
+       "  [i32] seen{view.count()}\n  reset(location(bag))\n  return(plus(seen, "
+       "shelfView.count()))\n}\n"},
+  };
+  for (const auto &[name, tail] : accepted) {
+    INFO(name);
+    std::string error;
+    CHECK(validateProgram(helpers + tail, "/main", error));
+    CHECK(error.empty());
+  }
+}
+
 TEST_CASE("vector and map public helpers stay callable from safe code") {
   const std::string source = R"(
 import /std/collections/*
