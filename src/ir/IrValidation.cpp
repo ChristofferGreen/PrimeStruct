@@ -170,6 +170,23 @@ std::string wasmUnsupportedOpcodeMessage(IrOpcode op, IrValidationTarget target)
   return message;
 }
 
+// ": AtomicAdd (atomic operations)" after a refusal that names a group of opcodes; the feature is the one the Wasm
+// message gives, so only a Wasm target has it.
+std::string refusedOpcodeSuffix(IrOpcode op, IrValidationTarget target) {
+  const IrOpcodeInfo *info = irOpcodeInfo(op);
+  if (info == nullptr) {
+    return "";
+  }
+  std::string suffix = std::string(": ") + info->name;
+  if (isWasmTarget(target)) {
+    const std::string feature = wasmOpcodeFeature(op);
+    if (!feature.empty()) {
+      suffix += " (" + feature + ")";
+    }
+  }
+  return suffix;
+}
+
 bool failFunction(size_t functionIndex,
                   const std::string &functionName,
                   const std::string &detail,
@@ -340,7 +357,9 @@ bool validateFunction(const IrModule &module,
         return failInstruction(functionIndex,
                                function.name,
                                instructionIndex,
-                               "host calls are only supported by the vm target, the C++ targets and serialized bytecode",
+                               "host calls are only supported by the vm target, the C++ targets "
+                               "and serialized bytecode" +
+                                   refusedOpcodeSuffix(inst.op, target),
                                error);
       }
       if (inst.imm >= module.hostImports.size()) {
@@ -358,7 +377,9 @@ bool validateFunction(const IrModule &module,
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
-                             "u8 and byte memory opcodes are only supported by the vm, the C++ emitters and the arm64 native backend",
+                             "u8 and byte memory opcodes are only supported by the vm, the C++ "
+                             "emitters and the arm64 native backend" +
+                                 refusedOpcodeSuffix(inst.op, target),
                              error);
     }
     if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
@@ -865,12 +886,14 @@ bool validateIrModule(const IrModule &module,
       const IrFunction &function = module.functions[functionIndex];
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
            ++instructionIndex) {
-        if (isConditionOpcode(function.instructions[instructionIndex].op)) {
+        const IrOpcode conditionOp = function.instructions[instructionIndex].op;
+        if (isConditionOpcode(conditionOp)) {
           return failInstruction(functionIndex,
                                  function.name,
                                  instructionIndex,
                                  "channel operations are not supported by the " +
-                                     std::string(backendName) + " backend",
+                                     std::string(backendName) + " backend" +
+                                     refusedOpcodeSuffix(conditionOp, target),
                                  error);
         }
       }
@@ -886,7 +909,8 @@ bool validateIrModule(const IrModule &module,
                                  instructionIndex,
                                  std::string(isMutexOpcode(op) ? "mutex" : "atomic") +
                                      " operations are not supported by the " +
-                                     std::string(backendName) + " backend",
+                                     std::string(backendName) + " backend" +
+                                     refusedOpcodeSuffix(op, target),
                                  error);
         }
       }

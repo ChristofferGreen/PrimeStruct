@@ -114,6 +114,35 @@ main() {
   CHECK(readFile(errPath) ==
         srcPath + ":4:10: error: Native lowering error: native backend does not support "
                   "recursive calls: /main [PSC2001]\nnote: backend: native\n");
+
+  // Wasm takes scalar parameters in a real call only, so a recursion over a `vector` stays inline; the refusal
+  // names the parameter that kept it inline.
+  const std::string wasmSource = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+walk([i32] depth, [vector<i32> mut] out) {
+  if(depth > 0i32) {
+    walk(depth - 1i32, out)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] out{vector<i32>{}}
+  walk(3i32, out)
+  return(0i32)
+}
+)";
+  const std::string wasmSrcPath = writeTemp("compile_wasm_recursive_vector.prime", wasmSource);
+  const std::string wasmErrPath =
+      (testScratchPath("") / "primec_wasm_recursive_vector_err.txt").string();
+  const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + wasmSrcPath +
+                              " -o /dev/null --entry /main 2> " + wasmErrPath;
+  CHECK(runCommand(wasmCmd) == 2);
+  CHECK(readFile(wasmErrPath)
+            .find("wasm backend does not support recursive calls: /walk (it stays inline because "
+                  "parameter `out` is a `vector<i32>`") != std::string::npos);
 }
 
 TEST_CASE("native accepts string pointers") {

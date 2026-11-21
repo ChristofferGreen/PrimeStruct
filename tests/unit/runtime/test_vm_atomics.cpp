@@ -328,7 +328,7 @@ TEST_CASE("the wasm and glsl targets (and native off arm64 macOS) reject a modul
     error.clear();
     CHECK_FALSE(validateIrModule(module, target, error));
     CHECK_MESSAGE(error.find(std::string("atomic operations are not supported by the ") + name +
-                             " backend") != std::string::npos,
+                             " backend: AtomicAdd") != std::string::npos,
                   error);
   }
 }

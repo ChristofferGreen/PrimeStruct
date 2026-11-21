@@ -1,4 +1,5 @@
 #include "IrLowererRecursionAnalysis.h"
+#include "IrLowererScalarCallBlocker.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
@@ -15,6 +16,15 @@
 #include <vector>
 
 namespace primec::ir_lowerer {
+
+bool paramHasMutTransform(const Expr &paramExpr) {
+  for (const auto &transform : paramExpr.transforms) {
+    if (transform.name == "mut") {
+      return true;
+    }
+  }
+  return false;
+}
 
 bool isSupportedScalarTypeName(const std::string &typeName) {
   switch (valueKindFromTypeName(typeName)) {
@@ -66,15 +76,6 @@ void collectCallEdges(const Expr &expr, std::vector<std::string> &out) {
   for (const Expr &bodyArg : expr.bodyArguments) {
     collectCallEdges(bodyArg, out);
   }
-}
-
-bool paramHasMutTransform(const Expr &paramExpr) {
-  for (const auto &transform : paramExpr.transforms) {
-    if (transform.name == "mut") {
-      return true;
-    }
-  }
-  return false;
 }
 
 // `try(...)` calls (both the explicit form and the `expr?` postfix, which
@@ -1121,9 +1122,11 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
 }
 
 std::string realCallBlockerReason(const Definition &def, const RealCallShapeContext &context) {
-  if (context.definitionsByPath == nullptr || context.structNames == nullptr ||
-      !context.allowStructs) {
+  if (context.definitionsByPath == nullptr || context.structNames == nullptr) {
     return {};
+  }
+  if (!context.allowStructs) {
+    return scalarOnlyParameterBlocker(def);
   }
   const auto &byPath = *context.definitionsByPath;
   const auto &structNames = *context.structNames;

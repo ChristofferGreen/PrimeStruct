@@ -641,6 +641,28 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   CHECK_ERROR_CONTAINS(
       error, "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by `vector`");
 
+  // The refusals of atomics, channels, `u8` and host calls name the opcode too.
+  const std::pair<primec::IrOpcode, const char *> namedRefusals[] = {
+      {primec::IrOpcode::AtomicAdd,
+       "atomic operations are not supported by the wasm backend: AtomicAdd"},
+      {primec::IrOpcode::ConditionNotify,
+       "channel operations are not supported by the wasm backend: ConditionNotify"},
+      {primec::IrOpcode::LoadU8, "arm64 native backend: LoadU8 (`u8` values and byte memory)"},
+      {primec::IrOpcode::CallHost, "serialized bytecode: CallHost (a host function call)"},
+  };
+  for (const auto &[opcode, expected] : namedRefusals) {
+    primec::IrModule refused;
+    refused.entryIndex = 0;
+    primec::IrFunction refusedFn;
+    refusedFn.name = "/main";
+    refusedFn.instructions.push_back({opcode, opcode == primec::IrOpcode::AtomicAdd ? 64u : 0u});
+    refusedFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+    refused.functions.push_back(refusedFn);
+    std::string refusedError;
+    CHECK_FALSE(primec::validateIrModule(refused, primec::IrValidationTarget::Wasm, refusedError));
+    CHECK_ERROR_CONTAINS(refusedError, expected);
+  }
+
   // An I/O opcode is refused by the browser profile only, and the message says which profile has it.
   primec::IrModule browserModule;
   browserModule.entryIndex = 0;

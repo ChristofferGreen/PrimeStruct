@@ -146,6 +146,8 @@ bool isLifecycleHelperPath(const std::string &path);
 // validated) can reuse the identical extraction instead of a second,
 // possibly-diverging implementation.
 bool isSupportedScalarTypeName(const std::string &typeName);
+// Whether a parameter carries the `mut` transform (an out-parameter, passed by address when inlined).
+bool paramHasMutTransform(const Expr &paramExpr);
 std::string extractParameterTypeNameStatic(const Expr &paramExpr);
 // The struct a definition returns by value as a real call: the declared `return<T>` names a struct (not a sum, not a
 // collection record, not a packed error struct), or empty when the result is a scalar, void or not eligible. The
