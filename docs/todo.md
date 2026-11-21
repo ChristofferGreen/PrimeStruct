@@ -124,8 +124,8 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
-| TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | deferred | safety-borrows |
-| TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | blocked | safety-borrows |
+| TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | ready | safety-borrows |
+| TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | ready | safety-borrows |
 | TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | ready | safety-borrows |
 | TODO-6168 | Assigning to a local that a view borrows names the local as the sink | deferred | safety-borrows |
 | TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
@@ -298,7 +298,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6165: A container is changed through a `Reference` parameter that is not `mut`
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5512)
   - parallel_track: safety-borrows
@@ -308,6 +308,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: structural mutation through non-`mut` references; no new reference kinds.
   - repro: `[effects(heap_alloc), return<void>] wipe([Reference<vector<i32>>] target) { dereference(target).clear() }` with `wipe(location(v))` compiles and clears `v`.
+  - decision: 2026-11-21 (owner): option B. Keep the spec: a plain `Reference<struct>` may change its fields and call `mut` helpers; only whole-value `assign` needs `mut`. Work: state it explicitly in docs/spec/pointers-and-references.md; this leaf then closes as docs (no validator change); the view check at a plain `Reference` argument is TODO-6166.
   - notes: decision needed (checked 2026-11-21, not implemented): the spec does not settle this. docs/spec/pointers-and-references.md says `mut` on a reference binding allows `assign(ref, value)` and that assigning through an immutable pointer or reference is rejected, which is only about whole-value assignment. docs/spec/stdlib-reference.md (Mutex bodies) documents the opposite for structs: "fields of a struct are assigned through a plain `[Reference<Tally>] state`", and the validator accepts `t.total = 5i32` and a `[mut]` helper call `t.bump()` through a plain `Reference<Tally>` today (only `assign(t, 5i32)` on a plain `Reference<i32>` is rejected). `Vector`, `Map` and `SoaColumn` are stdlib structs, so rejecting `clear`/`push` through a plain `Reference<vector<T>>` while `state.items.push(x)` through a plain `Reference<State>` stays legal would be an arbitrary line, and the UI handlers (`[Reference<State>] state`) rely on the second. Options:
     - A. A plain `Reference<T>` is read-only for everything: whole-value assign, field writes and `mut` helper calls (structural changes included). Consistent and simple to state, but it breaks the documented Mutex/handler idiom (`[Reference<Tally>] state` with `state.total = ...`) and every stdlib and example body written that way; each would need `mut` first.
     - B. Keep the spec as is (a plain `Reference<struct>` may change its fields and call `mut` helpers; only whole-value `assign` needs `mut`) and state it explicitly in pointers-and-references.md; the borrow check of TODO-6159 then trusts `mut` only for whole-value writes and must also treat a plain `Reference<container>` argument as a possible structural change (a view live across `wipe(location(v))` is rejected). Smaller change, no migration.
@@ -316,7 +317,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6166: A plain `Reference<vector<T>>` argument can change the container a live view reads
   - owner: ai
-  - status: blocked
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6165)
   - parallel_track: safety-borrows
@@ -327,7 +328,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the view check at a call with a plain `Reference` argument; no new borrow kinds.
   - repro: `[effects(heap_alloc), return<void>] wipe([Reference<vector<i32>>] target) { dereference(target).clear() } [effects(heap_alloc), return<int>] main() { [vector<i32> mut] v{vector<i32>(1i32, 2i32)} [vector<i32>] view{v} wipe(location(v)) return(view.count()) }` compiles.
-  - notes: blocked on the TODO-6165 decision.
+  - notes: TODO-6165 decided option B (2026-11-21): the callee-effect analysis of the acceptance applies.
 
 - [~] TODO-6167: A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly
   - owner: ai
