@@ -379,6 +379,7 @@ TEST_CASE("a method is called on a struct payload binding") {
   // No heap and no String, so this one runs on every backend.
   program_matrix::ProgramCase program;
   program.name = "pick_payload_struct_method";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = "import /std/maybe/*\n" + BoxDefinitions + R"(
 [return<i32>]
 measure([Shape] shape) {

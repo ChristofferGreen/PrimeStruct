@@ -1016,4 +1016,57 @@ main() {
                      3);
 }
 
+TEST_CASE("wasm runs a struct method called twice like the vm") {
+  // `sum` stays a real call: its struct parameter is stored to locals after the ones the wasm parameters take.
+  checkWasmMatchesVm("struct_method_real_call",
+                     R"(
+[struct]
+Counter() {
+  [i64 mut] total{1i64}
+  [i64 mut] doubled{2i64}
+
+  [return<i64>]
+  sum() {
+    return(this.total + this.doubled)
+  }
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Counter] five{Counter{2i64, 3i64}}
+  [Counter] none{Counter{0i64, 0i64}}
+  print_line(five.sum())
+  print_line(none.sum())
+  return(0i32)
+}
+)",
+                     0);
+}
+
+TEST_CASE("wasm runs struct parameters between scalar parameters like the vm") {
+  checkWasmMatchesVm("struct_parameters_real_call",
+                     R"(
+[struct]
+Pair() {
+  [i32 mut] left{0i32}
+  [i64 mut] right{0i64}
+}
+
+[return<i64>]
+weigh([i32] bias, [Pair] first, [i64] scale, [Pair] second) {
+  return(convert<i64>(bias + first.left + second.left) * scale + first.right - second.right)
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Pair] a{Pair{1i32, 10i64}}
+  [Pair] b{Pair{2i32, 4i64}}
+  print_line(weigh(3i32, a, 5i64, b))
+  print_line(weigh(0i32, b, 2i64, a))
+  return(0i32)
+}
+)",
+                     0);
+}
+
 TEST_SUITE_END();

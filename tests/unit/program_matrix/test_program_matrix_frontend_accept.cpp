@@ -357,6 +357,7 @@ main() {
 TEST_CASE("a ctor_only field is built by braces, read by the defaults after it and not stored") {
   program_matrix::ProgramCase program;
   program.name = "frontend_ctor_only_field";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 [struct]
 Counter() {

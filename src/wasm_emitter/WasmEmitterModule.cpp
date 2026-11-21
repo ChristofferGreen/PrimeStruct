@@ -90,9 +90,27 @@ bool inferFunctionType(const IrFunction &function, WasmFunctionType &outType, st
 
 } // namespace
 
-bool WasmEmitter::emitModule(const IrModule &module, std::vector<uint8_t> &out, std::string &error) const {
+bool WasmEmitter::emitModule(const IrModule &input,
+                             std::vector<uint8_t> &out,
+                             std::string &error) const {
   error.clear();
   out.clear();
+
+  // A function whose prologue stores its parameters to other locals than 0..n-1 is rewritten to the canonical one.
+  IrModule shifted;
+  bool needsShift = false;
+  for (const IrFunction &function : input.functions) {
+    needsShift = needsShift || wasmFunctionNeedsParameterShift(function);
+  }
+  if (needsShift) {
+    shifted = input;
+    for (IrFunction &function : shifted.functions) {
+      if (wasmFunctionNeedsParameterShift(function) && !shiftWasmParameterLocals(function, error)) {
+        return false;
+      }
+    }
+  }
+  const IrModule &module = needsShift ? shifted : input;
 
   if (!module.functions.empty() &&
       (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size())) {

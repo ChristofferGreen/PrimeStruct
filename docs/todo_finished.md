@@ -2541,6 +2541,7 @@ are left unarchived.
 | TODO-6137 | Count the matrix programs Wasm refuses per opcode | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6138 | Wasm lowers local addresses and indirect loads and stores | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6146 | Wasm structured control flow for an early return out of an inlined body with cleanup | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 
 <!-- INDEX-END -->

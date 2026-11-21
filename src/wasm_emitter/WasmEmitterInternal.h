@@ -442,6 +442,16 @@ WasmCodeBody buildWasmFmaHelperBody(bool isF64);
 // writes the VM's message to stderr and calls `proc_exit(3)`.
 WasmCodeBody buildWasmDivisionHelperBody(WasmDivisionOp op, const WasmRuntimeContext &runtime);
 
+// Whether the leading `StoreLocal`s of the function (its parameter prologue) store the parameters anywhere but to the
+// locals 0..parameterCount-1, which are the wasm parameters (a struct passed by value keeps its slots in the locals
+// after the ones its address goes to).
+bool wasmFunctionNeedsParameterShift(const IrFunction &function);
+
+// Rewrites such a function so that its prologue is the canonical one: the body's locals move up by `parameterCount`
+// and the prologue copies each wasm parameter to the local the body reads it from. The order of the body's slots,
+// which an address into its frame can walk, is kept.
+bool shiftWasmParameterLocals(IrFunction &function, std::string &error);
+
 // `irLocalTypes` are the inferred types of the function's IR locals (inferWasmLocalTypes).
 bool lowerFunctionCode(const IrFunction &function,
                        const std::vector<WasmFunctionType> &functionTypes,
