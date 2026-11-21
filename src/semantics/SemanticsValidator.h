@@ -16,6 +16,7 @@
 #include <utility>
 #include <vector>
 
+#include "ReferenceParameterEffects.h"
 #include "SemanticPublicationSurface.h"
 #include "SemanticsDefinitionWorkerResult.h"
 #include "SemanticsValidatorGraphLocalAuto.h"
@@ -526,6 +527,8 @@ private:
   std::unordered_set<std::string> sumNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
+  // Which plain `Reference` parameters change their container structurally (see the class comment).
+  ReferenceParameterEffects referenceParameterEffects_{defMap_, paramsByDef_};
   // Lazily-built, sorted union of paramsByDef_ keys and program_.definitions
   // fullPaths, used by hasDefinitionFamilyPath() to answer prefix-existence
   // queries in O(log N) instead of a linear scan. Safe to cache: both

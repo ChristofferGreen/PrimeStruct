@@ -1,0 +1,16 @@
+// `view` reads `values`' storage. `wipe` takes a plain `[Reference<vector<i32>>]` (no `mut`), which still lets it call
+// `clear`, so passing `location(values)` frees the storage `view` reads below. `count_ref` only reads and is fine.
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+wipe([Reference<vector<i32>>] target) {
+  dereference(target).clear()
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{values}
+  wipe(location(values))
+  return(view.count())
+}

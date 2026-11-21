@@ -530,9 +530,16 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
-    // A `[Reference<T> mut]` parameter is the one the callee may write through; a plain `Reference<T>` is read-only.
+    // A `[Reference<T> mut]` parameter is the one the callee may write through. A plain `Reference<T>` still lets
+    // the callee call `mut` helpers (docs/spec/pointers-and-references.md), so it counts when its body changes
+    // the container structurally, directly or through callees.
+    const bool isReferenceParam = normalizeBindingTypeName(param.binding.typeName) == "Reference" &&
+                                  !param.binding.isMove && !param.binding.isCopy;
     const bool takesReference =
-        normalizeBindingTypeName(param.binding.typeName) == "Reference" && param.binding.isMutable;
+        isReferenceParam &&
+        (param.binding.isMutable ||
+         (paramIndex != packedParamIndex && arg != nullptr && arg != param.defaultExpr &&
+          referenceParameterEffects_.changesStructurally(resolved, paramIndex)));
     if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
         (!param.binding.isMove && !isMutableBorrowParam(param) && !takesReference)) {
       continue;

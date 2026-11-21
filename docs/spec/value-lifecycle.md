@@ -153,7 +153,8 @@
   `Pointer` follows their rules; a user definition named like the mutator is an ordinary call). A non-`mut` collection binding (`vector`, `map`, `soa_vector`) initialized from a place (a
   binding, field or element: `[vector<i32>] row{rows[0i32]}`) is a read-only view of it and does not copy; it borrows
   the place's root binding until its last use, so the root cannot be changed (passed to a `mut` or `move` parameter,
-  assigned, or changed by a builtin vector `push`, `pop`, `clear`, `reserve` or `remove_*`, including pushing the view
+  assigned, passed as `location(x)` to a `[Reference<T> mut]` parameter or to a plain `Reference` parameter whose body
+  (or a callee it passes the parameter to) calls one of those mutators, or changed by a builtin vector `push`, `pop`, `clear`, `reserve` or `remove_*`, including pushing the view
   into it) while the view is still used: `borrowed binding: rows (root: rows, sink: row); rows cannot change while row
   still reads it: declare row `mut` to give it its own copy`. A temporary (a call result or constructor) or `move(x)`
   initializer is moved in without a copy. A `push` whose argument is an element of the same vector

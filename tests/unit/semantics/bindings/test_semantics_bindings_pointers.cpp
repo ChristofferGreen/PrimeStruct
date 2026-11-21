@@ -2075,6 +2075,89 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("a plain Reference argument that the callee changes structurally ends a live view") {
+  // docs/spec/pointers-and-references.md: a plain `Reference` may call `mut` helpers, so the callee's body decides.
+  const std::string helpers = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+wipe([Reference<vector<i32>>] target) {
+  dereference(target).clear()
+}
+
+[effects(heap_alloc), return<void>]
+wipe_via_alias([Reference<vector<i32>>] target) {
+  [Reference<vector<i32>>] alias{location(target)}
+  alias.push(1i32)
+}
+
+[effects(heap_alloc), return<void>]
+wipe_through_callee([Reference<vector<i32>>] target) {
+  wipe(target)
+}
+
+[effects(heap_alloc), return<void>]
+wipe_after_recursion([Reference<vector<i32>>] target, [i32] depth) {
+  if(depth > 0i32) {
+    wipe_after_recursion(target, minus(depth, 1i32))
+  } else {
+    target.clear()
+  }
+}
+
+[return<int>]
+count_ref([Reference<vector<i32>>] target) {
+  return(dereference(target).count())
+}
+
+[return<int>]
+count_through_callee([Reference<vector<i32>>] target) {
+  return(count_ref(target))
+}
+
+[return<int>]
+count_recursive([Reference<vector<i32>>] target, [i32] depth) {
+  if(depth > 0i32) {
+    return(count_recursive(target, minus(depth, 1i32)))
+  }
+  return(target.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{v}
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {"direct", "  wipe(location(v))\n  return(view.count())\n}\n"},
+      {"alias local",
+       "  [Reference<vector<i32>>] r{location(v)}\n  wipe(r)\n  return(view.count())\n}\n"},
+      {"through alias in callee", "  wipe_via_alias(location(v))\n  return(view.count())\n}\n"},
+      {"through callee", "  wipe_through_callee(location(v))\n  return(view.count())\n}\n"},
+      {"recursion", "  wipe_after_recursion(location(v), 2i32)\n  return(view.count())\n}\n"},
+  };
+  for (const auto &[name, tail] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(helpers + tail, "/main", error));
+    CHECK(error.find("borrowed binding: v (root: v, sink: view)") != std::string::npos);
+  }
+  const std::vector<std::pair<std::string, std::string>> accepted = {
+      {"read-only", "  [i32] n{count_ref(location(v))}\n  return(plus(n, view.count()))\n}\n"},
+      {"read-only through callee",
+       "  return(plus(count_through_callee(location(v)), view.count()))\n}\n"},
+      {"read-only recursion",
+       "  return(plus(count_recursive(location(v), 3i32), view.count()))\n}\n"},
+      {"view ends first", "  [i32] seen{view.count()}\n  wipe(location(v))\n  return(seen)\n}\n"},
+  };
+  for (const auto &[name, tail] : accepted) {
+    INFO(name);
+    std::string error;
+    CHECK(validateProgram(helpers + tail, "/main", error));
+    CHECK(error.empty());
+  }
+}
+
 TEST_CASE("a view of a dereferenced Reference parameter blocks changes through it") {
   // docs/spec/type-system.md, Memory safety: a view borrows the root of its source until its last use.
   const std::string prelude = R"(

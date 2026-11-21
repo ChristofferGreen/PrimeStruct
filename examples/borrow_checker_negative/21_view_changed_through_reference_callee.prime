@@ -1,0 +1,21 @@
+// `view` reads `values`' storage. `refill` takes a plain `[Reference<vector<i32>>]` and only passes it on, but the
+// callee it passes it to pushes, which can move the storage `view` reads below. The check follows the callees.
+import /std/collections/*
+
+[effects(heap_alloc), return<void>]
+grow([Reference<vector<i32>>] target) {
+  target.push(3i32)
+}
+
+[effects(heap_alloc), return<void>]
+refill([Reference<vector<i32>>] target) {
+  grow(target)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{values}
+  refill(location(values))
+  return(view.count())
+}

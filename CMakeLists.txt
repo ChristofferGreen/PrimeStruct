@@ -389,6 +389,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprMutationBorrows.cpp
   src/semantics/SemanticsValidatorExprPointerLike.cpp
   src/semantics/SemanticsValidatorExprReferenceEscapes.cpp
+  src/semantics/ReferenceParameterEffects.cpp
   src/semantics/SemanticsValidatorMoveOnly.cpp
   src/semantics/SemanticsValidatorExprReceiverPaths.cpp
   src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp
