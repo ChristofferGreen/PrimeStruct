@@ -278,9 +278,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: tracker; the work is in the leaves.
   - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
 
-- [ ] TODO-6161: A `[private]` field is readable and writable from anywhere
+- [~] TODO-6161: A `[private]` field is readable and writable from anywhere
   - owner: ai
   - status: ready
+  - claimed_by: ai-private (worktree-agent-aff951f79450d966f), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5511)
   - parallel_track: safety-stdlib
