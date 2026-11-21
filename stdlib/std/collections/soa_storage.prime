@@ -318,7 +318,7 @@ namespace std {
 
   }
 
-  [unsafe return<Pointer<uninitialized<T>>>]
+  [unsafe_api return<Pointer<uninitialized<T>>>]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -327,7 +327,7 @@ namespace std {
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
-  [unsafe public return<Pointer<uninitialized<Field>>>]
+  [unsafe_api public return<Pointer<uninitialized<Field>>>]
   soaColumnFieldSlotUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] index, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -347,7 +347,7 @@ namespace std {
     return(bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
   }
 
-  [unsafe public return<SoaFieldView<Field>>]
+  [unsafe_api public return<SoaFieldView<Field>>]
   soaColumnFieldViewUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
@@ -384,7 +384,7 @@ namespace std {
     }
   }
 
-  [unsafe return<Pointer<uninitialized<T>>>]
+  [unsafe_api return<Pointer<uninitialized<T>>>]
   soaFieldViewSlotUnsafe<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckIndex<T>(values, index)
     [i32] byteOffset{index * values.stride}
@@ -395,12 +395,12 @@ namespace std {
     return(bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
   }
 
-  [public return<T>]
+  [unsafe public return<T>]
   soaFieldViewRead<T>([SoaFieldView<T>] values, [i32] index) {
     return(*(soaFieldViewSlotUnsafe<T>(values, index)))
   }
 
-  [public return<Reference<T>>]
+  [unsafe public return<Reference<T>>]
   soaFieldViewRef<T>([SoaFieldView<T>] values, [i32] index) {
     return(borrow(*(soaFieldViewSlotUnsafe<T>(values, index))))
   }
@@ -411,31 +411,31 @@ namespace std {
     return(value)
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   soaColumnInitSlot<T>([SoaColumn<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   soaColumnDropSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     drop(*slot)
   }
 
-  [return<T>]
+  [unsafe_api return<T>]
   soaColumnTakeSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     return(take(*slot))
   }
 
-  [return<Reference<T>>]
+  [unsafe_api return<Reference<T>>]
   soaColumnBorrowSlot<T>([SoaColumn<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{soaColumnSlotUnsafe<T>(values, index)}
     return(borrow(*slot))
   }
 
-  [public return<Reference<T>>]
+  [unsafe public return<Reference<T>>]
   soaColumnRef<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     return(soaColumnBorrowSlot<T>(values, index))
@@ -451,7 +451,7 @@ namespace std {
         false})
   }
 
-  [return<void>]
+  [unsafe_api return<void>]
   soaColumnDropRange<T>([SoaColumn<T> mut] values, [i32] limit) {
     soaColumnCheckShape<T>(values)
     if(limit < 0i32 || limit > values.field_capacity()) {
@@ -464,7 +464,7 @@ namespace std {
     }
   }
 
-  [unsafe effects(heap_alloc), return<void>]
+  [unsafe_api effects(heap_alloc), return<void>]
   soaColumnMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [SoaColumn<T> mut] values, [i32] limit) {
     [i32 mut] index{0i32}
     while(index < limit) {

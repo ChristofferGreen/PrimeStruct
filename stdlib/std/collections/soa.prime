@@ -121,7 +121,7 @@ namespace std {
     return(soaColumnRef<T>(storage, index))
   }
 
-  [public return<SoaFieldView<Field>>]
+  [unsafe public return<SoaFieldView<Field>>]
   soaVectorFieldView<Struct, Field>([SoaVector<Struct>] values, [i32] fieldIndex) {
     soaVectorValidateType<Struct>()
     [SoaColumn<Struct>] storage{values.storage}

@@ -1,0 +1,13 @@
+// `soaColumnSlotUnsafe` hands out a Pointer into a column's storage that nothing tracks, so `soaColumnReserve`
+// below could move the storage while `slot` still points into it. The SoA slot helpers are `[unsafe_api]`: only
+// `[unsafe]` code may call them, safe code uses `soaColumnRead`, `soaColumnRef` and the borrow rules.
+import /std/collections/soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] column{soaColumnNew<i32>()}
+  soaColumnReserve<i32>(column, 1i32)
+  [Pointer<uninitialized<i32>>] slot{/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, 0i32)}
+  soaColumnReserve<i32>(column, 100i32)
+  return(0i32)
+}

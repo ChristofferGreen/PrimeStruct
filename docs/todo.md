@@ -123,7 +123,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6160 | The SoA slot helpers are `[unsafe]`, so safe code can call them | deferred | safety-stdlib |
 | TODO-6161 | A `[private]` field is readable and writable from anywhere | deferred | safety-stdlib |
 | TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | blocked | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
@@ -179,7 +178,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6160 (SoA slot helpers), TODO-6161 (private fields, decision needed), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6161 (private fields, decision needed), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -272,26 +271,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
-  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156). Open: the SoA slot helpers (TODO-6160), field privacy that is enforced (TODO-6161, decision needed) and then making the `Vector`, `Map` and `SoaColumn` fields private with a brace constructor that takes no storage (TODO-6162), and non-public helpers callable by absolute path (TODO-6163, decision needed).
+  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Open: field privacy that is enforced (TODO-6161, decision needed) and then making the `Vector`, `Map` and `SoaColumn` fields private with a brace constructor that takes no storage (TODO-6162), and non-public helpers callable by absolute path (TODO-6163, decision needed).
   - acceptance:
-    - TODO-6160, TODO-6161, TODO-6162 and TODO-6163 are done; each repro (free via helper, borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
+    - TODO-6161, TODO-6162 and TODO-6163 are done; each repro (borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
     - full release gate green
   - stop_rule: tracker; the work is in the leaves.
   - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
-
-- [~] TODO-6160: The SoA slot helpers are `[unsafe]`, so safe code can call them
-  - owner: ai
-  - status: in_progress
-  - claimed_by: safety-worker (worktree-agent-a9b602a9d3706b5ef), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-5511)
-  - parallel_track: safety-stdlib
-  - scope: `soaColumnSlotUnsafe`, `soaColumnFieldSlotUnsafe` and the slot init/drop/take/borrow helpers of stdlib/std/collections/soa_storage.prime (and soa_storage/geometry.prime) are `[unsafe]` (or `[unsafe public]`), which safe code may call, so safe code gets a `Pointer` into a column's storage by absolute path. Same fix as TODO-6156 for `Vector`: `[unsafe_api]` on the helpers, `[unsafe]` on their callers (the public SoA operations).
-  - acceptance:
-    - a safe `main` that calls `/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, 0i32)` is `calling ... requires an unsafe definition` (a case in tests/unit/semantics/bindings/test_semantics_bindings_pointers.cpp and a negative example); the SoA corpus still compiles
-    - full release gate green
-  - stop_rule: the SoA slot helpers; fields stay as they are (TODO-6162).
-  - repro: `[Pointer<uninitialized<i32>>] p{/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, 0i32)}` in a safe definition compiles.
 
 - [ ] TODO-6161: A `[private]` field is readable and writable from anywhere
   - owner: ai

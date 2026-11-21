@@ -86,7 +86,7 @@ namespace std {
     soaColumnPush<T15>(sixteenth, sixteenthValue)
   }
 
-  [public effects(heap_alloc), return<void>]
+  [unsafe public effects(heap_alloc), return<void>]
   soaColumnPush<T>([SoaColumn<T> mut] values, [T move] value) {
     soaColumnCheckShape<T>(values)
     if(values.field_count() == values.field_capacity()) {
@@ -855,7 +855,7 @@ namespace std {
     soaColumnClear<T15>(sixteenth)
   }
 
-  [public effects(heap_alloc), return<void>]
+  [unsafe public effects(heap_alloc), return<void>]
   soaColumnClear<T>([SoaColumn<T> mut] values) {
     // soaColumnDropRange checks the shape first.
     soaColumnDropRange<T>(values, values.field_count())

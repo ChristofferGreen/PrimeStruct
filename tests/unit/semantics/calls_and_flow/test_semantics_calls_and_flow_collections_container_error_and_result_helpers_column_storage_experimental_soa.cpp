@@ -416,7 +416,7 @@ TEST_CASE("experimental soa storage borrow-slot helper validates reference retur
   const std::string source = R"(
 import /std/collections/soa_storage/*
 
-[return<Reference<i32>>]
+[unsafe return<Reference<i32>>]
 borrow_second([SoaColumn<i32>] values) {
   return(soaColumnBorrowSlot<i32>(values, 1i32))
 }

@@ -1,0 +1,5 @@
+"code":"PSC1005"
+"message":"calling /std/collections/soa_storage/soaColumnSlotUnsafe__
+requires an unsafe definition"
+"line":10,"column":38
+"notes":["stage: semantic"]

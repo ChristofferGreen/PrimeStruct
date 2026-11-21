@@ -5,7 +5,7 @@ import /std/panic/*
 namespace std {
   namespace collections {
   namespace soa_storage {
-  [public return<T>]
+  [unsafe public return<T>]
   soaColumnRead<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckIndex<T>(values, index)
     return(*(soaColumnBorrowSlot<T>(values, index)))

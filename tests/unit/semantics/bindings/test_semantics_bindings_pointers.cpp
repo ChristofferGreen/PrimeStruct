@@ -1899,6 +1899,71 @@ TEST_CASE("vector storage helpers are only callable from unsafe definitions") {
   }
 }
 
+TEST_CASE("soa slot helpers are only callable from unsafe definitions") {
+  // docs/spec/type-system.md, Memory safety: the SoA slot helpers are `[unsafe_api]`.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"soaColumnSlotUnsafe",
+       "[Pointer<uninitialized<i32>>] "
+       "slot{/std/collections/soa_storage/soaColumnSlotUnsafe<i32>(column, "
+       "0i32)}"},
+      {"soaColumnBorrowSlot",
+       "[Reference<i32>] slot{/std/collections/soa_storage/soaColumnBorrowSlot<i32>(column, "
+       "0i32)}"},
+      {"soaColumnTakeSlot",
+       "[i32] taken{/std/collections/soa_storage/soaColumnTakeSlot<i32>(column, 0i32)}"},
+      {"soaColumnDropSlot", "/std/collections/soa_storage/soaColumnDropSlot<i32>(column, 0i32)"},
+      {"soaColumnInitSlot",
+       "/std/collections/soa_storage/soaColumnInitSlot<i32>(column, 0i32, 3i32)"},
+      {"soaColumnDropRange", "/std/collections/soa_storage/soaColumnDropRange<i32>(column, 0i32)"},
+  };
+  for (const auto &[name, use] : uses) {
+    INFO(name);
+    for (const bool unsafeMain : {false, true}) {
+      const std::string source = std::string("import /std/collections/soa_storage/*\n\n[") +
+                                 (unsafeMain ? "unsafe " : "") +
+                                 "effects(heap_alloc), return<int>]\n"
+                                 "main() {\n"
+                                 "  [SoaColumn<i32> mut] column{soaColumnNew<i32>()}\n"
+                                 "  soaColumnReserve<i32>(column, 1i32)\n"
+                                 "  " +
+                                 use +
+                                 "\n"
+                                 "  return(0i32)\n"
+                                 "}\n";
+      std::string error;
+      if (unsafeMain) {
+        CHECK(validateProgram(source, "/main", error));
+        CHECK(error.empty());
+      } else {
+        CHECK_FALSE(validateProgram(source, "/main", error));
+        CHECK(error.find("calling /std/collections/soa_storage/" + name + "__") !=
+              std::string::npos);
+        CHECK(error.find("requires an unsafe definition") != std::string::npos);
+      }
+    }
+  }
+}
+
+TEST_CASE("public soa operations stay callable from safe definitions") {
+  const std::string source = R"(
+import /std/collections/soa_storage/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaColumn<i32> mut] column{soaColumnNew<i32>()}
+  soaColumnReserve<i32>(column, 2i32)
+  soaColumnPush<i32>(column, 2i32)
+  soaColumnWrite<i32>(column, 0i32, 4i32)
+  [i32] first{soaColumnRead<i32>(column, 0i32)}
+  soaColumnClear<i32>(column)
+  return(first)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("a pointer used after its root moves is rejected") {
   // docs/spec/type-system.md, Memory safety: a pointer to a binding is a borrow of it until the pointer's last use.
   const std::string prelude = R"(
