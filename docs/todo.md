@@ -123,7 +123,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6161 | A `[private]` field is readable and writable from anywhere | deferred | safety-stdlib |
+| TODO-6161 | A `[private]` field is readable and writable from anywhere | ready | safety-stdlib |
 | TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | blocked | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
 | TODO-6164 | A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs | deferred | safety-borrows |
@@ -179,7 +179,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6161 (private fields, decision needed), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6161 (private fields, rule B decided), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -281,12 +281,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6161: A `[private]` field is readable and writable from anywhere
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5511)
   - parallel_track: safety-stdlib
   - scope: docs/spec/type-system.md (Field visibility) says a field may be `[private]` and that the compiler enforces it, but `b.secret = 9i32; return(b.secret)` on a `[private i32 mut] secret` field of a struct in another namespace compiles and runs (exit 9). `inferStructFieldBinding` (src/semantics/SemanticsValidatorExprFieldResolution.cpp) has the diagnostic `private field is not accessible: <struct>/<field>` but its only caller passes `allowPrivate = true`. Nothing stops code outside the struct from reading `data` of a `Mutex`, `SharedString` or `String`, and TODO-6162 cannot make container fields private before this is enforced.
-  - decision_needed: who may name a private field. (A) Only the struct's own body: member functions and lifecycle helpers (C++ `private`). Cleanest and matches the C++ legacy, but the stdlib containers reach their fields from free functions in the same namespace (`vectorCheckShape`, `vectorReserveInternal`, ...), so every such function would become a member or an `[unsafe]` accessor first. (B) The struct's body and every definition in the struct's namespace and the namespaces inside it. This is the rule type aliases already have (docs/spec/type-system.md: a private alias is private to its namespace), it needs no stdlib rewrite, and `std::collections::vector` can keep its free helpers while user code outside `/std/collections/vector` cannot name `data`. (C) Keep fields public and make only the dangerous container fields need an unsafe definition to read or write. Smallest change, but a new kind of field marker. Recommendation: B, it is the existing precedent, closes the Vector, Map and SoaColumn repros once TODO-6162 marks the fields private, and breaks no stdlib code. The same rule would apply to private definitions (TODO-6163).
+  - decision: 2026-11-21 (owner): option (B). A private field may be named by the struct body and by definitions in the struct's namespace and its nested namespaces (the existing rule for private type aliases); no stdlib rewrite is needed first. Option (A), (C) not taken.
   - acceptance:
     - the chosen rule is in docs/spec/type-system.md (Field visibility) and enforced: reading, writing, taking `location` of and brace-initializing a private field from outside is `private field is not accessible: <struct>/<field>`; the stdlib and every example still compile; a negative example with line and column
     - full release gate green
