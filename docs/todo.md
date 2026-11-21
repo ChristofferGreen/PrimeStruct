@@ -126,6 +126,9 @@ of sync with them.
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
 | TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | deferred | safety-borrows |
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | blocked | safety-borrows |
+| TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | ready | safety-borrows |
+| TODO-6168 | Assigning to a local that a view borrows names the local as the sink | deferred | safety-borrows |
+| TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -176,7 +179,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument), TODO-6168 (assignment diagnostic names the wrong sink), TODO-6169 (private fields of a root struct)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -325,6 +328,48 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the view check at a call with a plain `Reference` argument; no new borrow kinds.
   - repro: `[effects(heap_alloc), return<void>] wipe([Reference<vector<i32>>] target) { dereference(target).clear() } [effects(heap_alloc), return<int>] main() { [vector<i32> mut] v{vector<i32>(1i32, 2i32)} [vector<i32>] view{v} wipe(location(v)) return(view.count()) }` compiles.
   - notes: blocked on the TODO-6165 decision.
+
+- [~] TODO-6167: A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly
+  - owner: ai
+  - status: ready
+  - claimed_by: ai-private (worktree-agent-aff951f79450d966f), 2026-11-21
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-5512)
+  - parallel_track: safety-borrows
+  - scope: A view of `dereference(r)` is rooted at the `Reference` local `r` (TODO-6164), and `r` aliases the local it was made from (`[Reference<vector<i32>>] r{location(v)}`). Changing `v` directly (`v.clear()`, `v.push(x)`, `v = ...`) looks for views and borrows rooted at `v`, finds none once `r` is no longer used, and compiles although the view reads `v`'s old storage: `[vector<i32> mut] v{vector<i32>(1i32, 2i32)} [Reference<vector<i32>>] r{location(v)} [vector<i32>] view{dereference(r)} v.clear() return(view.count())`.
+  - acceptance:
+    - the repro, and the `push` and `v = ...` variants, are `borrowed binding: v (root: v, sink: view)`; a view used before the change, a `mut` view (own copy) and no view are accepted; the stdlib and corpus compile; negative example with line and column
+    - full release gate green
+  - stop_rule: the roots a view of a `Reference` local counts for (`liveContainerViewOf`, `activeBorrowSinkOf`); no new borrow kinds.
+  - repro: the program in scope compiles and exits 0.
+
+- [ ] TODO-6168: Assigning to a local that a view borrows names the local as the sink
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6167)
+  - parallel_track: safety-borrows
+  - scope: `[vector<i32> mut] v{...} [vector<i32>] view{v} v = vector<i32>(9i32) return(view.count())` is rejected with `borrowed binding: v (root: v, sink: v)`: the assignment path in src/semantics/SemanticsValidatorExprMutationBorrows.cpp (`hasActiveBorrowForBinding` then `failBorrowedBindingDiagnostic(target.name, target.name)`) discards the borrow's name, while the mutator path says `sink: view; v cannot change while view still reads it: declare view mut`. The message should name the borrow (`sink: view`) so the user can find what to end.
+  - acceptance:
+    - the assignment, `move(v)` and pointer-aware variants name the live borrow as the sink; the diagnostics in tests and examples that expect `sink: <the local>` are updated; negative example with line and column
+    - full release gate green
+  - stop_rule: the sink name in those messages; no new borrow rule.
+  - repro: the program in scope fails with `(root: v, sink: v)`.
+  - notes: deferred: wording only; the file src/semantics/SemanticsValidatorExprMutationBorrows.cpp is just under the 1,200-line cap, so extract a component before adding.
+
+- [ ] TODO-6169: A `[private]` field of a struct at the root is readable and writable from anywhere
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6161)
+  - parallel_track: safety-stdlib
+  - scope: A private field may be named by definitions in the struct's namespace; a struct declared at the root (`[public struct] Counter() { [private i32 mut] hits{0i32} }`) has the whole program as its namespace, so `c.hits = 5i32` from `main` compiles. The rule is the one private type aliases follow (decided 2026-11-21, TODO-6161), but a root struct cannot be encapsulated by it.
+  - decision_needed: (A) keep it: put the struct in a namespace to get privacy (consistent with aliases; no change). (B) a root struct's private fields are accessible only from its own body and from definitions in the same source file or module (needs a notion of module per definition). Recommendation: A, and state it in docs/spec/type-system.md (done in Field visibility).
+  - acceptance:
+    - decided; if B, enforced with a negative example
+    - full release gate green
+  - stop_rule: privacy of root-level structs; no new visibility keywords.
+  - repro: `[public struct] Counter() { [private i32 mut] hits{0i32} } [return<int>] main() { [Counter mut] c{Counter{}} c.hits = 5i32 return(c.hits) }` exits 5.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
