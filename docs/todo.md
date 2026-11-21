@@ -307,9 +307,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: privacy of root-level structs; no new visibility keywords.
   - repro: `[public struct] Counter() { [private i32 mut] hits{0i32} } [return<int>] main() { [Counter mut] c{Counter{}} c.hits = 5i32 return(c.hits) }` exits 5.
 
-- [ ] TODO-6170: A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it
+- [~] TODO-6170: A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it
   - owner: ai
   - status: ready
+  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6166)
   - parallel_track: safety-borrows
@@ -678,9 +679,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5932: Libraries carry back-end code
+- [~] TODO-5932: Libraries carry back-end code
   - owner: ai
   - status: deferred
+  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 13)
   - parallel_track: lib-backend
@@ -691,9 +693,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is split into leaves for `optexe` and for native.
   - notes: deferred: needs scoping and an object writer.
 
-- [ ] TODO-5933: The embed API loads a library at run time
+- [~] TODO-5933: The embed API loads a library at run time
   - owner: ai
   - status: deferred
+  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
   - parallel_track: lib-embed
@@ -704,9 +707,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
 
-- [ ] TODO-6032: A public function of any shape is a function of a library
+- [~] TODO-6032: A public function of any shape is a function of a library
   - owner: ai
   - status: deferred
+  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-18
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 7)
   - parallel_track: lib-shapes
