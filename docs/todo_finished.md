@@ -2545,6 +2545,7 @@ are left unarchived.
 | TODO-6144 | An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6146 | Wasm structured control flow for an early return out of an inlined body with cleanup | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6147 | The Wasm shadow stack is fixed at 131072 slots | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6148 | Wasm `LoadStringByte` reads a byte of a module string | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6151 | Wasm refuses an early return out of an inlined body whose condition is a short-circuit chain | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6152 | `progress_beat` counted the beats of a loaded run and failed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |

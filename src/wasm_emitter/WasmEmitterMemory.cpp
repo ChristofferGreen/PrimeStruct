@@ -191,14 +191,17 @@ void emitWasmFramePrologue(const WasmLocalLayout &layout,
   appendU32Leb(0, out);
   out.push_back(WasmOpLocalSet);
   appendU32Leb(layout.frameBaseLocal, out);
-  // A frame that does not fit the shadow stack ends the program with a wasm trap (the VM's call-stack fault has no
-  // message channel here yet).
+  // A frame that does not fit the memory the shadow stack has grows it (`growShadowStack`), or ends the program with
+  // the VM's call-stack fault when the host refuses.
   liveSlotsAfterFrame();
-  appendI32Const(static_cast<int32_t>(runtime.shadowSlots), out);
+  out.push_back(WasmOpGlobalGet);
+  appendU32Leb(1, out);
   out.push_back(WasmOpI32GtU);
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
-  out.push_back(WasmOpUnreachable);
+  liveSlotsAfterFrame();
+  out.push_back(0x10); // call
+  appendU32Leb(runtime.growShadowStackFunction, out);
   out.push_back(WasmOpEnd);
   liveSlotsAfterFrame();
   out.push_back(WasmOpGlobalSet);
@@ -335,6 +338,135 @@ WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime) {
   out.push_back(WasmOpI32WrapI64);
   appendI32Const(static_cast<int32_t>(runtime.shadowBase) - static_cast<int32_t>(SlotBytes), out);
   out.push_back(WasmOpI32Add);
+  out.push_back(WasmOpEnd);
+  return body;
+}
+
+// (i32 liveSlots) -> (): the shadow stack needs `liveSlots` slots in all. The memory grows to hold them (by half again
+// when it can, so a deep recursion does not grow it per frame); a host that refuses leaves too few slots, and that is
+// the VM's `VM call stack overflow` fault: the message and `proc_exit(3)` on the WASI profile, a trap on the browser
+// profile. Afterwards the global `capacity` holds the slots the memory has above the shadow base.
+WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime) {
+  constexpr uint32_t LiveLocal = 0;
+  constexpr uint32_t FdLocal = 1;
+  constexpr uint32_t NeededLocal = 2;
+  constexpr uint32_t CurrentLocal = 3;
+  constexpr uint32_t TargetLocal = 4;
+  constexpr uint32_t MemoryPages = 65536;
+  WasmCodeBody body;
+  appendU32Leb(1, body.localDecls);
+  appendU32Leb(4, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  std::vector<uint8_t> &out = body.instructions;
+  const auto localGet = [&](uint32_t index) {
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(index, out);
+  };
+  const auto localSet = [&](uint32_t index) {
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(index, out);
+  };
+  const auto memorySize = [&]() {
+    out.push_back(0x3f); // memory.size
+    out.push_back(0x00);
+  };
+  const auto memoryGrowTo = [&](uint32_t pagesLocal) {
+    localGet(pagesLocal);
+    localGet(CurrentLocal);
+    out.push_back(0x6b); // i32.sub
+    out.push_back(0x40); // memory.grow
+    out.push_back(0x00);
+    out.push_back(0x1a); // drop: a refusal shows in the capacity below
+  };
+
+  // needed pages = (shadowBase + 8 * liveSlots + 65535) / 65536
+  localGet(LiveLocal);
+  out.push_back(WasmOpI64ExtendI32U);
+  appendI64Const(3, out);
+  out.push_back(0x86); // i64.shl
+  appendI64Const(static_cast<int64_t>(runtime.shadowBase) + 65535, out);
+  out.push_back(0x7c); // i64.add
+  appendI64Const(16, out);
+  out.push_back(WasmOpI64ShrU);
+  out.push_back(WasmOpI32WrapI64);
+  localSet(NeededLocal);
+  memorySize();
+  localSet(CurrentLocal);
+
+  localGet(NeededLocal);
+  localGet(CurrentLocal);
+  out.push_back(WasmOpI32GtU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  // target = min(65536, max(needed, current + current / 2))
+  localGet(CurrentLocal);
+  localGet(CurrentLocal);
+  appendI32Const(1, out);
+  out.push_back(0x76); // i32.shr_u
+  out.push_back(WasmOpI32Add);
+  localSet(TargetLocal);
+  localGet(TargetLocal);
+  localGet(NeededLocal);
+  localGet(TargetLocal);
+  localGet(NeededLocal);
+  out.push_back(WasmOpI32GtU);
+  out.push_back(0x1b); // select
+  localSet(TargetLocal);
+  localGet(TargetLocal);
+  appendI32Const(static_cast<int32_t>(MemoryPages), out);
+  out.push_back(WasmOpI32GtU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  appendI32Const(static_cast<int32_t>(MemoryPages), out);
+  localSet(TargetLocal);
+  out.push_back(WasmOpEnd);
+  memoryGrowTo(TargetLocal);
+  // The host may refuse the generous target: take what is needed.
+  memorySize();
+  localGet(NeededLocal);
+  out.push_back(0x49); // i32.lt_u
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  memoryGrowTo(NeededLocal);
+  out.push_back(WasmOpEnd);
+  out.push_back(WasmOpEnd);
+
+  // capacity = (memory pages * 65536 - shadowBase) / 8
+  memorySize();
+  out.push_back(WasmOpI64ExtendI32U);
+  appendI64Const(16, out);
+  out.push_back(0x86); // i64.shl
+  appendI64Const(static_cast<int64_t>(runtime.shadowBase), out);
+  out.push_back(WasmOpI64Sub);
+  appendI64Const(3, out);
+  out.push_back(WasmOpI64ShrU);
+  out.push_back(WasmOpI32WrapI64);
+  out.push_back(WasmOpGlobalSet);
+  appendU32Leb(1, out);
+
+  localGet(LiveLocal);
+  out.push_back(WasmOpGlobalGet);
+  appendU32Leb(1, out);
+  out.push_back(WasmOpI32GtU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  if (!runtime.hasProcExit) {
+    out.push_back(WasmOpUnreachable);
+  } else {
+    appendI32Const(static_cast<int32_t>(StderrFd), out);
+    localSet(FdLocal);
+    emitWasiWriteLiteralFromFdLocal(FdLocal,
+                                    runtime.stackOverflowMessageAddr,
+                                    runtime.stackOverflowMessageLength,
+                                    runtime,
+                                    out);
+    out.push_back(0x1a); // drop
+    appendI32Const(RuntimeErrorExitCode, out);
+    out.push_back(0x10); // call
+    appendU32Leb(runtime.procExitImportIndex, out);
+    out.push_back(WasmOpUnreachable);
+  }
+  out.push_back(WasmOpEnd);
   out.push_back(WasmOpEnd);
   return body;
 }

@@ -168,6 +168,7 @@ bool WasmEmitter::emitModule(const IrModule &input,
 
   if (runtime.hasLocalMemory) {
     runtime.slotAddressFunction = nextHelperFunction++;
+    runtime.growShadowStackFunction = nextHelperFunction++;
   }
 
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
@@ -233,6 +234,12 @@ bool WasmEmitter::emitModule(const IrModule &input,
     functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
     types.push_back(std::move(helperType));
     codeBodies.push_back(buildWasmSlotAddressHelperBody(runtime));
+
+    WasmFunctionType growType;
+    growType.params = {WasmTypeI32};
+    functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+    types.push_back(std::move(growType));
+    codeBodies.push_back(buildWasmShadowGrowHelperBody(runtime));
   }
 
   std::vector<WasmExport> exports;
@@ -273,8 +280,9 @@ bool WasmEmitter::emitModule(const IrModule &input,
       (!encodeMemorySection(memories, payload, error) || !appendSection(WasmSectionMemory, payload, out, error))) {
     return false;
   }
-  if (runtime.hasLocalMemory && (!encodeShadowStackGlobalSection(payload, error) ||
-                                 !appendSection(WasmSectionGlobal, payload, out, error))) {
+  if (runtime.hasLocalMemory &&
+      (!encodeShadowStackGlobalSection(runtime.shadowSlots, payload, error) ||
+       !appendSection(WasmSectionGlobal, payload, out, error))) {
     return false;
   }
   if (!encodeExportSection(exports, payload, error) || !appendSection(WasmSectionExport, payload, out, error)) {

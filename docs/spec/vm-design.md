@@ -79,8 +79,14 @@
   the VM's order (an address that is not a multiple of 16 is `unaligned indirect address in IR: <address>`; address 0, an
   address beyond the live slots and a heap address are `invalid indirect address in IR: <address>`), writes `VM error: ...`
   and the address in decimal to stderr and calls `proc_exit(3)` on the WASI profile, and traps (`unreachable`) on the browser
-  profile. The shadow stack has 131072 slots (16 pages after the module's static data); a frame that does not fit is a wasm
-  trap on both profiles, not the VM's `VM call stack overflow` (TODO-6143). Frames are not zeroed: a slot is written before it is read.
+  profile. The shadow stack is the last region of the memory and starts with 131072 slots (16 pages after the module's static
+  data). A frame that does not fit grows the memory with `memory.grow` (the helper `growShadowStack` takes half again as
+  many pages as the memory has, or what the frame needs when the host refuses that), as the VM's locals arena grows;
+  a host that refuses the pages the frame needs gives the VM's `VM error: VM call stack overflow` and exit code 3 on the
+  WASI profile and a wasm trap on the browser profile. A single frame of more than 2^28 slots (2 GiB) is refused at
+  compile time. The call depth is not counted (a recursion past the VM's 4096 frames is the host's stack, TODO-6143), and
+  the stack owns the memory above its base, so a heap added to the module (TODO-6149) lives below the base or shares the
+  grower. Frames are not zeroed: a slot is written before it is read.
   Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
   and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
   locals arena is laid out that way, and generated C++ registers each addressable frame). The arm64 native backend

@@ -69,7 +69,11 @@ bool nodeAvailable() {
 }
 
 // Compiles `source` for the VM and for Wasm (WASI), runs both and checks that they print and exit alike.
-void checkWasmMatchesVm(const std::string &name, const std::string &source, int expectedExitCode) {
+// `nodeFlags` are options for Node itself (a larger JavaScript stack for a deep recursion).
+void checkWasmMatchesVm(const std::string &name,
+                        const std::string &source,
+                        int expectedExitCode,
+                        const std::string &nodeFlags = "") {
   if (!nodeAvailable()) {
     return;
   }
@@ -93,9 +97,9 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
   CHECK(vmExit == expectedExitCode);
   REQUIRE(runCommand("./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                      quoteShellArg(wasmPath) + " --entry /main") == 0);
-  const int wasmExit =
-      runCommand("node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
-                 quoteShellArg(wasmOut) + " 2> " + quoteShellArg(wasmErr));
+  const int wasmExit = runCommand("node " + nodeFlags + " " + quoteShellArg(runnerPath) + " " +
+                                  quoteShellArg(wasmPath) + " > " + quoteShellArg(wasmOut) +
+                                  " 2> " + quoteShellArg(wasmErr));
   CHECK_MESSAGE(wasmExit == expectedExitCode, readFile(wasmErr));
   CHECK(readFile(wasmOut) == readFile(vmOut));
   CHECK(readFile(wasmErr) == readFile(vmErr));
@@ -105,7 +109,8 @@ void checkWasmMatchesVm(const std::string &name, const std::string &source, int 
 void checkWasmBrowserExit(const std::string &name,
                           const std::string &source,
                           const std::string &expectedStdout,
-                          int expectedExit) {
+                          int expectedExit,
+                          const std::string &nodeFlags = "") {
   if (!nodeAvailable()) {
     return;
   }
@@ -121,15 +126,42 @@ void checkWasmBrowserExit(const std::string &name,
   REQUIRE(runCommand("./primec --emit=wasm --wasm-profile browser --default-effects=none " +
                      quoteShellArg(srcPath) + " -o " + quoteShellArg(wasmPath) +
                      " --entry /main") == 0);
-  CHECK(runCommand("node " + quoteShellArg(runnerPath) + " " + quoteShellArg(wasmPath) + " > " +
-                   quoteShellArg(out)) == expectedExit);
+  CHECK(runCommand("node " + nodeFlags + " " + quoteShellArg(runnerPath) + " " +
+                   quoteShellArg(wasmPath) + " > " + quoteShellArg(out)) == expectedExit);
   CHECK(readFile(out) == expectedStdout);
 }
 
 void checkWasmBrowserRuntimeError(const std::string &name,
                                   const std::string &source,
-                                  const std::string &expectedStdout) {
-  checkWasmBrowserExit(name, source, expectedStdout, 3);
+                                  const std::string &expectedStdout,
+                                  const std::string &nodeFlags = "") {
+  checkWasmBrowserExit(name, source, expectedStdout, 3, nodeFlags);
+}
+
+// A recursion whose every level keeps `locals` locals and takes the address of one, so the frames live on the shadow
+// stack: `levels` of them need `levels * (locals + a few)` slots, more than the first 131072 of the stack when the
+// product says so.
+std::string deepFrameProgram(int locals, int levels, bool printResult) {
+  std::string declarations;
+  std::string total;
+  for (int i = 0; i < locals; ++i) {
+    declarations += "  [i64 mut] a" + std::to_string(i) + "{n + " + std::to_string(i) + "i64}\n";
+    total += " + a" + std::to_string(i);
+  }
+  std::string source = "[return<i64>]\ndeep([i64] n) {\n" + declarations +
+                       "  [Pointer<i64> mut] p{location(a0)}\n"
+                       "  if(n <= 0i64, then() { return(0i64) }, else() { })\n"
+                       "  return(dereference(p)" +
+                       total + " + deep(n - 1i64))\n}\n\n";
+  if (printResult) {
+    source +=
+        "[return<int> effects(io_out)]\nmain() {\n  print_line(\"start\"utf8)\n  print_line(deep(" +
+        std::to_string(levels) + "i64))\n  return(0i32)\n}\n";
+  } else {
+    source += "[return<int>]\nmain() {\n  return(convert<i32>(deep(" + std::to_string(levels) +
+              "i64)))\n}\n";
+  }
+  return source;
 }
 
 std::string conversionProgram(const std::vector<std::vector<std::string>> &rows) {
@@ -813,6 +845,62 @@ main() {
 }
 )",
                                "trapped\n");
+}
+
+// The shadow stack starts with 131072 slots and grows with `memory.grow` when a frame needs more, as the VM's frames
+// do: 1000 levels of a 203-slot frame need about 203000 slots. Node's own stack is enlarged because every level is
+// also a host call frame (TODO-6143 tracks that limit).
+TEST_CASE("wasm grows the shadow stack for a deep recursion like the vm") {
+  checkWasmMatchesVm(
+      "memory_grow_recursion", deepFrameProgram(200, 1000, true), 0, "--stack-size=4000");
+}
+
+// Frames of an array that is large in itself: five levels of a 27000-element local array (the shadow stack holds each
+// element in a slot) need more than the first 131072 slots in all. The source is large, so the case is slow to
+// compile.
+TEST_CASE("wasm grows the shadow stack for local arrays like the vm") {
+  std::string elements;
+  for (int i = 0; i < 27000; ++i) {
+    elements += (i == 0 ? "" : ", ") + std::string(i % 2 == 0 ? "1i32" : "2i32");
+  }
+  checkWasmMatchesVm(
+      "memory_grow_arrays",
+      "[return<i32>]\nlevel([i32] n) {\n  [array<i32>] values{array<i32>(" + elements +
+          ")}\n  [i32 mut] below{0i32}\n  if(n > 0i32) {\n    below = level(n - 1i32)\n  }\n"
+          "  return(below + values[n])\n}\n\n"
+          "[return<int> effects(io_out)]\nmain() {\n  print_line(level(5i32))\n  return(0i32)\n}\n",
+      0,
+      "--stack-size=4000");
+}
+
+// A host that refuses the memory the stack needs (V8's page limit here, below what the recursion needs) gives the VM's
+// call-stack fault, with its message and exit code 3 under the WASI profile and a trap under the browser profile.
+TEST_CASE("wasm reports the vm call stack fault when the shadow stack cannot grow") {
+  if (!nodeAvailable()) {
+    return;
+  }
+  const std::filesystem::path root = testScratchPath("") / "primec_wasm_node_memory_grow_refused";
+  std::error_code ec;
+  std::filesystem::remove_all(root, ec);
+  std::filesystem::create_directories(root, ec);
+  REQUIRE(!ec);
+  const std::string srcPath =
+      writeTemp("compile_wasm_node_memory_grow_refused.prime", deepFrameProgram(200, 1000, true));
+  const std::string wasmPath = (root / "program.wasm").string();
+  const std::string runnerPath = writeTemp("compile_wasm_node_runner.cjs", WasmNodeRunner);
+  const std::string out = (root / "stdout.txt").string();
+  const std::string err = (root / "stderr.txt").string();
+  REQUIRE(runCommand("./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
+                     quoteShellArg(wasmPath) + " --entry /main") == 0);
+  CHECK(runCommand("node --stack-size=4000 --wasm-max-mem-pages=20 " + quoteShellArg(runnerPath) +
+                   " " + quoteShellArg(wasmPath) + " > " + quoteShellArg(out) + " 2> " +
+                   quoteShellArg(err)) == 3);
+  CHECK(readFile(out) == "start\n");
+  CHECK(readFile(err) == "VM error: VM call stack overflow\n");
+  checkWasmBrowserRuntimeError("memory_grow_refused",
+                               deepFrameProgram(200, 1000, false),
+                               "trapped\n",
+                               "--stack-size=4000 --wasm-max-mem-pages=20");
 }
 
 // `panic` is `/at` of an empty array with the code as the index, so it needs the array opcodes; it ends the program

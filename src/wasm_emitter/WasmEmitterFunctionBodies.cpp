@@ -162,9 +162,10 @@ bool lowerFunctionCode(const IrFunction &function,
     return false;
   }
 
-  if (localLayout.addressed && localLayout.irLocalCount > runtime.shadowSlots) {
+  if (localLayout.addressed && localLayout.irLocalCount > WasmMaxFrameSlots) {
     error = "wasm emitter frame of " + std::to_string(localLayout.irLocalCount) +
-            " slots does not fit the shadow stack in function: " + function.name;
+            " slots exceeds the " + std::to_string(WasmMaxFrameSlots) +
+            " slots a wasm memory can hold for one frame in function: " + function.name;
     return false;
   }
 

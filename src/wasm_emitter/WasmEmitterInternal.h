@@ -167,13 +167,18 @@ struct WasmRuntimeContext {
   uint32_t stringByteMessageAddr = 0;
   uint32_t stringByteMessageLength = 0;
   // The module takes a local address or reads or writes through one: a mutable `i32` global (index 0) holds the number
-  // of live slots of the shadow stack, which occupies `shadowSlots` 8-byte slots of the memory from `shadowBase`, and
-  // the helper function `slotAddress` checks an address and maps it to the memory (WasmEmitterMemory.cpp).
+  // of live slots of the shadow stack, which starts with `shadowSlots` 8-byte slots of the memory from `shadowBase`
+  // and is the last region of the memory; a second mutable `i32` global (index 1) holds the slots the memory has now,
+  // and the helper `growShadowStack` grows the memory when a frame needs more. The helper function `slotAddress`
+  // checks an address and maps it to the memory (WasmEmitterMemory.cpp).
   bool hasLocalMemory = false;
   bool hasMemoryFault = false;
   uint32_t shadowBase = 0;
   uint32_t shadowSlots = 0;
   uint32_t slotAddressFunction = 0;
+  uint32_t growShadowStackFunction = 0;
+  uint32_t stackOverflowMessageAddr = 0;
+  uint32_t stackOverflowMessageLength = 0;
   uint32_t unalignedMessageAddr = 0;
   uint32_t unalignedMessageLength = 0;
   uint32_t invalidMessageAddr = 0;
@@ -291,8 +296,11 @@ bool encodeMemorySection(const std::vector<WasmMemoryLimit> &memories,
                          std::vector<uint8_t> &payload,
                          std::string &error);
 
-// One mutable `i32` global, initially 0 (the number of live slots of the shadow stack).
-bool encodeShadowStackGlobalSection(std::vector<uint8_t> &payload, std::string &error);
+// Two mutable `i32` globals: the number of live slots of the shadow stack (initially 0) and the number of slots its
+// memory holds (initially `capacitySlots`).
+bool encodeShadowStackGlobalSection(uint32_t capacitySlots,
+                                    std::vector<uint8_t> &payload,
+                                    std::string &error);
 
 bool encodeExportSection(const std::vector<WasmExport> &exports,
                          std::vector<uint8_t> &payload,
@@ -528,6 +536,11 @@ void emitWasmIndirectStore(uint32_t valueLocal,
                            std::vector<uint8_t> &out);
 // The code of the helper `slotAddress` (type (i64) -> i32).
 WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime);
+// The code of the helper `growShadowStack` (type (i32) -> ()): the argument is the number of live slots a frame needs;
+// the memory grows to hold them, or the program ends with the VM's `VM call stack overflow` fault.
+WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime);
+// The largest frame, in slots, the emitter accepts (a frame holds at most half of the 4 GiB a wasm memory can have).
+inline constexpr uint32_t WasmMaxFrameSlots = 1u << 28;
 
 // A structured block (`if`, `loop`) cannot reach the values below it: its code starts with an empty tracked stack and
 // the outer stack comes back at the end.

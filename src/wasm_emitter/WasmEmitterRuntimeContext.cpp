@@ -206,6 +206,7 @@ bool buildWasiRuntimeContext(const IrModule &module,
   if (runtime.hasMemoryFault) {
     static const std::string UnalignedMessage = "VM error: unaligned indirect address in IR: ";
     static const std::string InvalidMessage = "VM error: invalid indirect address in IR: ";
+    static const std::string StackOverflowMessage = "VM error: VM call stack overflow\n";
     const auto appendMessage = [&](const std::string &message, uint32_t &addr, uint32_t &length) {
       addr = stringBase + static_cast<uint32_t>(stringBlob.size());
       length = static_cast<uint32_t>(message.size());
@@ -215,6 +216,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
     };
     appendMessage(UnalignedMessage, runtime.unalignedMessageAddr, runtime.unalignedMessageLength);
     appendMessage(InvalidMessage, runtime.invalidMessageAddr, runtime.invalidMessageLength);
+    appendMessage(
+        StackOverflowMessage, runtime.stackOverflowMessageAddr, runtime.stackOverflowMessageLength);
   }
 
   if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault ||
