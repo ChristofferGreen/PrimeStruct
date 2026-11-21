@@ -516,9 +516,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
-- [ ] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
+- [~] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: ai-flaky (worktree-agent-ab46e50011ed16122), 2026-11-21
   - created_at: 2026-11-21
   - phase: Tests (found by the release gate of TODO-6140)
   - parallel_track: flaky-tests
@@ -530,9 +531,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs named here; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log`.
 
-- [ ] TODO-6154: Wasm refuses an early return of an array element in a recursive function as mixed return kinds
+- [~] TODO-6154: Wasm refuses an early return of an array element in a recursive function as mixed return kinds
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: ai-flaky (worktree-agent-ab46e50011ed16122), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6147)
   - parallel_track: wasm-opcode-gaps
