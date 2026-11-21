@@ -949,7 +949,10 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
         continue;
       }
     }
-    if (isAccessCall && !preferDeclaredAccessReturnKind) {
+    // An access call yields one element, never an array, so a caller that asks for the element kind of an array
+    // return value (requireArrayReturn) must not get the receiver's element kind: `return(values[2i32])` of an
+    // `array<i32>` would be taken for a returned array and end in ReturnI64 in an i32 function.
+    if (isAccessCall && !preferDeclaredAccessReturnKind && !requireArrayReturn) {
       const auto arrayVectorTargetInfo =
           arrayVectorTargetInfoFor(methodExpr.args.front());
       if (arrayVectorTargetInfo.isArrayOrVectorTarget &&
@@ -1067,7 +1070,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
     kindOut = LocalInfo::ValueKind::Int32;
     return true;
   }
-  if (isAccessCall && isStringAccessReceiverExpr(callExpr.args.front())) {
+  if (isAccessCall && !requireArrayReturn && isStringAccessReceiverExpr(callExpr.args.front())) {
     kindOut = LocalInfo::ValueKind::Int32;
     return true;
   }

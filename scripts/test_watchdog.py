@@ -14,6 +14,7 @@ docs/TestWatchdog.md.
 """
 
 import argparse
+import collections
 import os
 import select
 import signal
@@ -24,6 +25,10 @@ import time
 BEAT_ENV = "PRIMESTRUCT_BEAT_FD"
 KILLED_EXIT_CODE = 124
 MAX_BEAT_LINE = 4096
+BEAT_HISTORY = 8
+SNAPSHOT_TIMEOUT_SECONDS = 10
+SNAPSHOT_MAX_PROCESSES = 30
+SNAPSHOT_MAX_COMMAND = 140
 
 
 class WatchResult:
@@ -39,6 +44,53 @@ def _format_seconds(value):
     return "%g" % round(value, 1)
 
 
+def _run_text(command):
+    """Output of a short read-only command, or an empty string when it fails."""
+    try:
+        completed = subprocess.run(
+            command, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            stdin=subprocess.DEVNULL, timeout=SNAPSHOT_TIMEOUT_SECONDS)
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return completed.stdout.decode("utf-8", "replace")
+
+
+def system_snapshot(pgid):
+    """Describes the machine and the command's process group for a kill message.
+
+    A test that passes alone and is killed in a gate needs more than "it was
+    slow": this names what the machine was doing (load, swap, free memory) and
+    which processes of the group were alive, how long, and in which state
+    (R running, S sleeping, U uninterruptible wait, T stopped) with how much
+    CPU time. Best effort: every part is skipped when its tool is missing.
+    """
+    lines = []
+    try:
+        load = os.getloadavg()
+        lines.append("load average %.1f %.1f %.1f" % load)
+    except OSError:
+        pass
+    swap = _run_text(["sysctl", "-n", "vm.swapusage"]).strip()
+    if swap:
+        lines.append("swap: " + swap)
+    free = _run_text(["sysctl", "-n", "kern.memorystatus_level"]).strip()
+    if free:
+        lines.append("memory free level: %s%%" % free)
+    table = _run_text(["ps", "-A", "-o", "pid=,ppid=,pgid=,stat=,etime=,time=,command="])
+    group = []
+    for row in table.splitlines():
+        fields = row.split(None, 6)
+        if len(fields) >= 6 and fields[2] == str(pgid):
+            group.append("  pid %s ppid %s state %s elapsed %s cpu %s %s" % (
+                fields[0], fields[1], fields[3], fields[4], fields[5],
+                (fields[6] if len(fields) > 6 else "")[:SNAPSHOT_MAX_COMMAND]))
+    lines.append("process group %s: %d process(es) alive" % (pgid, len(group)))
+    lines.extend(group[:SNAPSHOT_MAX_PROCESSES])
+    if len(group) > SNAPSHOT_MAX_PROCESSES:
+        lines.append("  ... %d more" % (len(group) - SNAPSHOT_MAX_PROCESSES))
+    return "\n".join(lines)
+
+
 class Watchdog:
     """Runs a command and decides from beats and output when to kill it.
 
@@ -49,7 +101,8 @@ class Watchdog:
 
     def __init__(self, command, silence, hard_cap, clock=time.monotonic,
                  poll_interval=0.5, out=None, err=None, stdin=None,
-                 env=None, pass_fds=(), on_beat=None, on_output=None):
+                 env=None, pass_fds=(), on_beat=None, on_output=None,
+                 snapshot=system_snapshot):
         self.command = list(command)
         self.silence = silence
         self.hard_cap = hard_cap
@@ -62,6 +115,7 @@ class Watchdog:
         self.pass_fds = tuple(pass_fds)
         self.on_beat = on_beat
         self.on_output = on_output
+        self.snapshot = snapshot
         self.pid = None
 
     def kill_group(self):
@@ -98,6 +152,8 @@ class Watchdog:
         last_progress = start
         last_beat = None
         last_beat_at = None
+        beat_count = 0
+        recent = collections.deque(maxlen=BEAT_HISTORY)
         pending = b""
         out_fd = proc.stdout.fileno()
         open_fds = {beat_read, out_fd}
@@ -105,7 +161,7 @@ class Watchdog:
         message = ""
 
         def pump(timeout):
-            nonlocal last_progress, last_beat, last_beat_at, pending
+            nonlocal last_progress, last_beat, last_beat_at, pending, beat_count
             if not open_fds:
                 if timeout:
                     time.sleep(min(timeout, 0.01))
@@ -124,6 +180,8 @@ class Watchdog:
                         line, pending = pending.split(b"\n", 1)
                         last_beat = line[:MAX_BEAT_LINE].decode("utf-8", "replace")
                         last_beat_at = now - start
+                        beat_count += 1
+                        recent.append((last_beat_at, last_beat))
                         if self.on_beat:
                             self.on_beat(last_beat)
                     if len(pending) > MAX_BEAT_LINE:
@@ -155,6 +213,11 @@ class Watchdog:
                               self._describe_last(last_beat, last_beat_at)))
                 break
         if killed:
+            # Describe the group before it dies: the state of its processes is
+            # what names the cause of a stall.
+            message += "\n" + self._describe_history(recent, beat_count, self.clock() - start)
+            if self.snapshot:
+                message += "\n" + self.snapshot(self.pid)
             self.kill_group()
             proc.wait()
             self.err.write(message + "\n")
@@ -171,6 +234,14 @@ class Watchdog:
         elif code < 0:
             code = 128 - code
         return WatchResult(code, killed, last_beat, message)
+
+    @staticmethod
+    def _describe_history(recent, beat_count, elapsed):
+        lines = ["test_watchdog: %d beat(s) in %s s; the last %d:" % (
+            beat_count, _format_seconds(elapsed), len(recent))]
+        for at, line in recent:
+            lines.append("  %s s: %s" % (_format_seconds(at), line))
+        return "\n".join(lines)
 
     @staticmethod
     def _describe_last(last_beat, last_beat_at):

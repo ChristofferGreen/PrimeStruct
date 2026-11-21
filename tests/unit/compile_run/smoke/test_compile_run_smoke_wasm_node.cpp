@@ -1238,4 +1238,23 @@ main() {
                      11);
 }
 
+TEST_CASE("wasm returns an array element early from a recursive i32 function like the vm") {
+  // The early `return(values[2i32])` is one i32 element, not a returned array: it ends in ReturnI32 like the tail,
+  // so the function has one return kind.
+  const std::string source = R"(
+[return<i32>]
+level([i32] n) {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  if(n <= 0i32, then() { return(values[2i32]) }, else() { })
+  return(3i32 + level(n - 1i32))
+}
+
+[return<int>]
+main() {
+  return(level(2i32))
+}
+)";
+  checkWasmMatchesVm("early_return_array_element", source, 9);
+}
+
 TEST_SUITE_END();

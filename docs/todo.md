@@ -131,8 +131,7 @@ of sync with them.
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
 | TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
 | TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
-| TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | ready | flaky-tests |
-| TODO-6154 | Wasm refuses an early return of an array element in a recursive function as mixed return kinds | ready | wasm-opcode-gaps |
+| TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -516,34 +515,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
-- [~] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
+- [ ] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
   - owner: ai
-  - status: in_progress
-  - claimed_by: ai-flaky (worktree-agent-ab46e50011ed16122), 2026-11-21
+  - status: deferred
   - created_at: 2026-11-21
   - phase: Tests (found by the release gate of TODO-6140)
   - parallel_track: flaky-tests
-  - scope: One `./scripts/compile.sh --release` run (a second heavy gate was probably running on the machine; the run took 2037 s against 572 s for an earlier run of nearly the same tree) failed these tests, all among the first 150 to finish, with `test_watchdog: killed at the hard cap of 295 s` and the last beat a `primec` command or `clang++ is running` 180 to 294 s old: `compile_run_vm_core_result_exit_codes_1_4` and `_5_8`, `compile_run_vm_outputs_ir_and_output_modes_argv_arrays_77_86_part2_49_49`, `program_matrix_tasks_10_10`, `_15_15`, `_30_30`, `_31_31`, `_32_32`, `program_matrix_text_views_1_1`, `program_matrix_element_assign_2_2`, `_4_4` and `program_matrix_element_receivers_3_3`. Rerun alone they pass in 6 to 11 s each (`nice ctest --parallel 2 -R ...`), so each is a test that does not survive a stalled or oversubscribed machine. The cause is not found: the silence limit never fires (the beats of the `primec` children arrive), only the hard cap does, so the tests ran, slowly, together. Find what was slow (a first-use cost all tests of the window shared, such as the `clang++` runtime or the stdlib import cache, or plain CPU starvation) and make those tests cheaper or the shared cost paid once; raising a timeout is not the fix.
+  - scope: One `./scripts/compile.sh --release` run (a second heavy gate was probably running on the machine; the run took 2037 s against 572 s for an earlier run of nearly the same tree) failed twelve tests, all among the first 150 to finish, with `test_watchdog: killed at the hard cap of 295 s`: `compile_run_vm_core_result_exit_codes_1_4` and `_5_8`, `compile_run_vm_outputs_ir_and_output_modes_argv_arrays_77_86_part2_49_49`, `program_matrix_tasks_10_10`, `_15_15`, `_30_30`, `_31_31`, `_32_32`, `program_matrix_text_views_1_1`, `program_matrix_element_assign_2_2`, `_4_4` and `program_matrix_element_receivers_3_3`. Rerun alone they pass in 6 to 11 s each.
+  - measured (2026-11-21, ai-flaky, release build of this tree, `nice -n 10 ctest --parallel 22`, 11 cores, other agents' gates running): (1) the twelve tests share no lock, port, cache, temp directory or stdin: each writes under its own `testScratchPath` name, the compile-run and matrix helpers shell out to `./primec`/`primevm` (and `node` for Wasm cases) with no shared file, and nothing in src/, tests/ or scripts/ takes a `flock`/`lockf`/`O_EXCL` lock outside the VM, the build runner and the UI script runner. (2) All twelve started together on the machine at load 99 to 111 with swap 5.9 of 7 GB used and about 5000 free pages: they finished in 18 to 23 s each (23 s for the group), so a stalled 295 s needs a further factor of 13 that load alone did not produce in this run of the group (the full gate of this change is the second measurement). (3) The "primec: X is running" beat is only written while the process tree's CPU time advances, so the killed tests were consuming CPU, not blocked; the kill message could not say where. Not reproduced, so no cause is claimed: the evidence fits a machine-wide stall during the first minutes of that run (memory pressure and swap with a second gate and two `primec` experiments), not a property of the twelve tests.
+  - done: `scripts/test_watchdog.py` now prints, with every kill, the last eight beats with times, the beat count, the load average, swap use, the free-memory level and every process of the killed group (state, elapsed, CPU time); tests/scripts/test_test_watchdog.py covers it and docs/TestWatchdog.md describes it. A recurrence names the cause in its own log (swap near full and processes in `U`: memory pressure; `S` with no CPU: a stalled child; `R` with CPU near elapsed: a runaway).
   - acceptance:
-    - the cause of the 295 s stall is named in this block (measure `ctest --parallel` at 2x and 4x the core count on an otherwise idle machine, and with a second gate running)
-    - the tests above no longer need more than a fraction of the cap under that load, or the shared cost is gone
-    - full release gate green
-  - stop_rule: the tests and shared costs named here; no timeout is raised and no test is retried.
-  - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log`.
-
-- [~] TODO-6154: Wasm refuses an early return of an array element in a recursive function as mixed return kinds
-  - owner: ai
-  - status: in_progress
-  - claimed_by: ai-flaky (worktree-agent-ab46e50011ed16122), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6147)
-  - parallel_track: wasm-opcode-gaps
-  - scope: `wasm emitter does not support mixed return kinds in function: /level` for a function that returns an array element early and recurses: the same function with a scalar early return (`return(5i32)`), or without the recursion, compiles and agrees with the VM. The VM runs the repro and prints 7. `inferFunctionType` (src/wasm_emitter/WasmEmitterModule.cpp) counts the return opcodes of the function and finds both a `ReturnI32` and a `ReturnI64`: the IR lowerer ends the early return of an `array<i32>` element with `ReturnI64` and the tail with `ReturnI32` (the VM runs both). Dump the IR (`--emit=ir`) to see which return the element read gets, then either lower the element return with the width of the declared `return<i32>` or let the emitter narrow the `ReturnI64` of an `i32` function.
-  - acceptance:
-    - the repro compiles for Wasm and agrees with the VM under node (a case in tests/unit/compile_run/smoke/test_compile_run_smoke_wasm_node.cpp)
-    - full release gate green
-  - stop_rule: the return-kind inference of a returned array element; no change to other refusals.
-  - repro: `printf '[return<i32>]\nlevel([i32] n) {\n  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}\n  if(n <= 0i32, then() { return(values[2i32]) }, else() { })\n  return(3i32 + level(n - 1i32))\n}\n\n[return<int>]\nmain() {\n  return(level(2i32))\n}\n' > m.prime; ./primec --emit=wasm --wasm-profile wasi m.prime -o m.wasm --entry /main` prints `Wasm emit error: wasm emitter does not support mixed return kinds in function: /level`.
+    - the next gate that hits a hard cap or a silence kill records the new message in `docs/failing_tests.md`, and the cause it names is fixed here (a shared cost paid once, or the test made cheaper); no timeout is raised and no test is retried
+    - or twenty consecutive release gates pass with no kill, then this leaf is closed as not reproducible
+  - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
+  - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai

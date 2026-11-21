@@ -41,7 +41,7 @@ class FakeClock:
 class Run:
     """One watched fake child, driven step by step by the test."""
 
-    def __init__(self, module, child, args, silence, hard_cap, pass_fds=()):
+    def __init__(self, module, child, args, silence, hard_cap, pass_fds=(), snapshot=None):
         self.clock = FakeClock()
         self.beats = []
         self.beat_event = threading.Event()
@@ -63,7 +63,8 @@ class Run:
             [sys.executable, str(child)] + [str(a) for a in args],
             silence, hard_cap, clock=self.clock, poll_interval=0.005,
             out=self.out, err=self.err, stdin=os.fdopen(control_read, "rb", 0),
-            pass_fds=pass_fds, on_beat=on_beat, on_output=on_output)
+            pass_fds=pass_fds, on_beat=on_beat, on_output=on_output,
+            snapshot=snapshot)
         self.thread = threading.Thread(target=self._run)
         self.thread.start()
         assert self.clock.first_read.wait(BACKSTOP_SECONDS), "the watchdog did not start"
@@ -115,6 +116,34 @@ def main() -> int:
     expect(result.last_beat == "ready", "last beat recorded: %r" % result.last_beat)
     expect('last beat: "ready"' in run.err.getvalue(), "message names the last beat: %r" % run.err.getvalue())
     expect("without a beat" in run.err.getvalue(), "message says silence: %r" % run.err.getvalue())
+
+    # A kill message also carries the beat history and the snapshot of the
+    # machine and the process group, taken before the group dies.
+    snapshots = []
+    run = Run(module, child, ["stepsblock", 3], silence=10, hard_cap=1000,
+              snapshot=lambda pgid: snapshots.append(pgid) or "snapshot text")
+    for _ in range(3):
+        run.go()
+        run.wait_beat()
+    run.clock.now = 11
+    result = run.finish()
+    message = run.err.getvalue()
+    expect(result.killed == "silence", "history child killed: %r" % result.killed)
+    expect("3 beat(s)" in message and "step 1" in message and "step 3" in message,
+           "message lists the beat history: %r" % message)
+    expect(message.rstrip().endswith("snapshot text"), "message ends with the snapshot: %r" % message)
+    expect(len(snapshots) == 1 and snapshots[0] == run.watchdog.pid,
+           "snapshot taken once for the child's group: %r" % snapshots)
+
+    # The real snapshot names the processes of a live group (the fake child
+    # is one) with their state and CPU time.
+    run = Run(module, child, ["block"], silence=10, hard_cap=1000, snapshot=None)
+    run.wait_beat()
+    text = module.system_snapshot(run.watchdog.pid)
+    expect("process group %d: " % run.watchdog.pid in text and " state " in text and " cpu " in text,
+           "snapshot names the live group: %r" % text)
+    run.clock.now = 11
+    run.finish()
 
     # A child that beats slowly is not killed: every gap is just under the
     # silence limit, and the total time is five times the limit.

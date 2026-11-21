@@ -5,6 +5,7 @@ Every step waits for a line on stdin, so a test decides when the child makes
 progress and no timing is involved.
 
   steps N        N times: read a line, beat "step i"; then exit 0
+  stepsblock N   N times: read a line, beat "step i"; then block reading stdin forever
   echo N         N times: read a line, print "line i"; then exit 0 (no beats)
   block          beat "ready", then block reading stdin forever
   exit CODE      print "hello", beat "once", exit CODE
@@ -37,6 +38,11 @@ def main():
             sys.stdin.readline()
             beat("step %d" % i)
         return 0
+    if mode == "stepsblock":
+        for i in range(1, int(sys.argv[2]) + 1):
+            sys.stdin.readline()
+            beat("step %d" % i)
+        wait_forever()
     if mode == "echo":
         for i in range(1, int(sys.argv[2]) + 1):
             sys.stdin.readline()

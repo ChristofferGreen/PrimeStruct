@@ -65,6 +65,15 @@ A test that beats forever (a loop that beats and never ends) is caught by the ha
 existing CTest `TIMEOUT` as the hard cap; the wrapper's `--hard-cap` is a few seconds below it so the wrapper's message,
 with the last beat, is the one printed. No timeout is raised by this mechanism, and no test asserts on time.
 
+## The kill message
+
+A kill names the cause (silence or hard cap) and the last beat, then lists the last eight beats with their times and the
+number of beats so far, and a snapshot taken before the group dies: the load average, swap use and free-memory level of
+the machine (macOS `sysctl`), and every process of the group with its state (`R` running, `S` sleeping, `U`
+uninterruptible wait, `T` stopped), elapsed time and CPU time. A test that passes alone and is killed in a gate is
+diagnosed from this text: a swapping machine shows swap near full and processes in `U`, a stalled child shows `S` with
+no CPU time, a runaway shows `R` with CPU time near the elapsed time.
+
 ## Process tree
 
 The group is started with `setsid`, so a kill reaches every descendant that stayed in it. A descendant that starts its own

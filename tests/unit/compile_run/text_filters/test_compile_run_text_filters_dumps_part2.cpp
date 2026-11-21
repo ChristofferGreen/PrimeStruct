@@ -1274,4 +1274,31 @@ main() {
   CHECK(diagnostics.find("\"related_spans\":[]") != std::string::npos);
 }
 
+TEST_CASE("primec lowers an early array element return with the width of the declared i32 return") {
+  // `return(values[2i32])` is one i32 element, not a returned array: it ends in ReturnI32 like the tail, so no
+  // function of the program returns a 64-bit value (Wasm refused the mix of ReturnI32 and ReturnI64).
+  const std::string source = R"(
+[return<i32>]
+level([i32] n) {
+  [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
+  if(n <= 0i32, then() { return(values[2i32]) }, else() { })
+  return(3i32 + level(n - 1i32))
+}
+
+[return<int>]
+main() {
+  return(level(2i32))
+}
+)";
+  const std::string srcPath = writeTemp("primec_dump_early_array_element_return.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_early_array_element_return.txt").string();
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --dump-stage ir-lowered --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(cmd) == 0);
+  const std::string ir = readFile(outPath);
+  CHECK(ir.find("ReturnI32") != std::string::npos);
+  CHECK(ir.find("ReturnI64") == std::string::npos);
+}
+
 TEST_SUITE_END();
