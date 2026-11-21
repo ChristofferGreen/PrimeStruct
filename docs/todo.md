@@ -224,9 +224,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6144: An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked
+- [~] TODO-6144: An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked
   - owner: ai
   - status: ready
+  - claimed_by: ai-types (worktree-agent-a0fcf111903dc9161), 2026-11-21
   - created_at: 2026-11-21
   - phase: Frontend and diagnostics (found with TODO-6130)
   - parallel_track: unknown-type-diagnostic
