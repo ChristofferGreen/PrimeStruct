@@ -284,6 +284,34 @@ TEST_CASE("emit-lib names its default output, refuses a function the ABI cannot 
   CHECK_FALSE(std::filesystem::exists(dir / "bad.psa"));
 }
 
+TEST_CASE("emit-lib names the result shape a refused public function has") {
+  const std::filesystem::path dir = testScratchPath("emit_lib_result_shapes");
+  const std::string errPath = (dir / "err.txt").string();
+  const std::vector<std::tuple<std::string, std::string, std::string>> refused = {
+      {"text",
+       "[public return<string>]\nname() {\n  return(\"hi\"utf8)\n}\n",
+       "public function /name cannot be compiled into a library: its result `string` is not one a "
+       "real call "
+       "returns"},
+      {"vector",
+       "import /std/collections/vector\n\n[public effects(heap_alloc) return<vector<i32>>]\nmake() "
+       "{\n"
+       "  return(vector<i32>(1i32))\n}\n",
+       "public function /make cannot be compiled into a library: its result `vector<i32>` is not "
+       "one a real "
+       "call returns"},
+  };
+  for (const auto &[name, source, message] : refused) {
+    INFO(name);
+    writeIn(dir, name + ".prime", source);
+    CHECK(runCommand("./primec --emit=lib " + quoteShellArg((dir / (name + ".prime")).string()) +
+                     " -o " + quoteShellArg((dir / (name + ".psa")).string()) + " 2> " +
+                     quoteShellArg(errPath)) == 2);
+    CHECK(readFile(errPath).find(message) != std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(dir / (name + ".psa")));
+  }
+}
+
 TEST_CASE("emit-lib: a module with no public function has an empty code module, and a changed file "
           "is refused") {
   const std::filesystem::path dir = testScratchPath("emit_lib_empty");

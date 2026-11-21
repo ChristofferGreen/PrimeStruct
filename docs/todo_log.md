@@ -302,3 +302,26 @@ open-work-only scope rule as `docs/todo.md` itself.
 - 2026-11-21 (after TODO-6146, `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1` and `PRIMESTRUCT_MATRIX_WASM_RUN=1` of `PrimeStruct_program_matrix_tests`, 514 programs): 164 compile for Wasm, run under node and agree with the VM (none differs, all list `wasm-wasi`). The 350 refusals, first refusal each: `HeapAlloc` 136, `HeapRealloc` 14, `HeapFree` 5, `LoadStringByte` 2 (TODO-6141); host calls 111 and u8 2 (TODO-6127); `unsupported effect mask bits` 32, atomics 18, channels 16 (TODO-6128); recursive calls a real call cannot take 9 (TODO-6140); the struct parameter prologue 2 (TODO-6145); the graphics substrate 1 (by design) and 2 expected frontend diagnostics. No `unsupported control-flow pattern` refusal is left (38 before TODO-6146).
 - 2026-11-21 (after TODO-6145, same probes): 166 programs agree on Wasm (the two struct-method programs `frontend_ctor_only_field` and `pick_payload_struct_method` joined), 348 are refused; the struct parameter prologue is no longer a refusal.
 - 2026-11-21 (after TODO-6148, same probes): 168 programs agree on Wasm (`native_string_count_and_indexing_21` and `string_scan` joined), 346 are refused; `LoadStringByte` is no longer a refusal. TODO-6141 is split: the slot heap (`HeapAlloc` 136, `HeapRealloc` 14, `HeapFree` 5) is TODO-6149 and the host call behind `heapLiveBlocks()` and the string heap statistics (87 of the 111 host-call refusals) is TODO-6150.
+
+## TODO-5932
+
+- 2026-11-21 (release build of the branch that adds TODO-6172, macOS arm64, `primec` release, one run each; `/usr/bin/time -l` for instructions retired and real time; the C++ compiler is the system `clang++`). `--emit=optexe` against `--emit=optcpp` (the same C++ text, not compiled):
+
+  | Program | `optcpp` (front end) | `optexe` | Generated lines |
+  | --- | --- | --- | --- |
+  | empty `main` | 0.02 s, 69M | 0.91 s | 555 |
+  | benchmarks/call_fib.prime | 0.02 s, 86M | 1.38 s | 609 |
+  | benchmarks/json_parse.prime | 0.03 s, 250M | 0.84 s | 893 |
+  | examples/apps/http_hello (link flags missing, so the link step failed after the compile) | 1.29 s, 14.6G | 4.18 s | 23,739 |
+  | benchmarks/http/bench_server.prime (same) | 1.45 s, 16.7G | 4.27 s | 35,930 |
+
+  Of the empty `main`'s 0.91 s, `clang++ -std=c++23 -fsyntax-only` of the generated unit is 0.64 s; one header alone costs 0.06 s (`<cmath>`) to 0.28 s (`<vector>`). With the include block precompiled (`-x c++-header`, 15.6 MB, 0.60 s to build once) and `-include-pch`, the empty `main` compiles in 0.39 s instead of 0.70 s (`-O2 -ffp-contract=off -pthread`, no link). So a library translation unit would pay at least the same fixed cost as the program.
+
+## TODO-5933
+
+- 2026-11-21 (reading, no code run): `ScriptEngine::compileEntry` builds an `Options` and calls `runCompilePipelineResult` then `prepareIrModule`; `prepareIrModule` links `options.libraryPaths` (src/ir/IrPreparation.cpp). `loadLibraries` reads each archive and checks `compilerBuildId` against `currentCompilerBuildId()`, the linker UUID of `selfExecutablePath("")`, the running executable. With 5M instructions for the id (TODO-6093) and about 2 ms for the link, the cost of a library per process is small; the id of an embed host differs from `primec`'s, so archives from `primec --emit=lib` are refused there.
+
+## TODO-6032
+
+- 2026-11-21 (`primec --emit=lib` of each of the 59 `stdlib/std/**/*.prime` files in release, first diagnostic of each): 28 build, 31 fail. The 18 that name a shape fail on: result type 9 (collections/errors, dir, file/errors, glob, http/server, web/fragment_script, sync, text/shared, scene), `string` parameter beyond `count()` 4 (build_step, collections/equality, file, text/string), the canonical collections root 4 (buffer_checked, buffer_unchecked, ring_buffer, slice), a generated tail value 1 (ui/events). The other 13 fail before the shape check because the file is not self-contained as a root (build, build_runner, collections/map, gfx and gfx/experimental, http/http, image, math/matrix, math/quaternion, text/view, ui/native/handlers, ui/native, web). A borrowed sum parameter is refused without a name (TODO-6173).
+

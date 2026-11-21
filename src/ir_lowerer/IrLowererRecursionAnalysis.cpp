@@ -1,4 +1,5 @@
 #include "IrLowererRecursionAnalysis.h"
+#include "IrLowererRealCallBlockerText.h"
 #include "IrLowererScalarCallBlocker.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
@@ -706,59 +707,30 @@ const Transform *builtinVectorReturnType(const Definition &def,
   return nullptr;
 }
 
-// The mutable `vector<T>` bindings of a body and whether every `return` hands back one of them: a task returns the
-// record of a vector it built, so the waiter takes that vector over. A parameter, a field or another expression would
-// need a copy the return does not make.
-void collectVectorReturnForms(const Expr &expr,
-                              std::unordered_set<std::string> &ownedVectors,
-                              bool &allReturnsOwned) {
-  if (expr.isLambda) {
-    return;
-  }
-  if (expr.isBinding && expr.args.size() == 1) {
-    bool isMutVector = false;
-    bool isVector = false;
-    for (const Transform &transform : expr.transforms) {
-      isMutVector = isMutVector || transform.name == "mut";
-      isVector = isVector || (transform.name == "vector" && transform.templateArgs.size() == 1);
-    }
-    if (isVector && isMutVector) {
-      ownedVectors.insert(expr.name);
-    }
-  }
-  if (expr.kind == Expr::Kind::Call && expr.name == "return") {
-    if (expr.args.size() != 1 || expr.args.front().kind != Expr::Kind::Name ||
-        ownedVectors.count(expr.args.front().name) == 0) {
-      allReturnsOwned = false;
-    }
-  }
-  for (const Expr &arg : expr.args) {
-    collectVectorReturnForms(arg, ownedVectors, allReturnsOwned);
-  }
-  for (const Expr &bodyArg : expr.bodyArguments) {
-    collectVectorReturnForms(bodyArg, ownedVectors, allReturnsOwned);
-  }
-}
-
-bool vectorResultReturnsOwnedLocals(const Definition &def) {
-  std::unordered_set<std::string> ownedVectors;
-  bool allReturnsOwned = true;
-  for (const Expr &stmt : def.statements) {
-    collectVectorReturnForms(stmt, ownedVectors, allReturnsOwned);
-  }
-  return allReturnsOwned;
-}
-
-bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext &context) {
+AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
+                                         const RealCallShapeContext &context) {
   const auto &byPath = *context.definitionsByPath;
   const auto &structNames = *context.structNames;
-  if (definitionHasTransform(def, "host") || definitionHasTransform(def, "struct") ||
-      definitionHasTransform(def, "sum") || definitionHasTransform(def, "compute") ||
-      definitionHasTransform(def, "on_error") || definitionHasTransform(def, "require")) {
-    return false;
+  if (definitionHasTransform(def, "host")) {
+    return AddressAbiBlocker::HostDefinition;
+  }
+  if (definitionHasTransform(def, "struct")) {
+    return AddressAbiBlocker::StructDefinition;
+  }
+  if (definitionHasTransform(def, "sum")) {
+    return AddressAbiBlocker::SumDefinition;
+  }
+  if (definitionHasTransform(def, "compute")) {
+    return AddressAbiBlocker::ComputeDefinition;
+  }
+  if (definitionHasTransform(def, "on_error")) {
+    return AddressAbiBlocker::OnErrorHandler;
+  }
+  if (definitionHasTransform(def, "require")) {
+    return AddressAbiBlocker::RequireContract;
   }
   if (def.fullPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
-    return false;
+    return AddressAbiBlocker::CollectionsHelper;
   }
   std::string parentStructPath;
   if (isStructHelperDefinition(def, structNames, parentStructPath) &&
@@ -768,9 +740,11 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
         leafStart == std::string::npos ? def.fullPath : def.fullPath.substr(leafStart + 1);
     const bool lifecycleHelper =
         leaf == "Create" || leaf == "Destroy" || leaf == "Copy" || leaf == "Move";
-    if ((lifecycleHelper && !context.allowLifecycleHelpers) ||
-        !isAddressAbiStruct(parentStructPath, structNames, context.allowCollections)) {
-      return false;
+    if (lifecycleHelper && !context.allowLifecycleHelpers) {
+      return AddressAbiBlocker::LifecycleHelper;
+    }
+    if (!isAddressAbiStruct(parentStructPath, structNames, context.allowCollections)) {
+      return AddressAbiBlocker::ReceiverStruct;
     }
     // A closure with a `[ref name]` capture runs its `call` inline, in the frame that holds the borrowed locals
     // (docs/spec/value-lifecycle.md, Borrowing).
@@ -780,7 +754,7 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
         for (const Expr &field : structIt->second->statements) {
           for (const Transform &transform : field.transforms) {
             if (field.isBinding && (transform.name == "Reference" || transform.name == "Pointer")) {
-              return false;
+              return AddressAbiBlocker::ClosureReferenceCapture;
             }
           }
         }
@@ -790,29 +764,34 @@ bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext
   for (const Expr &param : def.parameters) {
     if (!isAddressAbiParameter(
             def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
-      return false;
+      return AddressAbiBlocker::Parameter;
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
   const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath);
   if (!context.allowCollections &&
       structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
-    return false;
+    return AddressAbiBlocker::CollectionResult;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
       structResultPath.empty() &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
-    return false;
+    return AddressAbiBlocker::UnsupportedResult;
   }
   if (definitionUsesTry(def)) {
-    return false;
+    return AddressAbiBlocker::UsesTry;
   }
   if (def.returnExpr.has_value() &&
       (def.statements.empty() || def.statements.back().kind != Expr::Kind::Call ||
        def.statements.back().name != "return")) {
-    return false; // a generated tail value; the real-call body lowering only runs the statements
+    return AddressAbiBlocker::
+        GeneratedTailValue; // the real-call body lowering only runs the statements
   }
-  return true;
+  return AddressAbiBlocker::None;
+}
+
+bool isAddressAbiRealCallShape(const Definition &def, const RealCallShapeContext &context) {
+  return addressAbiShapeBlocker(def, context) == AddressAbiBlocker::None;
 }
 
 } // namespace
@@ -1167,8 +1146,9 @@ std::string realCallBlockerReason(const Definition &def, const RealCallShapeCont
            "reference or pointer " +
            "to one";
   }
-  if (!isRealCallShapeEligible(def, context)) {
-    return "its result, receiver or body shape is not one a real call takes";
+  if (const AddressAbiBlocker blocker = addressAbiShapeBlocker(def, context);
+      blocker != AddressAbiBlocker::None) {
+    return describeAddressAbiBlocker(blocker, def);
   }
   return {};
 }

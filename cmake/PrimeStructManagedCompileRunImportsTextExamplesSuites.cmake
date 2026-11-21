@@ -154,7 +154,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "emit_lib"
                                   SOURCE_FILE "*test_compile_run_text_filters_emit_lib.cpp"
-                                  TOTAL_CASES 6
+                                  TOTAL_CASES 7
                                   CASES_PER_SHARD 2)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300

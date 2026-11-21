@@ -149,6 +149,8 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
+| TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | deferred | lib-shapes |
+| TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | deferred | lib-backend |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -175,7 +177,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032 (each with `decision_needed`, 2026-11-21), TODO-6173, TODO-6174
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6169 (private fields of a root struct), TODO-6171 (a lambda or `Function` value changes a viewed container)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
@@ -321,6 +323,34 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: lambdas and `Function` values in the callee-effect analysis; no new borrow kinds.
   - repro: (1) `import /std/collections/*  [struct] Bag() { [vector<i32> mut] items{vector<i32>()} } [effects(heap_alloc), return<void>] reset_via_lambda([Reference<Bag>] bag) { [auto] f{[bag]() { bag.items = vector<i32>(7i32) }} f() } [effects(heap_alloc), return<int>] main() { [Bag mut] bag{Bag{}} bag.items.push(1i32) [vector<i32>] view{bag.items} reset_via_lambda(location(bag)) return(view.count()) }` compiles. (2) the same with `reset_via_function([Reference<Bag>] bag, [Function<void, Reference<Bag>>] f) { f(bag) }` called with `Function<void, Reference<Bag>>{swap_items}` where `swap_items([Reference<Bag> mut] bag)` assigns `bag.items`, compiles.
+
+- [ ] TODO-6173: A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Modules and libraries (found with TODO-6032)
+  - parallel_track: lib-shapes
+  - scope: `[sum] Pick { [i32] number [bool] flag } [public return<i32>] use_pick([Pick] value) { return(1i32) }` gives `public function /use_pick cannot be compiled into a library: its result, receiver or body shape is not one a real call takes`: `isAddressAbiParameter` accepts a borrowed sum parameter and `addressAbiShapeBlocker` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) finds no blocker, but the definition is not in `realCallReservationIndex` (src/ir_lowerer/IrLowererLowerSetupStage.cpp), so `realCallBlockerReason` has nothing to name. Find which rule keeps it out of `computeRealCallEligibleDefinitionPaths`, then either take the shape (and test it against the whole-program build) or make the blocker report it.
+  - acceptance:
+    - the function is a function of the archive and gives the same result as the whole-program build when linked, or the refusal names the rule
+    - negative or positive example with the program above
+    - full release gate green
+  - stop_rule: the sum parameter of a library root; no new ABI shape.
+  - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
+
+- [ ] TODO-6174: The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-21
+  - phase: Modules and libraries (found with TODO-5932)
+  - parallel_track: lib-backend
+  - scope: `primec --emit=optexe` of an empty `main` takes 0.91 s, of which `clang++ -fsyntax-only` on the generated unit is 0.64 s: the `#include <algorithm>`, `<map>`, `<set>`, `<string>` and the rest of the runtime preamble's headers (src/backend/IrToOptCppRuntime.h). A precompiled header of those includes took an empty `main` from 0.70 s to 0.39 s in a manual run (`clang++ -std=c++23 -O2 -ffp-contract=off -pthread -x c++-header`, then `-include-pch`; the .pch is 15.6 MB). Decide where the header is kept (a cache keyed by the compiler id and the C++ compiler version, under `.ps/cache` or the output directory) and what happens when `clang++` changes; or drop the headers the runtime does not need (`<map>`, `<set>`).
+  - decision_needed: (A) a cached precompiled header (fast, needs a cache and an invalidation rule); (B) trim the includes (no cache, smaller gain, measure first); (C) leave it. Recommendation: B first as the smaller change, then A if B leaves more than 0.3 s.
+  - acceptance:
+    - an empty `main` through `--emit=optexe` is measured before and after in docs/todo_log.md; the output executable behaves the same on the optexe test corpus
+    - full release gate green
+  - stop_rule: the C++ compile of the optimized emitters; no change to the generated code.
+  - repro: `primec --emit=optexe empty.prime -o empty` takes 0.91 s on an arm64 Mac while `primec --emit=optcpp` takes 0.02 s.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
@@ -679,10 +709,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [~] TODO-5932: Libraries carry back-end code
+- [ ] TODO-5932: Libraries carry back-end code
   - owner: ai
   - status: deferred
-  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 13)
   - parallel_track: lib-backend
@@ -692,11 +721,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a library built once is not regenerated when only its consumer changes, and the link of the final executable is a real link
   - stop_rule: do not start before it is split into leaves for `optexe` and for native.
   - notes: deferred: needs scoping and an object writer.
+  - measured: 2026-11-21 (release build, macOS arm64; numbers in docs/todo_log.md under TODO-5932). `--emit=optexe` of an empty `main` takes 0.91 s, of which the front end is 0.02 s (69M instructions) and `clang++` parsing the runtime preamble's standard headers alone is 0.64 s (`-fsyntax-only`); a program of 24k generated lines (examples/apps/http_hello) takes 4.18 s, 1.29 s of it the front end (14.6G instructions) and about 2.9 s the C++ compile and link. So the back end is 98 percent of a small program (a fixed cost every translation unit pays) and about 70 percent of an http-sized one. The emitter writes one translation unit with the runtime in an unnamed namespace, passing the runtime as `Rt &rt` (src/backend/IrToOptCppRuntime.h), so a library unit could share it; a string table, host import declarations and struct layouts are per unit, and the optimizer's inlining across the library boundary is lost. The native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer.
+  - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s, TODO-6174), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
+  - decision_needed: which of A, B, C to schedule; whether losing cross-library inlining under B is acceptable (`--ir-inline` crosses libraries today). Recommendation: A now (TODO-6174, small, helps every program); B only when a real library measures more than 1 s of back-end compile of a typical program, which none does today (the stdlib libraries that build are small, docs/todo_log.md under TODO-6093); C not before B.
 
-- [~] TODO-5933: The embed API loads a library at run time
+- [ ] TODO-5933: The embed API loads a library at run time
   - owner: ai
   - status: deferred
-  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
   - parallel_track: lib-embed
@@ -706,11 +737,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when scoped: a script that uses a library function runs through the embed API with the library loaded at run time, and a script without libraries starts exactly as before
   - stop_rule: do not start before it is scoped.
   - notes: deferred: not committed; follows if the archive proves out.
+  - measured: 2026-11-21 (numbers in docs/todo_log.md under TODO-5933). The embed engine already compiles through `runCompilePipelineResult` and `prepareIrModule` with an `Options` (src/embed/ScriptEngine.cpp, `compileEntry`), and `Options::libraryPaths` loads and links archives there (src/ir/IrPreparation.cpp, `linkProgramLibraries`), without a process or `dlopen` (scripts/check_embed_no_process.sh stays valid); so the first slice is small: `ScriptEngine::addLibrary(path)` that fills `options.libraryPaths`, with the script writing `import</root>`. A script without libraries pays nothing (`libraryPaths` empty returns at once, src/pipeline/LibraryLink.cpp); with one, the compiler build id is computed once per process (5M instructions, TODO-6093), plus the archive read and a link of about 2 ms. The blocker is the build id: `currentCompilerBuildId` is the running executable's linker UUID (src/pipeline/LibraryLink.cpp), and an embed host (PrimeScroll, a test binary) is a different executable from `primec`, so every archive `primec --emit=lib` wrote is refused with a build id mismatch. Existing coverage to reuse: the embed script tests (`PrimeStruct_embed_script_engine`) and the 23-program library differential corpus (tests/unit/compile_run, emit_lib and library link cases).
+  - options_to_decide: build id: (1) the id names the compiler sources, not the executable: CMake hashes the inputs of the front end, IR and lowering into a generated header both `primec` and the embed library carry, so one source tree agrees with itself; cost is a build-time hash, and a stale id is impossible because it is derived from the content. (2) the host passes an id: `ScriptEngine::setLibraryCompilerId`, defaulting to its own UUID; fragile, the host must learn `primec`'s. (3) accept another binary's archive when the IR schema version and a hand-bumped ABI constant match; cheap, but a forgotten bump runs wrong code silently. How a script names libraries: (a) the host: `engine.addLibrary(path)`, the script writes `import</ui>`; the host decides which code a script reaches, as it does for the effects ceiling (`setAllowEffects`). (b) the script names a file path; rejected, a script could read any file. (c) `addLibraryPath(dir)` resolving `import</name>` to `dir/name.psa`; a convenience on top of (a).
+  - decision_needed: the build id rule. Recommendation: (1) and naming (a). After that: slice 1 `ScriptEngine::addLibrary` plus a test that builds a library with the host's own compiler (`buildLibraryArchiveContent`) and one built by `primec`, runs a script that calls it, and checks that a script without libraries is unchanged (instruction count of an empty script compile, no timing); slice 2 `Script::bytecode` records the libraries so `loadBytecode` of a script that linked one stays self-contained (it already is: the link is in the IR).
 
-- [~] TODO-6032: A public function of any shape is a function of a library
+- [ ] TODO-6032: A public function of any shape is a function of a library
   - owner: ai
   - status: deferred
-  - claimed_by: ai-borrow-lib (worktree-agent-a62725c1a21205efc), 2026-11-21
   - created_at: 2026-11-18
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 7)
   - parallel_track: lib-shapes
@@ -722,6 +755,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: function shapes in the library ABI; no change to generics or to the link.
   - notes: deferred: not committed; follows when a real library needs a shape that is refused today.
+  - measured: 2026-11-21 (the first refusal of `primec --emit=lib` on each of the 59 stdlib files; numbers in docs/todo_log.md under TODO-6032). 28 build, 13 fail before the shape check (the file is not self-contained: `unknown return type: Vec2` in math/matrix, a missing import, an `on_error` handler type, `unsupported binding type`), and 18 name a shape. Of those 18: 9 a result the address ABI does not return (4 a sum, `Result` or packed error value: collections/errors, dir, file/errors, glob; 2 a `string`: http/server, web/fragment_script; 2 a `Pointer<i64>`: sync, text/shared; 1 a `vector<i32>`: scene), 4 a `string` parameter used beyond `count()` (build_step, collections/equality, file, text/string), 4 a definition under the canonical collections root `/std/collections/` (buffer_checked, buffer_unchecked, ring_buffer, slice; the rule is by path, so a scalar-only helper such as `ringBufferWrap` is refused too), 1 a body that ends in a generated tail value (ui/events). An argument pack blocks none of them.
+  - options_to_decide: (1) `string` and `Pointer<T>` results are one u64 slot: take them as slot results in the address ABI (4 of the 9 result cases; a `Reference<T>` result stays refused, it would dangle). (2) sum, `Result` and packed error results go through the struct-result path (a heap block the callee fills): needs TODO-6173 first, since a borrowed sum parameter passes the shape check and is still refused. (3) a `vector<T>` result with the owned-local rule a spawned call already uses (`vectorResultReturnsOwnedLocals`, the task shape of a spawned call). (4) a `string` parameter used beyond `count()`: the callee reads a merged-table string by a computed index (`LoadStringByteDynamic`, VM only), so lifting the rule breaks optexe and native; keep refused until those targets have it. (5) the collections-root rule: narrow it from the path to the definitions that take or return a collection record, so scalar helpers become roots; this changes which stdlib helpers are real calls in every program, so it needs the benchmarks of the lazy-import plan and an instruction-count check, or a flag limited to library roots. (6) an argument pack: a wrapper that takes a `vector<T>`, the call site packing; lowest value, no stdlib file needs it.
+  - decision_needed: the order and whether (5) applies to every program or only to library roots. Recommendation: (1), then TODO-6173 and (2), then (3); (5) limited to library roots; (4) and (6) later. Done so far: TODO-6172 (the refusal names the rule a function breaks, instead of the generic message).
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
