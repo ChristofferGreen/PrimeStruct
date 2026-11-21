@@ -2563,6 +2563,7 @@ are left unarchived.
 | TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6168 | Assigning to a local that a view borrows names the local as the sink | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 
 <!-- INDEX-END -->
 

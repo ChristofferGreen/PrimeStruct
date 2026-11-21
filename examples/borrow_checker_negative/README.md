@@ -14,7 +14,8 @@ cleared through the parameter (`12_view_of_dereferenced_parameter_cleared`), and
 another vector through its private fields (`16_vector_storage_pointer_copied`, `17_vector_count_written`,
 `18_vector_built_around_storage`), and a view of `dereference(r)` that outlives `r`'s last use while the local `r`
 aliases is changed directly (`19_view_of_reference_alias_changed_directly`), and a view whose container a plain `Reference` parameter changes structurally, directly or through callees
-(`20_view_changed_through_plain_reference_argument`, `21_view_changed_through_reference_callee`).
+(`20_view_changed_through_plain_reference_argument`, `21_view_changed_through_reference_callee`), and an assignment to the borrowed local, which names the view as the sink
+(`22_view_blocks_assignment_names_view`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

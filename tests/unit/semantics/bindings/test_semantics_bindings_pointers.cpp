@@ -2251,6 +2251,40 @@ main() {
   }
 }
 
+TEST_CASE("changing a borrowed local directly names the live view as the sink") {
+  const std::string prelude = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  [Bag mut] bag{Bag{}}
+  [vector<i32>] view{v}
+  [vector<i32>] bagView{bag.items}
+)";
+  const std::vector<std::tuple<std::string, std::string, std::string, std::string>> rejected = {
+      {"assign", "  v = vector<i32>(9i32)\n  return(view.count())\n}\n", "v", "view"},
+      {"assign call", "  assign(v, vector<i32>(9i32))\n  return(view.count())\n}\n", "v", "view"},
+      {"move", "  [vector<i32> mut] other{move(v)}\n  return(view.count())\n}\n", "v", "view"},
+      {"assign to a field",
+       "  bag.items = vector<i32>(9i32)\n  return(bagView.count())\n}\n",
+       "bag",
+       "bagView"},
+  };
+  for (const auto &[name, body, root, sink] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(prelude + body, "/main", error));
+    CHECK(error.find("borrowed binding: " + root + " (root: " + root + ", sink: " + sink + ")") !=
+          std::string::npos);
+  }
+}
+
 TEST_CASE("vector and map public helpers stay callable from safe code") {
   const std::string source = R"(
 import /std/collections/*

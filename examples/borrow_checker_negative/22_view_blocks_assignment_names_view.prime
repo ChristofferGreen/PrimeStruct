@@ -1,0 +1,11 @@
+// `view` reads `values`' storage, so assigning a new vector to `values` while `view` is still used below would leave
+// the view on freed storage. The diagnostic names the view (`sink: view`) so you can see which borrow to end.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
+  [vector<i32>] view{values}
+  values = vector<i32>(9i32)
+  return(view.count())
+}

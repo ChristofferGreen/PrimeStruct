@@ -124,8 +124,8 @@ of sync with them.
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
-| TODO-6168 | Assigning to a local that a view borrows names the local as the sink | deferred | safety-borrows |
 | TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
+| TODO-6170 | A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it | ready | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -176,7 +176,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6168 (assignment diagnostic names the wrong sink), TODO-6169 (private fields of a root struct)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6169 (private fields of a root struct), TODO-6170 (callee replaces a container field through a plain `Reference`)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -293,21 +293,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
 
 
-- [~] TODO-6168: Assigning to a local that a view borrows names the local as the sink
-  - owner: ai
-  - status: deferred
-  - claimed_by: worker-borrows (worktree agent-a72c88cd6a1a56274), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6167)
-  - parallel_track: safety-borrows
-  - scope: `[vector<i32> mut] v{...} [vector<i32>] view{v} v = vector<i32>(9i32) return(view.count())` is rejected with `borrowed binding: v (root: v, sink: v)`: the assignment path in src/semantics/SemanticsValidatorExprMutationBorrows.cpp (`hasActiveBorrowForBinding` then `failBorrowedBindingDiagnostic(target.name, target.name)`) discards the borrow's name, while the mutator path says `sink: view; v cannot change while view still reads it: declare view mut`. The message should name the borrow (`sink: view`) so the user can find what to end.
-  - acceptance:
-    - the assignment, `move(v)` and pointer-aware variants name the live borrow as the sink; the diagnostics in tests and examples that expect `sink: <the local>` are updated; negative example with line and column
-    - full release gate green
-  - stop_rule: the sink name in those messages; no new borrow rule.
-  - repro: the program in scope fails with `(root: v, sink: v)`.
-  - notes: deferred: wording only; the file src/semantics/SemanticsValidatorExprMutationBorrows.cpp is just under the 1,200-line cap, so extract a component before adding.
-
 - [ ] TODO-6169: A `[private]` field of a struct at the root is readable and writable from anywhere
   - owner: ai
   - status: deferred
@@ -321,6 +306,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: privacy of root-level structs; no new visibility keywords.
   - repro: `[public struct] Counter() { [private i32 mut] hits{0i32} } [return<int>] main() { [Counter mut] c{Counter{}} c.hits = 5i32 return(c.hits) }` exits 5.
+
+- [ ] TODO-6170: A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-21
+  - phase: Correctness audit 2026-10 (found with TODO-6166)
+  - parallel_track: safety-borrows
+  - scope: the callee-effect analysis of src/semantics/ReferenceParameterEffects.cpp counts `push`, `pop`, `clear`, `reserve`, `remove_at`, `remove_swap` and `insert` on a place rooted at the parameter (and passing it to a callee that does), but not a field assignment that replaces a container (`bag.items = vector<i32>(7i32)`), which frees the old storage a view of `bag.items` reads. A plain `Reference<Struct>` may assign its fields (docs/spec/pointers-and-references.md), so the call site needs the same view check. Also unhandled: a lambda body that changes the parameter, and a callee reached only through an unresolved call.
+  - acceptance:
+    - an assignment (`=` or `assign`) of a field whose type is a container (or owns one) through a parameter that is a plain `Reference`, directly or in a callee, counts as a structural change in the analysis; assigning a scalar field does not
+    - negative example with line and column; the stdlib, examples, UI and web code compile (no false positives)
+    - full release gate green
+  - stop_rule: the callee-effect analysis; no new borrow kinds.
+  - repro: `[struct] Bag() { [vector<i32> mut] items{vector<i32>()} } [effects(heap_alloc), return<void>] reset([Reference<Bag>] bag) { bag.items = vector<i32>(7i32) } [effects(heap_alloc), return<int>] main() { [Bag mut] bag{Bag{}} bag.items.push(1i32) [vector<i32>] view{bag.items} reset(location(bag)) return(view.count()) }` (with `import /std/collections/*`) compiles.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai

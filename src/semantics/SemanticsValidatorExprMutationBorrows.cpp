@@ -31,6 +31,10 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                                             " (root: " + borrowRoot +
                                             ", sink: " + sink + ")");
       };
+  // The binding a live view or reference holds on `root`, named as the sink so the user can find what to end.
+  auto failBorrowedByLiveSink = [&](const std::string &root) -> bool {
+    return failBorrowedBindingDiagnostic(root, activeBorrowSinkOf(params, locals, root, "", false));
+  };
   auto isMutableBinding = [&](const std::string &name) -> bool {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       return paramBinding->isMutable;
@@ -482,7 +486,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           "move does not support Reference bindings: " + target.name);
     }
     if (hasActiveBorrowForBinding(target.name)) {
-      return failBorrowedBindingDiagnostic(target.name, target.name);
+      return failBorrowedByLiveSink(target.name);
     }
     // A pointer to the binding that is used later would dangle once the value is moved away.
     if (const std::string pointerSink = activeBorrowSinkOf(params, locals, target.name, "", true);
@@ -759,8 +763,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       if (fieldReceiver.kind == Expr::Kind::Name &&
           hasActiveBorrowForBinding(fieldReceiver.name)) {
-        return failBorrowedBindingDiagnostic(fieldReceiver.name,
-                                            fieldReceiver.name);
+        return failBorrowedByLiveSink(fieldReceiver.name);
       }
       return true;
     };
@@ -770,7 +773,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             "assign target must be a mutable binding: " + target.name);
       }
       if (hasActiveBorrowForBinding(target.name)) {
-        return failBorrowedBindingDiagnostic(target.name, target.name);
+        return failBorrowedByLiveSink(target.name);
       }
       const BindingInfo *targetBinding = findParamBinding(params, target.name);
       if (targetBinding == nullptr) {
@@ -837,8 +840,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
                   collectionTarget.name);
             }
             if (hasActiveBorrowForBinding(collectionTarget.name)) {
-              return failBorrowedBindingDiagnostic(collectionTarget.name,
-                                                  collectionTarget.name);
+              return failBorrowedByLiveSink(collectionTarget.name);
             }
           } else if (collectionTarget.kind == Expr::Kind::Call &&
                      collectionTarget.isFieldAccess) {
@@ -1106,7 +1108,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             mutateName + " target must be a mutable binding: " + target.name);
       }
       if (hasActiveBorrowForBinding(target.name)) {
-        return failBorrowedBindingDiagnostic(target.name, target.name);
+        return failBorrowedByLiveSink(target.name);
       }
     } else if (target.kind == Expr::Kind::Call) {
       std::string pointerName;
