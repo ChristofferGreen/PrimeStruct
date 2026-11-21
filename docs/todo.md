@@ -474,9 +474,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: local-address and indirect memory opcodes only; the heap (`vector`, `String`), atomics and channels, tasks, u8 and host calls are separate leaves.
   - repro: `printf '[return<int>]\nmain() {\n  [i32 mut] v{4i32}\n  [Pointer<i32>] p{location(v)}\n  return(*p)\n}\n' > p.prime; ./primec --emit=wasm --wasm-profile wasi p.prime -o p.wasm --entry /main` now fails with `unsupported opcode for wasm target: AddressOfLocal (...)`.
 
-- [ ] TODO-6147: The Wasm shadow stack is fixed at 131072 slots
+- [~] TODO-6147: The Wasm shadow stack is fixed at 131072 slots
   - owner: ai
   - status: ready
+  - claimed_by: ai-types (worktree-agent-a0fcf111903dc9161), 2026-11-21
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6138)
   - parallel_track: wasm-opcode-gaps
@@ -487,9 +488,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the shadow stack's size and growth only; the heap allocator belongs to TODO-6141 and the recursion depth of native calls to TODO-6143.
   - repro: `[return<i64>] deep([i64] n) { [i64 mut] local{n} [Pointer<i64> mut] p{location(local)} if(n <= 0i64, then() { return(0i64) }, else() { }) return(dereference(p) + deep(n - 1i64)) }` with `main` returning `convert<i32>(deep(3000i64))` stays under the limit; a local `array<i32>` of 200000 elements does not.
 
-- [ ] TODO-6140: Wasm refusals of atomics, channels, u8 and host calls name the opcode
+- [~] TODO-6140: Wasm refusals of atomics, channels, u8 and host calls name the opcode
   - owner: ai
   - status: ready
+  - claimed_by: ai-types (worktree-agent-a0fcf111903dc9161), 2026-11-21
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6137)
   - parallel_track: wasm-opcode-gaps
