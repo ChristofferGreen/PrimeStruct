@@ -754,8 +754,11 @@ helper over `value` (docs/spec/transforms.md).
     `soaColumn{Init,Drop,Take,Borrow}Slot`/`soaColumnDropRange`) are `[unsafe_api]`: only
     `[unsafe]` code may call them, so safe code cannot hold an untracked reference into container storage. The
     public container operations built on them (`push`, `pop`, `at`, `reserve`, ...) are `[unsafe]` definitions that
-    safe code may call. The public `Vector` and `Map` fields, and calls by absolute path to
-    non-public helpers are still open (TODO-5511).
+    safe code may call. The storage fields of `Vector` (`fieldCount`, `fieldCapacity`, `data`, `ownsData`), `MapValue`
+    (`keys`, `payloads`) and `SoaColumn` (`count`, `capacity`, `data`, `ownsData`) are `[private]` (see Field
+    visibility), so safe code outside the collections module cannot copy or resize a container's storage, and a
+    brace constructor such as `Vector<i32>{5i32, 5i32, v.data}` is `private field is not accessible`; calls by absolute
+    path to non-public helpers are still open (TODO-5511).
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a

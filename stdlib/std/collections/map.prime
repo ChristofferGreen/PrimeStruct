@@ -16,8 +16,8 @@ namespace std {
   // member_prefix="map"
   [public struct key_value_type]
   MapValue<K, V>() {
-    [public Vector<K> mut] keys{vector<K>()}
-    [public Vector<V> mut] payloads{vector<V>()}
+    [private Vector<K> mut] keys{vector<K>()}
+    [private Vector<V> mut] payloads{vector<V>()}
 
     [public return<i32>]
     mapCount() {

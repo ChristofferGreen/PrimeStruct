@@ -163,10 +163,10 @@ import /std/collections/*
 [effects(io_out heap_alloc) return<int>]
 main() {
   [Vector<i32> mut] items{vector<i32>()}
-  print_line(items.ownsData)
+  print_line(items.owns_storage())
   vectorPush<i32>(items, 5i32)
   items.Destroy()
-  print_line(items.ownsData)
+  print_line(items.owns_storage())
   print_line(vectorCount<i32>(items))
   return(0i32)
 }

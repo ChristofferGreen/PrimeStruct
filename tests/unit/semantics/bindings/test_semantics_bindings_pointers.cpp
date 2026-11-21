@@ -1870,7 +1870,9 @@ TEST_CASE("vector storage helpers are only callable from unsafe definitions") {
       {"vectorTakeSlot", "[i32] taken{/std/collections/vector/vectorTakeSlot<i32>(values, 0i32)}"},
       {"vectorDropSlot", "/std/collections/vector/vectorDropSlot<i32>(values, 0i32)"},
       {"vectorInitSlot", "/std/collections/vector/vectorInitSlot<i32>(values, 0i32, 3i32)"},
-      {"vectorFreeStorage", "/std/collections/vector/vectorFreeStorage<i32>(values.data)"},
+      {"vectorFreeStorage",
+       "/std/collections/vector/vectorFreeStorage<i32>(/std/intrinsics/memory/"
+       "alloc<uninitialized<i32>>(1i32))"},
   };
   for (const auto &[name, use] : uses) {
     INFO(name);
@@ -2210,6 +2212,41 @@ TEST_CASE("private fields stay usable inside the struct namespace") {
       "/main",
       error));
   CHECK(error.empty());
+}
+
+TEST_CASE("container storage fields are private outside the collections namespace") {
+  // docs/spec/type-system.md, Memory safety: `Vector`, `MapValue` and `SoaColumn` keep their storage private.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"/std/collections/vector/Vector/fieldCount",
+       "  [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)}\n"
+       "  assign(v.fieldCount, 1000i32)"},
+      {"/std/collections/vector/Vector/fieldCapacity",
+       "  [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)}\n"
+       "  [i32] c{v.fieldCapacity}"},
+      {"/std/collections/vector/Vector/data",
+       "  [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)}\n"
+       "  [Pointer<uninitialized<i32>>] d{v.data}"},
+      {"/std/collections/map/MapValue/keys",
+       "  [/std/collections/map/MapValue<i32, i32> mut] m{/std/collections/map/map<i32, i32>(1i32, "
+       "2i32)}\n"
+       "  [/std/collections/vector/Vector<i32>] k{m.keys}"},
+      {"/std/collections/map/MapValue/payloads",
+       "  [/std/collections/map/MapValue<i32, i32> mut] m{/std/collections/map/map<i32, i32>(1i32, "
+       "2i32)}\n"
+       "  [/std/collections/vector/Vector<i32>] p{m.payloads}"},
+      {"/std/collections/soa_storage/SoaColumn/count",
+       "  [/std/collections/soa_storage/SoaColumn<i32>] "
+       "c{/std/collections/soa_storage/SoaColumn<i32>{1i32, 1i32}}"},
+  };
+  for (const auto &[field, use] : uses) {
+    INFO(field);
+    const std::string source =
+        "import /std/collections/*\n\n[effects(heap_alloc), return<int>]\nmain() {\n" + use +
+        "\n  return(0i32)\n}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("private field is not accessible: " + field) != std::string::npos);
+  }
 }
 
 TEST_SUITE_END();

@@ -1694,7 +1694,7 @@ import /std/collections/*
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [Vector<i32> mut] values{Vector<i32>{0i32, 0i32}}
+  [Vector<i32> mut] values{vector<i32>()}
   [Pointer<Vector<i32>>] p{location(values)}
   print_line(/std/collections/vector/vectorCount<i32>(dereference(p)))
   print_line(/std/collections/vector/vectorCapacity<i32>(dereference(p)))

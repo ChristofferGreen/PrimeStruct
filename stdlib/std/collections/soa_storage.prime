@@ -7,10 +7,10 @@ namespace std {
   namespace soa_storage {
   [public struct collection_type sendable]
   SoaColumn<T>() {
-    [public i32] count
-    [public i32] capacity
-    [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
-    [bool mut] ownsData{true}
+    [private i32] count
+    [private i32] capacity
+    [private Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
+    [private bool mut] ownsData{true}
 
     [return<i32>]
     field_count() {

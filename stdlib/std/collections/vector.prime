@@ -19,10 +19,15 @@ namespace std {
 
   [public struct collection_type sendable]
   Vector<T>() {
-    [public i32] fieldCount
-    [public i32] fieldCapacity
-    [public Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1)}
-    [bool mut] ownsData{true}
+    [private i32] fieldCount
+    [private i32] fieldCapacity
+    [private Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1)}
+    [private bool mut] ownsData{true}
+
+    [return<bool>]
+    owns_storage() {
+      return(this.ownsData)
+    }
 
     [return<i32>]
     field_count() {

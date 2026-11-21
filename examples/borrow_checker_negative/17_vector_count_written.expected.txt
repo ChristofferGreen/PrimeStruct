@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"private field is not accessible: /std/collections/vector/Vector/fieldCount"
+"line":8,"column":3
+"notes":["stage: semantic"]

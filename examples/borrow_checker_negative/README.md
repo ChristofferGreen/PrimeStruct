@@ -10,7 +10,9 @@ root moved (`09_pointer_used_after_move`), and a view whose container is changed
 (`10_view_changed_through_reference_argument`), and a view of `dereference(<Reference parameter>)` that is
 cleared through the parameter (`12_view_of_dereferenced_parameter_cleared`), and a `[private]` field read, written or brace-initialized from outside its struct's namespace
 (`13_private_field_read_outside_namespace`, `14_private_field_write_outside_namespace`,
-`15_private_field_brace_outside_namespace`).
+`15_private_field_brace_outside_namespace`), and `Vector` storage that safe code copies, resizes or wraps in
+another vector through its private fields (`16_vector_storage_pointer_copied`, `17_vector_count_written`,
+`18_vector_built_around_storage`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

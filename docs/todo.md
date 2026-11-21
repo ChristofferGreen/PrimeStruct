@@ -123,7 +123,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | ready | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
 | TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | deferred | safety-borrows |
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | blocked | safety-borrows |
@@ -177,7 +176,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -270,7 +269,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
-  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161). Open: making the `Vector`, `Map` and `SoaColumn` fields private with a brace constructor that takes no storage (TODO-6162), and non-public helpers callable by absolute path (TODO-6163, decision needed).
+  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Open: non-public helpers callable by absolute path (TODO-6163, decision needed).
   - acceptance:
     - TODO-6161, TODO-6162 and TODO-6163 are done; each repro (borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
     - full release gate green
@@ -278,19 +277,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
 
 
-- [~] TODO-6162: `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-private (worktree-agent-aff951f79450d966f), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-5511)
-  - parallel_track: safety-stdlib
-  - scope: With `[/std/collections/vector/Vector<i32> mut] v{...}`, safe code can write `w.data = v.data` (two vectors that free the same storage: `invalid heap free address`), `v.fieldCount = 1000i32; v.at(500i32)` (`invalid indirect address`) and `Vector<i32>{5i32, 5i32, v.data}` (a vector around another's storage), because `data`, `fieldCount`, `fieldCapacity` are `[public]` in stdlib/std/collections/vector.prime; `MapValue` has public `keys` and `payloads`, `SoaColumn` public `count`, `capacity` and `data`. Make them `[private]` (after TODO-6161 enforces it) and give the types a brace constructor that takes only what a user may choose (a capacity), keeping every stdlib file compiling. A user-facing `vector<i32>` binding does not expose the fields (`field access requires struct receiver`), only the explicit `Vector<T>` type does.
-  - acceptance:
-    - each of the three repros above is `private field is not accessible` (or a constructor `argument count mismatch`) outside `/std/collections`; the stdlib and corpus compile
-    - full release gate green
-  - stop_rule: visibility of the container fields and their constructors; no container redesign.
-  - repro: see scope; `w.data = v.data` runs and ends with `VM error: invalid heap free address in IR`.
 
 - [ ] TODO-6163: Non-public stdlib helpers are callable by absolute path
   - owner: ai

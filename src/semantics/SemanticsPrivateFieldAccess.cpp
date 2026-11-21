@@ -45,8 +45,30 @@ std::string privateFieldViolation(const std::unordered_map<std::string, const De
   return {};
 }
 
+namespace {
+
+// A monomorphized instance path ends in `__t<hex>`; the diagnostic names the generic struct instead.
+std::string genericStructPath(const std::string &structPath) {
+  const size_t slash = structPath.find_last_of('/');
+  const size_t suffix = structPath.rfind("__t");
+  if (suffix == std::string::npos || (slash != std::string::npos && suffix < slash) ||
+      suffix + 3 >= structPath.size()) {
+    return structPath;
+  }
+  for (size_t i = suffix + 3; i < structPath.size(); ++i) {
+    const char c = structPath[i];
+    const bool hex = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+    if (!hex) {
+      return structPath;
+    }
+  }
+  return structPath.substr(0, suffix);
+}
+
+} // namespace
+
 std::string privateFieldDiagnostic(const std::string &structPath, const std::string &fieldName) {
-  return "private field is not accessible: " + structPath + "/" + fieldName;
+  return "private field is not accessible: " + genericStructPath(structPath) + "/" + fieldName;
 }
 
 } // namespace primec::semantics

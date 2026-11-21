@@ -2558,6 +2558,7 @@ are left unarchived.
 | TODO-6159 | A `Reference` argument changes the container a live read-only view reads | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6160 | The SoA slot helpers are `[unsafe]`, so safe code can call them | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6161 | A `[private]` field is readable and writable from anywhere | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6164 | A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
