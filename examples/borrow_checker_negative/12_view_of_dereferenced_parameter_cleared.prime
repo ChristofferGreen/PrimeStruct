@@ -1,0 +1,17 @@
+// `view` reads the vector `r` refers to, so `dereference(r).clear()` would leave it on freed storage: a view of
+// `dereference(<Reference parameter>)` is rooted at the parameter and waits for its last use, as a view of a
+// local does.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+shrink([Reference<vector<i32>>] r, [i32] extra) {
+  [vector<i32>] view{dereference(r)}
+  dereference(r).clear()
+  return(view.count())
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] v{vector<i32>(1i32, 2i32)}
+  return(shrink(location(v), 0i32))
+}

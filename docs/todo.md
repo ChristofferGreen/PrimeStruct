@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6161 | A `[private]` field is readable and writable from anywhere | ready | safety-stdlib |
 | TODO-6162 | `Vector`, `Map` and `SoaColumn` expose their storage fields and a brace constructor that takes any storage | blocked | safety-stdlib |
 | TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
-| TODO-6164 | A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs | deferred | safety-borrows |
 | TODO-6165 | A container is changed through a `Reference` parameter that is not `mut` | deferred | safety-borrows |
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | blocked | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
@@ -179,7 +178,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6161 (private fields, rule B decided), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6164 (view of a dereferenced parameter), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6161 (private fields, rule B decided), TODO-6162 (container fields private), TODO-6163 (private definitions, decision needed), TODO-6165 (writes through a non-`mut` Reference), TODO-6166 (view live across a plain `Reference` argument)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -321,19 +320,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: call-site visibility of definitions; no new visibility keywords.
   - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
 
-- [~] TODO-6164: A view of `dereference(r)` stays live in a callee while `dereference(r).clear()` runs
-  - owner: ai
-  - status: in_progress
-  - claimed_by: safety-worker (worktree-agent-a9b602a9d3706b5ef), 2026-11-21
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-5512)
-  - parallel_track: safety-borrows
-  - scope: TODO-6159 rejects a view of a local that is cleared through a `Reference` argument, but inside the callee `shrink([Reference<vector<i32>>] r) { [vector<i32>] view{dereference(r)} dereference(r).clear() return(view.count()) }` still compiles and reads the cleared vector: a view whose source is `dereference(<Reference parameter>)` has no root (`markContainerViewBinding` roots a view at a name, `containerPlaceRoot` stops at the call). The same holds for a view of a `Reference` parameter's field.
-  - acceptance:
-    - the repro is `borrowed binding: r (root: r, sink: view)`; the stdlib and corpus compile; negative example with line and column
-    - full release gate green
-  - stop_rule: roots of views through `dereference` of a parameter; no new borrow kinds.
-  - repro: `[effects(heap_alloc), return<int>] shrink([Reference<vector<i32>>] r, [i32] extra) { [vector<i32>] view{dereference(r)} dereference(r).clear() return(view.count()) } [effects(heap_alloc), return<int>] main() { [vector<i32> mut] v{vector<i32>(1i32, 2i32)} return(shrink(location(v), 0i32)) }` compiles.
 
 - [ ] TODO-6165: A container is changed through a `Reference` parameter that is not `mut`
   - owner: ai

@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"borrowed binding: r (root: r, sink: view)"
+"line":9,"column":3
+"notes":["stage: semantic"]

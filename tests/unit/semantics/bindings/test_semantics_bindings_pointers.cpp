@@ -2073,6 +2073,58 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("a view of a dereferenced Reference parameter blocks changes through it") {
+  // docs/spec/type-system.md, Memory safety: a view borrows the root of its source until its last use.
+  const std::string prelude = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+}
+
+[effects(heap_alloc), return<int>]
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {
+          "clear",
+          "shrink([Reference<vector<i32>>] r) {\n  [vector<i32>] view{dereference(r)}\n"
+          "  dereference(r).clear()\n  return(view.count())\n}\n",
+      },
+      {"push",
+       "shrink([Reference<vector<i32>>] r) {\n  [vector<i32>] view{dereference(r)}\n"
+       "  dereference(r).push(1i32)\n  return(view.count())\n}\n"},
+      {"field",
+       "shrink([Reference<Bag>] bag) {\n  [vector<i32>] view{dereference(bag).items}\n"
+       "  dereference(bag).items.clear()\n  return(view.count())\n}\n"},
+  };
+  const std::string mainDef = "\n[return<int>]\nmain() {\n  return(0i32)\n}\n";
+  for (const auto &[name, definition] : rejected) {
+    INFO(name);
+    std::string error;
+    CHECK_FALSE(validateProgram(prelude + definition + mainDef, "/main", error));
+    CHECK(error.find("borrowed binding: ") != std::string::npos);
+    CHECK(error.find("sink: view") != std::string::npos);
+  }
+  const std::vector<std::pair<std::string, std::string>> accepted = {
+      {"last use first",
+       "shrink([Reference<vector<i32>>] r) {\n  [vector<i32>] view{dereference(r)}\n"
+       "  [i32] seen{view.count()}\n  dereference(r).clear()\n  return(seen)\n}\n"},
+      {"mut view copies",
+       "shrink([Reference<vector<i32>>] r) {\n  [vector<i32> mut] view{dereference(r)}\n"
+       "  dereference(r).clear()\n  return(view.count())\n}\n"},
+      {"read only use",
+       "shrink([Reference<vector<i32>>] r) {\n  [vector<i32>] view{dereference(r)}\n"
+       "  return(view.count() + dereference(r).count())\n}\n"},
+  };
+  for (const auto &[name, definition] : accepted) {
+    INFO(name);
+    std::string error;
+    CHECK(validateProgram(prelude + definition + mainDef, "/main", error));
+    CHECK(error.empty());
+  }
+}
+
 TEST_CASE("vector and map public helpers stay callable from safe code") {
   const std::string source = R"(
 import /std/collections/*

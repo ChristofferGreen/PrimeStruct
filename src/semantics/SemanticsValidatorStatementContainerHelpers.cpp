@@ -347,11 +347,14 @@ SemanticsValidator::pickPayloadOwner(const std::vector<ParameterInfo> &params,
 }
 
 const Expr *SemanticsValidator::containerPlaceRoot(const Expr &place) {
+  // `dereference(r)` is the place `r` refers to, so a view or mutator of it is rooted at `r`.
   const Expr *root = &place;
-  while (root->kind == Expr::Kind::Call &&
-         ((root->isFieldAccess && root->args.size() == 1) ||
-          (!root->isFieldAccess && root->args.size() == 2 &&
-           (isSimpleCallName(*root, "at") || isSimpleCallName(*root, "at_unsafe"))))) {
+  while (
+      root->kind == Expr::Kind::Call &&
+      ((root->isFieldAccess && root->args.size() == 1) ||
+       (!root->isFieldAccess && root->args.size() == 1 && isSimpleCallName(*root, "dereference")) ||
+       (!root->isFieldAccess && root->args.size() == 2 &&
+        (isSimpleCallName(*root, "at") || isSimpleCallName(*root, "at_unsafe"))))) {
     root = &root->args.front();
   }
   return root;
