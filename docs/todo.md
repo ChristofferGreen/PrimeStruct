@@ -225,9 +225,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6107: `panic` and every array runtime error compile for Wasm
+- [~] TODO-6107: `panic` and every array runtime error compile for Wasm
   - owner: ai
   - status: ready
+  - claimed_by: wasm-memory-agent (worktree-agent-a6b5a37c0f5e64766), 2026-11-21
   - created_at: 2026-11-20
   - phase: Backend parity (found while doing TODO-5744)
   - parallel_track: wasm-arrays-panic
