@@ -262,14 +262,15 @@ main([array<string>] args) {
           "wasi",
           R"(
 import /std/collections/*
+import /std/text/*
 
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count())
+  return(values.count() + heapLiveBlocks())
 }
 )",
-          "unsupported opcode for wasm target",
+          "host calls are only supported by the vm target",
       },
   };
   for (const auto &diagCase : diagnosticsCases) {

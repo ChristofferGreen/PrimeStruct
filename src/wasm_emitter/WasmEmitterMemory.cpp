@@ -124,7 +124,8 @@ bool wasmModuleUsesLocalMemory(const IrModule &module) {
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::AddressOfLocal || inst.op == IrOpcode::LoadIndirect ||
-          inst.op == IrOpcode::StoreIndirect) {
+          inst.op == IrOpcode::StoreIndirect || inst.op == IrOpcode::HeapAlloc ||
+          inst.op == IrOpcode::HeapFree || inst.op == IrOpcode::HeapRealloc) {
         return true;
       }
     }
@@ -313,6 +314,68 @@ WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime) {
   out.push_back(WasmBlockTypeVoid);
   appendAddressFault(runtime.unalignedMessageAddr, runtime.unalignedMessageLength, runtime, out);
   out.push_back(WasmOpEnd);
+
+  if (runtime.hasHeap) {
+    // A heap address (bit 63): the slot it names must be live with the generation the address carries; the memory
+    // address is `heapValues + 8 * slot`. A byte-region address needs no case of its own: it names no slot.
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(0, out);
+    appendI64Const(63, out);
+    out.push_back(WasmOpI64ShrU);
+    out.push_back(WasmOpI64Eqz);
+    out.push_back(WasmOpI32Eqz);
+    out.push_back(WasmOpIf);
+    out.push_back(WasmBlockTypeVoid);
+    // slot = (address & 2^48 - 1) / 16, as an i64 in the value local
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(0, out);
+    appendI64Const((int64_t{1} << 48) - 1, out);
+    out.push_back(WasmOpI64And);
+    appendI64Const(SlotAddressStrideShift, out);
+    out.push_back(WasmOpI64ShrU);
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(HelperValueLocal, out);
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(HelperValueLocal, out);
+    out.push_back(WasmOpGlobalGet);
+    appendU32Leb(WasmGlobalHeapSize, out);
+    out.push_back(WasmOpI64ExtendI32U);
+    out.push_back(WasmOpI64GeU);
+    out.push_back(WasmOpIf);
+    out.push_back(WasmBlockTypeVoid);
+    appendAddressFault(runtime.invalidMessageAddr, runtime.invalidMessageLength, runtime, out);
+    out.push_back(WasmOpEnd);
+    // states[slot] != address >> 48 (low 16 bits)
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(HelperValueLocal, out);
+    out.push_back(WasmOpI32WrapI64);
+    appendI32Const(1, out);
+    out.push_back(WasmOpI32Shl);
+    out.push_back(0x2f); // i32.load16_u
+    appendU32Leb(1, out);
+    appendU32Leb(runtime.heapStates, out);
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(0, out);
+    appendI64Const(48, out);
+    out.push_back(WasmOpI64ShrU);
+    out.push_back(WasmOpI32WrapI64);
+    appendI32Const(0xffff, out);
+    out.push_back(0x71); // i32.and
+    out.push_back(0x47); // i32.ne
+    out.push_back(WasmOpIf);
+    out.push_back(WasmBlockTypeVoid);
+    appendAddressFault(runtime.invalidMessageAddr, runtime.invalidMessageLength, runtime, out);
+    out.push_back(WasmOpEnd);
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(HelperValueLocal, out);
+    out.push_back(WasmOpI32WrapI64);
+    appendI32Const(3, out);
+    out.push_back(WasmOpI32Shl);
+    appendI32Const(static_cast<int32_t>(runtime.heapValues), out);
+    out.push_back(WasmOpI32Add);
+    out.push_back(0x0f); // return
+    out.push_back(WasmOpEnd);
+  }
 
   // (address / 16 - 1) >= top, unsigned: address 0 wraps to the largest value.
   out.push_back(WasmOpLocalGet);

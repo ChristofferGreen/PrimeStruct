@@ -129,8 +129,9 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
-| TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | ready | wasm-opcode-gaps |
-| TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
+| TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | ready | wasm-opcode-gaps |
+| TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | deferred | wasm-opcode-gaps |
+| TODO-6176 | The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM | deferred | wasm-bytes-host |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
@@ -161,7 +162,7 @@ of sync with them.
 
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6149 (wasm-opcode-gaps): the Wasm slot heap, a bit-exact port of the VM's `VmHeapCore`
+- TODO-6150 (wasm-opcode-gaps): `heapLiveBlocks()` on Wasm from the heap's allocation count
 - TODO-6163 (safety-stdlib): a call to a non-public `/std` definition from outside its namespace is `private`
 - TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
 - TODO-6171 (safety-borrows): a lambda's capture list counts as a change of a viewed container
@@ -170,7 +171,6 @@ of sync with them.
 
 1. TODO-5804
 2. TODO-5603
-4. TODO-6149
 5. TODO-6163
 6. TODO-5933
 7. TODO-6171
@@ -184,7 +184,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); TODO-6149 (Wasm heap, decided 2026-11-22); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); ready TODO-6150 (`heapLiveBlocks()` on Wasm); deferred TODO-6175 (Wasm heap capacity), TODO-6176 (matrix runner preopen), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -511,37 +511,21 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - phase: Correctness audit 2026-10 (found with TODO-6137)
   - parallel_track: wasm-opcode-gaps
   - scope: After the local-address opcodes, the refusals counted by TODO-6137 are `HeapAlloc` (42 matrix programs as the first refusal: every `vector` program) and `LoadStringByte` (2 programs), then the opcodes behind them (`HeapFree`, `HeapRealloc` and the string heap). TODO-6138's stop rule leaves the heap to a leaf of its own and none existed. Give Wasm `HeapAlloc`, `HeapFree`, `HeapRealloc` on the module's linear memory (a bump allocator with a free list over the pages the shadow stack of TODO-6138 does not use, `memory.grow` when it runs out; out of memory is the VM's fault) and `LoadStringByte` on the data segment of the string table. Settle in the block, before code, how the VM's allocator limits and fault texts map (docs/spec/vm-design.md, Memory) and write the options here if they are not settled.
-  - split: 2026-11-21 into TODO-6148 (`LoadStringByte`, 2 programs; done first because nothing about it is open), TODO-6149 (`HeapAlloc`, `HeapFree`, `HeapRealloc` and the heap addresses: 136 + 14 + 5 programs; the address and fault-text question is written there as options, not decided) and TODO-6150 (`heapLiveBlocks()` and the other `__pstext_stat` readings). This block is the tracker and closes when the three do.
+  - split: 2026-11-21 into TODO-6148 (`LoadStringByte`, 2 programs; done first because nothing about it is open) (`HeapAlloc`, `HeapFree`, `HeapRealloc` and the heap addresses: 136 + 14 + 5 programs; the address and fault-text question is written there as options, not decided) and TODO-6150 (`heapLiveBlocks()` and the other `__pstext_stat` readings). This block is the tracker and closes when the three do.
   - acceptance:
-    - TODO-6148, TODO-6149 and TODO-6150 are finished: a `vector<i32>` that is pushed to, indexed, popped and read by `count` runs on Wasm like the VM, and a program that scans a string by byte index; tests of each
+    - TODO-6148 and TODO-6150 are finished: a `vector<i32>` that is pushed to, indexed, popped and read by `count` runs on Wasm like the VM, and a program that scans a string by byte index; tests of each
     - full release gate green
   - stop_rule: the heap opcodes and string byte reads only; atomics, channels, tasks, u8 and host calls stay separate leaves.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
 
 
-- [~] TODO-6149: Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-wasm-heap (worktree-agent-aee0a7aa688836102), 2026-11-22
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (split from TODO-6141)
-  - parallel_track: wasm-opcode-gaps
-  - scope: 136 matrix programs (every `vector`) are first refused for `HeapAlloc`, 14 more for `HeapRealloc` and 5 for `HeapFree`. The VM's heap (docs/spec/vm-design.md, Heap; `include/primec/runtime/VmHeapCore.h`, `VmHeapCoreBody.inc`) hands out addresses `bit 63 | generation << 48 | slot * 16`, serves a request from the smallest free run that fits (lowest base among equal sizes), else extends the free run at the end of the heap, else takes new slots; merges adjacent free runs; zeroes freed slots; gives reused slots the next generation (15 bits, wraps after 32,768 reuses); grows a `HeapRealloc` in place when the next slots are free; and faults with `VM error: invalid indirect address in IR: <address>`, `invalid heap free address in IR: <address>`, `invalid heap realloc address in IR: <address>` and `VM heap allocation overflow` (exit 3). Wasm would keep the slot storage and a per-slot state (generation, live) in its linear memory after the shadow stack (TODO-6147 settles how the two grow), serve `LoadIndirect`/`StoreIndirect` of a heap address through the state check, and write the same messages. The open question is how exact the port must be. Options: (A) a bit-exact port of the single-arena `VmHeapCore` algorithm (same policy, so the same addresses and the same fault texts, `stderr` byte for byte; the free runs need an ordered structure, so the helper functions are hand-assembled wasm of a few hundred instructions, or a sorted array scanned linearly); (B) the same address encoding and the same observable rules (stale and double-freed addresses fault, `heapLiveBlocks()` counts live allocations) with a simpler allocator, so an address printed by a program, or inside a fault text, can differ from the VM's after a free and a reuse; (C) Wasm's own addresses and its own fault texts without numbers, as the arm64 native backend has (`invalid heap free address: the block is already free`), documented as a per-backend difference. The user's direction (identical behavior on every backend) favors (A); (C) has the arm64 backend as precedent. Decide before code.
-  - decision: 2026-11-22 (owner): option A: a bit-exact port of the VM single-arena `VmHeapCore` algorithm to Wasm (same addresses `bit 63 | generation << 48 | slot * 16`, per-slot generations, best-fit allocation, adjacent free-run merging, the VM fault texts with the address numbers, exit 3 on WASI); helper functions may be hand-assembled wasm; the shadow stack owns the memory above its base, so the heap lives below it or shares the grower (docs/spec/vm-design.md); split into smaller leaves with scope/acceptance/stop_rule if it is too big. After it lands, add `wasm-wasi` to the matrix cases that agree (`PRIMESTRUCT_MATRIX_WASM_RUN=1`) and update the refusal accounting in docs/todo_log.md. TODO-6141 and TODO-6150 follow it.
-  - acceptance:
-    - the option chosen is written here with a `decision:` line; then a `vector<i32>` that is pushed to, indexed, popped and read by `count`, a double free, a stale address and a `HeapRealloc` of a freed block run on Wasm under node like the VM (stdout, exit code and, for (A), stderr), the matrix programs that then agree list `wasm-wasi`, and an allocation that cannot be served ends with `VM heap allocation overflow` and exit 3
-    - full release gate green
-  - stop_rule: the slot heap only; byte regions (`HeapAllocBytes`, `LoadU8`) stay with TODO-6127 and the statistic `heapLiveBlocks()` with TODO-6150.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
-
 - [ ] TODO-6150: `heapLiveBlocks()` and the string heap statistics on Wasm
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6149
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (split from TODO-6141)
   - parallel_track: wasm-opcode-gaps
-  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so a matrix program that reads it (the leak checks of the vector, sum-owner and task programs) is refused with `host calls are only supported by the vm target, ...` (of the 111 programs refused for a host call, 87 read `heapLiveBlocks()` or a string heap statistic; the other 24 use `String` itself). Once TODO-6149 has an allocator, answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
+  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so a matrix program that reads it (the leak checks of the vector, sum-owner and task programs) is refused with `host calls are only supported by the vm target, ...` (of the 111 programs refused for a host call, 87 read `heapLiveBlocks()` or a string heap statistic; the other 24 use `String` itself). The Wasm slot heap exists (finished), so answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
   - acceptance:
     - a program that prints `heapLiveBlocks() - blocks` around a copy-and-destroy loop prints what the VM prints; the matrix programs that then agree list `wasm-wasi`
     - full release gate green
@@ -834,3 +818,28 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
+- [ ] TODO-6175: The Wasm slot heap has a fixed capacity of 2,097,152 slots
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (found with TODO-6149)
+  - parallel_track: wasm-opcode-gaps
+  - scope: the Wasm heap (src/wasm_emitter/WasmEmitterHeap.cpp) keeps its values, states, allocation sizes and free runs in regions of the linear memory below the shadow stack, sized for `WasmHeapSlots` (2^21) slots, so an allocation of more than that (a `vector<i64>` of 2.1 million elements, or the sum of live blocks) ends with `VM heap allocation overflow` and exit 3 where the VM keeps growing (it faults only past 2^37 slots). The shadow stack owns the memory above its base and grows with `memory.grow`, so a heap that grows needs a second memory, a move of the heap regions when it outgrows them (the helpers address by index, so a move is a `memory.copy`), or a shared grower. Decide by measuring the memory a module has to declare up front (about 36 MiB virtual today).
+  - acceptance:
+    - a program that holds more than 2,097,152 live slots runs on Wasm like the VM, or the limit is raised with a measured reason; the overflow fault stays for what the host refuses
+    - full release gate green
+  - stop_rule: the heap capacity of Wasm only.
+  - repro: an IR module `PushI64 2097153; HeapAlloc; Pop; ReturnVoid` runs on the VM and ends with `VM error: VM heap allocation overflow` under `--emit=wasm --wasm-profile wasi`.
+
+- [ ] TODO-6176: The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (found with TODO-6149)
+  - parallel_track: wasm-bytes-host
+  - scope: `PRIMESTRUCT_MATRIX_WASM_RUN=1` reports `file_io_errno_newline_png: differ (stdout)` once the heap runs: the node runner (`WasmNodeRunner` in tests/unit/program_matrix/program_matrix.h) builds `new WASI({version, args, returnOnExit})` with no `preopens`, so every `path_open` answers `EBADF` (8) and the program prints 8 where the VM prints the `ENOENT` status and the file contents. The programs that open files cannot list `wasm-wasi` until the runner preopens the working directory (and a missing path under it answers `ENOENT`).
+  - acceptance:
+    - the runner passes `preopens: {".": cwd}`; `file_io_errno_newline_png` and the other file programs agree on Wasm or each difference is a leaf
+    - full release gate green
+  - stop_rule: the matrix runner and the programs it then runs.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests` from the release build directory, line `wasm-run: file_io_errno_newline_png: differ (stdout)`.

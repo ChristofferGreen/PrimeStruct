@@ -61,11 +61,14 @@ bool encodeTypeSection(const std::vector<WasmFunctionType> &types,
 }
 
 bool encodeShadowStackGlobalSection(uint32_t capacitySlots,
+                                    bool hasHeap,
                                     std::vector<uint8_t> &payload,
                                     std::string &) {
   payload.clear();
-  appendU32Leb(2, payload);
-  for (const uint32_t initial : {0u, capacitySlots}) {
+  appendU32Leb(hasHeap ? 4 : 2, payload);
+  const uint32_t initials[4] = {0u, capacitySlots, 0u, 0u};
+  for (uint32_t i = 0; i < (hasHeap ? 4u : 2u); ++i) {
+    const uint32_t initial = initials[i];
     payload.push_back(WasmTypeI32);
     payload.push_back(0x01); // mutable
     payload.push_back(0x41); // i32.const

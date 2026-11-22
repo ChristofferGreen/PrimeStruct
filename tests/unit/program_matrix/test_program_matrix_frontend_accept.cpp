@@ -407,6 +407,7 @@ TEST_CASE("a chained index read with a name first index parses in call and opera
   // read as an argument label. A literal first index never did.
   program_matrix::ProgramCase program;
   program.name = "frontend_chained_index_name";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 

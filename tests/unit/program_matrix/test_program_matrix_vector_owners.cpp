@@ -171,6 +171,7 @@ swap_through([vector<Named> mut] values) {
 TEST_CASE("a mut vector parameter that is not assigned writes through to the caller") {
   program_matrix::ProgramCase program;
   program.name = "vector_mut_parameter_write_through";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -1655,6 +1656,7 @@ refill([vector<Named> mut] values) {
 TEST_CASE("methods through a dereferenced vector pointer match the direct calls") {
   program_matrix::ProgramCase program;
   program.name = "vector_deref_pointer_methods";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -1689,6 +1691,7 @@ main() {
 TEST_CASE("a dereferenced Vector struct pointer passes to the typed helpers") {
   program_matrix::ProgramCase program;
   program.name = "vector_struct_deref_pointer_helpers";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 

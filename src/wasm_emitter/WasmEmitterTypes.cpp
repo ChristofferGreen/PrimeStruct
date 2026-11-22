@@ -1,3 +1,4 @@
+#include "WasmEmitterHeap.h"
 #include "WasmEmitterInternal.h"
 
 #include <algorithm>
@@ -586,6 +587,34 @@ bool emitTypedInstruction(const IrInstruction &inst,
                            out);
     popTypes(localLayout, 1);
     pushType(localLayout, WasmTypeI32);
+    return true;
+  }
+  case IrOpcode::HeapAlloc:
+  case IrOpcode::HeapFree:
+  case IrOpcode::HeapRealloc: {
+    if (!runtime.hasHeap) {
+      error = "wasm emitter heap opcode without a heap in function: " + functionName;
+      return false;
+    }
+    const bool isAlloc = inst.op == IrOpcode::HeapAlloc;
+    const bool isFree = inst.op == IrOpcode::HeapFree;
+    const size_t operandCount = isAlloc || isFree ? 1u : 2u;
+    if (!coerceOperands(localLayout,
+                        isAlloc || isFree ? std::vector<uint8_t>{WasmTypeI64}
+                                          : std::vector<uint8_t>{WasmTypeI64, WasmTypeI64},
+                        out,
+                        error,
+                        functionName)) {
+      return false;
+    }
+    const WasmHeapHelper helper =
+        isAlloc ? WasmHeapHelper::Alloc : (isFree ? WasmHeapHelper::Free : WasmHeapHelper::Realloc);
+    out.push_back(0x10); // call
+    appendU32Leb(runtime.heapFunction[static_cast<size_t>(helper)], out);
+    popTypes(localLayout, operandCount);
+    if (!isFree) {
+      pushType(localLayout, WasmTypeI64);
+    }
     return true;
   }
   case IrOpcode::LoadIndirect:

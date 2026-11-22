@@ -19,6 +19,7 @@ main() {
 )";
   program.exitCode = 9;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -37,6 +38,7 @@ main() {
 )";
   program.exitCode = 9;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -57,6 +59,7 @@ main() {
 )";
   program.exitCode = 13;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -77,6 +80,7 @@ main() {
 )";
   program.exitCode = 13;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -97,6 +101,7 @@ main() {
 )";
   program.exitCode = 13;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -276,6 +281,7 @@ main() {
 )";
   program.exitCode = 7;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -318,12 +324,14 @@ main() {
 )";
   program.exitCode = 9;
   program.onlyConfigs = {"vm-O2", "native-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
 TEST_CASE("vector count and capacity read a vector field") {
   program_matrix::ProgramCase program;
   program.name = "vector_count_and_capacity_read_a_vector_field_15";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 

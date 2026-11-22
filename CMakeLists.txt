@@ -690,6 +690,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitterFma.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
   src/wasm_emitter/WasmEmitterMemory.cpp
+  src/wasm_emitter/WasmEmitterHeap.cpp
   src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp
   src/wasm_emitter/WasmEmitterParameterLocals.cpp
@@ -1164,6 +1165,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_wasm_heap.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_vm_fast_kernel.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_native_codegen.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_register_locals.cpp
@@ -4283,6 +4285,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.ir.optimizer_cli
     primestruct.ir.optexe
     primestruct.ir.optexe_tasks
+    primestruct.ir.wasm_heap
     primestruct.ir.vm_fast_kernel
     primestruct.ir.native_codegen
     primestruct.ir.register_locals

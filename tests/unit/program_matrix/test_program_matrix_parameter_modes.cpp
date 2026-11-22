@@ -242,6 +242,7 @@ main() {
 TEST_CASE("a Function moved into a method is owned by the call") {
   program_matrix::ProgramCase program;
   program.name = "real_call_function_move";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -474,6 +475,7 @@ main() {
 )";
   program.exitCode = 45;
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   if (program_matrix::nativeSupported()) {
     program.onlyConfigs.push_back("native-O0");
     program.onlyConfigs.push_back("native-O2");

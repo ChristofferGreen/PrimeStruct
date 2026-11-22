@@ -24,6 +24,10 @@ void runMethodProgram(const std::string &name, const std::string &source, int ex
   program.onlyConfigs = methodConfigs();
   // Wasm runs these programs; the others use opcodes it lacks.
   static const std::vector<std::string> wasmPrograms = {
+      "struct_methods_two_mutating_field_calls_in_expression",
+      "struct_methods_mutating_field_call_in_expression",
+      "struct_methods_generic_overloads",
+      "struct_methods_generic_clear",
       "struct_methods_generic_struct_parameter",
       "struct_methods_imported_static_helper",
       "struct_methods_infer_through_generic_struct",

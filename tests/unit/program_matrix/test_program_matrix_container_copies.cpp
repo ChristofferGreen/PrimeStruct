@@ -9,6 +9,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.container_copies");
 TEST_CASE("mutable vector binding copies its elements") {
   program_matrix::ProgramCase program;
   program.name = "vector_binding_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -31,6 +32,7 @@ main() {
 TEST_CASE("copied vector survives destroying the original") {
   program_matrix::ProgramCase program;
   program.name = "vector_copy_destroy_original";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -57,6 +59,7 @@ main() {
 TEST_CASE("copies of nested vectors, struct fields and maps are independent") {
   program_matrix::ProgramCase program;
   program.name = "nested_container_copies";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -103,6 +106,7 @@ main() {
 TEST_CASE("copy mut vector parameter does not write back") {
   program_matrix::ProgramCase program;
   program.name = "vector_copy_parameter";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -131,6 +135,7 @@ main() {
 TEST_CASE("ring buffer copy owns its elements") {
   program_matrix::ProgramCase program;
   program.name = "ring_buffer_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/ring_buffer/*
 
@@ -157,6 +162,7 @@ main() {
 TEST_CASE("an empty vector literal owns its storage") {
   program_matrix::ProgramCase program;
   program.name = "empty_vector_literal_owns_storage";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -214,6 +220,7 @@ main() {
 TEST_CASE("vector at reads struct elements at every index") {
   program_matrix::ProgramCase program;
   program.name = "vector_struct_element_at";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -934,6 +941,7 @@ main() {
 TEST_CASE("pop and clear run the Destroy helper of each dropped element once") {
   program_matrix::ProgramCase program;
   program.name = "dropping_vector_mutations_destroy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -1081,6 +1089,7 @@ main() {
 TEST_CASE("a vector local assigned from another keeps its own elements on every backend") {
   program_matrix::ProgramCase program;
   program.name = "vector_local_assignment_values";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -1160,6 +1169,7 @@ TEST_CASE(
   main += "  return(0i32)\n}\n";
   program_matrix::ProgramCase program;
   program.name = "large_struct_slot_loop_copies";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = source + main;
   program.exitCode = 0;
   program_matrix::runProgramMatrix(program);

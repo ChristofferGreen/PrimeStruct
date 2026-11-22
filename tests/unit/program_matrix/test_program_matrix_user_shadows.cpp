@@ -8,6 +8,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.user_shadows");
 TEST_CASE("rooted vector count and capacity shadows win for calls and not for methods") {
   program_matrix::ProgramCase program;
   program.name = "shadow_rooted_vector_helpers";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 

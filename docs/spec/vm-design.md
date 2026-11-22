@@ -498,6 +498,11 @@
   is handed out again zeroed, and a larger block has a mapping of its own; a double free or a realloc of a freed block
   prints `invalid heap free address` / `invalid heap realloc address` and exits with code 3
   (`src/native_emitter/NativeEmitterInternalsArm64Heap.h`). The x86_64 native backend maps every block on its own.
+  Wasm ports `VmHeapCore`'s single-arena algorithm to hand-assembled helper functions of the module
+  (`src/wasm_emitter/WasmEmitterHeap.cpp`) over fixed regions of its linear memory below the shadow stack (values, states,
+  allocation sizes and a sorted table of free runs), so its addresses, reuse and fault texts equal the VM's; the capacity is
+  2,097,152 slots (an allocation past it is `VM heap allocation overflow`), and byte regions and the string heap statistic
+  are not there yet.
 - **Host text (PSIR v30):** `IrHostValueKind::Text` is owned text at the host boundary. A `[host]` definition may name
   the stdlib `String` as a parameter or result type. A `String` argument passes its data block: the VM gives the host
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same

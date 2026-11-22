@@ -626,11 +626,12 @@ TEST_CASE("primec options parse benchmark semantic repeat count flag") {
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
 import /std/collections/*
+import /std/text/*
 
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count())
+  return(values.count() + heapLiveBlocks())
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
@@ -643,12 +644,11 @@ main() {
   CHECK(runCommand(wasmCmd) == 2);
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
-  CHECK(diagnostics.find("unsupported opcode for wasm target") != std::string::npos);
+  CHECK(diagnostics.find("host calls are only supported by the vm target") != std::string::npos);
   // The opcode and the features that need it are named.
-  CHECK(
-      diagnostics.find(
-          "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by `vector`, `map`, "
-          "`String` and other growable containers)") != std::string::npos);
+  CHECK(diagnostics.find(
+            "host calls are only supported by the vm target, the C++ targets and serialized "
+            "bytecode: CallHost (a host function call)") != std::string::npos);
   CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") !=
         std::string::npos);
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);
@@ -663,31 +663,33 @@ TEST_CASE("primec emit-diagnostics rejects unsupported wasm IR features with sta
 
   const std::vector<NegativeCase> cases = {
       {
-          "unsupported_opcode_heap_vector",
+          "unsupported_opcode_host_call_vector",
           R"(
 import /std/collections/*
+import /std/text/*
 
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count())
+  return(values.count() + heapLiveBlocks())
 }
 )",
-          "unsupported opcode for wasm target",
+          "host calls are only supported by the vm target",
       },
       {
-          "unsupported_opcode_heap_push",
+          "unsupported_opcode_host_call_push",
           R"(
 import /std/collections/*
+import /std/text/*
 
 [return<int> effects(heap_alloc)]
 main() {
   [vector<i32> mut] values{vector<i32>()}
   values.push(1i32)
-  return(values.count())
+  return(values.count() + heapLiveBlocks())
 }
 )",
-          "unsupported opcode for wasm target",
+          "host calls are only supported by the vm target",
       },
       {
           "unsupported_effect_pathspace_notify",

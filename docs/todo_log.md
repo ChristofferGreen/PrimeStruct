@@ -329,3 +329,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 ## TODO-6174
 
 - 2026-11-22 (release build, macOS arm64, wall seconds of `primec --emit=optexe` incl. the C++ compile, machine not idle, one run each): empty `main` 2.09 s with `PRIMEC_OPTEXE_PCH=0`, 1.71 s on the cold run that builds the header (one-off, 15.6 MB), 0.95 s warm; examples/apps/http_hello 3.74 s without, 3.33 s with. The header is `build-release/optexe-pch/pch-<key>.pch`, key = hash of the compiler's `-dM -E` macros under the compile flags, the flags and the header text (src/support/CppPrecompiledHeader.cpp).
+
+## TODO-6149
+
+- 2026-11-22 (refusal accounting of `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1`, release build): before the heap 168 cases compiled for `--emit=wasm --wasm-profile wasi`; after it 266 compile, and `PRIMESTRUCT_MATRIX_WASM_RUN=1` finds 265 that agree with the VM (168 already listed, 97 newly listed with `wasm-wasi`) and one that differs (`file_io_errno_newline_png`, no WASI preopen in the runner: TODO-6176). The refusals left, by first cause: 168 `CallHost` (`heapLiveBlocks()` and other `__pstext_*` host calls: TODO-6150, TODO-6127), 32 unsupported effect mask bits, 18 `AtomicStore` and 16 channel opcodes (TODO-6128), 11 front-end errors reported at a scratch path (not examined), 2 `ZextU8` (TODO-6127), 1 `/std/gfx` substrate.

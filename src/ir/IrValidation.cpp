@@ -120,11 +120,8 @@ const char *wasmOpcodeFeature(IrOpcode op) {
   case IrOpcode::LoadStringByteDynamic:
   case IrOpcode::LoadStringLength:
     return "reading a byte or the length of a string";
-  case IrOpcode::HeapAlloc:
   case IrOpcode::HeapAllocBytes:
-  case IrOpcode::HeapFree:
-  case IrOpcode::HeapRealloc:
-    return "heap memory, needed by `vector`, `map`, `String` and other growable containers";
+    return "byte regions, needed by `String` and byte buffers";
   case IrOpcode::CallHost:
     return "a host function call";
   case IrOpcode::LoadU8:

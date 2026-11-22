@@ -129,6 +129,7 @@ main() {
 TEST_CASE("a struct field initialized from a local owns its own copy") {
   program_matrix::ProgramCase program;
   program.name = "destroy_constructor_field_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -156,6 +157,7 @@ main() {
 TEST_CASE("assigning an owning value destroys the old one and copies the new one") {
   program_matrix::ProgramCase program;
   program.name = "destroy_owned_assignment";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -190,6 +192,7 @@ main() {
 TEST_CASE("a container destroys its elements when they are dropped") {
   program_matrix::ProgramCase program;
   program.name = "destroy_container_elements";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -224,6 +227,7 @@ main() {
 TEST_CASE("a callee destroys its copy and move parameters") {
   program_matrix::ProgramCase program;
   program.name = "destroy_owned_parameters";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -328,6 +332,7 @@ main() {
 TEST_CASE("a single-field struct is copied and destroyed, also through try on a map lookup") {
   program_matrix::ProgramCase program;
   program.name = "destroy_single_field_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 import /std/collections/map/*
@@ -374,6 +379,7 @@ main() {
 TEST_CASE("returns, while bodies and block temporaries destroy exactly the values they own") {
   program_matrix::ProgramCase program;
   program.name = "destroy_returns_loops_blocks";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -465,6 +471,7 @@ main() {
 TEST_CASE("builtin vector locals destroy their elements in blocks, loops and callees") {
   program_matrix::ProgramCase program;
   program.name = "builtin_vector_locals_destroy_elements";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -511,6 +518,7 @@ main() {
 TEST_CASE("returned and aliased builtin vectors are destroyed once by their owner") {
   program_matrix::ProgramCase program;
   program.name = "builtin_vector_owner_destroys_once";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -613,6 +621,7 @@ main() {
 TEST_CASE("temporaries passed to mut parameters and copied vectors run each helper once") {
   program_matrix::ProgramCase program;
   program.name = "temporaries_mut_params_vector_copy";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -658,6 +667,7 @@ main() {
 TEST_CASE("a user Copy helper starts from fields it owns") {
   program_matrix::ProgramCase program;
   program.name = "user_copy_owns_fields";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -696,6 +706,7 @@ main() {
 TEST_CASE("a user Copy helper that skips owning fields still copies them") {
   program_matrix::ProgramCase program;
   program.name = "user_copy_skipped_fields";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -739,6 +750,7 @@ main() {
 TEST_CASE("assigning a value to itself copies before destroying") {
   program_matrix::ProgramCase program;
   program.name = "self_assignment_copies_first";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -770,6 +782,7 @@ main() {
 TEST_CASE("fields of a struct with a user Destroy are destroyed after it") {
   program_matrix::ProgramCase program;
   program.name = "user_destroy_then_fields";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 
@@ -834,6 +847,7 @@ main() {
 TEST_CASE("sum payloads are destroyed once across returns, loops and pick") {
   program_matrix::ProgramCase program;
   program.name = "sum_payloads_destroyed_once";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 import /std/collections/*
@@ -1070,6 +1084,7 @@ main() {
 TEST_CASE("a Result with a vector-holding struct payload copies on try and frees once") {
   program_matrix::ProgramCase program;
   program.name = "result_payload_vector_field";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/result/*
 import /std/collections/*
 
@@ -1114,6 +1129,7 @@ main() {
 TEST_CASE("a Result local with a vector payload copies on try and frees once") {
   program_matrix::ProgramCase program;
   program.name = "result_payload_vector_local";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/result/*
 import /std/collections/*
 
@@ -1305,6 +1321,7 @@ main() {
   program.exitCode = 0;
   program.stdoutText = "5\n1\n6\n2\n1500\n7\n";
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program.extraConfigs = {"wasm-wasi"};
   if (program_matrix::nativeSupported()) {
     program.onlyConfigs.push_back("native-O0");
     program.onlyConfigs.push_back("native-O2");

@@ -62,6 +62,20 @@ void appendDataSegmentAt(uint32_t address,
   segments.push_back(std::move(segment));
 }
 
+// Places the heap regions from `start` on (8-byte aligned) and returns where they end.
+uint32_t layoutHeapRegions(uint32_t start, WasmRuntimeContext &runtime) {
+  const auto place = [&](uint32_t bytes) {
+    const uint32_t begin = (start + 7u) / 8u * 8u;
+    start = begin + bytes;
+    return begin;
+  };
+  runtime.heapValues = place(WasmHeapSlots * 8u);
+  runtime.heapStates = place(WasmHeapSlots * 2u);
+  runtime.heapCounts = place(WasmHeapSlots * 4u);
+  runtime.heapRuns = place(WasmHeapRunCapacity * 8u);
+  return start;
+}
+
 } // namespace
 
 bool buildWasiRuntimeContext(const IrModule &module,
@@ -72,6 +86,14 @@ bool buildWasiRuntimeContext(const IrModule &module,
                              std::string &error) {
   runtime = WasmRuntimeContext{};
   runtime.hasLocalMemory = wasmModuleUsesLocalMemory(module);
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      if (inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||
+          inst.op == IrOpcode::HeapRealloc) {
+        runtime.hasHeap = true;
+      }
+    }
+  }
   if (wasi && runtime.hasLocalMemory) {
     // The address check writes the VM's fault message (memory and `fd_write`) and ends the program (`proc_exit`).
     runtime.hasMemoryFault = true;
@@ -148,6 +170,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
     if (runtime.hasLocalMemory) {
       // The browser profile: a memory for the shadow stack alone, no WASI data.
       runtime.shadowBase = WasmShadowStackAlignment;
+      if (runtime.hasHeap) {
+        runtime.shadowBase =
+            (layoutHeapRegions(WasmShadowStackAlignment, runtime) + WasmShadowStackAlignment - 1u) /
+            WasmShadowStackAlignment * WasmShadowStackAlignment;
+      }
       runtime.shadowSlots = WasmShadowStackSlots;
       runtime.memories.push_back(WasmMemoryLimit{shadowStackPages(runtime.shadowBase), false, 0});
     }
@@ -214,6 +241,16 @@ bool buildWasiRuntimeContext(const IrModule &module,
           addr, std::vector<uint8_t>(message.begin(), message.end()), runtime.dataSegments);
       stringBlob.insert(stringBlob.end(), message.begin(), message.end());
     };
+    if (runtime.hasHeap) {
+      static const std::string FreeMessage = "VM error: invalid heap free address in IR: ";
+      static const std::string ReallocMessage = "VM error: invalid heap realloc address in IR: ";
+      static const std::string OverflowMessage = "VM error: VM heap allocation overflow\n";
+      appendMessage(FreeMessage, runtime.heapFreeMessageAddr, runtime.heapFreeMessageLength);
+      appendMessage(
+          ReallocMessage, runtime.heapReallocMessageAddr, runtime.heapReallocMessageLength);
+      appendMessage(
+          OverflowMessage, runtime.heapOverflowMessageAddr, runtime.heapOverflowMessageLength);
+    }
     appendMessage(UnalignedMessage, runtime.unalignedMessageAddr, runtime.unalignedMessageLength);
     appendMessage(InvalidMessage, runtime.invalidMessageAddr, runtime.invalidMessageLength);
     appendMessage(
@@ -291,6 +328,9 @@ bool buildWasiRuntimeContext(const IrModule &module,
   runtime.functionIndexOffset = static_cast<uint32_t>(imports.size());
 
   uint32_t memoryEnd = stringBase + static_cast<uint32_t>(stringBlob.size());
+  if (runtime.hasHeap) {
+    memoryEnd = layoutHeapRegions(memoryEnd, runtime);
+  }
   if (runtime.hasLocalMemory) {
     runtime.shadowBase = (memoryEnd + WasmShadowStackAlignment - 1u) / WasmShadowStackAlignment *
                          WasmShadowStackAlignment;

@@ -157,9 +157,9 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(PrintStringDynamic, Io, None, None, 1, 1, 0)                                                   \
   X(Call, Call, None, None, 1, 1, 1)                                                               \
   X(CallVoid, Call, None, None, 1, 1, 1)                                                           \
-  X(HeapAlloc, Heap, None, None, 0, 0, 0)                                                          \
-  X(HeapFree, Heap, None, None, 0, 0, 0)                                                           \
-  X(HeapRealloc, Heap, None, None, 0, 0, 0)                                                        \
+  X(HeapAlloc, Heap, None, None, 0, 1, 1)                                                          \
+  X(HeapFree, Heap, None, None, 0, 1, 1)                                                           \
+  X(HeapRealloc, Heap, None, None, 0, 1, 1)                                                        \
   X(FileWriteStringDynamic, Io, None, None, 1, 1, 0)                                               \
   X(CallHost, Call, None, None, 0, 0, 0)                                                           \
   X(LoadStringByteDynamic, Memory, None, None, 0, 0, 0)                                            \

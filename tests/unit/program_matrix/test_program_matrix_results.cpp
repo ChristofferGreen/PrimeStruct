@@ -326,6 +326,7 @@ TEST_CASE("vectors of stdlib Result values keep their elements") {
   // Each element is the sum's storage (tag plus payload slots), stored inline like a struct element.
   program_matrix::ProgramCase program;
   program.name = "result_vector_elements";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/collections/*
@@ -385,6 +386,7 @@ main() {
 TEST_CASE("map tryAt with the Result import reads ok and missing keys") {
   program_matrix::ProgramCase program;
   program.name = "result_map_try_at";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/collections/*
@@ -495,6 +497,7 @@ main() {
 TEST_CASE("map tryAt of a missing key reads its error struct through Result.why") {
   program_matrix::ProgramCase program;
   program.name = "result_map_try_at_why";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/result/*
 import /std/collections/*
@@ -525,6 +528,7 @@ TEST_CASE("try over a call whose callee and caller hold a struct with a vector f
   // vector<i32> field's /vector path as a struct.
   program_matrix::ProgramCase program;
   program.name = "result_try_vector_field_struct";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/collections/*
 

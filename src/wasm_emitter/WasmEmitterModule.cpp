@@ -1,5 +1,6 @@
 #include "primec/backend/WasmEmitter.h"
 
+#include "WasmEmitterHeap.h"
 #include "WasmEmitterInternal.h"
 
 #include <cctype>
@@ -170,6 +171,11 @@ bool WasmEmitter::emitModule(const IrModule &input,
     runtime.slotAddressFunction = nextHelperFunction++;
     runtime.growShadowStackFunction = nextHelperFunction++;
   }
+  if (runtime.hasHeap) {
+    for (size_t helper = 0; helper < WasmHeapHelperCount; ++helper) {
+      runtime.heapFunction[helper] = nextHelperFunction++;
+    }
+  }
 
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
   std::vector<std::vector<uint8_t>> irLocalTypes;
@@ -241,6 +247,13 @@ bool WasmEmitter::emitModule(const IrModule &input,
     types.push_back(std::move(growType));
     codeBodies.push_back(buildWasmShadowGrowHelperBody(runtime));
   }
+  if (runtime.hasHeap) {
+    for (size_t helper = 0; helper < WasmHeapHelperCount; ++helper) {
+      functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+      types.push_back(wasmHeapHelperType(static_cast<WasmHeapHelper>(helper)));
+      codeBodies.push_back(buildWasmHeapHelperBody(static_cast<WasmHeapHelper>(helper), runtime));
+    }
+  }
 
   std::vector<WasmExport> exports;
   if (module.entryIndex >= 0) {
@@ -281,7 +294,7 @@ bool WasmEmitter::emitModule(const IrModule &input,
     return false;
   }
   if (runtime.hasLocalMemory &&
-      (!encodeShadowStackGlobalSection(runtime.shadowSlots, payload, error) ||
+      (!encodeShadowStackGlobalSection(runtime.shadowSlots, runtime.hasHeap, payload, error) ||
        !appendSection(WasmSectionGlobal, payload, out, error))) {
     return false;
   }

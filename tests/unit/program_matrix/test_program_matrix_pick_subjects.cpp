@@ -586,6 +586,7 @@ unwrap_or_empty([Maybe<vector<i32>>] held) {
 TEST_CASE("a stdlib Vector payload binding keeps reading its count") {
   program_matrix::ProgramCase program;
   program.name = "pick_payload_stdlib_vector_reads";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/maybe/*
 import /std/collections/*

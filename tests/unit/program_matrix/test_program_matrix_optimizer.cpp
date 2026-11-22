@@ -218,6 +218,7 @@ main() {
 TEST_CASE("vector push and index loop") {
   program_matrix::ProgramCase program;
   program.name = "vector_loop";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/collections/*
 
 [return<int> effects(io_out, heap_alloc)]
@@ -419,6 +420,7 @@ main() {
 TEST_CASE("vector reads and writes through a local address") {
   program_matrix::ProgramCase program;
   program.name = "sroa_vector_access";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(import /std/collections/*
 
 [return<int> effects(io_out, heap_alloc)]

@@ -630,16 +630,15 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::HeapAlloc, 1});
+  fn.instructions.push_back({primec::IrOpcode::HeapAllocBytes, 1});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
 
   std::string error;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
-  CHECK_ERROR_CONTAINS(error, "unsupported opcode for wasm target");
+  CHECK_ERROR_CONTAINS(error, "byte memory opcodes are only supported by the vm");
   // The message names the opcode and the language feature that needs it.
-  CHECK_ERROR_CONTAINS(
-      error, "unsupported opcode for wasm target: HeapAlloc (heap memory, needed by `vector`");
+  CHECK_ERROR_CONTAINS(error, "HeapAllocBytes (byte regions, needed by `String`");
 
   // The refusals of atomics, channels, `u8` and host calls name the opcode too.
   const std::pair<primec::IrOpcode, const char *> namedRefusals[] = {

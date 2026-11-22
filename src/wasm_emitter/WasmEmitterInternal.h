@@ -134,6 +134,30 @@ struct WasmLocalLayout {
 enum class WasmDivisionOp : uint8_t { I32 = 0, I64 = 1, U64 = 2 };
 inline constexpr size_t WasmDivisionOpCount = 3;
 
+// The slot heap (WasmEmitterHeap.cpp): a fixed region of the linear memory below the shadow stack, and the helper
+// functions appended after the shadow-stack helpers. `WasmHeapSlots` is the capacity in VM slots; the runs table
+// holds at most one free run between two live allocations.
+enum class WasmHeapHelper : uint8_t {
+  Fault,
+  Find,
+  NewGeneration,
+  FillStates,
+  RemoveRun,
+  InsertRun,
+  TakeFront,
+  Release,
+  Alloc,
+  GrowInPlace,
+  Realloc,
+  Free,
+};
+inline constexpr size_t WasmHeapHelperCount = 12;
+inline constexpr uint32_t WasmHeapSlots = 1u << 21;
+inline constexpr uint32_t WasmHeapRunCapacity = WasmHeapSlots / 2u + 1u;
+// The mutable `i32` globals after the shadow stack's two: the slots handed out so far and the number of free runs.
+inline constexpr uint32_t WasmGlobalHeapSize = 2;
+inline constexpr uint32_t WasmGlobalRunCount = 3;
+
 struct WasmRuntimeContext {
   bool enabled = false;
   bool hasArgvOps = false;
@@ -173,6 +197,20 @@ struct WasmRuntimeContext {
   // checks an address and maps it to the memory (WasmEmitterMemory.cpp).
   bool hasLocalMemory = false;
   bool hasMemoryFault = false;
+  // The module has `HeapAlloc`, `HeapFree` or `HeapRealloc`: the heap regions (values, states, counts, free runs), the
+  // two extra globals, the helper function indexes and the VM's fault messages.
+  bool hasHeap = false;
+  uint32_t heapValues = 0;
+  uint32_t heapStates = 0;
+  uint32_t heapCounts = 0;
+  uint32_t heapRuns = 0;
+  uint32_t heapFunction[WasmHeapHelperCount] = {};
+  uint32_t heapFreeMessageAddr = 0;
+  uint32_t heapFreeMessageLength = 0;
+  uint32_t heapReallocMessageAddr = 0;
+  uint32_t heapReallocMessageLength = 0;
+  uint32_t heapOverflowMessageAddr = 0;
+  uint32_t heapOverflowMessageLength = 0;
   uint32_t shadowBase = 0;
   uint32_t shadowSlots = 0;
   uint32_t slotAddressFunction = 0;
@@ -299,6 +337,7 @@ bool encodeMemorySection(const std::vector<WasmMemoryLimit> &memories,
 // Two mutable `i32` globals: the number of live slots of the shadow stack (initially 0) and the number of slots its
 // memory holds (initially `capacitySlots`).
 bool encodeShadowStackGlobalSection(uint32_t capacitySlots,
+                                    bool hasHeap,
                                     std::vector<uint8_t> &payload,
                                     std::string &error);
 

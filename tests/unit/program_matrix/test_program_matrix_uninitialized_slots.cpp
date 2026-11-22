@@ -76,6 +76,7 @@ void runSlotProgram(const std::string &name,
   values.exitCode = 0;
   values.stdoutText = joinLines(expected, false);
   values.onlyConfigs = {"native-O0", "native-O2"};
+  values.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(values);
 }
 

@@ -309,6 +309,7 @@ main() {
   program.exitCode = 0;
   program.stdoutText = "3003\n1001\n1001\n1001\n1\n";
   program.onlyConfigs = allBackendConfigs();
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -347,6 +348,7 @@ main() {
   program.exitCode = 0;
   program.stdoutText = "3008\n1003\n1002\n1003\n2\n3\n";
   program.onlyConfigs = allBackendConfigs();
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -387,6 +389,7 @@ main() {
 )";
   program.exitCode = 21;
   program.onlyConfigs = allBackendConfigs();
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 
@@ -430,6 +433,7 @@ main() {
 )";
   program.exitCode = 246;
   program.onlyConfigs = allBackendConfigs();
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 

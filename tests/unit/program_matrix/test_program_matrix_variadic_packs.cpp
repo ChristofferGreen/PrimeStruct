@@ -15,7 +15,11 @@ void runPack(const char *name, const char *source, int exitCode) {
   program.exitCode = exitCode;
   // Wasm runs the packs of arrays and of references and pointers to scalars and structs; the vector and map packs need the
   // heap.
-  static const std::vector<std::string> wasmPrograms = {"variadic_array_pack",
+  static const std::vector<std::string> wasmPrograms = {"variadic_map_pack_count",
+                                                        "variadic_map_pack_try_at",
+                                                        "variadic_borrowed_vector_pack",
+                                                        "variadic_vector_pointer_pack",
+                                                        "variadic_array_pack",
                                                         "variadic_borrowed_array_pack",
                                                         "variadic_scalar_pointer_pack",
                                                         "variadic_scalar_reference_pack",

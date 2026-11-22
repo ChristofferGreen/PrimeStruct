@@ -281,6 +281,7 @@ unit_arm_vectors([Maybe<i32>] m, [i32] extra) {
 TEST_CASE("a unit arm with a vector local runs on every config") {
   program_matrix::ProgramCase program;
   program.name = "pick_value_unit_arm_vector_native";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = NoisyPrelude + R"(
 [effects(heap_alloc), return<i32>]
 unit_arm([Maybe<i32>] m) {
