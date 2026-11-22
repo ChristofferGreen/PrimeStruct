@@ -365,9 +365,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision above is made and recorded here; then the diagnostic (or the spec change) with a semantics test, TODO-5804's compile-error test, and the full release gate green
   - stop_rule: the decision and the one diagnostic; no change to `Reference<T>` or `mut` parameter rules.
 
-- [ ] TODO-6184: A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter
+- [~] TODO-6184: A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter
   - owner: ai
   - status: ready
+  - claimed_by: fix-a (worktree-agent-a971c1c6b7c978cf9), 2026-11-22
   - created_at: 2026-11-22
   - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
   - parallel_track: overload-reference-args
