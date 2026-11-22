@@ -1,5 +1,7 @@
 #include "WasmEmitterInternal.h"
 
+#include "primec/ir/IrNativeTextHost.h"
+
 namespace primec {
 
 namespace {
@@ -86,6 +88,9 @@ bool buildWasiRuntimeContext(const IrModule &module,
                              std::string &error) {
   runtime = WasmRuntimeContext{};
   runtime.hasLocalMemory = wasmModuleUsesLocalMemory(module);
+  for (const IrHostImport &hostImport : module.hostImports) {
+    runtime.statHostImports.push_back(nativeTextHost(hostImport.name) == NativeTextHost::Stat);
+  }
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||

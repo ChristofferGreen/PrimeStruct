@@ -49,6 +49,16 @@ make_named([i32] id) {
 }
 )";
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {"vector_mut_parameter_assignment",
+                                               "vector_sum_elements_plain",
+                                               "vector_struct_mutating_methods",
+                                               "stdlib_returned_vector_scalars",
+                                               "method_returned_vector_scalars",
+                                               "method_returned_vector_reference_receiver",
+                                               "method_returned_vector_temporary",
+                                               "method_returned_vector_reference"};
+
 void runVectorOwnerProgram(const std::string &name,
                            const std::string &definitions,
                            const std::string &body,
@@ -75,6 +85,7 @@ main() {
     program.onlyConfigs.push_back("native-O0");
     program.onlyConfigs.push_back("native-O2");
   }
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

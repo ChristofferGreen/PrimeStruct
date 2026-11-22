@@ -349,15 +349,28 @@ bool validateFunction(const IrModule &module,
                                "string heap function is not available on the native backend yet",
                                error);
       }
-      if (!nativeHost && target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
-          target != IrValidationTarget::Cpp && target != IrValidationTarget::OptCpp) {
-        return failInstruction(functionIndex,
-                               function.name,
-                               instructionIndex,
-                               "host calls are only supported by the vm target, the C++ targets "
-                               "and serialized bytecode" +
-                                   refusedOpcodeSuffix(inst.op, target),
-                               error);
+      // A Wasm module answers the string heap statistics itself (`__pstext_stat`: the live slot allocations, and no
+      // text blocks, since Wasm has no string heap); every other host function is refused.
+      const bool wasmStat =
+          isWasmTarget(target) && inst.imm < module.hostImports.size() &&
+          nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name) ==
+              NativeTextHost::Stat;
+      if (!nativeHost && !wasmStat && target != IrValidationTarget::Vm &&
+          target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
+          target != IrValidationTarget::OptCpp) {
+        const bool wasmText =
+            isWasmTarget(target) && inst.imm < module.hostImports.size() &&
+            nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name) !=
+                NativeTextHost::NotText;
+        return failInstruction(
+            functionIndex,
+            function.name,
+            instructionIndex,
+            "host calls are only supported by the vm target, the C++ targets "
+            "and serialized bytecode" +
+                refusedOpcodeSuffix(inst.op, target) +
+                (wasmText ? "; the string heap (`String`) is not available on wasm" : ""),
+            error);
       }
       if (inst.imm >= module.hostImports.size()) {
         return failInstruction(functionIndex, function.name, instructionIndex, "invalid host import index", error);
@@ -379,7 +392,8 @@ bool validateFunction(const IrModule &module,
                                  refusedOpcodeSuffix(inst.op, target),
                              error);
     }
-    if (isWasmTarget(target) && !isWasmOpcodeAllowedForTarget(inst.op, target)) {
+    if (isWasmTarget(target) && inst.op != IrOpcode::CallHost &&
+        !isWasmOpcodeAllowedForTarget(inst.op, target)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,

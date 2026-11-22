@@ -501,8 +501,11 @@
   Wasm ports `VmHeapCore`'s single-arena algorithm to hand-assembled helper functions of the module
   (`src/wasm_emitter/WasmEmitterHeap.cpp`) over fixed regions of its linear memory below the shadow stack (values, states,
   allocation sizes and a sorted table of free runs), so its addresses, reuse and fault texts equal the VM's; the capacity is
-  2,097,152 slots (an allocation past it is `VM heap allocation overflow`), and byte regions and the string heap statistic
-  are not there yet.
+  2,097,152 slots (an allocation past it is `VM heap allocation overflow`). A module answers `__pstext_stat` itself: statistic 8
+  (`heapLiveBlocks()`) is the number of live slot allocations, kept in a mutable global that every allocation and release
+  updates; statistics 0 to 7 count blocks of the string heap, which Wasm does not have yet, so they read 0 (as on the VM for
+  a program that allocates no text). Byte regions and the other `__pstext_*` functions (`String`) are not there yet and are
+  refused.
 - **Host text (PSIR v30):** `IrHostValueKind::Text` is owned text at the host boundary. A `[host]` definition may name
   the stdlib `String` as a parameter or result type. A `String` argument passes its data block: the VM gives the host
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same

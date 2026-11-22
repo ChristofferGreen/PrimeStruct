@@ -2543,6 +2543,7 @@ are left unarchived.
 | TODO-6138 | Wasm lowers local addresses and indirect loads and stores | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6140 | Wasm refusals of atomics, channels, u8 and host calls name the opcode | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6143 | Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6144 | An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
@@ -2550,6 +2551,7 @@ are left unarchived.
 | TODO-6147 | The Wasm shadow stack is fixed at 131072 slots | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6148 | Wasm `LoadStringByte` reads a byte of a module string | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
+| TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6151 | Wasm refuses an early return out of an inlined body whose condition is a short-circuit chain | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6152 | `progress_beat` counted the beats of a loaded run and failed | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6154 | Wasm refuses an early return of an array element in a recursive function as mixed return kinds | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |

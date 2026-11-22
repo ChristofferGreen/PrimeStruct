@@ -589,6 +589,24 @@ bool emitTypedInstruction(const IrInstruction &inst,
     pushType(localLayout, WasmTypeI32);
     return true;
   }
+  case IrOpcode::CallHost: {
+    // `__pstext_stat(which) -> u64`: statistic 8 is the number of live slot allocations of the heap; 0 to 7 count the
+    // blocks of the string heap, which a Wasm module does not have, so they read 0; any other number is the VM's
+    // unknown-statistic fault (a trap here).
+    if (inst.imm >= runtime.statHostImports.size() ||
+        !runtime.statHostImports[static_cast<size_t>(inst.imm)]) {
+      error =
+          "wasm emitter host call that is not a string heap statistic in function: " + functionName;
+      return false;
+    }
+    if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    emitWasmStringHeapStat(acquireScratch(localLayout, WasmTypeI64), runtime, out);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  }
   case IrOpcode::HeapAlloc:
   case IrOpcode::HeapFree:
   case IrOpcode::HeapRealloc: {

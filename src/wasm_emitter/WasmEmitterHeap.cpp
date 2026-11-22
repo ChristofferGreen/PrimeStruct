@@ -435,6 +435,10 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   emitScaled(a, Base, 2);
   a.i32Const(0);
   a.i32Store(runtime.heapCounts);
+  a.globalGet(WasmGlobalLiveBlocks);
+  a.i32Const(1);
+  a.i32Sub();
+  a.globalSet(WasmGlobalLiveBlocks);
 
   // position = the first run that starts after the allocation
   a.i32Const(0);
@@ -671,6 +675,10 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   emitScaled(a, Base, 2);
   a.localGet(Count32);
   a.i32Store(runtime.heapCounts);
+  a.globalGet(WasmGlobalLiveBlocks);
+  a.i32Const(1);
+  a.i32Add();
+  a.globalSet(WasmGlobalLiveBlocks);
   emitAddress(a, Generation, Base);
   a.end();
   return body;

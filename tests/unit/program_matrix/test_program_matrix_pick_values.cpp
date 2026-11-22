@@ -72,6 +72,10 @@ main() {
 )";
 }
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {
+    "pick_value_discarded_vector", "pick_value_borrowed_vector", "pick_value_stdlib_vector_count"};
+
 void runPickValueProgram(const std::string &name,
                          const std::string &source,
                          const std::string &stdoutText) {
@@ -86,6 +90,7 @@ void runPickValueProgram(const std::string &name,
     program.onlyConfigs.push_back("native-O0");
     program.onlyConfigs.push_back("native-O2");
   }
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

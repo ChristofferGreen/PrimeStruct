@@ -261,13 +261,13 @@ main([array<string>] args) {
           "wasi_rejects_unsupported_opcode",
           "wasi",
           R"(
-import /std/collections/*
-import /std/text/*
+[host return<i32>]
+host_add([i32] a, [i32] b) {
+}
 
-[return<int> effects(heap_alloc)]
+[return<int>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count() + heapLiveBlocks())
+  return(host_add(40i32, 2i32))
 }
 )",
           "host calls are only supported by the vm target",

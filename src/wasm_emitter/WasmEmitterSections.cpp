@@ -65,9 +65,9 @@ bool encodeShadowStackGlobalSection(uint32_t capacitySlots,
                                     std::vector<uint8_t> &payload,
                                     std::string &) {
   payload.clear();
-  appendU32Leb(hasHeap ? 4 : 2, payload);
-  const uint32_t initials[4] = {0u, capacitySlots, 0u, 0u};
-  for (uint32_t i = 0; i < (hasHeap ? 4u : 2u); ++i) {
+  appendU32Leb(hasHeap ? 5 : 2, payload);
+  const uint32_t initials[5] = {0u, capacitySlots, 0u, 0u, 0u};
+  for (uint32_t i = 0; i < (hasHeap ? 5u : 2u); ++i) {
     const uint32_t initial = initials[i];
     payload.push_back(WasmTypeI32);
     payload.push_back(0x01); // mutable

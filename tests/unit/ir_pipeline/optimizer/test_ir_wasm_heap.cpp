@@ -153,6 +153,16 @@ primec::IrModule mainOf(const std::vector<std::string> &lines) {
   return module;
 }
 
+// The module with the string heap statistic function imported as host function 0 (`__pstext_stat(u64) -> u64`).
+primec::IrModule withStat(primec::IrModule module) {
+  primec::IrHostImport stat;
+  stat.name = "std/text/__pstext_stat";
+  stat.parameters = {primec::IrHostValueKind::U64};
+  stat.returnKind = primec::IrHostValueKind::U64;
+  module.hostImports.push_back(stat);
+  return module;
+}
+
 // A random sequence of allocations, frees and reallocations over eight address variables, printing every address
 // and the first value of every block (which must be zero when it is new), so best fit, tail extension, merging of
 // free runs, generations and in-place growth all show in the output.
@@ -343,6 +353,70 @@ TEST_CASE("the browser profile has the heap and traps on a bad address") {
       mainOf({"PushI64 9223372036854775824", "HeapFree", "ReturnVoid"}), "browser_trap", true);
   REQUIRE_MESSAGE(trap.built, trap.buildError);
   CHECK(trap.out == "trap\n");
+}
+
+TEST_CASE("wasm answers the live allocation count like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Statistic 8 after each step: allocations count one each (a zero-slot allocation is none), a free gives one back, a
+  // realloc that grows in place or moves keeps the count, a realloc to zero frees, and 0 to 7 read 0 (no text blocks).
+  expectMatchesVm(
+      withStat(
+          mainOf({"PushI64 8",    "CallHost 0",   "PrintU64 1",  "PushI64 3",    "HeapAlloc",
+                  "StoreLocal 0", "PushI64 0",    "HeapAlloc",   "Pop",          "PushI64 2",
+                  "HeapAlloc",    "StoreLocal 1", "PushI64 8",   "CallHost 0",   "PrintU64 1",
+                  "LoadLocal 0",  "PushI64 9",    "HeapRealloc", "StoreLocal 0", "PushI64 8",
+                  "CallHost 0",   "PrintU64 1",   "LoadLocal 1", "PushI64 40",   "HeapRealloc",
+                  "StoreLocal 1", "PushI64 8",    "CallHost 0",  "PrintU64 1",   "LoadLocal 0",
+                  "HeapFree",     "PushI64 8",    "CallHost 0",  "PrintU64 1",   "LoadLocal 1",
+                  "PushI64 0",    "HeapRealloc",  "Pop",         "PushI64 8",    "CallHost 0",
+                  "PrintU64 1",   "PushI64 0",    "CallHost 0",  "PrintU64 1",   "PushI64 1",
+                  "CallHost 0",   "PrintU64 1",   "PushI64 5",   "CallHost 0",   "PrintU64 1",
+                  "PushI64 7",    "CallHost 0",   "PrintU64 1",  "PushI32 0",    "ReturnI32"})),
+      "stat_live_blocks");
+  for (const uint64_t seed : {11ull, 12ull}) {
+    // The random programs end with every block freed; the count before and after must be what the VM says.
+    primec::IrModule module = withStat(randomHeapProgram(seed, 120));
+    std::vector<primec::IrInstruction> &code = module.functions[0].instructions;
+    std::vector<primec::IrInstruction> traced;
+    for (const primec::IrInstruction &inst : code) {
+      traced.push_back(inst);
+      if (inst.op == primec::IrOpcode::StoreLocal) {
+        traced.push_back(optimizer_test::assembleOne("PushI64 8"));
+        traced.push_back(optimizer_test::assembleOne("CallHost 0"));
+        traced.push_back(optimizer_test::assembleOne("PrintU64 1"));
+      }
+    }
+    code = std::move(traced);
+    expectMatchesVm(module, "stat_random_" + std::to_string(seed));
+  }
+}
+
+TEST_CASE("the browser profile answers the live allocation count") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const NodeRun counted = runOnNode(withStat(mainOf({"PushI64 2",
+                                                     "HeapAlloc",
+                                                     "Pop",
+                                                     "PushI64 1",
+                                                     "HeapAlloc",
+                                                     "HeapFree",
+                                                     "PushI64 8",
+                                                     "CallHost 0",
+                                                     "ReturnI64"})),
+                                    "browser_stat",
+                                    true);
+  REQUIRE_MESSAGE(counted.built, counted.buildError);
+  CHECK(counted.out == "1\n");
+  // A module that never allocates has no heap: the count is 0.
+  const NodeRun none = runOnNode(
+      withStat(mainOf({"PushI64 8", "CallHost 0", "ReturnI64"})), "browser_stat_none", true);
+  REQUIRE_MESSAGE(none.built, none.buildError);
+  CHECK(none.out == "0\n");
 }
 
 TEST_SUITE_END();

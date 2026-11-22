@@ -1480,12 +1480,16 @@ main() {
 // read the heap statistics, which exist on the VM and optexe; the last case runs the same shapes on every config.
 namespace {
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {"vector_field_copy_destroy_loop"};
+
 void runHeapFlatProgram(const std::string &name, const std::string &source, int exitCode) {
   program_matrix::ProgramCase program;
   program.name = name;
   program.source = source;
   program.exitCode = exitCode;
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

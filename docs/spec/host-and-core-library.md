@@ -36,7 +36,8 @@ Rules:
   `PushI32 40`, `PushI32 2`, `CallHost 0`, with `host_imports[0] = host_add(i32, i32) -> i32`.
 - The VM target, `--emit=ir` serialized bytecode and the C++ emitters (`--emit=cpp`, `exe`, `optcpp`, `optexe`)
   accept host calls; native, wasm, and GLSL emission reject them with
-  `host calls are only supported by the vm target, the C++ targets and serialized bytecode`.
+  `host calls are only supported by the vm target, the C++ targets and serialized bytecode`. The one exception is
+  `__pstext_stat` (the string heap statistics, `heapLiveBlocks()`), which a Wasm module answers itself.
 - **C++ emitters.** Each host import that the program can reach becomes a plain function with C linkage whose name is
   the import's name (it must be a C identifier), declared in the generated source and left to the link step:
   `int32_t host_add(int32_t, int32_t);`, `void host_note(const char *, uint64_t);`, `bool host_flag(bool);`. The

@@ -450,6 +450,15 @@ inline void reportWasmRun(const ProgramCase &program) {
   std::fprintf(stderr, "%s\n", line.c_str());
 }
 
+// Lists `wasm-wasi` for a program whose name is in `wasmPrograms` (the ones `PRIMESTRUCT_MATRIX_WASM_RUN=1` finds
+// agreeing with the VM): in `onlyConfigs` when the case restricts its configs, in `extraConfigs` otherwise.
+inline void listWasmIf(ProgramCase &program, const std::vector<std::string> &wasmPrograms) {
+  if (!listed(wasmPrograms, program.name)) {
+    return;
+  }
+  (program.onlyConfigs.empty() ? program.extraConfigs : program.onlyConfigs).push_back("wasm-wasi");
+}
+
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
 inline void runProgramMatrix(const ProgramCase &program,

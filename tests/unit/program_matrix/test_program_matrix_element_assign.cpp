@@ -52,6 +52,9 @@ Bag() {
 }
 )";
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {"element_assign_scalar_struct"};
+
 void runAssignProgram(const std::string &name,
                       const std::string &body,
                       const std::string &stdoutText) {
@@ -73,6 +76,7 @@ main() {
   program.exitCode = 0;
   program.stdoutText = stdoutText + "0\n0\n";
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

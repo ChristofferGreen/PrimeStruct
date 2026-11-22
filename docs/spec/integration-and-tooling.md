@@ -93,7 +93,8 @@ An IR instruction the Wasm target does not lower is refused before emission, and
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
 wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`. Today that
 covers byte regions (`String`), the length of a string and the bytes of a run-time `String`, host
-calls, `u8` and byte memory, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
+calls (a module answers only the string heap statistic `__pstext_stat`, which is what `heapLiveBlocks()` reads; any other
+`__pstext_*` function is refused with a note that the string heap is not available on Wasm), `u8` and byte memory, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
 and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
 profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position
 past the end is `string index out of bounds` on stderr and exit code 3, as on the VM.

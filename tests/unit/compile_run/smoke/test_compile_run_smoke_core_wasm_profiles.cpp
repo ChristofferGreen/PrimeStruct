@@ -625,13 +625,13 @@ TEST_CASE("primec options parse benchmark semantic repeat count flag") {
 
 TEST_CASE("primec emit-diagnostics reports structured wasm emit payload") {
   const std::string source = R"(
-import /std/collections/*
-import /std/text/*
+[host return<i32>]
+host_add([i32] a, [i32] b) {
+}
 
-[return<int> effects(heap_alloc)]
+[return<int>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count() + heapLiveBlocks())
+  return(host_add(40i32, 2i32))
 }
 )";
   const std::string srcPath = writeTemp("compile_emit_wasm_diagnostics.prime", source);
@@ -663,30 +663,30 @@ TEST_CASE("primec emit-diagnostics rejects unsupported wasm IR features with sta
 
   const std::vector<NegativeCase> cases = {
       {
-          "unsupported_opcode_host_call_vector",
+          "unsupported_opcode_host_call_value",
           R"(
-import /std/collections/*
-import /std/text/*
+[host return<i32>]
+host_add([i32] a, [i32] b) {
+}
 
-[return<int> effects(heap_alloc)]
+[return<int>]
 main() {
-  [vector<i32>] values{vector<i32>(1i32, 2i32)}
-  return(values.count() + heapLiveBlocks())
+  return(host_add(40i32, 2i32))
 }
 )",
           "host calls are only supported by the vm target",
       },
       {
-          "unsupported_opcode_host_call_push",
+          "unsupported_opcode_host_call_void",
           R"(
-import /std/collections/*
-import /std/text/*
+[host return<void>]
+host_note([i32] value) {
+}
 
-[return<int> effects(heap_alloc)]
+[return<int>]
 main() {
-  [vector<i32> mut] values{vector<i32>()}
-  values.push(1i32)
-  return(values.count() + heapLiveBlocks())
+  host_note(7i32)
+  return(0i32)
 }
 )",
           "host calls are only supported by the vm target",

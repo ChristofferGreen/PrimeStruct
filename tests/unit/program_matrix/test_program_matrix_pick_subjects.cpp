@@ -55,6 +55,10 @@ main() {
 )";
 }
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {
+    "pick_payload_vector_reads", "pick_payload_fresh_vector_argument", "pick_vector_result"};
+
 void runPickSubjectProgram(const std::string &name,
                            const std::string &source,
                            const std::string &stdoutText) {
@@ -65,6 +69,7 @@ void runPickSubjectProgram(const std::string &name,
   program.stdoutText = stdoutText;
   // The heap statistics exist on the VM and optexe only.
   program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

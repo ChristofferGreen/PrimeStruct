@@ -56,6 +56,13 @@ std::string withoutHeapLines(const std::string &source) {
   return out;
 }
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {"slot_pointer_stride",
+                                               "block_place_move_parameter",
+                                               "uninitialized_vector_field",
+                                               "slot_of_vector_of_structs",
+                                               "reference_vector_element_reads"};
+
 void runSlotProgram(const std::string &name,
                     const std::string &source,
                     const std::string &expectedTokens) {
@@ -66,6 +73,7 @@ void runSlotProgram(const std::string &name,
   heap.exitCode = 0;
   heap.stdoutText = joinLines(expected, true);
   heap.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  program_matrix::listWasmIf(heap, WasmPrograms);
   program_matrix::runProgramMatrix(heap);
   if (!program_matrix::nativeSupported()) {
     return;

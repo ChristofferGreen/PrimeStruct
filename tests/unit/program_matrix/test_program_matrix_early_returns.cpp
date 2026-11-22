@@ -46,6 +46,14 @@ first_byte([String] text) {
 }
 )";
 
+// The programs of this file that run on Wasm like the VM (`PRIMESTRUCT_MATRIX_WASM_RUN=1`).
+const std::vector<std::string> WasmPrograms = {"early_return_live_sets",
+                                               "early_return_in_loop",
+                                               "early_return_nested_scopes",
+                                               "early_return_moved_local",
+                                               "early_return_void_body",
+                                               "early_return_unchanged_shapes"};
+
 void runEarlyReturnProgram(const std::string &name,
                            const std::string &definitions,
                            const std::string &body,
@@ -73,6 +81,7 @@ main() {
     program.onlyConfigs.push_back("native-O0");
     program.onlyConfigs.push_back("native-O2");
   }
+  program_matrix::listWasmIf(program, WasmPrograms);
   program_matrix::runProgramMatrix(program);
 }
 

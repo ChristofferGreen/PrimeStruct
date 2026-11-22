@@ -128,13 +128,16 @@ of sync with them.
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
-| TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
-| TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | ready | wasm-opcode-gaps |
 | TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | deferred | wasm-opcode-gaps |
 | TODO-6176 | The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM | deferred | wasm-bytes-host |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
+| TODO-6177 | Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`) | deferred | wasm-bytes-host |
+| TODO-6178 | The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7 | deferred | wasm-bytes-host |
+| TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
+| TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
+| TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
@@ -162,7 +165,6 @@ of sync with them.
 
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6150 (wasm-opcode-gaps): `heapLiveBlocks()` on Wasm from the heap's allocation count
 - TODO-6163 (safety-stdlib): a call to a non-public `/std` definition from outside its namespace is `private`
 - TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
 - TODO-6171 (safety-borrows): a lambda's capture list counts as a change of a viewed container
@@ -184,7 +186,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); ready TODO-6150 (`heapLiveBlocks()` on Wasm); deferred TODO-6175 (Wasm heap capacity), TODO-6176 (matrix runner preopen), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6176 (matrix runner preopen), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -503,35 +505,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: local-address and indirect memory opcodes only; the heap (`vector`, `String`), atomics and channels, tasks, u8 and host calls are separate leaves.
   - repro: `printf '[return<int>]\nmain() {\n  [i32 mut] v{4i32}\n  [Pointer<i32>] p{location(v)}\n  return(*p)\n}\n' > p.prime; ./primec --emit=wasm --wasm-profile wasi p.prime -o p.wasm --entry /main` now fails with `unsupported opcode for wasm target: AddressOfLocal (...)`.
 
-- [~] TODO-6141: Wasm lowers the heap opcodes and string byte reads (`vector`, `String`)
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-wasm (worktree-agent-ad6161ae949a7116b), 2026-11-21
-  - created_at: 2026-11-20
-  - phase: Correctness audit 2026-10 (found with TODO-6137)
-  - parallel_track: wasm-opcode-gaps
-  - scope: After the local-address opcodes, the refusals counted by TODO-6137 are `HeapAlloc` (42 matrix programs as the first refusal: every `vector` program) and `LoadStringByte` (2 programs), then the opcodes behind them (`HeapFree`, `HeapRealloc` and the string heap). TODO-6138's stop rule leaves the heap to a leaf of its own and none existed. Give Wasm `HeapAlloc`, `HeapFree`, `HeapRealloc` on the module's linear memory (a bump allocator with a free list over the pages the shadow stack of TODO-6138 does not use, `memory.grow` when it runs out; out of memory is the VM's fault) and `LoadStringByte` on the data segment of the string table. Settle in the block, before code, how the VM's allocator limits and fault texts map (docs/spec/vm-design.md, Memory) and write the options here if they are not settled.
-  - split: 2026-11-21 into TODO-6148 (`LoadStringByte`, 2 programs; done first because nothing about it is open) (`HeapAlloc`, `HeapFree`, `HeapRealloc` and the heap addresses: 136 + 14 + 5 programs; the address and fault-text question is written there as options, not decided) and TODO-6150 (`heapLiveBlocks()` and the other `__pstext_stat` readings). This block is the tracker and closes when the three do.
-  - acceptance:
-    - TODO-6148 and TODO-6150 are finished: a `vector<i32>` that is pushed to, indexed, popped and read by `count` runs on Wasm like the VM, and a program that scans a string by byte index; tests of each
-    - full release gate green
-  - stop_rule: the heap opcodes and string byte reads only; atomics, channels, tasks, u8 and host calls stay separate leaves.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
-
-
-- [~] TODO-6150: `heapLiveBlocks()` and the string heap statistics on Wasm
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-wasm2 (worktree-agent-a800942430db57dfd), 2026-11-22
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (split from TODO-6141)
-  - parallel_track: wasm-opcode-gaps
-  - scope: `heapLiveBlocks()` (stdlib/std/text/string.prime) is `__pstext_stat(8u64)`, a host call the VM answers itself, so a matrix program that reads it (the leak checks of the vector, sum-owner and task programs) is refused with `host calls are only supported by the vm target, ...` (of the 111 programs refused for a host call, 87 read `heapLiveBlocks()` or a string heap statistic; the other 24 use `String` itself). The Wasm slot heap exists (finished), so answer the statistic `8` (live slot allocations) in the Wasm module from the allocator's count, and refuse the other `__pstext_*` functions with a message that names the string heap (TODO-6127).
-  - acceptance:
-    - a program that prints `heapLiveBlocks() - blocks` around a copy-and-destroy loop prints what the VM prints; the matrix programs that then agree list `wasm-wasi`
-    - full release gate green
-  - stop_rule: the statistic 8 only; the string heap and the other host calls are TODO-6127.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "host calls are only"` from the release build directory.
 - [ ] TODO-6153: Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s
   - owner: ai
   - status: deferred
@@ -547,6 +520,67 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
+- [ ] TODO-6177: Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`)
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (split from TODO-6150)
+  - parallel_track: wasm-bytes-host
+  - scope: `String` keeps its bytes in byte regions (`HeapAllocBytes`, byte addresses of `VmHeapCore`: include/primec/runtime/VmHeapCoreBody.inc `allocateBytesOwn`, `releaseBytesOwn`, `reallocateBytesOwn`, `byteLive_`) read and written by `LoadU8`, `StoreU8` and `ZextU8`; Wasm refuses all of them (`unsupported opcode for wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`). 140 matrix programs are refused for a host call because they use `String`, and every one needs this first. Port the byte regions the way the slot heap was ported (hand-assembled helpers over regions of the linear memory, the VM's byte addresses, `HeapFree` and `HeapRealloc` of a byte address, the VM's fault texts), then lower `LoadU8`, `StoreU8` and `ZextU8` (the u8 conversion programs of TODO-6127 list `wasm-wasi` as well). Decide the capacity with TODO-6175 (the byte regions can share its growth).
+  - acceptance:
+    - a program that allocates a byte buffer, writes and reads bytes and frees it runs on Wasm like the VM (stdout, exit code, fault text); IR tests compare with the VM under node
+    - `conv_integer_to_u8` and `conv_float_to_u8` list `wasm-wasi`
+    - full release gate green
+  - stop_rule: byte regions and the byte opcodes; the string heap functions are TODO-6178 and TODO-6179.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
+- [ ] TODO-6178: The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (split from TODO-6150)
+  - parallel_track: wasm-bytes-host
+  - scope: `String` allocates its blocks with `__pstext_alloc`, `__pstext_try_alloc`, `__pstext_free`, `__pstext_capacity`, `__pstext_length`, `__pstext_usable`, `__pstext_set_limit`, `__pstext_arena_begin` and `__pstext_arena_end`, which the VM answers with `VmTextHeap` (include/primec/runtime/VmTextHeapBody.inc: size classes, chunks, large blocks, arenas, the byte limit). A Wasm module refuses them (`host calls are only supported by the vm target, ...; the string heap (`String`) is not available on wasm`) and answers statistics 0 to 7 of `__pstext_stat` as 0 because it has no text blocks. Port `VmTextHeap` over the byte regions of TODO-6177 so that block addresses, capacities, reuse, the limit fault and the statistics (`stringHeapChunks()`, `stringHeapBytesInUse()`, `stringHeapBytesFree()`, `stringHeapLargeBlocks()`, `stringHeapLargeBytes()`, `stringHeapAllocations()`, the arena depth and arena bytes) equal the VM's, and replace the constant 0 of statistics 0 to 7 in `emitWasmStringHeapStat` (src/wasm_emitter/WasmEmitterMemory.cpp).
+  - acceptance:
+    - a program that builds and drops `String` values prints the same statistics as the VM under node; the string arena programs (`string_arenas_*`) list `wasm-wasi`
+    - full release gate green
+  - stop_rule: the allocation functions and statistics; the byte operations are TODO-6179 and float text is TODO-6180. Blocked by TODO-6177.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
+- [ ] TODO-6179: The Wasm `__pstext_*` byte operations and entry arguments
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (split from TODO-6150)
+  - parallel_track: wasm-bytes-host
+  - scope: `String` copies, fills, compares and searches bytes with `__pstext_move` (overlap allowed), `__pstext_fill`, `__pstext_compare` (-1, 0 or 1) and `__pstext_find`, reads a string literal with `__pstext_literal` (the address of the literal's bytes: the module already keeps the string table in a data segment, so the address is known at emit time) and `argumentText(index)` reads `__pstext_argument` (WASI `args_get`, the argument copied into a fresh block). Each has one range check per call in the VM (`VmHeapCore::byteSpan`) and the same fault texts. Lower them as helper functions over the byte regions of TODO-6177.
+  - acceptance:
+    - the `String` programs of the matrix that only need these (concatenation, slicing, comparison, search, literals, arguments) run on Wasm like the VM and list `wasm-wasi`
+    - full release gate green
+  - stop_rule: the byte operations, literals and arguments; allocation is TODO-6178 and float text is TODO-6180. Blocked by TODO-6177 and TODO-6178.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
+- [ ] TODO-6180: Wasm formats and parses floats for `String`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (split from TODO-6150)
+  - parallel_track: wasm-bytes-host
+  - scope: `String` formats an `f64` with `__pstext_format_f64(value, style, precision, destination, capacity)` and parses decimal text with `__pstext_f64_ok` and `__pstext_parse_f64` (include/primec/runtime/VmTextHeap.h); the VM calls the C++ library's shortest round-trip and fixed/scientific formatting and `strtod`. WebAssembly has no such function and the browser profile has no imports. Decide (options: a hand-written shortest round-trip printer and exact parser in wasm helpers, as the fused multiply-add was done in src/wasm_emitter/WasmEmitterFma.cpp; or a WASI-profile import the host provides, which the browser profile still lacks) before code: the choice changes what a Wasm program may rely on, and the shortest round-trip digits must be the same on every backend.
+  - acceptance:
+    - the option chosen is written here with a `decision:` line; then `String` formatting and parsing of floats run on Wasm like the VM (matrix programs that print floats through `String` list `wasm-wasi`)
+    - full release gate green
+  - stop_rule: float text only. Blocked by TODO-6177 and TODO-6178.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
+- [ ] TODO-6181: A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (found with TODO-6150)
+  - parallel_track: wasm-bytes-host
+  - scope: the VM answers `__pstext_stat(9u64)` (any number above 8) with the runtime error `VM error: unknown string heap statistic: 9` and exit code 3; a Wasm module answers it with `unreachable` (`emitWasmStringHeapStat`, src/wasm_emitter/WasmEmitterMemory.cpp), so the WASI profile exits with a trap, not code 3 and the message. The stdlib only passes the constants 0 to 8, so no program reaches it today; a module built by hand or by a later stdlib change would. Print the VM's message and `proc_exit(3)` on the WASI profile (the heap's `fault` helper, src/wasm_emitter/WasmEmitterHeap.cpp, has the shape; it needs a data segment for the text and a decimal printer even when the module has no heap) and keep the trap on the browser profile.
+  - acceptance:
+    - an IR module that calls `__pstext_stat` with 9 ends with the VM's stderr text and exit code 3 under node on the WASI profile and with a trap on the browser profile
+    - full release gate green
+  - stop_rule: the unknown-statistic fault only.
+  - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred

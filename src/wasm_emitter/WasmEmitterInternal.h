@@ -154,9 +154,11 @@ enum class WasmHeapHelper : uint8_t {
 inline constexpr size_t WasmHeapHelperCount = 12;
 inline constexpr uint32_t WasmHeapSlots = 1u << 21;
 inline constexpr uint32_t WasmHeapRunCapacity = WasmHeapSlots / 2u + 1u;
-// The mutable `i32` globals after the shadow stack's two: the slots handed out so far and the number of free runs.
+// The mutable `i32` globals after the shadow stack's two: the slots handed out so far, the number of free runs and
+// the number of live allocations (`__pstext_stat(8)`, the VM's `liveSlotAllocationCount`).
 inline constexpr uint32_t WasmGlobalHeapSize = 2;
 inline constexpr uint32_t WasmGlobalRunCount = 3;
+inline constexpr uint32_t WasmGlobalLiveBlocks = 4;
 
 struct WasmRuntimeContext {
   bool enabled = false;
@@ -200,6 +202,8 @@ struct WasmRuntimeContext {
   // The module has `HeapAlloc`, `HeapFree` or `HeapRealloc`: the heap regions (values, states, counts, free runs), the
   // two extra globals, the helper function indexes and the VM's fault messages.
   bool hasHeap = false;
+  // Per host import of the module: it is `__pstext_stat`, the one host function a Wasm module answers itself.
+  std::vector<bool> statHostImports;
   uint32_t heapValues = 0;
   uint32_t heapStates = 0;
   uint32_t heapCounts = 0;
@@ -570,6 +574,11 @@ void emitWasmAddressOfLocal(uint64_t slot,
                             const WasmLocalLayout &layout,
                             std::vector<uint8_t> &out);
 void emitWasmIndirectLoad(const WasmRuntimeContext &runtime, std::vector<uint8_t> &out);
+
+// `__pstext_stat(which)`: takes the i64 on the stack (through the i64 scratch local) and leaves the statistic as an i64.
+void emitWasmStringHeapStat(uint32_t whichLocal,
+                            const WasmRuntimeContext &runtime,
+                            std::vector<uint8_t> &out);
 void emitWasmIndirectStore(uint32_t valueLocal,
                            const WasmRuntimeContext &runtime,
                            std::vector<uint8_t> &out);

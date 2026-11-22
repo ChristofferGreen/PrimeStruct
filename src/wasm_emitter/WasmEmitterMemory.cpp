@@ -16,6 +16,7 @@ namespace {
 
 constexpr uint8_t WasmOpUnreachable = 0x00;
 constexpr uint8_t WasmOpIf = 0x04;
+constexpr uint8_t WasmOpElse = 0x05;
 constexpr uint8_t WasmOpEnd = 0x0b;
 constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
@@ -42,6 +43,7 @@ constexpr uint8_t WasmOpF32ReinterpretI32 = 0xbe;
 constexpr uint8_t WasmOpF64ReinterpretI64 = 0xbf;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmBlockTypeVoid = 0x40;
+constexpr uint8_t WasmBlockTypeI64 = 0x7e;
 constexpr uint32_t StderrFd = 2;
 constexpr int32_t RuntimeErrorExitCode = 3;
 constexpr uint32_t SlotBytes = 8;
@@ -532,6 +534,41 @@ WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime) {
   out.push_back(WasmOpEnd);
   out.push_back(WasmOpEnd);
   return body;
+}
+
+// The statistic of the string heap functions a Wasm module answers (`__pstext_stat`): 8 is the number of live slot
+// allocations of the heap, 0 to 7 count the blocks of the string heap, which a Wasm module does not have (they read 0,
+// as in a VM program that never allocates text), and any other number is the VM's unknown-statistic fault, a trap.
+void emitWasmStringHeapStat(uint32_t whichLocal,
+                            const WasmRuntimeContext &runtime,
+                            std::vector<uint8_t> &out) {
+  out.push_back(WasmOpLocalSet);
+  appendU32Leb(whichLocal, out);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(whichLocal, out);
+  appendI64Const(8, out);
+  out.push_back(WasmOpI64Sub);
+  out.push_back(WasmOpI64Eqz);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeI64);
+  if (runtime.hasHeap) {
+    out.push_back(WasmOpGlobalGet);
+    appendU32Leb(WasmGlobalLiveBlocks, out);
+    out.push_back(WasmOpI64ExtendI32U);
+  } else {
+    appendI64Const(0, out);
+  }
+  out.push_back(WasmOpElse);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(whichLocal, out);
+  appendI64Const(8, out);
+  out.push_back(WasmOpI64GeU);
+  out.push_back(WasmOpIf);
+  out.push_back(WasmBlockTypeVoid);
+  out.push_back(WasmOpUnreachable);
+  out.push_back(WasmOpEnd);
+  appendI64Const(0, out);
+  out.push_back(WasmOpEnd);
 }
 
 } // namespace primec

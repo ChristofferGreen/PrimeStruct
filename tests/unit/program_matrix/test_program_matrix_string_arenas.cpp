@@ -205,6 +205,7 @@ main() {
 TEST_CASE("the live block count of the slot heap goes up by one per buffer and back down") {
   program_matrix::ProgramCase program;
   program.name = "string_heap_live_blocks";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/text/*
 import /std/collections/*
