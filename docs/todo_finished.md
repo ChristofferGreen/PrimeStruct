@@ -2543,6 +2543,7 @@ are left unarchived.
 | TODO-6138 | Wasm lowers local addresses and indirect loads and stores | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6139 | Matrix programs Wasm runs after TODO-6138 list `wasm-wasi` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6140 | Wasm refusals of atomics, channels, u8 and host calls name the opcode | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6143 | Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6144 | An unknown type inside a `vector`, `array`, `soa` or `Buffer` return type is never checked | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6145 | Wasm real calls whose struct parameters are stored to non-leading locals | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6146 | Wasm structured control flow for an early return out of an inlined body with cleanup | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
@@ -2564,6 +2565,7 @@ are left unarchived.
 | TODO-6166 | A plain `Reference<vector<T>>` argument can change the container a live view reads | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6167 | A view of `dereference(r)` stays live after `r`'s last use while the local `r` aliases is changed directly | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6168 | Assigning to a local that a view borrows names the local as the sink | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6170 | A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6172 | A refused library root names the rule it breaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 

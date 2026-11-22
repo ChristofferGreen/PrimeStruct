@@ -123,15 +123,13 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6163 | Non-public stdlib helpers are callable by absolute path | deferred | safety-stdlib |
-| TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | deferred | safety-stdlib |
-| TODO-6171 | A view stays live across a lambda or a `Function` value that changes its container | deferred | safety-borrows |
+| TODO-6163 | Non-public stdlib helpers are callable by absolute path | ready | safety-stdlib |
+| TODO-6171 | A view stays live across a lambda or a `Function` value that changes its container | ready | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
-| TODO-6143 | Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow` | deferred | runtime-faults |
 | TODO-6141 | Wasm lowers the heap opcodes and string byte reads (`vector`, `String`) | ready | wasm-opcode-gaps |
-| TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | deferred | wasm-opcode-gaps |
+| TODO-6149 | Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses | ready | wasm-opcode-gaps |
 | TODO-6150 | `heapLiveBlocks()` and the string heap statistics on Wasm | blocked | wasm-opcode-gaps |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
@@ -147,28 +145,38 @@ of sync with them.
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
-| TODO-5933 | The embed API loads a library at run time | deferred | lib-embed |
-| TODO-6032 | A public function of any shape is a function of a library | deferred | lib-shapes |
+| TODO-5933 | The embed API loads a library at run time | ready | lib-embed |
+| TODO-6032 | A public function of any shape is a function of a library | ready | lib-shapes |
 | TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | deferred | lib-shapes |
-| TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | deferred | lib-backend |
+| TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | ready | lib-backend |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
 | TODO-5979 | `--collect-diagnostics` reports no false intra-body call diagnostics | ready | collect-diagnostics-false-positives |
-| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | deferred | function-call-diagnostic |
-| TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | deferred | function-call-mutability |
+| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | ready | function-call-diagnostic |
+| TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | ready | function-call-mutability |
 | TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
 
 ### Ready Now
 
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-6174 (lib-backend): a precompiled header for the `optexe` and `exe` C++ compile
+- TODO-6149 (wasm-opcode-gaps): the Wasm slot heap, a bit-exact port of the VM's `VmHeapCore`
+- TODO-6163 (safety-stdlib): a call to a non-public `/std` definition from outside its namespace is `private`
+- TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
+- TODO-6171 (safety-borrows): a lambda's capture list counts as a change of a viewed container
 
 ### Immediate Next 10
 
 1. TODO-5804
 2. TODO-5603
+3. TODO-6174
+4. TODO-6149
+5. TODO-6163
+6. TODO-5933
+7. TODO-6171
 
 ### Priority Lanes
 
@@ -177,9 +185,9 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): none ready; deferred TODO-5932, TODO-5933, TODO-6032 (each with `decision_needed`, 2026-11-21), TODO-6173, TODO-6174
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker), TODO-6163 (private definitions, decision needed), TODO-6169 (private fields of a root struct), TODO-6171 (a lambda or `Function` value changes a viewed container)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6143 (Wasm recursion trap), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6174, TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); TODO-6149 (Wasm heap, decided 2026-11-22); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -190,7 +198,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup), TODO-6032 (library function shapes), TODO-6113 and TODO-6116 (a `Function` call needs a mutable place); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). Ready: TODO-5804 (read-only handlers with `app.view` under `RwLock`); deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -282,12 +290,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6163: Non-public stdlib helpers are callable by absolute path
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5511)
   - parallel_track: safety-stdlib
   - scope: docs/spec/backend-type-support.md (Exports) says a definition without `[public]` is private to its module but still callable within the same compilation unit; visibility only affects imports. `/std/collections/vector/vectorCheckShape<i32>(v)` and every other helper without `[public]` therefore compile in user code written by absolute path. The dangerous ones are `[unsafe_api]` now (TODO-6156), so this is about the rest: internal invariants (`vectorReserveInternal`, `vectorAlloc`, the checks) callable out of order.
-  - decision_needed: does `[private]` (and the default of no `[public]`) stop an absolute-path call from another module? (A) Yes: a call to a non-public definition from a definition outside its namespace is `<path> is private`, with the stdlib and examples fixed up. Matches C++ and the C++-legacy direction, and makes `[public]` mean what it says. Costs a sweep of the stdlib for helpers that other modules call without `[public]`. (B) No, keep the spec as it is and mark every helper that can break an invariant `[unsafe_api]`. No new rule, but the marker then means two things (memory unsafe, and internal). Recommendation: A for definitions in `/std`, enforced together with the field rule of TODO-6161 so that `private` has one meaning; the spec sentence in Exports changes in the same commit.
+  - decision: 2026-11-22 (owner): option A for `/std`: a call to a non-public definition (no `[public]`, or `[private]`) from a definition outside its namespace is `<path> is private`; the stdlib and examples are swept in the same change; the spec sentence in docs/spec/backend-type-support.md (Exports) changes in the same commit, enforced together with the field rule of TODO-6161 so that `private` has one meaning. Option B is not taken.
   - acceptance:
     - the chosen rule is in docs/spec/backend-type-support.md (Exports) and enforced, with a negative example; stdlib and examples compile
     - full release gate green
@@ -295,28 +303,14 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
 
 
-- [ ] TODO-6169: A `[private]` field of a struct at the root is readable and writable from anywhere
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6161)
-  - parallel_track: safety-stdlib
-  - scope: A private field may be named by definitions in the struct's namespace; a struct declared at the root (`[public struct] Counter() { [private i32 mut] hits{0i32} }`) has the whole program as its namespace, so `c.hits = 5i32` from `main` compiles. The rule is the one private type aliases follow (decided 2026-11-21, TODO-6161), but a root struct cannot be encapsulated by it.
-  - decision_needed: (A) keep it: put the struct in a namespace to get privacy (consistent with aliases; no change). (B) a root struct's private fields are accessible only from its own body and from definitions in the same source file or module (needs a notion of module per definition). Recommendation: A, and state it in docs/spec/type-system.md (done in Field visibility).
-  - acceptance:
-    - decided; if B, enforced with a negative example
-    - full release gate green
-  - stop_rule: privacy of root-level structs; no new visibility keywords.
-  - repro: `[public struct] Counter() { [private i32 mut] hits{0i32} } [return<int>] main() { [Counter mut] c{Counter{}} c.hits = 5i32 return(c.hits) }` exits 5.
-
 - [ ] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6170)
   - parallel_track: safety-borrows
   - scope: the callee-effect analysis (src/semantics/ReferenceParameterEffects.cpp) reads definition bodies and the definitions a call resolves to. Two ways of changing a viewed container escape it. (1) A lambda: its body is hoisted into a definition of its own (`/reset_via_lambda__lambda0/call`) that holds the captures, so a plain `Reference` parameter captured by a lambda that replaces or pushes to what it reaches is not counted when the callee calls the lambda. (2) A callee reached only through an unresolved call: a call of a `Function` value (`f(bag)` where `f` is a `Function<void, Reference<Bag>>`) has no definition, so passing the parameter to it is not counted. Counting every pass to such a call as a change would reject read-only callbacks (a false positive on stdlib and UI code), so it needs either the capture list of the hoisted lambda (case 1, sound) or a decision for case 2.
-  - decision_needed: case 2 (a `Function` value call): (A) leave it open and document it as a limit of the view check (it cannot see through type erasure); (B) treat a plain `Reference` passed to a `Function` value as a change unless the argument is a non-`mut` read-only parameter type, which needs the `Function` signature to say `mut` (a language change: `Function<void, Reference<Bag> mut>`); (C) require a `Function` value that takes a `Reference` to be called with a `mut` reference only. Recommendation: do case 1 (the hoisted lambda's capture list is known) and A for case 2 until a program needs it.
+  - decision: 2026-11-22 (owner): case 1 (a lambda): the hoisted lambda definition is counted through its capture list, so a lambda that replaces or pushes to a captured plain `Reference` parameter is a change. Case 2 (a `Function` value call) is option A: left open and documented as a limit of the view check (it cannot see through type erasure); no `Function<..., mut>` language change.
   - acceptance:
     - case 1: a lambda in the callee that replaces a container field of a captured plain `Reference` parameter, or calls `push` on it, counts as a change; a lambda that only reads does not; negative example with line and column; the stdlib, examples, UI and web code compile
     - case 2 decided and, if B or C, enforced with a negative example
@@ -331,6 +325,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - phase: Modules and libraries (found with TODO-6032)
   - parallel_track: lib-shapes
   - scope: `[sum] Pick { [i32] number [bool] flag } [public return<i32>] use_pick([Pick] value) { return(1i32) }` gives `public function /use_pick cannot be compiled into a library: its result, receiver or body shape is not one a real call takes`: `isAddressAbiParameter` accepts a borrowed sum parameter and `addressAbiShapeBlocker` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) finds no blocker, but the definition is not in `realCallReservationIndex` (src/ir_lowerer/IrLowererLowerSetupStage.cpp), so `realCallBlockerReason` has nothing to name. Find which rule keeps it out of `computeRealCallEligibleDefinitionPaths`, then either take the shape (and test it against the whole-program build) or make the blocker report it.
+  - decision: 2026-11-22 (owner): follows the order of TODO-6032 (done with or right after its first slice).
   - acceptance:
     - the function is a function of the archive and gives the same result as the whole-program build when linked, or the refusal names the rule
     - negative or positive example with the program above
@@ -340,12 +335,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6174: The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Modules and libraries (found with TODO-5932)
   - parallel_track: lib-backend
   - scope: `primec --emit=optexe` of an empty `main` takes 0.91 s, of which `clang++ -fsyntax-only` on the generated unit is 0.64 s: the `#include <algorithm>`, `<map>`, `<set>`, `<string>` and the rest of the runtime preamble's headers (src/backend/IrToOptCppRuntime.h). A precompiled header of those includes took an empty `main` from 0.70 s to 0.39 s in a manual run (`clang++ -std=c++23 -O2 -ffp-contract=off -pthread -x c++-header`, then `-include-pch`; the .pch is 15.6 MB). Decide where the header is kept (a cache keyed by the compiler id and the C++ compiler version, under `.ps/cache` or the output directory) and what happens when `clang++` changes; or drop the headers the runtime does not need (`<map>`, `<set>`).
-  - decision_needed: (A) a cached precompiled header (fast, needs a cache and an invalidation rule); (B) trim the includes (no cache, smaller gain, measure first); (C) leave it. Recommendation: B first as the smaller change, then A if B leaves more than 0.3 s.
+  - decision: 2026-11-22 (owner): a precompiled header of the runtime preamble (trimming includes the runtime does not need is allowed first or alongside). The cache lives inside the build directory or the user existing cache dir, never outside the checkout by surprise; a stale PCH is never used: it is keyed by the C++ compiler identity, flags and the contents of the headers. Measure an empty `main` and examples/apps/http_hello before and after.
   - acceptance:
     - an empty `main` through `--emit=optexe` is measured before and after in docs/todo_log.md; the output executable behaves the same on the optexe test corpus
     - full release gate green
@@ -368,6 +363,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `view` registration and read-lock dispatch only; no sessions, no new method names.
   - open_questions: found 2026-11-20 on the first attempt (nothing implemented; the block's design needs two decisions). Facts measured with primec: (1) a `Function` value's `call` is `mut` (docs/spec/value-lifecycle.md, Function values), so a `view` handler stored as a `Function` in the read-only `T` of `RwLock<T>.read` cannot be called there (`b.f(x)` on a `[T]` parameter is `unknown method: /Box/f`, TODO-6113); copying it first (`[Function<...> mut] h{b.f}` inside `read`, a closure clone with its own state) works and runs on the VM, so concurrent readers each get a private clone of the handler, at one small heap block per request. (2) `serveWorkers<Handler>` receives the whole app (`todo_web` passes `withRequestLog(todo_app())`, a lambda that wraps it), erased today into one `Function` in a `Mutex<RequestHandler>`; the server must learn the mode of a request before it takes a lock, and the language has no way to ask an arbitrary `Handler` for an optional method: overloads `mode<S>([App<S>])` next to `mode<H>([H])` always pick the generic one (TODO-6112), so a free-function protocol that `AppRouter`, `WebApp` and middleware specialise cannot be written today. Erasing the app into a `Function` is not possible either: a read lock over a `Function` that holds the app would have to clone the app's state per request.
   - options_to_decide: (a) fix TODO-6112 (a concrete generic struct parameter beats an unbound `H`), then `readsOnly(handler, request)` and `callView(handler, ...)` are overloads for `AppRouter<State>` and `WebApp<State>` with a generic default of "writes"; `withRequestLog` becomes a struct `RequestLog<Next>` with the same overloads that forward to `next`; the workers become generic over `Handler` (a generic `[spawn]` call works) and hold `RwLock<Handler>`; `AppRouter` gains a `views` route table whose handlers are `Function<void, State, Request, Reference<Response>>` cloned per request. (b) Make `readsOnly(request)` and `callView(...)` required methods of every handler `serveWorkers` takes: `Router`, `AppRouter`, `WebApp` and `RequestLog` get them, and a bare lambda passed to `serveWorkers` is wrapped by `asHandler(lambda)` (breaking for callers that pass a lambda or a struct with only `call`). (c) A separate entry `serveWorkersApp` for apps with views, leaving `serveWorkers` as it is (the block's "serveWorkers takes the read lock for a view handler" then does not hold by name). Option (a) keeps the block's text; (b) is the smallest compiler-free change.
+  - decision: 2026-11-22 (owner): option (a): readsOnly/callView overloads for `AppRouter<State>` and `WebApp<State>` with a generic default of "writes"; `withRequestLog` becomes a struct `RequestLog<Next>` with the same overloads forwarding to `next`; the workers are generic over `Handler` and hold `RwLock<Handler>`; `AppRouter` gains a `views` route table whose handlers are `Function<void, State, Request, Reference<Response>>` cloned per request (a `mut` clone, per TODO-6113). TODO-6112 (a concrete generic struct parameter beats an unbound `H`) is finished.
 
 - [ ] TODO-5806: Sessions: a cookie and per-session state
   - owner: ai
@@ -510,20 +506,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: a function `[return<i32>] depth([i32] n)` returning `plus(depth(n - 1i32), 1i32)` for `n > 0`, built with `primec --emit=native` and `--emit=exe`, run at depths 8000, 20000, 50000.
   - notes: deferred: needs a Linux x86_64 machine (the 2026-11-20 worker had arm64 macOS only; as TODO-6051).
 
-- [ ] TODO-6143: Deep recursion on Wasm is a host stack trap, not the VM's `VM call stack overflow`
-  - owner: ai
-  - status: deferred
-  - created_at: 2026-11-20
-  - phase: Correctness audit 2026-10 (found with TODO-6052)
-  - parallel_track: runtime-faults
-  - scope: the VM, `optexe` and the JIT fault past 4096 frames with `VM error: VM call stack overflow` and exit code 3; Wasm lowers a call to a Wasm `call`, so the limit is the host's: Node 24 returned depth 15000 and raised `RangeError: Maximum call stack size exceeded` at 20000 (a trap with no PrimeStruct message). A program that needs more than 4096 levels is portable to neither the VM nor `optexe` but runs on Wasm until the host stack is gone, and what happens then depends on the runtime.
-  - options: (a) document only (done by TODO-6052); (b) a frame counter global in every Wasm function that traps at 4096 (cost: a global read and write per call, and a code-size cost); (c) leave it. The owner decides; (b) needs a measurement of the cost on the Wasm matrix.
-  - acceptance:
-    - per the decision: a depth counter with a test under node that sees the trap at the VM's limit, or the documented difference
-    - full release gate green
-  - stop_rule: the Wasm call depth only.
-  - repro: `primec --emit=wasm --wasm-profile wasi rec.prime -o rec.wasm --entry /main` for the `depth` function above at `depth(20000i32)`, run under Node 24 (`new WebAssembly.Instance(...).exports.main()`).
-
 - [ ] TODO-6124: Wasm lowers pointers, `Reference`, struct values, arrays and closures
   - owner: ai
   - status: blocked
@@ -556,11 +538,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6149: Wasm slot heap: `HeapAlloc`, `HeapFree`, `HeapRealloc` and heap addresses
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (split from TODO-6141)
   - parallel_track: wasm-opcode-gaps
   - scope: 136 matrix programs (every `vector`) are first refused for `HeapAlloc`, 14 more for `HeapRealloc` and 5 for `HeapFree`. The VM's heap (docs/spec/vm-design.md, Heap; `include/primec/runtime/VmHeapCore.h`, `VmHeapCoreBody.inc`) hands out addresses `bit 63 | generation << 48 | slot * 16`, serves a request from the smallest free run that fits (lowest base among equal sizes), else extends the free run at the end of the heap, else takes new slots; merges adjacent free runs; zeroes freed slots; gives reused slots the next generation (15 bits, wraps after 32,768 reuses); grows a `HeapRealloc` in place when the next slots are free; and faults with `VM error: invalid indirect address in IR: <address>`, `invalid heap free address in IR: <address>`, `invalid heap realloc address in IR: <address>` and `VM heap allocation overflow` (exit 3). Wasm would keep the slot storage and a per-slot state (generation, live) in its linear memory after the shadow stack (TODO-6147 settles how the two grow), serve `LoadIndirect`/`StoreIndirect` of a heap address through the state check, and write the same messages. The open question is how exact the port must be. Options: (A) a bit-exact port of the single-arena `VmHeapCore` algorithm (same policy, so the same addresses and the same fault texts, `stderr` byte for byte; the free runs need an ordered structure, so the helper functions are hand-assembled wasm of a few hundred instructions, or a sorted array scanned linearly); (B) the same address encoding and the same observable rules (stale and double-freed addresses fault, `heapLiveBlocks()` counts live allocations) with a simpler allocator, so an address printed by a program, or inside a fault text, can differ from the VM's after a free and a reuse; (C) Wasm's own addresses and its own fault texts without numbers, as the arm64 native backend has (`invalid heap free address: the block is already free`), documented as a per-backend difference. The user's direction (identical behavior on every backend) favors (A); (C) has the arm64 backend as precedent. Decide before code.
+  - decision: 2026-11-22 (owner): option A: a bit-exact port of the VM single-arena `VmHeapCore` algorithm to Wasm (same addresses `bit 63 | generation << 48 | slot * 16`, per-slot generations, best-fit allocation, adjacent free-run merging, the VM fault texts with the address numbers, exit 3 on WASI); helper functions may be hand-assembled wasm; the shadow stack owns the memory above its base, so the heap lives below it or shares the grower (docs/spec/vm-design.md); split into smaller leaves with scope/acceptance/stop_rule if it is too big. After it lands, add `wasm-wasi` to the matrix cases that agree (`PRIMESTRUCT_MATRIX_WASM_RUN=1`) and update the refusal accounting in docs/todo_log.md. TODO-6141 and TODO-6150 follow it.
   - acceptance:
     - the option chosen is written here with a `decision:` line; then a `vector<i32>` that is pushed to, indexed, popped and read by `count`, a double free, a stale address and a `HeapRealloc` of a freed block run on Wasm under node like the VM (stdout, exit code and, for (A), stderr), the matrix programs that then agree list `wasm-wasi`, and an allocation that cannot be served ends with `VM heap allocation overflow` and exit 3
     - full release gate green
@@ -627,6 +610,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - parallel_track: debugger-filtered-columns
   - scope: TODO-6080 maps the spans of diagnostics back to the text the user wrote, but the IR source map keeps the parser's positions: `IrLowererLowerReturnEmitStage.cpp` (instruction source ranges) and `IrLowererLowerSetupStage.cpp` (function syntax provenance) call `mapExpandedSourceLocation`, which finds the source unit and the line but takes the column of the text-filtered source. `VmDebugAdapter.cpp` and `VmDebugDap.cpp` report that column for stack frames and match breakpoints against it, so a breakpoint written at the user's column of `nope` in `[i32] b{a + 2i32 * x}` (column 22) does not match the instruction, whose recorded column is the filtered `plus(a, multiply(2i32, x))` one. Not run: found by reading the call sites while closing TODO-6080; the repro is a DAP `setBreakpoints` with a column and a `stackTrace` over a statement that contains an operator.
   - implementation_notes: `SourceLocationMapper::mapFilteredSourceLocation` (TODO-6080) moves a position to the user's text, but building the offset map costs a second, tracking run of the text filters (about +30 percent instructions on a program that imports collections, measured as the first version of TODO-6080 did), so the lowerer must not call it per instruction. Options to decide: (a) record the filter's offsets in the `ExpandedSource` while the first run is made, at the price of one origin per byte on every compile (a startup cost); (b) build the map only when a debugger or `--emit` mode that writes the source map asks for it; (c) leave the debugger on the filtered column and document it. The owner decides; do not pick one without a measurement of startup instructions.
+  - decision: 2026-11-22 (owner): option (b): build the offset map only when a debugger or an `--emit` mode that writes the source map asks for it; no cost on an ordinary compile. Startup instructions of a program that compiles are still measured and must not be worse.
   - acceptance:
     - per the decision: a test that reads the column of a stack frame and of a breakpoint over a rewritten expression, or the documented limitation
     - startup instructions of a program that compiles are measured and not worse
@@ -723,11 +707,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: deferred: needs scoping and an object writer.
   - measured: 2026-11-21 (release build, macOS arm64; numbers in docs/todo_log.md under TODO-5932). `--emit=optexe` of an empty `main` takes 0.91 s, of which the front end is 0.02 s (69M instructions) and `clang++` parsing the runtime preamble's standard headers alone is 0.64 s (`-fsyntax-only`); a program of 24k generated lines (examples/apps/http_hello) takes 4.18 s, 1.29 s of it the front end (14.6G instructions) and about 2.9 s the C++ compile and link. So the back end is 98 percent of a small program (a fixed cost every translation unit pays) and about 70 percent of an http-sized one. The emitter writes one translation unit with the runtime in an unnamed namespace, passing the runtime as `Rt &rt` (src/backend/IrToOptCppRuntime.h), so a library unit could share it; a string table, host import declarations and struct layouts are per unit, and the optimizer's inlining across the library boundary is lost. The native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer.
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s, TODO-6174), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
-  - decision_needed: which of A, B, C to schedule; whether losing cross-library inlining under B is acceptable (`--ir-inline` crosses libraries today). Recommendation: A now (TODO-6174, small, helps every program); B only when a real library measures more than 1 s of back-end compile of a typical program, which none does today (the stdlib libraries that build are small, docs/todo_log.md under TODO-6093); C not before B.
+  - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
 
 - [ ] TODO-5933: The embed API loads a library at run time
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
   - parallel_track: lib-embed
@@ -739,11 +723,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: deferred: not committed; follows if the archive proves out.
   - measured: 2026-11-21 (numbers in docs/todo_log.md under TODO-5933). The embed engine already compiles through `runCompilePipelineResult` and `prepareIrModule` with an `Options` (src/embed/ScriptEngine.cpp, `compileEntry`), and `Options::libraryPaths` loads and links archives there (src/ir/IrPreparation.cpp, `linkProgramLibraries`), without a process or `dlopen` (scripts/check_embed_no_process.sh stays valid); so the first slice is small: `ScriptEngine::addLibrary(path)` that fills `options.libraryPaths`, with the script writing `import</root>`. A script without libraries pays nothing (`libraryPaths` empty returns at once, src/pipeline/LibraryLink.cpp); with one, the compiler build id is computed once per process (5M instructions, TODO-6093), plus the archive read and a link of about 2 ms. The blocker is the build id: `currentCompilerBuildId` is the running executable's linker UUID (src/pipeline/LibraryLink.cpp), and an embed host (PrimeScroll, a test binary) is a different executable from `primec`, so every archive `primec --emit=lib` wrote is refused with a build id mismatch. Existing coverage to reuse: the embed script tests (`PrimeStruct_embed_script_engine`) and the 23-program library differential corpus (tests/unit/compile_run, emit_lib and library link cases).
   - options_to_decide: build id: (1) the id names the compiler sources, not the executable: CMake hashes the inputs of the front end, IR and lowering into a generated header both `primec` and the embed library carry, so one source tree agrees with itself; cost is a build-time hash, and a stale id is impossible because it is derived from the content. (2) the host passes an id: `ScriptEngine::setLibraryCompilerId`, defaulting to its own UUID; fragile, the host must learn `primec`'s. (3) accept another binary's archive when the IR schema version and a hand-bumped ABI constant match; cheap, but a forgotten bump runs wrong code silently. How a script names libraries: (a) the host: `engine.addLibrary(path)`, the script writes `import</ui>`; the host decides which code a script reaches, as it does for the effects ceiling (`setAllowEffects`). (b) the script names a file path; rejected, a script could read any file. (c) `addLibraryPath(dir)` resolving `import</name>` to `dir/name.psa`; a convenience on top of (a).
-  - decision_needed: the build id rule. Recommendation: (1) and naming (a). After that: slice 1 `ScriptEngine::addLibrary` plus a test that builds a library with the host's own compiler (`buildLibraryArchiveContent`) and one built by `primec`, runs a script that calls it, and checks that a script without libraries is unchanged (instruction count of an empty script compile, no timing); slice 2 `Script::bytecode` records the libraries so `loadBytecode` of a script that linked one stays self-contained (it already is: the link is in the IR).
+  - decision: 2026-11-22 (owner): option (1): the compiler build id is a hash of the compiler sources (the inputs of the front end, IR and lowering) generated into a header that both `primec` and the embed library carry, so one source tree agrees with itself; naming (a): the host names libraries through `ScriptEngine::addLibrary(path)` and the script writes `import</root>`; a script never names a file path. Slice 1: `ScriptEngine::addLibrary` plus a test that builds a library with the host compiler (`buildLibraryArchiveContent`) and one built by `primec`, runs a script that calls it, and checks that a script without libraries is unchanged (instruction count of an empty script compile, no timing). Slice 2: `Script::bytecode` records the libraries so `loadBytecode` stays self-contained.
 
 - [ ] TODO-6032: A public function of any shape is a function of a library
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-18
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 7)
   - parallel_track: lib-shapes
@@ -757,7 +741,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - notes: deferred: not committed; follows when a real library needs a shape that is refused today.
   - measured: 2026-11-21 (the first refusal of `primec --emit=lib` on each of the 59 stdlib files; numbers in docs/todo_log.md under TODO-6032). 28 build, 13 fail before the shape check (the file is not self-contained: `unknown return type: Vec2` in math/matrix, a missing import, an `on_error` handler type, `unsupported binding type`), and 18 name a shape. Of those 18: 9 a result the address ABI does not return (4 a sum, `Result` or packed error value: collections/errors, dir, file/errors, glob; 2 a `string`: http/server, web/fragment_script; 2 a `Pointer<i64>`: sync, text/shared; 1 a `vector<i32>`: scene), 4 a `string` parameter used beyond `count()` (build_step, collections/equality, file, text/string), 4 a definition under the canonical collections root `/std/collections/` (buffer_checked, buffer_unchecked, ring_buffer, slice; the rule is by path, so a scalar-only helper such as `ringBufferWrap` is refused too), 1 a body that ends in a generated tail value (ui/events). An argument pack blocks none of them.
   - options_to_decide: (1) `string` and `Pointer<T>` results are one u64 slot: take them as slot results in the address ABI (4 of the 9 result cases; a `Reference<T>` result stays refused, it would dangle). (2) sum, `Result` and packed error results go through the struct-result path (a heap block the callee fills): needs TODO-6173 first, since a borrowed sum parameter passes the shape check and is still refused. (3) a `vector<T>` result with the owned-local rule a spawned call already uses (`vectorResultReturnsOwnedLocals`, the task shape of a spawned call). (4) a `string` parameter used beyond `count()`: the callee reads a merged-table string by a computed index (`LoadStringByteDynamic`, VM only), so lifting the rule breaks optexe and native; keep refused until those targets have it. (5) the collections-root rule: narrow it from the path to the definitions that take or return a collection record, so scalar helpers become roots; this changes which stdlib helpers are real calls in every program, so it needs the benchmarks of the lazy-import plan and an instruction-count check, or a flag limited to library roots. (6) an argument pack: a wrapper that takes a `vector<T>`, the call site packing; lowest value, no stdlib file needs it.
-  - decision_needed: the order and whether (5) applies to every program or only to library roots. Recommendation: (1), then TODO-6173 and (2), then (3); (5) limited to library roots; (4) and (6) later. Done so far: TODO-6172 (the refusal names the rule a function breaks, instead of the generic message).
+  - decision: 2026-11-22 (owner): order: (1) `string` and `Pointer<T>` results as slot results, then TODO-6173 plus (2) sum results, then (3) `vector<T>` results; (5) the `/std/collections` root rule is narrowed only for library roots; (4) and (6) later. Slice (1) is the first leaf to cut.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
@@ -817,24 +801,26 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Function values; found with TODO-5804)
   - parallel_track: function-call-diagnostic
   - scope: In `lock.read([]([Box] b) { return(b.f(b.base)) })` with `Box{[Function<i32, i32> mut] f ...}` the call `b.f(x)` reports `unknown method: /Box/f [PSC1005]`. The block assumed the reason is that `Function.call` is `mut` and `b` is read-only.
   - open_questions: found 2026-11-20 on the first attempt (nothing implemented; the premise of the block is wrong and the right fix is a language decision). Measured with primec on the VM: (1) the same call in a free function, `read_it([Box] b) { return(b.f(b.base)) }`, compiles and runs, and so do `b0.f(1i32)` on a read-only local `[Box] b0` and `g(1i32)` on a read-only `[Function<i32, i32>] g`; a stateful closure (`[mut n{0i32}]`) called through them changes its own state (prints 2, 3, 2). So the spec line "`call` is `mut`, hold the `Function` in a `mut` binding" (docs/spec/value-lifecycle.md, Function values) is not enforced anywhere (TODO-6116). (2) The `unknown method` message is not a mutability check: the `b.f(x)` to `b.f.call(x)` rewrite in the template monomorphizer (`TemplateMonomorphCallableRewrites.cpp`, the field-callable rewrite) finds the owner's type through the locals and parameters it knows, and a parameter of a lambda is not among them, so the call stays a method call `/Box/f` that does not exist (TODO-6115). Only calls inside lambdas fail; nothing about read-only values does.
   - options_to_decide: (a) enforce the spec: calling a `Function` through a read-only place (a non-`mut` local, parameter or field, a `[T]` lambda parameter) is `calling a Function needs a mutable place: hold a clone in a mut local, [Function<...> mut] h{b.f}`, for every call site; this is what makes concurrent readers of an `RwLock<T>` safe (a closure's state cannot be written through a shared read-only `T`), but it rejects programs that compile today (the gate shows which). Needs TODO-6115 first so lambdas and functions agree. (b) relax the spec: a `Function` is callable through a read-only place; then a state-carrying closure held in a read-only `T` races under `RwLock.read`, so TODO-5804 would need its per-request clone anyway. (c) leave the spec as written and fix only TODO-6115 (lambdas behave like functions), with TODO-6116 tracking the missing check. Option (a) is the one the spec and the language direction (well-defined behavior) point to; it is a breaking change, so it is the user's call.
+  - decision: 2026-11-22 (owner): option (a): enforce the spec. `Function` `call` is `mut`: a call through a read-only place (a non-`mut` local, parameter or field, a `[T]` lambda parameter) is a diagnostic that names the fix: hold a `mut` clone, `[Function<...> mut] h{b.f}`. TODO-6115 (lambdas behave like functions) is finished, so this is unblocked; programs that relied on the unenforced rule are updated.
   - acceptance:
     - the decision above is made and recorded here; then a diagnostic or a spec change with a semantics test and the full release gate green
   - stop_rule: this one decision and the diagnostic or spec line it needs; TODO-6115 and TODO-6116 carry the mechanical parts.
 
 - [ ] TODO-6116: Calling a `Function` through a read-only place is accepted although `call` is `mut`
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-20
   - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
   - parallel_track: function-call-mutability
   - scope: docs/spec/value-lifecycle.md says a `Function`'s `call` is `mut` and the `Function` is held in a `mut` binding, field or parameter, but `[Function<i32, i32>] g{[mut n{0i32}]([i32] x) { n = plus(n, 1i32)  return(plus(x, n)) }}  print_line(g(1i32))` and the same call through a field of a read-only `[Box] b0` compile and change the closure's state. Repro on the VM: a `[mut n{0i32}]` closure in a read-only `[Box] b0` prints 2 then 3 for `b0.f(1i32)` twice. Blocked on the decision in TODO-6113 (enforce the spec, or change the spec).
+  - decision: 2026-11-22 (owner): per TODO-6113: option (a), enforce the spec; the diagnostic and the sweep of existing programs are shared with TODO-6113 (do both in one change or 6113 first).
   - acceptance:
     - per the decision of TODO-6113: either the call through a read-only place is a diagnostic that names the `mut` local clone as the fix, with semantics tests and every existing program that relied on it updated, or the spec line is changed and the unenforced rule removed
     - full release gate green
