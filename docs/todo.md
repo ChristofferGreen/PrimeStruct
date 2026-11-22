@@ -866,9 +866,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-6175: The Wasm slot heap has a fixed capacity of 2,097,152 slots
+- [~] TODO-6175: The Wasm slot heap has a fixed capacity of 2,097,152 slots
   - owner: ai
   - status: deferred
+  - claimed_by: ai-wasm2 (worktree-agent-a800942430db57dfd), 2026-11-22
   - created_at: 2026-11-22
   - phase: Backend parity (found with TODO-6149)
   - parallel_track: wasm-opcode-gaps
