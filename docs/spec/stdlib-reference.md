@@ -796,11 +796,19 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   the same patterns, 404 and 405, `pathParam`), and `AppRouter` has the same `call(request, response)`, so it is
   passed to `serve` or middleware as it is: `serve(withRequestLog(app), config)`.
 
+  `app.view(pattern, handler)` registers a read-only GET route: the handler is a `StateViewHandler<State>`, the alias of
+  `Function<void, State, Request, Reference<Response>>`, so the state comes in as `[State] state`, a read-only
+  borrow, not a `Reference<State>`. A request that a view matches is answered by the view before the `get` and other
+  routes are tried (so a view wins over a `get` of the same pattern); a path that only a view has answers 405 to
+  another method. `serve` runs a view as it runs any handler; `serveWorkers` runs it under the read lock, beside other
+  views. A view must not change the state: the language does not yet diagnose a write through a read-only
+  parameter whose field is `mut` (TODO-6183), so keeping to this is the author's job until it does.
+
   The state is a parameter rather than a capture because a handler stored in a `Function` cannot hold a `[ref]`
   capture (docs/spec/value-lifecycle.md, Lambdas): a closure that borrowed an outer `TodoList` could outlive it. A
   value capture would give each route its own copy, so a todo added by one route would be invisible to another. The
   router owns the one copy and lends it to the handler for the length of the call; the server calls one handler at
-  a time (`serve` has one thread, `serveWorkers` holds the handler in a `Mutex`), so that needs no locking. Keeping the state in the router, rather than passing it to `serve` next to the router, keeps
+  a time (`serve` has one thread, `serveWorkers` holds the handler in an `RwLock` and runs `get`, `post`, `put`, `delete` and `route` handlers under its write lock), so that needs no locking. A handler registered with `view` is the exception: see below. Keeping the state in the router, rather than passing it to `serve` next to the router, keeps
   `serve` and middleware unchanged: they see one handler. `Router` stays as it is for handlers without state.
 
   ```prime
@@ -1037,11 +1045,12 @@ primec --emit=optexe app.prime -o app --link-arg stdlib/std/net/native/net_shim.
     for its next request;
   - `workers{0}`, how many worker tasks `serveWorkers` starts: 0 means one per processor (`/std/os` `cpuCount()`),
     and at most 64 are started. `serve` ignores it.
-- **Middleware:** `withRequestLog(next)` wraps any handler and logs `METHOD target STATUS Nms` for each request
-  through `logLine`. Middleware is a generic function that returns a closure capturing `next`, so wrapping is
-  zero-cost and composes: `serve(withRequestLog(router), config)`. A middleware chain may also be erased into a
+- **Middleware:** `withRequestLog(next)` wraps any handler in a `RequestLog<Next>` and logs `METHOD target STATUS Nms`
+  for each request through `logLine`. Middleware is a generic struct with a `call`, so wrapping is zero-cost and
+  composes: `serve(withRequestLog(router), config)`. A `RequestLog` forwards `readsOnly` and `callView` (below) to
+  its `next`, so a view stays a view behind it. A middleware chain may also be erased into a
   `Function` (a closure that holds a `Function`: docs/spec/value-lifecycle.md, Function values), which costs a heap
-  block per layer.
+  block per layer, and then it writes.
 - **`ServeError`:** the only error is failing to listen. Its `code` is the `/std/net` code, and `why()` names the
   common causes (sockets not permitted, port in use).
 - **Checking the result:** use `serve(...)?` in a `main` with `on_error<ServeError, handler>`; the handler prints
@@ -1087,14 +1096,22 @@ the `/std/net` and `/std/os` host functions runs the server on the VM's tasks (s
   then closes the connection or, when it is kept alive (step 5 of the `serve` loop), hands it back to the loop, which
   watches it for the next request until `keepAliveTimeoutMs`; a worker also closes instead of keeping once the server
   is stopping. Rejected requests get the same bare status as under `serve` and are drained by the loop.
-- **The handler runs inside a mutex.** The handler moves into a `Mutex` (`/std/sync`), and each request calls it
-  inside `locked`, one request at a time. A `Router`, `AppRouter<State>` or `WebApp<State>` therefore keeps plain
-  state with no locking of its own, and its handlers are written exactly as for `serve`. Receiving, parsing,
-  serializing and sending run in parallel; everything the handler does, building a page's HTML included, does not.
+- **The handler runs inside an `RwLock`.** The handler moves into an `RwLock<Handler>` (`/std/sync`; the workers are
+  generic over `Handler`). A request for which `readsOnly(handler, request)` is true is answered by
+  `callView(handler, request, response)` inside `read`, any number at a time; every other request calls the
+  handler inside `write`, one at a time. `readsOnly` and `callView` are overloads in `/std/http`: the generic
+  default says `false` (a lambda, a `Router`, middleware that does not forward), and `AppRouter<State>`, `WebApp<State>`
+  and `RequestLog<Next>` have their own, so `AppRouter.view` and `WebApp.view` handlers are the ones that read.
+  A `Router`, `AppRouter<State>` or `WebApp<State>` therefore keeps plain state with no locking of its own, and its
+  `get`, `post` and other handlers are written exactly as for `serve`. Receiving, parsing, serializing and sending
+  run in parallel, and so do the views; the other handlers, building their page's HTML included, do not. A view
+  handler is a `Function`, whose `call` needs a mutable place, so each request calls its own clone of the stored
+  one: one small heap block per request. A request that no view answers takes the read lock once to ask
+  `readsOnly` and then the write lock.
 - **The handler must be sendable**, because the tasks share it: an app whose state holds a `Pointer` or a
-  `StringView` is rejected when the server erases it into a `Function`, with the path to the field: ``closure
-  cannot be a Function: capture `inner`, field `state` of WebApp<Borrowed>, field `bytes` of Borrowed is
-  Pointer<u8>``.
+  `StringView` is rejected where the server hands it to its workers, with the path to the field: ``spawn argument
+  `app` of ... is not sendable: field `value` of RwLock<WebApp<Borrowed>>, field `state` of WebApp<Borrowed>, field
+  `bytes` of Borrowed is Pointer<u8>``.
 - **Stopping:** when `stop()` is true the loop stops listening, closes the connections that wait for input and
   ends the workers; each worker finishes the request it is answering, and a connection still queued for a worker is
   closed unanswered. Then the call returns `Result.ok()`. The loop watches `/std/os` `stopSignalFd()` beside its

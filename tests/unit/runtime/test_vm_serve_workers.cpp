@@ -246,6 +246,9 @@ VmHostFunctions scriptedHosts(ScriptedNet &net, bool withClose = true) {
   bind(hosts, "ps_os_stop_signal_fd", {}, I32, [](const uint64_t *) { return slot(-1); });
   bind(hosts, "ps_os_cpu_count", {}, I32, [](const uint64_t *) { return slot(2); });
   bind(hosts, "ps_os_block_stop_signals", {}, I32, [](const uint64_t *) { return slot(0); });
+  bind(hosts, "ps_os_log_line", {IrHostValueKind::Text}, I32, [](const uint64_t *) {
+    return slot(0);
+  });
   bind(hosts, "scripted_idle", {}, I32, [&net](const uint64_t *) { return slot(net.lastPollIdle ? 1 : 0); });
   bind(hosts, "scripted_total", {}, I32, [&net](const uint64_t *) {
     return slot(net.scenario.answers);
@@ -402,6 +405,110 @@ main() {
   return(0i32)
 }
 )";
+
+// An `AppRouter` with `get`, `post` and `view` routes on one counter, served by `serveWorkers` (HANDLER is `router` or
+// `withRequestLog(router)`) or by `serve`. "/meet" is a view that signals that it is inside and then waits until
+// another view is inside too: a server that ran views one at a time would answer the first "alone". The wait is a
+// count of rounds, not a clock, and long enough that the other worker is certain to arrive.
+const char *ViewServerTemplate = R"(
+import /std/http/*
+import /std/http/server/*
+import /std/sync/*
+import /std/text/*
+import /std/text/view/*
+
+[host return<i32>]
+scripted_idle() {
+}
+
+[host return<i32>]
+scripted_cap() {
+}
+
+[host return<i32>]
+scripted_idle_ms() {
+}
+
+[struct]
+Counter() {
+  [i32 mut] hits{0i32}
+}
+
+[effects(io_err)]
+log_serve_error([ServeError] err) {
+  print_line_error(err.why())
+}
+
+[effects(heap_alloc)]
+show_get([Reference<Counter>] counter, [Request] request, [Reference<Response>] response) {
+  response.body.append("get ")
+  response.body.appendI64(convert<i64>(counter.hits))
+}
+
+[effects(heap_alloc)]
+count_hit([Reference<Counter>] counter, [Request] request, [Reference<Response>] response) {
+  counter.hits = counter.hits + 1i32
+  response.body.append("ok")
+}
+
+[effects(heap_alloc)]
+show_view([Counter] counter, [Request] request, [Reference<Response>] response) {
+  response.body.append("view ")
+  response.body.appendI64(convert<i64>(counter.hits))
+}
+
+[return<AppRouter<Counter>> effects(heap_alloc, atomic)]
+counter_router() {
+  [AppRouter<Counter> mut] router{AppRouter<Counter>{Counter{}}}
+  [Atomic<i32>] arrived{Atomic<i32>{0i32}}
+  router.get("/count", show_get)
+  router.post("/hit", count_hit)
+  router.view("/seen", show_view)
+  router.view("/meet", [arrived]([Counter] counter, [Request] request, [Reference<Response>] response) {
+    arrived.add(1i32)
+    [i32 mut] rounds{0i32}
+    while(arrived.load() < 2i32 && rounds < 5000000i32) {
+      rounds = rounds + 1i32
+    }
+    if(arrived.load() >= 2i32) {
+      response.body.append("met")
+    } else {
+      response.body.append("alone")
+    }
+  })
+  return(router)
+}
+
+[return<int> effects(heap_alloc, io_out, io_err, net_io, task, lock, channel, atomic) on_error<ServeError, log_serve_error>]
+main() {
+  [AppRouter<Counter> mut] router{counter_router()}
+  [Atomic<i32>] spins{Atomic<i32>{0i32}}
+  [mut] stop{[spins, mut rounds{0i32}]() {
+    if(stopRequested() || rounds > 100000i32) {
+      return(true)
+    }
+    if(scripted_idle() != 0i32) {
+      rounds = rounds + 1i32
+      spins.add(1i32)
+    }
+    return(stopRequested())
+  }}
+  [ServerConfig] config{ServerConfig{[port] 0i32, [workers] 2i32, [announce] false,
+                                     [maxRequestsPerConnection] scripted_cap(), [keepAliveTimeoutMs] scripted_idle_ms()}}
+  @SERVE@
+  return(0i32)
+}
+)";
+
+std::string viewServer(const std::string &entry) {
+  std::string source = ViewServerTemplate;
+  source.replace(source.find("@SERVE@"), 7, entry);
+  return source;
+}
+
+const char *PlainWorkers = "serveWorkersUntil(router, config, stop)?";
+const char *LoggedWorkers = "serveWorkersUntil(withRequestLog(router), config, stop)?";
+const char *SerialView = "serveUntil(router, config, stop)?";
 
 struct Served {
   bool ok = false;
@@ -581,6 +688,84 @@ void checkReused(const Served &served, int count, int32_t idleMs, const std::str
                 label << ": closed after " << served.idleMs[0] << " ms");
 }
 
+// The view servers compiled once each for the whole suite.
+const IrModule &viewModule(const std::string &entry) {
+  static std::map<std::string, IrModule> modules;
+  auto found = modules.find(entry);
+  if (found == modules.end()) {
+    IrModule module;
+    std::string error;
+    REQUIRE_MESSAGE(compileVm(viewServer(entry), module, error), error);
+    found = modules.emplace(entry, std::move(module)).first;
+  }
+  return found->second;
+}
+
+std::string post(const std::string &target) {
+  return "POST " + target + " HTTP/1.1\r\nHost: test\r\nContent-Length: 0\r\n\r\n";
+}
+
+// One client that sends a GET and a POST in an order that shows each answer: the answer to a request reads the
+// counter every earlier request changed.
+Scenario countingClient() {
+  Scenario scenario;
+  scenario.scripts.push_back({get("/seen"),
+                              get("/count"),
+                              post("/hit"),
+                              get("/count"),
+                              get("/seen"),
+                              post("/seen"),
+                              post("/hit"),
+                              get("/nowhere"),
+                              get("/seen")});
+  scenario.cap = 0;
+  scenario.idleMs = 3000;
+  return scenario;
+}
+
+// Two clients whose only request is a view that waits for the other one.
+Scenario twoMeetings() {
+  Scenario scenario;
+  scenario.scripts.push_back({get("/meet")});
+  scenario.scripts.push_back({get("/meet")});
+  scenario.cap = 0;
+  scenario.idleMs = 3000;
+  return scenario;
+}
+
+void checkCountingClient(const Served &served, const std::string &label) {
+  REQUIRE_MESSAGE(served.ok, served.error);
+  REQUIRE_MESSAGE(served.responses.size() == 1, label);
+  const std::vector<std::string> responses = splitResponses(served.responses[0]);
+  const std::vector<std::pair<std::string, std::string>> expected = {
+      {"200 OK", "view 0"},
+      {"200 OK", "get 0"},
+      {"200 OK", "ok"},
+      {"200 OK", "get 1"},
+      {"200 OK", "view 1"},
+      {"405 Method Not Allowed", ""},
+      {"200 OK", "ok"},
+      {"404 Not Found", ""},
+      {"200 OK", "view 2"},
+  };
+  REQUIRE_MESSAGE(responses.size() == expected.size(), label << ": " << served.responses[0]);
+  for (size_t i = 0; i < expected.size(); ++i) {
+    CHECK_MESSAGE(responses[i].rfind("HTTP/1.1 " + expected[i].first + "\r\n", 0) == 0,
+                  label << " " << i << ": " << responses[i]);
+    CHECK_MESSAGE(bodyOf(responses[i]) == expected[i].second,
+                  label << " " << i << ": " << responses[i]);
+  }
+  CHECK_MESSAGE(served.closed == 1, label);
+}
+
+void checkMeetings(const Served &served, const std::string &label) {
+  REQUIRE_MESSAGE(served.ok, served.error);
+  REQUIRE_MESSAGE(served.responses.size() == 2, label);
+  for (const std::string &response : served.responses) {
+    CHECK_MESSAGE(bodyOf(response) == "met", label << ": " << response);
+  }
+}
+
 } // namespace
 
 TEST_CASE("serveWorkers with 2 workers answers a fixed set of requests on the eager schedule") {
@@ -689,6 +874,41 @@ TEST_CASE("serve keeps one connection for 100 requests and closes it after the i
 TEST_CASE("serve closes on Connection: close, HTTP/1.0, a pipelined request and the request cap") {
   const IrModule &module = serialModule();
   checkClosingClients(serve(module, closingClients(), std::nullopt, false), "serve");
+}
+
+// The views of an `AppRouter` (docs/spec/stdlib-reference.md, /std/http/server). The connection stays open, so these
+// run on seeded schedules and task threads.
+TEST_CASE("serveWorkers answers a view and a get, and a get after a post sees the change") {
+  for (const char *entry : {PlainWorkers, LoggedWorkers}) {
+    const IrModule &module = viewModule(entry);
+    for (uint64_t seed = 1; seed <= 3; ++seed) {
+      checkCountingClient(serve(module, countingClient(), seed, false),
+                          std::string(entry) + " seed " + std::to_string(seed));
+    }
+    for (int run = 0; run < ThreadRuns; ++run) {
+      checkCountingClient(serve(module, countingClient(), std::nullopt, true),
+                          std::string(entry) + " threads");
+    }
+  }
+}
+
+TEST_CASE("serve answers a view and a get, and a get after a post sees the change") {
+  const IrModule &module = viewModule(SerialView);
+  checkCountingClient(serve(module, countingClient(), std::nullopt, false), "serve");
+}
+
+TEST_CASE("two views are inside the read lock together, with and without RequestLog") {
+  for (const char *entry : {PlainWorkers, LoggedWorkers}) {
+    const IrModule &module = viewModule(entry);
+    for (uint64_t seed = 1; seed <= 3; ++seed) {
+      checkMeetings(serve(module, twoMeetings(), seed, false),
+                    std::string(entry) + " seed " + std::to_string(seed));
+    }
+    for (int run = 0; run < ThreadRuns; ++run) {
+      checkMeetings(serve(module, twoMeetings(), std::nullopt, true),
+                    std::string(entry) + " threads");
+    }
+  }
 }
 
 TEST_SUITE_END();

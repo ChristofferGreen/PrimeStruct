@@ -125,8 +125,8 @@ handler that brings the menus, toolbars and session up to date after each event.
 7. Concurrency (docs/MultithreadingPrototype.md, Threads For Real; after the PrimeScroll startup lane and TODO-5770,
    TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
-   TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency). Deferred: read-only handlers under `RwLock` TODO-5804,
-   sessions TODO-5806; keep-alive TODO-5805 (done: `serve` and `serveWorkers` keep HTTP/1.1 connections open, with a
+   TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency), then read-only handlers under `RwLock` (`app.view`;
+   TODO-5804, landed, its compile-error test waits on TODO-6183). Deferred: sessions TODO-5806; keep-alive TODO-5805 (done: `serve` and `serveWorkers` keep HTTP/1.1 connections open, with a
    request cap and an idle timeout).
 8. Later: TODO-5954 (handler aliases in the stdlib), TODO-5718 (repeated and decoded
    parameters).
@@ -136,10 +136,11 @@ handler that brings the menus, toolbars and session up to date after each event.
 `serve` uses one core. `serveWorkers(handler, config)` (docs/spec/stdlib-reference.md, Workers;
 docs/MultithreadingPrototype.md, The Server) keeps
 one thread polling and accepting and hands each readable connection to `config.workers` worker threads over a
-`Channel`; workers receive, parse, serialize and send in parallel, and call the handler inside a `Mutex` that holds
+`Channel`; workers receive, parse, serialize and send in parallel, and call the handler inside an `RwLock` that holds
 the whole app, so `WebApp<State>` and `AppRouter<State>` apps keep plain struct state with no locking of their own
 (principle 2 still holds: the state comes in as the handler's parameter). Writing a page's HTML happens inside the
-handler, so it stays serialized until handlers that only read the state share a read lock (TODO-5804). Running
+handler, so it stays serialized unless the handler only reads the state: `app.view(pattern, handler)` registers a GET
+handler that takes `[State] state`, and the workers run views under the read lock, side by side (TODO-5804). Running
 several processes on one port was rejected: each would have its own copy of the state. The example apps
 `todo_web` and `hello_button` call `serveWorkers` (`WORKERS` sets the number of workers; the default is one per
 processor).
@@ -219,4 +220,26 @@ What the numbers say:
   and 12,408 for 4 workers on the 32 KB form (3.20x, the `serve` run being low in that run), 1036 and 1040 on
   `GET /work`, and 232 and 187 on the list page. The 2.5x target is therefore met in ratio, with the new limit
   measured: the work of a worker is no longer what is measured at the top, the connection setup is.
-- **A handler that computes under the lock stays at 1x**, as expected: it is the baseline for TODO-5804.
+- **A handler that computes under the lock stays at 1x**, as expected: it was the baseline for TODO-5804.
+
+### Measured with views
+
+`GET /work` of `bench_server` and the list page of `todo_web` registered with `view`, 2026-11-22, the same
+machine and runner, three runs back to back (`run_http_benchmarks.py`; the first built the programs). The machine
+was shared with other builds: the load average before the scenarios was 15 to 65 on 11 processors, so the absolute
+requests per second vary by a factor of three between runs and only the ratios of one run mean anything. 4 workers
+against `serve` in the same run:
+
+| Run | `GET /work` serve / 4 workers | Against `serve` | List page serve / 4 workers | Against `serve` |
+| --- | ---: | ---: | ---: | ---: |
+| 1 | 453 / 2725 | 6.01x | 274 / 313 | 1.14x |
+| 2 | 359 / 1419 | 3.95x | 277 / 830 | 3.00x |
+| 3 | 371 / 1288 | 3.48x | 101 / 263 | 2.60x |
+
+The targets are 2.5x for `GET /work` (met in all three runs) and 1.5x for the list page (met in two; the first run
+of the page, 1.14x, was the first scenario after a build and its 1 worker run had a p99 of 238 ms, so the load of
+that minute is the likely cause, not a property of the code: the median is 2.60x). A reading
+of "met" needs an idle machine, which these runs did not have; the 1 worker rows (0.68x to 0.88x of `serve` on the
+page, 1.04x to 1.09x on `/work`) show that a view costs a worker about what `serve` costs plus the lock and the
+clone of the handler. Before this change the same scenarios were 0.95x and 1.01x. `POST /form`, which is not a
+view, gave 4.11x, 2.11x and 2.31x in the same runs, which is the noise of the form row in this table too.

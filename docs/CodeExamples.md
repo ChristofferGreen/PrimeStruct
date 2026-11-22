@@ -1032,19 +1032,25 @@ button_form([Writer mut] page, [String] action, [StringView] label) {
   page.endForm()
 }
 
-// The region "todos": the page writes it inside `<ul id="todos">`, and a fragment answer is the same items.
+// The items, read-only: the page writes them inside `<ul id="todos">`.
 [effects(heap_alloc)]
-write_todos([Reference<Writer>] page, [Reference<TodoList>] list) {
+write_items([Reference<Writer>] page, [TodoList] list) {
   for([i32 mut] index{0i32}; index < list.todos.count(); ++index) {
     write_todo(page, list.todos[index])
   }
+}
+
+// The region "todos": a fragment answer is the same items.
+[effects(heap_alloc)]
+write_todos([Reference<Writer>] page, [Reference<TodoList>] list) {
+  write_items(page, list)
 }
 
 [return<WebApp<TodoList>> effects(heap_alloc, io_err)]
 todo_app() {
   [WebApp<TodoList> mut] app{WebApp<TodoList>{[state] TodoList{}}}
   app.region("todos", write_todos)
-  app.get("/", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
+  app.view("/", []([TodoList] list, [Request] request, [Reference<Response>] response) {
     response.html(todo_page(list))
   })
   app.post("/todos", []([Reference<TodoList>] list, [Request] request, [Reference<Response>] response) {
@@ -1066,8 +1072,9 @@ Why this is good:
 - The state is a parameter, never a capture: a stored handler cannot borrow an outer binding, and a value capture
   would give each route its own copy. The router owns the one `TodoList` and lends it to the handler for the call.
 - The state is a plain struct with methods (`add`, `toggle`, `remove`); handlers only read the request, call one of
-  them and answer. The server calls one handler at a time (`serveWorkers` holds the app in a `Mutex`), so the
-  state needs no locking of its own.
+  them and answer. The server calls the handlers that change the state one at a time (`serveWorkers` holds the app in an
+  `RwLock`), so the state needs no locking of its own; the page is a `view`, which takes `[TodoList] list` and runs
+  beside other views.
 - Every POST answers `redirect("/")`, so the browser shows the page again with a GET and a reload never repeats a
   click. The buttons work with no JavaScript.
 - One function, `write_todos`, writes the list for the page and for the fragment, so the two cannot drift apart.

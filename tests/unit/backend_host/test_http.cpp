@@ -804,11 +804,10 @@ TEST_CASE("serveWorkers rejects an app whose state is not sendable") {
       " -o " + shellQuote(scratch("workers_not_sendable.cpp")) + " > " + shellQuote(log) + " 2>&1");
   CHECK(status != 0);
   const std::string diagnostics = readFile(log);
-  CHECK_MESSAGE(
-      diagnostics.find(
-          "closure cannot be a Function: capture `inner`, field `state` of WebApp<Borrowed>, "
-          "field `bytes` of Borrowed is Pointer<u8>") != std::string::npos,
-      diagnostics);
+  CHECK_MESSAGE(diagnostics.find("is not sendable: field `value` of RwLock<WebApp<Borrowed>>, "
+                                 "field `state` of WebApp<Borrowed>, "
+                                 "field `bytes` of Borrowed is Pointer<u8>") != std::string::npos,
+                diagnostics);
 }
 
 TEST_SUITE_END();

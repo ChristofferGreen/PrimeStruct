@@ -262,6 +262,8 @@ namespace web {
     // The state that every route and control handler reads and changes.
     [public State mut] state
     [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
+    // The read-only GET routes (`view`), tried before `routes`.
+    [public vector<AppView<State>> mut] views{vector<AppView<State>>()}
     [public vector<ClickHandler<State>> mut] clicks{vector<ClickHandler<State>>()}
     [public vector<RegionRenderer<State>> mut] regions{vector<RegionRenderer<State>>()}
     [public vector<PointerHandler<State>> mut] pointers{vector<PointerHandler<State>>()}
@@ -402,6 +404,31 @@ namespace web {
       this.route("DELETE", pattern, handler)
     }
 
+    // Adds a read-only GET route as `AppRouter.view` does: the handler takes the state as `[State] state` and runs
+    // under the read lock of `serveWorkers`. A view's answer is not turned into a region fragment (a fragment answers
+    // the redirect of a POST), and a path under "/_on/" or "/_web/" belongs to the controls and the script, not to a
+    // view.
+    [mut effects(heap_alloc)]
+    view([string] pattern, [StateViewHandler<State> move] handler) {
+      this.views.push(AppView<State>{[pattern] literalTextOf(pattern), [handler] handler})
+    }
+
+    // The index of the view that answers `request`, or -1.
+    [return<i32>]
+    viewAt([Request] request) {
+      [StringView] path{request.path}
+      if(path.startsWith("/_on/") || path.startsWith("/_web/")) {
+        return(-1i32)
+      }
+      return(viewIndex<State>(this.views, request))
+    }
+
+    // Answers a request that a view matches (`readsOnly`), with the state read-only.
+    [effects(heap_alloc)]
+    callView([Request] request, [Reference<Response>] response) {
+      callViewAt<State>(this.views, this.viewAt(request), this.state, request, response)
+    }
+
     // Dispatches one request: a control's route to its handler, "/_web/app.js" to the fragment script, anything else
     // as `AppRouter.call` does. A redirect that answers a fragment request becomes the fragment (`answerFragment`).
     [mut effects(heap_alloc)]
@@ -416,7 +443,11 @@ namespace web {
         serve_web_asset(request, response)
         return()
       }
-      [bool mut] pathMatched{false}
+      if(this.viewAt(request) >= 0i32) {
+        this.callView(request, response)
+        return()
+      }
+      [bool mut] pathMatched{viewsMatchPath<State>(this.views, path)}
       [i32 mut] index{0i32}
       while(index < this.routes.count()) {
         [StringView] pattern{this.routes[index].pattern.view()}
@@ -566,6 +597,24 @@ namespace web {
       return()
     }
     response.text(fragmentScript(), "text/javascript; charset=utf-8")
+  }
+
+}
+}
+
+// `serveWorkers` runs a request on a `WebApp` under the read lock when a view answers it. These overloads are of
+// `/std/http/readsOnly` and `/std/http/callView`, so the server finds them without importing /std/web.
+namespace std {
+namespace http {
+
+  [public return<bool>]
+  readsOnly<State>([/std/web/WebApp<State>] app, [Request] request) {
+    return(app.viewAt(request) >= 0i32)
+  }
+
+  [public effects(heap_alloc)]
+  callView<State>([/std/web/WebApp<State>] app, [Request] request, [Reference<Response>] response) {
+    app.callView(request, response)
   }
 
 }

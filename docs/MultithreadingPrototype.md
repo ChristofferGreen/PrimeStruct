@@ -1089,18 +1089,23 @@ main() {
   mutex, serializes the response, sends it, closes the connection and hands the slot back (a second channel and
   the wake pipe). An incomplete one goes back to the poller to be watched again. A slow client still holds only
   its own slot, never a worker (TODO-5705's guarantee).
-- **The handler runs under a mutex:** the handler value (for a `WebApp<State>` its state, its routes and their
-  closures' own `mut` captures) moves into a `Mutex`, and every request calls it inside `locked`. Existing
-  `WebApp<State>`, `AppRouter<State>` and `Router` apps need no change beyond the call and the effects `task`,
+- **The handler runs under an `RwLock`:** the handler value (for a `WebApp<State>` its state, its routes and their
+  closures' own `mut` captures) moves into an `RwLock<Handler>`; the workers are generic over `Handler`. Decided
+  2026-11-22 (open question 5): a request for which `readsOnly(handler, request)` is true is answered by
+  `callView(handler, request, response)` inside `read`, any number at a time, and every other request calls the
+  handler inside `write`. `readsOnly` and `callView` are free-function overloads in `/std/http` (the language has no
+  optional method to ask an arbitrary `Handler`): the generic default says `false`; `AppRouter<State>` and
+  `WebApp<State>` answer true for a request that one of their `view` routes (GET, `[State] state`) matches;
+  `RequestLog<Next>`, which `withRequestLog` returns, forwards both to `next`. A `Function` cannot be called under a
+  read lock (its `call` is `mut`), so the view handler is cloned into a `mut` local inside `read`: one small heap
+  block per request. Existing `WebApp<State>`, `AppRouter<State>` and `Router` apps need no change beyond the call and the effects `task`,
   `lock`, `channel` and `atomic` in `main`; their
   route tables store plain `Function` handlers, which are sendable by construction, and keep their literal names in
-  the sendable `LiteralText`, so the app is sendable when its `State` is. The workers are not generic: the server
-  erases the handler into a `Function` and locks a `Mutex` of that, so an app that is not sendable is rejected by
-  the `Function` rule (``closure cannot be a Function: capture `inner`, field `state` of ...``). A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
-- **What runs in parallel:** receiving, parsing, serializing the response and sending. What does not: everything
-  the handler does, including writing the page's HTML, which happens inside handlers. A handler that does heavy
-  work therefore gains little until handlers that only read the state share a read lock (TODO-5804); the server
-  leaves measure both cases.
+  the sendable `LiteralText`, so the app is sendable when its `State` is. An app that is not sendable is rejected
+  where the server hands the `RwLock` to a worker (``spawn argument `app` of ... is not sendable: field `value` of RwLock<WebApp<Borrowed>>, field `state` of ...``). A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
+- **What runs in parallel:** receiving, parsing, serializing the response and sending, and the views. What does not:
+  the `get`, `post` and other handlers, including writing their page's HTML. Measured in docs/WebAppsPlan.md,
+  Concurrency. A view that writes the state is a data race that the compiler does not yet stop (TODO-6183).
 - The poller watches `/std/os` `stopSignalFd()`, a pipe the signal handler writes to, so `SIGINT` or `SIGTERM` ends
   its `poll` at once on whichever thread the signal lands, at any moment from startup on. Worker threads also block
   both signals (`blockStopSignals`), so their reads and writes are not interrupted. On stop the poller stops
@@ -1118,8 +1123,8 @@ main() {
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).
-- **Later, filed but deferred:** read-only handlers under `RwLock` (TODO-5804; the `RwLock` itself is done), sessions
-  (TODO-5806). Keep-alive (TODO-5805) is done: a worker that answers a request with `keep-alive` hands the slot back
+- **Later, filed but deferred:** the compile error for a view that writes its state (TODO-5804's last acceptance,
+  blocked on TODO-6183), sessions (TODO-5806). Keep-alive (TODO-5805) is done: a worker that answers a request with `keep-alive` hands the slot back
   to the poller, which watches it until `keepAliveTimeoutMs` passes.
 
 ### Open Questions
@@ -1136,7 +1141,7 @@ entry points check the thread at run time.
    count), so a spawn argument just works. The alternative is an explicit `share()` and non-copyable handles.
 3. **Threads.** Recommended: one OS thread per task now, no pool, because tasks block on locks and channels.
 4. **Handlers serialized in the first server.** Recommended: accept that page rendering runs one request at a time
-   until TODO-5804, since it keeps every existing app correct with no change.
+   unless the handler is registered with `view` (TODO-5804), since it keeps every existing app correct with no change.
 5. **How a handler says it only reads.** Decided 2026-11-20: a separately named registration, `app.view(pattern, handler)`, whose state parameter is `[State] state`; `get`/`post`/`route` keep `[Reference<State>] state`. The options below were not taken. Was: by its state parameter, `[State] state` (a read-only borrow)
    against `[Reference<State>] state`, which needs overloads by `Function` type (same-arity struct method overloads resolve by argument type since TODO-5735; a lambda's type is not known there); the alternative is a
    separately named registration such as `app.view(pattern, handler)`.

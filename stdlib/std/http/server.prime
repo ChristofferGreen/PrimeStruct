@@ -7,8 +7,10 @@
 // response, then keep the connection for the next request or close it (`keepAlive`, `maxRequestsPerConnection`,
 // `keepAliveTimeoutMs`). A silent or slow client holds only its own slot, for at most `readTimeoutMs`; only writing a
 // response blocks the loop, for at most `writeTimeoutMs`.
-// `serveWorkers`: the same loop only accepts and watches; worker tasks read, call the handler one at a time inside a
-// `Mutex` and write, so a slow write holds one worker and not the loop.
+// `serveWorkers`: the same loop only accepts and watches; worker tasks read, call the handler and write, so a slow
+// write holds one worker and not the loop. The handler is held in an `RwLock`: a request that only reads the state
+// (`AppRouter.view`, `WebApp.view`) runs under the read lock beside other readers, any other request alone under the
+// write lock.
 import /std/collections/*
 import /std/http/*
 import /std/net/*
@@ -422,7 +424,7 @@ namespace server {
   // handler inside the app's mutex and answers. Only the handler call holds the mutex; reading, parsing, serializing
   // and sending run beside the other workers.
   [effects(net_io, heap_alloc, lock, atomic) return<SlotDone>]
-  work_slot([Mutex<RequestHandler>] app,
+  work_slot<Handler>([RwLock<Handler>] app,
             [SlotJob] job,
             [Atomic<i32>] stopping,
             [SlotBuffers] buffers,
@@ -455,10 +457,21 @@ namespace server {
     if(outcome == 0i32) {
       [bool] keep{stopping.load() == 0i32 && keeps_connection(request, config, job.served, total)}
       response.clear()
-      [mut] answer{[ref request, ref response]([Reference<RequestHandler>] handler) {
-        handler(request, location(response))
-      }}
-      app.locked(answer)
+      // A request that only reads the handler's state (`readsOnly`) is answered under the read lock, beside other
+      // readers; any other runs alone under the write lock. The handler's tables do not change while serving.
+      [bool] viewed{app.read([request, ref response]([Handler] handler) {
+        if(readsOnly(handler, request)) {
+          callView(handler, request, location(response))
+          return(true)
+        }
+        return(false)
+      })}
+      if(!viewed) {
+        [mut] answer{[ref request, ref response]([Reference<Handler>] handler) {
+          handler(request, location(response))
+        }}
+        app.write(answer)
+      }
       [String] bytes{response.serializeConnection(keep)}
       send_text(connection, bytes, config.writeTimeoutMs)
       if(keep) {
@@ -492,7 +505,7 @@ namespace server {
   // One worker task: takes readable connections from `jobs` until the channel is closed and empty. It keeps one
   // `Response` and one block of `maxRequestBytes` for the request it is parsing, as `serve` keeps one of each.
   [effects(net_io, heap_alloc, lock, channel, atomic) return<void>]
-  work_slots([Mutex<RequestHandler>] app,
+  work_slots<Handler>([RwLock<Handler>] app,
              [Channel<SlotJob>] jobs,
              [Channel<SlotDone>] finished,
              [Atomic<i32>] ready,
@@ -513,7 +526,7 @@ namespace server {
           open = false
         }
         some(job) {
-          return_slot(finished, ready, full, wakeWriter, work_slot(app, job, stopping, buffers, config, own, response))
+          return_slot(finished, ready, full, wakeWriter, work_slot<Handler>(app, job, stopping, buffers, config, own, response))
         }
       }
     }
@@ -727,7 +740,7 @@ namespace server {
   // Starts `remaining` more workers and then runs the poller on this task; each level waits for the worker it
   // started, so every worker has ended when the first call returns.
   [effects(net_io, heap_alloc, task, lock, channel, atomic)]
-  run_workers<Stop>([Mutex<RequestHandler>] app,
+  run_workers<Handler, Stop>([RwLock<Handler>] app,
                     [Channel<SlotJob>] jobs,
                     [Channel<SlotDone>] finished,
                     [Atomic<i32>] ready,
@@ -744,8 +757,8 @@ namespace server {
       poll_slots<Stop>(jobs, finished, ready, full, stopping, buffers, config, listener, pipe.reader, slots, stop)
       return()
     }
-    [Task<void>] worker{[spawn] work_slots(app, jobs, finished, ready, full, stopping, buffers, pipe.writer, config)}
-    run_workers<Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, remaining - 1i32, stop)
+    [Task<void>] worker{[spawn] work_slots<Handler>(app, jobs, finished, ready, full, stopping, buffers, pipe.writer, config)}
+    run_workers<Handler, Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, remaining - 1i32, stop)
     wait(worker)
   }
 
@@ -758,8 +771,10 @@ namespace server {
   }
 
   // `serveUntil` with worker tasks (threads on optexe): this task polls and accepts, and `config.workers` workers
-  // read, parse, call the handler and answer. The handler moves into a `Mutex` and every request calls it inside
-  // `locked`, one at a time, so a `Router`, `AppRouter<State>` or `WebApp<State>` keeps plain state; receiving,
+  // read, parse, call the handler and answer. The handler moves into an `RwLock`: a request for which
+  // `readsOnly(handler, request)` is true (a view of an `AppRouter` or `WebApp`, through `RequestLog` too) is
+  // answered by `callView` under the read lock, any number at a time, and every other request is called inside
+  // `write`, one at a time, so a `Router`, `AppRouter<State>` or `WebApp<State>` keeps plain state; receiving,
   // parsing, serializing and sending run in parallel. The handler must be sendable. When `stop()` is true the
   // server stops listening and closes the connections that wait for input at once, and returns when each worker
   // has finished the request it is answering.
@@ -788,17 +803,13 @@ namespace server {
     [i32] workers{if(asked < max_workers(), then() { asked }, else() { max_workers() })}
     [String mut] store{slot_store(slots * capacity)}
     [SlotBuffers] buffers{slot_buffers(store, capacity)}
-    // Workers are not generic: the handler is called as a `Function`, which also requires it to be sendable.
-    [RequestHandler mut] erased{[mut inner{handler}]([Request] request, [Reference<Response>] response) {
-      inner(request, response)
-    }}
-    app{Mutex<RequestHandler>{move(erased)}}
+    [RwLock<Handler>] app{RwLock<Handler>{move(handler)}}
     jobs{Channel<SlotJob>{[capacity] slots}}
     finished{Channel<SlotDone>{[capacity] slots}}
     ready{Atomic<i32>{0i32}}
     full{Atomic<i32>{0i32}}
     stopping{Atomic<i32>{0i32}}
-    run_workers<Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, workers, stop)
+    run_workers<Handler, Stop>(app, jobs, finished, ready, full, stopping, buffers, config, listener, pipe, slots, workers, stop)
     // Every worker has ended. What they handed back since the poller stopped is still open.
     [i32 mut] left{ready.exchange(0i32)}
     while(left > 0i32) {
@@ -825,26 +836,86 @@ namespace server {
 
 
   // Middleware: a handler that calls `next` and then logs "METHOD target STATUS Nms" for the request through /std/os
-  // logLine. It is generic, so `next` is called directly; wrap a Router or any other handler.
-  [public effects(heap_alloc)]
-  withRequestLog<Next>([Next move] next) {
-    return([mut inner{next}]([Request] request, [Reference<Response>] response) {
+  // logLine. Wrap a Router or any other handler; a view of a wrapped `AppRouter` or `WebApp` is still answered under
+  // the read lock of `serveWorkers` (`readsOnly` and `callView` forward to `next`).
+  [public struct]
+  RequestLog<Next>() {
+    [public Next mut] next
+
+    [mut effects(heap_alloc)]
+    call([Request] request, [Reference<Response>] response) {
       [i64] start{monotonicMs()}
-      inner(request, response)
-      [i64] elapsed{monotonicMs() - start}
-      [String mut] line{String{}}
-      line.appendBytes(request.method.data, request.method.count())
-      line.append(" ")
-      line.appendBytes(request.target.data, request.target.count())
-      line.append(" ")
-      line.appendI64(convert<i64>(response.status))
-      line.append(" ")
-      line.appendI64(elapsed)
-      line.append("ms")
-      logLine(line)
-    })
+      this.next(request, response)
+      log_request(request, response, start)
+    }
+
+    // Whether `next` answers `request` read-only (`readsOnly`).
+    [return<bool>]
+    readsOnlyRequest([Request] request) {
+      return(reads_only_of<Next>(this.next, request))
+    }
+
+    // `next`'s view answer (`callView`), logged as `call` logs.
+    [effects(heap_alloc)]
+    callViewRequest([Request] request, [Reference<Response>] response) {
+      [i64] start{monotonicMs()}
+      call_view_of<Next>(this.next, request, response)
+      log_request(request, response, start)
+    }
+  }
+
+  [public return<RequestLog<Next>> effects(heap_alloc)]
+  withRequestLog<Next>([Next move] next) {
+    return(RequestLog<Next>{[next] next})
+  }
+
+  // `readsOnly` and `callView` of `inner`, whose type a `RequestLog` method spells as its `Next`.
+  [return<bool>]
+  reads_only_of<Inner>([Inner] inner, [Request] request) {
+    return(readsOnly(inner, request))
+  }
+
+  [effects(heap_alloc)]
+  call_view_of<Inner>([Inner] inner, [Request] request, [Reference<Response>] response) {
+    // Through a typed local: a `Reference` parameter passed on to an overloaded generic helper does not match its
+    // `Reference<Response>` parameter.
+    [Reference<Response>] answer{response}
+    callView(inner, request, answer)
+  }
+
+  // Writes the log line of a request answered with `response` since `start`.
+  [effects(heap_alloc)]
+  log_request([Request] request, [Reference<Response>] response, [i64] start) {
+    [i64] elapsed{monotonicMs() - start}
+    [String mut] line{String{}}
+    line.appendBytes(request.method.data, request.method.count())
+    line.append(" ")
+    line.appendBytes(request.target.data, request.target.count())
+    line.append(" ")
+    line.appendI64(convert<i64>(response.status))
+    line.append(" ")
+    line.appendI64(elapsed)
+    line.append("ms")
+    logLine(line)
   }
 
 }
+}
+}
+
+// The overloads of `readsOnly` and `callView` (/std/http) for `RequestLog`: a request is read-only when `next`'s is.
+namespace std {
+namespace http {
+
+  [public return<bool>]
+  readsOnly<Next>([/std/http/server/RequestLog<Next>] handler, [Request] request) {
+    return(handler.readsOnlyRequest(request))
+  }
+
+  [public effects(heap_alloc)]
+  callView<Next>([/std/http/server/RequestLog<Next>] handler, [Request] request, [Reference<Response>] response) {
+    handler.callViewRequest(request, response)
+  }
+
 }
 }

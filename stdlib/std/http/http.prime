@@ -955,6 +955,77 @@ namespace http {
     [public StateRequestHandler<State> mut] handler
   }
 
+  // The type of a view's handler: a read-only route of an app with state. It takes the state as `[State] state`, not
+  // `Reference<State>`, so writing the state in it is a compile error, which is what lets `serveWorkers` run views
+  // under the read lock, many at a time (`AppRouter.view`).
+  [public alias<Function<void, State, Request, Reference<Response>>>]
+  StateViewHandler<State>() {}
+
+  // One view of an AppRouter or a WebApp: a pattern and the read-only handler it calls. A view answers GET.
+  [public struct]
+  AppView<State>() {
+    [public LiteralText] pattern{LiteralText{}}
+    [public StateViewHandler<State> mut] handler
+  }
+
+  // The index of the view of `views` that answers `request` (a GET whose path matches the view's pattern), or -1.
+  [public return<i32>]
+  viewIndex<State>([vector<AppView<State>>] views, [Request] request) {
+    [bool] got{request.method.equalsText("GET")}
+    if(!got) {
+      return(-1i32)
+    }
+    for([i32 mut] index{0i32}; index < views.count(); ++index) {
+      [StringView] pattern{views[index].pattern.view()}
+      if(pattern_matches(pattern, request.path)) {
+        return(index)
+      }
+    }
+    return(-1i32)
+  }
+
+  // Whether any view of `views` matches `path`, whatever the method: a path that only a view serves is 405 for a POST.
+  [public return<bool>]
+  viewsMatchPath<State>([vector<AppView<State>>] views, [StringView] path) {
+    for([i32 mut] index{0i32}; index < views.count(); ++index) {
+      [StringView] pattern{views[index].pattern.view()}
+      if(pattern_matches(pattern, path)) {
+        return(true)
+      }
+    }
+    return(false)
+  }
+
+  // Calls view `index` of `views` with `state`. The handler is a `Function`, whose `call` needs a mutable place, so
+  // each request calls its own clone of the stored one (one small heap block per request) and `views` stays
+  // read-only: any number of tasks may be inside this at once.
+  [public effects(heap_alloc)]
+  callViewAt<State>([vector<AppView<State>>] views,
+                    [i32] index,
+                    [State] state,
+                    [Request] request,
+                    [Reference<Response>] response) {
+    [Request mut] routed{request}
+    routed.route = views[index].pattern.view()
+    [StateViewHandler<State> mut] run{views[index].handler}
+    run(state, routed, response)
+  }
+
+  // How `serveWorkers` learns whether a request only reads the handler's state: `readsOnly(handler, request)` is true
+  // when `callView(handler, request, response)` answers it, and then the server calls `callView` under the read lock
+  // of the app, beside other readers, instead of `call` under the write lock. This generic version is the default
+  // for every handler (a lambda, a `Router`, middleware that does not forward): it writes. `AppRouter`, `WebApp` and
+  // `RequestLog` have their own overloads.
+  [public return<bool>]
+  readsOnly<Handler>([Handler] handler, [Request] request) {
+    return(false)
+  }
+
+  // Answers a request for which `readsOnly` is true. The default never runs: its handlers write.
+  [public effects(heap_alloc)]
+  callView<Handler>([Handler] handler, [Request] request, [Reference<Response>] response) {
+  }
+
   // A Router that holds the app's state and passes it to each handler as a `Reference<State>` first argument. A
   // stored handler cannot capture the state by reference, so this is how routes share it. It is a handler itself.
   [public struct]
@@ -962,6 +1033,8 @@ namespace http {
     // The state every route reads and changes, such as a struct of the app's records.
     [public State mut] state
     [public vector<AppRoute<State>> mut] routes{vector<AppRoute<State>>()}
+    // The read-only GET routes (`view`); a request that matches one is answered by it before `routes` are tried.
+    [public vector<AppView<State>> mut] views{vector<AppView<State>>()}
 
     // Adds a route as `Router.route` does; the handler takes the state first.
     [mut effects(heap_alloc)]
@@ -991,10 +1064,29 @@ namespace http {
       this.route("DELETE", pattern, handler)
     }
 
+    // Adds a read-only GET route: the handler takes the state as `[State] state`, so it cannot change it. Under
+    // `serveWorkers` views run under the app's read lock, many at a time, while `get` and the other routes run alone.
+    // A request that a view matches is answered by the view even when a `get` route has the same pattern; `serve`
+    // runs both kinds the same way.
+    [mut effects(heap_alloc)]
+    view([string] pattern, [StateViewHandler<State> move] handler) {
+      this.views.push(AppView<State>{[pattern] literalTextOf(pattern), [handler] handler})
+    }
+
+    // Answers a request that a view matches (`readsOnly`), with the state read-only.
+    [effects(heap_alloc)]
+    callView([Request] request, [Reference<Response>] response) {
+      callViewAt<State>(this.views, viewIndex<State>(this.views, request), this.state, request, response)
+    }
+
     // Dispatches one request as `Router.call` does, passing the state to the handler.
     [mut effects(heap_alloc)]
     call([Request] request, [Reference<Response>] response) {
-      [bool mut] pathMatched{false}
+      if(viewIndex<State>(this.views, request) >= 0i32) {
+        this.callView(request, response)
+        return()
+      }
+      [bool mut] pathMatched{viewsMatchPath<State>(this.views, request.path)}
       [i32 mut] index{0i32}
       while(index < this.routes.count()) {
         [StringView] pattern{this.routes[index].pattern.view()}
@@ -1012,6 +1104,17 @@ namespace http {
       }
       response.status = if(pathMatched, then() { 405i32 }, else() { 404i32 })
     }
+  }
+
+  // `serveWorkers` runs a request on an `AppRouter` under the read lock when a view answers it.
+  [public return<bool>]
+  readsOnly<State>([AppRouter<State>] app, [Request] request) {
+    return(viewIndex<State>(app.views, request) >= 0i32)
+  }
+
+  [public effects(heap_alloc)]
+  callView<State>([AppRouter<State>] app, [Request] request, [Reference<Response>] response) {
+    app.callView(request, response)
   }
 
 }

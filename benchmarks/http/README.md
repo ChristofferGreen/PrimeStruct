@@ -19,7 +19,7 @@ that both load generators report failures (`tests/scripts/test_http_load.py`) an
   send one request per connection for a fixed time and report requests per second and the p50 and p99 latency.
   It exits 1 when a response is not 2xx or 3xx and 2 when a client cannot connect.
 - `benchmarks/http/bench_server.prime`: a server with a route whose handler does little (`POST /form`) and a
-  route whose handler computes for about 1 ms (`GET /work`). `SERVER=serve` or `SERVER=workers` with `WORKERS=n`.
+  `view` route that computes for about 1 ms (`GET /work`). `SERVER=serve` or `SERVER=workers` with `WORKERS=n`.
 - `benchmarks/http/run_http_benchmarks.py`: builds the programs, runs every scenario on `serve`, 1 worker and 4
   workers back to back and prints the table.
 
@@ -27,9 +27,9 @@ that both load generators report failures (`tests/scripts/test_http_load.py`) an
 
 | Scenario | Program | What it shows |
 | --- | --- | --- |
-| List page with 200 items, `GET /` | `examples/apps/todo_web` | A page written inside the handler, so inside the app's mutex |
+| List page with 200 items, `GET /` | `examples/apps/todo_web` | A page written by a `view` handler, so under the read lock |
 | 32 KB form, `POST /form` | `bench_server` | Receiving and parsing, which workers do side by side |
-| About 1 ms of work, `GET /work` | `bench_server` | A handler that holds the mutex: the baseline for read-only handlers under a read lock |
+| About 1 ms of work, `GET /work` | `bench_server` | A `view` handler that computes: read-only handlers share the read lock |
 
 `serve` for the list page is a copy of the example with `serveWorkers(` replaced by `serve(`.
 

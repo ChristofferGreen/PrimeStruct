@@ -5,8 +5,8 @@
 // Routes:
 //   POST /form   a handler that does little: it counts the request and answers the size of the posted body, so a
 //                large form costs receiving and parsing, which the workers do side by side
-//   GET  /work   a handler that computes for WORK_ROUNDS rounds (about 1 ms by default); under `serveWorkers` it
-//                holds the app's mutex for all of it
+//   GET  /work   a view (`router.view`) that computes for WORK_ROUNDS rounds (about 1 ms by default); under
+//                `serveWorkers` it runs under the read lock, beside other views
 import /std/http/*
 import /std/http/server/*
 import /std/os/*
@@ -42,8 +42,7 @@ churn([i32] rounds) {
 }
 
 [effects(heap_alloc)]
-do_work([Reference<Bench>] bench, [Request] request, [Reference<Response>] response) {
-  bench.requests = bench.requests + 1i64
+do_work([Bench] bench, [Request] request, [Reference<Response>] response) {
   response.body.appendI64(churn(bench.workRounds))
 }
 
@@ -52,7 +51,7 @@ bench_router() {
   [String] rounds{envOr(stringFrom("WORK_ROUNDS"), stringFrom("260000"))}
   [AppRouter<Bench> mut] router{AppRouter<Bench>{Bench{[workRounds] rounds.view().parseI32Or(260000i32)}}}
   router.post("/form", take_form)
-  router.get("/work", do_work)
+  router.view("/work", do_work)
   return(router)
 }
 
