@@ -554,4 +554,105 @@ main() {
   CHECK_MESSAGE(error.find("no viable overload for /pick") != std::string::npos, error);
 }
 
+// An unqualified call of an overloaded generic helper resolves from a method of a generic struct, from a namespace and
+// from a lambda, as the qualified call does (docs/spec/language-core.md, Helper overloading).
+
+TEST_CASE("an unqualified generic overload call resolves in a struct method") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<H>([H] h) {
+  return(0i32)
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(1i32)
+}
+
+[struct]
+Wrap<N>() {
+  [public N mut] next
+
+  [return<i32>]
+  ask() {
+    return(mode(this.next))
+  }
+}
+
+[return<int>]
+main() {
+  [Wrap<Box<i32>> mut] w{Wrap<Box<i32>>{Box<i32>{3i32}}}
+  return(w.ask())
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("an unqualified generic overload call resolves in a namespace") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<H>([H] h) {
+  return(0i32)
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(1i32)
+}
+
+namespace lib {
+  [return<i32>]
+  ask([Box<i32>] b) {
+    return(mode(b))
+  }
+}
+
+[return<int>]
+main() {
+  return(/lib/ask(Box<i32>{3i32}))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("an unqualified generic overload call resolves in a lambda") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<H>([H] h) {
+  return(0i32)
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [Box<i32>] b{Box<i32>{3i32}}
+  f{[b]([i32] k) { return(mode(b)) }}
+  return(f(1i32))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_SUITE_END();

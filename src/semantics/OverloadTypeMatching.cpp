@@ -131,27 +131,17 @@ bool overloadTypePatternMatches(const std::string &pattern,
   return true;
 }
 
-
-bool overloadArgumentTypeFits(const std::string &pattern,
-                              const std::string &actual,
-                              const std::vector<std::string> &templateArgs) {
-  if (overloadTypePatternMatches(pattern, actual, templateArgs)) {
-    return true;
-  }
-  // A `Reference<T>` argument reads as its referent in a value position (docs/spec/pointers-and-references.md), so it
-  // also fits a parameter declared `T`.
-  const std::string actualText = overloadTypeTextWithoutSpaces(actual);
-  const std::string patternText = overloadTypeTextWithoutSpaces(pattern);
-  if (overloadTypeLeafName(actualText) != "Reference" || overloadTypeLeafName(patternText) == "Reference") {
+bool overloadReferentTypeText(const std::string &typeText, std::string &referentOut) {
+  const std::string text = overloadTypeTextWithoutSpaces(typeText);
+  if (overloadTypeLeafName(text) != "Reference") {
     return false;
   }
-  const size_t angle = actualText.find('<');
-  if (angle == std::string::npos || actualText.back() != '>') {
+  const size_t angle = text.find('<');
+  if (angle == std::string::npos || text.back() != '>') {
     return false;
   }
-  return overloadTypePatternMatches(
-      patternText, actualText.substr(angle + 1, actualText.size() - angle - 2), templateArgs);
+  referentOut = text.substr(angle + 1, text.size() - angle - 2);
+  return true;
 }
-
 
 } // namespace primec

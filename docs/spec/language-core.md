@@ -249,7 +249,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     other argument (a method call, a call of an overloaded or `auto` callee, a lambda) keeps every candidate viable at
     its position. A `Reference<T>` argument (a `Reference` parameter or local, or a variable a lambda captures by `ref`) fits
     a parameter declared `Reference<T>` and, as it reads as its referent in a value position, one declared `T`; the
-    template arguments of a type match one by one, so `Reference<Response>` fits `Reference</std/http/Response>`. A struct method is selected the same way in a struct and in a generic struct, where each
+    template arguments of a type match one by one, so `Reference<Response>` fits `Reference</std/http/Response>`.
+    An unqualified call finds an overload set of an enclosing namespace or of the root from a method of a generic
+    struct, a namespaced definition or a lambda, as it finds a single definition. A struct method is selected the same way in a struct and in a generic struct, where each
     specialization has the overload families of its template; a type spelled by path and by bare name of the same leaf
     matches.
     Minimal examples:

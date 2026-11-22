@@ -24,9 +24,8 @@ bool overloadTypePatternMatches(const std::string &pattern,
                                 const std::string &actual,
                                 const std::vector<std::string> &templateArgs);
 
-// overloadTypePatternMatches, and also a `Reference<T>` argument for a parameter that is not a `Reference`.
-bool overloadArgumentTypeFits(const std::string &pattern,
-                              const std::string &actual,
-                              const std::vector<std::string> &templateArgs);
+// The referent of a `Reference<T>` type text. A `Reference<T>` argument reads as its referent in a value position
+// (docs/spec/pointers-and-references.md), so it also fits a parameter declared `T`.
+bool overloadReferentTypeText(const std::string &typeText, std::string &referentOut);
 
 } // namespace primec

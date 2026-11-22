@@ -1004,7 +1004,7 @@ std::string resolveCalleePath(const Expr &expr,
     std::string prefix = namespacePrefix;
     while (!prefix.empty()) {
       std::string candidate = prefix + "/" + expr.name;
-      if (ctx.sourceDefs.count(candidate) > 0) {
+      if (ctx.sourceDefs.count(candidate) > 0 || ctx.helperOverloads.count(candidate) > 0) {
         return finalizeResolvedPath(candidate);
       }
       const size_t slash = prefix.find_last_of('/');
@@ -1015,7 +1015,8 @@ std::string resolveCalleePath(const Expr &expr,
     }
     // The walk above stops before the root scope: a struct method (`/Box/call`) or namespaced definition calling a
     // root-level template (`/ident`) must still find it.
-    if (const std::string rootCandidate = "/" + expr.name; ctx.sourceDefs.count(rootCandidate) > 0) {
+    if (const std::string rootCandidate = "/" + expr.name;
+        ctx.sourceDefs.count(rootCandidate) > 0 || ctx.helperOverloads.count(rootCandidate) > 0) {
       return finalizeResolvedPath(rootCandidate);
     }
     if (const std::string *importAlias =

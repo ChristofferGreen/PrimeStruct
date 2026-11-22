@@ -601,10 +601,18 @@ RequirementOverloadViability evaluateRequirementOverloadViability(
           }
           // Both spellings of an instance fit: the generated name (a parameter already specialized) or the
           // template with its arguments (a parameter that spells `App<S>`).
-          if (!overloadArgumentTypeFits(expectedFullType, actualType, def.templateArgs) &&
-              !overloadArgumentTypeFits(overloadSpecializationSourceText(expectedFullType, ctx),
-                                        overloadSpecializationSourceText(actualType, ctx),
-                                        def.templateArgs)) {
+          const auto fits = [&](const std::string &actualText) {
+            return overloadTypePatternMatches(expectedFullType, actualText, def.templateArgs) ||
+                   overloadTypePatternMatches(
+                       overloadSpecializationSourceText(expectedFullType, ctx),
+                       overloadSpecializationSourceText(actualText, ctx),
+                       def.templateArgs);
+          };
+          std::string referentType;
+          const bool referentFits = overloadTypeLeafName(expectedFullType) != "Reference" &&
+                                    overloadReferentTypeText(actualType, referentType) &&
+                                    fits(referentType);
+          if (!fits(actualType) && !referentFits) {
             result.viable = false;
             result.decisive = true;
             result.diagnostics.push_back(

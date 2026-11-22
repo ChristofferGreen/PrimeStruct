@@ -115,7 +115,6 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | blocked | mt-server |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | deferred | readonly-struct-writes |
-| TODO-6185 | An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target` | ready | overload-call-from-method |
 | TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | ready | template-infer-reference |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -364,19 +363,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - the decision above is made and recorded here; then the diagnostic (or the spec change) with a semantics test, TODO-5804's compile-error test, and the full release gate green
   - stop_rule: the decision and the one diagnostic; no change to `Reference<T>` or `mut` parameter rules.
-
-- [~] TODO-6185: An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target`
-  - owner: ai
-  - status: ready
-  - claimed_by: fix-a (worktree-agent-a971c1c6b7c978cf9), 2026-11-22
-  - created_at: 2026-11-22
-  - phase: Overload resolution (found with TODO-5804)
-  - parallel_track: overload-call-from-method
-  - scope: `[return<i32>] mode<H>([H] h) { return(0i32) }` and `[return<i32>] mode<S>([Box<S>] h) { return(1i32) }` at the top level, and `[struct] Wrap<N>() { [public N mut] next  [return<i32>] ask() { return(mode(this.next)) } }`: `Wrap<Box<i32>>{...}.ask()` is `unknown call target: mode`; `/mode(this.next)` prints 1, and with only the first `mode` defined `mode(this.next)` prints 0. The same unqualified call in a lambda in `main` fails the same way. The stdlib spells the helper by an explicit template argument instead (`/std/http/server/reads_only_of<Next>(this.next, ...)`).
-  - acceptance:
-    - the unqualified call resolves from a method of a generic struct and from a lambda, with a semantics test
-    - full release gate green
-  - stop_rule: the lookup of an overload set of generic helpers from those two places only.
 
 - [ ] TODO-6186: Implicit template inference does not see through a `Reference<Box<T>>` argument
   - owner: ai
