@@ -934,6 +934,10 @@ private:
 
 } // namespace
 
+std::string_view optCppRuntimeHeaders() {
+  return OptCppRuntimeHeaders;
+}
+
 bool IrToOptCppEmitter::emitSource(const IrModule &module,
                                    std::string &out,
                                    std::string &error) const {
@@ -952,7 +956,7 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
   std::ostringstream source;
   // The `[host]` functions are plain C functions supplied at link time, so they are
   // declared before the runtime opens its unnamed namespace.
-  source << OptCppRuntimeHeaders << hostImportDeclarations(module.hostImports) << "namespace {\n"
+  source << optCppRuntimeHeaders() << hostImportDeclarations(module.hostImports) << "namespace {\n"
          << VmHeapCoreSource << "\n"
          << VmTextHeapSource << "\n"
          << VmHeapArenasSource << "\n"

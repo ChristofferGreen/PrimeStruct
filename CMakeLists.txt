@@ -668,6 +668,7 @@ set(PRIMESTRUCT_IR_SOURCES
 
 set(PRIMESTRUCT_CODEGEN_SOURCES
   src/support/ExternalTooling.cpp
+  src/support/CppPrecompiledHeader.cpp
   src/backend/IrToCppEmitter.cpp
   src/backend/IrToOptCppEmitter.cpp
   src/backend/IrToCppHostImports.cpp
@@ -787,6 +788,10 @@ target_link_libraries(primec_runtime_lib PUBLIC primec_ir_core_lib primec_suppor
 primestructEnableWarnings(primec_runtime_lib)
 
 add_library(primec_backend_emitters_lib ${PRIMESTRUCT_CODEGEN_SOURCES})
+# The optexe and optimized exe compiles keep a precompiled header of the runtime's standard headers here, built on
+# first use (src/support/CppPrecompiledHeader.h); it is inside the build directory, never outside the checkout.
+target_compile_definitions(primec_backend_emitters_lib PRIVATE
+  "PRIMEC_OPTEXE_PCH_DIR=\"${CMAKE_BINARY_DIR}/optexe-pch\"")
 target_include_directories(primec_backend_emitters_lib PUBLIC include)
 target_link_libraries(primec_backend_emitters_lib PUBLIC primec_ir_core_lib primec_frontend_lib primec_support_lib)
 primestructEnableWarnings(primec_backend_emitters_lib)
@@ -2459,6 +2464,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/backends/test_ir_pipeline_backends_registry_semantic_pipeline_benchmark_compile_part2.cpp
     tests/unit/vm/test_vm_debug_session.cpp
     tests/unit/ir_pipeline/test_ir_pipeline_external_tooling.cpp
+    tests/unit/ir_pipeline/test_ir_pipeline_cpp_precompiled_header.cpp
     tests/unit/ir_pipeline/to_cpp/test_ir_pipeline_to_cpp.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl.cpp
     tests/unit/ir_pipeline/to_glsl/test_ir_pipeline_to_glsl_runtime.cpp

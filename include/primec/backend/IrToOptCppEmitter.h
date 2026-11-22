@@ -3,6 +3,7 @@
 #include "primec/ir/Ir.h"
 
 #include <string>
+#include <string_view>
 
 namespace primec {
 
@@ -26,5 +27,9 @@ class IrToOptCppEmitter {
 public:
   bool emitSource(const IrModule &module, std::string &out, std::string &error) const;
 };
+
+// The `#include` lines every generated program starts with; the precompiled header of the host compile
+// (primec/support/CppPrecompiledHeader.h) is built from exactly this text.
+std::string_view optCppRuntimeHeaders();
 
 } // namespace primec

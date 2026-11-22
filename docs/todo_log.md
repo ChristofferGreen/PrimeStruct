@@ -325,3 +325,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 
 - 2026-11-21 (`primec --emit=lib` of each of the 59 `stdlib/std/**/*.prime` files in release, first diagnostic of each): 28 build, 31 fail. The 18 that name a shape fail on: result type 9 (collections/errors, dir, file/errors, glob, http/server, web/fragment_script, sync, text/shared, scene), `string` parameter beyond `count()` 4 (build_step, collections/equality, file, text/string), the canonical collections root 4 (buffer_checked, buffer_unchecked, ring_buffer, slice), a generated tail value 1 (ui/events). The other 13 fail before the shape check because the file is not self-contained as a root (build, build_runner, collections/map, gfx and gfx/experimental, http/http, image, math/matrix, math/quaternion, text/view, ui/native/handlers, ui/native, web). A borrowed sum parameter is refused without a name (TODO-6173).
 
+
+## TODO-6174
+
+- 2026-11-22 (release build, macOS arm64, wall seconds of `primec --emit=optexe` incl. the C++ compile, machine not idle, one run each): empty `main` 2.09 s with `PRIMEC_OPTEXE_PCH=0`, 1.71 s on the cold run that builds the header (one-off, 15.6 MB), 0.95 s warm; examples/apps/http_hello 3.74 s without, 3.33 s with. The header is `build-release/optexe-pch/pch-<key>.pch`, key = hash of the compiler's `-dM -E` macros under the compile flags, the flags and the header text (src/support/CppPrecompiledHeader.cpp).

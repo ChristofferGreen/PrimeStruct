@@ -2568,6 +2568,7 @@ are left unarchived.
 | TODO-6169 | A `[private]` field of a struct at the root is readable and writable from anywhere | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6170 | A plain `Reference<Struct>` parameter that replaces a container field does not end a live view of it | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6172 | A refused library root names the rule it breaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
+| TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 
 <!-- INDEX-END -->
 

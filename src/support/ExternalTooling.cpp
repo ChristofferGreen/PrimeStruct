@@ -1,5 +1,10 @@
 #include "primec/support/ExternalTooling.h"
 
+#include "primec/backend/IrToOptCppEmitter.h"
+#include "primec/support/CppPrecompiledHeader.h"
+
+#include <cstdlib>
+
 #include <string>
 #include <vector>
 
@@ -65,16 +70,38 @@ bool compileCppExecutableOptimized(const ProcessRunner &runner,
                                    int optimizationLevel,
                                    const std::vector<std::string> &linkArgs) {
   const int level = optimizationLevel < 0 ? 0 : (optimizationLevel > 3 ? 3 : optimizationLevel);
-  std::vector<std::string> args = {"clang++",
-                                   "-std=c++23",
-                                   "-O" + std::to_string(level),
-                                   "-ffp-contract=off",
-                                   "-pthread",
-                                   cppPath.string(),
-                                   "-o",
-                                   outputPath.string()};
-  args.insert(args.end(), linkArgs.begin(), linkArgs.end());
-  return commandSucceeds(runner, args);
+  const std::vector<std::string> flags = {
+      "-std=c++23", "-O" + std::to_string(level), "-ffp-contract=off", "-pthread"};
+  const auto compile = [&](const std::filesystem::path &precompiledHeader) {
+    std::vector<std::string> args = {"clang++"};
+    args.insert(args.end(), flags.begin(), flags.end());
+    if (!precompiledHeader.empty()) {
+      args.push_back("-include-pch");
+      args.push_back(precompiledHeader.string());
+    }
+    args.push_back(cppPath.string());
+    args.push_back("-o");
+    args.push_back(outputPath.string());
+    args.insert(args.end(), linkArgs.begin(), linkArgs.end());
+    return commandSucceeds(runner, args);
+  };
+#if defined(PRIMEC_OPTEXE_PCH_DIR)
+  // The runtime's standard headers are most of the compile of a small program (src/support/CppPrecompiledHeader.h).
+  // The header is cached inside the build directory under a key of the compiler, the flags and the header text, so
+  // a stale one is never used; a compile that fails with it is repeated without it, so it can only ever save time.
+  const char *disabled = std::getenv("PRIMEC_OPTEXE_PCH");
+  if ((disabled == nullptr || std::string(disabled) != "0") &&
+      linkArgsAllowPrecompiledHeader(linkArgs)) {
+    const std::filesystem::path precompiledHeader =
+        ensureCppPrecompiledHeader(runner, PRIMEC_OPTEXE_PCH_DIR, flags, optCppRuntimeHeaders());
+    if (!precompiledHeader.empty()) {
+      if (compile(precompiledHeader)) {
+        return true;
+      }
+    }
+  }
+#endif
+  return compile({});
 }
 
 } // namespace primec

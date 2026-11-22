@@ -148,7 +148,6 @@ of sync with them.
 | TODO-5933 | The embed API loads a library at run time | ready | lib-embed |
 | TODO-6032 | A public function of any shape is a function of a library | ready | lib-shapes |
 | TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | deferred | lib-shapes |
-| TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | ready | lib-backend |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -162,7 +161,6 @@ of sync with them.
 
 - TODO-5804 (mt-server): read-only handlers registered with `app.view(...)` run under the read lock
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6174 (lib-backend): a precompiled header for the `optexe` and `exe` C++ compile
 - TODO-6149 (wasm-opcode-gaps): the Wasm slot heap, a bit-exact port of the VM's `VmHeapCore`
 - TODO-6163 (safety-stdlib): a call to a non-public `/std` definition from outside its namespace is `private`
 - TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
@@ -172,7 +170,6 @@ of sync with them.
 
 1. TODO-5804
 2. TODO-5603
-3. TODO-6174
 4. TODO-6149
 5. TODO-6163
 6. TODO-5933
@@ -185,7 +182,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6174, TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); TODO-6149 (Wasm heap, decided 2026-11-22); deferred TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
@@ -332,21 +329,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
-
-- [~] TODO-6174: The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-pch (worktree-agent-aee0a7aa688836102), 2026-11-22
-  - created_at: 2026-11-21
-  - phase: Modules and libraries (found with TODO-5932)
-  - parallel_track: lib-backend
-  - scope: `primec --emit=optexe` of an empty `main` takes 0.91 s, of which `clang++ -fsyntax-only` on the generated unit is 0.64 s: the `#include <algorithm>`, `<map>`, `<set>`, `<string>` and the rest of the runtime preamble's headers (src/backend/IrToOptCppRuntime.h). A precompiled header of those includes took an empty `main` from 0.70 s to 0.39 s in a manual run (`clang++ -std=c++23 -O2 -ffp-contract=off -pthread -x c++-header`, then `-include-pch`; the .pch is 15.6 MB). Decide where the header is kept (a cache keyed by the compiler id and the C++ compiler version, under `.ps/cache` or the output directory) and what happens when `clang++` changes; or drop the headers the runtime does not need (`<map>`, `<set>`).
-  - decision: 2026-11-22 (owner): a precompiled header of the runtime preamble (trimming includes the runtime does not need is allowed first or alongside). The cache lives inside the build directory or the user existing cache dir, never outside the checkout by surprise; a stale PCH is never used: it is keyed by the C++ compiler identity, flags and the contents of the headers. Measure an empty `main` and examples/apps/http_hello before and after.
-  - acceptance:
-    - an empty `main` through `--emit=optexe` is measured before and after in docs/todo_log.md; the output executable behaves the same on the optexe test corpus
-    - full release gate green
-  - stop_rule: the C++ compile of the optimized emitters; no change to the generated code.
-  - repro: `primec --emit=optexe empty.prime -o empty` takes 0.91 s on an arm64 Mac while `primec --emit=optcpp` takes 0.02 s.
 
 - [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
@@ -707,7 +689,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: do not start before it is split into leaves for `optexe` and for native.
   - notes: deferred: needs scoping and an object writer.
   - measured: 2026-11-21 (release build, macOS arm64; numbers in docs/todo_log.md under TODO-5932). `--emit=optexe` of an empty `main` takes 0.91 s, of which the front end is 0.02 s (69M instructions) and `clang++` parsing the runtime preamble's standard headers alone is 0.64 s (`-fsyntax-only`); a program of 24k generated lines (examples/apps/http_hello) takes 4.18 s, 1.29 s of it the front end (14.6G instructions) and about 2.9 s the C++ compile and link. So the back end is 98 percent of a small program (a fixed cost every translation unit pays) and about 70 percent of an http-sized one. The emitter writes one translation unit with the runtime in an unnamed namespace, passing the runtime as `Rt &rt` (src/backend/IrToOptCppRuntime.h), so a library unit could share it; a string table, host import declarations and struct layouts are per unit, and the optimizer's inlining across the library boundary is lost. The native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer.
-  - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s, TODO-6174), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
+  - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
 
 - [ ] TODO-5933: The embed API loads a library at run time
