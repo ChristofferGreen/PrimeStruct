@@ -866,9 +866,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the heap capacity of Wasm only.
   - repro: an IR module `PushI64 2097153; HeapAlloc; Pop; ReturnVoid` runs on the VM and ends with `VM error: VM heap allocation overflow` under `--emit=wasm --wasm-profile wasi`.
 
-- [ ] TODO-6176: The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM
+- [~] TODO-6176: The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM
   - owner: ai
   - status: deferred
+  - claimed_by: ai-wasm2 (worktree-agent-a800942430db57dfd), 2026-11-22
   - created_at: 2026-11-22
   - phase: Backend parity (found with TODO-6149)
   - parallel_track: wasm-bytes-host
