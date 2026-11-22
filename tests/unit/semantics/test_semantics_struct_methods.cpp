@@ -457,4 +457,101 @@ main() {
   CHECK_MESSAGE(error.find("ambiguous call to /pick") != std::string::npos, error);
 }
 
+// A `Reference` argument fits an overload parameter declared as the same `Reference<T>` (a path and a bare name of one
+// struct match inside the arguments) and one declared as its referent `T` (docs/spec/language-core.md, Helper
+// overloading).
+
+TEST_CASE("a Reference parameter passed to a generic overload matches a Reference parameter") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+namespace lib {
+  [struct]
+  Response() {
+    [public i32 mut] status{200i32}
+  }
+
+  [return<i32>]
+  mode<H>([H] h, [Reference<Response> mut] out) {
+    return(0i32)
+  }
+
+  [return<i32>]
+  mode<S>([Box<S>] h, [Reference<Response> mut] out) {
+    return(1i32)
+  }
+
+  [return<i32>]
+  run<H>([H] h, [Reference<Response> mut] out) {
+    return(/lib/mode(h, out))
+  }
+}
+
+[return<int>]
+main() {
+  [/lib/Response mut] v{/lib/Response{}}
+  [Box<i32>] b{Box<i32>{3i32}}
+  return(/lib/run(b, location(v)))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a ref-captured variable passed to a generic overload matches a value parameter") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<H>([H] h, [i32] n) {
+  return(0i32)
+}
+
+[return<i32>]
+mode<S>([Box<S>] h, [i32] n) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [i32 mut] n{5i32}
+  [Box<i32>] b{Box<i32>{3i32}}
+  [auto] f{[ref n]([Box<i32>] h) { return(/mode(h, n)) }}
+  return(f(b))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a Reference argument does not match a parameter of another type") {
+  const std::string source = R"(
+[return<i32>]
+pick([bool] flag) {
+  return(1i32)
+}
+
+[return<i32>]
+pick([string] text) {
+  return(2i32)
+}
+
+[return<int>]
+main() {
+  [i32 mut] n{5i32}
+  [Reference<i32>] r{location(n)}
+  return(pick(r))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("no viable overload for /pick") != std::string::npos, error);
+}
+
 TEST_SUITE_END();

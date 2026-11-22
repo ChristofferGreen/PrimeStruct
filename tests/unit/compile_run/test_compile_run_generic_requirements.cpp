@@ -527,4 +527,73 @@ main() {
   expectBackendsExit("generic_struct_overload_specificity", source, 11);
 }
 
+TEST_CASE("a Reference parameter picks the more specific generic overload on every backend") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+namespace lib {
+  [struct]
+  Response() {
+    [public i32 mut] status{200i32}
+  }
+
+  [return<i32>]
+  mode<H>([H] h, [Reference<Response> mut] out) {
+    return(0i32)
+  }
+
+  [return<i32>]
+  mode<S>([Box<S>] h, [Reference<Response> mut] out) {
+    return(1i32)
+  }
+
+  [return<i32>]
+  run<H>([H] h, [Reference<Response> mut] out) {
+    return(/lib/mode(h, out))
+  }
+}
+
+[return<int>]
+main() {
+  [/lib/Response mut] v{/lib/Response{}}
+  [Box<i32>] b{Box<i32>{3i32}}
+  return(/lib/run(b, location(v)))
+}
+)";
+
+  expectBackendsExit("generic_overload_reference_parameter", source, 1);
+}
+
+TEST_CASE("a ref-captured variable picks the more specific generic overload on every backend") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<H>([H] h, [i32] n) {
+  return(0i32)
+}
+
+[return<i32>]
+mode<S>([Box<S>] h, [i32] n) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [i32 mut] n{5i32}
+  [Box<i32>] b{Box<i32>{3i32}}
+  [auto] f{[ref n]([Box<i32>] h) { return(/mode(h, n)) }}
+  return(f(b))
+}
+)";
+
+  expectBackendsExit("generic_overload_ref_captured_value", source, 1);
+}
+
 TEST_SUITE_END();

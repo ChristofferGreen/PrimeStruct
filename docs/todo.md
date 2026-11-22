@@ -115,7 +115,6 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | blocked | mt-server |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | deferred | readonly-struct-writes |
-| TODO-6184 | A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter | ready | overload-reference-args |
 | TODO-6185 | An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target` | ready | overload-call-from-method |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -364,19 +363,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - the decision above is made and recorded here; then the diagnostic (or the spec change) with a semantics test, TODO-5804's compile-error test, and the full release gate green
   - stop_rule: the decision and the one diagnostic; no change to `Reference<T>` or `mut` parameter rules.
-
-- [~] TODO-6184: A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter
-  - owner: ai
-  - status: ready
-  - claimed_by: fix-a (worktree-agent-a971c1c6b7c978cf9), 2026-11-22
-  - created_at: 2026-11-22
-  - phase: Overload resolution (docs/spec/language-core.md, Helper overloading; found with TODO-5804)
-  - parallel_track: overload-reference-args
-  - scope: Two cases of one gap, both with a generic overload set (one candidate alone works). (1) A `[Reference<Response>] out` parameter passed on to `mode<H>([H] h, [Reference<Response> out])` and `mode<S>([Box<S>] h, [Reference<Response>] out)` from inside a generic function is `no viable overload ... argument type mismatch for /mode__ov2_1 parameter out: expected Reference got Reference</std/http/Response>`; a call from `main` with `location(v)` works, and so does binding `[Reference<Response>] again{out}` first. (2) A variable a lambda captures by `[ref n]` reaches an overloaded call as `Reference<i32>`: `mode<H>([H] h, [i32] n)` and `mode<S>([Box<S>] h, [i32] n)` called as `/mode(h, n)` in `[ref n]([Box<i32>] h) { ... }` is `expected i32 got Reference<i32>`; the server's `read` body had to capture `request` by value for it. Repro files: both are 12-line programs on `Box<S>() { [public S mut] state }`.
-  - acceptance:
-    - both repros compile and print the more specific overload's result, with semantics and compile-run tests
-    - full release gate green
-  - stop_rule: argument-type matching of generic overload candidates for `Reference` arguments only.
 
 - [ ] TODO-6185: An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target`
   - owner: ai
