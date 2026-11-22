@@ -519,9 +519,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "HeapAlloc"` from the release build directory.
 
 
-- [ ] TODO-6150: `heapLiveBlocks()` and the string heap statistics on Wasm
+- [~] TODO-6150: `heapLiveBlocks()` and the string heap statistics on Wasm
   - owner: ai
   - status: ready
+  - claimed_by: ai-wasm2 (worktree-agent-a800942430db57dfd), 2026-11-22
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (split from TODO-6141)
   - parallel_track: wasm-opcode-gaps
