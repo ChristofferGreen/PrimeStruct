@@ -116,6 +116,7 @@ of sync with them.
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | blocked | mt-server |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | deferred | readonly-struct-writes |
 | TODO-6185 | An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target` | ready | overload-call-from-method |
+| TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | ready | template-infer-reference |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
@@ -376,6 +377,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the unqualified call resolves from a method of a generic struct and from a lambda, with a semantics test
     - full release gate green
   - stop_rule: the lookup of an overload set of generic helpers from those two places only.
+
+- [ ] TODO-6186: Implicit template inference does not see through a `Reference<Box<T>>` argument
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-22
+  - phase: Template inference (found with TODO-6185)
+  - parallel_track: template-infer-reference
+  - scope: A `Reference<Box<i32>>` argument to a template whose parameter is `[Box<S>]` leaves `S` unbound: `unable to infer implicit template arguments for /mode`, with one `mode<S>([Box<S>] h)` alone (no overloads). A `Reference<T>` argument reads as its referent in a value position (docs/spec/pointers-and-references.md), and C++ deduces a template parameter through a reference, so inference should bind `S` to `i32` as it does for a `Box<i32>` local. Repro (`primec --emit=vm`): `[struct] Box<S>() { [public S mut] state }  [return<i32>] mode<S>([Box<S>] h) { return(1i32) }  [return<int>] main() { [Box<i32> mut] b{Box<i32>{3i32}}  [Reference<Box<i32>>] r{location(b)}  return(mode(r)) }`. The same happens for a variable a lambda captures with `[ref b]`, so `f{[ref b]([i32] k) { return(mode(b)) }}` fails once `mode` is overloaded (after TODO-6185 the overload is selected and the inference then fails: `unable to infer implicit template arguments for /mode__ov1_1`). Capturing by value works.
+  - acceptance:
+    - the repro compiles and exits 1 on the VM and the native backend; a `[ref b]` lambda calling an overloaded `mode(b)` does too, with semantics and compile-run tests
+    - full release gate green
+  - stop_rule: implicit template inference through a `Reference` argument only (src/semantics/TemplateMonomorphImplicitTemplateInference*.cpp); no change to overload ranking.
 
 - [ ] TODO-5806: Sessions: a cookie and per-session state
   - owner: ai
