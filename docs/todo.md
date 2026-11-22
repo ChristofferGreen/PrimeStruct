@@ -607,9 +607,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
-- [ ] TODO-6182: A failed file open reads as an open file on Wasm, and closing it crashes node
+- [~] TODO-6182: A failed file open reads as an open file on Wasm, and closing it crashes node
   - owner: ai
   - status: deferred
+  - claimed_by: fix-a (worktree-agent-a971c1c6b7c978cf9), 2026-11-22
   - created_at: 2026-11-22
   - phase: Backend parity (found with TODO-6176)
   - parallel_track: wasm-bytes-host
