@@ -158,14 +158,16 @@ inline bool nodeAvailable() {
 
 // Runs the exported `main` of a `--wasm-profile wasi` module under Node's built-in WebAssembly and WASI, as the VM
 // would run the program: stdout through `fd_write`, `proc_exit` (a runtime error calls it with 3) as the exit code, and
-// the result of `main` modulo 256 otherwise (a `void` main exits 0).
+// the result of `main` modulo 256 otherwise (a `void` main exits 0). The working directory is preopened (as `.`), so a
+// program that opens files finds the same ones as on the VM, and a missing path answers `ENOENT`.
 constexpr const char *WasmNodeRunner = R"(
 "use strict";
 const fs = require("node:fs");
 process.removeAllListeners("warning");
 process.on("warning", () => {});
 const { WASI } = require("node:wasi");
-const wasi = new WASI({ version: "preview1", args: [process.argv[2]], returnOnExit: true });
+// The working directory is the one preopened directory, as the VM resolves a relative path against it.
+const wasi = new WASI({ version: "preview1", args: [process.argv[2]], preopens: { ".": process.cwd() }, returnOnExit: true });
 class ProgramExit { constructor(code) { this.code = code; } }
 const imports = wasi.getImportObject();
 imports.wasi_snapshot_preview1.proc_exit = (code) => { throw new ProgramExit(code); };

@@ -129,7 +129,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | deferred | wasm-opcode-gaps |
-| TODO-6176 | The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM | deferred | wasm-bytes-host |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
@@ -138,6 +137,7 @@ of sync with them.
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
+| TODO-6182 | A failed file open reads as an open file on Wasm, and closing it crashes node | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
@@ -186,7 +186,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6176 (matrix runner preopen), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -581,6 +581,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
+- [ ] TODO-6182: A failed file open reads as an open file on Wasm, and closing it crashes node
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-22
+  - phase: Backend parity (found with TODO-6176)
+  - parallel_track: wasm-bytes-host
+  - scope: the VM answers `FileOpenRead`, `FileOpenWrite` and `FileOpenAppend` with the handle packed as an i64: the descriptor on success and `errno << 32` on failure (`packFileHandle`, src/runtime/VmIoHelpers.cpp), and the lowered code reads the status as `handle / 4294967296` (a nonzero quotient is the error, then `FileError.status` is the errno, 2 for a missing file). The Wasm emitter returns an i32 instead: the WASI errno with `0x80000000` or-ed in (`WasmFileHandleErrorBit`, src/wasm_emitter/WasmEmitterIo.cpp), which widens to a negative i64 whose quotient by 2^32 is 0, so a failed open reads as success, the guarded `FileClose` of the handle (`handle >= 0` is false only for the Wasm form) is skipped or hands a garbage descriptor to `fd_close`, and under node 24 with a preopened directory that call crashes the process (exit 139, a segmentation fault in node). `file_io_errno_newline_png` prints `0` then the file contents where the VM prints `2`, `2` and the contents. The WASI errno numbers also differ from the host's (ENOENT is 44 in WASI and 2 on the VM), so the status the program reads has to be mapped to the VM's. Make the Wasm file opcodes produce and read the VM's packing (descriptor, or errno `<< 32`), map WASI errnos to the POSIX ones the VM reports for the same condition (ENOENT 2, EACCES 13, EEXIST 17, ENOTDIR 20, EISDIR 21, EINVAL 22, EMFILE 24, ENOSPC 28; the VM reports the host's number, so an errno whose value differs between Linux and macOS, such as ENAMETOOLONG, needs a decision first, and an unmapped errno is passed through), and make `FileReadByte`, `FileWrite*`, `FileFlush` and `FileClose` of an error handle return its errno like the VM.
+  - acceptance:
+    - `file_io_errno_newline_png` lists `wasm-wasi` and a program that opens a missing path, a directory for writing and a path through a file prints the VM's statuses; IR tests compare with the VM under node
+    - no file operation passes an error handle to `fd_close`, `fd_read` or `fd_write`
+    - full release gate green
+  - stop_rule: the file open and handle error encoding of the Wasm file opcodes; directory and glob functions stay separate.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests -tc="file open errors*"` from the release build directory prints `differ (exit 139 not 0)` for `file_io_errno_newline_png`.
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred
@@ -866,16 +879,3 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the heap capacity of Wasm only.
   - repro: an IR module `PushI64 2097153; HeapAlloc; Pop; ReturnVoid` runs on the VM and ends with `VM error: VM heap allocation overflow` under `--emit=wasm --wasm-profile wasi`.
 
-- [~] TODO-6176: The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM
-  - owner: ai
-  - status: deferred
-  - claimed_by: ai-wasm2 (worktree-agent-a800942430db57dfd), 2026-11-22
-  - created_at: 2026-11-22
-  - phase: Backend parity (found with TODO-6149)
-  - parallel_track: wasm-bytes-host
-  - scope: `PRIMESTRUCT_MATRIX_WASM_RUN=1` reports `file_io_errno_newline_png: differ (stdout)` once the heap runs: the node runner (`WasmNodeRunner` in tests/unit/program_matrix/program_matrix.h) builds `new WASI({version, args, returnOnExit})` with no `preopens`, so every `path_open` answers `EBADF` (8) and the program prints 8 where the VM prints the `ENOENT` status and the file contents. The programs that open files cannot list `wasm-wasi` until the runner preopens the working directory (and a missing path under it answers `ENOENT`).
-  - acceptance:
-    - the runner passes `preopens: {".": cwd}`; `file_io_errno_newline_png` and the other file programs agree on Wasm or each difference is a leaf
-    - full release gate green
-  - stop_rule: the matrix runner and the programs it then runs.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests` from the release build directory, line `wasm-run: file_io_errno_newline_png: differ (stdout)`.

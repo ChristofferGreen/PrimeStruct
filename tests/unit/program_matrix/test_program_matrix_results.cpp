@@ -831,4 +831,56 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a file written in the working directory reads back byte by byte") {
+  program_matrix::ProgramCase program;
+  program.name = "file_io_write_read_roundtrip";
+  // The Wasm runner preopens the working directory, so the file lands where the VM puts it.
+  program.extraConfigs = {"wasm-wasi"};
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /on_file_err>]
+write_lines() {
+  [File<Write>] file{File<Write>("program_matrix_file_roundtrip_probe.txt")?}
+  file.write("ab")?
+  file.writeLine("cd")?
+  file.writeLine("e")?
+  return(Result.ok())
+}
+
+[return<i32> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+read_one([File<Read>] file) {
+  [i32 mut] byte{0i32}
+  file.readByte(byte)?
+  return(byte)
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+read_lines() {
+  [File<Read>] file{File<Read>("program_matrix_file_roundtrip_probe.txt")?}
+  [i32 mut] index{0i32}
+  while(index < 7i32) {
+    print_line(read_one(file))
+    index = index + 1i32
+  }
+  return(0i32)
+}
+
+[return<int> effects(io_out, file_read, file_write)]
+main() {
+  write_lines()
+  print_line(read_lines())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "97\n98\n99\n100\n10\n101\n10\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
