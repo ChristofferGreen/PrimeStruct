@@ -333,9 +333,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6174: The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program
+- [~] TODO-6174: The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program
   - owner: ai
   - status: ready
+  - claimed_by: ai-pch (worktree-agent-aee0a7aa688836102), 2026-11-22
   - created_at: 2026-11-21
   - phase: Modules and libraries (found with TODO-5932)
   - parallel_track: lib-backend
