@@ -345,9 +345,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6191: A write to an element of a stdlib `Vector` changes a temporary copy silently
+- [~] TODO-6191: A write to an element of a stdlib `Vector` changes a temporary copy silently
   - owner: ai
   - status: ready
+  - claimed_by: agent-ab69b87dc26ecd9b8 (worktree-agent-ab69b87dc26ecd9b8), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the read-only element rule)
   - parallel_track: vector-element-write-lost
