@@ -133,7 +133,8 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
-| TODO-6177 | Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`) | deferred | wasm-bytes-host |
+| TODO-6220 | Wasm `ZextU8` and the u8 loads and stores of local and slot addresses | ready | wasm-bytes-host |
+| TODO-6177 | Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`) | ready | wasm-bytes-host |
 | TODO-6178 | The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7 | deferred | wasm-bytes-host |
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
@@ -176,7 +177,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, then TODO-6213 (sum results; the options are in its block and wait for the owner), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors), TODO-6220 (Wasm ZextU8 and u8 slot access), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -518,16 +519,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
-- [ ] TODO-6177: Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`)
+- [~] TODO-6220: Wasm `ZextU8` and the u8 loads and stores of local and slot addresses
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
+  - created_at: 2026-11-23
+  - phase: Backend parity (first slice of TODO-6177, which is too large for one commit)
+  - parallel_track: wasm-bytes-host
+  - scope: Wasm refuses `ZextU8`, `LoadU8` and `StoreU8` (`unsupported opcode for wasm target: ZextU8 (`u8` values and byte memory)`). `ZextU8` is the low byte of the 64-bit slot (`value & 0xff`); `LoadU8` and `StoreU8` of an address that is not a byte-region address are the slot access with the low byte (`loadHeapByte` and `storeHeapByte` in src/runtime/VmHeapHelpers.cpp: a pointer to a `u8` local or slot field reads the slot's low byte and writes the byte as the whole slot, and the result of a store is the byte). Lower the three opcodes with the slot-address helper the indirect loads use (same alignment and invalid-address faults); byte-region addresses stay TODO-6177, which is why a module that allocates byte regions is still refused. The `u8` conversion programs `conv_integer_to_u8` and `conv_float_to_u8` use `ZextU8` only (the TODO-6127 note in test_program_matrix_conversions.cpp says why they did not list `wasm-wasi`).
+  - acceptance:
+    - IR tests under node compare `ZextU8` and `LoadU8`/`StoreU8` through a local address and a heap slot address with the VM (values above 255 are cut, a store writes the whole slot, the fault text of a bad address is the VM's)
+    - `conv_integer_to_u8` and `conv_float_to_u8` list `wasm-wasi`; refusals before and after in docs/todo_log.md
+    - full release gate green
+  - stop_rule: the three opcodes over slots; byte regions, `HeapAllocBytes` and byte-region addresses are TODO-6177.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep 'conv_.*_to_u8'` from the release build directory: both are `refused`.
+
+- [~] TODO-6177: Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`)
+  - owner: ai
+  - status: ready
+  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
   - created_at: 2026-11-22
   - phase: Backend parity (split from TODO-6150)
   - parallel_track: wasm-bytes-host
-  - scope: `String` keeps its bytes in byte regions (`HeapAllocBytes`, byte addresses of `VmHeapCore`: include/primec/runtime/VmHeapCoreBody.inc `allocateBytesOwn`, `releaseBytesOwn`, `reallocateBytesOwn`, `byteLive_`) read and written by `LoadU8`, `StoreU8` and `ZextU8`; Wasm refuses all of them (`unsupported opcode for wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`). 140 matrix programs are refused for a host call because they use `String`, and every one needs this first. Port the byte regions the way the slot heap was ported (hand-assembled helpers over regions of the linear memory, the VM's byte addresses, `HeapFree` and `HeapRealloc` of a byte address, the VM's fault texts), then lower `LoadU8`, `StoreU8` and `ZextU8` (the u8 conversion programs of TODO-6127 list `wasm-wasi` as well). Decide the capacity with TODO-6175 (the byte regions can share its growth).
+  - scope: `String` keeps its bytes in byte regions (`HeapAllocBytes`, byte addresses of `VmHeapCore`: include/primec/runtime/VmHeapCoreBody.inc `allocateBytesOwn`, `releaseBytesOwn`, `reallocateBytesOwn`, `byteLive_`) read and written by `LoadU8`, `StoreU8` and `ZextU8`; Wasm refuses all of them (`unsupported opcode for wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`). 140 matrix programs are refused for a host call because they use `String`, and every one needs this first. Port the byte regions the way the slot heap was ported (hand-assembled helpers over regions of the linear memory, the VM's byte addresses, `HeapFree` and `HeapRealloc` of a byte address, the VM's fault texts), then lower `LoadU8` and `StoreU8` of a byte-region address (`ZextU8` and the u8 access of slots are TODO-6220). Capacity: TODO-6175 moved the slot regions to the end of the memory when they outgrow it (`ensureCapacity` in src/wasm_emitter/WasmEmitterHeapRegions.cpp, base addresses in globals); the byte storage can grow the same way.
   - acceptance:
     - a program that allocates a byte buffer, writes and reads bytes and frees it runs on Wasm like the VM (stdout, exit code, fault text); IR tests compare with the VM under node
-    - `conv_integer_to_u8` and `conv_float_to_u8` list `wasm-wasi`
     - full release gate green
   - stop_rule: byte regions and the byte opcodes; the string heap functions are TODO-6178 and TODO-6179.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
