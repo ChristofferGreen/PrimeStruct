@@ -195,9 +195,13 @@
     // (docs/spec/value-lifecycle.md).
     const bool receiverReadForm =
         expr.isMethodCall ||
-        // The stdlib `at` of a stdlib vector record a call returns (the builtin vector keeps its own path).
-        (expr.kind == Expr::Kind::Call && expr.args.size() == 2 &&
-         ir_lowerer::isStdlibVectorValueAtPath(expr.name) &&
+        // A stdlib reader (`at`, `count`, `capacity`) of a stdlib vector record a call returns (the builtin vector
+        // keeps its own path). `count(make())` keeps its plain name until the call is emitted, so the name is
+        // matched as spelled as well as by the path of the resolved helper.
+        (expr.kind == Expr::Kind::Call && !expr.isBinding && !expr.args.empty() &&
+         (ir_lowerer::isStdlibVectorValueReaderPath(expr.name, expr.args.size()) ||
+          (expr.args.size() == 1 &&
+           (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")))) &&
          expr.args.front().kind == Expr::Kind::Call &&
          ir_lowerer::isCollectionVectorRecordPath(
              inferStructExprPath(expr.args.front(), localsIn))) ||

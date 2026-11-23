@@ -249,24 +249,8 @@ inline void expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(cons
 }
 
 inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
-        "vector_wrapper_constructor_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
-
-  if (emitMode == "native") {
-    expectVectorConformanceCompileReject(
-        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
-        "vector_wrapper_constructor_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
-
+  // The stdlib `count` and `at` of a constructor result or a call result read the temporary record on the VM, optexe
+  // and native alike; only the simple C++ emitter has no vector record to read.
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
       "vector_wrapper_constructor_receiver_" + emitMode,
@@ -808,22 +792,6 @@ inline void expectCanonicalVectorNamespacePushShadow(const std::string &emitMode
 }
 
 inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
-        "vector_namespace_canonical_temporary_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
-  if (emitMode == "native") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
-        "vector_namespace_canonical_temporary_receiver_" + emitMode,
-        emitMode,
-        "");
-    return;
-  }
   if (emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceTemporaryReceiverSource(),

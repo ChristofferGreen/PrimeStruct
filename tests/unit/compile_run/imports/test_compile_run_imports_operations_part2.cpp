@@ -1411,7 +1411,7 @@ TEST_CASE("rejects stdlib wrapper vector constructor auto inference mismatch in 
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("vm");
 }
 
-TEST_CASE("rejects stdlib wrapper vector constructor receivers in C++ emitter") {
+TEST_CASE("runs stdlib wrapper vector constructor receivers in C++ emitter") {
   expectStdlibWrapperVectorConstructorReceiverConformance("vm");
 }
 
@@ -1423,7 +1423,7 @@ TEST_CASE("rejects stdlib wrapper vector method receiver mismatch in C++ emitter
   expectStdlibWrapperVectorConstructorMethodReceiverMismatchReject("vm");
 }
 
-TEST_CASE("rejects canonical namespaced vector constructor temporaries in C++ emitter") {
+TEST_CASE("runs canonical namespaced vector constructor temporaries in C++ emitter") {
   expectCanonicalVectorNamespaceTemporaryReceiverConformance("vm");
 }
 

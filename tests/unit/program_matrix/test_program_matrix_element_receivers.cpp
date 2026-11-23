@@ -777,6 +777,54 @@ make_rows() {
                     "import /std/collections/*\n");
 }
 
+TEST_CASE("count and capacity of a call result that is a stdlib Vector of structs leave nothing "
+          "live") {
+  // `count(make_rows())` is the helper by name, not a method call: the statement binds the record a call returns
+  // to a hidden local and destroys it at its end, as `make_rows().count()` and `at(make_rows(), i)` do.
+  program_matrix::ProgramCase program;
+  program.name = "count_of_call_result_strings";
+  program.source = "import /std/collections/*\n" + ElementPrelude + R"(
+[struct]
+Row() {
+  [i32 mut] n{0i32}
+  [String mut] name{String{}}
+}
+
+[effects(heap_alloc), return<Vector<Row>>]
+make_rows() {
+  [Vector<Row> mut] rows{Vector<Row>{}}
+  rows.push(Row{[n] 1i32, [name] label(1i32)})
+  rows.push(Row{[n] 2i32, [name] label(2i32)})
+  return(rows)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  [u64] bytes{stringHeapBytesInUse()}
+  if(true) {
+    print_line(count(make_rows()))
+    print_line(make_rows().count())
+    print_line(capacity(make_rows()) - make_rows().capacity())
+    print_line(count(make_rows()) + count(make_rows()))
+    [i32] total{count(make_rows())}
+    print_line(total)
+  }
+  print_line(heapLiveBlocks() - blocks)
+  print_line(stringHeapBytesInUse() - bytes)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2\n0\n4\n2\n0\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeRunsStringHeap()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("dereference of a Reference to a stdlib Vector is the receiver of an inlined at") {
   // The argument `dereference(r)` of the stdlib `at` passes the record's address on every backend; it once
   // lowered as the builtin indexed access, which loaded the first slot of the record as the element.

@@ -241,7 +241,8 @@ bool borrowedVectorElementAccessName(const std::string &path, std::string &acces
 
 // Whether `path` is the stdlib vector `at` or `at_unsafe` that returns a copy of the element, with or without
 // the generated specialization suffix.
-bool isStdlibVectorValueAtPath(const std::string &path);
+// The stdlib readers of a vector record (`at`, `at_unsafe` with two arguments; `count`, `capacity` with one).
+bool isStdlibVectorValueReaderPath(const std::string &path, size_t argCount);
 // Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
 // user definition or method returning a vector, never a name, field, element or stdlib accessor
 // result. `resolveCallee` resolves a method call too (see makeCallOrMethodResolver).

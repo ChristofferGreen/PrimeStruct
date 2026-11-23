@@ -35,11 +35,15 @@ bool borrowedVectorElementAccessName(const std::string &path, std::string &acces
   return false;
 }
 
-bool isStdlibVectorValueAtPath(const std::string &path) {
+bool isStdlibVectorValueReaderPath(const std::string &path, size_t argCount) {
   std::string base = path;
   base.resize(std::min(base.find("__t"), base.size()));
-  return base == collection_helpers::kCanonicalVectorAt ||
-         base == collection_helpers::kCanonicalVectorAtUnsafe;
+  if (argCount == 2) {
+    return base == collection_helpers::kCanonicalVectorAt ||
+           base == collection_helpers::kCanonicalVectorAtUnsafe;
+  }
+  return argCount == 1 && (base == collection_helpers::kCanonicalVectorCount ||
+                           base == collection_helpers::kCanonicalVectorCapacity);
 }
 
 bool isFreshBuiltinVectorExpr(
