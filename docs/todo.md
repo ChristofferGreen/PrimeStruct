@@ -748,7 +748,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 2)
   - parallel_track: lib-shapes
@@ -759,7 +759,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: sum, `Result` and packed error results of library roots; no vector result.
   - repro: `[sum] Pick { [i32] number [bool] flag } [public return<Pick>] make_pick() { return(Pick{[number] 1i32}) }`, `primec --emit=lib sum.prime -o sum.psa`.
-  - blocked_on: owner decision, options below (found 2026-11-23 while claiming it for the third time in the library-shapes lane)
+  - decision: 2026-11-23 (owner): "C now, then A", the agent recommendation. Step 1 (this leaf, first commit): the named refusal of option C for a sum, `Result` and packed error result of a library root. Step 2: option A (print a public `[sum]` in the interface, struct-result path for user sums). The packed results (`Result<T, E>` and the four stdlib error structs) become their own leaf that needs a result path that is not a frame address. Split the leaf accordingly before implementing.
   - findings: (1) The archive side is small. `computeRealCallEligibleDefinitionPaths` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) reads struct names without sums, while the lowerer setup reads them with sums, so `make_pick` of the repro passes the shape check and is not a real call (the same split as the borrowed sum parameter). Giving a library root or an imported declaration struct names that include the program's sums (and `refuseSumParameters`, the rule of the sum parameter) makes `primec --emit=lib sum.prime` write an archive for the repro (about 12 lines, tried and reverted). (2) The consumer side is not there: the interface of an archive does not print a sum type (docs/ModulesAndLibrariesPlan.md, section 8: "a sum type and the stdlib are not printed"), so a program that links such an archive stops at `unknown return type: /pk/Pick on /pk/make_number` for a library with `[public sum] Pick` in a namespace. A sum result cannot be a function of a library that a program can call until the type is in the interface or comes from the stdlib. (3) `Result<i32, i32>` is refused as a packed builtin (`isPackedErrorStructTypeName` and the `<` in the type of `realCallStructReturnPath` keep it out of the struct-result path), and the stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`) are returned as a scalar that is a frame address, which a real call must not do; both need their own result path, not only the sum one.
   - question: where does the type of a sum result come from for the consumer, and are the packed results part of this leaf?
   - options:
