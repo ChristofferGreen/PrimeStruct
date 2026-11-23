@@ -6,6 +6,7 @@
 #include "primec/pipeline/BuildScriptCache.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/CompileArena.h"
+#include "primec/support/CompilerSourceId.h"
 #include "primec/pipeline/CompilePipeline.h"
 #include "primec/pipeline/LibraryBuild.h"
 #include "primec/support/Diagnostics.h"
@@ -435,7 +436,6 @@ static int emitCompiledProgram(primec::Options &options,
 
 // `--emit=lib`: writes the library archive of the validated module to the output path.
 static int emitLibraryArchive(primec::Options &options,
-                              const std::string &compilerPath,
                               primec::CompilePipelineOutput &pipelineOutput) {
   auto fail = [&](primec::DiagnosticCode code, const char *prefix, const std::string &message) {
     primec::CliFailure failure;
@@ -446,10 +446,9 @@ static int emitLibraryArchive(primec::Options &options,
     return primec::emitCliFailure(std::cerr, options, failure);
   };
   std::string error;
-  std::string buildId;
   primec::LibraryArchiveContent content;
-  if (!primec::computeCompilerBuildId(compilerPath, buildId, error) ||
-      !primec::buildLibraryArchiveContent(pipelineOutput, options, buildId, content, error)) {
+  if (!primec::buildLibraryArchiveContent(
+          pipelineOutput, options, primec::compilerSourceBuildId(), content, error)) {
     return fail(primec::DiagnosticCode::EmitError, "Emit error: ", error);
   }
   const std::filesystem::path resolved = resolveOutputPath(options);
@@ -633,7 +632,7 @@ int main(int argc, char **argv) {
   }
 
   if (options.emitKind == "lib" && options.dumpStage.empty()) {
-    return emitLibraryArchive(options, primec::selfExecutablePath(argv[0]), pipelineOutput);
+    return emitLibraryArchive(options, pipelineOutput);
   }
 
   return emitCompiledProgram(

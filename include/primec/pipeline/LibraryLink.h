@@ -21,9 +21,6 @@ struct LoadedLibrary {
   LibraryArchiveContent content;
 };
 
-// The compiler build id of the running executable (the SHA-256 of the file), computed once per process.
-bool currentCompilerBuildId(std::string &id, std::string &error);
-
 // Reads every archive (the container, section hashes, compiler build id and IR schema, see readLibraryArchiveFile)
 // and checks the set: a library supplied twice, a library `mid` that was compiled against `base` when `base` is not
 // supplied (`library mid needs library base`), and one whose interface differs from the one `mid` recorded

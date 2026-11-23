@@ -156,6 +156,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/CollectionSpellingClassifier.cpp
   src/support/CompileArena.cpp
   src/support/CompileContext.cpp
+  src/support/CompilerSourceId.cpp
   src/support/DiagnosticNames.cpp
   src/support/Diagnostics.cpp
   src/support/EmitKind.cpp
@@ -735,10 +736,43 @@ set(PRIMESTRUCT_BACKEND_REGISTRY_SOURCES
   src/ir/IrBackends.cpp
 )
 
+# The compiler build id of a library archive is a hash of the compiler's own sources (the front end, IR, lowering,
+# runtime and support code, not the executables, the UI or the embed API), so `primec`, an embed host and a test binary
+# built from one tree agree on which archives they can load. tools/compiler_source_id.cpp hashes the files listed here
+# and writes the literal that src/support/CompilerSourceId.cpp compiles in; a changed source regenerates it.
+file(GLOB_RECURSE PRIMESTRUCT_SOURCE_ID_FILES CONFIGURE_DEPENDS
+  RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/*"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include/primec/*")
+list(FILTER PRIMESTRUCT_SOURCE_ID_FILES EXCLUDE REGEX
+  "^(src/(bin|embed|ui)/|include/primec/(embed|ui|testing)/)|\\.DS_Store$|^src/loc\\.sh$")
+list(SORT PRIMESTRUCT_SOURCE_ID_FILES)
+set(PRIMESTRUCT_SOURCE_ID_DEPENDS ${PRIMESTRUCT_SOURCE_ID_FILES})
+list(TRANSFORM PRIMESTRUCT_SOURCE_ID_DEPENDS PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/")
+string(REPLACE ";" "\n" PRIMESTRUCT_SOURCE_ID_LIST_TEXT "${PRIMESTRUCT_SOURCE_ID_FILES}")
+set(PRIMESTRUCT_SOURCE_ID_LIST "${CMAKE_BINARY_DIR}/compiler_source_files.txt")
+set(PRIMESTRUCT_SOURCE_ID_INC "${CMAKE_BINARY_DIR}/generated/CompilerSourceId.inc")
+file(CONFIGURE OUTPUT "${PRIMESTRUCT_SOURCE_ID_LIST}" CONTENT "${PRIMESTRUCT_SOURCE_ID_LIST_TEXT}\n" @ONLY)
+add_executable(compiler_source_id tools/compiler_source_id.cpp src/support/Sha256.cpp)
+target_include_directories(compiler_source_id PRIVATE include)
+primestructEnableWarnings(compiler_source_id)
+add_custom_command(
+  OUTPUT "${PRIMESTRUCT_SOURCE_ID_INC}"
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/generated"
+  COMMAND compiler_source_id "${CMAKE_CURRENT_SOURCE_DIR}" "${PRIMESTRUCT_SOURCE_ID_LIST}"
+          "${PRIMESTRUCT_SOURCE_ID_INC}"
+  DEPENDS compiler_source_id "${PRIMESTRUCT_SOURCE_ID_LIST}" ${PRIMESTRUCT_SOURCE_ID_DEPENDS}
+  COMMENT "Hashing the compiler sources")
+add_custom_target(primec_compiler_source_id DEPENDS "${PRIMESTRUCT_SOURCE_ID_INC}")
+set_source_files_properties(src/support/CompilerSourceId.cpp PROPERTIES
+  OBJECT_DEPENDS "${PRIMESTRUCT_SOURCE_ID_INC}")
+
 add_library(primec_support_lib ${PRIMESTRUCT_SUPPORT_SOURCES})
 target_include_directories(primec_support_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+target_include_directories(primec_support_lib PRIVATE "${CMAKE_BINARY_DIR}/generated")
+add_dependencies(primec_support_lib primec_compiler_source_id)
 if(PRIMESTRUCT_EMBED_NO_PROCESS)
   target_compile_definitions(primec_support_lib PUBLIC PRIMESTRUCT_NO_PROCESS=1)
 endif()
@@ -1517,9 +1551,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
   target_include_directories(PrimeStruct_vm_byte_tests PRIVATE third_party ${CMAKE_SOURCE_DIR})
   target_link_libraries(PrimeStruct_vm_byte_tests PRIVATE primec_embed_lib)
   # The IR link CLI tests (TODO-5922) run `primevm <program.psir> --link <module.psir>`.
-  add_dependencies(PrimeStruct_vm_byte_tests primevm)
+  add_dependencies(PrimeStruct_vm_byte_tests primevm compiler_source_id)
   target_compile_definitions(PrimeStruct_vm_byte_tests PRIVATE
     PRIMESTRUCT_TEST_PRIMEVM_PATH="$<TARGET_FILE:primevm>"
+    PRIMESTRUCT_TEST_COMPILER_SOURCE_ID_TOOL="$<TARGET_FILE:compiler_source_id>"
     PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   primestructEnableWarnings(PrimeStruct_vm_byte_tests)
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>

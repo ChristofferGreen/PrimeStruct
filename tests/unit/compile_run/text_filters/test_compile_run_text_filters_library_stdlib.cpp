@@ -4,7 +4,7 @@
 #include "test_compile_run_text_filters_helpers.h"
 
 #include "primec/pipeline/LibraryArchive.h"
-#include "primec/support/ExecutableBuildId.h"
+#include "primec/support/CompilerSourceId.h"
 
 TEST_SUITE_BEGIN("primestruct.compile.run.text_filters");
 
@@ -120,11 +120,7 @@ bool depsRead(const std::filesystem::path &dir, const std::string &fileName) {
 
 primec::LibraryArchiveContent readArchive(const std::string &path) {
   primec::LibraryArchiveExpectations expected;
-  std::string idError;
-  REQUIRE_MESSAGE(
-      primec::executableBuildId(
-          "./primec", primec::BuildIdSource::LinkerIdFirst, expected.compilerBuildId, idError),
-      idError);
+  expected.compilerBuildId = primec::compilerSourceBuildId();
   primec::LibraryArchiveContent content;
   std::string error;
   REQUIRE_MESSAGE(primec::readLibraryArchiveFile(path, expected, content, error), error);

@@ -1,3 +1,4 @@
+#include "primec/support/CompilerSourceId.h"
 #include "primec/support/ExecutableBuildId.h"
 #include "primec/support/Sha256.h"
 #include "primec/testing/TestScratch.h"
@@ -5,10 +6,13 @@
 #include "third_party/doctest.h"
 
 #include <cstdint>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <utility>
+#include <vector>
 
 // The compiler build id of a library: the linker's identifier of the executable, the full hash as the
 // fallback. Determinism is shown with byte-identical copies (equal ids) and with images that differ in code and
@@ -266,6 +270,73 @@ TEST_CASE("build id: a missing executable is an error") {
                                 id,
                                 error));
   CHECK(error.find("cannot read the compiler executable") != std::string::npos);
+}
+
+namespace {
+
+// Runs tools/compiler_source_id over the files `files` (name, bytes) written under a scratch directory, in the
+// order given, and returns the literal it wrote.
+std::string sourceIdOf(const std::string &name,
+                       const std::vector<std::pair<std::string, std::string>> &files) {
+  const std::filesystem::path dir = primec::testing::testScratchPath(name);
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir / "tree");
+  std::string list;
+  for (const auto &[file, bytes] : files) {
+    std::filesystem::create_directories((dir / "tree" / file).parent_path());
+    std::ofstream(dir / "tree" / file, std::ios::binary) << bytes;
+    list += file + "\n";
+  }
+  std::ofstream(dir / "list.txt", std::ios::binary) << list;
+  const std::string command = std::string("\"") + PRIMESTRUCT_TEST_COMPILER_SOURCE_ID_TOOL +
+                              "\" \"" + (dir / "tree").string() + "\" \"" +
+                              (dir / "list.txt").string() + "\" \"" + (dir / "id.inc").string() +
+                              "\"";
+  REQUIRE(std::system(command.c_str()) == 0);
+  return readAll(dir / "id.inc");
+}
+
+} // namespace
+
+TEST_CASE("source id: the compiled-in compiler build id is src- and a SHA-256") {
+  const std::string &id = primec::compilerSourceBuildId();
+  REQUIRE(id.size() == 4 + 64);
+  CHECK(id.rfind("src-", 0) == 0);
+  CHECK(id.find_first_not_of("0123456789abcdef", 4) == std::string::npos);
+  // Another form never equals the id of an executable, so an archive of one kind is refused under the other.
+  CHECK(id != idOf(std::filesystem::path(PRIMESTRUCT_TEST_PRIMEVM_PATH),
+                   primec::BuildIdSource::LinkerIdFirst));
+}
+
+TEST_CASE(
+    "source id: a tree hashes to the same literal and every change of it changes the literal") {
+  const std::vector<std::pair<std::string, std::string>> base = {{"a/one.cpp", "int one;"},
+                                                                 {"b.h", "two"}};
+  const std::string id = sourceIdOf("source_id_base", base);
+  CHECK(id.rfind("\"src-", 0) == 0);
+  CHECK(id.size() == 4 + 64 + 3);
+  CHECK(sourceIdOf("source_id_again", base) == id);
+  // The bytes, the name, the set and the order of the files all count; the directory the tree sits in does not.
+  CHECK(sourceIdOf("source_id_bytes", {{"a/one.cpp", "int one;\n"}, {"b.h", "two"}}) != id);
+  CHECK(sourceIdOf("source_id_name", {{"a/uno.cpp", "int one;"}, {"b.h", "two"}}) != id);
+  CHECK(sourceIdOf("source_id_less", {{"a/one.cpp", "int one;"}}) != id);
+  CHECK(sourceIdOf("source_id_order", {{"b.h", "two"}, {"a/one.cpp", "int one;"}}) != id);
+  // `ab` + `c` is not `a` + `bc`: the size of a file is part of what is hashed.
+  CHECK(sourceIdOf("source_id_split_one", {{"x", "ab"}, {"y", "c"}}) !=
+        sourceIdOf("source_id_split_two", {{"x", "a"}, {"y", "bc"}}));
+}
+
+TEST_CASE("source id: a file the list names but the tree lacks is an error") {
+  const std::filesystem::path dir = primec::testing::testScratchPath("source_id_missing");
+  std::filesystem::remove_all(dir);
+  std::filesystem::create_directories(dir / "tree");
+  std::ofstream(dir / "list.txt", std::ios::binary) << "gone.cpp\n";
+  const std::string command = std::string("\"") + PRIMESTRUCT_TEST_COMPILER_SOURCE_ID_TOOL +
+                              "\" \"" + (dir / "tree").string() + "\" \"" +
+                              (dir / "list.txt").string() + "\" \"" + (dir / "id.inc").string() +
+                              "\" 2> /dev/null";
+  CHECK(std::system(command.c_str()) != 0);
+  CHECK_FALSE(std::filesystem::exists(dir / "id.inc"));
 }
 
 TEST_SUITE_END();

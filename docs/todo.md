@@ -152,7 +152,6 @@ of sync with them.
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
-| TODO-6216 | The compiler build id is a hash of the compiler sources | ready | lib-embed |
 | TODO-5933 | The embed API loads a library at run time (`ScriptEngine::addLibrary`) | ready | lib-embed |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | deferred | lib-embed |
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
@@ -169,14 +168,12 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6216 (lib-embed): the compiler build id is a hash of the compiler sources, so an embed host loads an archive `primec` wrote
-- TODO-5933 (lib-embed): `ScriptEngine::addLibrary`, after TODO-6216
+- TODO-5933 (lib-embed): `ScriptEngine::addLibrary`
 
 ### Immediate Next 10
 
 1. TODO-5603
-6. TODO-6216
-7. TODO-5933
+6. TODO-5933
 
 ### Priority Lanes
 
@@ -185,7 +182,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-6216, TODO-5933, then deferred TODO-6217; TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (TODO-6216, the source-hash compiler build id, landed), then deferred TODO-6217; TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -767,8 +764,8 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
   - parallel_track: lib-embed
-  - depends_on: TODO-5925, TODO-6216
-  - split: 2026-11-23: the compiler build id is TODO-6216 (done first, it is the blocker); this leaf is slice 1 of the owner's decision (`ScriptEngine::addLibrary` and its test); slice 2 is TODO-6217.
+  - depends_on: TODO-5925
+  - split: 2026-11-23: the compiler build id is TODO-6216 (done, it was the blocker); this leaf is slice 1 of the owner's decision (`ScriptEngine::addLibrary` and its test); slice 2 is TODO-6217.
   - scope: The VM runs IR, so `Script` (include/primec/embed/Script.h) could load a `.psa` and link it into a script it compiles, which would let a PrimeScroll script use a precompiled library. The embed library must stay free of process spawning (scripts/check_embed_no_process.sh) and the link runs in-process. Needs a decision on how a script names the libraries it wants and on the startup cost of loading one; scope it when TODO-5925 has landed.
   - acceptance:
     - `ScriptEngine::addLibrary(path)` makes `import</root>` of a script resolve against the archive and links it in-process; a script that calls a function of a library built by `primec --emit=lib`, and one built with the host compiler (`buildLibraryArchiveContent`), runs through the embed API
@@ -780,23 +777,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - options_to_decide: build id: (1) the id names the compiler sources, not the executable: CMake hashes the inputs of the front end, IR and lowering into a generated header both `primec` and the embed library carry, so one source tree agrees with itself; cost is a build-time hash, and a stale id is impossible because it is derived from the content. (2) the host passes an id: `ScriptEngine::setLibraryCompilerId`, defaulting to its own UUID; fragile, the host must learn `primec`'s. (3) accept another binary's archive when the IR schema version and a hand-bumped ABI constant match; cheap, but a forgotten bump runs wrong code silently. How a script names libraries: (a) the host: `engine.addLibrary(path)`, the script writes `import</ui>`; the host decides which code a script reaches, as it does for the effects ceiling (`setAllowEffects`). (b) the script names a file path; rejected, a script could read any file. (c) `addLibraryPath(dir)` resolving `import</name>` to `dir/name.psa`; a convenience on top of (a).
   - decision: 2026-11-22 (owner): option (1): the compiler build id is a hash of the compiler sources (the inputs of the front end, IR and lowering) generated into a header that both `primec` and the embed library carry, so one source tree agrees with itself; naming (a): the host names libraries through `ScriptEngine::addLibrary(path)` and the script writes `import</root>`; a script never names a file path. Slice 1: `ScriptEngine::addLibrary` plus a test that builds a library with the host compiler (`buildLibraryArchiveContent`) and one built by `primec`, runs a script that calls it, and checks that a script without libraries is unchanged (instruction count of an empty script compile, no timing). Slice 2: `Script::bytecode` records the libraries so `loadBytecode` stays self-contained.
 
-
-- [~] TODO-6216: The compiler build id is a hash of the compiler sources
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-libshapes (worktree-agent-ae7b8cc36b25dd2d2), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Modules and libraries (split from TODO-5933)
-  - parallel_track: lib-embed
-  - scope: `currentCompilerBuildId` and `computeCompilerBuildId` (src/pipeline/LibraryLink.cpp, src/pipeline/LibraryBuild.cpp) answer the linker UUID of the running executable, so an embed host (a different executable from `primec`) refuses every archive `primec --emit=lib` wrote. The id becomes a hash of the compiler sources (the front end, IR, lowering, runtime and support: `src/` and `include/primec/` outside `bin`, `embed`, `ui` and `testing`), generated at build time into a header that `primec`, the embed library and the test binaries all carry through one unit of `primec_support_lib`, so one source tree agrees with itself. A small tool built with the project (no Python in a library build) hashes the files and writes the header; the custom command depends on the file list (`CONFIGURE_DEPENDS` glob), so a changed source regenerates it and an unchanged tree does not. The id is `src-<64 hex>`; `uuid-` and `sha256-` ids of older archives are refused as before. `executableBuildId` stays for the other binaries it names (a script's cache key uses the id the same way, so it now keys on the source id).
-  - decision: 2026-11-22 (owner): option (1) of TODO-5933, a hash of the compiler sources generated into a header both `primec` and the embed library carry.
-  - acceptance:
-    - an archive written by `primec --emit=lib` loads in the test binary and in an embed host (the doctest binaries are different executables from `primec`)
-    - a changed compiler source gives another id; the same tree built twice gives the same id
-    - the cost of an archive load does not grow (the id is a constant, no executable is read: fewer instructions than the 5M of the linker UUID)
-    - full release gate green
-  - stop_rule: the compiler build id; `ScriptEngine::addLibrary` is TODO-5933.
-  - repro: build the tree, then `PrimeStruct_compile_run_tests --test-case="library link*"` compares ids computed from `./primec`; an embed host that reads an archive is refused with a build id mismatch today.
 
 - [ ] TODO-6217: `Script::bytecode` records the libraries a script was linked with
   - owner: ai

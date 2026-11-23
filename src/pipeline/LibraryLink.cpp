@@ -4,25 +4,13 @@
 #include "primec/ir/IrLinker.h"
 #include "primec/pipeline/BuildRunner.h"
 #include "primec/pipeline/LibraryBuild.h"
+#include "primec/support/CompilerSourceId.h"
 #include "LibraryOwnership.h"
 
 #include <algorithm>
 #include <map>
-#include <mutex>
 
 namespace primec {
-
-bool currentCompilerBuildId(std::string &id, std::string &error) {
-  static std::mutex mutex;
-  static std::string cached;
-  const std::lock_guard<std::mutex> lock(mutex);
-  if (cached.empty() && !computeCompilerBuildId(selfExecutablePath(""), cached, error)) {
-    cached.clear();
-    return false;
-  }
-  id = cached;
-  return true;
-}
 
 bool loadLibraries(const std::vector<std::string> &paths,
                    std::vector<LoadedLibrary> &out,
@@ -32,9 +20,7 @@ bool loadLibraries(const std::vector<std::string> &paths,
     return true;
   }
   LibraryArchiveExpectations expected;
-  if (!currentCompilerBuildId(expected.compilerBuildId, error)) {
-    return false;
-  }
+  expected.compilerBuildId = compilerSourceBuildId();
   for (const std::string &path : paths) {
     LoadedLibrary library;
     library.path = path;

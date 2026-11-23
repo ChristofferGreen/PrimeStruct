@@ -9,6 +9,7 @@
 #include "primec/pipeline/BuildStepScheduler.h"
 #include "primec/pipeline/BuildSubprojects.h"
 #include "primec/pipeline/LibraryBuild.h"
+#include "primec/support/CompilerSourceId.h"
 #include "primec/support/Sha256.h"
 
 #include <algorithm>
@@ -409,17 +410,14 @@ int runBuildGraph(const BuildGraphData &given,
   std::vector<Result> results(graph.steps.size());
 
   // The compiler executable stands for the compiler version: its build id (the linker's UUID, the hash of the
-  // whole file as the fallback) keys the cache and is the id a library archive records for the compiler that wrote
-  // it. Without a readable executable nothing is cached.
-  std::string compilerBuildId;
+  // whole file as the fallback) keys the cache. Without a readable executable nothing is cached. The archives of a
+  // library step are checked against the id of the compiler sources, which is the id `--emit=lib` records.
+  std::string compilerHash;
   std::string compilerBuildIdError;
   const bool caching =
       !settings.cacheDir.empty() &&
-      computeCompilerBuildId(settings.primecPath, compilerBuildId, compilerBuildIdError);
-  const std::string &compilerHash = compilerBuildId;
-  if (!caching) {
-    compilerBuildId.clear();
-  }
+      computeCompilerBuildId(settings.primecPath, compilerHash, compilerBuildIdError);
+  const std::string compilerBuildId = caching ? compilerSourceBuildId() : std::string();
 
   std::atomic<bool> stop{false};
 
