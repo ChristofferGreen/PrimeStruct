@@ -6,6 +6,7 @@
 #include <cstdlib>
 
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace primec {
@@ -64,11 +65,12 @@ bool compileCppExecutable(const ProcessRunner &runner,
   return commandSucceeds(runner, args);
 }
 
-bool compileCppExecutableOptimized(const ProcessRunner &runner,
-                                   const std::filesystem::path &cppPath,
-                                   const std::filesystem::path &outputPath,
-                                   int optimizationLevel,
-                                   const std::vector<std::string> &linkArgs) {
+bool compileCppExecutableOptimizedWithHeaderCache(const ProcessRunner &runner,
+                                                  const std::filesystem::path &cppPath,
+                                                  const std::filesystem::path &outputPath,
+                                                  int optimizationLevel,
+                                                  const std::filesystem::path &headerCacheDir,
+                                                  const std::vector<std::string> &linkArgs) {
   const int level = optimizationLevel < 0 ? 0 : (optimizationLevel > 3 ? 3 : optimizationLevel);
   const std::vector<std::string> flags = {
       "-std=c++23", "-O" + std::to_string(level), "-ffp-contract=off", "-pthread"};
@@ -85,23 +87,44 @@ bool compileCppExecutableOptimized(const ProcessRunner &runner,
     args.insert(args.end(), linkArgs.begin(), linkArgs.end());
     return commandSucceeds(runner, args);
   };
-#if defined(PRIMEC_OPTEXE_PCH_DIR)
   // The runtime's standard headers are most of the compile of a small program (src/support/CppPrecompiledHeader.h).
-  // The header is cached inside the build directory under a key of the compiler, the flags and the header text, so
-  // a stale one is never used; a compile that fails with it is repeated without it, so it can only ever save time.
+  // The header is cached under a key of the compiler, the flags and the header text, so a stale one is never
+  // used; a compile that fails with it is repeated without it, so it can only ever save time.
   const char *disabled = std::getenv("PRIMEC_OPTEXE_PCH");
-  if ((disabled == nullptr || std::string(disabled) != "0") &&
+  if (!headerCacheDir.empty() && (disabled == nullptr || std::string(disabled) != "0") &&
       linkArgsAllowPrecompiledHeader(linkArgs)) {
     const std::filesystem::path precompiledHeader =
-        ensureCppPrecompiledHeader(runner, PRIMEC_OPTEXE_PCH_DIR, flags, optCppRuntimeHeaders());
+        ensureCppPrecompiledHeader(runner, headerCacheDir, flags, optCppRuntimeHeaders());
     if (!precompiledHeader.empty()) {
       if (compile(precompiledHeader)) {
         return true;
       }
+      if (compile({})) {
+        // The program compiles, so the header was refused: it goes, and the next compile builds it again
+        // instead of paying for a refused compile every time.
+        std::error_code ec;
+        std::filesystem::remove(precompiledHeader, ec);
+        return true;
+      }
+      return false;
     }
   }
-#endif
   return compile({});
+}
+
+bool compileCppExecutableOptimized(const ProcessRunner &runner,
+                                   const std::filesystem::path &cppPath,
+                                   const std::filesystem::path &outputPath,
+                                   int optimizationLevel,
+                                   const std::vector<std::string> &linkArgs) {
+#if defined(PRIMEC_OPTEXE_PCH_DIR)
+  // Inside the build directory, never outside the checkout.
+  const std::filesystem::path headerCacheDir = PRIMEC_OPTEXE_PCH_DIR;
+#else
+  const std::filesystem::path headerCacheDir;
+#endif
+  return compileCppExecutableOptimizedWithHeaderCache(
+      runner, cppPath, outputPath, optimizationLevel, headerCacheDir, linkArgs);
 }
 
 } // namespace primec

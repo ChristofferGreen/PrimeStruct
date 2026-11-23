@@ -6,6 +6,7 @@
 #include <atomic>
 #include <fstream>
 #include <sstream>
+#include <string_view>
 #include <system_error>
 #include <utility>
 
@@ -59,6 +60,41 @@ bool compilerIdentity(const ProcessRunner &runner,
   return read;
 }
 
+// The header a precompiled header was built from. The compiler records its path, size and time in the precompiled
+// header and refuses the precompiled header when that file is gone or changed, so it stays next to it under a
+// name that only depends on the key.
+std::filesystem::path precompiledHeaderSourcePath(const std::filesystem::path &precompiledHeader) {
+  std::filesystem::path header = precompiledHeader;
+  header.replace_extension(".h");
+  return header;
+}
+
+bool sourceHeaderIs(const std::filesystem::path &headerPath, std::string_view headerText) {
+  std::string kept;
+  return readFile(headerPath, kept) && kept == headerText;
+}
+
+// Writes the header under `tempPath` and links it to `headerPath`. A link never replaces a file, so of several
+// compiles that start with an empty cache one header wins and every precompiled header names that same file.
+bool publishSourceHeader(const std::filesystem::path &tempPath,
+                         const std::filesystem::path &headerPath,
+                         std::string_view headerText,
+                         bool &created) {
+  std::error_code ec;
+  {
+    std::ofstream header(tempPath, std::ios::binary);
+    header << headerText;
+    if (!header) {
+      std::filesystem::remove(tempPath, ec);
+      return false;
+    }
+  }
+  std::filesystem::create_hard_link(tempPath, headerPath, ec);
+  created = !ec;
+  std::filesystem::remove(tempPath, ec);
+  return sourceHeaderIs(headerPath, headerText);
+}
+
 // Keeps the cache bounded: when more than MaxCachedHeaders headers are there (one per compiler and flag set that
 // ever ran), the oldest ones other than `keep` go.
 void pruneCache(const std::filesystem::path &cacheDir, const std::filesystem::path &keep) {
@@ -82,6 +118,7 @@ void pruneCache(const std::filesystem::path &cacheDir, const std::filesystem::pa
     }
     if (header.second != keep) {
       std::filesystem::remove(header.second, ec);
+      std::filesystem::remove(precompiledHeaderSourcePath(header.second), ec);
       --excess;
     }
   }
@@ -120,27 +157,34 @@ std::filesystem::path ensureCppPrecompiledHeader(const ProcessRunner &runner,
   }
   const std::string key = cppPrecompiledHeaderKey(identity, flags, headerText);
   const std::filesystem::path finalPath = cacheDir / ("pch-" + key + ".pch");
-  if (std::filesystem::is_regular_file(finalPath, ec) && std::filesystem::file_size(finalPath, ec) > 0) {
-    return finalPath;
-  }
-
+  const std::filesystem::path headerPath = precompiledHeaderSourcePath(finalPath);
   const std::string suffix = uniqueSuffix();
-  const std::filesystem::path headerPath = cacheDir / ("pch-" + key + "-" + suffix + ".h");
-  const std::filesystem::path tempPath = cacheDir / ("pch-" + key + "-" + suffix + ".tmp");
-  {
-    std::ofstream header(headerPath, std::ios::binary);
-    header << headerText;
-    if (!header) {
+  if (!sourceHeaderIs(headerPath, headerText)) {
+    // A header with other text goes; a missing one is only ever added, so the header a concurrent compile
+    // builds from is never replaced.
+    if (std::filesystem::exists(headerPath, ec)) {
       std::filesystem::remove(headerPath, ec);
+    }
+    bool created = false;
+    if (!publishSourceHeader(
+            cacheDir / ("pch-" + key + "-" + suffix + ".h.tmp"), headerPath, headerText, created)) {
       return {};
     }
+    if (created) {
+      // A precompiled header that was there before its header names another file and would be refused.
+      std::filesystem::remove(finalPath, ec);
+    }
   }
+  if (std::filesystem::is_regular_file(finalPath, ec) &&
+      std::filesystem::file_size(finalPath, ec) > 0) {
+    return finalPath;
+  }
+  const std::filesystem::path tempPath = cacheDir / ("pch-" + key + "-" + suffix + ".tmp");
   std::vector<std::string> args = {"clang++"};
   args.insert(args.end(), flags.begin(), flags.end());
   args.insert(args.end(), {"-x", "c++-header", headerPath.string(), "-o", tempPath.string()});
   const bool built = runner.run(args) == 0 && std::filesystem::is_regular_file(tempPath, ec) &&
                      std::filesystem::file_size(tempPath, ec) > 0;
-  std::filesystem::remove(headerPath, ec);
   if (!built) {
     std::filesystem::remove(tempPath, ec);
     return {};

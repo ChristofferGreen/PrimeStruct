@@ -335,3 +335,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 ## TODO-6149
 
 - 2026-11-22 (refusal accounting of `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1`, release build): before the heap 168 cases compiled for `--emit=wasm --wasm-profile wasi`; after it 266 compile, and `PRIMESTRUCT_MATRIX_WASM_RUN=1` finds 265 that agree with the VM (168 already listed, 97 newly listed with `wasm-wasi`) and one that differs (`file_io_errno_newline_png`, no WASI preopen in the runner: TODO-6176). The refusals left, by first cause: 168 `CallHost` (`heapLiveBlocks()` and other `__pstext_*` host calls: TODO-6150, TODO-6127), 32 unsupported effect mask bits, 18 `AtomicStore` and 16 channel opcodes (TODO-6128), 11 front-end errors reported at a scratch path (not examined), 2 `ZextU8` (TODO-6127), 1 `/std/gfx` substrate.
+
+## TODO-6194
+
+- 2026-11-23 (release build, macOS arm64, Apple clang 21.0.0, wall seconds of `primec --emit=optexe m.prime -o m` for `[return<int>] main() { return(0i32) }`, three runs each, `/usr/bin/time -p`). Before the fix (the header is refused, the compile runs again without it, two lines on stderr): 0.69, 0.59, 0.63 s. After: 1.10 s on the cold run that builds the header, then 0.33, 0.33 s warm, nothing on stderr. With `PRIMEC_OPTEXE_PCH=0`: 0.59, 0.58, 0.58 s. A cache left by the old layout (a `.pch` without its `pch-<key>.h`) is rebuilt on the first compile without a refusal.

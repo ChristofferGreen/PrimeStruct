@@ -34,4 +34,14 @@ bool compileCppExecutableOptimized(const ProcessRunner &runner,
                                    int optimizationLevel,
                                    const std::vector<std::string> &linkArgs = {});
 
+// The same compile with the precompiled header of the runtime headers kept in `headerCacheDir`
+// (primec/support/CppPrecompiledHeader.h); an empty directory compiles without one. A header the compiler
+// refuses is removed, so it is built again by the next compile.
+bool compileCppExecutableOptimizedWithHeaderCache(const ProcessRunner &runner,
+                                                  const std::filesystem::path &cppPath,
+                                                  const std::filesystem::path &outputPath,
+                                                  int optimizationLevel,
+                                                  const std::filesystem::path &headerCacheDir,
+                                                  const std::vector<std::string> &linkArgs = {});
+
 } // namespace primec

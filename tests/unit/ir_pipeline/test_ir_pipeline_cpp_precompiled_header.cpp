@@ -6,11 +6,13 @@
 #include "primec/support/ProcessRunner.h"
 #include "primec/testing/TestScratch.h"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -25,6 +27,7 @@ public:
     return 0;
   };
   mutable int headerBuilds = 0;
+  mutable std::vector<std::string> headerSources;
   mutable std::vector<std::vector<std::string>> compiles;
 
   int run(const std::vector<std::string> &args) const override {
@@ -43,6 +46,9 @@ public:
     }
     if (has("c++-header")) {
       ++headerBuilds;
+      if (args.size() >= 3) {
+        headerSources.push_back(args[args.size() - 3]);
+      }
       if (failHeaderBuild) {
         return 1;
       }
@@ -53,6 +59,25 @@ public:
     return compileResult(args);
   }
 };
+
+// The system compiler, with every command and its exit code kept.
+class RecordingCompiler final : public primec::ProcessRunner {
+public:
+  mutable std::vector<std::pair<std::vector<std::string>, int>> commands;
+
+  int run(const std::vector<std::string> &args) const override {
+    const int code = primec::systemProcessRunner().run(args);
+    commands.emplace_back(args, code);
+    return code;
+  }
+};
+
+std::string readText(const std::filesystem::path &path) {
+  std::ifstream file(path, std::ios::binary);
+  std::ostringstream buffer;
+  buffer << file.rdbuf();
+  return buffer.str();
+}
 
 std::filesystem::path pchScratch(const std::string &name) {
   const std::filesystem::path dir = primec::testing::testScratchPath("pch/" + name);
@@ -98,8 +123,98 @@ TEST_CASE("precompiled header is built once and reused") {
   const std::filesystem::path second = primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n");
   CHECK(second == first);
   CHECK(compiler.headerBuilds == 1);
-  // Only the header itself is left behind: no probe, source or temporary files.
-  CHECK(fileCount(cache) == 1);
+  // Only the precompiled header and the header text it names are left behind: no probe or temporary files.
+  CHECK(fileCount(cache) == 2);
+}
+
+TEST_CASE("the header a precompiled header is built from stays next to it under a stable name") {
+  const std::filesystem::path cache = pchScratch("source");
+  FakeCompiler compiler;
+  const std::filesystem::path pch =
+      primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n");
+  REQUIRE_FALSE(pch.empty());
+  std::filesystem::path header = pch;
+  header.replace_extension(".h");
+  REQUIRE(compiler.headerSources.size() == 1);
+  CHECK(compiler.headerSources.front() == header.string());
+  CHECK(readText(header) == "#include <map>\n");
+
+  // The compiler refuses a precompiled header whose source is gone or changed, so neither is reused.
+  std::filesystem::remove(header);
+  CHECK(primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n") == pch);
+  CHECK(compiler.headerBuilds == 2);
+  CHECK(readText(header) == "#include <map>\n");
+  std::ofstream(header, std::ios::binary | std::ios::trunc) << "#include <set>\n";
+  CHECK(primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n") == pch);
+  CHECK(compiler.headerBuilds == 3);
+  CHECK(readText(header) == "#include <map>\n");
+  CHECK(primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n") == pch);
+  CHECK(compiler.headerBuilds == 3);
+  CHECK(fileCount(cache) == 2);
+}
+
+TEST_CASE("the system compiler accepts the precompiled header it built") {
+  if (!primec::processSpawningAvailable() ||
+      primec::systemProcessRunner().run({"clang++", "--version"}) != 0) {
+    return;
+  }
+  const std::filesystem::path cache = pchScratch("accepted");
+  const std::filesystem::path source = cache / "program.cpp";
+  std::ofstream(source, std::ios::binary)
+      << "int main() { std::vector<int> values; return int(values.size()); }\n";
+  RecordingCompiler compiler;
+  const std::filesystem::path pch =
+      primec::ensureCppPrecompiledHeader(compiler, cache / "cache", Flags, "#include <vector>\n");
+  REQUIRE_FALSE(pch.empty());
+  // The program names `std::vector` without an include, so it only compiles when the header is taken.
+  std::vector<std::string> command = {"clang++"};
+  command.insert(command.end(), Flags.begin(), Flags.end());
+  command.insert(
+      command.end(),
+      {"-include-pch", pch.string(), source.string(), "-o", (cache / "program").string()});
+  CHECK(compiler.run(command) == 0);
+  // A second process finds the header and the compiler still takes it.
+  CHECK(primec::ensureCppPrecompiledHeader(
+            compiler, cache / "cache", Flags, "#include <vector>\n") == pch);
+  CHECK(compiler.run(command) == 0);
+}
+
+TEST_CASE("the optimized compile of a program runs once with the precompiled header of the runtime "
+          "headers") {
+  if (!primec::processSpawningAvailable() ||
+      primec::systemProcessRunner().run({"clang++", "--version"}) != 0) {
+    return;
+  }
+  const char *disabled = std::getenv("PRIMEC_OPTEXE_PCH");
+  if (disabled != nullptr && std::string(disabled) == "0") {
+    return;
+  }
+  const std::filesystem::path dir = pchScratch("once");
+  const std::filesystem::path source = dir / "program.cpp";
+  std::ofstream(source, std::ios::binary) << "int main() { return 0; }\n";
+  for (int round = 0; round < 2; ++round) {
+    RecordingCompiler compiler;
+    CHECK(primec::compileCppExecutableOptimizedWithHeaderCache(
+        compiler, source, dir / "program", 2, dir / "cache"));
+    size_t compiles = 0;
+    size_t withHeader = 0;
+    for (const auto &command : compiler.commands) {
+      bool probeOrHeader = false;
+      bool usesHeader = false;
+      for (const std::string &arg : command.first) {
+        probeOrHeader = probeOrHeader || arg == "-dM" || arg == "c++-header";
+        usesHeader = usesHeader || arg == "-include-pch";
+      }
+      if (!probeOrHeader) {
+        ++compiles;
+        withHeader += usesHeader ? 1 : 0;
+        CHECK(command.second == 0);
+      }
+    }
+    // One compile, and it took the header: a refused header shows as a second compile without it.
+    CHECK(compiles == 1);
+    CHECK(withHeader == 1);
+  }
 }
 
 TEST_CASE("a changed compiler, flags or header text never reuses a precompiled header") {
@@ -135,12 +250,14 @@ TEST_CASE("an empty precompiled header file is rebuilt") {
   CHECK(std::filesystem::file_size(again) > 0);
 }
 
-TEST_CASE("a failed precompiled header build leaves nothing behind and returns no path") {
+TEST_CASE(
+    "a failed precompiled header build leaves only the header text behind and returns no path") {
   const std::filesystem::path cache = pchScratch("failed");
   FakeCompiler compiler;
   compiler.failHeaderBuild = true;
   CHECK(primec::ensureCppPrecompiledHeader(compiler, cache, Flags, "#include <map>\n").empty());
-  CHECK(fileCount(cache) == 0);
+  // Only the header text stays: a concurrent compile may be building from it.
+  CHECK(fileCount(cache) == 1);
 }
 
 TEST_CASE("link arguments that can change how headers are read refuse the precompiled header") {
@@ -154,9 +271,11 @@ TEST_CASE("link arguments that can change how headers are read refuse the precom
   CHECK_FALSE(primec::linkArgsAllowPrecompiledHeader({"-framework"}));
 }
 
-TEST_CASE("the optimized compile of a program uses a precompiled header of the runtime headers or none at all") {
+TEST_CASE("the optimized compile of a program uses a precompiled header of the runtime headers") {
+  const std::filesystem::path cache = pchScratch("compile");
   FakeCompiler compiler;
-  CHECK(primec::compileCppExecutableOptimized(compiler, "/tmp/pch_source.cpp", "/tmp/pch_program", 2));
+  CHECK(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, cache));
   REQUIRE(compiler.compiles.size() == 1);
   const std::vector<std::string> &command = compiler.compiles.front();
   CHECK(command[0] == "clang++");
@@ -166,18 +285,29 @@ TEST_CASE("the optimized compile of a program uses a precompiled header of the r
       pchIndex = i;
     }
   }
-  if (pchIndex != command.size()) {
-    REQUIRE(pchIndex + 1 < command.size());
-    const std::filesystem::path pch = command[pchIndex + 1];
-    CHECK(std::filesystem::exists(pch));
-    CHECK(pch.filename().string().starts_with("pch-"));
-    std::error_code ec;
-    std::filesystem::remove(pch, ec);
-  }
-  CHECK(command.back() != "-include-pch");
+  REQUIRE(pchIndex + 1 < command.size());
+  const std::filesystem::path pch = command[pchIndex + 1];
+  CHECK(std::filesystem::exists(pch));
+  CHECK(pch.parent_path() == cache);
+  CHECK(pch.filename().string().starts_with("pch-"));
+  REQUIRE(compiler.headerSources.size() == 1);
+  CHECK(readText(compiler.headerSources.front()) == primec::optCppRuntimeHeaders());
 }
 
-TEST_CASE("a compile that fails with the precompiled header is repeated without it") {
+TEST_CASE("the optimized compile of a program without a header cache uses no precompiled header") {
+  FakeCompiler compiler;
+  CHECK(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, {}));
+  REQUIRE(compiler.compiles.size() == 1);
+  CHECK(compiler.headerBuilds == 0);
+  for (const std::string &arg : compiler.compiles.front()) {
+    CHECK(arg != "-include-pch");
+  }
+}
+
+TEST_CASE(
+    "a compile that fails with the precompiled header is repeated without it and the header goes") {
+  const std::filesystem::path cache = pchScratch("refused");
   FakeCompiler compiler;
   compiler.compileResult = [](const std::vector<std::string> &args) {
     for (const std::string &arg : args) {
@@ -187,20 +317,32 @@ TEST_CASE("a compile that fails with the precompiled header is repeated without 
     }
     return 0;
   };
-  CHECK(primec::compileCppExecutableOptimized(compiler, "/tmp/pch_source.cpp", "/tmp/pch_program", 2));
-  REQUIRE_FALSE(compiler.compiles.empty());
-  const std::vector<std::string> &last = compiler.compiles.back();
-  for (const std::string &arg : last) {
+  CHECK(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, cache));
+  REQUIRE(compiler.compiles.size() == 2);
+  for (const std::string &arg : compiler.compiles.back()) {
     CHECK(arg != "-include-pch");
   }
-  for (const std::vector<std::string> &command : compiler.compiles) {
-    for (size_t i = 0; i + 1 < command.size(); ++i) {
-      if (command[i] == "-include-pch") {
-        std::error_code ec;
-        std::filesystem::remove(command[i + 1], ec);
-      }
+  // The refused header is not kept, so the next compile builds it again instead of being refused again.
+  for (const std::string &arg : compiler.compiles.front()) {
+    if (arg.ends_with(".pch")) {
+      CHECK_FALSE(std::filesystem::exists(arg));
     }
   }
+  CHECK(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, cache));
+  CHECK(compiler.headerBuilds == 2);
+}
+
+TEST_CASE("a program that does not compile keeps the precompiled header") {
+  const std::filesystem::path cache = pchScratch("broken_program");
+  FakeCompiler compiler;
+  compiler.compileResult = [](const std::vector<std::string> &) { return 1; };
+  CHECK_FALSE(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, cache));
+  CHECK_FALSE(primec::compileCppExecutableOptimizedWithHeaderCache(
+      compiler, "pch_source.cpp", "pch_program", 2, cache));
+  CHECK(compiler.headerBuilds == 1);
 }
 
 TEST_CASE("the runtime headers of a generated program start the precompiled header text") {

@@ -16,7 +16,8 @@ namespace primec {
 // compiler's predefined macros under the compile flags (which carry its version, target and optimization level),
 // of the flags themselves and of the header text. A header that is missing, unreadable or half written is
 // rebuilt; a header is written under a unique name and renamed into place, so concurrent compiles never see a
-// partial file.
+// partial file. The header text it was built from stays next to it as `pch-<key>.h`: the compiler refuses a
+// precompiled header whose source file is gone or changed.
 
 // The key a precompiled header is stored under: a hash of the compiler identity (its predefined macros), the
 // flags and the header text. Different input, different key.
