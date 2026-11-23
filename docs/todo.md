@@ -349,9 +349,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6193: `push` of a `string` into a `Vector<string>` or `vector<string>` is an internal lowering error
+- [~] TODO-6193: `push` of a `string` into a `Vector<string>` or `vector<string>` is an internal lowering error
   - owner: ai
   - status: ready
+  - claimed_by: agent-ab69b87dc26ecd9b8 (worktree-agent-ab69b87dc26ecd9b8), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the field element read)
   - parallel_track: vector-string-push
@@ -362,9 +363,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `push` with a `string` element; other element types are untouched.
   - repro: `import /std/collections/*  [effects(heap_alloc, io_out) return<int>] main() { [Vector<string> mut] names{/std/collections/vector/vector<string>()}  names.push("hello"utf8)  print_line(names[0i32])  return(0i32) }` with `primec --emit=vm -I stdlib`.
 
-- [ ] TODO-6195: `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string`
+- [~] TODO-6195: `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string`
   - owner: ai
   - status: ready
+  - claimed_by: agent-ab69b87dc26ecd9b8 (worktree-agent-ab69b87dc26ecd9b8), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (found with the field element read)
   - parallel_track: print-field-count
