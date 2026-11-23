@@ -764,4 +764,62 @@ TEST_CASE("a mut parameter of a read-only parameter's field names the parameter 
       error);
 }
 
+TEST_CASE("an element of a stdlib Vector reached through a Reference is a place") {
+  // The element is a place as it is for the vector itself: a field write and a `[mut]` call go through a plain
+  // `Reference`, which gates only whole-value assignment (docs/spec/pointers-and-references.md); a whole element
+  // assignment needs `mut` on the reference.
+  const std::string prelude = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+  [mut return<void>]
+  bump() {
+    this.n = this.n + 1i32
+  }
+}
+
+)";
+  const std::string tail = R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string rejected = prelude + R"([return<void>]
+reset([Reference<Vector<Item>>] values) {
+  values[0i32] = Item{}
+}
+)" + tail;
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(rejected, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find("assign target must be a mutable binding: values") != std::string::npos,
+                error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  const auto position = positionOf(rejected, "values[0i32] = Item{}");
+  CHECK(diagnosticInfo.primarySpan.line == position.first);
+  CHECK(diagnosticInfo.primarySpan.column == position.second);
+
+  const std::string accepted = prelude + R"([return<int>]
+read([Reference<Vector<Item>>] values) {
+  return(values[0i32].n + values.at(0i32).n)
+}
+
+[return<void>]
+poke([Reference<Vector<Item>>] values) {
+  values[0i32].n = 5i32
+  values[0i32].bump()
+  values.at(0i32).bump()
+}
+
+[return<void>]
+reset([Reference<Vector<Item>> mut] values) {
+  values[0i32] = Item{}
+}
+)" + tail;
+  error.clear();
+  CHECK_MESSAGE(validateProgram(accepted, "/main", error), error);
+}
+
 TEST_SUITE_END();

@@ -355,7 +355,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.read_only_roots"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 26
+  TOTAL_CASES 27
   SHARD_PREFIX "read_only_roots"
 )
 

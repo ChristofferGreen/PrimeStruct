@@ -287,6 +287,12 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             return false;
           }
         }
+        // So does the stdlib vector record a reference holds (`dereference(r)`).
+        if (receiver.kind == Expr::Kind::Call && !receiver.isMethodCall &&
+            receiver.args.size() == 1 && isSimpleCallName(receiver, "dereference") &&
+            ir_lowerer::isCollectionVectorRecordPath(inferStructExprPath(receiver, locals))) {
+          return false;
+        }
         const auto receiverInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
             callExpr.args.front(),
             locals,

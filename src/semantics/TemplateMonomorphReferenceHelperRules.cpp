@@ -118,6 +118,8 @@ PhaseStatus rewriteBorrowedVectorHelperCall(ExprReferenceContext &rc) {
   if (rewriteBorrowedVectorBareHelperCall(expr, params, locals, allowMathBare, ctx)) {
     allConcrete = true;
     resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
+  } else if (rewriteReferencedStdlibVectorElementRead(expr, params, locals, allowMathBare, ctx)) {
+    resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx, &locals, &params);
   }
   const std::string preferredCollectionHelperPath =
       preferCanonicalStdlibCollectionHelperPath(rc.st, resolvedPath);

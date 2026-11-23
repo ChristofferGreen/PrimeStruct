@@ -73,6 +73,14 @@ bool inferBindingTypeForMonomorph(const Expr &initializer,
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, infoOut, allowMathBare)) {
     return true;
   }
+  // `dereference(r)` of a `Reference<T>` has the type T (the stdlib `Vector` element reads through a `Reference`
+  // see their receiver as the record).
+  if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall &&
+      initializer.args.size() == 1 && semantics::isSimpleCallName(initializer, "dereference") &&
+      resolveDereferenceBindingTarget(
+          initializer, params, locals, allowMathBare, initializer.namespacePrefix, ctx, infoOut)) {
+    return true;
+  }
   if (resolveFieldBindingTarget(initializer,
                                 params,
                                 locals,

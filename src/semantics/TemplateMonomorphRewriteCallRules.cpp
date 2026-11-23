@@ -298,6 +298,10 @@ PhaseStatus rewritePlainCallReference(ExprRewriteContext &rc) {
   std::string &error = rc.error;
   const LocalTypeMap &locals = rc.locals;
   const std::vector<semantics::ParameterInfo> &params = rc.params;
+  // `r.at(i)` of a reference to the stdlib vector record is the plain read of the record the reference holds.
+  if (expr.isMethodCall && !expr.isBinding) {
+    rewriteReferencedStdlibVectorElementRead(expr, params, locals, rc.allowMathBare, ctx);
+  }
   if (!expr.isMethodCall && !expr.isBinding) {
     const PhaseStatus status = rewriteExprReference(
         expr, mapping, allowedParams, namespacePrefix, ctx, error, locals, params, rc);

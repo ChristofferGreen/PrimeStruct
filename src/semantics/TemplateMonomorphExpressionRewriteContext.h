@@ -119,5 +119,10 @@ bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
                                          const LocalTypeMap &locals,
                                          bool allowMathBare,
                                          Context &ctx);
+bool rewriteReferencedStdlibVectorElementRead(Expr &expr,
+                                              const std::vector<semantics::ParameterInfo> &params,
+                                              const LocalTypeMap &locals,
+                                              bool allowMathBare,
+                                              Context &ctx);
 
 } // namespace primec

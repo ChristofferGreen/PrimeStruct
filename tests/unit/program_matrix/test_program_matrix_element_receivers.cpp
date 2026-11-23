@@ -742,4 +742,106 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an element read through a Reference to a stdlib Vector is a place") {
+  // `r[i]`, `r.at(i)` and `at_unsafe(r, i)` of a `Reference<Vector<T>>` read the element of the record the reference
+  // holds; a write through `r` changes the element in the caller's vector, as it does for the vector itself.
+  program_matrix::ProgramCase program;
+  program.name = "element_through_reference";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+  [mut return<void>]
+  bump() {
+    this.n = this.n + 1i32
+  }
+}
+
+[return<void>]
+set_to([Item mut] item, [i32] value) {
+  item.n = value
+}
+
+[effects(io_out) return<void>]
+read([Reference<Vector<Item>>] r) {
+  [Item] copy{r[0i32]}
+  print_line(copy.n)
+  print_line(r.at(1i32).n)
+  print_line(at_unsafe(r, 1i32).n)
+}
+
+[effects(io_out) return<void>]
+write([Reference<Vector<Item>> mut] r) {
+  r[0i32].n = 5i32
+  r[0i32].bump()
+  r.at(1i32).bump()
+  set_to(r[1i32], 40i32)
+  r[0i32] = Item{9i32}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Vector<Item> mut] values{Vector<Item>{}}
+  values.push(Item{7i32})
+  values.push(Item{8i32})
+  read(location(values))
+  write(location(values))
+  print_line(values[0i32].n)
+  print_line(values[1i32].n)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n8\n8\n9\n40\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE(
+    "elements of structs holding Strings read and written through a Reference leave nothing live") {
+  runElementProgram("element_through_reference_strings",
+                    R"(
+[struct]
+Row() {
+  [i32 mut] n{0i32}
+  [String mut] name{String{}}
+
+  [mut effects(heap_alloc)]
+  rename([i32] id) {
+    this.name = label(id)
+  }
+}
+
+[effects(heap_alloc, io_out), return<void>]
+inspect([Reference<Vector<Row>>] rows) {
+  print_line(rows[0i32].n)
+  print_line(convert<i32>(rows[0i32].name.byteAt(0i32)))
+  [Row] copy{rows[1i32]}
+  print_line(copy.n)
+}
+
+[effects(heap_alloc), return<void>]
+mutate([Reference<Vector<Row>> mut] rows) {
+  rows[0i32].n = 5i32
+  rows[0i32].name = label(7i32)
+  rows[1i32].rename(8i32)
+  rows[1i32] = Row{[n] 3i32, [name] label(9i32)}
+}
+)",
+                    R"(
+    [Vector<Row> mut] rows{Vector<Row>{}}
+    rows.push(Row{[n] 1i32, [name] label(1i32)})
+    rows.push(Row{[n] 2i32, [name] label(2i32)})
+    inspect(location(rows))
+    mutate(location(rows))
+    print_line(rows[0i32].n)
+    print_line(convert<i32>(rows[0i32].name.byteAt(0i32)))
+    print_line(rows[1i32].n)
+    print_line(convert<i32>(rows[1i32].name.byteAt(0i32)))
+)",
+                    "1\n49\n2\n5\n55\n3\n57\n",
+                    "import /std/collections/*\n");
+}
+
 TEST_SUITE_END();

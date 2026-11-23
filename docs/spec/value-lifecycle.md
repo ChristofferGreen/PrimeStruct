@@ -94,7 +94,11 @@
   checked as a read is. `/std/collections/vector/at` returns a copy, so semantics reads each element a write goes
   through by reference instead (`/std/collections/vector/vectorElementRef`); the read-only roots rule above is
   checked first, so a write through a read-only root stays its diagnostic. An element that is only read is still
-  a copy that the read destroys (`tests/unit/program_matrix/test_program_matrix_element_receivers.cpp`).
+  a copy that the read destroys (`tests/unit/program_matrix/test_program_matrix_element_receivers.cpp`). Reaching
+  the vector through a `Reference<Vector<T>>` does not change that: `r[i]`, `r.at(i)` and `at(r, i)` are `at` of the
+  record the reference holds (`at(dereference(r), i)`), so the elements are the caller's, a field write, a `[mut]`
+  call and an element passed to a `mut` parameter go through a plain `Reference` (which gates only whole-value
+  assignment, see Pointers and references), and the whole assignment `r[i] = x` needs `[Reference<Vector<T>> mut]`.
 - **A `Reference` result as an argument:** a call that returns `Reference<T>` (`[return<Reference<T>>]`) yields its
   referent, so passing it to a `[Reference<T>]` or `[T mut]` scalar parameter gives the callee the referent itself, not a
   copy: `bump(borrow_of(slot))` and a closure body called as `body(borrow_of(slot))` write through to `slot`. A call

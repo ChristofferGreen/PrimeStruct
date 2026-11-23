@@ -134,4 +134,53 @@ bool rewriteBorrowedVectorBareHelperCall(Expr &expr,
   return true;
 }
 
+// `r[i]`, `at(r, i)` and `r.at(i)` where `r` is a reference to the stdlib vector record: the element is a place, as
+// the element of a local of that type is (docs/spec/value-lifecycle.md, Read-only roots), so the read is the
+// library's `at` of the record the reference holds, `at(dereference(r), i)`. A write through it changes the
+// element, and a read stays a copy that is destroyed.
+bool rewriteReferencedStdlibVectorElementRead(Expr &expr,
+                                              const std::vector<semantics::ParameterInfo> &params,
+                                              const LocalTypeMap &locals,
+                                              bool allowMathBare,
+                                              Context &ctx) {
+  if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.isFieldAccess ||
+      expr.args.size() != 2 || !expr.templateArgs.empty() || expr.hasBodyArguments ||
+      !expr.bodyArguments.empty() || hasNamedCallArguments(expr) ||
+      (expr.name != "at" && expr.name != "at_unsafe")) {
+    return false;
+  }
+  if (ctx.sourceDefs.count("/" + expr.name) > 0 || ctx.helperOverloads.count("/" + expr.name) > 0) {
+    return false;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    const std::string scoped = expr.namespacePrefix + "/" + expr.name;
+    if (ctx.sourceDefs.count(scoped) > 0 || ctx.helperOverloads.count(scoped) > 0) {
+      return false;
+    }
+  }
+  semantics::BindingInfo receiverInfo;
+  if (!inferBindingTypeForMonomorph(
+          expr.args.front(), params, locals, allowMathBare, ctx, receiverInfo) ||
+      semantics::normalizeBindingTypeName(receiverInfo.typeName) != "Reference") {
+    return false;
+  }
+  std::string elementType;
+  if (!extractCollectionVectorElementTypeFromTypeText(
+          bindingTypeToString(receiverInfo), ctx, elementType)) {
+    return false;
+  }
+  Expr dereference;
+  dereference.kind = Expr::Kind::Call;
+  dereference.name = "dereference";
+  dereference.namespacePrefix = expr.namespacePrefix;
+  dereference.sourceLine = expr.args.front().sourceLine;
+  dereference.sourceColumn = expr.args.front().sourceColumn;
+  dereference.args.push_back(std::move(expr.args.front()));
+  dereference.argNames.assign(1, std::nullopt);
+  expr.args.front() = std::move(dereference);
+  // The method form `r.at(i)` is the same read.
+  expr.isMethodCall = false;
+  return true;
+}
+
 } // namespace primec

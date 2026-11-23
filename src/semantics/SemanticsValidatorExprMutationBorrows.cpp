@@ -864,17 +864,19 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           return failMutationBorrowDiagnostic(
               "assign target must be a mutable binding");
         } else {
-          if (collectionTarget.kind == Expr::Kind::Name) {
-            if (!isMutableBinding(collectionTarget.name)) {
-              return failMutationBorrowDiagnostic(
-                  "assign target must be a mutable binding: " +
-                  collectionTarget.name);
+          const bool dereferenced = collectionTarget.args.size() == 1 &&
+                                    collectionTarget.args.front().kind == Expr::Kind::Name &&
+                                    isSimpleCallName(collectionTarget, "dereference");
+          const Expr &rootName = dereferenced ? collectionTarget.args.front() : collectionTarget;
+          if (rootName.kind == Expr::Kind::Name) {
+            if (!isMutableBinding(rootName.name)) {
+              return failMutationBorrowDiagnostic("assign target must be a mutable binding: " +
+                                                  rootName.name);
             }
-            if (hasActiveBorrowForBinding(collectionTarget.name)) {
-              return failBorrowedByLiveSink(collectionTarget.name);
+            if (hasActiveBorrowForBinding(rootName.name)) {
+              return failBorrowedByLiveSink(rootName.name);
             }
-          } else if (collectionTarget.kind == Expr::Kind::Call &&
-                     collectionTarget.isFieldAccess) {
+          } else if (collectionTarget.kind == Expr::Kind::Call && collectionTarget.isFieldAccess) {
             if (!validateMutableFieldAccessTarget(collectionTarget)) {
               return false;
             }
