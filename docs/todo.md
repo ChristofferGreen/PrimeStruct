@@ -373,9 +373,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `push` with a `string` element; other element types are untouched.
   - repro: `import /std/collections/*  [effects(heap_alloc, io_out) return<int>] main() { [Vector<string> mut] names{/std/collections/vector/vector<string>()}  names.push("hello"utf8)  print_line(names[0i32])  return(0i32) }` with `primec --emit=vm -I stdlib`.
 
-- [ ] TODO-6194: The `optexe` precompiled header is refused on every compile and the compile runs twice
+- [~] TODO-6194: The `optexe` precompiled header is refused on every compile and the compile runs twice
   - owner: ai
   - status: ready
+  - claimed_by: agent-ab69b87dc26ecd9b8 (worktree-agent-ab69b87dc26ecd9b8), 2026-11-23
   - created_at: 2026-11-23
   - phase: Optimizing backends (startup of the `optexe` host compile; found with the field element read)
   - parallel_track: optexe-pch-refused
