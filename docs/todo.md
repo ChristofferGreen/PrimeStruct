@@ -350,9 +350,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6200: A field or an element of a read-only root is changed through a `mut` parameter
+- [~] TODO-6200: A field or an element of a read-only root is changed through a `mut` parameter
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Read-only roots; found with the stdlib `Vector` element places)
   - parallel_track: read-only-roots-mut-parameter
@@ -365,9 +366,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the argument of a `mut` parameter; `Reference`, `Pointer` and capability-view parameters stay exempt.
   - repro: the program in scope with `primec --emit=vm -I stdlib` prints 9.
 
-- [ ] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
+- [~] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the stdlib `Vector` element places)
   - parallel_track: vector-reference-element
@@ -378,9 +380,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the element of a `Reference<Vector<T>>`; `Pointer` receivers and other collections are untouched.
   - repro: the function in scope, called with `location(values)`, with `primec --emit=vm -I stdlib`.
 
-- [ ] TODO-6202: Assigning a whole element of a stdlib `Vector` is an internal lowering error
+- [~] TODO-6202: Assigning a whole element of a stdlib `Vector` is an internal lowering error
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the stdlib `Vector` element places)
   - parallel_track: vector-element-assign
@@ -405,9 +408,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the first program in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
-- [ ] TODO-6204: A call in a struct field's default initializer is not validated
+- [~] TODO-6204: A call in a struct field's default initializer is not validated
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (found with the brace constructors of field initializers)
   - parallel_track: field-initializer-validation
@@ -433,9 +437,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the edit in scope, then `build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots`.
   - notes: deferred: not reachable on master, needs the edit above.
 
-- [ ] TODO-6206: The argument of `push` is not checked against the element type of the vector
+- [~] TODO-6206: The argument of `push` is not checked against the element type of the vector
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Correctness audit 2026-10 (memory safety; found with the `string` push)
   - parallel_track: vector-push-type
@@ -461,9 +466,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `import /std/collections/*  [effects(heap_alloc) return<int>] main() { [Vector<i32> mut] values{Vector<i32>{}}  push(values, 7i32)  return(0i32) }` with `primec --emit=vm -I stdlib`.
   - notes: deferred: a diagnostics improvement; 31 test expectations pin the current text.
 
-- [ ] TODO-6208: The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line`
+- [~] TODO-6208: The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line`
   - owner: ai
   - status: ready
+  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (found with the print of the count of a `Vector` field)
   - parallel_track: print-field-count
