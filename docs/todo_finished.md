@@ -2590,6 +2590,12 @@ are left unarchived.
 | TODO-6194 | The `optexe` precompiled header is refused on every compile and the compile runs twice | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6195 | `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6196 | A struct field's default initializer is not validated as a local's is | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6200 | A field or an element of a read-only root is changed through a `mut` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6202 | Assigning a whole element of a stdlib `Vector` is an internal lowering error | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6204 | A call in a struct field's default initializer is not validated | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6206 | The argument of `push` is not checked against the element type of the vector | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6208 | The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6209 | `mapInsert` of `MapValue` wrote its fields in a method that was not `[mut]` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
 

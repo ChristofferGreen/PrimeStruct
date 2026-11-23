@@ -113,15 +113,11 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-6200 | A field or an element of a read-only root is changed through a `mut` parameter | ready | read-only-roots-mut-parameter |
 | TODO-6201 | A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver` | ready | vector-reference-element |
-| TODO-6202 | Assigning a whole element of a stdlib `Vector` is an internal lowering error | ready | vector-element-assign |
+| TODO-6210 | `dereference(r)` of a `Reference<Vector<T>>` as the receiver argument of the inlined stdlib `at` is an `unaligned indirect address` | ready | vector-reference-deref-arg |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
-| TODO-6204 | A call in a struct field's default initializer is not validated | ready | field-initializer-validation |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
-| TODO-6206 | The argument of `push` is not checked against the element type of the vector | ready | vector-push-type |
 | TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | deferred | vector-bare-push-position |
-| TODO-6208 | The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line` | ready | print-field-count |
 | TODO-6199 | The tracked stdlib symbol manifests are not what the generator writes | deferred | stdlib-manifest-drift |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
@@ -191,18 +187,18 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6171 (a lambda changes a viewed container); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
-- Frontend and diagnostics (split from TODO-5520): TODO-6121; ready outside Ready Now TODO-6200 (a `mut` parameter changes a field of a read-only root), TODO-6204 (a call in a field's default initializer is not validated); deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
+- Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5806
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Stdlib `Vector` elements (found with the read-only element rule; outside Ready Now): TODO-6208 (the direct `count(bag.items)` of a `Vector` field has no integer type), TODO-6206 (the argument of `push` is not checked against the element type), TODO-6201 (an element read through a `Reference<Vector<T>>`), TODO-6202 (assigning a whole element)
+- Stdlib `Vector` elements (found with the read-only element rule; outside Ready Now): TODO-6201 (an element read through a `Reference<Vector<T>>`), TODO-6210 (`dereference(r)` of a `Reference<Vector<T>>` as an argument of the inlined `at`)
 - Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup), TODO-6032 (library function shapes), TODO-6201, TODO-6202 and TODO-6206 (elements of a stdlib `Vector`: an element read through a `Reference<Vector<T>>`, assigning a whole element, the unchecked argument of `push`), TODO-6200 (a `mut` parameter changes a field of a read-only root), TODO-6204 (a call in a struct field's default initializer is not validated), TODO-6198 (a `Slice` built over any pointer), TODO-6208 (the direct `count` of a `Vector` field has no integer type); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup), TODO-6032 (library function shapes), TODO-6201 and TODO-6210 (elements of a stdlib `Vector`: an element read through a `Reference<Vector<T>>`, `dereference(r)` of one as an argument of the inlined `at`), TODO-6198 (a `Slice` built over any pointer); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). TODO-5804 (read-only handlers with `app.view` under `RwLock`, with the compile error for a view that writes its state) is done; deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -350,26 +346,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [~] TODO-6200: A field or an element of a read-only root is changed through a `mut` parameter
+- [ ] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
   - owner: ai
   - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Read-only roots; found with the stdlib `Vector` element places)
-  - parallel_track: read-only-roots-mut-parameter
-  - scope: The read-only roots rule holds an assignment target and the receiver of a `[mut]` method to the root of the place, but not the argument of a `mut` parameter: `validateExprResolvedCallArguments` (src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp) checks only a name (`mut parameter requires a mutable place`) and accepts fields and elements. `[struct] Item() { [i32 mut] n{0i32} }  [struct] Bag() { [Item mut] item{Item{}} }  [return<void>] poke([Item mut] item) { item.n = 9i32 }  [effects(io_out) return<int>] main() { [Bag] bag{Bag{}}  poke(bag.item)  print_line(bag.item.n)  return(0i32) }` prints 9: the read-only local changed. For an element of a stdlib `Vector` (`poke(bag.items[0i32])` on a read-only `bag`) the argument stays the copy `at` returns, so the write is lost silently (the element place of src/semantics/SemanticsVectorElementPlaces.h is only taken when the root may be written). Both should be the diagnostic of the rule, `mut parameter requires a mutable place: bag.item (bag is read-only; declare it with mut: [T mut] bag{...})`, with the way out of the root's kind (`findReadOnlyRoot`).
-  - acceptance:
-    - the program above and its element forms (`array`, `vector`, stdlib `Vector`, `map`) are the diagnostic with file, line and column; semantics tests
-    - the stdlib, examples and tests that relied on the gap are fixed in the same change
-    - docs/spec/value-lifecycle.md (Parameter Passing, Read-only roots) says so
-    - full release gate green
-  - stop_rule: the argument of a `mut` parameter; `Reference`, `Pointer` and capability-view parameters stay exempt.
-  - repro: the program in scope with `primec --emit=vm -I stdlib` prints 9.
-
-- [~] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
-  - owner: ai
-  - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the stdlib `Vector` element places)
   - parallel_track: vector-reference-element
@@ -379,20 +358,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the element of a `Reference<Vector<T>>`; `Pointer` receivers and other collections are untouched.
   - repro: the function in scope, called with `location(values)`, with `primec --emit=vm -I stdlib`.
+  - notes: 2026-11-23, tried and not landed. Today the first failure is not `field access requires struct receiver`: bare `at(r, 0i32)` (`r[0i32]`) of a `Reference<Vector<Item>>` is `unknown call target: /std/collections/map/at`, because `rewriteBorrowedVectorBareHelperCall` (src/semantics/TemplateMonomorphBorrowedVectorRewrites.cpp) only knows the builtin `vector` and the method form `r.at(0i32).n` is `unknown field: n`. The reference's type argument is already the specialization path (`/std/collections/vector/Vector__t<hash>`), not `Vector<Item>`. What worked: (1) rewriting the bare `at` and `at_unsafe` of such a receiver to `at(dereference(r), i)` in that function, (2) `inferBindingTypeForMonomorph` answering `dereference(r)` with the referent's type, (3) a `resolveDereferencedReferenceVector` rule in `resolveStructFieldReceiverPath` (src/semantics/SemanticsValidatorExprFieldResolution.cpp, before `resolveArrayTarget`, which answers true with no element type for a `dereference` call). With those the program passes semantics and fails on the VM with `unaligned indirect address in IR` (TODO-6210). A different route is a stdlib helper `vectorElementRefOfRef<T>([Reference<Vector<T>>] values, [i32] index)` that returns the element place, brought in from `vectorAtRef<T>` the way `at<T>` brings `vectorElementRef<T>`, with `vectorAtRef` added to `ElementReadHelpers` in src/semantics/SemanticsVectorElementPlaces.cpp; it needs the element type text of the specialization (`stdlibVectorElementTypeText`) at monomorphization, which is not available there yet. Decision for the owner: the element of a `Reference<Vector<T>>` as a place (recommended, needs TODO-6210 first, costs the three rules above) or as a copy only (reads work, writes through the reference stay `Vector<T> mut`-only, costs the helper and the specialization text).
 
-- [~] TODO-6202: Assigning a whole element of a stdlib `Vector` is an internal lowering error
+- [ ] TODO-6210: `dereference(r)` of a `Reference<Vector<T>>` as the receiver argument of the inlined stdlib `at` is an `unaligned indirect address`
   - owner: ai
   - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
   - created_at: 2026-11-23
-  - phase: Collections (stdlib `Vector`; found with the stdlib `Vector` element places)
-  - parallel_track: vector-element-assign
-  - scope: `values[0i32] = Item{}` on a `[Vector<Item> mut] values` passes semantics and fails in the lowerer: `VM lowering error: vm backend only supports assign to array/vector elements [PSC2001]`. A builtin `vector<Item>` replaces the element (and destroys the one it replaces, docs/spec/value-lifecycle.md, Copies). A field of the element is assigned in place since the element places (`values[0i32].n = 7i32`), but the element itself is not: an assignment through a call that returns `Reference<T>` is `assign target must be a mutable binding`. Either the element assign of a stdlib `Vector` replaces the element as the builtin does (the old element destroyed once, a place on the right copied, a temporary taken over), or it is one semantic diagnostic that names `remove_at` and `push`.
+  - phase: Collections (stdlib `Vector`; found with TODO-6201)
+  - parallel_track: vector-reference-deref-arg
+  - scope: `[effects(io_out) return<void>] read([Reference<Vector<Item>>] r) { print_line(/std/collections/vector/at<Item>(dereference(r), 0i32).n) }` (`import /std/collections/*`, `[struct] Item() { [i32 mut] n{0i32} }`) compiles and ends in `VM error: unaligned indirect address in IR: 17`: the argument `dereference(r)` of the inlined `at` loads the first slot of the vector record instead of passing its address. `show(dereference(r))` with a real `[Vector<Item>] v` parameter and `[Vector<Item>] v{dereference(r)}` work. The lowerer treats the dereference of a `Reference` to a stdlib `Vector` record as an aggregate when the callee is a call and not when it is inlined.
   - acceptance:
-    - the assignment replaces the element on the VM, optexe and native, with `String`-holding elements and nothing left live (program-matrix case), or it is a semantic diagnostic with file, line and column and a test
+    - the program in scope prints the field on the VM, optexe and native, with a program-matrix case
     - full release gate green
-  - stop_rule: the whole-element assignment of a stdlib `Vector`; field writes are done.
-  - repro: `import /std/collections/*  [struct] Item() { [i32 mut] n{0i32} }  [effects(heap_alloc, io_out) return<int>] main() { [Vector<Item> mut] values{Vector<Item>{}}  values.push(Item{})  values[0i32] = Item{}  return(0i32) }` with `primec --emit=vm -I stdlib`.
+  - stop_rule: the argument position of `dereference(r)` for a `Reference` to a struct record; no new syntax.
+  - repro: the program in scope with `primec --emit=vm -I stdlib`.
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai
@@ -408,21 +387,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the first program in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
-- [~] TODO-6204: A call in a struct field's default initializer is not validated
-  - owner: ai
-  - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (found with the brace constructors of field initializers)
-  - parallel_track: field-initializer-validation
-  - scope: A brace constructor that is a field's default initializer is validated as a local's is, but any other initializer expression of a field is still skipped (`checkBindingForm`, src/semantics/SemanticsValidatorBindingFormRules.cpp, records the field and returns). With `[return<i32>] three([i32] a) { return(3i32) }`: `[struct] Bag() { [i32] r{three()} }` reaches the lowerer (`VM lowering error: argument count mismatch for three [PSC2001]`), `[i32] r{nosuch(1i32)}` is `VM lowering error: vm backend only supports arithmetic/comparison/... calls in expressions (call=/nosuch, ...)`, and `[i32] r{three(true)}` compiles and prints 3 although a `bool` is not an `i32`. As a local's initializer the three are `argument count mismatch for /three`, `unknown call target: nosuch` and `argument type mismatch for /three parameter a`. Validate every field initializer expression with `validateExpr` under the effect set of field initializers (`everyEffectName`, the initializer runs in whatever constructs the struct), and check its type against the field as a local's is checked.
-  - acceptance:
-    - the three programs are the diagnostics of the local form at the field initializer, with file, line and column; a semantics test for each
-    - the stdlib, examples and tests that relied on the gap are fixed in the same change
-    - full release gate green
-  - stop_rule: the validation of a field's default initializer expression; which definition must hold the effects of a field initializer is not part of this leaf.
-  - repro: `[return<i32>] three([i32] a) { return(3i32) }  [struct] Bag() { [i32] r{three(true)} }  [effects(io_out) return<int>] main() { [Bag] b{Bag{}}  print_line(b.r)  return(0i32) }` with `primec --emit=vm` prints 3.
-
 - [ ] TODO-6205: The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer
   - owner: ai
   - status: deferred
@@ -437,21 +401,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the edit in scope, then `build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots`.
   - notes: deferred: not reachable on master, needs the edit above.
 
-- [~] TODO-6206: The argument of `push` is not checked against the element type of the vector
-  - owner: ai
-  - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Correctness audit 2026-10 (memory safety; found with the `string` push)
-  - parallel_track: vector-push-type
-  - scope: Semantics does not compare the argument of `push` with the element type. On a stdlib `Vector`: `[Vector<Item> mut] items{Vector<Item>{}}  items.push(5i32)` compiles (an `i32` is stored as the first slot of a struct element whose other slots are never written), and so do `[Vector<i32> mut] ints  ints.push(true)` and `[Vector<string> mut] names  names.push(7i32)`. On a builtin `vector`: `[vector<i32> mut] v  v.push(true)` and `[vector<i64> mut] w  w.push(5i32)` are the internal `VM lowering error: missing semantic-product method-call target: push [PSC2001]` instead of a diagnostic. Only a `string` argument is checked (`checkBuiltinVectorMutation`, src/semantics/SemanticsValidatorMoveOnly.cpp: `argument type mismatch for /std/collections/vector/push parameter value: expected i32 got string`). Hold every `push` argument to the element type by the rule of a call argument (`validateArgumentTypeAgainstParam`), for the method and for the stdlib helper forms.
-  - acceptance:
-    - each program above is `argument type mismatch for /std/collections/vector/push parameter value: expected <T> got <U>` with file, line and column; semantics tests for a struct element, a scalar element and a `string` element, builtin and stdlib
-    - the stdlib, examples and tests that relied on the gap are fixed in the same change
-    - full release gate green
-  - stop_rule: the argument type of `push`; conversions the call rule accepts stay accepted.
-  - repro: `import /std/collections/*  [struct] Item() { [i32 mut] n{0i32} }  [effects(heap_alloc) return<int>] main() { [Vector<Item> mut] items{Vector<Item>{}}  items.push(5i32)  return(0i32) }` with `primec --emit=vm -I stdlib` compiles.
-
 - [ ] TODO-6207: The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position
   - owner: ai
   - status: deferred
@@ -465,20 +414,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the position and the text of the diagnostic; whether the bare form should be accepted is not part of this leaf.
   - repro: `import /std/collections/*  [effects(heap_alloc) return<int>] main() { [Vector<i32> mut] values{Vector<i32>{}}  push(values, 7i32)  return(0i32) }` with `primec --emit=vm -I stdlib`.
   - notes: deferred: a diagnostics improvement; 31 test expectations pin the current text.
-
-- [~] TODO-6208: The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line`
-  - owner: ai
-  - status: ready
-  - claimed_by: vector-batch (worktree-agent-ae270a8a8256c5773), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (found with the print of the count of a `Vector` field)
-  - parallel_track: print-field-count
-  - scope: With `[struct] Bag() { [Vector<Item> mut] items{Vector<Item>{}} }` and `[Bag mut] bag{Bag{}}`, the method form `bag.items.count()` is a print argument and an `auto` initializer, and `[i32] c{count(bag.items)}` and `print_line(count(local))` of a local `Vector<Item>` compile, but the direct form on the field does not type: `print_line(count(bag.items))` is `print_line requires an integer/bool or string literal/binding argument`, and after `[auto] d{count(bag.items)}` so is `print_line(d)`. `inferBindingTypeFromInitializer` (and `inferExprReturnKind`) do not resolve the bare `count` call whose argument is a field holding the stdlib `Vector` record; `capacity(bag.items)` is the same.
-  - acceptance:
-    - `print_line(count(bag.items))`, `print_line(capacity(bag.items))` and `[auto] d{count(bag.items)}  print_line(d)` compile and print the count on the VM, optexe and native, for a field and a nested field, with a test
-    - full release gate green
-  - stop_rule: the type of the direct `count` and `capacity` calls on a `Vector` field.
-  - repro: `import /std/collections/*  [struct] Item() { [i32 mut] n{0i32} }  [struct] Bag() { [Vector<Item> mut] items{Vector<Item>{}} }  [effects(heap_alloc, io_out) return<int>] main() { [Bag mut] bag{Bag{}}  print_line(count(bag.items))  return(0i32) }` with `primec --emit=vm -I stdlib`.
 
 - [ ] TODO-6199: The tracked stdlib symbol manifests are not what the generator writes
   - owner: ai
