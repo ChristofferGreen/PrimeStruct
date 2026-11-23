@@ -57,10 +57,12 @@ const std::vector<std::string> WasmPrograms = {"element_assign_scalar_struct"};
 
 void runAssignProgram(const std::string &name,
                       const std::string &body,
-                      const std::string &stdoutText) {
+                      const std::string &stdoutText,
+                      const std::string &imports = "",
+                      const std::string &definitions = "") {
   program_matrix::ProgramCase program;
   program.name = name;
-  program.source = AssignPrelude + R"(
+  program.source = imports + AssignPrelude + definitions + R"(
 [effects(heap_alloc, io_out), return<int>]
 main() {
   [i32] blocks{heapLiveBlocks()}
@@ -80,7 +82,76 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// The elements of a stdlib `Vector` are places: assigning a whole element replaces it through the element's
+// reference, destroys the old element once and copies a place or takes over a temporary.
+const std::string StdlibElementDefinitions = R"(
+[struct]
+Record() {
+  [i32 mut] n{0i32}
+  [String mut] name{String{}}
+}
+
+[struct]
+Shelf() {
+  [Vector<Record> mut] records{Vector<Record>{}}
+}
+
+[effects(heap_alloc), return<Record>]
+make_record([i32] n) {
+  return(Record{[n] n, [name] label(n)})
+}
+
+[effects(heap_alloc), return<void>]
+replace_first([Vector<Record> mut] records, [i32] n) {
+  records[0i32] = make_record(n)
+}
+)";
+
 } // namespace
+
+TEST_CASE("an element assignment of a stdlib Vector replaces the element and frees the old one") {
+  runAssignProgram("element_assign_stdlib_vector",
+                   R"(
+    [Vector<Record> mut] records{Vector<Record>{}}
+    records.push(make_record(1i32))
+    records.push(make_record(2i32))
+    records[0i32] = make_record(7i32)
+    print_line(records[0i32].n)
+    print_line(convert<i32>(records[0i32].name.byteAt(0i32)))
+    records[1i32] = records[0i32]
+    records[0i32].n = 9i32
+    print_line(records[1i32].n)
+    print_line(convert<i32>(records[1i32].name.byteAt(0i32)))
+    records[1i32] = records[1i32]
+    print_line(records[1i32].n)
+    replace_first(records, 4i32)
+    print_line(records[0i32].n)
+    print_line(records.count())
+)",
+                   "7\n55\n7\n55\n7\n4\n2\n",
+                   "import /std/collections/*\n",
+                   StdlibElementDefinitions);
+}
+
+TEST_CASE("an element assignment through a stdlib Vector field and of scalars") {
+  runAssignProgram("element_assign_stdlib_field",
+                   R"(
+    [Shelf mut] shelf{Shelf{}}
+    shelf.records.push(make_record(1i32))
+    shelf.records[0i32] = make_record(5i32)
+    print_line(convert<i32>(shelf.records[0i32].name.byteAt(0i32)))
+    [Vector<i32> mut] numbers{Vector<i32>{}}
+    numbers.push(1i32)
+    numbers.push(2i32)
+    numbers[1i32] = 8i32
+    numbers[0i32] = numbers[1i32]
+    print_line(numbers[0i32])
+    print_line(numbers[1i32])
+)",
+                   "53\n8\n8\n",
+                   "import /std/collections/*\n",
+                   StdlibElementDefinitions);
+}
 
 TEST_CASE("shifting the strings of a vector up with element assignments frees each string once") {
   // The sixth push grows the buffer after five shifts; every element must still read as the shifted copy.

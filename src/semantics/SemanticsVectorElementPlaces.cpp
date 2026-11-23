@@ -68,9 +68,46 @@ std::string siteKey(const std::string &definitionPath, const Expr &elementRead) 
          std::to_string(elementRead.sourceColumn);
 }
 
+void retargetToPlaceHelper(Expr &read, const ElementReadHelper &helper, std::string_view suffix) {
+  std::string placePath(VectorHelperPrefix);
+  placePath += helper.place;
+  placePath += suffix;
+  read.name = placePath;
+  read.resolvedCallPath = placePath;
+}
+
+// `values[i] = x` is `assign(at(values, i), x)`: the target becomes `*vectorElementRef(values, i)`, an assignment
+// through the element's reference.
+void rewriteAssignedElement(const std::string &definitionPath,
+                            Expr &assign,
+                            const VectorElementPlaceSites &sites) {
+  if (!isAssignCall(assign) || assign.args.size() != 2) {
+    return;
+  }
+  Expr &target = assign.args.front();
+  std::string_view suffix;
+  const ElementReadHelper *helper = elementReadHelper(target, suffix);
+  if (helper == nullptr || !sites.containsAssignedElement(definitionPath, target)) {
+    return;
+  }
+  retargetToPlaceHelper(target, *helper, suffix);
+  Expr dereference = target;
+  dereference.args.clear();
+  dereference.argNames.clear();
+  dereference.templateArgs.clear();
+  dereference.templateArgDetails.clear();
+  dereference.name = "dereference";
+  dereference.sourceName.clear();
+  dereference.resolvedCallPath.clear();
+  dereference.semanticNodeId = 0;
+  dereference.args.push_back(std::move(target));
+  target = std::move(dereference);
+}
+
 void rewriteExpr(const std::string &definitionPath,
                  Expr &expr,
                  const VectorElementPlaceSites &sites) {
+  rewriteAssignedElement(definitionPath, expr, sites);
   for (Expr &arg : expr.args) {
     rewriteExpr(definitionPath, arg, sites);
   }
@@ -82,11 +119,7 @@ void rewriteExpr(const std::string &definitionPath,
   if (helper == nullptr || !sites.contains(definitionPath, expr)) {
     return;
   }
-  std::string placePath(VectorHelperPrefix);
-  placePath += helper->place;
-  placePath += suffix;
-  expr.name = placePath;
-  expr.resolvedCallPath = placePath;
+  retargetToPlaceHelper(expr, *helper, suffix);
 }
 
 } // namespace
@@ -100,8 +133,19 @@ bool VectorElementPlaceSites::contains(const std::string &definitionPath,
   return sites_.count(siteKey(definitionPath, elementRead)) > 0;
 }
 
+void VectorElementPlaceSites::addAssignedElement(const std::string &definitionPath,
+                                                 const Expr &elementRead) {
+  assignedSites_.insert(siteKey(definitionPath, elementRead));
+}
+
+bool VectorElementPlaceSites::containsAssignedElement(const std::string &definitionPath,
+                                                      const Expr &elementRead) const {
+  return assignedSites_.count(siteKey(definitionPath, elementRead)) > 0;
+}
+
 void VectorElementPlaceSites::merge(const VectorElementPlaceSites &other) {
   sites_.insert(other.sites_.begin(), other.sites_.end());
+  assignedSites_.insert(other.assignedSites_.begin(), other.assignedSites_.end());
 }
 
 bool isStdlibVectorElementRead(const Expr &expr) {

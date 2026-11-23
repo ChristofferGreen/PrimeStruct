@@ -19,13 +19,18 @@ class VectorElementPlaceSites {
 public:
   void add(const std::string &definitionPath, const Expr &elementRead);
   bool contains(const std::string &definitionPath, const Expr &elementRead) const;
+  // The element reads that are the whole target of an assignment (`values[i] = x`): the assignment replaces the
+  // element through the reference `vectorElementRef` returns.
+  void addAssignedElement(const std::string &definitionPath, const Expr &elementRead);
+  bool containsAssignedElement(const std::string &definitionPath, const Expr &elementRead) const;
   bool empty() const {
-    return sites_.empty();
+    return sites_.empty() && assignedSites_.empty();
   }
   void merge(const VectorElementPlaceSites &other);
 
 private:
   std::unordered_set<std::string> sites_;
+  std::unordered_set<std::string> assignedSites_;
 };
 
 // Whether `expr` is a call of an instantiation of the stdlib vector's `at` or `at_unsafe`.

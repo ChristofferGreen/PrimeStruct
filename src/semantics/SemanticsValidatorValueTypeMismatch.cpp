@@ -73,4 +73,27 @@ SemanticsValidator::valueTypeMismatch(const std::vector<ParameterInfo> &params,
   return {};
 }
 
+bool SemanticsValidator::checkIndexedAssignmentTarget(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr) {
+  const Expr &target = expr.args.front();
+  const std::string &definitionPath = currentValidationState_.context.definitionPath;
+  noteVectorElementPlaces(definitionPath, target, false, vectorElementPlaceSites_);
+  if (!isStdlibVectorElementRead(target)) {
+    return true;
+  }
+  BindingInfo elementInfo;
+  if (inferBindingTypeFromInitializer(target, params, locals, elementInfo)) {
+    const std::string expectedType = expectedBindingTypeText(elementInfo);
+    const std::string actualType = valueTypeMismatch(params, locals, expr.args[1], expectedType);
+    if (!actualType.empty()) {
+      return failExprDiagnostic(
+          expr, "assign value type mismatch: expected " + expectedType + ", got " + actualType);
+    }
+  }
+  vectorElementPlaceSites_.addAssignedElement(definitionPath, target);
+  return true;
+}
+
 } // namespace primec::semantics

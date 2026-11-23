@@ -1,5 +1,7 @@
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 #include "primec/ir_lowerer/IrLowererStringPushMarks.h"
+#include "primec/ir_lowerer/IrLowererInlineParamHelpers.h"
+#include "primec/ir_lowerer/IrLowererReferenceCallAddress.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
@@ -609,8 +611,45 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           return true;
         }
       } else {
-        if (!emitExpr(pointerExpr, localsIn)) {
-          return false;
+        // `*element(values, i) = value` where the call returns `Reference<T>` (the place of an element of a stdlib
+        // `Vector`): the call yields the address of the element, which the value replaces.
+        std::string referentType;
+        const Definition *referenceCallee = pointerExpr.kind == Expr::Kind::Call &&
+                                                    !pointerExpr.isMethodCall &&
+                                                    context.resolveDefinitionCall
+                                                ? context.resolveDefinitionCall(pointerExpr)
+                                                : nullptr;
+        const bool referenceReturn = referenceCallee != nullptr &&
+                                     definitionReturnsReference(*referenceCallee, referentType);
+        {
+          std::optional<ReferenceCallAddressScope> addressScope;
+          if (referenceReturn) {
+            addressScope.emplace();
+          }
+          if (!emitExpr(pointerExpr, localsIn)) {
+            return false;
+          }
+        }
+        const Expr &rhsExpr = expr.args[1];
+        const std::string rhsStruct =
+            referenceReturn ? inferStructExprPath(rhsExpr, localsIn) : std::string();
+        int32_t structSlotCount = 0;
+        if (!rhsStruct.empty() && resolveStructSlotCount(rhsStruct, structSlotCount)) {
+          // A struct element: the old element is destroyed and the value is copied (a place) or taken over (a
+          // temporary), as for an element of a builtin vector.
+          const int32_t destPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          if (!emitExpr(rhsExpr, localsIn)) {
+            return false;
+          }
+          const int32_t srcPtrLocal = allocTempLocal();
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitAssignedStructCopy(
+                  destPtrLocal, srcPtrLocal, structSlotCount, rhsStruct, rhsExpr, -1)) {
+            return false;
+          }
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(destPtrLocal)});
+          return true;
         }
       }
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});

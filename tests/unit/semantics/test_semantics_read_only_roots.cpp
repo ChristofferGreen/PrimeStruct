@@ -712,6 +712,36 @@ TEST_CASE("an element of a read-only root is not handed to a mut parameter") {
   checkMutArgument("[Bag] bag{Bag{}}", "at(bag.grown, 0i32)", "bag.grown[...] " + readOnly);
 }
 
+TEST_CASE("a whole element of a stdlib Vector is assigned through a mutable root only") {
+  const std::string source = std::string(MutParameterProgram) +
+                             "[effects(heap_alloc), return<int>]\nmain() {\n  [Bag] bag{Bag{}}\n"
+                             "  bag.grown[0i32] = Item{}\n  return(0i32)\n}\n";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(
+      error.find(
+          "assign target must be a mutable binding: bag.grown (bag is read-only; declare it with "
+          "mut: [T mut] bag{...})") != std::string::npos,
+      error);
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}  bag.grown[0i32] = Item{}", "Item{}");
+}
+
+TEST_CASE("a whole element of a stdlib Vector is assigned a value of its type") {
+  const std::string source =
+      std::string(MutParameterProgram) +
+      "[effects(heap_alloc), return<int>]\nmain() {\n  [Vector<Item> mut] values{Vector<Item>{}}\n"
+      "  values.push(Item{})\n  values[0i32] = 5i32\n  return(0i32)\n}\n";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find("assign value type mismatch: expected /Item, got i32") !=
+                    std::string::npos,
+                error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == positionOf(source, "values[0i32] = 5i32").first);
+}
+
 TEST_CASE("a mut parameter takes a field or an element of a mutable root") {
   checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.item");
   checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.items[0i32]");

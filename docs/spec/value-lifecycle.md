@@ -88,7 +88,8 @@
 - **Elements of a stdlib `Vector` are places:** as for the builtin `vector`, a write through an element changes
   the element, not a copy: `values[i].n = x`, `values[i].inner.n = x`, `values[i].bump()` of a `[mut]` method, an
   element passed to a `mut` parameter (`poke(values[i])`) and a change of a vector field of the element
-  (`values[i].tags.push(x)`), spelled `values[i]`, `values.at(i)` or `at(values, i)`, for a local, a `mut`
+  (`values[i].tags.push(x)`) and the whole element (`values[i] = x`: the old element is destroyed once and a place on
+  the right is copied or a temporary taken over, as for the builtin `vector`), spelled `values[i]`, `values.at(i)` or `at(values, i)`, for a local, a `mut`
   parameter, a field and `this` of a `[mut]` method, and for an element of an element. The index is bounds
   checked as a read is. `/std/collections/vector/at` returns a copy, so semantics reads each element a write goes
   through by reference instead (`/std/collections/vector/vectorElementRef`); the read-only roots rule above is

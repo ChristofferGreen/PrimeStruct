@@ -395,6 +395,12 @@
                                 const std::unordered_map<std::string, BindingInfo> &locals,
                                 const Expr &value,
                                 const std::string &expectedTypeText);
+  // After the target `values[i]` of the assignment `expr` validates: the write goes through every element on the
+  // way, and an element of a stdlib `Vector` that is the target itself is replaced through its reference after
+  // validation; a value of another type than the element is a diagnostic. False after a diagnostic.
+  bool checkIndexedAssignmentTarget(const std::vector<ParameterInfo> &params,
+                                    const std::unordered_map<std::string, BindingInfo> &locals,
+                                    const Expr &expr);
   bool checkBuiltinVectorMutation(const std::vector<ParameterInfo> &params,
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const Expr &expr);

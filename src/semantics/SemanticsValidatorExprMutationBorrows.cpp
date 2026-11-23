@@ -885,6 +885,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           if (!validateExpr(params, locals, target)) {
             return false;
           }
+          if (!checkIndexedAssignmentTarget(params, locals, expr)) {
+            return false;
+          }
         }
       } else {
         std::string pointerName;
