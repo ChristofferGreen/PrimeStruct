@@ -648,9 +648,10 @@ TEST_CASE("this fields and method results pass to struct parameters") {
       "[struct]\nHolder() {\n"
       "  [String mut] head{String{}}\n  [StringView mut] line{StringView{}}\n\n"
       "  [return<StringView>]\n  pick() {\n    return(this.line)\n  }\n\n"
-      "  [return<i32> effects(heap_alloc)]\n  grow([StringView] name) {\n"
+      "  [mut return<i32> effects(heap_alloc)]\n  grow([StringView] name) {\n"
       "    appendView(this.head, name)\n    return(this.head.count())\n  }\n\n"
-      "  [return<i32>]\n  measure() {\n    return(name_length(this.pick()) + name_length(this.line))\n  }\n}\n";
+      "  [return<i32>]\n  measure() {\n    return(name_length(this.pick()) + "
+      "name_length(this.line))\n  }\n}\n";
   CHECK(exitOf("  [Holder mut] h{Holder{}}\n  [i32] grown{h.grow(textOf(\"abc\"))}\n  return(grown + h.measure())", defs) == 3);
 }
 

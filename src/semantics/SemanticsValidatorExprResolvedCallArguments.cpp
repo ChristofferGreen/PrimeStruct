@@ -497,6 +497,23 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
+  const auto makeReadOnlyRootLookup = [&]() {
+    ReadOnlyRootLookup lookup;
+    lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
+      isParameter = findParamBinding(params, name) != nullptr;
+      return bindingForName(name);
+    };
+    lookup.fieldOf =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
+          return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
+        };
+    lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
+      return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
+    };
+    lookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
+    return lookup;
+  };
+
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
@@ -505,7 +522,12 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       continue;
     }
     if (arg->kind != Expr::Kind::Name) {
-      continue; // literals and other temporaries, fields and elements
+      // A field or an element of a read-only root is changed through the parameter: the read-only roots rule.
+      // Literals and other temporaries are not places.
+      if (const auto root = findReadOnlyRoot(*arg, makeReadOnlyRootLookup(), true)) {
+        return failResolvedCallArgumentDiagnostic(readOnlyArgumentDiagnostic(*arg, *root));
+      }
+      continue;
     }
     const BindingInfo *binding = bindingForName(arg->name);
     if (binding == nullptr) {
@@ -535,19 +557,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       calleeParams.front().binding.isMutable && packedParamIndex != 0 && !orderedArgs.empty() &&
       orderedArgs.front() != nullptr && orderedArgs.front() != calleeParams.front().defaultExpr &&
       !isLifecycleHelperPath(currentValidationState_.context.definitionPath)) {
-    ReadOnlyRootLookup lookup;
-    lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
-      isParameter = findParamBinding(params, name) != nullptr;
-      return bindingForName(name);
-    };
-    lookup.fieldOf =
-        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
-          return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
-        };
-    lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
-      return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
-    };
-    lookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
+    const ReadOnlyRootLookup lookup = makeReadOnlyRootLookup();
     if (const auto root = findReadOnlyRoot(*orderedArgs.front(), lookup, true)) {
       const std::string &callee = *context.diagnosticResolved;
       return failResolvedCallArgumentDiagnostic(
@@ -558,8 +568,8 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   }
 
   // What a `[mut]` method or a `mut` parameter changes is its argument, so an element of a stdlib `Vector` on
-  // the way to it is a place (SemanticsVectorElementPlaces.h). A `mut` parameter does not hold a field or an
-  // element to the read-only roots rule, so an argument rooted at a read-only binding stays the copy it was.
+  // the way to it is a place (SemanticsVectorElementPlaces.h). An argument of a `mut` parameter rooted at a
+  // read-only binding is the diagnostic above, so what is left here is a place that may be written.
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
     const ParameterInfo &param = calleeParams[paramIndex];
     const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
@@ -568,24 +578,6 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
         arg->kind != Expr::Kind::Call || (!isMutableReceiver && !isMutableBorrowParam(param))) {
       continue;
-    }
-    if (!isMutableReceiver) {
-      ReadOnlyRootLookup lookup;
-      lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
-        isParameter = findParamBinding(params, name) != nullptr;
-        return bindingForName(name);
-      };
-      lookup.fieldOf =
-          [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
-            return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
-          };
-      lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
-        return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
-      };
-      lookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
-      if (findReadOnlyRoot(*arg, lookup, true)) {
-        continue;
-      }
     }
     noteVectorElementPlaces(
         currentValidationState_.context.definitionPath, *arg, true, vectorElementPlaceSites_);

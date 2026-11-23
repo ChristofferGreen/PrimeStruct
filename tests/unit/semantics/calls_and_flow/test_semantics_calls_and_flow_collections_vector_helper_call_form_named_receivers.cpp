@@ -119,7 +119,7 @@ TEST_CASE("vector helper statement validates on variadic vector pack receivers")
 import /std/collections/*
 
 [effects(heap_alloc), return<int>]
-mutate([args<vector<i32>>] values) {
+mutate([args<vector<i32>> mut] values) {
   push(at(values, 0i32), 9i32)
   values[1i32].clear()
   values[2i32].remove_swap(0i32)
@@ -196,7 +196,7 @@ TEST_CASE("vector helper statement user shadow resolves on variadic vector pack 
 }
 
 [return<int>]
-mutate([args<vector<i32>>] values) {
+mutate([args<vector<i32>> mut] values) {
   push(at(values, 0i32), 9i32)
   values[0i32].push(3i32)
   return(0i32)

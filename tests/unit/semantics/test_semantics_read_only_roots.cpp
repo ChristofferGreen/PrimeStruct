@@ -2,6 +2,9 @@
 
 #include "test_semantics_helpers.h"
 
+#include <algorithm>
+#include <utility>
+
 TEST_SUITE_BEGIN("primestruct.semantics.read_only_roots");
 
 // A write to a field of, or a `[mut]` method call on, a read-only root (a local that is not `mut`, a `[T]` or
@@ -627,6 +630,108 @@ main() {
   return(plus(add(1i32), drive(add)))
 }
 )");
+}
+
+namespace {
+
+// The 1-based line and column of the first `needle` in `source`.
+std::pair<int, int> positionOf(const std::string &source, const std::string &needle) {
+  const size_t offset = source.find(needle);
+  REQUIRE(offset != std::string::npos);
+  const int line = 1 + static_cast<int>(std::count(
+                           source.begin(), source.begin() + static_cast<long>(offset), '\n'));
+  const size_t lineStart = source.rfind('\n', offset == 0 ? 0 : offset - 1);
+  const int column =
+      static_cast<int>(offset -
+                       (lineStart == std::string::npos || offset == 0 ? 0 : lineStart + 1)) +
+      1;
+  return {line, column};
+}
+
+const char *MutParameterProgram = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Item mut] item{Item{}}
+  [vector<Item> mut] items{vector<Item>{Item{}}}
+  [array<Item> mut] fixed{array<Item>{Item{}}}
+  [Vector<Item> mut] grown{Vector<Item>{}}
+  [map<i32, Item> mut] table{map<i32, Item>{}}
+}
+
+[return<void>]
+poke([Item mut] item) {
+  item.n = 9i32
+}
+
+)";
+
+void checkMutArgument(const std::string &declaration,
+                      const std::string &argument,
+                      const std::string &place) {
+  const std::string source = std::string(MutParameterProgram) +
+                             "[effects(heap_alloc), return<int>]\nmain() {\n  " + declaration +
+                             "\n  poke(" + argument + ")\n  return(0i32)\n}\n";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find("mut parameter requires a mutable place: " + place) != std::string::npos,
+                error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  const auto [line, column] = positionOf(source, "poke(" + argument);
+  CHECK(diagnosticInfo.primarySpan.line == line);
+  CHECK(diagnosticInfo.primarySpan.column == column);
+}
+
+void checkMutArgumentAccepted(const std::string &declaration, const std::string &argument) {
+  const std::string source = std::string(MutParameterProgram) +
+                             "[effects(heap_alloc), return<int>]\nmain() {\n  " + declaration +
+                             "\n  poke(" + argument + ")\n  return(0i32)\n}\n";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+} // namespace
+
+TEST_CASE("a field of a read-only root is not handed to a mut parameter") {
+  checkMutArgument("[Bag] bag{Bag{}}",
+                   "bag.item",
+                   "bag.item (bag is read-only; declare it with mut: [T mut] bag{...})");
+}
+
+TEST_CASE("an element of a read-only root is not handed to a mut parameter") {
+  const std::string readOnly = "(bag is read-only; declare it with mut: [T mut] bag{...})";
+  checkMutArgument("[Bag] bag{Bag{}}", "bag.items[0i32]", "bag.items[...] " + readOnly);
+  checkMutArgument("[Bag] bag{Bag{}}", "bag.fixed[0i32]", "bag.fixed[...] " + readOnly);
+  checkMutArgument("[Bag] bag{Bag{}}", "bag.grown[0i32]", "bag.grown[...] " + readOnly);
+  checkMutArgument("[Bag] bag{Bag{}}", "at(bag.grown, 0i32)", "bag.grown[...] " + readOnly);
+}
+
+TEST_CASE("a mut parameter takes a field or an element of a mutable root") {
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.item");
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.items[0i32]");
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.fixed[0i32]");
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "bag.grown[0i32]");
+  checkMutArgumentAccepted("[Bag mut] bag{Bag{}}", "Item{}");
+  checkMutArgumentAccepted("[Bag] bag{Bag{}}", "Item{}");
+}
+
+TEST_CASE("a mut parameter of a read-only parameter's field names the parameter fix") {
+  const std::string source = std::string(MutParameterProgram) +
+                             "[return<void>]\nrelay([Bag] bag) {\n  poke(bag.item)\n}\n\n"
+                             "[return<int>]\nmain() {\n  return(0i32)\n}\n";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/relay", error));
+  CHECK_MESSAGE(
+      error.find(
+          "mut parameter requires a mutable place: bag.item (bag is a read-only parameter; take it "
+          "as a [T mut] parameter)") != std::string::npos,
+      error);
 }
 
 TEST_SUITE_END();

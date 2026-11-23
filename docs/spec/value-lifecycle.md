@@ -70,7 +70,9 @@
   `assign target must be a mutable binding: c.n (c is a read-only parameter; take it as a [T mut] parameter)`, and a call
   of a `[mut]` method on one is `mutating method needs a mutable receiver: c.bump() (c is read-only; declare it with
   mut: [T mut] c{...})`; each names the fix for its root (`[T mut] c{...}`, a `[T mut]` parameter, or `[mut]` on the
-  method). A `Reference<T>` parameter or local, a `[T mut]` binding, a `Reference` or `Pointer` field on the way and the
+  method). Handing a field or an element of one to a `mut` parameter (`poke(c.item)`, `poke(c.items[i])`) is
+  `mut parameter requires a mutable place: c.item (c is read-only; declare it with mut: [T mut] c{...})`, the same
+  way out for the same roots. A `Reference<T>` parameter or local, a `[T mut]` binding, a `Reference` or `Pointer` field on the way and the
   `this` of a lifecycle helper (`Create`, `Destroy`, `Copy`, `Move`) carry their own write access, so they are not
   read-only roots (a plain `Reference<struct>` may still change fields and call
   `mut` helpers, as in `pointers-and-references.md`). A write view (`Slice<T, Write>`) is a struct like another: its
@@ -195,8 +197,9 @@
   string once (`tests/unit/program_matrix/test_program_matrix_element_assign.cpp`).
 - **Implementation status:** the IR lowering passes non-`mut` struct and collection arguments by alias and treats
   `mut` parameters as borrows whose writes reach the caller. Semantics checks that a `mut` argument is a mutable place
-  (a non-`mut` binding is `mut parameter requires a mutable place`; literals and other temporaries, fields and elements
-  are accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut` or
+  (a non-`mut` binding is `mut parameter requires a mutable place`; a field or an element of a read-only root is the
+  same diagnostic with the place and the way out (Read-only roots, above); literals and other temporaries are
+  accepted, and `Reference`/`Pointer`/capability-view parameters are exempt), that a binding passed to a `mut` or
   `move` parameter is not passed to another parameter of the same call (`borrow conflict`), and that a borrowed
   parameter of an owning type (a container, a type that defines `Destroy`, or one holding either) is not returned,
   assigned or moved (`borrowed parameter escapes via return` / `via assignment`, `borrowed parameter cannot be

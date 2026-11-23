@@ -64,7 +64,7 @@ namespace std {
           findIndex<K, V>(this, key)))
     }
 
-    [public effects(heap_alloc), return<void> Comparable<K>]
+    [public mut effects(heap_alloc), return<void> Comparable<K>]
     mapInsert([K move] key, [V move] value) {
       [i32] index{findIndex<K, V>(this, key)}
       [Vector<K>] keys{this.keys}

@@ -151,6 +151,11 @@ std::string readOnlyFieldWriteDiagnostic(const Expr &target, const ReadOnlyRoot 
          wayOut(root) + ")";
 }
 
+std::string readOnlyArgumentDiagnostic(const Expr &argument, const ReadOnlyRoot &root) {
+  return "mut parameter requires a mutable place: " + placeText(argument, root) + " (" +
+         wayOut(root) + ")";
+}
+
 std::string readOnlyReceiverDiagnostic(const Expr &receiver, const std::string &methodName, const ReadOnlyRoot &root) {
   return "mutating method needs a mutable receiver: " + placeText(receiver, root) + "." +
          methodName + "() (" + wayOut(root) + ")";

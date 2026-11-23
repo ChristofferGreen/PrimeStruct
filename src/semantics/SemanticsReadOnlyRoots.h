@@ -54,6 +54,10 @@ bool isFunctionCallPath(const std::string &path);
 // read-only root, with the way out for the root's kind.
 std::string readOnlyFieldWriteDiagnostic(const Expr &target, const ReadOnlyRoot &root);
 
+// `mut parameter requires a mutable place: c.n (c is read-only; declare it with mut: [T mut] c{...})`: a field or an
+// element of a read-only root handed to a `mut` parameter.
+std::string readOnlyArgumentDiagnostic(const Expr &argument, const ReadOnlyRoot &root);
+
 // `mutating method needs a mutable receiver: c.bump() (c is read-only; declare it with mut)`.
 std::string readOnlyReceiverDiagnostic(const Expr &receiver, const std::string &methodName, const ReadOnlyRoot &root);
 
