@@ -130,7 +130,7 @@ of sync with them.
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
-| TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | deferred | wasm-opcode-gaps |
+| TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | ready | wasm-opcode-gaps |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
@@ -849,9 +849,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: this leaf only files the split; no lowerer code changes.
   - notes: Stay out of src/ir_lowerer while TODO-5972 and TODO-5963 are open.
 
-- [ ] TODO-6175: The Wasm slot heap has a fixed capacity of 2,097,152 slots
+- [~] TODO-6175: The Wasm slot heap has a fixed capacity of 2,097,152 slots
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
   - created_at: 2026-11-22
   - phase: Backend parity (found with TODO-6149)
   - parallel_track: wasm-opcode-gaps
