@@ -155,7 +155,6 @@ of sync with them.
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
-| TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | ready | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -178,7 +177,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; deferred TODO-6217 (bytecode of a linked script); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; deferred TODO-6217 (bytecode of a linked script); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -309,22 +308,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
-
-- [~] TODO-6173: A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
-  - created_at: 2026-11-21
-  - phase: Modules and libraries (found with TODO-6032)
-  - parallel_track: lib-shapes
-  - scope: `[sum] Pick { [i32] number [bool] flag } [public return<i32>] use_pick([Pick] value) { return(1i32) }` gives `public function /use_pick cannot be compiled into a library: its result, receiver or body shape is not one a real call takes`: `isAddressAbiParameter` accepts a borrowed sum parameter and `addressAbiShapeBlocker` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) finds no blocker, but the definition is not in `realCallReservationIndex` (src/ir_lowerer/IrLowererLowerSetupStage.cpp), so `realCallBlockerReason` has nothing to name. Find which rule keeps it out of `computeRealCallEligibleDefinitionPaths`, then either take the shape (and test it against the whole-program build) or make the blocker report it.
-  - decision: 2026-11-22 (owner): follows the order of TODO-6032 (done with or right after its first slice).
-  - acceptance:
-    - the function is a function of the archive and gives the same result as the whole-program build when linked, or the refusal names the rule
-    - negative or positive example with the program above
-    - full release gate green
-  - stop_rule: the sum parameter of a library root; no new ABI shape.
-  - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai
@@ -762,7 +745,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 2)
   - parallel_track: lib-shapes
-  - depends_on: TODO-6173
   - scope: sum, `Result` and packed error results (4 of the 9 refused results of the stdlib: collections/errors, dir, file/errors, glob) go through the struct-result path: a heap block the callee fills, as a struct result is, with the owned payloads destroyed by the caller. A borrowed sum parameter must pass the library shape check first (TODO-6173).
   - decision: 2026-11-22 (owner): after the `string` and `Pointer<T>` results (TODO-6032) and TODO-6173.
   - acceptance:

@@ -90,6 +90,9 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
            "frame that made the closure";
   case AddressAbiBlocker::Parameter:
     return "a parameter has a type the address ABI does not pass";
+  case AddressAbiBlocker::SumParameter:
+    return "a parameter is a sum, which a real call does not take: a function with a sum parameter "
+           "stays inline";
   case AddressAbiBlocker::CollectionResult:
     return "its result is a struct of the canonical collections, which a real call does not return";
   case AddressAbiBlocker::UnsupportedResult: {

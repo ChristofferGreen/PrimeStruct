@@ -1,5 +1,6 @@
 #include "IrLowererRecursionAnalysis.h"
 #include "IrLowererRealCallBlockerText.h"
+#include "IrLowererStringParameterUse.h"
 #include "IrLowererScalarCallBlocker.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
@@ -489,47 +490,6 @@ bool isAddressAbiStruct(const std::string &path,
          (allowCollections || path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) != 0);
 }
 
-// Whether every use of the `string` parameter `name` in `def` is `count()` of it or its passing to
-// `__pstext_literal`: the two reads of a runtime string that cost one instruction. Any other use (indexing, a
-// comparison, a print, forwarding it) keeps the definition inline, where the string is a table index the lowering
-// knows statically.
-bool stringParameterUseIsCountOrLiteral(const Expr &expr,
-                                        const std::string &name,
-                                        const Expr *parent) {
-  if (expr.kind == Expr::Kind::Name && expr.name == name) {
-    if (parent == nullptr || parent->kind != Expr::Kind::Call || parent->args.size() != 1 ||
-        &parent->args.front() != &expr) {
-      return false;
-    }
-    const size_t slash = parent->name.rfind('/');
-    const std::string_view leaf = slash == std::string::npos
-                                      ? std::string_view(parent->name)
-                                      : std::string_view(parent->name).substr(slash + 1);
-    return leaf == "count" || leaf == "__pstext_literal";
-  }
-  for (const Expr &arg : expr.args) {
-    if (!stringParameterUseIsCountOrLiteral(arg, name, &expr)) {
-      return false;
-    }
-  }
-  for (const Expr &bodyArg : expr.bodyArguments) {
-    if (!stringParameterUseIsCountOrLiteral(bodyArg, name, &expr)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool stringParameterUsedOnlyAsCountOrLiteral(const Definition &def, const std::string &name) {
-  for (const Expr &stmt : def.statements) {
-    if (!stringParameterUseIsCountOrLiteral(stmt, name, nullptr)) {
-      return false;
-    }
-  }
-  return !def.returnExpr.has_value() ||
-         stringParameterUseIsCountOrLiteral(*def.returnExpr, name, nullptr);
-}
-
 // Whether `path` names a sum definition (`[sum]`), whose owned parameters stay inline for a direct call: the call
 // site's inline binding destroys a sum temporary itself, and the real-call body would destroy the payload again. A
 // spawned call binds its arguments itself, in hidden locals, so it takes them.
@@ -727,6 +687,23 @@ const Transform *builtinVectorReturnType(const Definition &def,
   return nullptr;
 }
 
+// Whether the parameter names a sum, plain or through a `Reference` or `Pointer`.
+bool isSumParameter(const Definition &def,
+                    const Expr &param,
+                    const std::unordered_set<std::string> &structNames,
+                    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+  const Transform *type = taskParameterTypeTransform(param);
+  if (type == nullptr) {
+    return false;
+  }
+  std::string name = type->name;
+  if ((name == "Reference" || name == "Pointer") && type->templateArgs.size() == 1) {
+    name = trimTemplateTypeText(type->templateArgs.front());
+  }
+  return isSumDefinitionPath(resolveStructTypeName(name, def.namespacePrefix, structNames),
+                             definitionsByPath);
+}
+
 AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
                                          const RealCallShapeContext &context) {
   const auto &byPath = *context.definitionsByPath;
@@ -785,6 +762,9 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     if (!isAddressAbiParameter(
             def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
       return AddressAbiBlocker::Parameter;
+    }
+    if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
+      return AddressAbiBlocker::SumParameter;
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
@@ -1134,11 +1114,16 @@ std::string realCallBlockerReason(const Definition &def, const RealCallShapeCont
   const auto &byPath = *context.definitionsByPath;
   const auto &structNames = *context.structNames;
   for (const Expr &param : def.parameters) {
+    const std::string subject = "parameter `" + param.name + "` ";
     if (isAddressAbiParameter(
             def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
+      if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
+        return subject +
+               "is a sum, which a real call does not take: a function with a sum parameter "
+               "stays inline";
+      }
       continue;
     }
-    const std::string subject = "parameter `" + param.name + "` ";
     if (isArgsPackBinding(param) || param.args.size() > 1) {
       return subject + "is an argument pack";
     }

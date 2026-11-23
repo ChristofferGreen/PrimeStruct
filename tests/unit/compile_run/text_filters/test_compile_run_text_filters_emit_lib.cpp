@@ -299,6 +299,17 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "public function /make cannot be compiled into a library: its result `vector<i32>` is not "
        "one a real "
        "call returns"},
+      // A borrowed sum parameter stays inline in every program, so a library root cannot take it either.
+      {"sum_parameter",
+       "[sum] Pick { [i32] number [bool] flag }\n\n[public return<i32>]\nuse_pick([Pick] value) {\n"
+       "  return(1i32)\n}\n",
+       "public function /use_pick cannot be compiled into a library: parameter `value` is a sum, "
+       "which a real call does not take: a function with a sum parameter stays inline"},
+      {"sum_reference_parameter",
+       "[sum] Pick { [i32] number [bool] flag }\n\n[public return<i32>]\n"
+       "use_ref([Reference<Pick>] value) {\n  return(2i32)\n}\n",
+       "public function /use_ref cannot be compiled into a library: parameter `value` is a sum, "
+       "which a real call does not take"},
   };
   for (const auto &[name, source, message] : refused) {
     INFO(name);
@@ -309,6 +320,14 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
     CHECK(readFile(errPath).find(message) != std::string::npos);
     CHECK_FALSE(std::filesystem::exists(dir / (name + ".psa")));
   }
+  // The same function in a whole-program build is inlined and runs.
+  writeIn(dir,
+          "whole.prime",
+          "[sum] Pick { [i32] number [bool] flag }\n\n[return<i32>]\nuse_pick([Pick] value) {\n"
+          "  return(41i32)\n}\n\n[return<i32>]\nmain() {\n  return(use_pick(Pick{[number] 1i32}) + "
+          "1i32)\n}\n");
+  CHECK(runCommand("./primec --emit=vm " + quoteShellArg((dir / "whole.prime").string()) +
+                   " --entry /main") == 42);
 }
 
 TEST_CASE("emit-lib: a module with no public function has an empty code module, and a changed file "

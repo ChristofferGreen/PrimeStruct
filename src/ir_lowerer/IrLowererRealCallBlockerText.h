@@ -21,6 +21,7 @@ enum class AddressAbiBlocker {
   ReceiverStruct,
   ClosureReferenceCapture,
   Parameter,
+  SumParameter,
   CollectionResult,
   UnsupportedResult,
   UsesTry,

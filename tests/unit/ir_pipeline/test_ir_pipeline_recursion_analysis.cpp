@@ -377,7 +377,8 @@ namespace {
 // `structPath` is a `[struct]`, or a `[sum]` with `sum` set.
 bool ownedParameterShapeEligible(const std::string &structPath,
                                  const std::string &mode,
-                                 bool sum = false) {
+                                 bool sum = false,
+                                 bool library = false) {
   primec::Definition registerDef = makeDef("/main/register");
   primec::Expr param = makeScalarParam("handler", structPath);
   primec::Transform modeTransform;
@@ -393,10 +394,45 @@ bool ownedParameterShapeEligible(const std::string &structPath,
       {structDef.fullPath, &structDef},
   };
   const std::unordered_set<std::string> structNames = {structPath};
-  return primec::ir_lowerer::isRealCallShapeEligible(
-      registerDef, primec::ir_lowerer::RealCallShapeContext{&byPath, &structNames, true});
+  primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
+  context.refuseSumParameters = library;
+  return primec::ir_lowerer::isRealCallShapeEligible(registerDef, context);
+}
+
+// The reason `register` is not a function of a library, empty when it is one.
+std::string
+libraryParameterBlocker(const std::string &structPath, const std::string &mode, bool sum) {
+  primec::Definition registerDef = makeDef("/main/register");
+  primec::Expr param = makeScalarParam("handler", structPath);
+  primec::Transform modeTransform;
+  modeTransform.name = mode;
+  param.transforms.push_back(modeTransform);
+  registerDef.parameters.push_back(param);
+  primec::Definition structDef = makeDef(structPath);
+  primec::Transform structTransform;
+  structTransform.name = sum ? "sum" : "struct";
+  structDef.transforms.push_back(structTransform);
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {registerDef.fullPath, &registerDef},
+      {structDef.fullPath, &structDef},
+  };
+  const std::unordered_set<std::string> structNames = {structPath};
+  primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
+  context.refuseSumParameters = true;
+  return primec::ir_lowerer::realCallBlockerReason(registerDef, context);
 }
 } // namespace
+
+TEST_CASE("a library function refuses a sum parameter and names the rule") {
+  // `mut` and read-only sums are taken by the shape check of a program; a library's function and root is not.
+  CHECK(ownedParameterShapeEligible("/main/Item", "mut", true));
+  CHECK_FALSE(ownedParameterShapeEligible("/main/Item", "mut", true, true));
+  CHECK(ownedParameterShapeEligible("/main/Holder", "mut", false, true));
+  CHECK(libraryParameterBlocker("/main/Item", "mut", true) ==
+        "parameter `handler` is a sum, which a real call does not take: a function with a sum "
+        "parameter stays inline");
+  CHECK(libraryParameterBlocker("/main/Holder", "mut", false).empty());
+}
 
 TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "move"));

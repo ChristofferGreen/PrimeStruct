@@ -224,7 +224,9 @@ consumer target without that ABI is refused) and is not optimized or inlined: se
 the merged module. The module has `entryIndex` -1, its struct layouts, host imports, string table, source map and debug
 slots; a stub entry that lowering needs stands in for `main` and is removed. A root the real-call ABI cannot take (an
 argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
-/packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); a result,
+/packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); so is a
+parameter that is a sum, borrowed or by `Reference` or `Pointer` (`parameter `value` is a sum, which a real call does not
+take: a function with a sum parameter stays inline`); a result,
 receiver or body rule gets its own text (`its result `vector<i32>` is not one a real call returns: ...`, `its body uses `try``,
 `it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,

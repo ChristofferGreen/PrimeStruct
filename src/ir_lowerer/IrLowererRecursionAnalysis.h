@@ -101,6 +101,10 @@ struct RealCallShapeContext {
   // it writes and a function it declares to a consumer). A program's own call whose result is a string stays inline,
   // since a string a call returns cannot be indexed on every target.
   bool allowSlotResults = false;
+  // A sum parameter (borrowed, `mut` or by `Reference` or `Pointer`) is refused, as the eligibility pass refuses it
+  // since it leaves sums out of its struct names: a library root and a function a library declares must agree with
+  // it, and the refusal names the rule.
+  bool refuseSumParameters = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
