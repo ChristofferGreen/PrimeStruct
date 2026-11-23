@@ -72,6 +72,12 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
     return copyNamedBinding(expr.name);
   }
   if (expr.kind != Expr::Kind::Call) return false;
+  // A field that holds a collection (`bag.items`) has the collection type its declaration gives it.
+  if (expr.isFieldAccess && expr.args.size() == 1) {
+    return runWithPreservedDiagnostic([&]() {
+      return resolveStructFieldBinding(params, locals, expr.args.front(), expr.name, bindingOut);
+    });
+  }
   std::string resolvedCollectionPath = preferredCollectionHelperResolvedPath(expr);
   if (resolvedCollectionPath.empty()) {
     resolvedCollectionPath = resolveCalleePath(expr);

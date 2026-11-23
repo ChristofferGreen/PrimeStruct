@@ -796,4 +796,50 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("the direct count of a stdlib Vector field is a print argument and an auto initializer") {
+  // `print_line(count(bag.items))` and `[auto] d{count(bag.items)}`: the direct form of the call the method form
+  // spells, for a field and a nested field, with `count` and `capacity`.
+  program_matrix::ProgramCase program;
+  program.name = "vector_field_direct_count";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+}
+
+[struct]
+Outer() {
+  [Bag mut] bag{Bag{}}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  [Outer mut] outer{Outer{}}
+  bag.items.push(Item{})
+  bag.items.push(Item{})
+  outer.bag.items.push(Item{})
+  print_line(count(bag.items))
+  print_line(count(outer.bag.items))
+  [auto] d{count(bag.items)}
+  print_line(d)
+  [i32] room{capacity(bag.items)}
+  print_line(room)
+  print_line(capacity(outer.bag.items))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n1\n2\n2\n1\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
