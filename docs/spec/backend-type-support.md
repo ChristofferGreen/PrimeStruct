@@ -112,8 +112,28 @@
     whitespace-separated paths. A wildcard import of a module that holds only public templates (`/std/tuple/*`) is
     valid whether or not the program instantiates one; a path that no module defines is `unknown import path`.
   - **Exports:** definitions are private by default. Add `[public]` to a definition (function, struct, method) to make
-    it importable; `[private]` explicitly marks it as non-exported. Private definitions are still callable within the
-    same compilation unit; visibility only affects imports.
+    it importable; `[private]` explicitly marks it as non-exported. In the standard library (`/std`) visibility also
+    limits calls: a definition that is a member of a namespace and is not `[public]`, and a method marked `[private]`,
+    is callable only from the definitions of its namespace and of the namespaces nested in it (for a method, the
+    namespace of its struct). A call from any other definition, an absolute path included, is
+    `<path> is private: only definitions in <namespace> may call it`. This is the namespace rule of private fields
+    (Field visibility in `type-system.md`), so `private` has one meaning. Example:
+    ```
+    import /std/collections/*
+
+    [effects(heap_alloc), return<int>]
+    main() {
+      [Vector<i32> mut] values{vector<i32>(1i32)}
+      /std/collections/vector/vectorCheckShape<i32>(values)
+      return(0i32)
+    }
+    ```
+    is `/std/collections/vector/vectorCheckShape is private: only definitions in /std/collections/vector may call it`.
+    A definition written under a `/std` path by a program follows the same rule, so a program that replaces a library
+    helper (`/std/collections/vector/count`) marks it `[public]`. A method of a `/std` struct without a visibility
+    transform is callable wherever its struct is (whether it should need `[public]` is open, TODO-6197), and the brace
+    construction of a type is not a call. Outside `/std` a private definition is still callable within the same
+    compilation unit; there visibility only affects imports.
 - **Transform-driven control flow:** control structures desugar into prefix calls that accept envelope arguments.
   Surface `if(condition) { … } else { … }` rewrites into `if(condition, then() { … }, else() { … })`. Surface
   `if(condition) { … }` (without `else`) is statement-only sugar and rewrites into `if(condition, then() { … }, else() {

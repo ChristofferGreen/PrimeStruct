@@ -9,7 +9,7 @@ TEST_CASE("map compatibility explicit-template count call keeps non-templated al
   return(41i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -32,7 +32,7 @@ TEST_CASE("map compatibility explicit-template count method reports canonical re
   return(41i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -55,7 +55,7 @@ TEST_CASE("wrapper reference templated map count method rejects missing canonica
   return(7i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([Reference</std/collections/map<K, V>>] values, [bool] marker) {
   return(41i32)
 }
@@ -83,7 +83,7 @@ TEST_CASE("wrapper reference templated map count method rejects missing canonica
   return(7i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
   return(false)
 }
@@ -106,7 +106,7 @@ main() {
 
 TEST_CASE("map slash-path explicit-template count method reports canonical return mismatch") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -124,7 +124,7 @@ main() {
 
 TEST_CASE("map canonical slash-path explicit-template access method stays on canonical unknown call target diagnostic") {
   const std::string source = R"(
-[effects(heap_alloc), return<i32>]
+[public effects(heap_alloc), return<i32>]
 /std/collections/map/at<K, V>([map<K, V>] values, [i32] key) {
   return(key)
 }
@@ -142,7 +142,7 @@ main() {
 
 TEST_CASE("map canonical explicit-template count call keeps canonical non-templated diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -166,7 +166,7 @@ main() {
 
 TEST_CASE("map canonical implicit-template count call keeps argument count diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -191,7 +191,7 @@ main() {
 
 TEST_CASE("map canonical implicit-template count call validates with wrapper slash return envelope") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(41i32)
 }
@@ -213,7 +213,7 @@ main() {
 
 TEST_CASE("map canonical implicit-template count wrapper slash return keeps marker diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(41i32)
 }

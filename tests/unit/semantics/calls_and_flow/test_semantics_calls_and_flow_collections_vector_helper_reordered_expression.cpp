@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("vector namespaced helper reordered expression stays statement-only") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -22,7 +22,7 @@ main() {
 
 TEST_CASE("stdlib namespaced helper reordered expression rejects compatibility receiver fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -42,7 +42,7 @@ main() {
 
 TEST_CASE("stdlib namespaced helper reordered expression keeps compatibility reject diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -62,7 +62,7 @@ main() {
 
 TEST_CASE("vector namespaced helper reordered statement keeps vector-binding diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<void>]
+[public effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -80,7 +80,7 @@ main() {
 
 TEST_CASE("stdlib namespaced helper reordered statement rejects compatibility receiver fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<void>]
+[public effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -99,7 +99,7 @@ main() {
 
 TEST_CASE("stdlib namespaced helper reordered statement keeps compatibility reject diagnostics") {
   const std::string source = R"(
-[effects(heap_alloc), return<void>]
+[public effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -122,12 +122,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
 
-[return<void>]
+[public return<void>]
 /std/collections/vector/push([Marker] self, [i32] value) {
 }
 
@@ -148,12 +148,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
 
-[return<void>]
+[public return<void>]
 /std/collections/vector/push([Marker] self, [i32] value) {
 }
 
@@ -175,12 +175,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
 
-[return<void>]
+[public return<void>]
 /std/collections/vector/push([Marker] self, [i32] value) {
 }
 
@@ -201,12 +201,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
 
-[return<void>]
+[public return<void>]
 /std/collections/vector/push([Marker] self, [i32] value) {
 }
 

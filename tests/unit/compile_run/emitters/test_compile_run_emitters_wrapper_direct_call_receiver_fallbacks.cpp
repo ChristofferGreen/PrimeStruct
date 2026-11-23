@@ -16,7 +16,7 @@ wrapValues() {
   return(vector<i32>(5i32, 6i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(plus(index, 40i32)))
 }
@@ -147,12 +147,12 @@ TEST_CASE("C++ emitter rejects wrapper-returned vector direct-call string count 
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -185,7 +185,7 @@ wrapValues() {
   return(vector<i32>(1i32))
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -212,7 +212,7 @@ wrapValues() {
   return(vector<i32>(1i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(7i32)
 }

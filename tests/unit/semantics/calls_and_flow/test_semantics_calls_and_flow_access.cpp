@@ -272,7 +272,7 @@ TEST_CASE("map method calls reject retired count helper definitions") {
   return(/std/collections/map/count(items))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] items) {
   return(1i32)
 }
@@ -343,7 +343,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/custom([map<i32, i32>] values) {
   return(Marker(7i32))
 }
@@ -364,7 +364,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/custom([map<i32, i32>] values) {
   return(Marker(7i32))
 }

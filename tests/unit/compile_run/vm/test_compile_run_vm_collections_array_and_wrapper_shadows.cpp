@@ -33,7 +33,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([array<i32>] values) {
   return(88i32)
 }
@@ -173,7 +173,7 @@ TEST_CASE("runs vm canonical map sugar with current helper precedence") {
   return(96i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }
@@ -183,7 +183,7 @@ TEST_CASE("runs vm canonical map sugar with current helper precedence") {
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(11i32)
 }
@@ -193,7 +193,7 @@ TEST_CASE("runs vm canonical map sugar with current helper precedence") {
   return(42i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(12i32)
 }
@@ -238,7 +238,7 @@ TEST_CASE("runs vm canonical map access string shadow through builtin storage") 
   return(41i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
@@ -248,7 +248,7 @@ TEST_CASE("runs vm canonical map access string shadow through builtin storage") 
   return(42i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
@@ -276,7 +276,7 @@ TEST_CASE("runs vm canonical map access same-path string shadow") {
   return("hello"utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return(41i32)
 }
@@ -286,7 +286,7 @@ TEST_CASE("runs vm canonical map access same-path string shadow") {
   return("hello"utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return(42i32)
 }
@@ -315,7 +315,7 @@ TEST_CASE("runs vm rooted map count as ordinary user definition") {
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -344,7 +344,7 @@ TEST_CASE("rejects vm map compatibility count call mismatch with canonical templ
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -373,7 +373,7 @@ TEST_CASE("runs vm map compatibility explicit-template count call with canonical
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -402,7 +402,7 @@ TEST_CASE("rejects vm map compatibility explicit-template count call with non-te
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -431,7 +431,7 @@ TEST_CASE("rejects vm map compatibility explicit-template count method with non-
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -456,7 +456,7 @@ main() {
 
 TEST_CASE("rejects vm canonical explicit-template map count call with non-templated canonical helper") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -486,7 +486,7 @@ main() {
 
 TEST_CASE("rejects vm canonical implicit-template map count call with canonical argument-shape diagnostics") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -515,7 +515,7 @@ main() {
 
 TEST_CASE("runs vm canonical implicit-template map count expression call with wrapper slash return envelope") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }

@@ -35,7 +35,7 @@ main() {
 
 TEST_CASE("rejects explicit canonical vector mutator statement helper without vector access helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   assign(values[1i32], plus(value, 40i32))
 }
@@ -63,7 +63,7 @@ main() {
 
 TEST_CASE("rejects reordered explicit canonical vector mutator statement helper without vector access helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   assign(values[1i32], plus(value, 40i32))
 }
@@ -91,7 +91,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects alias reordered vector mutator statements with canonical-only helper before emission") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -117,7 +117,7 @@ main() {
 
 TEST_CASE("rejects alias vector mutator statements with canonical-only helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -356,7 +356,7 @@ TEST_CASE("C++ emitter rejects direct wrapper-returned canonical map access coun
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
@@ -392,12 +392,12 @@ TEST_CASE("C++ emitter rejects wrapper-returned canonical map method access stri
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }

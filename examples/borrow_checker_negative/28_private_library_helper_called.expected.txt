@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"/std/collections/vector/vectorCheckShape is private: only definitions in /std/collections/vector may call it"
+"line":8,"column":3
+"notes":["stage: semantic"]

@@ -402,7 +402,7 @@ main() {
 
 TEST_CASE("map compatibility count call requires explicit alias definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -420,7 +420,7 @@ main() {
 
 TEST_CASE("map compatibility count auto inference requires explicit alias definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -439,7 +439,7 @@ main() {
 
 TEST_CASE("map compatibility contains call rejects visible canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -463,7 +463,7 @@ TEST_CASE("map compatibility contains call keeps explicit alias precedence") {
   return(false)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [bool] key) {
   return(true)
 }
@@ -482,7 +482,7 @@ main() {
 
 TEST_CASE("map compatibility tryAt call rejects visible canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -506,7 +506,7 @@ TEST_CASE("map compatibility tryAt call keeps explicit alias precedence") {
   return(Result.ok(19i32))
 }
 
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [bool] key) {
   return(Result.ok(7i32))
 }
@@ -544,7 +544,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -581,7 +581,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }

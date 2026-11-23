@@ -8,7 +8,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -72,7 +72,7 @@ CanonicalMarker {
   return(AliasMarker(plus(index, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(CanonicalMarker(index))
 }
@@ -100,7 +100,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -132,7 +132,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -160,7 +160,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -192,7 +192,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -228,7 +228,7 @@ AliasMarker {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
@@ -265,7 +265,7 @@ Marker {
   return(Marker(plus(key, 40i32)))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(key)
 }
@@ -297,7 +297,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -328,7 +328,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -392,7 +392,7 @@ wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -423,7 +423,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -456,7 +456,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -488,7 +488,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -526,7 +526,7 @@ Marker {
   return(index)
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -558,7 +558,7 @@ Marker {
   return(index)
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -586,12 +586,12 @@ main() {
 
 TEST_CASE("templated stdlib canonical vector helpers reject method-call sugar template args on count") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 40i32))
 }
@@ -609,12 +609,12 @@ main() {
 
 TEST_CASE("templated slash-path vector helper methods stay on unknown method diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 40i32))
 }
@@ -632,7 +632,7 @@ main() {
 
 TEST_CASE("templated slash-path vector helper arity failures stay on unknown method diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -650,7 +650,7 @@ main() {
 
 TEST_CASE("templated stdlib canonical vector helper reports current argument mismatch diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }

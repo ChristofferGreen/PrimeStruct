@@ -50,7 +50,7 @@ TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -82,7 +82,7 @@ main() {
 
 TEST_CASE("native auto-inferred std namespaced vector push canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -115,7 +115,7 @@ TEST_CASE("native std namespaced count expression uses compatibility alias prece
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -331,7 +331,7 @@ main() {
 
 TEST_CASE("native std namespaced count expression canonical fallback uses builtin count") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -417,7 +417,7 @@ TEST_CASE("native std namespaced capacity expression uses compatibility alias pr
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -447,7 +447,7 @@ main() {
 
 TEST_CASE("native std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }

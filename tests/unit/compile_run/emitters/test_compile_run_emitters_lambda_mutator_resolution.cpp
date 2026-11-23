@@ -127,7 +127,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -150,7 +150,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -192,7 +192,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 

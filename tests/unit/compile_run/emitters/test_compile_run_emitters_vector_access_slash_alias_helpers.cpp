@@ -17,12 +17,12 @@ TEST_CASE("vector namespaced access slash methods through explicit alias helpers
   return(plus(index, 50i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(7i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(8i32)
 }
@@ -409,7 +409,7 @@ main() {
 
 TEST_CASE("rejects explicit canonical vector mutator method helper without access helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   assign(values[1i32], plus(value, 70i32))
 }
@@ -437,7 +437,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects alias vector mutator methods with canonical-only helper before emission") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 

@@ -216,7 +216,7 @@ TEST_CASE("wrapper-returned canonical map access count call auto inference keeps
   return(false)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("abc"utf8)
 }
@@ -244,12 +244,12 @@ TEST_CASE("wrapper-returned canonical map method access count keeps builtin stri
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return(8i32)
 }
@@ -277,7 +277,7 @@ TEST_CASE("wrapper-returned direct canonical map access count keeps primitive di
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"utf8)
 }
@@ -328,12 +328,12 @@ TEST_CASE("wrapper-returned canonical map method access count keeps string recei
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"utf8)
 }
@@ -361,7 +361,7 @@ TEST_CASE("canonical vector access count call rejects builtin string helper shad
   return(false)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -390,7 +390,7 @@ TEST_CASE("canonical vector unsafe access count call keeps primitive diagnostics
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -413,7 +413,7 @@ TEST_CASE("canonical vector method access count keeps builtin string fallback") 
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -436,7 +436,7 @@ TEST_CASE("canonical vector unsafe method access count keeps primitive receiver 
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -459,12 +459,12 @@ TEST_CASE("slash-method vector access count keeps builtin string fallback") {
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -488,12 +488,12 @@ TEST_CASE("slash-method vector access count keeps primitive diagnostics") {
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -517,12 +517,12 @@ TEST_CASE("wrapper-returned vector access count keeps builtin string helper shad
   return(false)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -551,12 +551,12 @@ TEST_CASE("wrapper-returned vector access count keeps primitive diagnostics") {
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -610,12 +610,12 @@ TEST_CASE("wrapper-returned referenced canonical map access count call auto infe
   return(false)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("abc"utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_ref([Reference</std/collections/map<i32, string>>] values, [i32] key) {
   return("abc"utf8)
 }

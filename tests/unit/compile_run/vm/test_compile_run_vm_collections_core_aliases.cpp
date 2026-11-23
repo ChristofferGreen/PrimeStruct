@@ -276,7 +276,7 @@ main() {
 
 TEST_CASE("rejects vm array namespaced vector count method alias") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -299,7 +299,7 @@ main() {
 
 TEST_CASE("rejects vm array namespaced vector capacity method alias") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -322,7 +322,7 @@ main() {
 
 TEST_CASE("rejects vm map namespaced count compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -344,7 +344,7 @@ main() {
 
 TEST_CASE("rejects vm map namespaced contains compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -369,7 +369,7 @@ main() {
 
 TEST_CASE("rejects vm map namespaced tryAt compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -397,7 +397,7 @@ TEST_CASE("runs vm unchecked pointer conformance harness for imported .prime hel
 
 TEST_CASE("rejects vm map namespaced at compatibility alias without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -420,7 +420,7 @@ main() {
 
 TEST_CASE("rejects vm map namespaced at unsafe compatibility alias without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -512,27 +512,27 @@ Marker {
 [effects(io_err)]
 unexpectedCanonicalMapTryAt([i32] err) {}
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(70i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
 
-[effects(heap_alloc), return<Result<i32, i32>>]
+[public effects(heap_alloc), return<Result<i32, i32>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(80i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(60i32)
 }
 
-[effects(heap_alloc), return<Marker>]
+[public effects(heap_alloc), return<Marker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(Marker(30i32))
 }
@@ -583,7 +583,7 @@ main() {
 
 TEST_CASE("runs vm canonical map method with slash return type receiver") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }
@@ -605,12 +605,12 @@ main() {
 
 TEST_CASE("runs vm canonical map access direct calls on wrapper slash return receiver") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(41i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(42i32)
 }
@@ -779,7 +779,7 @@ main() {
 
 TEST_CASE("runs vm bare map count through visible canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -820,7 +820,7 @@ main() {
 
 TEST_CASE("runs vm bare map at through explicit canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }

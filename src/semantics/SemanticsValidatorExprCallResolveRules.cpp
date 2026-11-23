@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsPrivateDefinitionAccess.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/ir/StdlibCollectionPaths.h"
@@ -481,6 +482,20 @@ PhaseStatus SemanticsValidator::validateResolvedCall(ExprCallContext &cc) {
       return cc.done(failExprRootDiagnostic("argument count mismatch for builtin capacity"));
     }
     return cc.done(failExprRootDiagnostic("unknown call target: " + unknownCallTarget));
+  }
+  // A safe caller of an `[unsafe_api]` definition is told about the unsafe rule first (argument validation).
+  const bool unsafeApiFromSafeCode =
+      !currentValidationState_.context.definitionIsUnsafe &&
+      std::any_of(resolvedDefinition->transforms.begin(),
+                  resolvedDefinition->transforms.end(),
+                  [](const Transform &transform) { return transform.name == "unsafe_api"; });
+  if (!unsafeApiFromSafeCode) {
+    const std::string &callerPath = currentValidationState_.context.definitionPath;
+    std::string privateViolation = privateDefinitionCallViolation(
+        defMap_, *resolvedDefinition, callerPath.empty() ? expr.namespacePrefix : callerPath);
+    if (!privateViolation.empty()) {
+      return cc.done(failExprRootDiagnostic(std::move(privateViolation)));
+    }
   }
   if (!validateCalleeEffects(expr, *resolvedDefinition)) {
     return cc.done(false);

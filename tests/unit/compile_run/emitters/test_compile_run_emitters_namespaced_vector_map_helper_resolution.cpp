@@ -12,7 +12,7 @@ TEST_CASE("rejects vector alias templated forwarding past non-templated compatib
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -272,7 +272,7 @@ main() {
 
 TEST_CASE("rejects map namespaced count compatibility alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -295,7 +295,7 @@ main() {
 
 TEST_CASE("rejects map namespaced contains compatibility alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -320,7 +320,7 @@ main() {
 
 TEST_CASE("rejects map namespaced tryAt compatibility alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -371,7 +371,7 @@ main() {
 
 TEST_CASE("rejects map namespaced at compatibility alias in C++ emitter without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -392,7 +392,7 @@ main() {
 
 TEST_CASE("rejects map namespaced at unsafe compatibility alias in C++ emitter without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }

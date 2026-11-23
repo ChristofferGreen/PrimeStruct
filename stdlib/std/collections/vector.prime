@@ -12,7 +12,7 @@ namespace std {
     return(bufferAlloc<T>(count))
   }
 
-  [unsafe_api effects(heap_alloc), return<void>]
+  [public unsafe_api effects(heap_alloc), return<void>]
   vectorFreeStorage<T>([Pointer<uninitialized<T>>] ptr) {
     bufferFreeUninitialized<T>(ptr)
   }
@@ -95,7 +95,7 @@ namespace std {
 
   }
 
-  [unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>>]
   vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(index < 0 || index >= values.field_capacity()) {
@@ -110,31 +110,31 @@ namespace std {
     return(value)
   }
 
-  [unsafe_api return<void>]
+  [public unsafe_api return<void>]
   vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
 
-  [unsafe_api return<void>]
+  [public unsafe_api return<void>]
   vectorDropSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     drop(*slot)
   }
 
-  [unsafe_api return<T>]
+  [public unsafe_api return<T>]
   vectorTakeSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     return(take(*slot))
   }
 
-  [unsafe_api return<Reference<T>>]
+  [public unsafe_api return<Reference<T>>]
   vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
     return(borrow(*slot))
   }
 
-  [unsafe_api return<void>]
+  [public unsafe_api return<void>]
   vectorDropRange<T>([Vector<T> mut] values, [i32] limit) {
     vectorCheckShape<T>(values)
     if(limit < 0 || limit > values.field_capacity()) {
@@ -145,7 +145,7 @@ namespace std {
     }
   }
 
-  [unsafe_api effects(heap_alloc), return<void>]
+  [public unsafe_api effects(heap_alloc), return<void>]
   vectorMovePrefixToBuffer<T>([Pointer<uninitialized<T>> mut] dst, [Vector<T> mut] values, [i32] limit) {
     for([i32 mut] index{0}, index < limit, index++) {
       [Pointer<uninitialized<T>> mut] nextSlot{
@@ -366,7 +366,7 @@ namespace std {
   // The first element's address as a `Pointer<T>` (the storage is `Pointer<uninitialized<T>>`).
   [unsafe return<Pointer<T>>]
   vectorElementsFrom<T>([Vector<T>] values, [i32] start) {
-    return(sliceOffset<T>(bufferReinterpret<T, uninitialized<T>>(values.data), start))
+    return(bufferOffsetUnsafe<T>(bufferReinterpret<T, uninitialized<T>>(values.data), start))
   }
 
   // A borrowed view of the elements: no copy. The vector must not change while the view is in use.

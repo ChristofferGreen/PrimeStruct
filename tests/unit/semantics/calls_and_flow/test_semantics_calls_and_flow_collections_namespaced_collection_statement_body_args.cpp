@@ -18,7 +18,7 @@ main() {
 
 TEST_CASE("array namespaced vector helper call form accepts statement body arguments") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -38,7 +38,7 @@ main() {
 
 TEST_CASE("vector namespaced helper call form accepts statement body arguments") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -78,7 +78,7 @@ main() {
 
 TEST_CASE("array namespaced vector helper call form rejects expression body arguments") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -96,7 +96,7 @@ main() {
 
 TEST_CASE("vector namespaced helper call form expression body arguments currently pass semantics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -282,7 +282,7 @@ main() {
 
 TEST_CASE("array namespaced method body-arg canonical-fallback helper fails on bare count target after rooted borrow") {
   const std::string source = R"(
-[return<Reference<i32>>]
+[public return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
   return(ref)
 }
@@ -301,7 +301,7 @@ main() {
 
 TEST_CASE("stdlib namespaced method expression body-arg canonical-fallback helper keeps rooted borrow diagnostic") {
   const std::string source = R"(
-[return<Reference<i32>>]
+[public return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
   return(ref)
 }
@@ -324,7 +324,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
   return(7i32)
 }
@@ -352,7 +352,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [i32] marker) {
   return(7i32)
 }
@@ -380,7 +380,7 @@ wrapValues() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(7i32)
 }
@@ -417,7 +417,7 @@ main() {
 
 TEST_CASE("bare map helper statement body arguments validate through canonical helper target") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -436,7 +436,7 @@ main() {
 
 TEST_CASE("bare map helper statement body arguments keep argument count diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(90i32)
 }
@@ -462,7 +462,7 @@ wrapValues() {
   return(map<i32, i32>(5i32, 6i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -485,7 +485,7 @@ wrapValues() {
   return(map<i32, i32>(5i32, 6i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(90i32)
 }
@@ -510,7 +510,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
   return(90i32)
 }
@@ -535,7 +535,7 @@ borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([Reference</std/collections/map<i32, i32>>] values) {
   return(90i32)
 }
@@ -555,7 +555,7 @@ main() {
 
 TEST_CASE("map namespaced count method statement body arguments validate") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -574,7 +574,7 @@ main() {
 
 TEST_CASE("map namespaced at method statement body arguments validate through canonical helper") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(90i32)
 }
@@ -593,7 +593,7 @@ main() {
 
 TEST_CASE("map stdlib call form statement body arguments use canonical helper target") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(90i32)
 }

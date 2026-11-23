@@ -96,7 +96,7 @@ TEST_CASE("ir lowerer supports map method calls") {
   return(/std/collections/map/count(items))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] items) {
   return(1i32)
 }

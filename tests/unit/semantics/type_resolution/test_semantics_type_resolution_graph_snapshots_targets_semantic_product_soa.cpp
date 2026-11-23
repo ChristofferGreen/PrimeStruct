@@ -280,7 +280,7 @@ TEST_CASE("semantic product publishes stdlib surface ids for direct, method, and
   const std::string source = R"(
 import /std/collections/vector
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([vector<i32>] self) {
   return(17i32)
 }
@@ -422,11 +422,11 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[public return<void>]
 /std/collections/soa/push<T>([soa<T> mut] values, [T] value) {
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/soa/count<T>([soa<T>] values) {
   return(1i32)
 }
@@ -684,12 +684,12 @@ cloneValues() {
   return(count)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/soa/push([soa<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/soa/reserve([soa<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
@@ -776,12 +776,12 @@ Holder() {}
   return(count)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/soa/push([soa<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/soa/reserve([soa<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
@@ -876,17 +876,17 @@ Holder() {}
   return(vector<Particle>())
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/get([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<vector<Particle>>]
+[public return<vector<Particle>>]
 /std/collections/soa/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -1020,17 +1020,17 @@ cloneValues() {
   return(vector<Particle>())
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/get([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<vector<Particle>>]
+[public return<vector<Particle>>]
 /std/collections/soa/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }

@@ -7,7 +7,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on string receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([string] values) {
   return(91i32)
 }
@@ -30,7 +30,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects local canonical slash-method vector capacity same-path helper on map receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(92i32)
 }
@@ -131,7 +131,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(94i32)
 }
@@ -158,7 +158,7 @@ wrapText() {
   return("abc"raw_utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([string] values) {
   return(96i32)
 }
@@ -526,12 +526,12 @@ main() {
 
 TEST_CASE("rejects wrapper explicit vector count capacity aliases on count first when only canonical helpers exist in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(20i32)
 }

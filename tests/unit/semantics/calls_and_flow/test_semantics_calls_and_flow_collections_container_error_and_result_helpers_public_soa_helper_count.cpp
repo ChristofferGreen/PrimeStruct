@@ -99,12 +99,12 @@ import /std/collections/*
 
 namespace std {
   namespace image {
-    [effects(heap_alloc), return<int>]
+    [public effects(heap_alloc), return<int>]
     vector_count([vector<i32>] values) {
       return(count(values))
     }
 
-    [return<int>]
+    [public return<int>]
     array_count([array<i32>] values) {
       return(count(values))
     }
@@ -127,7 +127,7 @@ main() {
 
 TEST_CASE("args pack count method resolves inside stdlib vector namespace") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/make<T>([args<T>] values) {
   valueCount{values.count()}
   return(valueCount)

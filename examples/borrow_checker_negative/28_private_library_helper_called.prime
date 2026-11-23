@@ -1,0 +1,10 @@
+// `vectorCheckShape` is a helper of the vector module without `[public]`: it is private to its namespace, so a
+// program cannot call it, by absolute path either. The public operations (`push`, `at`, `count`) run it.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vector<i32>(1i32)}
+  /std/collections/vector/vectorCheckShape<i32>(values)
+  return(0i32)
+}

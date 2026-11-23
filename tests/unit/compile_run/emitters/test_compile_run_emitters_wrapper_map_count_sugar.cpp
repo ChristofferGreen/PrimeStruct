@@ -7,7 +7,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("C++ emitter resolves canonical map count helper on wrapper slash return method sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(92i32)
 }
@@ -30,7 +30,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical map count diagnostics on wrapper slash return method sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(92i32)
 }
@@ -61,7 +61,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects templated canonical map count helper on wrapper slash return method sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
@@ -88,7 +88,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on templated wrapper slash return map count sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
@@ -122,7 +122,7 @@ namespace i32 {
   }
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(41i32)
 }
@@ -154,7 +154,7 @@ namespace i32 {
   }
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(41i32)
 }
@@ -240,7 +240,7 @@ TEST_CASE("C++ emitter routes bare map count to rooted shadow and map sugar to c
   return(96i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }
@@ -250,7 +250,7 @@ TEST_CASE("C++ emitter routes bare map count to rooted shadow and map sugar to c
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(11i32)
 }
@@ -260,7 +260,7 @@ TEST_CASE("C++ emitter routes bare map count to rooted shadow and map sugar to c
   return(42i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(12i32)
 }
@@ -290,7 +290,7 @@ TEST_CASE("C++ emitter rejects explicit-template map count method with non-templ
   return(96i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(73i32)
 }
@@ -318,7 +318,7 @@ main() {
 
 TEST_CASE("C++ emitter resolves alias explicit-template map count method precedence") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -378,7 +378,7 @@ wrapMap() {
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(7i32)
 }
@@ -388,7 +388,7 @@ wrapMap() {
   return(42i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(8i32)
 }
@@ -422,7 +422,7 @@ wrapMap() {
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [bool] key) {
   return(7i32)
 }
@@ -454,7 +454,7 @@ wrapMap() {
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(7i32)
 }
@@ -487,7 +487,7 @@ wrapMap() {
   return(41i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(7i32)
 }
@@ -541,7 +541,7 @@ TEST_CASE("C++ emitter rejects canonical direct-call map access string receivers
   return(41i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
@@ -551,7 +551,7 @@ TEST_CASE("C++ emitter rejects canonical direct-call map access string receivers
   return(42i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }

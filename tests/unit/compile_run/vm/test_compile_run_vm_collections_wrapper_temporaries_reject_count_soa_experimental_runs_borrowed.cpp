@@ -707,7 +707,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/get_ref([Reference<soa<Particle>>] values, [i32] index) {
   return(Particle(0i32, 0i32))
 }

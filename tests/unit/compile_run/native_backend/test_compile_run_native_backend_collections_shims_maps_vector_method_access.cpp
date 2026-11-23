@@ -36,7 +36,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }

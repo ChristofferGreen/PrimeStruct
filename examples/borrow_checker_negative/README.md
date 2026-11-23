@@ -20,7 +20,8 @@ aliases is changed directly (`19_view_of_reference_alias_changed_directly`), and
 called on a local that is not `mut` (`24_read_only_parameter_field_written`, `25_mut_method_on_read_only_local`), and
 a `[mut]` method called on an element of a collection field of a read-only parameter
 (`26_element_of_read_only_parameter_changed`), and a `Function` field called through a read-only parameter
-(`27_function_called_through_read_only_parameter`).
+(`27_function_called_through_read_only_parameter`), and a helper of the standard library that is not `[public]`
+called by absolute path (`28_private_library_helper_called`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

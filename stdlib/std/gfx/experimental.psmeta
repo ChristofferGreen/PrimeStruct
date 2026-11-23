@@ -7,6 +7,24 @@
 # file line numbers.
 
 [symbol]
+path = /std
+start_line = 3
+end_line = 646
+content_hash = df6704d4feaff1a7
+
+[symbol]
+path = /std/gfx
+start_line = 4
+end_line = 645
+content_hash = f55afe7d3b4ae6a7
+
+[symbol]
+path = /std/gfx/experimental
+start_line = 5
+end_line = 644
+content_hash = e601dc683be48da0
+
+[symbol]
 path = /std/gfx/experimental/ColorFormat
 start_line = 11
 end_line = 16
@@ -424,13 +442,13 @@ content_hash = 64db0c5266b0ff3e
 path = /std/gfx/experimental/windowCreate
 start_line = 537
 end_line = 542
-content_hash = ee6a86e49506b4c8
+content_hash = 2a76ae0908fd284d
 
 [symbol]
 path = /std/gfx/experimental/deviceCreate
 start_line = 544
 end_line = 554
-content_hash = fbe5d5bf663b1585
+content_hash = 2074d904725cb474
 
 [symbol]
 path = /std/gfx/experimental/GfxError/why

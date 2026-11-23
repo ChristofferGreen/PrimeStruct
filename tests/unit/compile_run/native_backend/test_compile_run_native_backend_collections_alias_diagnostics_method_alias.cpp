@@ -15,7 +15,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -54,7 +54,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -88,7 +88,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -128,7 +128,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -163,7 +163,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -203,7 +203,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -244,7 +244,7 @@ CanonicalMarker {
   return(AliasMarker(plus(index, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(CanonicalMarker(index))
 }
@@ -272,7 +272,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -305,7 +305,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -333,7 +333,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -406,7 +406,7 @@ wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -477,7 +477,7 @@ wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }

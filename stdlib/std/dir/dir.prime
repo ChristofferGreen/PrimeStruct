@@ -75,7 +75,7 @@ namespace dir {
   // `Result.ok()`, or the errno of the failure as a `FileError` (2 when the directory does not exist, 20 when `path`
   // is not a directory, 13 when it cannot be read); `out` is left alone on failure. A name that contains a line feed
   // is not listed. The listing is not a snapshot: a directory that changes while it is read gives either state.
-  [public return<Result<FileError>> effects(file_read, heap_alloc)]
+  [public unsafe return<Result<FileError>> effects(file_read, heap_alloc)]
   listDirectory([StringView] path, [vector<DirEntry> mut] out) {
     [i64 mut] needed{__pstext_dir_list(path.data, convert<u64>(path.fieldLength), path.data, 0u64)}
     if(needed < 0i64) {
@@ -101,7 +101,10 @@ namespace dir {
     }
     if(needed > 0i64) {
       listing.fieldLength = convert<i32>(needed)
-      /std/text/textStore(listing.data, listing.fieldLength, 0u8)
+      // The terminator after the bytes the host wrote.
+      [Pointer<u8> mut] bytes{listing.data}
+      [Pointer<u8> mut] terminator{/std/intrinsics/memory/at_unsafe(bytes, listing.fieldLength)}
+      *terminator = 0u8
     }
     out.clear()
     [i32 mut] at{0i32}

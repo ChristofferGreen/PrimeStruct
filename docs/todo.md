@@ -118,6 +118,7 @@ of sync with them.
 | TODO-6194 | The `optexe` precompiled header is refused on every compile and the compile runs twice | ready | optexe-pch-refused |
 | TODO-6195 | `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string` | ready | print-field-count |
 | TODO-6196 | A struct field's default initializer is not validated as a local's is | ready | field-initializer-validation |
+| TODO-6199 | The tracked stdlib symbol manifests are not what the generator writes | deferred | stdlib-manifest-drift |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -128,7 +129,8 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6163 | Non-public stdlib helpers are callable by absolute path | ready | safety-stdlib |
+| TODO-6197 | Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std` | deferred | safety-stdlib |
+| TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
 | TODO-6171 | A view stays live across a lambda or a `Function` value that changes its container | ready | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
@@ -166,14 +168,12 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
-- TODO-6163 (safety-stdlib): a call to a non-public `/std` definition from outside its namespace is `private`
 - TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
 - TODO-6171 (safety-borrows): a lambda's capture list counts as a change of a viewed container
 
 ### Immediate Next 10
 
 1. TODO-5603
-5. TODO-6163
 6. TODO-5933
 7. TODO-6171
 
@@ -185,7 +185,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6163 (private definitions, decided 2026-11-22), TODO-6171 (a lambda changes a viewed container); ready outside Ready Now TODO-6196 (a field's default initializer is not validated)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6171 (a lambda changes a viewed container); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer); ready outside Ready Now TODO-6196 (a field's default initializer is not validated)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -198,7 +198,7 @@ of sync with them.
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup), TODO-6032 (library function shapes), TODO-6191 and TODO-6193 (elements of a stdlib `Vector`: element writes that are lost, `push` of a `string` element), TODO-6196 (a struct field's default initializer is not validated), TODO-6194 (the `optexe` precompiled header is refused on every compile), TODO-6195 (`print_line` of the count of a `Vector` field); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6121 (debugger columns of rewritten expressions), TODO-6019 (a person measures startup), TODO-6032 (library function shapes), TODO-6191 and TODO-6193 (elements of a stdlib `Vector`: element writes that are lost, `push` of a `string` element), TODO-6196 (a struct field's default initializer is not validated), TODO-6198 (a `Slice` built over any pointer), TODO-6194 (the `optexe` precompiled header is refused on every compile), TODO-6195 (`print_line` of the count of a `Vector` field); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). TODO-5804 (read-only handlers with `app.view` under `RwLock`, with the compile error for a view that writes its state) is done; deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -279,30 +279,42 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
-  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Open: non-public helpers callable by absolute path (TODO-6163, decision needed).
+  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Namespace-level `/std` definitions without `[public]` are private to their namespace (TODO-6163). Open: methods of `/std` structs without a visibility transform (TODO-6197, decision needed) and slices built over any pointer (TODO-6198).
   - acceptance:
     - TODO-6161, TODO-6162 and TODO-6163 are done; each repro (borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
     - full release gate green
   - stop_rule: tracker; the work is in the leaves.
-  - notes: deferred: queued behind the Ready Now cap; the two decisions are written into TODO-6161 and TODO-6163.
+  - notes: deferred: queued behind the Ready Now cap; the open decision is written into TODO-6197.
 
 
 
-- [~] TODO-6163: Non-public stdlib helpers are callable by absolute path
+- [ ] TODO-6197: Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-23
+  - phase: Correctness audit 2026-10 (split from TODO-6163)
+  - parallel_track: safety-stdlib
+  - scope: TODO-6163 made a namespace-level `/std` definition without `[public]`, and a method marked `[private]`, private to its namespace (src/semantics/SemanticsPrivateDefinitionAccess.{h,cpp}). Two questions were left out because the decision of TODO-6163 does not answer them. (1) A method of a `/std` struct without a visibility transform. The decision's words (no `[public]` is private) make it private, but almost no method of the library carries `[public]`: a survey of the whole test suite and the examples found 304 distinct methods of `/std` structs called from outside their namespace (58,838 calls): the API of `String`, `StringView`, the slices, `Atomic`, `Channel`, the HTTP and UI types. Fields are public by default and private only when marked (docs/spec/type-system.md, Field visibility), so today a method follows its struct. The invariants this leaves open are methods such as `Vector.set_field_count`, `set_field_capacity`, `field_count` and `owns_storage`, which a program can call (`v.set_field_count(1000i32)` panics only when the value exceeds the capacity). (2) A definition marked `[private]` outside `/std` (`namespace util { [private] helper() { ... } }` called as `/util/helper()` from `main`) is still callable; the field rule applies to every struct, and the decision names `/std` only.
+  - options_to_decide: (1a) members follow the field rule: a method is callable where its struct is unless it is marked `[private]`; the internal methods of the library (`Vector.set_field_count`, `set_field_capacity`, `field_count`, `field_capacity`, `owns_storage`, and the like in `MapValue`, `SoaColumn`, `String`) are marked `[private]` and their callers in other library namespaces (ring_buffer.prime, soa_storage) are rerouted or the methods stay open to them through a public unsafe helper. Small sweep, one rule for fields and methods; an author who forgets `[private]` leaves an internal method open. (1b) a method needs `[public]` like a namespace-level definition: about 300 library methods and every method of a struct a test defines under `/std` get `[public]`; closed by default, at the price of a mark on every API method and a spec change for fields to match. Recommendation: 1a. (2a) leave `[private]` outside `/std` as an import-only mark; (2b) enforce an explicit `[private]` everywhere with the same rule (the default of no transform stays callable outside `/std`), so that the word means one thing on a field, a method and a definition; the cost is the programs and tests that call a `[private]` definition across namespaces, not yet counted. Recommendation: 2b.
+  - acceptance:
+    - the decisions are recorded here; the chosen rule is in docs/spec/backend-type-support.md (Exports) and enforced, with a negative example for each; the library, examples and tests compile
+    - `v.set_field_count(1000i32)` from a program is `is private`
+    - full release gate green
+  - stop_rule: call-site visibility of methods and of `[private]` definitions; no new visibility keywords.
+  - repro: `import /std/collections/*  [effects(heap_alloc), return<int>] main() { [Vector<i32> mut] v{vector<i32>(1i32)}  v.set_field_count(0i32)  return(0i32) }` compiles.
+
+- [ ] TODO-6198: Safe code builds a `Slice` of any count over any pointer
   - owner: ai
   - status: ready
-  - claimed_by: vector-elements (worktree-agent-a200af4774795b81c), 2026-11-23
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-5511)
-  - parallel_track: safety-stdlib
-  - scope: docs/spec/backend-type-support.md (Exports) says a definition without `[public]` is private to its module but still callable within the same compilation unit; visibility only affects imports. `/std/collections/vector/vectorCheckShape<i32>(v)` and every other helper without `[public]` therefore compile in user code written by absolute path. The dangerous ones are `[unsafe_api]` now (TODO-6156), so this is about the rest: internal invariants (`vectorReserveInternal`, `vectorAlloc`, the checks) callable out of order.
-  - decision: 2026-11-22 (owner): option A for `/std`: a call to a non-public definition (no `[public]`, or `[private]`) from a definition outside its namespace is `<path> is private`; the stdlib and examples are swept in the same change; the spec sentence in docs/spec/backend-type-support.md (Exports) changes in the same commit, enforced together with the field rule of TODO-6161 so that `private` has one meaning. Option B is not taken.
+  - created_at: 2026-11-23
+  - phase: Correctness audit 2026-10 (found with TODO-6163)
+  - parallel_track: safety-slices
+  - scope: `ReadSlice<T>` and `WriteSlice<T>` (stdlib/std/collections/slice.prime, written by scripts/generate_slice_stdlib.py) declare `[public Pointer<T> mut] data` and `[public i32 mut] fieldCount`, and `readSliceMake` / `writeSliceMake` are public, so a program outside `[unsafe]` builds a slice of 1000 elements over one local. On the VM the read is `VM error: invalid indirect address in IR: 8016` (exit 3); on native it reads memory past the local and prints 0 (exit 0). The fields of `Vector`, `MapValue` and `SoaColumn` are private for this reason (docs/spec/type-system.md, Memory safety). Make the two fields `[private]` and the two constructors `[public unsafe_api]`, and mark the library callers that build a slice from storage they own (`vectorView`, `vectorSlice`, `vectorSliceMut`, `StringView.bytes`, the HTTP server's `work_slot`, the slice methods) `[unsafe]`.
   - acceptance:
-    - the chosen rule is in docs/spec/backend-type-support.md (Exports) and enforced, with a negative example; stdlib and examples compile
+    - the program below is `private field is not accessible: /std/collections/slice/ReadSlice/data`, and `readSliceMake` from a definition that is not `[unsafe]` is `requires an unsafe definition`, each with a test with line and column; the library, examples and tests compile
     - full release gate green
-  - stop_rule: call-site visibility of definitions; no new visibility keywords.
-  - repro: `[effects(heap_alloc), return<int>] main() { [/std/collections/vector/Vector<i32> mut] v{/std/collections/vector/vector<i32>(1i32)} /std/collections/vector/vectorCheckShape<i32>(v) return(0i32) }` compiles.
-
+  - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
+  - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
 - [ ] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
   - owner: ai
@@ -401,6 +413,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the validation of a brace constructor in a field's default initializer; no change to what a local accepts.
   - repro: `import /std/collections/*  [struct] Bag() { [Vector<i32>] v{Vector<i32>{1i32}} }  [effects(heap_alloc, io_out) return<int>] main() { [Bag] b{Bag{}}  print_line(b.v[0i32])  return(0i32) }` with `primec --emit=vm -I stdlib` compiles, prints 0 and ends with `array index out of bounds` (exit 3).
+
+- [ ] TODO-6199: The tracked stdlib symbol manifests are not what the generator writes
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-23
+  - phase: Modules and libraries (found with TODO-6163)
+  - parallel_track: stdlib-manifest-drift
+  - scope: `build-release/generate_stdlib_manifest stdlib/std/image/image.prime /std/image <out>` writes 130 symbols; the tracked stdlib/std/image/image.psmeta has 126: the generator now also writes the namespace definitions (`/std`, `/std/image`, ...). stdlib/std/gfx/experimental.psmeta was the same until it was regenerated for TODO-6163. Nothing fails, because a compile only compares the hash of the entries a manifest has, but no test tells a stale manifest from a fresh one, so the next edit of image.prime changes the file in ways unrelated to the edit.
+  - acceptance:
+    - a ctest entry regenerates each tracked `.psmeta` and fails when it differs from the tracked file; image.psmeta is regenerated
+    - full release gate green
+  - stop_rule: the freshness of the tracked manifests; no change to the manifest format.
+  - repro: the command in scope, then `diff` against the tracked file.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

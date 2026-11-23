@@ -54,7 +54,7 @@ TEST_CASE("rejects native auto-inferred std namespaced access helper compatibili
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -88,7 +88,7 @@ main() {
 
 TEST_CASE("native auto-inferred std namespaced access helper canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }

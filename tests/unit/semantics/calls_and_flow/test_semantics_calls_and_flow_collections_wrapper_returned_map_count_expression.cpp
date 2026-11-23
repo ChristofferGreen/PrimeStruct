@@ -9,12 +9,12 @@ TEST_CASE("wrapper-returned slash-method map access count validates string resul
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"utf8)
 }
@@ -59,7 +59,7 @@ TEST_CASE("map stdlib namespaced count auto inference keeps canonical helper ret
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -103,7 +103,7 @@ TEST_CASE("map stdlib namespaced count auto inference succeeds when canonical he
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -141,7 +141,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -165,7 +165,7 @@ TEST_CASE("wrapper vector stdlib namespaced capacity expression keeps canonical 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -189,7 +189,7 @@ TEST_CASE("wrapper vector stdlib namespaced capacity expression keeps return mis
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -207,7 +207,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -230,7 +230,7 @@ TEST_CASE("vector stdlib namespaced capacity expression rejects compatibility al
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -254,7 +254,7 @@ TEST_CASE("vector stdlib namespaced capacity expression keeps non-builtin arity 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -272,7 +272,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced capacity expression uses canonical helper definition for non-builtin arity") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -295,7 +295,7 @@ TEST_CASE("vector stdlib namespaced access expression follows alias precedence")
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -319,7 +319,7 @@ TEST_CASE("vector stdlib namespaced access expression reports alias return misma
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -337,7 +337,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -360,7 +360,7 @@ TEST_CASE("vector stdlib namespaced access expression uses alias precedence for 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
   return(false)
 }
@@ -383,7 +383,7 @@ TEST_CASE("vector stdlib namespaced access expression reports alias mismatch for
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
   return(false)
 }
@@ -401,7 +401,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition for non-builtin arity") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
   return(false)
 }
@@ -464,7 +464,7 @@ TEST_CASE("vector stdlib namespaced access helper auto inference keeps canonical
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -489,7 +489,7 @@ TEST_CASE("vector stdlib namespaced access helper auto inference reports alias m
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -508,7 +508,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced access helper auto inference uses canonical helper definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -532,7 +532,7 @@ TEST_CASE("map stdlib namespaced access helper auto inference keeps canonical pr
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -557,7 +557,7 @@ TEST_CASE("map stdlib namespaced access helper auto inference keeps canonical re
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -576,7 +576,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced access helper auto inference falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(false)
 }

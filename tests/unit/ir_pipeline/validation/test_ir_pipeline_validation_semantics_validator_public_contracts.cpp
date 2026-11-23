@@ -84,17 +84,17 @@ main() {
 
 TEST_CASE("semantic product publishes stdlib helper routing ids") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/file/FileError/status([i32] err) {
   return(err)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/ContainerError/status([i32] err) {
   return(err)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/gfx/GfxError/status([i32] err) {
   return(err)
 }

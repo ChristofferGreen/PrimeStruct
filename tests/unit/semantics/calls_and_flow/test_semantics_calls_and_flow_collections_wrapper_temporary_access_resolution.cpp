@@ -241,7 +241,7 @@ main() {
 
 TEST_CASE("declared canonical map access positional reorder keeps key diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
   return(86i32)
 }

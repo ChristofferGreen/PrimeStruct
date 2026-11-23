@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("vector stdlib namespaced push auto inference uses canonical helper definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -246,7 +246,7 @@ TEST_CASE("vector stdlib namespaced count helper auto inference keeps canonical 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -270,7 +270,7 @@ TEST_CASE("vector stdlib namespaced count helper auto inference keeps inferred r
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -289,7 +289,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced count helper auto inference falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -313,7 +313,7 @@ TEST_CASE("vector stdlib namespaced count auto inference rejects compatibility a
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -337,7 +337,7 @@ TEST_CASE("vector stdlib namespaced count auto inference keeps non-builtin arity
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -356,7 +356,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced count auto inference non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -380,7 +380,7 @@ TEST_CASE("vector stdlib namespaced count expression keeps canonical precedence"
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -404,7 +404,7 @@ TEST_CASE("vector stdlib namespaced count expression keeps return mismatch diagn
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -422,7 +422,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced count expression falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -445,7 +445,7 @@ TEST_CASE("vector stdlib namespaced capacity expression keeps canonical preceden
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -469,7 +469,7 @@ TEST_CASE("vector stdlib namespaced capacity expression keeps return mismatch di
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -487,7 +487,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced capacity expression falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -510,7 +510,7 @@ TEST_CASE("vector stdlib namespaced count expression rejects compatibility alias
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -534,7 +534,7 @@ TEST_CASE("vector stdlib namespaced count expression keeps non-builtin arity mis
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -553,7 +553,7 @@ main() {
 
 TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -692,7 +692,7 @@ TEST_CASE("map stdlib namespaced count expression keeps canonical helper return 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -716,7 +716,7 @@ TEST_CASE("map stdlib namespaced count expression succeeds when canonical helper
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -734,7 +734,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -793,7 +793,7 @@ TEST_CASE("map compatibility count call keeps explicit alias precedence with can
   return(41i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -816,7 +816,7 @@ TEST_CASE("map compatibility count call keeps alias mismatch diagnostics with ca
   return(41i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -853,7 +853,7 @@ main() {
 
 TEST_CASE("map compatibility count call does not inherit canonical templated helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(41i32)
 }
@@ -876,7 +876,7 @@ TEST_CASE("map compatibility explicit-template count call keeps alias precedence
   return(41i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }

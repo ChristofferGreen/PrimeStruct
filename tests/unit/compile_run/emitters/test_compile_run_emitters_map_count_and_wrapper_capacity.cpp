@@ -22,7 +22,7 @@ TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map count rece
   return("hello"utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, string>] values) {
   return(41i32)
 }
@@ -221,7 +221,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on map receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(41i32)
 }
@@ -412,17 +412,17 @@ main() {
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector count overloads") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(31i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([array<i32>] values) {
   return(32i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([string] values) {
   return(33i32)
 }

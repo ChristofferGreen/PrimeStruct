@@ -42,7 +42,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(true)
 }
@@ -64,7 +64,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(true)
 }
@@ -117,7 +117,7 @@ main() {
 
 TEST_CASE("map compatibility at call requires explicit alias definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -163,7 +163,7 @@ TEST_CASE("map compatibility at call keeps explicit alias precedence") {
   return(19i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [bool] index) {
   return(17i32)
 }
@@ -182,7 +182,7 @@ main() {
 
 TEST_CASE("map compatibility at_unsafe auto inference requires explicit alias definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -218,7 +218,7 @@ main() {
 
 TEST_CASE("map unnamespaced count call resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -236,7 +236,7 @@ main() {
 
 TEST_CASE("map unnamespaced count auto inference resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -301,7 +301,7 @@ main() {
 
 TEST_CASE("bare map at call resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -319,7 +319,7 @@ main() {
 
 TEST_CASE("bare map at wrapper call resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -376,7 +376,7 @@ main() {
 
 TEST_CASE("bare map at call prefers canonical helper over compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -399,7 +399,7 @@ main() {
 
 TEST_CASE("bare map at_unsafe auto inference resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -437,7 +437,7 @@ main() {
 
 TEST_CASE("bare map at_unsafe auto inference prefers canonical helper over compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -499,7 +499,7 @@ main() {
 
 TEST_CASE("bare vector at call prefers canonical helper over compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(17i32)
 }

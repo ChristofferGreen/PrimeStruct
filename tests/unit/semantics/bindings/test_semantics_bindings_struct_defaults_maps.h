@@ -6,7 +6,7 @@ TEST_CASE("omitted initializer rejects Create with canonical map method preceden
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -40,7 +40,7 @@ TEST_CASE("map method precedence now rejects omitted initializer through Create 
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [i32] marker) {
   return(marker)
 }
@@ -78,7 +78,7 @@ TEST_CASE("rooted map count shadow effects reject omitted initializer Create") {
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -116,7 +116,7 @@ TEST_CASE("rooted map count shadow call reaches omitted initializer effect gate"
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [i32] marker) {
   return(marker)
 }
@@ -147,7 +147,7 @@ main() {
 
 TEST_CASE("omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -176,7 +176,7 @@ main() {
 
 TEST_CASE("omitted initializer keeps alias diagnostics for map call helper fallback") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -211,7 +211,7 @@ wrapItems() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -245,7 +245,7 @@ wrapItems() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -279,7 +279,7 @@ wrapItems() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }
@@ -312,7 +312,7 @@ wrapItems() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(27i32)
 }

@@ -67,7 +67,7 @@ TEST_CASE("local explicit vector count capacity calls through same-path helpers 
   return(14i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(15i32)
 }
@@ -143,7 +143,7 @@ wrapVector() {
   return(vector<i32>(5i32, 6i32, 7i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(17i32)
 }
@@ -277,17 +277,17 @@ main() {
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector capacity overloads") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(41i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([array<i32>] values) {
   return(42i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([string] values) {
   return(43i32)
 }
@@ -419,12 +419,12 @@ TEST_CASE("vector alias count capacity slash methods in C++ emitter") {
   return(20i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(8i32)
 }
@@ -444,12 +444,12 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count capacity slash methods in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(20i32)
 }
@@ -516,7 +516,7 @@ main() {
 
 TEST_CASE("rejects cross-path vector count capacity slash helper routing in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
@@ -548,12 +548,12 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access slash methods in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(plus(index, 40i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(plus(index, 50i32))
 }

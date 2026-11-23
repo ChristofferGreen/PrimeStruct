@@ -12,7 +12,7 @@ TEST_CASE("rejects vector alias arity-mismatch compatibility template forwarding
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -43,7 +43,7 @@ TEST_CASE("compiles vector alias compatibility template forwarding on bool->i32 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -71,7 +71,7 @@ TEST_CASE("rejects vector alias compatibility template forwarding on non-bool ty
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -98,7 +98,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -126,7 +126,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -159,7 +159,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -199,7 +199,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -225,7 +225,7 @@ TEST_CASE("rejects vector alias compatibility template forwarding on array envel
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [array<i64>] marker) {
   return(90i32)
 }
@@ -250,7 +250,7 @@ TEST_CASE("rejects vector alias compatibility template forwarding on map envelop
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -280,7 +280,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -309,7 +309,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -340,7 +340,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -359,7 +359,7 @@ main() {
 
 TEST_CASE("rejects vector helper method expression legacy alias forwarding in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(plus(count(values), value))
 }
@@ -390,7 +390,7 @@ TEST_CASE("rejects vector alias named-argument compatibility template forwarding
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -422,7 +422,7 @@ TEST_CASE("rejects wrapper temporary templated vector method canonical forwardin
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }

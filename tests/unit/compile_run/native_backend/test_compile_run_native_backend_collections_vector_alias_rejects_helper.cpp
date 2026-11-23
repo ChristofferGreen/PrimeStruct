@@ -11,7 +11,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 TEST_CASE("rejects native vector helper method expression legacy alias forwarding") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(plus(count(values), value))
 }
@@ -46,7 +46,7 @@ TEST_CASE("rejects native vector alias named-argument compatibility template for
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -78,7 +78,7 @@ TEST_CASE("rejects native wrapper temporary templated vector method compatibilit
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -140,7 +140,7 @@ TEST_CASE("rejects native vector alias templated forwarding past non-templated c
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }

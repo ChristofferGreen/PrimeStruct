@@ -203,7 +203,7 @@ main() {
 
 TEST_CASE("vector namespaced access helper named arguments stay rejected with canonical helper in scope") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(index)
 }
@@ -695,7 +695,7 @@ TEST_CASE("vector stdlib namespaced helper auto inference follows alias preceden
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -721,7 +721,7 @@ TEST_CASE("vector stdlib namespaced helper auto inference keeps explicit paramet
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -747,7 +747,7 @@ TEST_CASE("vector stdlib namespaced helper keeps explicit parameter diagnostics 
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }

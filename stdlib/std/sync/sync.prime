@@ -34,7 +34,8 @@ namespace std {
   __psatomic_load_i32([Pointer<i64>] cell) {
   }
 
-  [host return<i64>]
+  // The three 64-bit operations are public: the owner count of a SharedString (/std/text/shared) uses them.
+  [public host return<i64>]
   __psatomic_load_i64([Pointer<i64>] cell) {
   }
 
@@ -42,7 +43,7 @@ namespace std {
   __psatomic_store_i32([Pointer<i64>] cell, [i32] value) {
   }
 
-  [host return<void>]
+  [public host return<void>]
   __psatomic_store_i64([Pointer<i64>] cell, [i64] value) {
   }
 
@@ -50,7 +51,7 @@ namespace std {
   __psatomic_add_i32([Pointer<i64>] cell, [i32] delta) {
   }
 
-  [host return<i64>]
+  [public host return<i64>]
   __psatomic_add_i64([Pointer<i64>] cell, [i64] delta) {
   }
 

@@ -253,7 +253,7 @@ main() {
 
 TEST_CASE("vector namespaced mutator statement helper on builtin vector receiver ignores canonical-only helper") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -303,7 +303,7 @@ main() {
 
 TEST_CASE("vector namespaced mutator slash method on builtin vector receiver ignores canonical-only helper") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -321,7 +321,7 @@ main() {
 
 TEST_CASE("lambda vector namespaced mutator slash method ignores canonical-only helper") {
   const std::string source = R"(
-[effects(heap_alloc)]
+[public effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -754,7 +754,7 @@ main() {
 
 TEST_CASE("vector mutator alias block args require same-path helpers") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -786,7 +786,7 @@ main() {
 
 TEST_CASE("vector helper method expression resolves through canonical stdlib helper") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -805,7 +805,7 @@ main() {
 
 TEST_CASE("vector helper method expression reports canonical helper argument mismatch") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [bool] value) {
   return(convert<int>(value))
 }

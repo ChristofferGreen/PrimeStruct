@@ -30,7 +30,7 @@ main() {
 
 TEST_CASE("bare map count through canonical helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -90,7 +90,7 @@ main() {
 
 TEST_CASE("bare map at through canonical helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -109,7 +109,7 @@ main() {
 
 TEST_CASE("bare map at_unsafe through canonical helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -278,7 +278,7 @@ main() {
 
 TEST_CASE("map unnamespaced contains through canonical helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -323,7 +323,7 @@ main() {
 
 TEST_CASE("map unnamespaced contains preferring canonical helper over compatibility alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -369,7 +369,7 @@ main() {
 
 TEST_CASE("rejects map unnamespaced tryAt through canonical helper in C++ emitter without on_error") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -419,7 +419,7 @@ main() {
 
 TEST_CASE("rejects map unnamespaced tryAt preferring canonical helper over compatibility alias in C++ emitter without on_error") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -512,27 +512,27 @@ Marker {
 [effects(io_err)]
 unexpectedCanonicalMapTryAt([i32] err) {}
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(70i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
 
-[effects(heap_alloc), return<Result<i32, i32>>]
+[public effects(heap_alloc), return<Result<i32, i32>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(80i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(60i32)
 }
 
-[effects(heap_alloc), return<Marker>]
+[public effects(heap_alloc), return<Marker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(Marker(30i32))
 }
@@ -585,7 +585,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -629,7 +629,7 @@ AliasMarker {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
@@ -677,7 +677,7 @@ AliasMarker {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
@@ -732,7 +732,7 @@ AliasMarker {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
@@ -780,7 +780,7 @@ AliasMarker {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[return<CanonicalMarker>]
+[public return<CanonicalMarker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
@@ -815,7 +815,7 @@ main() {
 
 TEST_CASE("compiles namespaced map count method through canonical helper in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -875,7 +875,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(Marker(11i32))
 }
@@ -958,7 +958,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Marker(13i32))
 }
@@ -1036,7 +1036,7 @@ main() {
 
 TEST_CASE("uses canonical helper for namespaced map at method alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -1055,7 +1055,7 @@ main() {
 
 TEST_CASE("C++ emitter runs extra-argument stdlib canonical map count method-call sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(91i32)
 }

@@ -217,7 +217,7 @@ import /std/collections/*
 
 namespace std {
 namespace image {
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 work() {
   [mut] values{vector<i32>()}
   /std/collections/vector/push(values, 1i32)

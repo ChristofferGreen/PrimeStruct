@@ -534,14 +534,14 @@ namespace std {
     }
   }
 
-  [return<Result<Window, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
+  [public return<Result<Window, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
   windowCreate([string] title, [i32] width, [i32] height) {
     [SubstrateWindowConfig] config{[hostToken] 1i32, [width] width, [height] height}
     [i32] windowToken{GraphicsSubstrate.createWindow(config)?}
     return(Result.ok(Window{[token] windowToken, [width] width, [height] height}))
   }
 
-  [return<Result<Device, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
+  [public return<Result<Device, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
   deviceCreate() {
     [Window] window{[token] 1i32, [width] 1i32, [height] 1i32}
     [SubstrateDeviceConfig] config{[window] window, [deviceToken] 2i32, [queueToken] 3i32}

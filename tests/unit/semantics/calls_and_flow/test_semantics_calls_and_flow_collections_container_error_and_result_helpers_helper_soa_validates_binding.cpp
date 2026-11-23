@@ -1041,27 +1041,27 @@ Holder() {
   return(count)
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<Particle>]
+[public return<Particle>]
 /std/collections/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[effects(heap_alloc), return<vector<Particle>>]
+[public effects(heap_alloc), return<vector<Particle>>]
 /std/collections/soa/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }

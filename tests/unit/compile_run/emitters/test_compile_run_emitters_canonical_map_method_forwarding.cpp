@@ -11,7 +11,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -87,7 +87,7 @@ wrapMap() {
   return(map<i32, i32>(2i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
@@ -122,7 +122,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -195,7 +195,7 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -241,7 +241,7 @@ namespace i32 {
 /vector/count([vector<i32>] values, [bool] marker) {
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(41i32)
 }
@@ -329,7 +329,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(93i32)
 }

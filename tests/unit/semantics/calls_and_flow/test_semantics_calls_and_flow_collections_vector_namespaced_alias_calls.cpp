@@ -110,7 +110,7 @@ main() {
 
 TEST_CASE("vector namespaced call alias with explicit template args keeps builtin diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -133,7 +133,7 @@ TEST_CASE("vector namespaced count alias arity mismatch rejects compatibility te
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -156,7 +156,7 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding on 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -180,7 +180,7 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding on 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -206,7 +206,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -234,7 +234,7 @@ MarkerC() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerC] marker) {
   return(90i32)
 }
@@ -261,7 +261,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -288,7 +288,7 @@ MarkerC() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerC] marker) {
   return(90i32)
 }
@@ -320,7 +320,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -354,7 +354,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerC] marker) {
   return(90i32)
 }
@@ -393,7 +393,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -434,7 +434,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerC] marker) {
   return(90i32)
 }
@@ -458,7 +458,7 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding on 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [array<i64>] marker) {
   return(90i32)
 }
@@ -482,7 +482,7 @@ TEST_CASE("vector namespaced array envelope mismatch keeps compatibility diagnos
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [array<bool>] marker) {
   return(90i32)
 }
@@ -507,7 +507,7 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding on 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -531,7 +531,7 @@ TEST_CASE("vector namespaced map envelope mismatch keeps compatibility diagnosti
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, bool>] marker) {
   return(90i32)
 }
@@ -561,7 +561,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -589,7 +589,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, bool>] marker) {
   return(90i32)
 }
@@ -618,7 +618,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -646,7 +646,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -677,7 +677,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }

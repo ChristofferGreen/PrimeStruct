@@ -153,7 +153,7 @@ namespace std {
     }
   }
 
-  [unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>>]
   slotUnsafe<T>([RingBuffer<T>] values, [i32] index) {
     if(index < 0 || index >= values.field_count()) {
       panic(index)

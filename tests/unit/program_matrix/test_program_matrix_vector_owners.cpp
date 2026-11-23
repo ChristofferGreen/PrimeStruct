@@ -1366,7 +1366,7 @@ namespace {
 const std::string StdlibVectorReturns = R"(
 namespace std {
 namespace probe {
-  [effects(heap_alloc), return<vector<i32>>]
+  [public effects(heap_alloc), return<vector<i32>>]
   make_ints([i32] first) {
     [vector<i32> mut] out{vector<i32>{}}
     out.push(first)
@@ -1374,7 +1374,7 @@ namespace probe {
     return(out)
   }
 
-  [effects(heap_alloc), return<vector<String>>]
+  [public effects(heap_alloc), return<vector<String>>]
   make_labels([i32] id) {
     [vector<String> mut] out{vector<String>{}}
     out.push(/label(id))

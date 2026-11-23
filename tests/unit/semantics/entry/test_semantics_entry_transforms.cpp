@@ -263,7 +263,7 @@ main() {
 
 TEST_CASE("canonical stdlib map returns report retired map helper diagnostics") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values) {
   return(1i32)
 }

@@ -33,7 +33,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects canonical map access positional reorder") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
   return(86i32)
 }
@@ -58,7 +58,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical map access key diagnostics on positional reorder") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/at([/std/collections/map<string, i32>] values, [string] key) {
   return(86i32)
 }
@@ -212,7 +212,7 @@ main() {
 
 TEST_CASE("rejects array namespaced vector count method alias in C++ emitter") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -258,7 +258,7 @@ main() {
 
 TEST_CASE("rejects array namespaced vector capacity method alias in C++ emitter") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }

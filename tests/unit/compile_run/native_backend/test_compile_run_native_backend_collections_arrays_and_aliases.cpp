@@ -391,7 +391,7 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector count method alias") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -419,7 +419,7 @@ main() {
 
 TEST_CASE("rejects native array namespaced vector capacity method alias") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -447,7 +447,7 @@ main() {
 
 TEST_CASE("rejects native map namespaced count compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -475,7 +475,7 @@ main() {
 
 TEST_CASE("rejects native map namespaced contains compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -505,7 +505,7 @@ main() {
 
 TEST_CASE("rejects native map namespaced tryAt compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<Result<i32, ContainerError>>]
+[public effects(heap_alloc), return<Result<i32, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -534,7 +534,7 @@ main() {
 
 TEST_CASE("native map namespaced at compatibility alias rejects without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -562,7 +562,7 @@ main() {
 
 TEST_CASE("native map namespaced at unsafe compatibility alias rejects without explicit alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }

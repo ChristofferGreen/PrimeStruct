@@ -259,10 +259,12 @@ namespace {
 const char *BulkText = "abcdefghijklmnopqrstuvwxyz0123456789";
 
 // Operations on two Strings (a, b) through the stdlib's moveBytes / fillBytes / compareBytes / findByte, each result
-// printed; mirrored below on std::string with memmove, memset, memcmp and memchr.
+// printed; mirrored below on std::string with memmove, memset, memcmp and memchr. The helpers are private to
+// /std/text, so the probe is a definition of that namespace and `main` calls it.
 std::string bulkProgram() {
   std::string body =
-      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\nnamespace std {\nnamespace text {\n"
+      "[public return<int> effects(heap_alloc, io_out)]\nbulk_probe() {\n"
       "  [String mut] a{/std/text/stringFrom(\"abcdefghijklmnopqrstuvwxyz0123456789\")}\n"
       "  [String mut] b{/std/text/stringFrom(\"abcdefghijklmnopqrstuvwxyz0123456789\")}\n";
   const auto fold = [](const char *var) {
@@ -290,7 +292,8 @@ std::string bulkProgram() {
   body += "  print_line(/std/text/findByte(b.data, 36i32, 33u8))\n";
   body += "  print_line(/std/text/findByte(b.data, 6i32, 90u8))\n";
   body += "  print_line(/std/text/findByte(b.data, 0i32, 90u8))\n";
-  body += "  return(0i32)\n}\n";
+  body += "  return(0i32)\n}\n}\n}\n\n[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+          "  return(/std/text/bulk_probe())\n}\n";
   return body;
 }
 
@@ -349,9 +352,11 @@ TEST_CASE("bulk byte operations agree with the C library on the arm64 native bac
 // leaves the chunk faults.
 TEST_CASE("a bulk operation past the end of its region stops the program on the VM") {
   const std::string source =
-      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\nnamespace std {\nnamespace text {\n"
+      "[public return<int> effects(heap_alloc)]\nfill_probe() {\n"
       "  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
-      "  /std/text/fillBytes(a.data, 1u8, 1000000i32)\n  return(0i32)\n}\n";
+      "  /std/text/fillBytes(a.data, 1u8, 1000000i32)\n  return(0i32)\n}\n}\n}\n\n"
+      "[return<int> effects(heap_alloc)]\nmain() {\n  return(/std/text/fill_probe())\n}\n";
   ScriptEngine engine;
   const auto script = engine.compileSource("/bulk_fault.prime", source);
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
@@ -363,9 +368,11 @@ TEST_CASE("a bulk operation past the end of its region stops the program on the 
 // The optimizing C++ emitter calls the bulk move directly (ps_text_move) and keeps its range check.
 TEST_CASE("a bulk move past the end of its region stops the program through optexe") {
   const std::string source =
-      "import /std/text/*\nimport /std/text/view/*\n\n[return<int> effects(heap_alloc)]\nmain() {\n"
+      "import /std/text/*\nimport /std/text/view/*\n\nnamespace std {\nnamespace text {\n"
+      "[public return<int> effects(heap_alloc)]\nmove_probe() {\n"
       "  [String mut] a{/std/text/stringFrom(\"abc\")}\n"
-      "  /std/text/moveBytes(a.data, a.data, 1000000i32)\n  return(0i32)\n}\n";
+      "  /std/text/moveBytes(a.data, a.data, 1000000i32)\n  return(0i32)\n}\n}\n}\n\n"
+      "[return<int> effects(heap_alloc)]\nmain() {\n  return(/std/text/move_probe())\n}\n";
   const std::string file = scratch("bulk_move_fault.prime");
   std::ofstream(file, std::ios::binary) << source;
   const std::string cpp = scratch("bulk_move_fault.cpp");
@@ -1821,29 +1828,40 @@ TEST_CASE("a malformed format pattern or a missing argument stops the program") 
 
 namespace {
 std::string secretProgram() {
-  return
-      "import /std/text/*\nimport /std/text/view/*\nimport /std/text/secret/*\n\n"
-      "[return<Pointer<u8>> effects(heap_alloc)]\nleakyPointer() {\n"
-      "  [Secret] s{secretOf(textOf(\"topsecret\"))}\n  return(s.reveal().data)\n}\n\n"
-      "[return<i32> effects(heap_alloc)]\nchurn() {\n"
-      "  [Secret] s{secretOf(textOf(\"a secret value long enough to need a heap block of its own\"))}\n  return(s.count())\n}\n\n"
-      "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
-      "  [Secret] a{secretOf(textOf(\"hunter2\"))}\n  [Secret] b{secretOf(textOf(\"hunter2\"))}\n"
-      "  [Secret] c{secretOf(textOf(\"hunter3\"))}\n  [Secret] d{secretOf(textOf(\"hunter\"))}\n  [Secret] e{secretOf(textOf(\"\"))}\n"
-      "  print_line(if(a.equalsConstantTime(b), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(a.equalsConstantTime(c), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(a.equalsConstantTime(d), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(e.equalsConstantTime(e), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(a.equalsViewConstantTime(textOf(\"hunter2\")), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(a.equalsViewConstantTime(textOf(\"Hunter2\")), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(a.count())\n  print_line(if(e.empty(), then() { 1i32 }, else() { 0i32 }))\n"
-      "  print_line(if(a.reveal().equalsText(\"hunter2\"), then() { 1i32 }, else() { 0i32 }))\n"
-      "  [Pointer<u8>] gone{leakyPointer()}\n  [i32 mut] nonZero{0i32}\n"
-      "  for([i32 mut] i{0i32}, i < 9i32, i++) {\n    if(/std/text/textLoad(gone, i) != 0u8) {\n      nonZero = nonZero + 1i32\n    }\n  }\n"
-      "  print_line(nonZero)\n"
-      "  for([i32 mut] r{0i32}, r < 40i32, r++) {\n    churn()\n  }\n"
-      "  print_line(if(stringHeapBytesInUse() > 0u64, then() { 1i32 }, else() { 0i32 }))\n"
-      "  return(0i32)\n}\n";
+  return "import /std/text/*\nimport /std/text/view/*\nimport /std/text/secret/*\n\n"
+         // `textLoad` is private to /std/text: the count of bytes that are not zero is a definition of that namespace.
+         "namespace std {\nnamespace text {\n[public return<i32>]\nnon_zero_bytes([Pointer<u8>] "
+         "block, [i32] count) {\n"
+         "  [i32 mut] nonZero{0i32}\n"
+         "  for([i32 mut] i{0i32}, i < count, i++) {\n    if(textLoad(block, i) != 0u8) {\n      "
+         "nonZero = nonZero + 1i32\n    }\n  }\n"
+         "  return(nonZero)\n}\n}\n}\n\n"
+         "[return<Pointer<u8>> effects(heap_alloc)]\nleakyPointer() {\n"
+         "  [Secret] s{secretOf(textOf(\"topsecret\"))}\n  return(s.reveal().data)\n}\n\n"
+         "[return<i32> effects(heap_alloc)]\nchurn() {\n"
+         "  [Secret] s{secretOf(textOf(\"a secret value long enough to need a heap block of its "
+         "own\"))}\n  return(s.count())\n}\n\n"
+         "[return<int> effects(heap_alloc, io_out)]\nmain() {\n"
+         "  [Secret] a{secretOf(textOf(\"hunter2\"))}\n  [Secret] "
+         "b{secretOf(textOf(\"hunter2\"))}\n"
+         "  [Secret] c{secretOf(textOf(\"hunter3\"))}\n  [Secret] "
+         "d{secretOf(textOf(\"hunter\"))}\n  [Secret] e{secretOf(textOf(\"\"))}\n"
+         "  print_line(if(a.equalsConstantTime(b), then() { 1i32 }, else() { 0i32 }))\n"
+         "  print_line(if(a.equalsConstantTime(c), then() { 1i32 }, else() { 0i32 }))\n"
+         "  print_line(if(a.equalsConstantTime(d), then() { 1i32 }, else() { 0i32 }))\n"
+         "  print_line(if(e.equalsConstantTime(e), then() { 1i32 }, else() { 0i32 }))\n"
+         "  print_line(if(a.equalsViewConstantTime(textOf(\"hunter2\")), then() { 1i32 }, else() { "
+         "0i32 }))\n"
+         "  print_line(if(a.equalsViewConstantTime(textOf(\"Hunter2\")), then() { 1i32 }, else() { "
+         "0i32 }))\n"
+         "  print_line(a.count())\n  print_line(if(e.empty(), then() { 1i32 }, else() { 0i32 }))\n"
+         "  print_line(if(a.reveal().equalsText(\"hunter2\"), then() { 1i32 }, else() { 0i32 }))\n"
+         "  [Pointer<u8>] gone{leakyPointer()}\n  [i32] nonZero{/std/text/non_zero_bytes(gone, "
+         "9i32)}\n"
+         "  print_line(nonZero)\n"
+         "  for([i32 mut] r{0i32}, r < 40i32, r++) {\n    churn()\n  }\n"
+         "  print_line(if(stringHeapBytesInUse() > 0u64, then() { 1i32 }, else() { 0i32 }))\n"
+         "  return(0i32)\n}\n";
 }
 
 const char *SecretExpected = "1\n0\n0\n1\n1\n0\n7\n1\n1\n0\n1\n";

@@ -12,12 +12,12 @@ TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access count wi
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
@@ -70,7 +70,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects explicit canonical map count slash-method receiver fallback") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -100,7 +100,7 @@ TEST_CASE("rejects canonical vector access direct-call string count fallback in 
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -165,7 +165,7 @@ TEST_CASE("C++ emitter keeps slash-method vector access count through builtin st
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -305,7 +305,7 @@ TEST_CASE("C++ emitter keeps canonical vector unsafe direct-call count via built
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -334,7 +334,7 @@ TEST_CASE("C++ emitter keeps canonical vector method helper return precedence ov
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -358,7 +358,7 @@ TEST_CASE("C++ emitter rejects canonical vector unsafe method string count forwa
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -382,12 +382,12 @@ TEST_CASE("rejects slash-method vector access element-type count fallback in C++
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -419,12 +419,12 @@ TEST_CASE("C++ emitter rejects slash-method vector access helper return-kind cou
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -456,12 +456,12 @@ TEST_CASE("rejects wrapper-returned vector alias direct-call string count fallba
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -589,7 +589,7 @@ wrapValues() {
   return(vector<i32>(5i32, 6i32, 7i32))
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }

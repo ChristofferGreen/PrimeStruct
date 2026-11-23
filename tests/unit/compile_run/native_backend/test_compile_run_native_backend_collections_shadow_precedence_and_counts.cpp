@@ -121,7 +121,7 @@ TEST_CASE("rejects native canonical map access string shadow before compatibilit
   return(41i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
@@ -131,7 +131,7 @@ TEST_CASE("rejects native canonical map access string shadow before compatibilit
   return(42i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
@@ -171,7 +171,7 @@ TEST_CASE("native canonical map access non-string shadow before compatibility al
   return("hello"utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return(41i32)
 }
@@ -181,7 +181,7 @@ TEST_CASE("native canonical map access non-string shadow before compatibility al
   return("hello"utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return(42i32)
 }
@@ -290,27 +290,27 @@ Marker {
 [effects(io_err)]
 unexpectedCanonicalMapTryAt([i32] err) {}
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(70i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
 
-[return<Result<i32, i32>>]
+[public return<Result<i32, i32>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(80i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(60i32)
 }
 
-[return<Marker>]
+[public return<Marker>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(Marker(30i32))
 }
@@ -352,7 +352,7 @@ TEST_CASE("rejects native map compatibility count call mismatch with canonical t
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -387,7 +387,7 @@ TEST_CASE("native map compatibility explicit-template count call with canonical 
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -423,7 +423,7 @@ TEST_CASE("rejects native map compatibility explicit-template count call with no
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -459,7 +459,7 @@ TEST_CASE("rejects native map compatibility explicit-template count method with 
   return(96i32)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -490,7 +490,7 @@ main() {
 
 TEST_CASE("rejects native canonical explicit-template map count call with non-templated canonical helper") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -526,7 +526,7 @@ main() {
 
 TEST_CASE("rejects native canonical implicit-template map count call with canonical argument-shape diagnostics") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
@@ -561,7 +561,7 @@ main() {
 
 TEST_CASE("native canonical implicit-template map count call with wrapper slash return envelope") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }

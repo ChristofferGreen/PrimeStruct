@@ -759,8 +759,11 @@ helper over `value` (docs/spec/transforms.md).
     safe code may call. The storage fields of `Vector` (`fieldCount`, `fieldCapacity`, `data`, `ownsData`), `MapValue`
     (`keys`, `payloads`) and `SoaColumn` (`count`, `capacity`, `data`, `ownsData`) are `[private]` (see Field
     visibility), so safe code outside the collections module cannot copy or resize a container's storage, and a
-    brace constructor such as `Vector<i32>{5i32, 5i32, v.data}` is `private field is not accessible`; calls by absolute
-    path to non-public helpers are still open (TODO-5511).
+    brace constructor such as `Vector<i32>{5i32, 5i32, v.data}` is `private field is not accessible`. A helper of the
+    library that is not `[public]` (`vectorCheckShape`, `vectorReserveInternal`, `vectorAlloc`) cannot be called from
+    outside its namespace, by absolute path either (`<path> is private`, see Exports in `backend-type-support.md`);
+    the `[unsafe_api]` helpers above are the unsafe API of their module and are `[public unsafe_api]`, callable from
+    `[unsafe]` definitions only.
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a

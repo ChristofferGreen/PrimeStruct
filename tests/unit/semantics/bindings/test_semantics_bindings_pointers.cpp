@@ -2565,4 +2565,182 @@ main() {
   CHECK(diagnosticInfo.primarySpan.column == 24);
 }
 
+namespace {
+
+void checkPrivateDefinitionCall(const std::string &source,
+                                const std::string &expected,
+                                int line,
+                                int column) {
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == line);
+  CHECK(diagnosticInfo.primarySpan.column == column);
+}
+
+// A program may write definitions under `/std`; they follow the rule of the library's own.
+const char *PrivateProbePrelude = R"(namespace std {
+  namespace probe {
+    [return<int>]
+    hidden() {
+      return(1i32)
+    }
+
+    [private return<int>]
+    marked() {
+      return(2i32)
+    }
+
+    [public return<int>]
+    open() {
+      return(hidden() + marked())
+    }
+
+    [public struct]
+    Counter() {
+      [i32 mut] total{5i32}
+
+      [private return<int>]
+      raw() {
+        return(this.total)
+      }
+
+      [return<int>]
+      peek() {
+        return(this.raw())
+      }
+    }
+
+    [public return<int>]
+    sibling([Counter] counter) {
+      return(counter.raw())
+    }
+
+    namespace inner {
+      [public return<int>]
+      nested() {
+        return(/std/probe/hidden())
+      }
+    }
+  }
+}
+)";
+
+} // namespace
+
+TEST_CASE("a private helper of the standard library is not callable by absolute path") {
+  // docs/spec/backend-type-support.md, Exports: a `/std` definition without `[public]` is private to its namespace.
+  const std::vector<std::pair<std::string, std::string>> uses = {
+      {"vectorCheckShape", "  /std/collections/vector/vectorCheckShape<i32>(values)"},
+      {"vectorCheckIndex", "  /std/collections/vector/vectorCheckIndex<i32>(values, 0i32)"},
+      {"vectorReserveInternal",
+       "  /std/collections/vector/vectorReserveInternal<i32>(values, 8i32)"},
+  };
+  for (const auto &[name, use] : uses) {
+    INFO(name);
+    const std::string source =
+        "import /std/collections/*\n\n[effects(heap_alloc), return<int>]\nmain() {\n"
+        "  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32)}\n" +
+        use + "\n  return(0i32)\n}\n";
+    checkPrivateDefinitionCall(
+        source,
+        "/std/collections/vector/" + name +
+            " is private: only definitions in /std/collections/vector may call it",
+        6,
+        3);
+  }
+}
+
+TEST_CASE("a private definition written under /std is not callable from outside its namespace") {
+  const std::string hidden = std::string(PrivateProbePrelude) +
+                             "\n[return<int>]\nmain() {\n  return(/std/probe/hidden())\n}\n";
+  checkPrivateDefinitionCall(
+      hidden, "/std/probe/hidden is private: only definitions in /std/probe may call it", 49, 10);
+  const std::string marked = std::string(PrivateProbePrelude) +
+                             "\n[return<int>]\nmain() {\n  return(/std/probe/marked())\n}\n";
+  checkPrivateDefinitionCall(
+      marked, "/std/probe/marked is private: only definitions in /std/probe may call it", 49, 10);
+}
+
+TEST_CASE("a private method of a /std struct is not callable from outside the struct's namespace") {
+  const std::string source =
+      std::string(PrivateProbePrelude) +
+      "\n[return<int>]\nmain() {\n  [/std/probe/Counter] counter{/std/probe/Counter{}}\n"
+      "  return(counter.raw())\n}\n";
+  checkPrivateDefinitionCall(
+      source,
+      "/std/probe/Counter/raw is private: only definitions in /std/probe may call it",
+      50,
+      10);
+}
+
+TEST_CASE(
+    "a private /std definition is callable from its namespace and the namespaces nested in it") {
+  // The public definitions of the namespace, a nested namespace, the struct's own method and a sibling of the
+  // struct reach the private ones; a method without a visibility transform is callable where its struct is.
+  const std::string source =
+      std::string(PrivateProbePrelude) +
+      "\n[return<int>]\nmain() {\n  [/std/probe/Counter] counter{/std/probe/Counter{}}\n"
+      "  [i32] a{/std/probe/open()}\n  [i32] b{/std/probe/inner/nested()}\n"
+      "  [i32] c{counter.peek()}\n  [i32] d{/std/probe/sibling(counter)}\n"
+      "  return(plus(plus(a, b), plus(c, d)))\n}\n";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_MESSAGE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("a definition added to a library namespace calls its private helpers") {
+  const std::string source = R"(import /std/collections/*
+
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<int>]
+      checked_count([Vector<i32>] values) {
+        vectorCheckShape<i32>(values)
+        return(vectorCount<i32>(values))
+      }
+    }
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{/std/collections/vector/vector<i32>(1i32)}
+  return(/std/collections/vector/checked_count(values))
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_MESSAGE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("outside /std a private definition stays callable within the compilation unit") {
+  const std::string source = R"(namespace util {
+  [return<int>]
+  helper() {
+    return(3i32)
+  }
+
+  [private return<int>]
+  marked() {
+    return(4i32)
+  }
+}
+
+[return<int>]
+main() {
+  return(/util/helper() + /util/marked())
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_MESSAGE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo), error);
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

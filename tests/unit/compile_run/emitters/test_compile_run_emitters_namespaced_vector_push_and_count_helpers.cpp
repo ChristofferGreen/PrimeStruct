@@ -7,7 +7,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("rejects reordered namespaced vector push call expression compatibility alias in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -37,7 +37,7 @@ TEST_CASE("auto-inferred std namespaced vector push canonical precedence in C++ 
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -68,7 +68,7 @@ TEST_CASE("rejects auto-inferred std namespaced count helper return mismatch in 
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -242,7 +242,7 @@ TEST_CASE("auto-inferred std namespaced access helper canonical precedence in C+
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -272,7 +272,7 @@ main() {
 
 TEST_CASE("auto-inferred std namespaced access helper canonical definition in C++ emitter") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -301,7 +301,7 @@ wrapVector() {
   return(vector<i32>(5i32, 6i32, 7i32))
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(plus(index, 30i32))
 }

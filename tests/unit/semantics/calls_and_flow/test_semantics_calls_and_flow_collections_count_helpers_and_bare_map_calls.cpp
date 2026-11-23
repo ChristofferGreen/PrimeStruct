@@ -49,7 +49,7 @@ main() {
 
 TEST_CASE("bare map count call resolves through canonical helper definition") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -146,7 +146,7 @@ TEST_CASE("bare map count call keeps explicit root helper precedence") {
   return(23i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -182,7 +182,7 @@ main() {
 
 TEST_CASE("bare map contains call resolves through canonical helper definition") {
   const std::string source = R"(
-[return<bool>]
+[public return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -223,7 +223,7 @@ TEST_CASE("bare map contains call keeps explicit root helper precedence") {
   return(false)
 }
 
-[return<bool>]
+[public return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [bool] key) {
   return(true)
 }
@@ -835,12 +835,12 @@ TEST_CASE("canonical map count wrapper resolves independently of removed alias h
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/experimental_map/mapCount<K, V>([map<K, V>] values) {
   return(2i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values) {
   return(/std/collections/experimental_map/mapCount<K, V>(values))
 }
@@ -864,12 +864,12 @@ TEST_CASE("canonical map access wrapper ignores removed alias helper") {
   return(false)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/experimental_map/mapAt<K, V>([map<K, V>] values, [K] key) {
   return(4i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/experimental_map/mapAt<K, V>(values, key))
 }

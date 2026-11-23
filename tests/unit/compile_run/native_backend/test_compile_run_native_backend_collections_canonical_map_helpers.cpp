@@ -35,7 +35,7 @@ main() {
 
 TEST_CASE("rejects native canonical map method with slash return type receiver") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }
@@ -67,12 +67,12 @@ main() {
 
 TEST_CASE("rejects native canonical map access helpers on wrapper slash return receiver") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(41i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(42i32)
 }
@@ -209,7 +209,7 @@ main() {
 
 TEST_CASE("compiles native bare map count through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -257,7 +257,7 @@ main() {
 
 TEST_CASE("compiles native bare map at through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -307,7 +307,7 @@ main() {
 
 TEST_CASE("native map namespaced count method runs through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -357,7 +357,7 @@ main() {
 
 TEST_CASE("native bare map contains through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(false)
 }
@@ -472,7 +472,7 @@ main() {
 
 TEST_CASE("native map namespaced at method compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }

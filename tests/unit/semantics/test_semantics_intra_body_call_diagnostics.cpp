@@ -139,7 +139,7 @@ make_maybe() {
 
 TEST_CASE("a user definition of a canonical key-value access path is not reported as unknown") {
   const std::string preamble = std::string(R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/map/at([i32] values, [i32] key) {
   return(key)
 }

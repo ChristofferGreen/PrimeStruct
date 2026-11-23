@@ -42,7 +42,7 @@ TEST_CASE("rejects vm direct wrapper-returned canonical map access count shadow"
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
@@ -76,12 +76,12 @@ TEST_CASE("rejects vm wrapper-returned canonical map method access string receiv
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
@@ -116,12 +116,12 @@ TEST_CASE("rejects vm builtin string count on wrapper-returned slash-method map 
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
@@ -155,7 +155,7 @@ TEST_CASE("runs vm canonical vector access string literal count fallback") {
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -193,7 +193,7 @@ TEST_CASE("runs vm canonical vector unsafe access count shadow") {
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -222,7 +222,7 @@ TEST_CASE("runs vm canonical vector method access count shadow") {
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -250,12 +250,12 @@ TEST_CASE("rejects vm slash-method vector access string count fallback") {
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -284,12 +284,12 @@ TEST_CASE("rejects vm wrapper-returned vector access string literals") {
   return(91i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/at_unsafe([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -322,12 +322,12 @@ TEST_CASE("vm keeps wrapper-returned vector access primitive count diagnostics")
   return(91i32)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
 
-[return<string>]
+[public return<string>]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -378,7 +378,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(87i32)
 }

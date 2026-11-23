@@ -1145,7 +1145,7 @@ id([i32] value) {
   return(value)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([vector<i32>] self) {
   return(7i32)
 }
@@ -1348,7 +1348,7 @@ main() {
 
 TEST_CASE("type resolution local binding snapshot keeps canonical helper path when alias is absent") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([vector<i32>] self) {
   return(23i32)
 }

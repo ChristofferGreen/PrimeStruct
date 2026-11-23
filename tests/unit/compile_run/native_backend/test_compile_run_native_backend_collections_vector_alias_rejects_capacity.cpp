@@ -112,12 +112,12 @@ main() {
 
 TEST_CASE("rejects native stdlib canonical vector helper method-precedence forwarding") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
   return(40i32)
 }
@@ -141,12 +141,12 @@ main() {
 
 TEST_CASE("rejects native templated stdlib canonical vector helper method template args") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 40i32))
 }
@@ -173,12 +173,12 @@ main() {
 
 TEST_CASE("rejects native vector namespaced call aliases without alias helpers") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(plus(index, 40i32))
 }
@@ -205,7 +205,7 @@ main() {
 
 TEST_CASE("rejects native vector namespaced templated canonical helper alias call without alias definition") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -238,7 +238,7 @@ TEST_CASE("rejects native vector alias arity-mismatch compatibility template for
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -269,7 +269,7 @@ TEST_CASE("rejects native vector alias compatibility template forwarding on non-
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -301,7 +301,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -334,7 +334,7 @@ MarkerB() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -372,7 +372,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -417,7 +417,7 @@ Holder() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -448,7 +448,7 @@ TEST_CASE("rejects native vector alias compatibility template forwarding on arra
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [array<i64>] marker) {
   return(90i32)
 }
@@ -478,7 +478,7 @@ TEST_CASE("rejects native vector alias compatibility template forwarding on map 
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -513,7 +513,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -547,7 +547,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -583,7 +583,7 @@ makeMarker() {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -614,7 +614,7 @@ Marker() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -646,7 +646,7 @@ Marker() {}
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [vector<i32>] marker) {
   return(90i32)
 }

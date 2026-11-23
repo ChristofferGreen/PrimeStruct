@@ -1248,7 +1248,8 @@ namespace std {
 
   [public return<u64>]
   /std/text/String/hash([/std/text/String] self) {
-    return(__pstext_hash(self.data, convert<u64>(self.fieldLength), 0u64))
+    [/std/text/view/StringView] whole{/std/text/view/StringView{[data] self.data, [fieldLength] self.fieldLength}}
+    return(whole.hash())
   }
 
   // Operators: `a + b`, `==`, `!=`, `<`, `<=`, `>`, `>=` and `s[i]` on text dispatch to these members (byte order).

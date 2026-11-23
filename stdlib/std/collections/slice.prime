@@ -48,12 +48,12 @@ namespace std {
     return(n)
   }
 
-  [return<ReadSlice<T>>]
+  [public return<ReadSlice<T>>]
   readSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(ReadSlice<T>{[data] data, [fieldCount] count})
   }
 
-  [return<WriteSlice<T>>]
+  [public return<WriteSlice<T>>]
   writeSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(WriteSlice<T>{[data] data, [fieldCount] count})
   }

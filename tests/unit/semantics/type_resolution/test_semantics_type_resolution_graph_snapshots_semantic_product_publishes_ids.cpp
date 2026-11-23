@@ -903,7 +903,7 @@ pick([i32] value) {
   return(value)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([vector<i32>] self) {
   return(17i32)
 }
@@ -960,7 +960,7 @@ main() {
 
 TEST_CASE("semantic product publishes graph-backed collection helper direct-call facts") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([vector<i32>] self) {
   return(17i32)
 }

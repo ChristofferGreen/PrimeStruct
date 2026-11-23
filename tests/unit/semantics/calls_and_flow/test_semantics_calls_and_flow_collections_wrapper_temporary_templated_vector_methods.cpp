@@ -18,7 +18,7 @@ TEST_CASE("wrapper temporary templated vector method rejects canonical-only help
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -41,7 +41,7 @@ main() {
 
 TEST_CASE("vector namespaced alias keeps builtin count diagnostics when only canonical templated helper exists") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -137,7 +137,7 @@ TEST_CASE("vector namespaced count and stdlib namespaced capacity accept same-pa
   return(14i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(15i32)
 }
@@ -185,7 +185,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count accepts same-path helper on map target") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(53i32)
 }
@@ -774,7 +774,7 @@ namespace i32 {
   }
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(41i32)
 }
@@ -880,7 +880,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity accepts same-path helper on map target") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(41i32)
 }
@@ -988,7 +988,7 @@ namespace i32 {
   }
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(45i32)
 }

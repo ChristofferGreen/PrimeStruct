@@ -294,12 +294,12 @@ namespace util {
   }
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/size([map<i32, i32>] values) {
   return(count(values))
 }
@@ -326,7 +326,7 @@ namespace util {
   }
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/size([map<i32, i32>] values) {
   return(count(values))
 }
@@ -353,7 +353,7 @@ namespace util {
   }
 }
 
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/first([map<i32, i32>] values) {
   return(at(values, 1i32))
 }
@@ -398,7 +398,7 @@ main() {
 
 TEST_CASE("map namespaced count method compatibility alias resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -416,7 +416,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced count method resolves through canonical helper") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -434,7 +434,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced count method supports auto inference") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -572,7 +572,7 @@ main() {
 
 TEST_CASE("map namespaced at method now validates through slash-path routing") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -590,7 +590,7 @@ main() {
 
 TEST_CASE("map namespaced at_unsafe method auto inference now validates through slash-path routing") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -609,7 +609,7 @@ main() {
 
 TEST_CASE("map namespaced contains method validates slash-path routing") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(true)
 }
@@ -627,7 +627,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced contains method validates slash-path routing") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(true)
 }
@@ -657,7 +657,7 @@ namespace ContainerError {
   }
 }
 
-[return<Result<int, ContainerError>>]
+[public return<Result<int, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -690,7 +690,7 @@ namespace ContainerError {
   }
 }
 
-[return<Result<int, ContainerError>>]
+[public return<Result<int, ContainerError>>]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -711,7 +711,7 @@ main() {
 
 TEST_CASE("map stdlib namespaced at_unsafe method now validates through slash-path routing") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
   return(17i32)
 }
@@ -745,7 +745,7 @@ main() {
 
 TEST_CASE("stdlib canonical map helpers validate method-call sugar") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(91i32)
 }
@@ -888,7 +888,7 @@ main() {
 
 TEST_CASE("stdlib canonical map helper validates method-call sugar for slash return type") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }

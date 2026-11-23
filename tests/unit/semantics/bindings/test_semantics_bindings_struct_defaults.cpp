@@ -194,7 +194,7 @@ main() {
 
 TEST_CASE("omitted initializer rejects effect-free Create with vector alias call helper fallback") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([array<i32>] values, [bool] marker) {
   return(11i32)
 }
@@ -225,7 +225,7 @@ main() {
 
 TEST_CASE("omitted initializer rejects effect-free Create with vector alias method helper fallback") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([array<i32>] values, [bool] marker) {
   return(13i32)
 }
@@ -258,7 +258,7 @@ main() {
 
 TEST_CASE("omitted initializer rejects effect-free Create with canonical slash-path vector method helper") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([array<i32>] values, [bool] marker) {
   return(15i32)
 }
@@ -293,7 +293,7 @@ TEST_CASE("omitted initializer keeps explicit-template vector alias call diagnos
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count<T>([array<T>] values, [bool] marker) {
   return(17i32)
 }
@@ -329,7 +329,7 @@ TEST_CASE("omitted initializer rejects Create when extra-arg vector alias method
   return(9i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count<T>([array<T>] values, [bool] marker) {
   return(19i32)
 }
@@ -393,7 +393,7 @@ TEST_CASE("explicit-template vector alias fallback keeps mismatch diagnostics in
   return(7i32)
 }
 
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count<T>([array<T>] values, [i32] marker) {
   return(marker)
 }
@@ -424,7 +424,7 @@ main() {
 
 TEST_CASE("vector alias method fallback keeps canonical mismatch diagnostics in Create") {
   const std::string source = R"(
-[return<i32>]
+[public return<i32>]
 /std/collections/vector/count([array<i32>] values, [i32] marker) {
   return(marker)
 }

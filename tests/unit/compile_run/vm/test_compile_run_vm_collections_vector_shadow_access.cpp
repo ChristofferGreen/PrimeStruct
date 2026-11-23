@@ -12,7 +12,7 @@ TEST_CASE("rejects vm reordered namespaced vector push call compatibility alias"
   const std::string source = R"(
 import /std/collections/*
 
-[effects(heap_alloc), return<void>]
+[public effects(heap_alloc), return<void>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
 }
 
@@ -157,7 +157,7 @@ main() {
 
 TEST_CASE("rejects vm reordered namespaced vector push call expression compatibility alias") {
   const std::string source = R"(
-[effects(heap_alloc), return<int>]
+[public effects(heap_alloc), return<int>]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -247,7 +247,7 @@ TEST_CASE("rejects vm auto-inferred std namespaced vector push compatibility ali
   return(11i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -273,7 +273,7 @@ main() {
 
 TEST_CASE("runs vm with auto-inferred std namespaced vector push canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/push([vector<i32> mut] values, [string] value) {
   return(false)
 }
@@ -299,7 +299,7 @@ TEST_CASE("rejects vm auto-inferred std namespaced count helper compatibility al
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -322,7 +322,7 @@ main() {
 
 TEST_CASE("runs vm with auto-inferred std namespaced count helper canonical fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -349,7 +349,7 @@ TEST_CASE("rejects vm std namespaced count expression compatibility alias preced
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -517,7 +517,7 @@ main() {
 
 TEST_CASE("runs vm with std namespaced count expression canonical fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/count([vector<i32>] values) {
   return(false)
 }
@@ -579,7 +579,7 @@ TEST_CASE("rejects vm std namespaced capacity expression compatibility alias pre
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -602,7 +602,7 @@ main() {
 
 TEST_CASE("runs vm with std namespaced capacity expression canonical fallback") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -657,7 +657,7 @@ TEST_CASE("rejects vm auto-inferred std namespaced access helper compatibility a
   return(12i32)
 }
 
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
@@ -682,7 +682,7 @@ main() {
 
 TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical definition") {
   const std::string source = R"(
-[effects(heap_alloc), return<bool>]
+[public effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }

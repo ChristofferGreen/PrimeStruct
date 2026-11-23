@@ -29,7 +29,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([string] values) {
   return(81i32)
 }
@@ -49,7 +49,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(82i32)
 }
@@ -69,7 +69,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([array<i32>] values) {
   return(83i32)
 }
@@ -250,7 +250,7 @@ wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(87i32)
 }
@@ -352,7 +352,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([array<i32>] values) {
   return(88i32)
 }
@@ -375,7 +375,7 @@ wrapText() {
   return("abc"raw_utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([string] values) {
   return(89i32)
 }
@@ -446,7 +446,7 @@ wrapText() {
   return("abc"raw_utf8)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([string] values) {
   return(92i32)
 }
@@ -593,7 +593,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([array<i32>] values) {
   return(93i32)
 }

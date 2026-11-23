@@ -108,7 +108,7 @@ TEST_CASE("text transform rules apply to namespace paths") {
   const std::string source = R"(
 namespace std {
   namespace math {
-    [return<int>]
+    [public return<int>]
     add() {
       return(1i32+2i32)
     }
@@ -532,7 +532,7 @@ TEST_CASE("text transform rules recurse when requested") {
 namespace std {
   namespace math {
     namespace ops {
-      [return<int>]
+      [public return<int>]
       add() {
         return(1i32+2i32)
       }
@@ -567,7 +567,7 @@ TEST_CASE("text transform rules accept recursive suffix alias") {
 namespace std {
   namespace math {
     namespace ops {
-      [return<int>]
+      [public return<int>]
       add() {
         return(1i32+2i32)
       }

@@ -7,12 +7,12 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
   return(40i32)
 }
@@ -35,12 +35,12 @@ main() {
 
 TEST_CASE("rejects templated stdlib canonical vector helper method template args in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 40i32))
 }
@@ -74,12 +74,12 @@ TEST_CASE("runs vector namespaced count capacity aliases through explicit alias 
   return(20i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(8i32)
 }
@@ -98,12 +98,12 @@ main() {
 
 TEST_CASE("rejects vector namespaced count capacity aliases with only canonical helpers in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[return<int>]
+[public return<int>]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(20i32)
 }
@@ -126,7 +126,7 @@ main() {
 
 TEST_CASE("rejects vector namespaced templated canonical helper alias call without alias definition in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[public return<int>]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
