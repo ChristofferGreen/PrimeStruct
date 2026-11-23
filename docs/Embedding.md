@@ -65,6 +65,32 @@ The output callback runs on the thread that runs the script. A run with a cancel
 flag uses the plain interpreter, which polls the flag every 1024 steps; without a
 flag the run takes the fast kernel and cannot be stopped.
 
+## Using a precompiled library
+
+A library archive built by `primec --emit=lib` (or by the host's own compiler) can be linked into the scripts an
+engine compiles. The host adds the archive; the script names the library's root:
+
+```cpp
+primec::embed::ScriptEngine engine;
+engine.addLibrary("/path/to/ui.psa");
+auto script = engine.compileSource("/main.prime", R"(
+import</ui>
+import /ui/*
+
+[return<int>]
+main() {
+  return(add(40i32, 2i32))
+}
+)");
+```
+
+The link runs in this process: no program is started and nothing is loaded with `dlopen`. The host decides which code a
+script can reach, as it does with `setAllowEffects`; a script never names a file. An archive that is missing, damaged
+or written by another compiler build is a diagnostic of the compile (`library was built by another compiler build`).
+The compiler build id is a hash of the compiler sources (docs/spec/integration-and-tooling.md, Library Archive), so a
+host and a `primec` built from one source tree agree on which archives they load. A script that imports no library
+compiles as it does without one; an engine with no library pays nothing.
+
 ## Calling script functions from the host
 
 Declare the functions the host will call, then call them by name:

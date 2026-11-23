@@ -25,6 +25,14 @@ public:
   // definition outside it is a compile diagnostic. Unset (the default): no ceiling.
   void setAllowEffects(std::vector<std::string> effects);
 
+  // Makes the library archive at `path` (`primec --emit=lib`) available to the scripts this engine compiles: a script
+  // writes `import</root>` for a root the archive owns and the compile links the archive's code in, in this process
+  // (no `dlopen`, no program is started). The host decides which code a script reaches, as it does with
+  // `setAllowEffects`; a script never names a file. An archive that cannot be read, or that another compiler build
+  // wrote, is a diagnostic of each script that is compiled. A script that does not import a library compiles as it
+  // does without any.
+  void addLibrary(std::string path);
+
   // Declares a script function the host will call with Script::call. Compile
   // generates one entry per export, so each export adds compile time. The
   // function must exist in the script with exactly this signature (primitive
@@ -69,6 +77,7 @@ private:
                     std::vector<std::string> *sourceFiles = nullptr) const;
 
   std::vector<std::string> importPaths_;
+  std::vector<std::string> libraryPaths_;
   std::string entryPath_ = "/main";
   std::string stdlibPath_;
   std::optional<std::vector<std::string>> allowEffects_;

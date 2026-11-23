@@ -1376,6 +1376,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/embed/test_embed_host_calls.cpp
     tests/unit/embed/test_embed_host_language.cpp
     tests/unit/embed/test_embed_exports.cpp
+    tests/unit/embed/test_embed_libraries.cpp
     tests/unit/embed/test_embed_lifetime.cpp
     tests/unit/embed/test_embed_order_independence.cpp
     tests/unit/embed/test_embed_no_process.cpp
@@ -1433,6 +1434,14 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # 29 cases, 98 s in a loaded gate: shards of ten.
   primestructAddDoctestShards(PrimeStruct_embed_exports PrimeStruct_embed_tests 29 10 300
                               "--test-suite=primestruct.embed.exports")
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
+            "--test-suite=primestruct.embed.libraries"
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_embed_libraries
+    COMMAND ${testCommand})
+  set_tests_properties(PrimeStruct_embed_libraries
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
             "--test-suite=primestruct.embed.lifetime"
             "--order-by=file")

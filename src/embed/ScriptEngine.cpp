@@ -58,6 +58,10 @@ ScriptEngine::ScriptEngine() = default;
 
 void ScriptEngine::addImportPath(std::string path) { importPaths_.push_back(std::move(path)); }
 
+void ScriptEngine::addLibrary(std::string path) {
+  libraryPaths_.push_back(std::move(path));
+}
+
 void ScriptEngine::setEntryPath(std::string entryPath) { entryPath_ = std::move(entryPath); }
 
 void ScriptEngine::setStdlibPath(std::string path) { stdlibPath_ = std::move(path); }
@@ -157,6 +161,7 @@ bool ScriptEngine::compileEntry(const std::string &path,
   options.inputPath = path;
   options.entryPath = entryPath;
   options.importPaths = importPaths_;
+  options.libraryPaths = libraryPaths_;
   options.inMemorySource = text;
   options.allowEffects = allowEffects_;
   // An explicit stdlib wins; the checkout the script's path happens to sit in would add the same modules a second time.
