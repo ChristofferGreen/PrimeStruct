@@ -533,9 +533,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
-- [ ] TODO-6177: Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`)
+- [~] TODO-6177: Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`)
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-refusal (worktree agent-a69f0d5ca054959a4), 2026-11-24
   - created_at: 2026-11-22
   - phase: Backend parity (split from TODO-6150)
   - parallel_track: wasm-bytes-host
