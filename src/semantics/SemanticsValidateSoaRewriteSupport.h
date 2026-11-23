@@ -87,7 +87,7 @@ void rewriteBuiltinSoaDefinitions(Program &program,
   }
 }
 
-// The vector `candidate` evaluates to: a vector binding, a vector literal, a call to a function
+// The vector `candidate` evaluates to: a vector binding, a constructed vector, a call to a function
 // that returns a vector, or a dereference of one.
 std::optional<semantics::BindingInfo> findBuiltinVectorValueBinding(
     const Expr &candidate, const SoaBindingMap &bindings, const BuiltinSoaRewriteScope &scope);
