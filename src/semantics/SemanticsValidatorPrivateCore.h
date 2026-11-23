@@ -387,6 +387,8 @@
   // the receiver's root must have no live container view, and `push` stores its argument like a
   // `[T move]` parameter, so a named owning binding (not a view or a borrowed parameter) is
   // moved-from afterwards. False after a diagnostic.
+  // The element type `T` of the specialization of the stdlib vector struct at `vectorStructPath`, or empty.
+  std::string stdlibVectorElementTypeText(const std::string &vectorStructPath);
   bool checkBuiltinVectorMutation(const std::vector<ParameterInfo> &params,
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const Expr &expr);

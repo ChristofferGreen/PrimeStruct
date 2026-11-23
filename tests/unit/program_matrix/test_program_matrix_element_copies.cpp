@@ -683,4 +683,65 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a string is pushed into a stdlib Vector and a builtin vector of strings") {
+  // A `string` is one slot (its index in the string table): a literal, a local and a parameter are pushed into a
+  // local, a `mut` parameter and a field, and the vector grows.
+  program_matrix::ProgramCase program;
+  program.name = "vector_string_push";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Names() {
+  [Vector<string> mut] all{Vector<string>{}}
+  [mut effects(heap_alloc)]
+  add([string] name) {
+    this.all.push(name)
+  }
+}
+
+[effects(heap_alloc), return<void>]
+fill([Vector<string> mut] names, [string] extra) {
+  names.push("two"utf8)
+  names.push(extra)
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Vector<string> mut] names{/std/collections/vector/vector<string>()}
+  [string] local{"one"utf8}
+  names.push("hello"utf8)
+  names.push(local)
+  fill(names, "three"utf8)
+  [vector<string> mut] builtin{vector<string>()}
+  builtin.push("first"utf8)
+  builtin.push(local)
+  [Names mut] holder{Names{}}
+  holder.add("field"utf8)
+  holder.all.push("direct"utf8)
+  print_line(names[0i32])
+  print_line(names[1i32])
+  print_line(names[2i32])
+  print_line(names[3i32])
+  [i32] count{names.count()}
+  print_line(count)
+  print_line(builtin[0i32])
+  print_line(builtin[1i32])
+  print_line(holder.all[0i32])
+  print_line(holder.all[1i32])
+  for([i32 mut] i{0i32}, i < 20i32, i++) {
+    names.push("grown"utf8)
+  }
+  print_line(names[23i32])
+  [i32] grown{names.count()}
+  print_line(grown)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "hello\none\ntwo\nthree\n4\nfirst\none\nfield\ndirect\ngrown\n24\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

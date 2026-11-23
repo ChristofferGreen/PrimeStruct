@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::semantics {
 
@@ -86,6 +87,29 @@ bool SemanticsValidator::movedAtOtherSite(const std::string &name, const Expr &s
   return moved == currentValidationState_.moveArgumentSites.end() || !moved->second.matches(site);
 }
 
+std::string SemanticsValidator::stdlibVectorElementTypeText(const std::string &vectorStructPath) {
+  // The storage field of a specialization is `Pointer<uninitialized<T>>`.
+  const auto defIt = defMap_.find(vectorStructPath);
+  if (defIt == defMap_.end() || defIt->second == nullptr) {
+    return {};
+  }
+  for (const Expr &field : defIt->second->statements) {
+    BindingInfo binding;
+    std::string wrapper;
+    std::string element;
+    if (!field.isBinding || field.name != "data" || !runWithPreservedDiagnostic([&]() {
+          return resolveStructFieldBinding(*defIt->second, field, binding);
+        })) {
+      continue;
+    }
+    if (splitTemplateTypeName(binding.typeTemplateArg, wrapper, element) &&
+        normalizeBindingTypeName(wrapper) == "uninitialized") {
+      return element;
+    }
+  }
+  return {};
+}
+
 bool SemanticsValidator::checkBuiltinVectorMutation(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -113,9 +137,6 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
                           expr.args.front(),
                           true,
                           vectorElementPlaceSites_);
-  if (currentValidationState_.context.definitionIsUnsafe) {
-    return true;
-  }
   std::string receiverTypeText;
   if (!inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText)) {
     return true;
@@ -153,6 +174,21 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
   }
   if (!target.empty() && target.rfind("/std/", 0) != 0 &&
       (defMap_.count(target) > 0 || hasDefinitionFamilyPath(target))) {
+    return true;
+  }
+  // A `string` is an element of a vector of strings only: pushed into another vector it would be stored as the
+  // element type (its index in the string table as an `i32`, or as the first slot of a struct).
+  if (storesArgument && inferExprReturnKind(expr.args[1], params, locals) == ReturnKind::String) {
+    const std::string elementType =
+        receiverIsStdlibVector ? stdlibVectorElementTypeText(receiverTypeText) : receiverArg;
+    if (!elementType.empty() && normalizeBindingTypeName(elementType) != "string") {
+      return failExprDiagnostic(expr.args[1],
+                                "argument type mismatch for " +
+                                    std::string(collection_helpers::kCanonicalVectorPrefix) + leaf +
+                                    " parameter value: expected " + elementType + " got string");
+    }
+  }
+  if (currentValidationState_.context.definitionIsUnsafe) {
     return true;
   }
   // Changing the vector can move or free the storage a view of it (or of one of its elements)

@@ -496,10 +496,11 @@ VectorMutationStatementEmitResult tryEmitCanonicalVectorMutationStatement(
     } else if (payloadKind == LocalInfo::ValueKind::Unknown) {
       return VectorMutationStatementEmitResult::NotMatched;
     } else {
-      // Primitive push: check type compatibility.
-      if (payloadKind == LocalInfo::ValueKind::String ||
-          (targetInfo.elemKind != LocalInfo::ValueKind::Unknown &&
-           targetInfo.elemKind != payloadKind)) {
+      // Primitive push: check type compatibility. A `string` is one slot (its index in the string table), so it
+      // is pushed like another scalar. A local of the stdlib vector record has no element kind here; semantics
+      // has checked the argument against the element type.
+      if (targetInfo.elemKind != LocalInfo::ValueKind::Unknown &&
+          targetInfo.elemKind != payloadKind) {
         return VectorMutationStatementEmitResult::NotMatched;
       }
     }

@@ -2565,6 +2565,43 @@ main() {
   CHECK(diagnosticInfo.primarySpan.column == 24);
 }
 
+TEST_CASE("a string is pushed into a vector of strings only") {
+  const std::string accepted = R"(import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<string> mut] names{Vector<string>{}}
+  [string] local{"one"utf8}
+  names.push("hello"utf8)
+  names.push(local)
+  [vector<string> mut] builtin{vector<string>()}
+  builtin.push("first"utf8)
+  return(names.count())
+}
+)";
+  std::string acceptedError;
+  CHECK_MESSAGE(validateProgram(accepted, "/main", acceptedError), acceptedError);
+
+  const auto checkRejected = [](const std::string &binding, const std::string &expected) {
+    const std::string source =
+        "import /std/collections/*\n\n[struct]\nItem() {\n  [i32 mut] n{0i32}\n}\n\n"
+        "[effects(heap_alloc), return<int>]\nmain() {\n  " +
+        binding + "\n  values.push(\"hello\"utf8)\n  return(0i32)\n}\n";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 11);
+    CHECK(diagnosticInfo.primarySpan.column == 15);
+  };
+  const std::string prefix =
+      "argument type mismatch for /std/collections/vector/push parameter value: expected ";
+  checkRejected("[Vector<i32> mut] values{Vector<i32>{}}", prefix + "i32 got string");
+  checkRejected("[vector<i32> mut] values{vector<i32>()}", prefix + "i32 got string");
+  checkRejected("[Vector<Item> mut] values{Vector<Item>{}}", prefix);
+}
+
 namespace {
 
 void checkPrivateDefinitionCall(const std::string &source,
