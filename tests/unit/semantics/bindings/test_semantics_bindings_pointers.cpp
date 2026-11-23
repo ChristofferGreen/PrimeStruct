@@ -2602,6 +2602,52 @@ main() {
   checkRejected("[Vector<Item> mut] values{Vector<Item>{}}", prefix);
 }
 
+TEST_CASE("a pushed argument has the element type of the vector") {
+  const std::string accepted = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+  items.push(Item{3i32})
+  [Vector<i64> mut] wide{Vector<i64>{}}
+  wide.push(5i64)
+  [vector<bool> mut] flags{vector<bool>()}
+  flags.push(true)
+  return(items.count())
+}
+)";
+  std::string acceptedError;
+  CHECK_MESSAGE(validateProgram(accepted, "/main", acceptedError), acceptedError);
+
+  const auto checkRejected =
+      [](const std::string &binding, const std::string &argument, const std::string &expected) {
+        const std::string source =
+            "import /std/collections/*\n\n[struct]\nItem() {\n  [i32 mut] n{0i32}\n}\n\n"
+            "[effects(heap_alloc), return<int>]\nmain() {\n  " +
+            binding + "\n  values.push(" + argument + ")\n  return(0i32)\n}\n";
+        primec::SemanticDiagnosticInfo diagnosticInfo;
+        std::string error;
+        CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+        CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+        REQUIRE(diagnosticInfo.hasPrimarySpan);
+        CHECK(diagnosticInfo.primarySpan.line == 11);
+        CHECK(diagnosticInfo.primarySpan.column == 15);
+      };
+  const std::string prefix =
+      "argument type mismatch for /std/collections/vector/push parameter value: expected ";
+  checkRejected("[Vector<Item> mut] values{Vector<Item>{}}", "5i32", prefix + "Item got i32");
+  checkRejected("[Vector<i32> mut] values{Vector<i32>{}}", "true", prefix + "i32 got bool");
+  checkRejected("[Vector<string> mut] values{Vector<string>{}}", "7i32", prefix + "string got i32");
+  checkRejected("[vector<i32> mut] values{vector<i32>()}", "true", prefix + "i32 got bool");
+  checkRejected("[vector<i64> mut] values{vector<i64>()}", "5i32", prefix + "i64 got i32");
+  checkRejected("[vector<Item> mut] values{vector<Item>()}", "5i32", prefix + "Item got i32");
+}
+
 namespace {
 
 void checkPrivateDefinitionCall(const std::string &source,

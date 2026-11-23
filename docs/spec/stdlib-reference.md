@@ -97,8 +97,11 @@
     `pop`, `reserve`, `clear`, `remove_at` and `remove_swap` resolve to those helpers, and the receiver must be
     declared `mut` (`push changes values, which is not mutable` otherwise); the bare call form `push(values, x)`
     stays an unknown call target. A `string` (a literal, a local or a parameter) is pushed into a `Vector<string>`
-    or a `vector<string>` like another scalar; pushed into a vector of another element type it is
-    `argument type mismatch for /std/collections/vector/push parameter value: expected <T> got string`.
+    or a `vector<string>` like another scalar. The argument of `push` has the element type of the vector (the
+    conversions of a binding's initializer apply): any other argument is
+    `argument type mismatch for /std/collections/vector/push parameter value: expected <T> got <U>`
+    (`Vector<Item>.push(5i32)`, `Vector<i32>.push(true)`, `vector<i64>.push(5i32)`, a `string` for a non-`string`
+    vector), reported at the argument.
     Explicit canonical read/access calls to
     `/std/collections/vector/count`, `capacity`, `at`, and `at_unsafe` now fall through to visible `.prime` helper
     definitions instead of count/access classifier raw vector emitters; rooted

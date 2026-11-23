@@ -389,6 +389,12 @@
   // moved-from afterwards. False after a diagnostic.
   // The element type `T` of the specialization of the stdlib vector struct at `vectorStructPath`, or empty.
   std::string stdlibVectorElementTypeText(const std::string &vectorStructPath);
+  // The type text of `value` when it is not a value of type `expectedTypeText` (a scalar of another kind, a
+  // `string` for another type, a struct for another struct); empty when it is, or when that is not known.
+  std::string valueTypeMismatch(const std::vector<ParameterInfo> &params,
+                                const std::unordered_map<std::string, BindingInfo> &locals,
+                                const Expr &value,
+                                const std::string &expectedTypeText);
   bool checkBuiltinVectorMutation(const std::vector<ParameterInfo> &params,
                                   const std::unordered_map<std::string, BindingInfo> &locals,
                                   const Expr &expr);

@@ -266,15 +266,20 @@ PhaseStatus SemanticsValidator::checkBindingForm(BindingContext &ctx) {
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return ctx.done(false);
     }
-    // A brace constructor in a field's default initializer is held to the rules of the same expression as a
-    // local's initializer: an entry for every field without an initializer, and no entry for a private field of
-    // another module (docs/spec/literals-and-composite-construction.md, Defaults & validation). The initializer
-    // runs in whatever constructs the struct, so the struct's own effects say nothing about it.
+    // The initializer of a field (a brace constructor or a call) is held to the rules of the same expression as a
+    // local's initializer: an entry for every field without an initializer, no entry for a private field of
+    // another module (docs/spec/literals-and-composite-construction.md, Defaults & validation), the arguments of a
+    // call, and the type of the field. The initializer runs in whatever constructs the struct, so the struct's own
+    // effects say nothing about it.
     if (stmt.args.size() == 1 && stmt.args.front().kind == Expr::Kind::Call &&
-        stmt.args.front().isBraceConstructor) {
+        !stmt.args.front().isLambda && !isSimpleCallName(stmt.args.front(), "block")) {
+      const Expr &initializer = stmt.args.front();
       EffectScope initializerEffects(*this, everyEffectName());
-      if (!validateExpr(params, locals, stmt.args.front())) {
+      if (!validateExpr(params, locals, initializer)) {
         return ctx.done(false);
+      }
+      if (!valueTypeMismatch(params, locals, initializer, expectedBindingTypeText(info)).empty()) {
+        return ctx.done(failBindingDiagnostic(ctx, "binding initializer type mismatch"));
       }
     }
     insertLocalBinding(locals, stmt.name, std::move(info));

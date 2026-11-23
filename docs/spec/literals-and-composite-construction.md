@@ -33,7 +33,10 @@
     the same expression is in a local's initializer: an entry that is missing for a field without an initializer is
     `argument count mismatch for /P`, and an entry for a private field of another module (`Vector<i32>{1i32}`) is
     `private field is not accessible: <struct>/<field>`, both reported at the field's initializer. The initializer
-    runs in whatever constructs the struct, so it is not held to the effects of the struct definition.
+    runs in whatever constructs the struct, so it is not held to the effects of the struct definition. A call that is
+    a field's default initializer is validated the same way (`argument count mismatch for /three`, `unknown call
+    target: nosuch`, the argument types of the callee) and its result must have the type of the field
+    (`binding initializer type mismatch`), reported at the initializer.
   - **Multi-expression blocks:** constructor braces hold constructor field entries. General binding initializer blocks
     still produce one value via `return(value)` or the final expression when they are not parsed as a constructor entry
     list.

@@ -176,16 +176,17 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
       (defMap_.count(target) > 0 || hasDefinitionFamilyPath(target))) {
     return true;
   }
-  // A `string` is an element of a vector of strings only: pushed into another vector it would be stored as the
-  // element type (its index in the string table as an `i32`, or as the first slot of a struct).
-  if (storesArgument && inferExprReturnKind(expr.args[1], params, locals) == ReturnKind::String) {
+  // `push` stores its argument as the element type: an argument of another type would be stored as that type
+  // (a `string` as its index in the string table, an `i32` as the first slot of a struct element).
+  if (storesArgument) {
     const std::string elementType =
         receiverIsStdlibVector ? stdlibVectorElementTypeText(receiverTypeText) : receiverArg;
-    if (!elementType.empty() && normalizeBindingTypeName(elementType) != "string") {
-      return failExprDiagnostic(expr.args[1],
-                                "argument type mismatch for " +
-                                    std::string(collection_helpers::kCanonicalVectorPrefix) + leaf +
-                                    " parameter value: expected " + elementType + " got string");
+    const std::string actualType = valueTypeMismatch(params, locals, expr.args[1], elementType);
+    if (!actualType.empty()) {
+      return failExprDiagnostic(
+          expr.args[1],
+          "argument type mismatch for " + std::string(collection_helpers::kCanonicalVectorPrefix) +
+              leaf + " parameter value: expected " + elementType + " got " + actualType);
     }
   }
   if (currentValidationState_.context.definitionIsUnsafe) {

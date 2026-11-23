@@ -394,6 +394,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprReferenceEscapes.cpp
   src/semantics/ReferenceParameterEffects.cpp
   src/semantics/SemanticsValidatorMoveOnly.cpp
+  src/semantics/SemanticsValidatorValueTypeMismatch.cpp
   src/semantics/SemanticsValidatorExprReceiverPaths.cpp
   src/semantics/SemanticsValidatorCollectionHelperRewrites.cpp
   src/semantics/SemanticsValidatorExprResultFile.cpp

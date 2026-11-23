@@ -544,4 +544,53 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("a call in a field initializer is validated as a local's initializer is") {
+  const auto checkRejected = [](const std::string &field, const std::string &expected) {
+    const std::string source =
+        "[return<i32>]\nthree([i32] a) {\n  return(3i32)\n}\n\n[return<bool>]\nyes() {\n"
+        "  return(true)\n}\n\n[struct]\nBag() {\n  " +
+        field +
+        "\n}\n\n[effects(io_out), return<int>]\nmain() {\n  [Bag] bag{Bag{}}\n"
+        "  print_line(bag.r)\n  return(0i32)\n}\n";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 13);
+  };
+  checkRejected("[i32] r{three()}", "argument count mismatch for /three");
+  checkRejected("[i32] r{nosuch(1i32)}", "unknown call target: nosuch");
+  checkRejected("[i32] r{yes()}", "binding initializer type mismatch");
+}
+
+TEST_CASE("a call is a field's initializer when its arguments and type fit the field") {
+  const std::string source = R"([return<i32>]
+three([i32] a) {
+  return(plus(a, 3i32))
+}
+
+[return<f64>]
+half() {
+  return(0.5f64)
+}
+
+[struct]
+Bag() {
+  [i32] r{three(4i32)}
+  [f64] h{half()}
+  [bool] flag{not(false)}
+}
+
+[effects(io_out), return<int>]
+main() {
+  [Bag] bag{Bag{}}
+  print_line(bag.r)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 #include "test_semantics_bindings_struct_defaults_maps.h"
