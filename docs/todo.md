@@ -330,9 +330,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6189: An element of a collection field of a read-only root is written and has a `[mut]` method called
+- [~] TODO-6189: An element of a collection field of a read-only root is written and has a `[mut]` method called
   - owner: ai
   - status: ready
+  - claimed_by: readonly-roots (worktree-agent-ac0d2c9985def801a), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Read-only roots; found with the read-only roots rule)
   - parallel_track: readonly-element-writes
