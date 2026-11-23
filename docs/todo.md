@@ -151,7 +151,7 @@ of sync with them.
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
-| TODO-6217 | `Script::bytecode` records the libraries a script was linked with | deferred | lib-embed |
+| TODO-6217 | `Script::bytecode` records the libraries a script was linked with | ready | lib-embed |
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
@@ -725,9 +725,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
 
-- [ ] TODO-6217: `Script::bytecode` records the libraries a script was linked with
+- [~] TODO-6217: `Script::bytecode` records the libraries a script was linked with
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-5933, slice 2)
   - parallel_track: lib-embed
