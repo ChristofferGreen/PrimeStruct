@@ -297,6 +297,17 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             ir_lowerer::isCollectionVectorRecordPath(inferStructExprPath(receiver, locals))) {
           return false;
         }
+        // So does the stdlib vector record a call returns by value: the call result is a temporary the
+        // statement destroys, and the element read is a copy.
+        if (receiver.kind == Expr::Kind::Call && !receiver.isFieldAccess && !receiver.isBinding &&
+            ir_lowerer::isCollectionVectorRecordPath(inferStructExprPath(receiver, locals))) {
+          const Definition *receiverCallee = receiver.isMethodCall
+                                                 ? resolveMethodCallDefinition(receiver, locals)
+                                                 : resolveDefinitionCall(receiver);
+          if (receiverCallee != nullptr && !ir_lowerer::isStructDefinition(*receiverCallee)) {
+            return false;
+          }
+        }
         const auto receiverInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
             callExpr.args.front(),
             locals,

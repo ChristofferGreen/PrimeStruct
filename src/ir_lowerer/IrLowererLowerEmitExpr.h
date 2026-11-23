@@ -194,8 +194,15 @@
     // there, so the receiver is evaluated once and is still alive while the method reads it
     // (docs/spec/value-lifecycle.md).
     const bool receiverReadForm =
-        expr.isMethodCall || (expr.args.size() == 2 && (isSimpleCallName(expr, "at") ||
-                                                        isSimpleCallName(expr, "at_unsafe")));
+        expr.isMethodCall ||
+        // The stdlib `at` of a stdlib vector record a call returns (the builtin vector keeps its own path).
+        (expr.kind == Expr::Kind::Call && expr.args.size() == 2 &&
+         ir_lowerer::isStdlibVectorValueAtPath(expr.name) &&
+         expr.args.front().kind == Expr::Kind::Call &&
+         ir_lowerer::isCollectionVectorRecordPath(
+             inferStructExprPath(expr.args.front(), localsIn))) ||
+        (expr.args.size() == 2 &&
+         (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe")));
     if (expr.kind == Expr::Kind::Call && receiverReadForm && !expr.isBinding &&
         !expr.isFieldAccess && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Call &&
         !fileScopeStack.empty() && setupStage.statementNesting > 0 &&

@@ -153,7 +153,9 @@
   `use(make_rows()[0i32])`) is a place like an element of a named vector, so the reader copies it; the vector
   lives to the end of the statement that reads it and is destroyed there, after a returned element is copied
   out, and each time a loop condition or the right side of `and`/`or` has run. A read-only `vector<T>` binding
-  from such a place is a copy, not a view.
+  from such a place is a copy, not a view. The same holds when the call returns the stdlib `Vector` of structs (`at(make(), 0i32).n`,
+  `make()[0i32].n`): the statement owns the returned record and destroys it, and the element the real `at`
+  returns is a copy that the read destroys.
 - **Block expressions:** `block() { ... value }` yields its last expression. When that is a `String`, struct or
   vector local the block declared (`[String] text{block() { [String] e{label()} e }}`), the block hands the local
   over: the binding or argument outside owns it, the block's scope does not destroy it, and a call argument of that

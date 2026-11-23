@@ -2600,6 +2600,7 @@ are left unarchived.
 | TODO-6208 | The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6209 | `mapInsert` of `MapValue` wrote its fields in a method that was not `[mut]` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6210 | `dereference(r)` of a `Reference<Vector<T>>` as the receiver argument of the inlined stdlib `at` is an `una... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6211 | Reading an element of a call result that is a stdlib `Vector` of structs is `unaligned indirect address` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
 

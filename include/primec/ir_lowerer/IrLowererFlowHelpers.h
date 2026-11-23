@@ -238,6 +238,10 @@ bool isUserShadowedCollectionCall(
 // `vectorAtUnsafeRef<T>`, with a generated `__t` suffix). When `path` is one of them, sets `accessName` to
 // `at` / `at_unsafe` and returns true: the lowerer reads that element in place like a builtin vector's.
 bool borrowedVectorElementAccessName(const std::string &path, std::string &accessName);
+
+// Whether `path` is the stdlib vector `at` or `at_unsafe` that returns a copy of the element, with or without
+// the generated specialization suffix.
+bool isStdlibVectorValueAtPath(const std::string &path);
 // Whether `expr` makes a fresh builtin `vector<T>` nobody else owns: the vector constructor or a
 // user definition or method returning a vector, never a name, field, element or stdlib accessor
 // result. `resolveCallee` resolves a method call too (see makeCallOrMethodResolver).

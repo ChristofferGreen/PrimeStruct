@@ -709,6 +709,74 @@ through_parameter([Vector<Row> mut] rows) {
                     "import /std/collections/*\n");
 }
 
+TEST_CASE("an element of a call result that is a stdlib Vector of structs is read as a copy") {
+  // `at(make(), i)` and `make()[i]` read the element of a record nobody binds: the statement owns the record and
+  // destroys it, and the element read is a copy. Both once lowered as the builtin indexed access and ended in
+  // "unaligned indirect address".
+  program_matrix::ProgramCase program;
+  program.name = "element_of_call_result";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[effects(heap_alloc) return<Vector<Item>>]
+make() {
+  [Vector<Item> mut] v{Vector<Item>{}}
+  v.push(Item{7i32})
+  v.push(Item{8i32})
+  return(v)
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  print_line(at(make(), 0i32).n)
+  print_line(make()[1i32].n)
+  print_line(make().at(1i32).n)
+  [Item] copy{make()[0i32]}
+  print_line(copy.n)
+  print_line(at(make(), 0i32).n + make()[1i32].n)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n8\n8\n7\n15\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an element of a call result that is a stdlib Vector of structs holding Strings leaves "
+          "nothing live") {
+  runElementProgram("element_of_call_result_strings",
+                    R"(
+[struct]
+Row() {
+  [i32 mut] n{0i32}
+  [String mut] name{String{}}
+}
+
+[effects(heap_alloc), return<Vector<Row>>]
+make_rows() {
+  [Vector<Row> mut] rows{Vector<Row>{}}
+  rows.push(Row{[n] 1i32, [name] label(1i32)})
+  rows.push(Row{[n] 2i32, [name] label(2i32)})
+  return(rows)
+}
+)",
+                    R"(
+    print_line(at(make_rows(), 0i32).n)
+    print_line(make_rows()[1i32].n)
+    print_line(convert<i32>(make_rows()[1i32].name.byteAt(0i32)))
+    print_line(make_rows().at(0i32).name.view().count())
+    [Row] copy{make_rows()[1i32]}
+    print_line(convert<i32>(copy.name.byteAt(0i32)))
+)",
+                    "1\n2\n50\n1\n50\n",
+                    "import /std/collections/*\n");
+}
+
 TEST_CASE("dereference of a Reference to a stdlib Vector is the receiver of an inlined at") {
   // The argument `dereference(r)` of the stdlib `at` passes the record's address on every backend; it once
   // lowered as the builtin indexed access, which loaded the first slot of the record as the element.

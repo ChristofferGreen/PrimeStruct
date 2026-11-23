@@ -35,6 +35,13 @@ bool borrowedVectorElementAccessName(const std::string &path, std::string &acces
   return false;
 }
 
+bool isStdlibVectorValueAtPath(const std::string &path) {
+  std::string base = path;
+  base.resize(std::min(base.find("__t"), base.size()));
+  return base == collection_helpers::kCanonicalVectorAt ||
+         base == collection_helpers::kCanonicalVectorAtUnsafe;
+}
+
 bool isFreshBuiltinVectorExpr(
     const Expr &expr, const std::function<const Definition *(const Expr &)> &resolveCallee) {
   if (expr.kind != Expr::Kind::Call || expr.isFieldAccess) {
