@@ -351,9 +351,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `import /std/collections/*  [effects(heap_alloc) return<int>] main() { [Vector<i32> mut] values{Vector<i32>{}}  push(values, 7i32)  return(0i32) }` with `primec --emit=vm -I stdlib`.
   - notes: deferred: a diagnostics improvement; 31 test expectations pin the current text.
 
-- [ ] TODO-6199: The tracked stdlib symbol manifests are not what the generator writes
+- [~] TODO-6199: The tracked stdlib symbol manifests are not what the generator writes
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
   - created_at: 2026-11-23
   - phase: Modules and libraries (found with TODO-6163)
   - parallel_track: stdlib-manifest-drift
