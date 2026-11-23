@@ -288,9 +288,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 
 
-- [ ] TODO-6163: Non-public stdlib helpers are callable by absolute path
+- [~] TODO-6163: Non-public stdlib helpers are callable by absolute path
   - owner: ai
   - status: ready
+  - claimed_by: vector-elements (worktree-agent-a200af4774795b81c), 2026-11-23
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-5511)
   - parallel_track: safety-stdlib
