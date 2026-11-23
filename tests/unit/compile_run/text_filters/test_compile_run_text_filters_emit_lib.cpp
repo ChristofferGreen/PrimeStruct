@@ -288,11 +288,15 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
   const std::filesystem::path dir = testScratchPath("emit_lib_result_shapes");
   const std::string errPath = (dir / "err.txt").string();
   const std::vector<std::tuple<std::string, std::string, std::string>> refused = {
-      {"text",
-       "[public return<string>]\nname() {\n  return(\"hi\"utf8)\n}\n",
-       "public function /name cannot be compiled into a library: its result `string` is not one a "
-       "real call "
-       "returns"},
+      {"reference",
+       "[public return<Reference<i32>>]\nview([Reference<i32>] value) {\n  return(value)\n}\n",
+       "public function /view cannot be compiled into a library: its result `Reference<i32>` is "
+       "not "
+       "one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer` or a struct "
+       "are; "
+       "a sum (such as `Result`), a packed error value, a `Reference` and a builtin `vector<T>` "
+       "are "
+       "not"},
       {"vector",
        "import /std/collections/vector\n\n[public effects(heap_alloc) return<vector<i32>>]\nmake() "
        "{\n"

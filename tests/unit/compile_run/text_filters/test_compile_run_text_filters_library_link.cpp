@@ -233,4 +233,63 @@ TEST_CASE("library link: a library compiled against a library links when both ar
   CHECK(missing.err.find("library mid needs library base") != std::string::npos);
 }
 
+TEST_CASE("library link: a string result and a Pointer result are results of the archive") {
+  // A `string` result is an index into the string table of the module that returned it, which the link relocates
+  // with the library's literals; a `Pointer<i64>` result is an address of the heap the program shares.
+  const std::string source = R"(
+[namespace summary("One slot results.")]
+slots {
+  [public return<string>]
+  pick([i32] n) {
+    if(n > 1i32) {
+      return("many"utf8)
+    }
+    return("one"utf8)
+  }
+
+  [public unsafe effects(heap_alloc) return<Pointer<i64>>]
+  make_cell([i64] x) {
+    [Pointer<i64> mut] cell{/std/intrinsics/memory/alloc<i64>(2i32)}
+    assign(*cell, x)
+    return(cell)
+  }
+
+  [public unsafe effects(heap_alloc) return<void>]
+  free_cell([Pointer<i64>] cell) {
+    /std/intrinsics/memory/free(cell)
+  }
+}
+)";
+  const std::string body = R"(
+[unsafe return<i32> effects(io_out, heap_alloc)]
+main() {
+  print_line(pick(1i32))
+  print_line("between"utf8)
+  print_line(pick(2i32))
+  [Pointer<i64>] first{make_cell(40i64)}
+  [Pointer<i64>] second{make_cell(2i64)}
+  print_line(*first + *second)
+  free_cell(first)
+  free_cell(second)
+  return(0i32)
+}
+)";
+  for (const std::string emit : {"vm", "optexe"}) {
+    INFO(emit);
+    const std::filesystem::path dir = testScratchPath("library_link_slot_results_" + emit);
+    writeIn(dir, "slots.prime", source);
+    writeIn(dir, "app.prime", "import<\"slots.prime\">\nimport /slots/*\n" + body);
+    const Run whole = runApp(dir, emit, "");
+    REQUIRE_MESSAGE(whole.exitCode == 0, whole.err);
+    CHECK(whole.out == "one\nbetween\nmany\n42\n");
+
+    const std::string archive = buildLibrary(dir, "slots", source);
+    writeIn(dir, "app.prime", "import</slots>\nimport /slots/*\n" + body);
+    const Run linked = runApp(dir, emit, "--library " + quoteShellArg(archive));
+    CHECK_MESSAGE(linked.err.empty(), linked.err);
+    CHECK(linked.exitCode == whole.exitCode);
+    CHECK(linked.out == whole.out);
+  }
+}
+
 TEST_SUITE_END();

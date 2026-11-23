@@ -2456,6 +2456,7 @@ are left unarchived.
 | TODO-6029 | Function steps can wait for other steps in one stage | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
 | TODO-6030 | The concurrent corpus runs in fewer, cheaper CTest entries | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6031 | Lowering marks string literal pushes so the IR link can always move a library's strings | [2026-11.md](todo_archive/2026-11.md) | 2026-11-18 |
+| TODO-6032 | A public function with a `string` or `Pointer<T>` result is a function of a library | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6033 | `[imported(<library>)]` declarations, `--library` and the import resolver | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6034 | A call of an imported function lowers to an import and the pipeline links before optimization | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6035 | A corpus of programs behaves the same built whole and as library plus consumer | [2026-11.md](todo_archive/2026-11.md) | - |

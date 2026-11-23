@@ -219,13 +219,13 @@ module's `.prime` files. `--library` consumes it (Compiling against a library, b
 roots call with them: a callee with two call sites or more, or a recursive one, is a function of the archive (a stdlib
 one such as `/std/collections/slice/Read` too, which the link shares with the program's own copy), and a callee with one call site is inlined into its caller as in any
 program. The IR is lowered for the VM target, which gives every function the address ABI (a struct, a `mut` parameter or
-a string is one slot that holds an address or an index; a consumer must call it with the same convention, so a
+a string is one slot that holds an address or an index, and a `string` or `Pointer<T>` result is one slot too: the link relocates the string index with the library's literals; a consumer must call it with the same convention, so a
 consumer target without that ABI is refused) and is not optimized or inlined: several passes are target-specific, so the link runs them on
 the merged module. The module has `entryIndex` -1, its struct layouts, host imports, string table, source map and debug
 slots; a stub entry that lowering needs stands in for `main` and is removed. A root the real-call ABI cannot take (an
 argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
 /packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); a result,
-receiver or body rule gets its own text (`its result `string` is not one a real call returns: ...`, `its body uses `try``,
+receiver or body rule gets its own text (`its result `vector<i32>` is not one a real call returns: ...`, `its body uses `try``,
 `it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,
 the archive is `<root file name>.psa` in the output directory.

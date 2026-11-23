@@ -123,11 +123,12 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   }
 
   if (input.libraryRoots != nullptr) {
-    const RealCallShapeContext shapeContext{&stateOut.defMap,
-                                            &stateOut.structNames,
-                                            stateOut.realCallAllowStructs,
-                                            stateOut.runtimeErrorsTrap,
-                                            stateOut.realCallAllowStrings};
+    RealCallShapeContext shapeContext{&stateOut.defMap,
+                                      &stateOut.structNames,
+                                      stateOut.realCallAllowStructs,
+                                      stateOut.runtimeErrorsTrap,
+                                      stateOut.realCallAllowStrings};
+    shapeContext.allowSlotResults = true;
     for (const std::string &root : *input.libraryRoots) {
       if (stateOut.realCallReservationIndex.count(root) != 0) {
         continue;
@@ -157,11 +158,12 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
       const std::unordered_set<std::string> reachable =
           findReachableDefinitionPaths(*input.program, *input.entryPath);
       std::sort(importedPaths.begin(), importedPaths.end());
-      const RealCallShapeContext shapeContext{&stateOut.defMap,
-                                              &stateOut.structNames,
-                                              stateOut.realCallAllowStructs,
-                                              stateOut.runtimeErrorsTrap,
-                                              stateOut.realCallAllowStrings};
+      RealCallShapeContext shapeContext{&stateOut.defMap,
+                                        &stateOut.structNames,
+                                        stateOut.realCallAllowStructs,
+                                        stateOut.runtimeErrorsTrap,
+                                        stateOut.realCallAllowStrings};
+      shapeContext.allowSlotResults = true;
       for (const std::string &path : importedPaths) {
         if (reachable.count(path) == 0) {
           continue;

@@ -686,6 +686,26 @@ bool hasTransformReturnType(const Definition &def, const char *typeName) {
   return false;
 }
 
+// A `string` result is an index into the module's string table and a `Pointer<T>` result an address, each one slot
+// like a scalar: the callee returns it and the caller reads it as it reads the result of an inlined call. A
+// `Reference<T>` result stays refused, since it would name a place of the callee's frame.
+bool hasSlotResultReturn(const Definition &def) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+    if (returnType == "string") {
+      return true;
+    }
+    std::string base;
+    std::string argText;
+    return splitTemplateTypeName(returnType, base, argText) &&
+           trimTemplateTypeText(base) == "Pointer";
+  }
+  return false;
+}
+
 // The `return<vector<T>>` transform of `def` when it names a builtin vector the lowerer can copy, else null.
 const Transform *builtinVectorReturnType(const Definition &def,
                                          const std::unordered_set<std::string> &structNames) {
@@ -774,7 +794,7 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     return AddressAbiBlocker::CollectionResult;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
-      structResultPath.empty() &&
+      !(context.allowSlotResults && hasSlotResultReturn(def)) && structResultPath.empty() &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;
   }
@@ -1092,7 +1112,11 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
         continue;
       }
     }
-    if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, context)) {
+    // A root of a library and a function a library defines are the ones that take a one-slot `string` or `Pointer<T>`
+    // result.
+    RealCallShapeContext definitionContext = context;
+    definitionContext.allowSlotResults = isImported || roots.find(path) != roots.end();
+    if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, definitionContext)) {
       continue;
     }
     eligible.insert(path);
