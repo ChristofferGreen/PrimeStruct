@@ -341,9 +341,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - phase: Collections (stdlib `Vector`; found with the read-only element rule)
   - parallel_track: vector-element-write-lost
   - scope: `/std/collections/vector/at` returns `T` by value, so `values[0i32].n = 7i32` and `values[0i32].bump()` on a `[Vector<Item> mut] values` compile and change a copy: the element keeps its old value. A builtin `vector<Item>` changes the element in place. Repro (`primec --emit=vm -I stdlib`): `import /std/collections/*  [struct] Item() { [i32 mut] n{0i32}  [mut] bump() { this.n = this.n + 1i32 } }  [effects(heap_alloc, io_out) return<int>] main() { [Vector<Item> mut] local{/std/collections/vector/vector<Item>()}  local.push(Item{})  local[0i32].n = 7i32  local[0i32].bump()  [i32] c{local[0i32].n}  print_line(c)  return(0i32) }` prints 0; with `vector<Item>` it prints 8. The read-only roots rule already rejects both writes when the root is read-only (docs/spec/value-lifecycle.md), so only the `mut` root is silent.
-  - options_to_decide: (a) the element of a `Vector` is a place, as for `vector` (an `at` that yields the element itself, as a `Reference`-returning call does); (b) a write to a field of, or a `[mut]` method call on, a call result that is a temporary is a diagnostic (`assign target is a temporary`), which also covers `make_bag().items[0i32].bump()`. (a) keeps `Vector` and `vector` interchangeable, which the collection docs promise; (b) is the smaller change.
+  - decision: (a), decided by the user on 2026-11-23: the element of a stdlib `Vector` is a place, as for the builtin `vector`; `values[i].n = x` and `values[i].bump()` write the element in place. Option (b), a diagnostic for a write to a temporary call result such as `make_bag().items[0i32].bump()`, was not chosen for `Vector` elements and is not part of this leaf.
   - acceptance:
-    - the program above prints 8 on the VM and optexe, or both writes are diagnostics that name the temporary, with tests
+    - the program above prints 8 on the VM and optexe, with tests
     - full release gate green
   - stop_rule: element writes of a stdlib `Vector`; no change to the builtin `vector`.
   - repro: the program in scope.
