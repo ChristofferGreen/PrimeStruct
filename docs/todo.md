@@ -374,9 +374,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the type of a method call on a `Vector` field as a print argument.
   - repro: `import /std/collections/*  [struct] Item() { [i32 mut] n{0i32} }  [struct] Bag() { [Vector<Item> mut] items{/std/collections/vector/vector<Item>()} }  [effects(heap_alloc, io_out) return<int>] main() { [Bag mut] bag{Bag{}}  print_line(bag.items.count())  return(0i32) }` with `primec --emit=vm -I stdlib`.
 
-- [ ] TODO-6196: A struct field's default initializer is not validated as a local's is
+- [~] TODO-6196: A struct field's default initializer is not validated as a local's is
   - owner: ai
   - status: ready
+  - claimed_by: agent-ab69b87dc26ecd9b8 (worktree-agent-ab69b87dc26ecd9b8), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (brace construction; found with the empty brace `Vector`)
   - parallel_track: field-initializer-validation
