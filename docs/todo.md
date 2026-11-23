@@ -229,9 +229,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green on Linux x86_64
   - stop_rule: local addressing and real calls on x86_64 native and the JIT.
 
-- [ ] TODO-6211: Reading an element of a call result that is a stdlib `Vector` of structs is `unaligned indirect address`
+- [~] TODO-6211: Reading an element of a call result that is a stdlib `Vector` of structs is `unaligned indirect address`
   - owner: ai
   - status: ready
+  - claimed_by: ai-callresult (worktree-agent-ae7b8cc36b25dd2d2), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with TODO-6210)
   - parallel_track: vector-call-result-element
