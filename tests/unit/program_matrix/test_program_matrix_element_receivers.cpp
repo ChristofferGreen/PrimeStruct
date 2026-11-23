@@ -709,4 +709,37 @@ through_parameter([Vector<Row> mut] rows) {
                     "import /std/collections/*\n");
 }
 
+TEST_CASE("dereference of a Reference to a stdlib Vector is the receiver of an inlined at") {
+  // The argument `dereference(r)` of the stdlib `at` passes the record's address on every backend; it once
+  // lowered as the builtin indexed access, which loaded the first slot of the record as the element.
+  program_matrix::ProgramCase program;
+  program.name = "element_dereference_argument";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[effects(io_out), return<void>]
+show_first([Reference<Vector<Item>>] r) {
+  print_line(/std/collections/vector/at<Item>(dereference(r), 0i32).n)
+  print_line(/std/collections/vector/at<Item>(dereference(r), 1i32).n)
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Vector<Item> mut] values{Vector<Item>{}}
+  values.push(Item{7i32})
+  values.push(Item{8i32})
+  show_first(location(values))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n8\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

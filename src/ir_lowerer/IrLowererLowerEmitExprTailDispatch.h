@@ -911,13 +911,21 @@
               if (matchesGeneratedSpecializedType(
                       inferredReceiverStruct, "vector", "Vector")) {
                 ir_lowerer::LocalInfo::ValueKind elemKind;
-                if (!resolveSpecializedVectorElementKind(inferredReceiverStruct,
-                                                        elemKind)) {
+                const bool scalarElement =
+                    resolveSpecializedVectorElementKind(inferredReceiverStruct, elemKind);
+                // The record behind `dereference(r)` of a `Reference<Vector<T>>` with a struct element is
+                // read by the real `at`, as a local of that type is.
+                const bool dereferencedRecord =
+                    !scalarElement && isSimpleCallName(targetCallExpr, "dereference") &&
+                    ir_lowerer::isCollectionVectorRecordPath(inferredReceiverStruct);
+                if (!scalarElement && !dereferencedRecord) {
                   return false;
                 }
                 targetInfoOut.isArrayOrVectorTarget = true;
                 targetInfoOut.isVectorTarget = true;
-                targetInfoOut.elemKind = elemKind;
+                targetInfoOut.elemKind =
+                    scalarElement ? elemKind : ir_lowerer::LocalInfo::ValueKind::Unknown;
+                targetInfoOut.isStructBoxedRecordTarget = dereferencedRecord;
                 targetInfoOut.structTypeName = inferredReceiverStruct;
                 return true;
               }
