@@ -116,6 +116,7 @@ of sync with them.
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | blocked | mt-server |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | ready | readonly-struct-writes |
 | TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | ready | template-infer-reference |
+| TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
@@ -139,7 +140,6 @@ of sync with them.
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
-| TODO-6182 | A failed file open reads as an open file on Wasm, and closing it crashes node | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | ready | debugger-filtered-columns |
@@ -377,6 +377,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: implicit template inference through a `Reference` argument only (src/semantics/TemplateMonomorphImplicitTemplateInference*.cpp); no change to overload ranking.
 
+- [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-23
+  - phase: Backend parity (found with TODO-6182)
+  - parallel_track: wasm-bytes-host
+  - scope: Under node 24.2 (`/opt/homebrew/bin/node`) a Wasm module that calls `path_open` on the preopened directory with an absolute path that does not exist (`File<Read>("/nonexistent_primestruct_dir/missing.txt")`) answers ENOENT (44) and then the node process dies at some later point, nondeterministically (exit 139 segmentation fault, 133 trace trap or 0, about 7 runs in 8). A relative missing path is stable (8 of 8 runs exit 0), and so is every program that only opens existing files. The crash is in node's WASI implementation, not in the emitted module (the trace of `fd_*` and `path_open` calls is identical to a run that exits 0, and no descriptor is closed twice). It keeps `file_io_errno_newline_png` (an absolute missing path and a missing png) off the `wasm-wasi` config, and a flaky matrix case is not allowed. Options: (a) change that program to relative missing paths for the Wasm config (loses the absolute-path coverage on the VM too unless a second case keeps it); (b) make the Wasm emitter answer an absolute path itself, as ENOENT without calling `path_open`, which matches the VM only when the path does not exist; (c) wait for a node fix and record the version. The owner decides.
+  - acceptance:
+    - a decision recorded here; then `file_io_errno_newline_png` (or its relative-path twin) lists `wasm-wasi` and passes 20 of 20 runs
+    - full release gate green
+  - stop_rule: the absolute-path failure only.
+  - repro: `printf` the program `[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>] open_missing() { [File<Read>] file{File<Read>("/nonexistent_primestruct_dir/missing.txt")?} return(0i32) }` with `on_file_err([FileError] err) { print_line(err.status()) }` and a `main` that prints `open_missing()`, compile it with `--emit=wasm --wasm-profile wasi` and run the matrix runner (`WasmNodeRunner` in tests/unit/program_matrix/program_matrix.h) eight times: most runs exit 139 or 133 after printing `2` and `2`.
+
 - [ ] TODO-5806: Sessions: a cookie and per-session state
   - owner: ai
   - status: deferred
@@ -608,20 +621,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
-- [~] TODO-6182: A failed file open reads as an open file on Wasm, and closing it crashes node
-  - owner: ai
-  - status: deferred
-  - claimed_by: fix-a (worktree-agent-a971c1c6b7c978cf9), 2026-11-22
-  - created_at: 2026-11-22
-  - phase: Backend parity (found with TODO-6176)
-  - parallel_track: wasm-bytes-host
-  - scope: the VM answers `FileOpenRead`, `FileOpenWrite` and `FileOpenAppend` with the handle packed as an i64: the descriptor on success and `errno << 32` on failure (`packFileHandle`, src/runtime/VmIoHelpers.cpp), and the lowered code reads the status as `handle / 4294967296` (a nonzero quotient is the error, then `FileError.status` is the errno, 2 for a missing file). The Wasm emitter returns an i32 instead: the WASI errno with `0x80000000` or-ed in (`WasmFileHandleErrorBit`, src/wasm_emitter/WasmEmitterIo.cpp), which widens to a negative i64 whose quotient by 2^32 is 0, so a failed open reads as success, the guarded `FileClose` of the handle (`handle >= 0` is false only for the Wasm form) is skipped or hands a garbage descriptor to `fd_close`, and under node 24 with a preopened directory that call crashes the process (exit 139, a segmentation fault in node). `file_io_errno_newline_png` prints `0` then the file contents where the VM prints `2`, `2` and the contents. The WASI errno numbers also differ from the host's (ENOENT is 44 in WASI and 2 on the VM), so the status the program reads has to be mapped to the VM's. Make the Wasm file opcodes produce and read the VM's packing (descriptor, or errno `<< 32`), map WASI errnos to the POSIX ones the VM reports for the same condition (ENOENT 2, EACCES 13, EEXIST 17, ENOTDIR 20, EISDIR 21, EINVAL 22, EMFILE 24, ENOSPC 28; the VM reports the host's number, so an errno whose value differs between Linux and macOS, such as ENAMETOOLONG, needs a decision first, and an unmapped errno is passed through), and make `FileReadByte`, `FileWrite*`, `FileFlush` and `FileClose` of an error handle return its errno like the VM.
-  - acceptance:
-    - `file_io_errno_newline_png` lists `wasm-wasi` and a program that opens a missing path, a directory for writing and a path through a file prints the VM's statuses; IR tests compare with the VM under node
-    - no file operation passes an error handle to `fd_close`, `fd_read` or `fd_write`
-    - full release gate green
-  - stop_rule: the file open and handle error encoding of the Wasm file opcodes; directory and glob functions stay separate.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests -tc="file open errors*"` from the release build directory prints `differ (exit 139 not 0)` for `file_io_errno_newline_png`.
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred

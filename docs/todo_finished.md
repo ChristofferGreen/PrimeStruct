@@ -2573,6 +2573,7 @@ are left unarchived.
 | TODO-6172 | A refused library root names the rule it breaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6176 | The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
+| TODO-6182 | A failed file open reads as an open file on Wasm, and closing it crashes node | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6184 | A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6185 | An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 

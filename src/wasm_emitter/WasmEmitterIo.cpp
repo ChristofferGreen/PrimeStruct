@@ -10,6 +10,7 @@ namespace primec {
 namespace {
 
 constexpr uint8_t WasmValueTypeI32 = 0x7f;
+constexpr uint8_t WasmValueTypeI64 = 0x7e;
 constexpr uint8_t WasmBlockTypeVoid = 0x40;
 
 constexpr uint8_t WasmOpIf = 0x04;
@@ -25,6 +26,7 @@ constexpr uint8_t WasmOpI32Load = 0x28;
 constexpr uint8_t WasmOpI32Load8U = 0x2d;
 constexpr uint8_t WasmOpI32Store8 = 0x3a;
 constexpr uint8_t WasmOpI32Const = 0x41;
+constexpr uint8_t WasmOpI64Const = 0x42;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmOpI32Eq = 0x46;
 constexpr uint8_t WasmOpI32GeU = 0x4f;
@@ -33,6 +35,9 @@ constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32And = 0x71;
 constexpr uint8_t WasmOpI32Or = 0x72;
+constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
+constexpr uint8_t WasmOpI64Shl = 0x86;
+constexpr uint8_t WasmOpI64ShrU = 0x88;
 constexpr uint8_t WasmOpI64ExtendI32S = 0xac;
 constexpr uint8_t WasmOpI64ExtendI32U = 0xad;
 
@@ -57,6 +62,36 @@ void emitMaskedFileHandleError(uint32_t fileHandleLocal, std::vector<uint8_t> &o
   out.push_back(WasmOpI32Const);
   appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorMask), out);
   out.push_back(WasmOpI32And);
+}
+
+// Takes the VM's i64 file handle off the stack into `fileHandleLocal`, in the form the file operations test: the
+// descriptor, or the errno of a failed open with `WasmFileHandleErrorBit` or-ed in. A failed handle never reaches
+// `fd_read`, `fd_write`, `fd_sync` or `fd_close`; the operation answers its errno instead.
+void emitUnpackFileHandle(const WasmLocalLayout &layout, std::vector<uint8_t> &out) {
+  const auto emitHighHalf = [&]() {
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(layout.fileHandle64Local, out);
+    out.push_back(WasmOpI64Const);
+    appendS32Leb(32, out);
+    out.push_back(WasmOpI64ShrU);
+    out.push_back(WasmOpI32WrapI64);
+  };
+  out.push_back(WasmOpLocalSet);
+  appendU32Leb(layout.fileHandle64Local, out);
+  emitHighHalf();
+  out.push_back(WasmOpIf);
+  out.push_back(WasmValueTypeI32);
+  emitHighHalf();
+  out.push_back(WasmOpI32Const);
+  appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
+  out.push_back(WasmOpI32Or);
+  out.push_back(WasmOpElse);
+  out.push_back(WasmOpLocalGet);
+  appendU32Leb(layout.fileHandle64Local, out);
+  out.push_back(WasmOpI32WrapI64);
+  out.push_back(WasmOpEnd);
+  out.push_back(WasmOpLocalSet);
+  appendU32Leb(layout.fileHandleLocal, out);
 }
 
 } // namespace
@@ -303,18 +338,22 @@ bool emitIoInstruction(const IrInstruction &inst,
                          runtime,
                          out);
       }
+      // The VM's packing: the descriptor on success, `errno << 32` (the POSIX number the VM reports) on failure.
       out.push_back(WasmOpLocalTee);
       appendU32Leb(localLayout.fileErrLocal, out);
       out.push_back(WasmOpI32Eqz);
       out.push_back(WasmOpIf);
-      out.push_back(WasmValueTypeI32);
+      out.push_back(WasmValueTypeI64);
       emitI32LoadAtAddress(runtime.openedFdAddr, out);
+      out.push_back(WasmOpI64ExtendI32U);
       out.push_back(WasmOpElse);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileErrLocal, out);
-      out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(WasmFileHandleErrorBit), out);
-      out.push_back(WasmOpI32Or);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
+      out.push_back(WasmOpI64ExtendI32U);
+      out.push_back(WasmOpI64Const);
+      appendS32Leb(32, out);
+      out.push_back(WasmOpI64Shl);
       out.push_back(WasmOpEnd);
       return true;
     }
@@ -323,8 +362,7 @@ bool emitIoInstruction(const IrInstruction &inst,
         error = "wasm emitter missing file runtime support in function: " + functionName;
         return false;
       }
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -337,6 +375,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpCall);
       appendU32Leb(runtime.fdCloseImportIndex, out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -351,8 +390,7 @@ bool emitIoInstruction(const IrInstruction &inst,
         error = "wasm emitter local index out of range in function: " + functionName;
         return false;
       }
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -392,6 +430,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpElse);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileErrLocal, out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpEnd);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
@@ -403,8 +442,7 @@ bool emitIoInstruction(const IrInstruction &inst,
         error = "wasm emitter missing file runtime support in function: " + functionName;
         return false;
       }
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -417,6 +455,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpCall);
       appendU32Leb(runtime.fdSyncImportIndex, out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -431,8 +470,7 @@ bool emitIoInstruction(const IrInstruction &inst,
         error = "wasm emitter invalid string index in function: " + functionName;
         return false;
       }
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -446,6 +484,7 @@ bool emitIoInstruction(const IrInstruction &inst,
                                       runtime.stringLens[static_cast<size_t>(inst.imm)],
                                       runtime,
                                       out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -458,8 +497,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       }
       out.push_back(WasmOpLocalSet);
       appendU32Leb(localLayout.fileDigitsValueLocal, out);
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -472,6 +510,7 @@ bool emitIoInstruction(const IrInstruction &inst,
                                              localLayout.fileDigitsValueLocal,
                                              runtime,
                                              out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -484,8 +523,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       }
       out.push_back(WasmOpLocalSet);
       appendU32Leb(localLayout.fileValueLocal, out);
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -501,6 +539,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Store8);
       appendI8MemArg(0, out);
       emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.byteScratchAddr, 1, runtime, out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -511,8 +550,7 @@ bool emitIoInstruction(const IrInstruction &inst,
         error = "wasm emitter missing file write runtime support in function: " + functionName;
         return false;
       }
-      out.push_back(WasmOpLocalSet);
-      appendU32Leb(localLayout.fileHandleLocal, out);
+      emitUnpackFileHandle(localLayout, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpI32Const);
@@ -522,6 +560,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpIf);
       out.push_back(WasmValueTypeI32);
       emitWasiWriteLiteralFromFdLocal(localLayout.fileHandleLocal, runtime.newlineAddr, 1, runtime, out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);
       out.push_back(WasmOpEnd);
@@ -537,8 +576,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       if (inst.op == IrOpcode::FileWriteI32) {
         out.push_back(WasmOpLocalSet);
         appendU32Leb(localLayout.fileValueLocal, out);
-        out.push_back(WasmOpLocalSet);
-        appendU32Leb(localLayout.fileHandleLocal, out);
+        emitUnpackFileHandle(localLayout, out);
         out.push_back(WasmOpLocalGet);
         appendU32Leb(localLayout.fileValueLocal, out);
         out.push_back(WasmOpI64ExtendI32S);
@@ -547,8 +585,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       } else {
         out.push_back(WasmOpLocalSet);
         appendU32Leb(localLayout.fileDigitsValueLocal, out);
-        out.push_back(WasmOpLocalSet);
-        appendU32Leb(localLayout.fileHandleLocal, out);
+        emitUnpackFileHandle(localLayout, out);
       }
 
       out.push_back(WasmOpLocalGet);
@@ -569,6 +606,7 @@ bool emitIoInstruction(const IrInstruction &inst,
                                        inst.op != IrOpcode::FileWriteU64,
                                        runtime,
                                        out);
+      emitMapWasiErrno(localLayout.fileMapLocal, runtime, out);
 
       out.push_back(WasmOpElse);
       emitMaskedFileHandleError(localLayout.fileHandleLocal, out);

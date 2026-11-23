@@ -121,6 +121,10 @@ struct WasmLocalLayout {
   uint32_t fileHandleLocal = 0;
   uint32_t fileValueLocal = 0;
   uint32_t fileErrLocal = 0;
+  // The i32 scratch of the errno mapping, and the i64 a file handle is unpacked from (low half the descriptor, high
+  // half the errno of a failed open, as the VM packs it).
+  uint32_t fileMapLocal = 0;
+  uint32_t fileHandle64Local = 0;
   bool hasFileNumericHelpers = false;
   uint32_t fileDigitsPtrLocal = 0;
   uint32_t fileDigitsLenLocal = 0;
@@ -236,6 +240,8 @@ struct WasmRuntimeContext {
   uint32_t argvBufSizeAddr = 0;
   uint32_t nwrittenAddr = 0;
   uint32_t openedFdAddr = 0;
+  // The table that maps a WASI errno to the POSIX number the VM reports (wasiErrnoTable).
+  uint32_t errnoTableAddr = 0;
   uint32_t iovAddr = 0;
   uint32_t argvPtrsBase = 0;
   uint32_t argvBufferBase = 0;
@@ -364,6 +370,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
                              std::vector<WasmFunctionType> &types,
                              WasmRuntimeContext &runtime,
                              std::string &error);
+
+// The table of POSIX errno numbers indexed by WASI errno (an unmapped errno maps to itself), and the code that maps the
+// i32 errno on the stack through it so a program reads the same status on Wasm as on the VM.
+const std::vector<uint8_t> &wasiErrnoTable();
+void emitMapWasiErrno(uint32_t scratchLocal,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out);
 
 void emitWasiWritePtrLen(uint32_t fd,
                          uint32_t ptrLocal,

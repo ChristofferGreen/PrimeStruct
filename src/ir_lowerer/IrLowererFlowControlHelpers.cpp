@@ -25,6 +25,18 @@ void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t loca
   instructions[jumpSkip].imm = static_cast<int32_t>(skipIndex);
 }
 
+void emitSetI32Local(std::vector<IrInstruction> &instructions, int32_t localIndex, int32_t value) {
+  instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(value)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+}
+
+int32_t emitClosedFileHandleLocal(std::vector<IrInstruction> &instructions, int32_t &nextLocal) {
+  const int32_t localIndex = nextLocal++;
+  instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(static_cast<int64_t>(-1))});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(localIndex)});
+  return localIndex;
+}
+
 void emitFileScopeCleanup(std::vector<IrInstruction> &instructions, const std::vector<int32_t> &scope) {
   for (auto it = scope.rbegin(); it != scope.rend(); ++it) {
     emitFileCloseIfValid(instructions, *it);

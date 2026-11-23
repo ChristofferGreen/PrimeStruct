@@ -48,6 +48,10 @@ class ResultReturnScope {
 };
 
 void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t localIndex);
+// Stores an i32 constant into a local (for example a drop flag).
+void emitSetI32Local(std::vector<IrInstruction> &instructions, int32_t localIndex, int32_t value);
+// Allocates a file handle local that starts at -1, so the scope cleanup of an early exit closes nothing for it.
+int32_t emitClosedFileHandleLocal(std::vector<IrInstruction> &instructions, int32_t &nextLocal);
 void emitFileScopeCleanup(std::vector<IrInstruction> &instructions, const std::vector<int32_t> &scope);
 void emitAllFileScopeCleanup(std::vector<IrInstruction> &instructions,
                              const std::vector<std::vector<int32_t>> &fileScopeStack);

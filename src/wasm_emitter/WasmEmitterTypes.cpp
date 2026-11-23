@@ -184,31 +184,32 @@ bool opSignature(IrOpcode op, OpSignature &sig) {
   case IrOpcode::PrintArgvUnsafe:
     sig = {{I32}, WasmTypeUnknown};
     return true;
+  // A file handle is the VM's i64: the descriptor, or `errno << 32` for a failed open.
   case IrOpcode::FileOpenRead:
   case IrOpcode::FileOpenWrite:
   case IrOpcode::FileOpenAppend:
-    sig = {{}, I32};
+    sig = {{}, I64};
     return true;
   case IrOpcode::FileOpenReadDynamic:
   case IrOpcode::FileOpenWriteDynamic:
   case IrOpcode::FileOpenAppendDynamic:
-    sig = {{I64}, I32};
+    sig = {{I64}, I64};
     return true;
   case IrOpcode::FileClose:
   case IrOpcode::FileReadByte:
   case IrOpcode::FileFlush:
   case IrOpcode::FileWriteString:
   case IrOpcode::FileWriteNewline:
-    sig = {{I32}, I32};
+    sig = {{I64}, I32};
     return true;
   case IrOpcode::FileWriteStringDynamic:
   case IrOpcode::FileWriteI64:
   case IrOpcode::FileWriteU64:
-    sig = {{I32, I64}, I32};
+    sig = {{I64, I64}, I32};
     return true;
   case IrOpcode::FileWriteByte:
   case IrOpcode::FileWriteI32:
-    sig = {{I32, I32}, I32};
+    sig = {{I64, I32}, I32};
     return true;
   case IrOpcode::ReturnI32:
     sig = {{I32}, WasmTypeUnknown};

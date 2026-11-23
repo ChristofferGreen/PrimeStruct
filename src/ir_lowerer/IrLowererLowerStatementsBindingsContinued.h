@@ -97,9 +97,7 @@
             return;
           }
           ownedInfo.dropFlagLocal = allocTempLocal();
-          function.instructions.push_back({IrOpcode::PushI32, 1});
-          function.instructions.push_back(
-              {IrOpcode::StoreLocal, static_cast<uint64_t>(ownedInfo.dropFlagLocal)});
+          ir_lowerer::emitSetI32Local(function.instructions, ownedInfo.dropFlagLocal, 1);
           setupStage.dropEntries.push_back(
               {ownedInfo.index, ownedInfo.dropFlagLocal, ownedInfo.structTypeName});
           fileScopeStack.back().push_back(-static_cast<int32_t>(setupStage.dropEntries.size()));
@@ -486,6 +484,10 @@
         localsIn.emplace(stmt.name, info);
         return true;
       }
+      const bool fileHandleStartsClosed = info.isFileHandle && !fileScopeStack.empty();
+      if (fileHandleStartsClosed) {
+        info.index = ir_lowerer::emitClosedFileHandleLocal(function.instructions, nextLocal);
+      }
       {
         // A `Reference` binding of a call that returns a `Reference<T>` is the address the call yields.
         std::optional<ir_lowerer::ReferenceCallAddressScope> addressScope;
@@ -502,7 +504,7 @@
           return false;
         }
       }
-      info.index = nextLocal++;
+      info.index = fileHandleStartsClosed ? info.index : nextLocal++;
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
       // The element struct of a `vector<T>` binding, when `T` is a struct.
       std::string vectorElementStructPath;
@@ -595,9 +597,7 @@
           elementStructPath = vectorElementStructPath;
         }
         info.dropFlagLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::PushI32, 1});
-        function.instructions.push_back(
-            {IrOpcode::StoreLocal, static_cast<uint64_t>(info.dropFlagLocal)});
+        ir_lowerer::emitSetI32Local(function.instructions, info.dropFlagLocal, 1);
         LowerSetupStageState::DropEntry entry{info.index, info.dropFlagLocal, elementStructPath};
         entry.builtinVectorElementSlots = std::max<int32_t>(1, info.vectorStructElementSlotCount);
         if (vectorElementTypeFound) {

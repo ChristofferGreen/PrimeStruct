@@ -578,6 +578,7 @@ main() {
 TEST_CASE("file open errors report errno, writeLine ends lines and a missing png is invalid") {
   program_matrix::ProgramCase program;
   program.name = "file_io_errno_newline_png";
+  // Not on Wasm: node 24 crashes (segmentation fault, exit 139) on a failed `path_open` of an absolute path.
   program.source = R"(
 import /std/file/*
 import /std/image/*
@@ -880,6 +881,57 @@ main() {
 )";
   program.exitCode = 0;
   program.stdoutText = "97\n98\n99\n100\n10\n101\n10\n0\n";
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("failed file opens report the VM's errno numbers") {
+  program_matrix::ProgramCase program;
+  program.name = "file_open_failure_statuses";
+  program.extraConfigs = {"wasm-wasi"};
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+open_missing() {
+  [File<Read>] file{File<Read>("program_matrix_no_such_dir/missing.txt")?}
+  return(0i32)
+}
+
+[return<int> effects(io_out, file_write) on_error<FileError, /on_file_err>]
+open_directory_for_writing() {
+  [File<Write>] file{File<Write>(".")?}
+  return(0i32)
+}
+
+[return<Result<FileError>> effects(io_out, file_write) on_error<FileError, /on_file_err>]
+write_probe() {
+  [File<Write>] file{File<Write>("program_matrix_open_failure_probe.txt")?}
+  file.write("x")?
+  return(Result.ok())
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+open_through_file() {
+  [File<Read>] file{File<Read>("program_matrix_open_failure_probe.txt/inner.txt")?}
+  return(0i32)
+}
+
+[return<int> effects(io_out, file_read, file_write)]
+main() {
+  print_line(open_missing())
+  print_line(open_directory_for_writing())
+  write_probe()
+  print_line(open_through_file())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2\n21\n21\n20\n20\n";
   program_matrix::runProgramMatrix(program);
 }
 

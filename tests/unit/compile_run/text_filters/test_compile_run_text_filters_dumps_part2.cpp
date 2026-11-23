@@ -1301,4 +1301,38 @@ main() {
   CHECK(ir.find("ReturnI64") == std::string::npos);
 }
 
+// A file handle local starts at -1: a failing `?` in its initializer skips the store, and the scope cleanup closes
+// every handle that is not -1 (a zero-initialized local made it close descriptor 0).
+TEST_CASE("a file handle local starts at minus one so a failed open closes nothing") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>]
+open_missing() {
+  [File<Read>] file{File<Read>("primec_no_such_dir/missing.txt")?}
+  return(0i32)
+}
+
+[return<int> effects(io_out, file_read)]
+main() {
+  return(open_missing())
+}
+)";
+  const std::string srcPath = writeTemp("primec_dump_file_handle_starts_closed.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_file_handle_starts_closed.txt").string();
+  const std::string cmd = "./primec " + quoteShellArg(srcPath) +
+                          " --dump-stage ir-lowered --entry /main > " + quoteShellArg(outPath);
+  CHECK(runCommand(cmd) == 0);
+  const std::string ir = readFile(outPath);
+  const size_t open = ir.find("FileOpenRead");
+  REQUIRE(open != std::string::npos);
+  CHECK(ir.rfind("PushI64 -1", open) != std::string::npos);
+}
+
 TEST_SUITE_END();

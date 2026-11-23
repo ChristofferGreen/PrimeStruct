@@ -262,6 +262,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
         StackOverflowMessage, runtime.stackOverflowMessageAddr, runtime.stackOverflowMessageLength);
   }
 
+  if (runtime.hasFileOps) {
+    const std::vector<uint8_t> &errnoTable = wasiErrnoTable();
+    runtime.errnoTableAddr = stringBase + static_cast<uint32_t>(stringBlob.size());
+    appendDataSegmentAt(runtime.errnoTableAddr, errnoTable, runtime.dataSegments);
+    stringBlob.insert(stringBlob.end(), errnoTable.begin(), errnoTable.end());
+  }
+
   if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault ||
       runtime.hasMemoryFault || runtime.hasStringByteFault) {
     WasmFunctionType fdWriteType;

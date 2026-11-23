@@ -741,3 +741,13 @@
     - full release gate green
   - stop_rule: which text a snippet is cut from; spans and columns are TODO-6080.
   - completed: 2026-11-20. `sourceUnitTexts` (src/pipeline/DiagnosticSnippets.cpp) cuts each unit's own text out of the expanded text through the segments; `CliFailure::unitTexts` carries it and `formatDiagnosticsTextWithSources` picks the text by the file a span names. A program without imports is unchanged (the expanded text is used as before); with imports the primary file's snippets are also cut from the primary unit's own text.
+
+  - phase: Backend parity (found with TODO-6182)
+  - parallel_track: wasm-bytes-host
+  - scope: the file handle local of `[File<Read>] file{File<Read>(path)?}` is stored only after the open succeeded; a failing `?` jumps to the scope end, where `emitFileCloseIfValid` closes every handle that is `>= 0`, and the never-stored local reads 0 (locals start at 0), so the cleanup called `FileClose` on descriptor 0: `fd_close(0)` on Wasm (seen in the trace) and `close(0)` on the VM and the native runtimes, which closes the process's stdin and lets the next open take descriptor 0.
+  - acceptance:
+    - the lowered IR starts the handle local at -1 (a test of the dump); a failed open closes nothing on Wasm (trace shows no `fd_close`)
+    - full release gate green
+  - stop_rule: the handle local initialization of a file binding.
+  - repro: `primec --dump-stage ir-lowered` of a function with `[File<Read>] file{File<Read>("nodir/missing.txt")?}` shows `LoadLocal <handle>; PushI64 0; CmpGeI64; ... FileClose` with the handle never stored on the failing path; under the Wasm runner `fd_close(0)` is called after the failed open.
+  - result: the binding lowering allocates the handle local before the initializer and stores -1 into it (`emitClosedFileHandleLocal`, src/ir_lowerer/IrLowererFlowControlHelpers.cpp); the success path overwrites it. `emitSetI32Local` replaces two copies of the drop-flag store in the binding fragment to keep it at the file size cap. Test: `a file handle local starts at minus one so a failed open closes nothing`.

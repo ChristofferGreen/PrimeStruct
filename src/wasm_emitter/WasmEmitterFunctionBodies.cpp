@@ -72,7 +72,8 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
     layout.fileHandleLocal = static_cast<uint32_t>(totalCount);
     layout.fileValueLocal = static_cast<uint32_t>(totalCount + 1);
     layout.fileErrLocal = static_cast<uint32_t>(totalCount + 2);
-    totalCount += 3;
+    layout.fileMapLocal = static_cast<uint32_t>(totalCount + 3);
+    totalCount += 4;
   }
   if (layout.hasFileNumericHelpers) {
     layout.fileDigitsPtrLocal = static_cast<uint32_t>(totalCount);
@@ -109,6 +110,11 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
   layout.localTypes.assign(static_cast<size_t>(totalCount), WasmTypeI32);
   for (size_t i = 0; i < baseCount; ++i) {
     layout.localTypes[i] = i < irLocalTypes.size() ? irLocalTypes[i] : WasmTypeUnknown;
+  }
+  if (layout.hasFileHelpers) {
+    layout.fileHandle64Local = static_cast<uint32_t>(totalCount);
+    totalCount += 1;
+    layout.localTypes.push_back(WasmTypeI64);
   }
   if (layout.hasFileNumericHelpers) {
     layout.fileDigitsValueLocal = static_cast<uint32_t>(totalCount);
