@@ -118,6 +118,7 @@ of sync with them.
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
+| TODO-6221 | A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace | deferred | stdlib-manifest-drift |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
@@ -199,6 +200,20 @@ Build system (docs/BuildSystemPlan.md), after the startup lane: TODO-5906 (direc
 Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves are `ready` outside `Ready Now` because they are worked by their own pair of agents under rule 18. Start with TODO-5959 (delete the AST C++ and GLSL emitters) and TODO-5960 (one implementation of the execution and definition intra-body diagnostics), which touch different files. Then, as each lands: TODO-5961 (one type-text parser, after TODO-5959), TODO-5962 (one builtin-name classifier, after TODO-5961), TODO-5964 (semantics key-value predicates, after TODO-5960), TODO-5966 (binding validation as rules, not phases) then TODO-5967 and TODO-5968 (the same for template rewrites and call validation). Independent and ready at any time: TODO-5963 (lowerer collection spellings), TODO-5965 (reflection AST builders), TODO-5969 (table-driven float math lowering), TODO-5970 and TODO-5971 (semantic-product fact plumbing), TODO-5972 (lowerer helpers copied per unit), TODO-5973 (SoA rewrite walker), TODO-5974 (shared string, hash, JSON and C-literal helpers), TODO-5975 (opcode categories in the opcode table). Each block's `notes` names the leaves it must not run alongside. Deferred: TODO-5976 (parsed types in the semantic product) and TODO-5977 (one diagnostics builder).
 
 ### Task Blocks
+
+- [ ] TODO-6221: A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-23
+  - phase: Modules and libraries (found with TODO-6199)
+  - parallel_track: stdlib-manifest-drift
+  - scope: `computeLazyStdlibModuleClosureSource` (src/pipeline/CompilePipelineStdlib.cpp) includes every manifest entry whose leaf name appears as a word in the text it scans, so an entry for a `namespace` block (`/std/image`, leaf `image`) is included as soon as the program says `import /std/image/*`, and its slice is the whole block: every member and the imports written inside the file are compiled, which defeats the slicing and made `--allow-import` reject the stdlib file's own imports. `generate_stdlib_manifest` used to write those entries (the parser turns a namespace block into a `[namespace]` definition); it was fixed under TODO-6199 and a ctest entry keeps the tracked files equal to its output, but the reader still trusts whatever a manifest holds, so a hand-written or older manifest with a namespace entry repeats it silently.
+  - acceptance:
+    - the reader ignores (or the manifest verifier rejects with the file and entry named) an entry whose definition is a namespace, with a test that reads a manifest holding one and a program that imports the module
+    - full release gate green
+  - stop_rule: namespace entries in `.psmeta` files; no change to the manifest format.
+  - repro: put the three entries `/std`, `/std/image` and `/std/image/ppm` (start_line and end_line of the namespace blocks, `content_hash` from `generate_stdlib_manifest` before the TODO-6199 fix) back into stdlib/std/image/image.psmeta and run `primec --emit=vm --allow-import /std/image` on a program that only has `import /std/image/*`: `import /std/math/* is outside the allowed imports: /std/image` (positions inside the stdlib file).
+  - notes: deferred: only a stale or hand-written manifest triggers it.
 
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai
