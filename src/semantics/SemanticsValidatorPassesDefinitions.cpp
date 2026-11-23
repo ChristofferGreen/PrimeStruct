@@ -769,6 +769,7 @@ bool SemanticsValidator::validateDefinitions() {
                               validationPlan_);
     result.ok = worker.runDefinitionValidationWorkerChunk(stableOrderOffset, stableOrderCount);
     result.counters = worker.validationCounters();
+    result.vectorElementPlaceSites = worker.vectorElementPlaceSites();
     if (result.ok) {
       worker.collectDefinitionPublicationFactsForStableRange(
           stableOrderOffset, stableOrderCount, result.publicationFacts);
@@ -815,6 +816,9 @@ bool SemanticsValidator::validateDefinitions() {
                const SemanticDefinitionWorkerResultBundle &right) {
               return left.partitionKey < right.partitionKey;
             });
+  for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
+    vectorElementPlaceSites_.merge(result.vectorElementPlaceSites);
+  }
   if (benchmarkSemanticPhaseCountersEnabled_) {
     for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
       validationCounters_.callsVisited += result.counters.callsVisited;

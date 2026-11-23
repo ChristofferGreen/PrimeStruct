@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SemanticPublicationSurface.h"
+#include "SemanticsVectorElementPlaces.h"
 #include "primec/semantics/Semantics.h"
 #include "primec/frontend/SymbolInterner.h"
 
@@ -22,6 +23,7 @@ struct SemanticDefinitionWorkerResultBundle {
   SemanticDefinitionWorkerCounters counters;
   SemanticPublicationSurface publicationFacts;
   WorkerSymbolInternerSnapshot publicationStringSnapshot;
+  VectorElementPlaceSites vectorElementPlaceSites;
 };
 
 } // namespace primec::semantics

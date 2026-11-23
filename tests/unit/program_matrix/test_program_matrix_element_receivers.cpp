@@ -499,4 +499,214 @@ Holder() {
                     "import /std/collections/*\n");
 }
 
+TEST_CASE("a write to an element of a stdlib Vector changes the element") {
+  // The element of a stdlib `Vector` is a place, as for the builtin `vector`: a field assignment, a `[mut]` method,
+  // a `mut` parameter and a `push` into a vector field all change the element, not a copy of it, for a local, a
+  // `mut` parameter, a field and `this`.
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_element_write";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Inner() {
+  [i32 mut] k{0i32}
+  [mut] bump() { this.k = this.k + 1i32 }
+}
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+  [Inner mut] inner{Inner{}}
+  [Vector<i32> mut] tags{Vector<i32>{}}
+  [mut] bump() { this.n = this.n + 1i32 }
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+  [mut] touch() {
+    this.items[0i32].n = 30i32
+    this.items[0i32].bump()
+  }
+}
+
+[return<void>]
+poke([Item mut] item) {
+  item.n = item.n + 100i32
+}
+
+[return<void>]
+through_parameter([Vector<Item> mut] values) {
+  values[1i32].n = 20i32
+  values.at(1i32).bump()
+  at(values, 1i32).inner.k = 4i32
+  values[1i32].inner.bump()
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  if(true) {
+    [Vector<Item> mut] local{/std/collections/vector/vector<Item>()}
+    local.push(Item{})
+    local.push(Item{})
+    local[0i32].n = 7i32
+    local[0i32].bump()
+    [i32] first{local[0i32].n}
+    print_line(first)
+    local[0i32].n = local[0i32].n + local[1i32].n + 2i32
+    poke(local[0i32])
+    local[0i32].tags.push(5i32)
+    local[0i32].tags.push(6i32)
+    [i32] tagCount{local[0i32].tags.count()}
+    print_line(local[0i32].n)
+    print_line(tagCount)
+    print_line(local[0i32].tags[1i32])
+    through_parameter(local)
+    print_line(local[1i32].n)
+    print_line(local[1i32].inner.k)
+    [Bag mut] bag{Bag{}}
+    bag.items.push(Item{})
+    bag.items[0i32].n = 10i32
+    bag.items[0i32].bump()
+    print_line(bag.items[0i32].n)
+    bag.touch()
+    print_line(bag.items[0i32].n)
+    [Vector<Bag> mut] bags{Vector<Bag>{}}
+    bags.push(Bag{})
+    bags[0i32].items.push(Item{})
+    bags[0i32].items[0i32].n = 40i32
+    bags[0i32].items[0i32].bump()
+    bags[0i32].touch()
+    bags[0i32].items[0i32].inner.bump()
+    print_line(bags[0i32].items[0i32].n)
+    print_line(bags[0i32].items[0i32].inner.k)
+  }
+  print_line(heapLiveBlocks() - blocks)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "8\n110\n2\n6\n21\n5\n11\n31\n31\n1\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("an out of range element write of a stdlib Vector is the bounds fault") {
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_element_write_bounds";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Vector<Item> mut] local{Vector<Item>{}}
+  local.push(Item{})
+  local[0i32].n = 1i32
+  print_line(local[0i32].n)
+  local[1i32].n = 2i32
+  print_line(local[0i32].n)
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "1\n";
+  program.vmStderr = "array index out of bounds\n";
+  program.nativeStderr = "array index out of bounds\n";
+  program.cppStderr = "array index out of bounds\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (program_matrix::nativeSupported()) {
+    program.onlyConfigs.push_back("native-O0");
+    program.onlyConfigs.push_back("native-O2");
+  }
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("element writes of a stdlib Vector of structs holding Strings leave nothing live") {
+  // A String field assigned through the element replaces the element's String (the old one is freed once), a
+  // `[mut]` method and a `mut` parameter change the element's own String and vector, and an element of a vector
+  // field of an element is a place too.
+  runElementProgram("stdlib_vector_element_write_strings",
+                    R"(
+[struct]
+Row() {
+  [i32 mut] n{0i32}
+  [String mut] name{String{}}
+  [Vector<String> mut] tags{Vector<String>{}}
+
+  [mut effects(heap_alloc)]
+  rename([i32] id) {
+    this.name = label(id)
+    this.n = this.n + 1i32
+  }
+}
+
+[struct]
+Table() {
+  [Vector<Row> mut] rows{Vector<Row>{}}
+
+  [mut effects(heap_alloc)]
+  touch([i32] index) {
+    this.rows[index].n = this.rows[index].n + 10i32
+    this.rows[index].rename(7i32)
+    this.rows[index].tags.push(label(8i32))
+  }
+}
+
+[effects(heap_alloc), return<void>]
+retag([Row mut] row, [i32] id) {
+  row.tags.push(label(id))
+  row.n = row.n + 100i32
+}
+
+[effects(heap_alloc), return<void>]
+through_parameter([Vector<Row> mut] rows) {
+  rows[1i32].name = label(5i32)
+  rows.at(1i32).rename(6i32)
+  retag(at(rows, 1i32), 4i32)
+}
+)",
+                    R"(
+    [Vector<Row> mut] rows{Vector<Row>{}}
+    rows.push(Row{[n] 1i32, [name] label(1i32)})
+    rows.push(Row{[n] 2i32, [name] label(2i32)})
+    rows[0i32].n = 5i32
+    rows[0i32].name = label(3i32)
+    rows[0i32].rename(9i32)
+    rows[0i32].tags.push(label(1i32))
+    rows[0i32].tags.push(label(2i32))
+    rows[0i32].tags[1i32].pushByte(convert<u8>(65i32))
+    retag(rows[0i32], 3i32)
+    through_parameter(rows)
+    print_line(rows[0i32].n)
+    print_line(convert<i32>(rows[0i32].name.byteAt(0i32)))
+    [i32] tagCount{rows[0i32].tags.count()}
+    print_line(tagCount)
+    print_line(rows[0i32].tags[1i32].view().count())
+    print_line(rows[1i32].n)
+    print_line(convert<i32>(rows[1i32].name.byteAt(0i32)))
+    [Table mut] table{Table{}}
+    table.rows.push(Row{[n] 3i32, [name] label(3i32)})
+    table.rows[0i32].n = 4i32
+    table.touch(0i32)
+    print_line(table.rows[0i32].n)
+    print_line(convert<i32>(table.rows[0i32].name.byteAt(0i32)))
+    [i32] tableTags{table.rows[0i32].tags.count()}
+    print_line(tableTags)
+)",
+                    "106\n57\n3\n2\n103\n54\n15\n55\n1\n",
+                    "import /std/collections/*\n");
+}
+
 TEST_SUITE_END();

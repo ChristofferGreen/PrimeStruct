@@ -557,6 +557,40 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
+  // What a `[mut]` method or a `mut` parameter changes is its argument, so an element of a stdlib `Vector` on
+  // the way to it is a place (SemanticsVectorElementPlaces.h). A `mut` parameter does not hold a field or an
+  // element to the read-only roots rule, so an argument rooted at a read-only binding stays the copy it was.
+  for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {
+    const ParameterInfo &param = calleeParams[paramIndex];
+    const Expr *arg = paramIndex < orderedArgs.size() ? orderedArgs[paramIndex] : nullptr;
+    const bool isMutableReceiver =
+        paramIndex == 0 && param.name == "this" && param.binding.isMutable;
+    if (paramIndex == packedParamIndex || arg == nullptr || arg == param.defaultExpr ||
+        arg->kind != Expr::Kind::Call || (!isMutableReceiver && !isMutableBorrowParam(param))) {
+      continue;
+    }
+    if (!isMutableReceiver) {
+      ReadOnlyRootLookup lookup;
+      lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
+        isParameter = findParamBinding(params, name) != nullptr;
+        return bindingForName(name);
+      };
+      lookup.fieldOf =
+          [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
+            return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
+          };
+      lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
+        return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
+      };
+      lookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
+      if (findReadOnlyRoot(*arg, lookup, true)) {
+        continue;
+      }
+    }
+    noteVectorElementPlaces(
+        currentValidationState_.context.definitionPath, *arg, true, vectorElementPlaceSites_);
+  }
+
   // Changing a container (a `mut` or `move` argument rooted at it) while a read-only view of it is
   // still used later could leave the view on freed storage.
   for (size_t paramIndex = 0; paramIndex < calleeParams.size(); ++paramIndex) {

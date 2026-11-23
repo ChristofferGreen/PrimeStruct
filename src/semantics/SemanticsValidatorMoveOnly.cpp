@@ -91,7 +91,7 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isBinding || expr.args.empty() ||
-      expr.args.size() > 2 || currentValidationState_.context.definitionIsUnsafe) {
+      expr.args.size() > 2) {
     return true;
   }
   for (const auto &argName : expr.argNames) {
@@ -105,6 +105,15 @@ bool SemanticsValidator::checkBuiltinVectorMutation(
   const bool storesArgument = leaf == "push" && expr.args.size() == 2;
   if (!storesArgument && leaf != "pop" && leaf != "clear" && leaf != "reserve" &&
       leaf != "remove_at" && leaf != "remove_swap") {
+    return true;
+  }
+  // The vector that changes may be a field of an element of a stdlib `Vector` (`rows[i].tags.push(x)`): that
+  // element is a place (SemanticsVectorElementPlaces.h).
+  noteVectorElementPlaces(currentValidationState_.context.definitionPath,
+                          expr.args.front(),
+                          true,
+                          vectorElementPlaceSites_);
+  if (currentValidationState_.context.definitionIsUnsafe) {
     return true;
   }
   std::string receiverTypeText;

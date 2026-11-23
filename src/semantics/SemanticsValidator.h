@@ -22,6 +22,7 @@
 #include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsSendable.h"
+#include "SemanticsVectorElementPlaces.h"
 #include "primec/semantics/SemanticValidationPlan.h"
 #include "primec/semantics/SemanticValidationResult.h"
 #include "primec/frontend/SymbolInterner.h"
@@ -89,6 +90,10 @@ public:
   SemanticPublicationSurface takeSemanticPublicationSurfaceForSemanticProduct(
       const SemanticProductBuildConfig *buildConfig = nullptr);
   void invalidatePilotRoutingSemanticCollectors();
+  // The stdlib `Vector` element reads that validation found a write going through.
+  const VectorElementPlaceSites &vectorElementPlaceSites() const {
+    return vectorElementPlaceSites_;
+  }
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
   std::vector<SumTypeMetadataSnapshotEntry> sumTypeMetadataSnapshotForSemanticProduct() const;
@@ -570,6 +575,7 @@ private:
   std::unordered_map<std::string, std::string> uniqueSpecializationPathByBase_;
   std::unordered_set<std::string> ambiguousSpecializationBasePaths_;
   ValidationState currentValidationState_;
+  VectorElementPlaceSites vectorElementPlaceSites_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;
   // inside a CallSnapshotMemoScope (AST stable) the result of

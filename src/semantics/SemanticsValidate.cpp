@@ -448,6 +448,15 @@ bool runSemanticValidationManifestPass(
         return false;
       }
       return rewriteOmittedStructInitializers(state.program, state.error);
+    case PassId::VectorElementPlaces:
+      if (!state.validatorPassCompleted || state.validator == nullptr) {
+        state.error =
+            "semantic validation manifest reached vector element places without validator state";
+        return false;
+      }
+      semantics::rewriteVectorElementPlaces(state.program,
+                                            state.validator->vectorElementPlaceSites());
+      return true;
     case PassId::SemanticNodeIdAssignment:
       if (!state.validatorPassCompleted || state.validator == nullptr) {
         state.error =

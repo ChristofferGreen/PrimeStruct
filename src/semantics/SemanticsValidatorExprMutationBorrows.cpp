@@ -756,6 +756,12 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
             isLifecycleHelperPath(currentValidationState_.context.definitionPath))) {
         return failMutationBorrowDiagnostic(readOnlyFieldWriteDiagnostic(fieldTarget, *root));
       }
+      // The write goes through every element on the way; an element of a stdlib `Vector` is read by a call
+      // that returns a copy, so those reads are noted and become places after validation.
+      noteVectorElementPlaces(currentValidationState_.context.definitionPath,
+                              fieldTarget,
+                              false,
+                              vectorElementPlaceSites_);
       std::string fieldTargetRootName;
       const bool allowMutableReceiverFieldWrite =
           resolveFieldTargetRootName(fieldTarget, fieldTargetRootName) &&

@@ -85,6 +85,7 @@ enum class SemanticValidationPassId {
   ConvertConstructors,
   ValidatorPasses,
   OmittedStructInitializers,
+  VectorElementPlaces,
   SemanticNodeIdAssignment,
   SemanticProductPublication,
 };

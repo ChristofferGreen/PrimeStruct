@@ -345,6 +345,14 @@ namespace std {
     vectorRemoveSwap<T>(values, index)
   }
 
+  // The element `index` as a place, bounds checked. A write to an element (`values[i].n = x`, `values[i].bump()`,
+  // an element passed to a `mut` parameter) goes through it, so it changes the element and not a copy.
+  [public unsafe_api return<Reference<T>>]
+  vectorElementRef<T>([Vector<T>] values, [i32] index) {
+    vectorCheckIndex<T>(values, index)
+    return(vectorBorrowSlot<T>(values, index))
+  }
+
   [public unsafe return<T>]
   vectorAt<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
@@ -448,9 +456,10 @@ namespace std {
   /std/collections/vector/vectorRemoveSwap<T>(values, index)
 }
 
-[public return<T>]
+// Reads through the element place, so every `at<T>` brings the `vectorElementRef<T>` an element write needs.
+[public unsafe return<T>]
 /std/collections/vector/at<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
-  return(/std/collections/vector/vectorAt<T>(values, index))
+  return(*(/std/collections/vector/vectorElementRef<T>(values, index)))
 }
 
 [public return<T>]

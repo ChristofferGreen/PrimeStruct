@@ -83,6 +83,15 @@
   with the place spelled `bag.items[...]`, and so are `items.at(i)`, an element of an element and `this.items[i]` in
   a method that is not `[mut]`. An element that is a `Reference` or a `Pointer` (`[args<Reference<T>>] values`)
   carries its own write access. The result of any other call is a temporary and is not checked.
+- **Elements of a stdlib `Vector` are places:** as for the builtin `vector`, a write through an element changes
+  the element, not a copy: `values[i].n = x`, `values[i].inner.n = x`, `values[i].bump()` of a `[mut]` method, an
+  element passed to a `mut` parameter (`poke(values[i])`) and a change of a vector field of the element
+  (`values[i].tags.push(x)`), spelled `values[i]`, `values.at(i)` or `at(values, i)`, for a local, a `mut`
+  parameter, a field and `this` of a `[mut]` method, and for an element of an element. The index is bounds
+  checked as a read is. `/std/collections/vector/at` returns a copy, so semantics reads each element a write goes
+  through by reference instead (`/std/collections/vector/vectorElementRef`); the read-only roots rule above is
+  checked first, so a write through a read-only root stays its diagnostic. An element that is only read is still
+  a copy that the read destroys (`tests/unit/program_matrix/test_program_matrix_element_receivers.cpp`).
 - **A `Reference` result as an argument:** a call that returns `Reference<T>` (`[return<Reference<T>>]`) yields its
   referent, so passing it to a `[Reference<T>]` or `[T mut]` scalar parameter gives the callee the referent itself, not a
   copy: `bump(borrow_of(slot))` and a closure body called as `body(borrow_of(slot))` write through to `slot`. A call
