@@ -327,7 +327,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.struct_methods"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 19
+  TOTAL_CASES 21
   SHARD_PREFIX "struct_methods"
 )
 

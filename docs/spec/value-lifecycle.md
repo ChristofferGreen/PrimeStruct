@@ -77,7 +77,7 @@
   `set` and `fill` are `[mut]` methods, so the binding is declared `[Slice<T, Write> mut]`. The `call` of a `Function` or closure is not held to this rule
   (whether a `Function` may be called through a read-only place is TODO-6116). This is what makes a `[T]` parameter a
   read-only borrow that concurrent readers of an `RwLock<T>` can share. Only a name or a chain of field accesses ending
-  in a name is checked: an element of a collection (`items[i].bump()`) and the result of a call are not.
+  in a name is checked: an element of a collection (`items[i].bump()`, TODO-6189) and the result of a call are not.
 - **A `Reference` result as an argument:** a call that returns `Reference<T>` (`[return<Reference<T>>]`) yields its
   referent, so passing it to a `[Reference<T>]` or `[T mut]` scalar parameter gives the callee the referent itself, not a
   copy: `bump(borrow_of(slot))` and a closure body called as `body(borrow_of(slot))` write through to `slot`. A call

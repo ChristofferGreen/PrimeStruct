@@ -2578,6 +2578,7 @@ are left unarchived.
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6184 | A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6185 | An unqualified call to an overloaded generic helper from a method of a generic struct is `unknown call target` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
+| TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
 

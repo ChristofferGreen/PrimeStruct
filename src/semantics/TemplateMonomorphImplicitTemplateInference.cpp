@@ -929,6 +929,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
           if (semantics::splitTemplateTypeName(argTemplateArgText, innerBase, innerArgs) && !innerBase.empty()) {
             argBaseType = innerBase;
             argTemplateArgText = innerArgs;
+          } else {
+            // The referent is spelled as a specialized struct (`Box__t1a2b`), as a `Box<i32>` binding's type is:
+            // it unifies against the parameter like a value of that struct.
+            argBaseType = argTemplateArgText;
+            argTemplateArgText.clear();
           }
         }
         std::string paramBaseType = paramInfo.typeName;

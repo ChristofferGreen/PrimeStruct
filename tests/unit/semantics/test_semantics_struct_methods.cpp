@@ -655,4 +655,71 @@ main() {
   CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
+TEST_CASE("a generic struct parameter infers its template arguments through a Reference argument") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(h.state + 1i32)
+}
+
+[return<i32>]
+mode([i32] n) {
+  return(n + 100i32)
+}
+
+[return<i32>]
+via_param([Reference<Box<i32>>] r) {
+  return(mode(r))
+}
+
+[return<int>]
+main() {
+  [Box<i32> mut] b{Box<i32>{3i32}}
+  [Reference<Box<i32>>] r{location(b)}
+  f{[ref b]([i32] k) { return(k + mode(b)) }}
+  return(mode(r) + via_param(location(b)) + f(10i32) + mode(7i32))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a Reference to a struct that is not the generic struct of a parameter infers nothing") {
+  const std::string source = R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[struct]
+Other() {
+  [i32 mut] n{0i32}
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  [Other mut] other{Other{}}
+  [Reference<Other>] r{location(other)}
+  return(mode(r))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("unable to infer implicit template arguments for /mode") !=
+                    std::string::npos,
+                error);
+}
+
 TEST_SUITE_END();

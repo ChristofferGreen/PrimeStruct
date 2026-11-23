@@ -572,3 +572,37 @@ main() {
 )",
                    7);
 }
+
+TEST_CASE("a generic struct parameter infers its template arguments through a Reference argument") {
+  runMethodProgram("struct_methods_infer_through_reference",
+                   R"(
+[struct]
+Box<S>() {
+  [public S mut] state
+}
+
+[return<i32>]
+mode<S>([Box<S>] h) {
+  return(h.state + 1i32)
+}
+
+[return<i32>]
+mode([i32] n) {
+  return(n + 100i32)
+}
+
+[return<i32>]
+via_param([Reference<Box<i32>>] r) {
+  return(mode(r))
+}
+
+[return<int>]
+main() {
+  [Box<i32> mut] b{Box<i32>{3i32}}
+  [Reference<Box<i32>>] r{location(b)}
+  f{[ref b]([i32] k) { return(k + mode(b)) }}
+  return(mode(r) + via_param(location(b)) + f(10i32) + mode(7i32))
+}
+)",
+                   129);
+}

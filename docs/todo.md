@@ -113,7 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
-| TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | ready | template-infer-reference |
+| TODO-6189 | An element of a collection field of a read-only root is written and has a `[mut]` method called | ready | readonly-element-writes |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -330,18 +330,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [~] TODO-6186: Implicit template inference does not see through a `Reference<Box<T>>` argument
+- [ ] TODO-6189: An element of a collection field of a read-only root is written and has a `[mut]` method called
   - owner: ai
   - status: ready
-  - claimed_by: readonly-a (worktree-agent-a62a19ddaa7886f74), 2026-11-23
-  - created_at: 2026-11-22
-  - phase: Template inference (found with TODO-6185)
-  - parallel_track: template-infer-reference
-  - scope: A `Reference<Box<i32>>` argument to a template whose parameter is `[Box<S>]` leaves `S` unbound: `unable to infer implicit template arguments for /mode`, with one `mode<S>([Box<S>] h)` alone (no overloads). A `Reference<T>` argument reads as its referent in a value position (docs/spec/pointers-and-references.md), and C++ deduces a template parameter through a reference, so inference should bind `S` to `i32` as it does for a `Box<i32>` local. Repro (`primec --emit=vm`): `[struct] Box<S>() { [public S mut] state }  [return<i32>] mode<S>([Box<S>] h) { return(1i32) }  [return<int>] main() { [Box<i32> mut] b{Box<i32>{3i32}}  [Reference<Box<i32>>] r{location(b)}  return(mode(r)) }`. The same happens for a variable a lambda captures with `[ref b]`, so `f{[ref b]([i32] k) { return(mode(b)) }}` fails once `mode` is overloaded (after TODO-6185 the overload is selected and the inference then fails: `unable to infer implicit template arguments for /mode__ov1_1`). Capturing by value works.
+  - created_at: 2026-11-23
+  - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Read-only roots; found with the read-only roots rule)
+  - parallel_track: readonly-element-writes
+  - scope: The read-only roots rule (`findReadOnlyRoot`, src/semantics/SemanticsReadOnlyRoots.cpp) walks a name or a chain of field accesses, so a place whose receiver is an element read (`bag.items[0i32]`) or a call result is not checked. Repro (`primec --emit=vm -I stdlib`): `[struct] Item() { [i32 mut] n{0i32}  [mut] bump() { this.n = this.n + 1i32 } }  [struct] Bag() { [vector<Item> mut] items{vector<Item>{}} }  [effects(heap_alloc) return<void>] w1([Bag] bag) { bag.items[0i32].n = 5i32 }  [effects(heap_alloc) return<void>] w2([Bag] bag) { bag.items[0i32].bump() }` compiles; `bag.nums[0i32] = 4i32` and `bag.nums.push(1i32)` are already diagnostics. An element of a collection is part of the collection's owner, so its root is the root of the collection place; a call result is a temporary and stays writable.
   - acceptance:
-    - the repro compiles and exits 1 on the VM and the native backend; a `[ref b]` lambda calling an overloaded `mode(b)` does too, with semantics and compile-run tests
-    - full release gate green
-  - stop_rule: implicit template inference through a `Reference` argument only (src/semantics/TemplateMonomorphImplicitTemplateInference*.cpp); no change to overload ranking.
+    - the two writes above are `assign target must be a mutable binding: bag.items[...].n (bag is a read-only parameter; ...)` and `mutating method needs a mutable receiver` with the fix for the root, for a vector, an array and a stdlib `Vector` field; a `Reference<Bag>` parameter, a `[Bag mut]` binding and a call result stay accepted
+    - semantics tests with file, line and column; the full release gate green, and the sweep of the stdlib and tests that write elements through a read-only root (`mut` added where intended)
+  - stop_rule: element receivers of the field-access chain only; no change to `Reference<T>` or `mut` parameter rules.
+  - repro: the program in scope.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai
