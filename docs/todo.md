@@ -150,7 +150,7 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
-| TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
+| TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | ready | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
@@ -729,9 +729,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
-- [ ] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
+- [~] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-refusal (worktree agent-a69f0d5ca054959a4), 2026-11-24
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 2)
   - parallel_track: lib-shapes
