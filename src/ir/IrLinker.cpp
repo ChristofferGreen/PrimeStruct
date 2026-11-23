@@ -7,6 +7,7 @@
 #include <cctype>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -20,9 +21,12 @@ struct LinkMaps {
   // definition, or an import of the same name, and the library only declares it.
   std::vector<bool> copyFunction;
   std::vector<size_t> hostImports;
-  uint64_t stringShift = 0;
+  // Where each string of the library went in the merged table (`NotMerged` for one no merged function reads).
+  std::vector<uint64_t> strings;
   uint32_t debugShift = 0;
 };
+
+constexpr size_t NotMerged = std::numeric_limits<size_t>::max();
 
 bool sameField(const IrStructField &a, const IrStructField &b) {
   return a.name == b.name && a.envelope == b.envelope && a.offsetBytes == b.offsetBytes &&
@@ -60,16 +64,23 @@ bool mergeStructLayouts(IrModule &module, const IrModule &library, std::string &
   return true;
 }
 
-// Host imports merge by name and signature; the map says where each of the library's went.
+// Host imports merge by name and signature; the map says where each of the library's went. `used` (when not null)
+// says which of the library's imports a merged function calls; the others are left out.
 bool mergeHostImports(IrModule &module,
                       const IrModule &library,
+                      const std::vector<bool> *used,
                       LinkMaps &maps,
                       std::string &error) {
   std::unordered_map<std::string, size_t> byName;
   for (size_t index = 0; index < module.hostImports.size(); ++index) {
     byName.emplace(module.hostImports[index].name, index);
   }
-  for (const IrHostImport &import : library.hostImports) {
+  for (size_t at = 0; at < library.hostImports.size(); ++at) {
+    const IrHostImport &import = library.hostImports[at];
+    if (used != nullptr && !(*used)[at]) {
+      maps.hostImports.push_back(NotMerged);
+      continue;
+    }
     const auto found = byName.find(import.name);
     if (found == byName.end()) {
       byName.emplace(import.name, module.hostImports.size());
@@ -187,6 +198,12 @@ bool mergeFunctionSlots(IrModule &module,
     byName.emplace(module.functions[index].name, index);
   }
   for (const IrFunction &function : library.functions) {
+    if (options != nullptr && options->onlyFunctions != nullptr &&
+        options->onlyFunctions->count(function.name) == 0) {
+      maps.functions.push_back(NotMerged);
+      maps.copyFunction.push_back(false);
+      continue;
+    }
     const auto found = byName.find(function.name);
     if (found == byName.end()) {
       byName.emplace(function.name, module.functions.size());
@@ -258,13 +275,15 @@ bool relocateInstruction(IrInstruction &inst,
                          std::string &error) {
   switch (irOperandClass(inst.op)) {
   case IrOperandClass::Function:
-    if (inst.imm >= maps.functions.size()) {
+    if (inst.imm >= maps.functions.size() ||
+        maps.functions[static_cast<size_t>(inst.imm)] == NotMerged) {
       return failRelocation(function, "function index", error);
     }
     inst.imm = maps.functions[static_cast<size_t>(inst.imm)];
     return true;
   case IrOperandClass::HostImport:
-    if (inst.imm >= maps.hostImports.size()) {
+    if (inst.imm >= maps.hostImports.size() ||
+        maps.hostImports[static_cast<size_t>(inst.imm)] == NotMerged) {
       return failRelocation(function, "host import index", error);
     }
     inst.imm = maps.hostImports[static_cast<size_t>(inst.imm)];
@@ -273,21 +292,22 @@ bool relocateInstruction(IrInstruction &inst,
     if (inst.imm >= library.stringTable.size()) {
       return failRelocation(function, "string index", error);
     }
-    inst.imm += maps.stringShift;
+    inst.imm = maps.strings[static_cast<size_t>(inst.imm)];
     return true;
   case IrOperandClass::PrintString:
     if (decodePrintStringIndex(inst.imm) >= library.stringTable.size()) {
       return failRelocation(function, "string index", error);
     }
-    inst.imm = encodePrintStringImm(decodePrintStringIndex(inst.imm) + maps.stringShift,
-                                    decodePrintFlags(inst.imm));
+    inst.imm =
+        encodePrintStringImm(maps.strings[static_cast<size_t>(decodePrintStringIndex(inst.imm))],
+                             decodePrintFlags(inst.imm));
     return true;
   case IrOperandClass::Constant:
     if (inst.isStringLiteral) {
       if (inst.imm >= library.stringTable.size()) {
         return failRelocation(function, "string index", error);
       }
-      inst.imm += maps.stringShift;
+      inst.imm = maps.strings[static_cast<size_t>(inst.imm)];
       if (inst.op == IrOpcode::PushI32 &&
           inst.imm > static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
         error = "string index of " + function.name + " does not fit a PushI32 after the link";
@@ -331,7 +351,103 @@ bool relocateFunction(const IrModule &library,
   return true;
 }
 
+// What the functions that are copied read of the library: one flag per host import and string, and the debug ids.
+struct LibraryUse {
+  std::vector<bool> hostImports;
+  std::vector<bool> strings;
+  std::unordered_set<uint32_t> debugIds;
+};
+
+LibraryUse collectLibraryUse(const IrModule &library, const LinkMaps &maps) {
+  LibraryUse use;
+  use.hostImports.assign(library.hostImports.size(), false);
+  use.strings.assign(library.stringTable.size(), false);
+  const auto markString = [&](uint64_t index) {
+    if (index < use.strings.size()) {
+      use.strings[static_cast<size_t>(index)] = true;
+    }
+  };
+  for (size_t index = 0; index < library.functions.size(); ++index) {
+    if (!maps.copyFunction[index]) {
+      continue;
+    }
+    for (const IrInstruction &inst : library.functions[index].instructions) {
+      if (inst.debugId != 0) {
+        use.debugIds.insert(inst.debugId);
+      }
+      switch (irOperandClass(inst.op)) {
+      case IrOperandClass::HostImport:
+        if (inst.imm < use.hostImports.size()) {
+          use.hostImports[static_cast<size_t>(inst.imm)] = true;
+        }
+        break;
+      case IrOperandClass::String:
+        markString(inst.imm);
+        break;
+      case IrOperandClass::PrintString:
+        markString(decodePrintStringIndex(inst.imm));
+        break;
+      case IrOperandClass::Constant:
+        if (inst.isStringLiteral) {
+          markString(inst.imm);
+        }
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  return use;
+}
+
 } // namespace
+
+std::unordered_set<std::string>
+reachableLibraryFunctionNames(const IrModule &module,
+                              const std::vector<const IrModule *> &libraries) {
+  // A definition keeps the table of its library, since a call names its target by an index into that table.
+  struct Definition {
+    const IrModule *library;
+    const IrFunction *function;
+  };
+  std::unordered_map<std::string, std::vector<Definition>> definitions;
+  for (const IrModule *library : libraries) {
+    for (const IrFunction &function : library->functions) {
+      if (!function.isImport) {
+        definitions[function.name].push_back({library, &function});
+      }
+    }
+  }
+  std::unordered_set<std::string> reached;
+  std::vector<std::string> pending;
+  const auto reach = [&](const std::string &name) {
+    if (reached.insert(name).second) {
+      pending.push_back(name);
+    }
+  };
+  for (const IrFunction &function : module.functions) {
+    if (function.isImport) {
+      reach(function.name);
+    }
+  }
+  while (!pending.empty()) {
+    const std::string name = std::move(pending.back());
+    pending.pop_back();
+    const auto found = definitions.find(name);
+    if (found == definitions.end()) {
+      continue;
+    }
+    for (const Definition &definition : found->second) {
+      const std::vector<IrFunction> &table = definition.library->functions;
+      for (const IrInstruction &inst : definition.function->instructions) {
+        if (irOperandClass(inst.op) == IrOperandClass::Function && inst.imm < table.size()) {
+          reach(table[static_cast<size_t>(inst.imm)].name);
+        }
+      }
+    }
+  }
+  return reached;
+}
 
 bool linkIrModule(IrModule &module,
                   const IrModule &library,
@@ -347,30 +463,48 @@ bool linkIrModule(IrModule &module,
   }
   IrModule merged = module;
   LinkMaps maps;
-  maps.stringShift = merged.stringTable.size();
   maps.debugShift = maxDebugId(merged);
   if (maps.debugShift > std::numeric_limits<uint32_t>::max() - maxDebugId(library)) {
     error = "too many debug ids to link";
     return false;
   }
+  const bool onlyUsed = options != nullptr && options->onlyFunctions != nullptr;
   if (!mergeStructLayouts(merged, library, error) ||
-      !mergeHostImports(merged, library, maps, error) ||
       !mergeFunctionSlots(merged, library, options, maps, error)) {
     return false;
   }
+  // A whole link takes every host import, string and debug id of the library; a link of the reachable functions only
+  // those the functions it copies read.
+  const LibraryUse use = collectLibraryUse(library, maps);
+  if (!mergeHostImports(merged, library, onlyUsed ? &use.hostImports : nullptr, maps, error)) {
+    return false;
+  }
+  std::vector<std::string> addedStrings;
+  for (size_t at = 0; at < library.stringTable.size(); ++at) {
+    if (onlyUsed && !use.strings[at]) {
+      maps.strings.push_back(0);
+      continue;
+    }
+    maps.strings.push_back(merged.stringTable.size() + addedStrings.size());
+    addedStrings.push_back(library.stringTable[at]);
+  }
   for (size_t index = 0; index < library.functions.size(); ++index) {
-    const IrFunction &function = library.functions[index];
     if (!maps.copyFunction[index]) {
       continue;
     }
-    if (!relocateFunction(
-            library, function, maps, merged.functions[maps.functions[index]], error)) {
+    if (!relocateFunction(library,
+                          library.functions[index],
+                          maps,
+                          merged.functions[maps.functions[index]],
+                          error)) {
       return false;
     }
   }
-  merged.stringTable.insert(
-      merged.stringTable.end(), library.stringTable.begin(), library.stringTable.end());
+  merged.stringTable.insert(merged.stringTable.end(), addedStrings.begin(), addedStrings.end());
   for (IrInstructionSourceMapEntry entry : library.instructionSourceMap) {
+    if (onlyUsed && entry.debugId != 0 && use.debugIds.count(entry.debugId) == 0) {
+      continue;
+    }
     if (entry.debugId != 0) {
       entry.debugId += maps.debugShift;
     }

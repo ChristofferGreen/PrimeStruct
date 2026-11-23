@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "primec/ir/Ir.h"
@@ -14,6 +15,10 @@ struct IrLinkOptions {
   // (docs/ModulesAndLibrariesPlan.md, section 9; docs/spec/integration-and-tooling.md, Compiling against a library).
   // The two definitions are the same source, so they are not compared. Every other name defined twice is an error.
   std::vector<std::string> sharedRoots;
+  // When set, only the functions of the library whose names are in the set are merged, with the host imports, strings
+  // and debug ids they read (see reachableLibraryFunctionNames); the rest of the library is left behind. Null merges
+  // the whole library.
+  const std::unordered_set<std::string> *onlyFunctions = nullptr;
 };
 
 // The IR link of docs/ModulesAndLibrariesPlan.md, section 9: merges `library` into `module`, which keeps
@@ -36,6 +41,14 @@ bool linkIrModule(IrModule &module,
                   const IrModule &library,
                   std::string &error,
                   const IrLinkOptions *options = nullptr);
+
+// The names of the functions of `libraries` that a program holding `module` needs: every function `module` declares as
+// an import, and what each definition of such a name calls, through every library, until nothing new is named. The
+// set is by name, so it does not depend on the order of the libraries; pass it as IrLinkOptions::onlyFunctions of each
+// link.
+std::unordered_set<std::string>
+reachableLibraryFunctionNames(const IrModule &module,
+                              const std::vector<const IrModule *> &libraries);
 
 // Fails with `undefined symbol <name> (library <library>)` for the first function that is still an import.
 bool checkIrImportsResolved(const IrModule &module, std::string &error);

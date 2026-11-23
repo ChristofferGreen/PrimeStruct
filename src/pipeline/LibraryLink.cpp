@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <map>
+#include <unordered_set>
 
 namespace primec {
 
@@ -122,11 +123,19 @@ bool linkProgramLibraries(IrModule &module,
       }
     }
   }
+  // Only the functions the program reaches are merged: a library carries every function of its archive, and a program
+  // that calls one of them has no use for the rest.
+  std::vector<const IrModule *> codes;
+  for (const LoadedLibrary &library : libraries) {
+    codes.push_back(&library.content.code);
+  }
+  const std::unordered_set<std::string> reached = reachableLibraryFunctionNames(module, codes);
   for (const LoadedLibrary &library : libraries) {
     // The stdlib routines a library's code reached are the same source in the program and in every library; the
     // stdlib definitions a library owns are not read by the program, so they do not meet a copy.
     IrLinkOptions linkOptions;
     linkOptions.sharedRoots.push_back("/std");
+    linkOptions.onlyFunctions = &reached;
     std::string linkError;
     if (!linkIrModule(module, library.content.code, linkError, &linkOptions)) {
       error = "cannot link library " + library.content.manifest.name + ": " + linkError;

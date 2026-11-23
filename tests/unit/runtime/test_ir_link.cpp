@@ -9,6 +9,7 @@
 #include "third_party/doctest.h"
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 using namespace primec;
@@ -184,6 +185,51 @@ TEST_CASE("link: host imports merge by name and a name with two signatures is an
   IrModule returning = libraryModule();
   returning.hostImports.push_back({"host_log", {IrHostValueKind::I32}, IrHostValueKind::I32});
   CHECK_FALSE(linkIrModule(program, returning, error));
+}
+
+TEST_CASE("link: only the functions the program reaches come along, with what they read") {
+  // /lib/unused and /lib/chain_end are not reached from the program; they read a string and a host import.
+  IrModule library = libraryModule();
+  library.stringTable = {"kept", "dropped"};
+  library.hostImports.push_back({"host_dropped", {}, IrHostValueKind::Void});
+  library.functions[1].instructions.insert(library.functions[1].instructions.begin(),
+                                           stringPush(IrOpcode::PushI32, 0));
+  library.functions[1].instructions.insert(library.functions[1].instructions.begin() + 1,
+                                           IrInstruction{IrOpcode::Pop, 0});
+  library.functions.push_back(functionOf("/lib/unused",
+                                         0,
+                                         {stringPush(IrOpcode::PushI32, 1),
+                                          IrInstruction{IrOpcode::Pop, 0},
+                                          IrInstruction{IrOpcode::CallHost, 0},
+                                          IrInstruction{IrOpcode::Call, 3},
+                                          IrInstruction{IrOpcode::ReturnI32, 0}}));
+  library.functions.push_back(
+      functionOf("/lib/chain_end", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}}));
+
+  IrModule program = consumerModule();
+  const std::unordered_set<std::string> reached =
+      reachableLibraryFunctionNames(program, {&library});
+  CHECK(reached == std::unordered_set<std::string>{"/lib/add_one", "/lib/twice"});
+
+  IrLinkOptions options;
+  options.onlyFunctions = &reached;
+  std::string error;
+  REQUIRE_MESSAGE(linkIrModule(program, library, error, &options), error);
+  REQUIRE_MESSAGE(checkIrImportsResolved(program, error), error);
+  CHECK(program.functions.size() == 3);
+  CHECK(program.stringTable == std::vector<std::string>{"kept"});
+  CHECK(program.hostImports.empty());
+  REQUIRE_MESSAGE(validateIrModule(program, IrValidationTarget::Vm, error), error);
+  const Run result = run(program);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.value == 21);
+
+  // The whole link still takes everything.
+  IrModule whole = consumerModule();
+  REQUIRE_MESSAGE(linkIrModule(whole, library, error), error);
+  CHECK(whole.functions.size() == 5);
+  CHECK(whole.stringTable.size() == 2);
+  CHECK(whole.hostImports.size() == 1);
 }
 
 TEST_CASE("link: source maps and debug ids of the library shift past those of the program") {

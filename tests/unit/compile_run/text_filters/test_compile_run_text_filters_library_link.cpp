@@ -119,6 +119,13 @@ Run runApp(const std::filesystem::path &dir, const std::string &emit, const std:
   return shell(dir, quoteShellArg(exe));
 }
 
+// The function count of a dump of the lowered module, `functions: N`.
+int dumpedFunctionCount(const std::string &dump) {
+  const size_t at = dump.find("\nfunctions: ");
+  REQUIRE(at != std::string::npos);
+  return std::stoi(dump.substr(at + 12));
+}
+
 } // namespace
 
 TEST_CASE(
@@ -282,6 +289,70 @@ main() {
     CHECK(linked.exitCode == whole.exitCode);
     CHECK(linked.out == whole.out);
   }
+}
+
+TEST_CASE("library link: a program carries only the functions it reaches") {
+  const std::filesystem::path dir = testScratchPath("library_link_reachable");
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  const std::string link = "--emit=vm --dump-stage=ir-lowered --library " + quoteShellArg(ui) + " ";
+  const std::string app = quoteShellArg((dir / "app.prime").string());
+  const std::string imports = "import</ui>\nimport /ui/*\n";
+
+  // No call into the library: the program alone.
+  writeIn(dir, "app.prime", imports + "[return<i32>]\nmain() {\n  return(7i32)\n}\n");
+  const Run none = shell(dir, "./primec " + link + app + " --entry /main");
+  REQUIRE_MESSAGE(none.exitCode == 0, none.err);
+  CHECK(dumpedFunctionCount(none.out) == 1);
+  CHECK(none.out.find("/ui/add") == std::string::npos);
+  CHECK(none.out.find("announce") == std::string::npos);
+
+  // One function: it and what it calls, not the rest.
+  writeIn(dir, "app.prime", imports + "[return<i32>]\nmain() {\n  return(quad(2i32))\n}\n");
+  const Run one = shell(dir, "./primec " + link + app + " --entry /main");
+  REQUIRE_MESSAGE(one.exitCode == 0, one.err);
+  CHECK(one.out.find("/ui/quad") != std::string::npos);
+  CHECK(one.out.find("/ui/announce") == std::string::npos);
+  CHECK(one.out.find("/ui/moved") == std::string::npos);
+  CHECK(one.out.find("announce") == std::string::npos);
+
+  // Every function: a bigger module, and the same program runs as the whole-program build.
+  writeIn(dir, "app.prime", imports + AppBody);
+  const Run all = shell(dir, "./primec " + link + app + " --entry /main");
+  REQUIRE_MESSAGE(all.exitCode == 0, all.err);
+  CHECK(all.out.find("/ui/announce") != std::string::npos);
+  CHECK(dumpedFunctionCount(none.out) < dumpedFunctionCount(one.out));
+  CHECK(dumpedFunctionCount(one.out) < dumpedFunctionCount(all.out));
+
+  writeIn(dir, "app.prime", imports + "[return<i32>]\nmain() {\n  return(quad(2i32))\n}\n");
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(ui));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 8);
+}
+
+TEST_CASE("library link: the same bytecode however the libraries are listed") {
+  const std::filesystem::path dir = testScratchPath("library_link_reachable_order");
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  const std::string more =
+      buildLibrary(dir,
+                   "more",
+                   "[namespace summary(\"More.\")]\nmore {\n  [public return<i32>]\n"
+                   "  seven() {\n    return(7i32)\n  }\n}\n");
+  writeIn(dir,
+          "app.prime",
+          "import</ui>\nimport</more>\nimport /ui/*\nimport /more/*\n[return<i32>]\nmain() {\n"
+          "  return(quad(1i32) + seven())\n}\n");
+  const std::string app = quoteShellArg((dir / "app.prime").string());
+  const std::string dump = "./primec --emit=vm --dump-stage=ir-lowered --entry /main ";
+  const Run first = shell(dir,
+                          dump + "--library " + quoteShellArg(ui) + " --library " +
+                              quoteShellArg(more) + " " + app);
+  const Run second = shell(dir,
+                           dump + "--library " + quoteShellArg(more) + " --library " +
+                               quoteShellArg(ui) + " " + app);
+  REQUIRE_MESSAGE(first.exitCode == 0, first.err);
+  REQUIRE_MESSAGE(second.exitCode == 0, second.err);
+  CHECK(first.out == second.out);
+  CHECK(first.out.find("/more/seven") != std::string::npos);
 }
 
 TEST_SUITE_END();

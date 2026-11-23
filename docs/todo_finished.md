@@ -2605,6 +2605,7 @@ are left unarchived.
 | TODO-6211 | Reading an element of a call result that is a stdlib `Vector` of structs is `unaligned indirect address` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6212 | `count(make())` of a call result that is a stdlib `Vector` of structs answers a wrong number and leaks the... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6216 | The compiler build id is a hash of the compiler sources | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6218 | A program linked against a library carries every function of the archive, used or not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
 

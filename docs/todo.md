@@ -152,7 +152,6 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | deferred | lib-embed |
-| TODO-6218 | A program linked against a library carries every function of the archive, used or not | ready | lib-embed |
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
@@ -179,7 +178,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; deferred TODO-6217 (bytecode of a linked script), TODO-6218 (a link merges only what is used); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; deferred TODO-6217 (bytecode of a linked script); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173, then TODO-6213 (sum results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -741,21 +740,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - measured: 2026-11-21 (release build, macOS arm64; numbers in docs/todo_log.md under TODO-5932). `--emit=optexe` of an empty `main` takes 0.91 s, of which the front end is 0.02 s (69M instructions) and `clang++` parsing the runtime preamble's standard headers alone is 0.64 s (`-fsyntax-only`); a program of 24k generated lines (examples/apps/http_hello) takes 4.18 s, 1.29 s of it the front end (14.6G instructions) and about 2.9 s the C++ compile and link. So the back end is 98 percent of a small program (a fixed cost every translation unit pays) and about 70 percent of an http-sized one. The emitter writes one translation unit with the runtime in an unnamed namespace, passing the runtime as `Rt &rt` (src/backend/IrToOptCppRuntime.h), so a library unit could share it; a string table, host import declarations and struct layouts are per unit, and the optimizer's inlining across the library boundary is lost. The native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer.
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
-
-- [~] TODO-6218: A program linked against a library carries every function of the archive, used or not
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Modules and libraries (found with TODO-5933)
-  - parallel_track: lib-embed
-  - scope: `primec --emit=lib tools.prime -o tools.psa` (two public functions, `add` and `quad`) and `primec --dump-stage=ir-lowered --library tools.psa plain.prime` of a program that imports no root of the library show `functions: 3` where the program alone has `functions: 1`: the link (src/ir/IrLinker.cpp, `linkProgramLibraries` in src/ir/IrPreparation.cpp) merges the whole code of every archive it is given. For a script of the embed API the bytecode of a script that imports nothing grew from 184 to 1,698 bytes with one small library added. Link only the functions the program reaches from its entry (the closure over `Call` targets and function-valued data), as the `--emit-uses` list already names the symbols a compile used.
-  - acceptance:
-    - the example in scope gives `functions: 1` and a script that uses one function of a library carries that function and what it calls, not the rest, with a test on the function count of the linked module
-    - the 23-program library corpus and the library link tests give the same output
-    - full release gate green
-  - stop_rule: which archive functions the link merges; no change to the archive format or the ABI.
-  - repro: the commands in scope, from a release build directory.
 
 - [ ] TODO-6217: `Script::bytecode` records the libraries a script was linked with
   - owner: ai

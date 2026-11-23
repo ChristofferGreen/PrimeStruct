@@ -307,13 +307,19 @@ library `imported(other) in the interface of library ui: /f`.
 **Lowering and link.** A call of an imported function is a call of an import function (`IrFunction::isImport`) that
 names the library. The link runs inside `prepareIrModule`, right after lowering and before validation and the
 optimizer, so every back end sees one module: each library is merged by name (docs/spec/vm-design.md, IR link),
-and `undefined symbol /ui/draw (library ui)` is reported for an import no library defines. Two decisions:
+and `undefined symbol /ui/draw (library ui)` is reported for an import no library defines. Three decisions:
 
 - *ABI.* An imported function is always called with the address ABI the archive was lowered with (a struct, `mut`,
   `this` or a string is one slot, a struct result goes through a block of the caller). A target without it (x86_64
   native, wasm, GLSL, the simple C++ emitters) is refused: `linking a library needs a target with the address ABI (the
   vm, optexe, optcpp and arm64 native): /ui/add is imported from library ui`. A declaration whose shape the ABI cannot
   take is `imported function /f cannot be called on this target: <reason>`.
+- *Reachable functions only.* The program carries the functions it reaches, not the archive: the link starts from the
+  functions the program imports and follows the calls of each definition through every supplied library (the closure is
+  by name, so the order of the `--library` options does not change the result). A function nothing reaches is left
+  behind with the host imports, strings and debug entries only it read, so a program that imports nothing of a library
+  is the module it would be without the library (`functions: 1` in a dump). The struct layouts of the archive are
+  merged whole.
 - *Shared routines.* The archive holds the stdlib routines (`/std/...`) its roots reached as real calls, and the program
   lowers the same routines under the same names. A routine under `/std` that both define is one: the program's copy
   stays, the archive's is dropped, and the archive's callers use it. They are not compared; both come from the same
