@@ -114,7 +114,7 @@ of sync with them.
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | blocked | mt-server |
-| TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | deferred | readonly-struct-writes |
+| TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | ready | readonly-struct-writes |
 | TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | ready | template-infer-reference |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -354,12 +354,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6183: A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-22
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Parameter modes; found with TODO-5804)
   - parallel_track: readonly-struct-writes
   - scope: `[T] x` is "a read-only borrow of the argument ... it cannot change during the call" (docs/spec/value-lifecycle.md), but `primec` accepts both writes through it when the struct has a `mut` field. Repro (`primec --emit=vm`): `[struct] C() { [i32 mut] n{0i32}  [mut] bump() { this.n = this.n + 1i32 } }  w1([C] c) { c.n = 5i32 }  w2([C] c) { c.bump() }` and `main() { [C] y{C{}}  y.n = 3i32  y.bump() ... }` compile and run (only `c = C{}` is `assign target must be a mutable binding: c`). The check for a field write (`validateMutableFieldAccessTarget`, src/semantics/SemanticsValidatorExprMutationBorrows.cpp) accepts any field declared `mut` whatever the root binding. This is the premise of TODO-5804's compile-error acceptance (the block said writing a `[State]` parameter is already a diagnostic) and of every `RwLock<T>.read` body (a reader that writes a `mut` field is a data race the compiler does not stop).
   - options_to_decide: (a) enforce the spec: a write to a field of, or a call of a `[mut]` method on, a read-only root (a non-`mut` local, a `[T]` or `[T copy]` parameter, a `[T]` lambda parameter) is an error that names the fix (`assign target must be a mutable binding: c`, `mutating method needs a mutable receiver`); a breaking change, the gate shows what it rejects. (b) keep field-level `mut` as it is and give `view` handlers a stricter rule of their own (a view handler's state type must have no `mut` field), which a library cannot check, so it needs a compiler hook. (c) leave it: views are documented as not writing the state, unenforced. Option (a) is what the spec and the language direction (well-defined behavior) point to; it is the user's call.
+  - decision: 2026-11-23 (owner): option (a). Enforce the spec: a write to a field of, or a call of a `[mut]` method on, a read-only root is an error that names the fix. No change to `Reference<T>` (TODO-6165 option B stands) or `mut` parameter rules.
   - acceptance:
     - the decision above is made and recorded here; then the diagnostic (or the spec change) with a semantics test, TODO-5804's compile-error test, and the full release gate green
   - stop_rule: the decision and the one diagnostic; no change to `Reference<T>` or `mut` parameter rules.
