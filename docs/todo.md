@@ -116,7 +116,6 @@ of sync with them.
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
 | TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | deferred | vector-bare-push-position |
-| TODO-6199 | The tracked stdlib symbol manifests are not what the generator writes | deferred | stdlib-manifest-drift |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -350,20 +349,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the position and the text of the diagnostic; whether the bare form should be accepted is not part of this leaf.
   - repro: `import /std/collections/*  [effects(heap_alloc) return<int>] main() { [Vector<i32> mut] values{Vector<i32>{}}  push(values, 7i32)  return(0i32) }` with `primec --emit=vm -I stdlib`.
   - notes: deferred: a diagnostics improvement; 31 test expectations pin the current text.
-
-- [~] TODO-6199: The tracked stdlib symbol manifests are not what the generator writes
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Modules and libraries (found with TODO-6163)
-  - parallel_track: stdlib-manifest-drift
-  - scope: `build-release/generate_stdlib_manifest stdlib/std/image/image.prime /std/image <out>` writes 130 symbols; the tracked stdlib/std/image/image.psmeta has 126: the generator now also writes the namespace definitions (`/std`, `/std/image`, ...). stdlib/std/gfx/experimental.psmeta was the same until it was regenerated for TODO-6163. Nothing fails, because a compile only compares the hash of the entries a manifest has, but no test tells a stale manifest from a fresh one, so the next edit of image.prime changes the file in ways unrelated to the edit.
-  - acceptance:
-    - a ctest entry regenerates each tracked `.psmeta` and fails when it differs from the tracked file; image.psmeta is regenerated
-    - full release gate green
-  - stop_rule: the freshness of the tracked manifests; no change to the manifest format.
-  - repro: the command in scope, then `diff` against the tracked file.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

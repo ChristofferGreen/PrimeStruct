@@ -114,6 +114,15 @@ int findDefinitionStartLine(const std::vector<Token> &tokens, int nameTokenIndex
   return 1;
 }
 
+bool isNamespaceDefinition(const Definition &def) {
+  for (const primec::Transform &transform : def.transforms) {
+    if (transform.name == "namespace") {
+      return true;
+    }
+  }
+  return false;
+}
+
 struct SymbolEntry {
   std::string path;
   int startLine = 0;
@@ -191,6 +200,11 @@ int main(int argc, char **argv) {
   std::vector<SymbolEntry> entries;
 
   for (const Definition *def : moduleDefs) {
+    // A `namespace` block is the `[namespace]` definition of its members' prefix, not a symbol: its slice would be
+    // the whole block, and a lazy import that names the namespace would pull every member in.
+    if (isNamespaceDefinition(*def)) {
+      continue;
+    }
     const int nameTokenIndex = findNameTokenIndex(tokens, *def);
     if (nameTokenIndex < 0) {
       std::cerr << "error: could not locate name token for " << def->fullPath

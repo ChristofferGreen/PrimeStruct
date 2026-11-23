@@ -7,24 +7,6 @@
 # file line numbers.
 
 [symbol]
-path = /std
-start_line = 3
-end_line = 646
-content_hash = df6704d4feaff1a7
-
-[symbol]
-path = /std/gfx
-start_line = 4
-end_line = 645
-content_hash = f55afe7d3b4ae6a7
-
-[symbol]
-path = /std/gfx/experimental
-start_line = 5
-end_line = 644
-content_hash = e601dc683be48da0
-
-[symbol]
 path = /std/gfx/experimental/ColorFormat
 start_line = 11
 end_line = 16

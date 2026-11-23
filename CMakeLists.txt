@@ -4657,6 +4657,16 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(PrimeStruct_spec_docs_self_test PROPERTIES TIMEOUT 60)
 
+  # The tracked stdlib symbol manifests must equal what the generator writes.
+  add_test(
+    NAME PrimeStruct_stdlib_manifests_fresh
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/check_stdlib_manifests.py
+            --root ${CMAKE_SOURCE_DIR}
+            --generator $<TARGET_FILE:generate_stdlib_manifest>
+            --scratch ${CMAKE_BINARY_DIR}
+  )
+  set_tests_properties(PrimeStruct_stdlib_manifests_fresh PROPERTIES TIMEOUT 60)
+
   # TODO-5374: string-tagged collection family comparisons may only shrink.
   add_test(
     NAME PrimeStruct_collection_family_compares
