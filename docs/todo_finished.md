@@ -2527,8 +2527,10 @@ are left unarchived.
 | TODO-6110 | A logical import of a stdlib module root without a library duplicates its definitions | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6111 | An unknown type as a return type is reported as `unsupported return type` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6112 | An overload on `App<S>` loses to a generic `H` overload | [undated.md](todo_archive/undated.md) | - |
+| TODO-6113 | Calling a `Function` field of a read-only value says `unknown method` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6114 | A same-arity overload whose parameter spells template arguments was never viable for a matching argument | [undated.md](todo_archive/undated.md) | - |
 | TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6120 | The snippet of a diagnostic in an imported file is cut from the primary file's text | [undated.md](todo_archive/undated.md) | - |
 | TODO-6122 | The library cutoff of the build runner passed the cache hash as the compiler build id | [undated.md](todo_archive/undated.md) | - |
 | TODO-6123 | The build command hashes the 22 MB `primec` twice per run | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |

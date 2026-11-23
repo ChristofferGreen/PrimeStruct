@@ -1717,11 +1717,12 @@ import /std/text/*
 
 [return<i32>]
 apply([Function<i32, i32>] step, [i32] value) {
-  return(step(value))
+  [Function<i32, i32> mut] own{step}
+  return(own(value))
 }
 
 [return<i32>]
-apply_owned([Function<i32, i32> move] step, [i32] value) {
+apply_owned([Function<i32, i32> move mut] step, [i32] value) {
   return(step(value))
 }
 

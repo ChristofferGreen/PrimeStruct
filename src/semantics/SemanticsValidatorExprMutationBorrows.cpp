@@ -749,6 +749,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       rootLookup.typeOf = [&](const Expr &typed, BindingInfo &out) {
         return this->inferBindingTypeFromInitializer(typed, params, locals, out);
       };
+      rootLookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
       if (const auto root = findReadOnlyRoot(fieldTarget, rootLookup, false);
           root.has_value() &&
           !(root->name == "this" &&

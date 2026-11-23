@@ -1,0 +1,17 @@
+// The `call` of a `Function` is `mut`: a `Function` field is not called through a read-only `[T]` parameter.
+[struct]
+Route() {
+  [i32] code{0i32}
+  [Function<i32, i32> mut] handler{}
+}
+
+[return<int> effects(heap_alloc)]
+dispatch([Route] route, [i32] value) {
+  return(route.handler(value))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Route] route{Route{[code] 1i32, [handler] []([i32] x) { return(x + 1i32) }}}
+  return(dispatch(route, 2i32))
+}

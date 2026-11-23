@@ -320,7 +320,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.lambdas"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 47
+  TOTAL_CASES 48
   SHARD_PREFIX "lambdas"
 )
 
@@ -355,7 +355,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.read_only_roots"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 15
+  TOTAL_CASES 20
   SHARD_PREFIX "read_only_roots"
 )
 

@@ -875,7 +875,9 @@ main() {
   CHECK(found.column == 51);
 }
 
-TEST_CASE("a Function field of a lambda parameter is called through the parameter") {
+// The `call` of a `Function` is `mut` (docs/spec/value-lifecycle.md, Function values): through a read-only lambda
+// parameter the diagnostic names the receiver and the fix, not an unknown method.
+TEST_CASE("a Function field of a read-only lambda parameter is not called through the parameter") {
   const std::string box = R"(
 [struct]
 Box() {
@@ -883,12 +885,64 @@ Box() {
   [i32] base{0i32}
 }
 )";
+  const std::string expected =
+      "mutating method needs a mutable receiver: b.f.call() (b is a read-only parameter; "
+      "take it as a [T mut] parameter, or call a mut copy: [Function<...> mut] h{b.f})";
   SUBCASE("a lambda parameter by value") {
     const std::string source = box + R"(
 [return<int> effects(heap_alloc)]
 main() {
   [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
   g{[]([Box] b) { return(b.f(b.base)) }}
+  return(g(b0))
+}
+)";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+    CHECK(error.find("unknown method") == std::string::npos);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 11);
+    CHECK(diagnosticInfo.primarySpan.column == 26);
+  }
+  SUBCASE("a lambda nested in a generic Body call") {
+    const std::string source = box + R"(
+[return<int>]
+run<Body>([Body mut] body, [Box] box) {
+  return(body(box))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  return(run([]([Box] b) { return(b.f(b.base)) }, b0))
+}
+)";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+  }
+}
+
+TEST_CASE("a Function field of a lambda parameter is called through a mut copy, a Reference or a "
+          "mut parameter") {
+  const std::string box = R"(
+[struct]
+Box() {
+  [Function<i32, i32> mut] f{}
+  [i32] base{0i32}
+}
+)";
+  SUBCASE("a mut copy of the field") {
+    const std::string source = box + R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  g{[]([Box] b) {
+    [Function<i32, i32> mut] h{b.f}
+    return(h(b.base))
+  }}
   return(g(b0))
 }
 )";
@@ -907,17 +961,13 @@ main() {
     std::string error;
     CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   }
-  SUBCASE("a lambda nested in a generic Body call") {
+  SUBCASE("a mut lambda parameter") {
     const std::string source = box + R"(
-[return<int>]
-run<Body>([Body mut] body, [Box] box) {
-  return(body(box))
-}
-
 [return<int> effects(heap_alloc)]
 main() {
-  [Box] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
-  return(run([]([Box] b) { return(b.f(b.base)) }, b0))
+  [Box mut] b0{Box{[f] []([i32] x) { return(plus(x, 1i32)) }, [base] 4i32}}
+  g{[]([Box mut] b) { return(b.f(b.base)) }}
+  return(g(b0))
 }
 )";
     std::string error;

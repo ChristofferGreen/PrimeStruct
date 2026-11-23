@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"mutating method needs a mutable receiver: route.handler.call() (route is a read-only parameter; take it as a [T mut] parameter, or call a mut copy: [Function<...> mut] h{route.handler})"
+"line":10,"column":10
+"notes":["stage: semantic"]

@@ -234,7 +234,7 @@ TEST_CASE("a lambda whose capture list starts with mut is a call argument") {
   runClosureProgram("closure_mut_capture_argument",
                     R"(
 [return<int>]
-apply([Function<i32, i32>] f, [i32] x) {
+apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
 
@@ -260,7 +260,7 @@ five() {
 }
 
 [return<int>]
-apply([Function<i32, i32>] f, [i32] x) {
+apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
 
@@ -293,7 +293,7 @@ import /std/result/*
 
 [return<int> effects(heap_alloc)]
 main() {
-  [Function<Result<i32, i32>, i32>] double_it{
+  [Function<Result<i32, i32>, i32> mut] double_it{
     [return<Result<i32, i32>>]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }
   }
   return(pick(double_it(4i32)) {
@@ -771,7 +771,7 @@ TEST_CASE("a closure moves into a Function at every expected-type site") {
   runClosureProgram("closure_move_into_function",
                     R"(
 [return<int>]
-apply([Function<i32, i32>] f, [i32] x) {
+apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
 
@@ -789,12 +789,12 @@ main() {
   third{[base]([i32] x) { return(x - base) }}
   fourth{[base]([i32] x) { return(x + base + base) }}
   fifth{[base]([i32] x) { return(x + 100i32) }}
-  [Function<i32, i32>] boxed{move(first)}
+  [Function<i32, i32> mut] boxed{move(first)}
   [i32] applied{apply(move(second), 2i32)}
   [Function<i32, i32> mut] later{move(third)}
   later = move(fourth)
-  [Function<i32, i32>] made{make(10i32)}
-  [Function<i32, i32>] explicit{Function<i32, i32>{move(fifth)}}
+  [Function<i32, i32> mut] made{make(10i32)}
+  [Function<i32, i32> mut] explicit{Function<i32, i32>{move(fifth)}}
   // 7 + 6 + 7 + 11 + 101
   return(boxed(4i32) + applied + later(1i32) + made(1i32) + explicit(1i32))
 }
@@ -1150,7 +1150,7 @@ Route() {
 }
 
 [return<int> effects(heap_alloc)]
-by_value([Route] route, [i32] x) {
+by_value([Route mut] route, [i32] x) {
   return(route.handler(x))
 }
 
@@ -1164,7 +1164,7 @@ main() {
   [Route mut] direct{Route{[code] 6i32, [handler] double}}
   [i32] first{direct.handler(2i32)}
   direct.handler(5i32)
-  [Route] other{Route{[code] 7i32, [handler] triple}}
+  [Route mut] other{Route{[code] 7i32, [handler] triple}}
   return(first + by_value(other, 10i32) + by_reference(location(direct), 100i32))
 }
 )",
@@ -1810,7 +1810,7 @@ main() {
                     110);
 }
 
-TEST_CASE("a Function field of a lambda parameter is called through the parameter") {
+TEST_CASE("a Function field of a lambda parameter is called through a mut copy or a Reference") {
   runClosureProgram("lambda_parameter_function_field",
                     R"(
 [struct]
@@ -1827,9 +1827,15 @@ run<Body>([Body mut] body, [Box] box) {
 [return<int> effects(heap_alloc)]
 main() {
   [Box] b0{Box{[f] []([i32] x) { return(x + 1i32) }, [base] 4i32}}
-  by_value{[]([Box] b) { return(b.f(b.base)) }}
+  by_value{[]([Box] b) {
+    [Function<i32, i32> mut] f{b.f}
+    return(f(b.base))
+  }}
   by_reference{[]([Reference<Box>] b) { return(b.f(b.base) * 10i32) }}
-  nested{run([]([Box] b) { return(b.f(b.base) * 100i32) }, b0)}
+  nested{run([]([Box] b) {
+    [Function<i32, i32> mut] f{b.f}
+    return(f(b.base) * 100i32)
+  }, b0)}
   return(by_value(b0) + by_reference(location(b0)) + nested)
 }
 )",
@@ -2119,8 +2125,8 @@ Filter() {
 
 [return<int> effects(heap_alloc)]
 main() {
-  [Function<bool, KeyEvent>] isEscape{[]([KeyEvent] event) { return(event.key == Key.escape) }}
-  [Function<bool, PointerEvent>] notSecondary{[]([PointerEvent] event) {
+  [Function<bool, KeyEvent> mut] isEscape{[]([KeyEvent] event) { return(event.key == Key.escape) }}
+  [Function<bool, PointerEvent> mut] notSecondary{[]([PointerEvent] event) {
     return(event.button != PointerButton.secondary)
   }}
   [KeyEvent] escape{KeyEvent{[key] Key.escape}}

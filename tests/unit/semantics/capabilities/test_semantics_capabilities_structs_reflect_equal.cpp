@@ -617,7 +617,7 @@ Holder() {
 [return<bool> effects(heap_alloc)]
 main() {
   [Holder] holder{Holder{}}
-  [Function<bool, Pair>] differs{[]([Pair] other) {
+  [Function<bool, Pair> mut] differs{[]([Pair] other) {
     [Pair] mine{Pair{[x] 2i32}}
     return(not_equal(mine, other))
   }}
@@ -663,7 +663,7 @@ Pair() {
 
 [return<bool> effects(heap_alloc)]
 main() {
-  [Function<bool, Pair>] same{[]([Pair] other) {
+  [Function<bool, Pair> mut] same{[]([Pair] other) {
     [Pair] mine{Pair{}}
     return(equal(mine, other))
   }}

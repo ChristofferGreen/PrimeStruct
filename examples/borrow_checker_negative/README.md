@@ -19,7 +19,8 @@ aliases is changed directly (`19_view_of_reference_alias_changed_directly`), and
 (`23_view_changed_by_replacing_a_field`), and a field written through a read-only `[T]` parameter or a `[mut]` method
 called on a local that is not `mut` (`24_read_only_parameter_field_written`, `25_mut_method_on_read_only_local`), and
 a `[mut]` method called on an element of a collection field of a read-only parameter
-(`26_element_of_read_only_parameter_changed`).
+(`26_element_of_read_only_parameter_changed`), and a `Function` field called through a read-only parameter
+(`27_function_called_through_read_only_parameter`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

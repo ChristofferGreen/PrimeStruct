@@ -74,8 +74,9 @@
   `this` of a lifecycle helper (`Create`, `Destroy`, `Copy`, `Move`) carry their own write access, so they are not
   read-only roots (a plain `Reference<struct>` may still change fields and call
   `mut` helpers, as in `pointers-and-references.md`). A write view (`Slice<T, Write>`) is a struct like another: its
-  `set` and `fill` are `[mut]` methods, so the binding is declared `[Slice<T, Write> mut]`. The `call` of a `Function` or closure is not held to this rule
-  (whether a `Function` may be called through a read-only place is TODO-6116). This is what makes a `[T]` parameter a
+  `set` and `fill` are `[mut]` methods, so the binding is declared `[Slice<T, Write> mut]`. The `call` of a `Function`, and of a closure with a `mut` value capture, is a `[mut]` method
+  held to this rule (Function values, below). A `[T copy]` or `[T move]` parameter is read-only too; its fix is
+  `[T copy mut]` or `[T move mut]`. This is what makes a `[T]` parameter a
   read-only borrow that concurrent readers of an `RwLock<T>` can share. An element of a collection (`array`, `vector`,
   `map`, an `args` pack, a stdlib `Vector` or `Map`) is part of the collection's owner, so its root is the root of
   the collection place: `bag.items[i].n = 5` and `bag.items[i].bump()` on a `[Bag] bag` are the two diagnostics above
@@ -464,7 +465,7 @@ bad_set() {
 
   [return<int> effects(heap_alloc)]
   main() {
-    [Function<Result<i32, i32>, i32>] double_it{
+    [Function<Result<i32, i32>, i32> mut] double_it{
       [return<Result<i32, i32>>]([i32] x) { return(Result<i32, i32>{[ok] x * 2i32}) }
     }
     return(pick(double_it(4i32)) {
@@ -479,7 +480,9 @@ bad_set() {
   `drive<Handler>([Handler mut] handler)` takes either and is monomorphized per type (a direct call, no allocation).
   `Holder{[handler] lambda}` infers `Holder<F>`'s template arguments from its field arguments.
 - **Mutable state:** `call` is a `mut` method when any value or init capture is `mut`, so such a closure must be held
-  in a `mut` binding, field or parameter to call it. State lives in the closure value: a closure passed to a `mut`
+  in a `mut` binding, field or parameter to call it (the read-only roots rule: `mutating method needs a mutable
+  receiver: counter.call() (counter is read-only; declare it with mut: [T mut] counter{...})`). A closure without
+  such a capture is called through a read-only binding. State lives in the closure value: a closure passed to a `mut`
   parameter is changed in place, and a copy has its own state. Writing through a `[ref name]` capture does not change
   the closure, so it does not make `call` `mut`.
 - **`return`** inside a lambda returns from the lambda (its `call` method), never from the enclosing definition. This
@@ -546,7 +549,17 @@ bad_set() {
   Request, Reference<Response>>`, `Function<void, Reference<State>, Request, Reference<Response>>`) take
   `[Response mut]` and `[State mut]` parameters this way (docs/spec/stdlib-reference.md).
 - **Calling** `f(x)` dispatches to the stored closure; `call` is `mut` (the closure may change its state), so hold
-  the `Function` in a `mut` binding, field or parameter.
+  the `Function` in a `mut` binding, field or parameter (`[Function<i32, i32> mut] g{...}`, a `[Function<i32, i32>
+  mut] g` or `[... move mut] g` parameter, a `mut` field of a struct that is itself reached through a mutable root, a
+  `[mut inner{next}]` capture). A call through a read-only root (Read-only roots, above) is a diagnostic that names
+  the receiver and the fix: `mutating method needs a mutable receiver: b.f.call() (b is a read-only parameter; take it
+  as a [T mut] parameter, or call a mut copy: [Function<...> mut] h{b.f})`; for a local that is the `Function`
+  itself, `g.call() (g is read-only; declare it with mut: [T mut] g{...})`; in a method that is not `[mut]`,
+  `this.f.call() (this is read-only in a method that is not [mut]; mark the method [mut], or call a mut copy:
+  [Function<...> mut] h{this.f})`; for a capture, `inner.call() (inner is a capture that is not mut; capture it with
+  mut: [mut inner])`. A copy has its own state, so where only a read-only value is at hand (a `[T]` parameter of a
+  lambda run under `RwLock.read`), copy the `Function` into a `mut` local and call the copy. A `Reference<T>` to the
+  holder, or to the `Function`, carries its own write access.
 - **Copy** clones the stored closure into a new block (the copy has its own state), also where a `Function` local is
   an argument of a brace constructor (`Wrap{plain}` and `Wrap{[run] plain}` alike); **Move** hands the block over;
   **Destroy** destroys the closure and frees the block.

@@ -159,7 +159,8 @@ main() {
 }
 
 TEST_CASE("same-arity overloads of a generic struct's methods resolve by argument type") {
-  runMethodProgram("struct_methods_generic_overloads", R"(
+  runMethodProgram("struct_methods_generic_overloads",
+                   R"(
 [struct]
 Tag() {
   [i32] n{0i32}
@@ -191,13 +192,13 @@ Holder<T>() {
   }
 
   [mut]
-  run([Tag] tag, [Function<void, Reference<T>> move] handler) {
+  run([Tag] tag, [Function<void, Reference<T>> move mut] handler) {
     handler(location(this.total))
     this.calls = this.calls + 1i32
   }
 
   [mut]
-  run([Other] other, [Function<void, Reference<T>> move] handler) {
+  run([Other] other, [Function<void, Reference<T>> move mut] handler) {
     handler(location(this.total))
     this.calls = this.calls + 10i32
   }

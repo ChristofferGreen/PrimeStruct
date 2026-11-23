@@ -446,4 +446,187 @@ read_and_write_temporary([Bag] bag) {
 )");
 }
 
+// The `call` of a `Function` is `mut`, and so is the `call` of a closure with a `mut` value capture
+// (docs/spec/value-lifecycle.md, Function values): `f(x)` is `f.call(x)` and needs a mutable receiver.
+TEST_CASE("a Function is not called through a read-only local or parameter") {
+  checkRejectedAt(
+      R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<i32, i32>] g{[mut n{0i32}]([i32] x) {
+    n = plus(n, 1i32)
+    return(plus(x, n))
+  }}
+  return(g(1i32))
+}
+)",
+      "mutating method needs a mutable receiver: g.call() (g is read-only; declare it with mut: "
+      "[T mut] g{...})",
+      19,
+      10);
+  checkRejectedAt(R"(
+[return<int>]
+apply([Function<i32, i32>] g) {
+  return(g(1i32))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)",
+                  "mutating method needs a mutable receiver: g.call() (g is a read-only parameter; "
+                  "take it as a "
+                  "[T mut] parameter, or call a mut copy: [Function<...> mut] h{g})",
+                  15,
+                  10);
+  checkRejectedAt(R"(
+[return<int>]
+apply_owned([Function<i32, i32> move] g) {
+  return(g(1i32))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)",
+                  "g is a read-only parameter; take it as a [T move mut] parameter",
+                  15,
+                  10);
+}
+
+TEST_CASE("a Function field is not called through a read-only struct or this") {
+  const std::string holder = R"(
+[struct]
+Holder() {
+  [Function<i32, i32> mut] f{}
+  [return<int>] run() {
+    return(this.f(1i32))
+  }
+}
+)";
+  checkRejectedAt(
+      holder + R"(
+[return<int>]
+main() {
+  return(0i32)
+}
+)",
+      "mutating method needs a mutable receiver: this.f.call() (this is read-only in a method that "
+      "is "
+      "not [mut]; mark the method [mut], or call a mut copy: [Function<...> mut] h{this.f})",
+      17,
+      12);
+  checkRejectedAt(R"(
+[struct]
+Box() {
+  [Function<i32, i32> mut] f{}
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Box] box{Box{[f] []([i32] x) { return(plus(x, 1i32)) }}}
+  return(box.f(1i32))
+}
+)",
+                  "mutating method needs a mutable receiver: box.f.call() (box is read-only; "
+                  "declare it with mut: "
+                  "[T mut] box{...}, or call a mut copy: [Function<...> mut] h{box.f})",
+                  21,
+                  10);
+}
+
+TEST_CASE("a closure with mut state and a captured Function need a mutable place to be called") {
+  checkRejectedAt(R"(
+[return<int>]
+main() {
+  [auto] counter{[mut n{0i32}]() {
+    n = plus(n, 1i32)
+    return(n)
+  }}
+  return(counter())
+}
+)",
+                  "mutating method needs a mutable receiver: counter.call() (counter is read-only; "
+                  "declare it with "
+                  "mut: [T mut] counter{...})",
+                  19,
+                  10);
+  checkRejectedAt(
+      R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<i32, i32> mut] next{[]([i32] x) { return(plus(x, 1i32)) }}
+  [Function<i32, i32> mut] outer{[inner{next}]([i32] x) { return(inner(x)) }}
+  return(outer(1i32))
+}
+)",
+      "mutating method needs a mutable receiver: inner.call() (inner is a capture that is not mut; "
+      "capture it with mut: [mut inner])",
+      16,
+      66);
+}
+
+TEST_CASE("a Function is called through mut, a mut copy, a Reference and a mut or ref capture") {
+  checkAccepted(R"(
+[struct]
+Box() {
+  [Function<i32, i32> mut] f{}
+  [mut return<int>] run() {
+    return(this.f(1i32))
+  }
+}
+
+[return<int>]
+apply([Function<i32, i32> mut] g) {
+  return(g(1i32))
+}
+
+[return<int>]
+apply_owned([Function<i32, i32> move mut] g) {
+  return(g(1i32))
+}
+
+[return<int>]
+apply_reference([Reference<Function<i32, i32>>] g) {
+  return(g(1i32))
+}
+
+[return<int> effects(heap_alloc)]
+apply_copy([Box] box) {
+  [Function<i32, i32> mut] h{box.f}
+  return(h(1i32))
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<i32, i32> mut] g{[mut n{0i32}]([i32] x) {
+    n = plus(n, 1i32)
+    return(plus(x, n))
+  }}
+  [Function<i32, i32> mut] wrapped{[mut inner{g}]([i32] x) { return(inner(x)) }}
+  [auto] borrowed{[ref g]([i32] x) { return(g(x)) }}
+  [Box mut] box{Box{[f] []([i32] x) { return(plus(x, 1i32)) }}}
+  return(plus(plus(g(1i32), wrapped(1i32)), plus(plus(borrowed(1i32), box.f(1i32)), plus(box.run(), apply_copy(box)))))
+}
+)");
+}
+
+TEST_CASE("a closure without mut state is called through a read-only binding") {
+  checkAccepted(R"(
+[return<int>]
+drive<Handler>([Handler] handler) {
+  return(handler(2i32))
+}
+
+[return<int>]
+main() {
+  [i32] base{3i32}
+  [auto] add{[base]([i32] x) { return(plus(x, base)) }}
+  return(plus(add(1i32), drive(add)))
+}
+)");
+}
+
 TEST_SUITE_END();

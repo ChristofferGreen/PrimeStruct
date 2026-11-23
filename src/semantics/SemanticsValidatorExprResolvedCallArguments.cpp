@@ -529,11 +529,11 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
 
   // A `[mut]` method changes its receiver, so the receiver cannot be rooted at a read-only binding: a non-`mut`
   // local, a `[T]` or `[T copy]` parameter, or the `this` of a method that is not `[mut]`. A lifecycle helper
-  // sets up `this`, and a `Reference` carries its own write access.
+  // sets up `this`, and a `Reference` carries its own write access. The `call` of a `Function`, and of a closure
+  // with `mut` state, is such a method.
   if (!calleeParams.empty() && calleeParams.front().name == "this" &&
       calleeParams.front().binding.isMutable && packedParamIndex != 0 && !orderedArgs.empty() &&
       orderedArgs.front() != nullptr && orderedArgs.front() != calleeParams.front().defaultExpr &&
-      !isClosureCallPath(*context.diagnosticResolved) &&
       !isLifecycleHelperPath(currentValidationState_.context.definitionPath)) {
     ReadOnlyRootLookup lookup;
     lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
@@ -547,9 +547,13 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
       return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
     };
+    lookup.inClosureBody = isClosureCallPath(currentValidationState_.context.definitionPath);
     if (const auto root = findReadOnlyRoot(*orderedArgs.front(), lookup, true)) {
+      const std::string &callee = *context.diagnosticResolved;
       return failResolvedCallArgumentDiagnostic(
-          readOnlyReceiverDiagnostic(*orderedArgs.front(), expr.name, *root));
+          isClosureCallPath(callee)
+              ? readOnlyCallableDiagnostic(*orderedArgs.front(), *root, isFunctionCallPath(callee))
+              : readOnlyReceiverDiagnostic(*orderedArgs.front(), expr.name, *root));
     }
   }
 
