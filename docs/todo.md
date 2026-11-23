@@ -115,7 +115,6 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
-| TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | ready | vector-bare-push-position |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -335,21 +334,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the crash of the test binary; `primec` itself reports the diagnostic and exits 2.
   - repro: the edit in scope, then `build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots`.
   - notes: deferred: not reachable on master, needs the edit above.
-
-- [~] TODO-6207: The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (found with the `string` push)
-  - parallel_track: vector-bare-push-position
-  - scope: docs/spec/stdlib-reference.md says the bare call form `push(values, x)` on a local declared `Vector<T>` stays an unknown call target (the method form resolves to the stdlib helper). The diagnostic is raised in template monomorphization (`error = "unknown call target: " + ...` in src/semantics/TemplateMonomorphRewriteHelperPaths.cpp) and has no file, line or column: `Semantic error: unknown call target: /std/collections/vector/push`. It also does not say what to write. Give it the position of the call and name the method form (`values.push(x)`), for `push`, `pop`, `reserve`, `clear`, `remove_at` and `remove_swap`, for every element type.
-  - acceptance:
-    - the diagnostic has file, line and column and names the method form, with a semantics test; the tests that pin the text are updated
-    - full release gate green
-  - stop_rule: the position and the text of the diagnostic; whether the bare form should be accepted is not part of this leaf.
-  - repro: `import /std/collections/*  [effects(heap_alloc) return<int>] main() { [Vector<i32> mut] values{Vector<i32>{}}  push(values, 7i32)  return(0i32) }` with `primec --emit=vm -I stdlib`.
-  - notes: deferred: a diagnostics improvement; 31 test expectations pin the current text.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

@@ -399,6 +399,15 @@ std::string preferCanonicalStdlibCollectionHelperPath(ExprRewriteContext &rc,
           receiverExpr, params, locals, allowMathBare, namespacePrefix, ctx)) {
     error = "unknown call target: " +
             semantics::canonicalVectorCompatibilityHelperPathOrFallback(helperName);
+    if (isBarePublishedVectorMutatorSugar) {
+      // The bare call form is not a spelling of the helper: say what to write, where the call is.
+      const std::string receiverText =
+          receiverExpr->kind == Expr::Kind::Name && !receiverExpr->name.empty() ? receiverExpr->name
+                                                                                : "<receiver>";
+      error += "; call it as a method: " + receiverText + "." + helperName + "(...)";
+    }
+    ctx.errorSourceLine = expr.sourceLine;
+    ctx.errorSourceColumn = expr.sourceColumn;
     return path;
   }
   if (receiverFamily == "vector" &&

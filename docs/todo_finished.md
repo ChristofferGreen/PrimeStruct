@@ -2601,6 +2601,7 @@ are left unarchived.
 | TODO-6202 | Assigning a whole element of a stdlib `Vector` is an internal lowering error | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6204 | A call in a struct field's default initializer is not validated | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6206 | The argument of `push` is not checked against the element type of the vector | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6208 | The direct `count(bag.items)` of a `Vector` field has no integer type for `auto` and `print_line` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6209 | `mapInsert` of `MapValue` wrote its fields in a method that was not `[mut]` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6210 | `dereference(r)` of a `Reference<Vector<T>>` as the receiver argument of the inlined stdlib `at` is an `una... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

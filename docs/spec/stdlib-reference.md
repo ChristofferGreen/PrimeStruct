@@ -96,7 +96,8 @@
     those same explicit experimental `Vector<T>` bindings. On a local declared `Vector<T>`, the method forms `push`,
     `pop`, `reserve`, `clear`, `remove_at` and `remove_swap` resolve to those helpers, and the receiver must be
     declared `mut` (`push changes values, which is not mutable` otherwise); the bare call form `push(values, x)`
-    stays an unknown call target. A `string` (a literal, a local or a parameter) is pushed into a `Vector<string>`
+    stays an unknown call target, reported at the call with the method form to write
+    (`unknown call target: /std/collections/vector/push; call it as a method: values.push(...)`). A `string` (a literal, a local or a parameter) is pushed into a `Vector<string>`
     or a `vector<string>` like another scalar. The argument of `push` has the element type of the vector (the
     conversions of a binding's initializer apply): any other argument is
     `argument type mismatch for /std/collections/vector/push parameter value: expected <T> got <U>`

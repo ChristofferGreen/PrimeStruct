@@ -422,4 +422,53 @@ TEST_CASE("vector helper named args on array targets report vector binding") {
   checkInvalidStatement("values.remove_swap([index] 0i32)", true);
 }
 
+namespace {
+
+std::string stdlibVectorMutatorSource(const std::string &statement) {
+  return "import /std/collections/*\n"
+         "\n"
+         "[effects(heap_alloc), return<int>]\n"
+         "main() {\n"
+         "  [Vector<i32> mut] values{Vector<i32>{}}\n"
+         "  " +
+         statement +
+         "\n"
+         "  return(0i32)\n"
+         "}\n";
+}
+
+} // namespace
+
+TEST_CASE("bare mutator call on a stdlib vector names its position and the method form") {
+  struct Case {
+    std::string name;
+    std::string statement;
+  };
+  const std::vector<Case> cases = {{"push", "push(values, 7i32)"},
+                                   {"pop", "pop(values)"},
+                                   {"reserve", "reserve(values, 8i32)"},
+                                   {"clear", "clear(values)"},
+                                   {"remove_at", "remove_at(values, 0i32)"},
+                                   {"remove_swap", "remove_swap(values, 0i32)"}};
+  for (const Case &testCase : cases) {
+    CAPTURE(testCase.name);
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(
+        stdlibVectorMutatorSource(testCase.statement), "/main", error, diagnosticInfo));
+    CHECK(error.find("unknown call target: /std/collections/vector/" + testCase.name +
+                     "; call it as a method: values." + testCase.name + "(...)") !=
+          std::string::npos);
+    CHECK(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 6);
+    CHECK(diagnosticInfo.primarySpan.column == 3);
+  }
+}
+
+TEST_CASE("the method form of a mutator on a stdlib vector is accepted") {
+  std::string error;
+  CHECK(validateProgram(stdlibVectorMutatorSource("values.push(7i32)"), "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();
