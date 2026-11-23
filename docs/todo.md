@@ -115,7 +115,7 @@ of sync with them.
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
-| TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | deferred | vector-bare-push-position |
+| TODO-6207 | The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position | ready | vector-bare-push-position |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -336,9 +336,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the edit in scope, then `build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots`.
   - notes: deferred: not reachable on master, needs the edit above.
 
-- [ ] TODO-6207: The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position
+- [~] TODO-6207: The bare `push(values, x)` on a stdlib `Vector` is `unknown call target` without a position
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-wasm (worktree-agent-a17eeacb332d6b439), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (found with the `string` push)
   - parallel_track: vector-bare-push-position
