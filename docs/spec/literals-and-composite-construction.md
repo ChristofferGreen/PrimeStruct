@@ -29,6 +29,11 @@
   - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled
     from their field initializers; if a field has no initializer, zero-arg construction requires a `Create()` helper to
     assign it. Extra arguments are a semantic error (`argument count mismatch`).
+    A brace constructor that is a struct field's default initializer (`[P] p{P{}}` in a struct body) is validated as
+    the same expression is in a local's initializer: an entry that is missing for a field without an initializer is
+    `argument count mismatch for /P`, and an entry for a private field of another module (`Vector<i32>{1i32}`) is
+    `private field is not accessible: <struct>/<field>`, both reported at the field's initializer. The initializer
+    runs in whatever constructs the struct, so it is not held to the effects of the struct definition.
   - **Multi-expression blocks:** constructor braces hold constructor field entries. General binding initializer blocks
     still produce one value via `return(value)` or the final expression when they are not parsed as a constructor entry
     list.

@@ -266,6 +266,17 @@ PhaseStatus SemanticsValidator::checkBindingForm(BindingContext &ctx) {
     if (!validateBuiltinComparableKeyType(info, definitionTemplateArgs, error_)) {
       return ctx.done(false);
     }
+    // A brace constructor in a field's default initializer is held to the rules of the same expression as a
+    // local's initializer: an entry for every field without an initializer, and no entry for a private field of
+    // another module (docs/spec/literals-and-composite-construction.md, Defaults & validation). The initializer
+    // runs in whatever constructs the struct, so the struct's own effects say nothing about it.
+    if (stmt.args.size() == 1 && stmt.args.front().kind == Expr::Kind::Call &&
+        stmt.args.front().isBraceConstructor) {
+      EffectScope initializerEffects(*this, everyEffectName());
+      if (!validateExpr(params, locals, stmt.args.front())) {
+        return ctx.done(false);
+      }
+    }
     insertLocalBinding(locals, stmt.name, std::move(info));
     return ctx.done(true);
   }

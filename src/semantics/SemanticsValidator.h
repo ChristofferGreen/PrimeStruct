@@ -576,6 +576,7 @@ private:
   std::unordered_set<std::string> ambiguousSpecializationBasePaths_;
   ValidationState currentValidationState_;
   VectorElementPlaceSites vectorElementPlaceSites_;
+  std::unordered_set<std::string> everyEffectName_;
   std::unordered_set<std::string> inferenceStack_;
   std::unordered_set<std::string> returnBindingInferenceStack_;
   // inside a CallSnapshotMemoScope (AST stable) the result of

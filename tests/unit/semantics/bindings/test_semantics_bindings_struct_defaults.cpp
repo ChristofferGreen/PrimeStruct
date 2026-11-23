@@ -451,4 +451,97 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
+TEST_CASE("a brace constructor in a field initializer needs every entry a local's needs") {
+  // docs/spec/literals-and-composite-construction.md, Defaults & validation: `x` has no initializer, so `P{}`
+  // lacks an entry, as a field's default as much as a local's initializer.
+  const std::string source = R"([struct]
+P() {
+  [i32] x
+  [i32] y{2i32}
+}
+
+[struct]
+Bag() {
+  [P] p{P{}}
+}
+
+[return<int>]
+main() {
+  [Bag] bag{Bag{}}
+  return(bag.p.x)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find("argument count mismatch for /P") != std::string::npos, error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 9);
+  CHECK(diagnosticInfo.primarySpan.column == 9);
+}
+
+TEST_CASE(
+    "a brace constructor in a field initializer cannot fill a private field of another module") {
+  // The entries of `Vector<i32>{1i32}` are the storage fields, which are private to the collections module: as a
+  // field's default it would build a vector that claims an element it does not have.
+  const std::string source = R"(import /std/collections/*
+
+[struct]
+Bag() {
+  [Vector<i32>] values{Vector<i32>{1i32}}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag] bag{Bag{}}
+  return(0i32)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(
+      error.find("private field is not accessible: /std/collections/vector/Vector/fieldCount") !=
+          std::string::npos,
+      error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 5);
+  CHECK(diagnosticInfo.primarySpan.column == 24);
+}
+
+TEST_CASE("a complete brace constructor is a field's initializer") {
+  const std::string source = R"(import /std/collections/*
+
+[struct]
+P() {
+  [i32] x
+  [i32] y{2i32}
+}
+
+[struct]
+Pair() {
+  [P] first
+  [P] second{P{4i32}}
+}
+
+[struct]
+Bag() {
+  [P] positional{P{1i32}}
+  [P] labeled{P{[x] 3i32, [y] 5i32}}
+  [Pair] nested{Pair{P{6i32}}}
+  [Vector<i32> mut] values{Vector<i32>{}}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.values.push(1i32)
+  return(bag.positional.x + bag.labeled.y + bag.nested.first.x + bag.nested.second.x)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
 #include "test_semantics_bindings_struct_defaults_maps.h"

@@ -152,6 +152,36 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
   return true;
 }
 
+const std::unordered_set<std::string> &SemanticsValidator::everyEffectName() {
+  if (everyEffectName_.empty()) {
+    everyEffectName_ = {"heap_alloc",
+                        "io_out",
+                        "io_err",
+                        "file_read",
+                        "file_write",
+                        "gpu_dispatch",
+                        "task",
+                        "net_io",
+                        "atomic",
+                        "lock",
+                        "channel",
+                        "build_run",
+                        "pathspace_notify",
+                        "pathspace_insert",
+                        "pathspace_take",
+                        "pathspace_bind",
+                        "pathspace_schedule"};
+    for (const Definition &def : program_.definitions) {
+      for (const Transform &transform : def.transforms) {
+        if (transform.name == "effects" || transform.name == "capabilities") {
+          everyEffectName_.insert(transform.arguments.begin(), transform.arguments.end());
+        }
+      }
+    }
+  }
+  return everyEffectName_;
+}
+
 bool SemanticsValidator::resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut) {
   auto failPassesEffectsDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));

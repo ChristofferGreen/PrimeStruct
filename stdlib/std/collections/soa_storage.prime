@@ -7,8 +7,9 @@ namespace std {
   namespace soa_storage {
   [public struct collection_type sendable]
   SoaColumn<T>() {
-    [private i32] count
-    [private i32] capacity
+    // Every field has an initializer, so `SoaColumn<T>{}` is the empty column, as `soaColumnNew<T>()` is.
+    [private i32] count{0i32}
+    [private i32] capacity{0i32}
     [private Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [private bool mut] ownsData{true}
 

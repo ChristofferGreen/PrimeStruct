@@ -71,6 +71,10 @@
   std::unordered_set<std::string> resolveEffects(const std::vector<Transform> &transforms, bool isEntry) const;
   bool validateCapabilitiesSubset(const std::vector<Transform> &transforms, const std::string &context);
   bool resolveExecutionEffects(const Expr &expr, std::unordered_set<std::string> &effectsOut);
+  // Every effect a definition of the program names and every effect a builtin asks for: the active effects of a
+  // place whose effects belong to another definition (a struct field's default initializer runs in whatever
+  // constructs the struct).
+  const std::unordered_set<std::string> &everyEffectName();
   bool validateCalleeEffects(const Expr &expr, const Definition &callee);
   bool exprUsesName(const Expr &expr, const std::string &name) const;
   bool statementsUseNameFrom(const std::vector<Expr> &statements, size_t startIndex, const std::string &name) const;
