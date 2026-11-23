@@ -347,9 +347,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: element writes of a stdlib `Vector`; no change to the builtin `vector`.
   - repro: the program in scope.
 
-- [ ] TODO-6192: `Vector<T>{}` is accepted as a field initializer and rejected as a local's
+- [~] TODO-6192: `Vector<T>{}` is accepted as a field initializer and rejected as a local's
   - owner: ai
   - status: ready
+  - claimed_by: vector-elements (worktree-agent-a200af4774795b81c), 2026-11-23
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (brace construction; found with the read-only element rule)
   - parallel_track: vector-brace-empty
