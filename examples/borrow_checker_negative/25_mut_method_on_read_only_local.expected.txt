@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"mutating method needs a mutable receiver: counter.bump() (counter is read-only; declare it with mut: [T mut] counter{...})"
+"line":13,"column":3
+"notes":["stage: semantic"]

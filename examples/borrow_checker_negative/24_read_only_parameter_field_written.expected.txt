@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"assign target must be a mutable binding: counter.total (counter is a read-only parameter; take it as a [T mut] parameter)"
+"line":9,"column":3
+"notes":["stage: semantic"]

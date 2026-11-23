@@ -1,0 +1,17 @@
+// A field is not written through a `[T]` parameter, even one declared `mut`: the parameter is a read-only borrow.
+[struct]
+Counter() {
+  [i32 mut] total{0i32}
+}
+
+[return<void>]
+add_one([Counter] counter) {
+  counter.total = counter.total + 1i32
+}
+
+[return<int>]
+main() {
+  [Counter mut] counter{Counter{}}
+  add_one(counter)
+  return(0i32)
+}

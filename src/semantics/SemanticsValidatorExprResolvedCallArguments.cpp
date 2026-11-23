@@ -1,4 +1,6 @@
 #include "SemanticsValidator.h"
+#include "SemanticsFieldModifiers.h"
+#include "SemanticsReadOnlyRoots.h"
 #include "StdlibCollectionSurfaceHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -522,6 +524,29 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
       }
       return failResolvedCallArgumentDiagnostic(
           "borrow conflict: " + arg->name + " (root: " + arg->name + ", sink: " + param.name + ")");
+    }
+  }
+
+  // A `[mut]` method changes its receiver, so the receiver cannot be rooted at a read-only binding: a non-`mut`
+  // local, a `[T]` or `[T copy]` parameter, or the `this` of a method that is not `[mut]`. A lifecycle helper
+  // sets up `this`, and a `Reference` carries its own write access.
+  if (!calleeParams.empty() && calleeParams.front().name == "this" &&
+      calleeParams.front().binding.isMutable && packedParamIndex != 0 && !orderedArgs.empty() &&
+      orderedArgs.front() != nullptr && orderedArgs.front() != calleeParams.front().defaultExpr &&
+      !isClosureCallPath(*context.diagnosticResolved) &&
+      !isLifecycleHelperPath(currentValidationState_.context.definitionPath)) {
+    ReadOnlyRootLookup lookup;
+    lookup.bindingOf = [&](const std::string &name, bool &isParameter) -> const BindingInfo * {
+      isParameter = findParamBinding(params, name) != nullptr;
+      return bindingForName(name);
+    };
+    lookup.fieldOf =
+        [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
+          return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
+        };
+    if (const auto root = findReadOnlyRoot(*orderedArgs.front(), lookup, true)) {
+      return failResolvedCallArgumentDiagnostic(
+          readOnlyReceiverDiagnostic(*orderedArgs.front(), expr.name, *root));
     }
   }
 

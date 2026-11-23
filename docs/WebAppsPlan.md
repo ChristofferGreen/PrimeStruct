@@ -126,7 +126,7 @@ handler that brings the menus, toolbars and session up to date after each event.
    TODO-5772): sendable values TODO-5790 and `Function` sendable by construction TODO-5791; VM tasks TODO-5792; `optexe` heaps and threads TODO-5793,
    TODO-5794, TODO-5795; `Atomic`, `Mutex`, `Channel` TODO-5796, TODO-5797, TODO-5798; then `serveWorkers`
    TODO-5802 (done) and the apps on it, measured (done; the numbers are under Concurrency), then read-only handlers under `RwLock` (`app.view`;
-   TODO-5804, landed, its compile-error test waits on TODO-6183). Deferred: sessions TODO-5806; keep-alive TODO-5805 (done: `serve` and `serveWorkers` keep HTTP/1.1 connections open, with a
+   TODO-5804, landed; only its compile-error test is left). Deferred: sessions TODO-5806; keep-alive TODO-5805 (done: `serve` and `serveWorkers` keep HTTP/1.1 connections open, with a
    request cap and an idle timeout).
 8. Later: TODO-5954 (handler aliases in the stdlib), TODO-5718 (repeated and decoded
    parameters).

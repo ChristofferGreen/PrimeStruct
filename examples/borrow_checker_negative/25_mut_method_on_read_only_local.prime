@@ -1,0 +1,15 @@
+// A `[mut]` method is not called on a local that is not `mut`.
+[struct]
+Counter() {
+  [i32 mut] total{0i32}
+  [mut] bump() {
+    this.total = this.total + 1i32
+  }
+}
+
+[return<int>]
+main() {
+  [Counter] counter{Counter{}}
+  counter.bump()
+  return(0i32)
+}

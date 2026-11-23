@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 #include "AssignScalarTypeCheck.h"
 #include "SemanticsFieldModifiers.h"
+#include "SemanticsReadOnlyRoots.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 #include <algorithm>
 #include "StdlibCollectionSurfaceHelpers.h"
@@ -730,6 +731,26 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       }
       if (const auto message = fieldAssignmentDiagnostic(fieldBinding, fieldTarget.name)) {
         return failMutationBorrowDiagnostic(*message);
+      }
+      // A field is written through its root; a read-only root (a non-`mut` local, a `[T]` parameter, the
+      // `this` of a method that is not `[mut]`) cannot change, whatever the field says. A lifecycle helper
+      // sets up its own `this`.
+      ReadOnlyRootLookup rootLookup;
+      rootLookup.bindingOf = [&](const std::string &name,
+                                 bool &isParameter) -> const BindingInfo * {
+        const BindingInfo *binding = findParamBinding(params, name);
+        isParameter = binding != nullptr;
+        const auto localIt = locals.find(name);
+        return isParameter ? binding : (localIt == locals.end() ? nullptr : &localIt->second);
+      };
+      rootLookup.fieldOf = [&](const Expr &receiver, const std::string &name, BindingInfo &out) {
+        return this->resolveStructFieldBinding(params, locals, receiver, name, out);
+      };
+      if (const auto root = findReadOnlyRoot(fieldTarget, rootLookup, false);
+          root.has_value() &&
+          !(root->name == "this" &&
+            isLifecycleHelperPath(currentValidationState_.context.definitionPath))) {
+        return failMutationBorrowDiagnostic(readOnlyFieldWriteDiagnostic(fieldTarget, *root));
       }
       std::string fieldTargetRootName;
       const bool allowMutableReceiverFieldWrite =

@@ -33,6 +33,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.text_views
   primestruct.semantics.type_aliases
   primestruct.semantics.construction_only_fields
+  primestruct.semantics.read_only_roots
   primestruct.semantics.maybe
   primestruct.semantics.type_resolution_graph
   primestruct.semantics.move
@@ -349,6 +350,13 @@ addPrimeStructManagedDoctestSuite(
   ${PrimeStructManagedSemanticsCommon}
   TOTAL_CASES 9
   SHARD_PREFIX "construction_only_fields"
+)
+
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.read_only_roots"
+  ${PrimeStructManagedSemanticsCommon}
+  TOTAL_CASES 10
+  SHARD_PREFIX "read_only_roots"
 )
 
 addPrimeStructManagedDoctestSuite(

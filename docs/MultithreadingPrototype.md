@@ -1105,7 +1105,8 @@ main() {
   where the server hands the `RwLock` to a worker (``spawn argument `app` of ... is not sendable: field `value` of RwLock<WebApp<Borrowed>>, field `state` of ...``). A handler that captures a `Pointer` is already rejected where it is written, under `serve` too.
 - **What runs in parallel:** receiving, parsing, serializing the response and sending, and the views. What does not:
   the `get`, `post` and other handlers, including writing their page's HTML. Measured in docs/WebAppsPlan.md,
-  Concurrency. A view that writes the state is a data race that the compiler does not yet stop (TODO-6183).
+  Concurrency. A view that writes the state is a compile error: its `[State]` parameter is a read-only borrow
+  (docs/spec/value-lifecycle.md, Read-only roots).
 - The poller watches `/std/os` `stopSignalFd()`, a pipe the signal handler writes to, so `SIGINT` or `SIGTERM` ends
   its `poll` at once on whichever thread the signal lands, at any moment from startup on. Worker threads also block
   both signals (`blockStopSignals`), so their reads and writes are not interrupted. On stop the poller stops
@@ -1123,8 +1124,7 @@ main() {
 - **Rejected: several processes on one port** (`SO_REUSEPORT`, N copies of the binary). Each process would have its
   own state: a POST would change one copy of the todo list and the next GET could read another. It only fits
   stateless apps, and the stdlib's app model keeps state in the process (`docs/WebAppsPlan.md`, principle 2).
-- **Later, filed but deferred:** the compile error for a view that writes its state (TODO-5804's last acceptance,
-  blocked on TODO-6183), sessions (TODO-5806). Keep-alive (TODO-5805) is done: a worker that answers a request with `keep-alive` hands the slot back
+- **Later, filed but deferred:** the compile-error test for a view that writes its state (TODO-5804's last acceptance), sessions (TODO-5806). Keep-alive (TODO-5805) is done: a worker that answers a request with `keep-alive` hands the slot back
   to the poller, which watches it until `keepAliveTimeoutMs` passes.
 
 ### Open Questions

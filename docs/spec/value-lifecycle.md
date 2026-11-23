@@ -64,6 +64,20 @@
   | `[T move] x` | the value itself (passed by reference, no copy); the callee owns it | the binding ends: it is moved-from after the call |
   | `[T move mut] x` | as for `move`, and it may change it | as for `move` |
 
+- **Read-only roots:** a struct reached through a read-only root cannot be changed, whatever its fields say. The roots
+  are a local that is not `mut`, a `[T]` or `[T copy]` parameter (a lambda's included) and the `this` of a method that
+  is not `[mut]`. A write to a field of one (`c.n = 5`, `c.inner.n = 5`, `c.items[i] = x`) is the diagnostic
+  `assign target must be a mutable binding: c.n (c is a read-only parameter; take it as a [T mut] parameter)`, and a call
+  of a `[mut]` method on one is `mutating method needs a mutable receiver: c.bump() (c is read-only; declare it with
+  mut: [T mut] c{...})`; each names the fix for its root (`[T mut] c{...}`, a `[T mut]` parameter, or `[mut]` on the
+  method). A `Reference<T>` parameter or local, a `[T mut]` binding, a `Reference` or `Pointer` field on the way and the
+  `this` of a lifecycle helper (`Create`, `Destroy`, `Copy`, `Move`) carry their own write access, so they are not
+  read-only roots (a plain `Reference<struct>` may still change fields and call
+  `mut` helpers, as in `pointers-and-references.md`). A write view (`Slice<T, Write>`) is a struct like another: its
+  `set` and `fill` are `[mut]` methods, so the binding is declared `[Slice<T, Write> mut]`. The `call` of a `Function` or closure is not held to this rule
+  (whether a `Function` may be called through a read-only place is TODO-6116). This is what makes a `[T]` parameter a
+  read-only borrow that concurrent readers of an `RwLock<T>` can share. Only a name or a chain of field accesses ending
+  in a name is checked: an element of a collection (`items[i].bump()`) and the result of a call are not.
 - **A `Reference` result as an argument:** a call that returns `Reference<T>` (`[return<Reference<T>>]`) yields its
   referent, so passing it to a `[Reference<T>]` or `[T mut]` scalar parameter gives the callee the referent itself, not a
   copy: `bump(borrow_of(slot))` and a closure body called as `body(borrow_of(slot))` write through to `slot`. A call

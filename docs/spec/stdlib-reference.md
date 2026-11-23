@@ -801,8 +801,8 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   borrow, not a `Reference<State>`. A request that a view matches is answered by the view before the `get` and other
   routes are tried (so a view wins over a `get` of the same pattern); a path that only a view has answers 405 to
   another method. `serve` runs a view as it runs any handler; `serveWorkers` runs it under the read lock, beside other
-  views. A view must not change the state: the language does not yet diagnose a write through a read-only
-  parameter whose field is `mut` (TODO-6183), so keeping to this is the author's job until it does.
+  views. A view cannot change the state: a write to a field of the `[State]` parameter, or a call of a `[mut]` method on it,
+  is a compile error (docs/spec/value-lifecycle.md, Read-only roots).
 
   The state is a parameter rather than a capture because a handler stored in a `Function` cannot hold a `[ref]`
   capture (docs/spec/value-lifecycle.md, Lambdas): a closure that borrowed an outer `TodoList` could outlive it. A

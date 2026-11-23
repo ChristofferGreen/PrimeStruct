@@ -291,6 +291,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateSliceLoans.cpp
   src/semantics/SemanticsBorrowedParameterMessages.cpp
   src/semantics/SemanticsFieldModifiers.cpp
+  src/semantics/SemanticsReadOnlyRoots.cpp
   src/semantics/SemanticsSendable.cpp
   src/semantics/SemanticsSummaryTransform.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
@@ -2864,6 +2865,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/semantics/test_semantics_symbol_interner.cpp
     tests/unit/semantics/test_semantics_uninitialized_fields.cpp
     tests/unit/semantics/test_semantics_construction_only_fields.cpp
+    tests/unit/semantics/test_semantics_read_only_roots.cpp
     tests/unit/semantics/entry/test_semantics_entry_parameters.cpp
     tests/unit/semantics/entry/test_semantics_entry_return_inference.cpp
     tests/unit/semantics/entry/test_semantics_entry_resolution.cpp
@@ -3054,6 +3056,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.semantics.text_views
     primestruct.semantics.type_aliases
     primestruct.semantics.construction_only_fields
+    primestruct.semantics.read_only_roots
     primestruct.semantics.maybe
     primestruct.semantics.traits
     primestruct.semantics.move
