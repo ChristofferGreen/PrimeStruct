@@ -23,13 +23,17 @@ struct ReadOnlyRootLookup {
   std::function<const BindingInfo *(const std::string &name, bool &isParameter)> bindingOf;
   // The binding of field `fieldName` of `receiver`, or false when it cannot be resolved.
   std::function<bool(const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut)> fieldOf;
+  // The type of the value `expr` yields, or false when it cannot be inferred.
+  std::function<bool(const Expr &expr, BindingInfo &typeOut)> typeOf;
 };
 
-// The read-only root of `place` (a name, or a chain of field accesses ending in a name), or nothing when the
-// place may be written: its root is `mut`, a `Reference` or `Pointer`, a field on the way is a `Reference` or
-// `Pointer` (the write goes through it to its referent), the root is not a binding, or the place is no chain.
-// `placeIsReceiver` says the place itself is what a method is called on, so its own last field counts as a field
-// on the way (a `Reference` field's method call changes its referent); for an assignment target it does not.
+// The read-only root of `place` (a name, or a chain of field accesses and element reads ending in a name), or
+// nothing when the place may be written: its root is `mut`, a `Reference` or `Pointer`, a field or element on the
+// way is a `Reference` or `Pointer` (the write goes through it to its referent), the root is not a binding, or the
+// place is no chain. An element of a collection (`bag.items[i]`) is part of the collection's owner, so its root is
+// the root of the collection place; the result of any other call is a temporary and ends the chain.
+// `placeIsReceiver` says the place itself is what a method is called on, so its own last field or element counts
+// as one on the way (a `Reference` field's method call changes its referent); for an assignment target it does not.
 std::optional<ReadOnlyRoot> findReadOnlyRoot(const Expr &place, const ReadOnlyRootLookup &lookup,
                                              bool placeIsReceiver);
 

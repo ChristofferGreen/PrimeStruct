@@ -17,7 +17,9 @@ aliases is changed directly (`19_view_of_reference_alias_changed_directly`), and
 (`20_view_changed_through_plain_reference_argument`, `21_view_changed_through_reference_callee`), and an assignment to the borrowed local, which names the view as the sink
 (`22_view_blocks_assignment_names_view`), and a view of a field that a plain `Reference` parameter replaces
 (`23_view_changed_by_replacing_a_field`), and a field written through a read-only `[T]` parameter or a `[mut]` method
-called on a local that is not `mut` (`24_read_only_parameter_field_written`, `25_mut_method_on_read_only_local`).
+called on a local that is not `mut` (`24_read_only_parameter_field_written`, `25_mut_method_on_read_only_local`), and
+a `[mut]` method called on an element of a collection field of a read-only parameter
+(`26_element_of_read_only_parameter_changed`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

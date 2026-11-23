@@ -544,6 +544,9 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
         [&](const Expr &receiver, const std::string &fieldName, BindingInfo &fieldOut) {
           return resolveStructFieldBinding(params, locals, receiver, fieldName, fieldOut);
         };
+    lookup.typeOf = [&](const Expr &typed, BindingInfo &typeOut) {
+      return inferBindingTypeFromInitializer(typed, params, locals, typeOut);
+    };
     if (const auto root = findReadOnlyRoot(*orderedArgs.front(), lookup, true)) {
       return failResolvedCallArgumentDiagnostic(
           readOnlyReceiverDiagnostic(*orderedArgs.front(), expr.name, *root));

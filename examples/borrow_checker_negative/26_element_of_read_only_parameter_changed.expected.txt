@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"mutating method needs a mutable receiver: bag.items[...].bump() (bag is a read-only parameter; take it as a [T mut] parameter)"
+"line":20,"column":3
+"notes":["stage: semantic"]

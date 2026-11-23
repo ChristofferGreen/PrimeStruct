@@ -41,6 +41,59 @@ void checkAccepted(const std::string &body) {
                 error);
 }
 
+// An element of a collection is part of the collection's owner, so `bag.items[i]` has the root of `bag.items`.
+const char *BagProgram = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+  [mut] bump() {
+    this.n = this.n + 1i32
+  }
+}
+
+[struct]
+Bag() {
+  [vector<Item> mut] items{vector<Item>{}}
+  [array<Item> mut] fixed{array<Item>{Item{}}}
+  [Vector<Item> mut] grown{/std/collections/vector/vector<Item>()}
+  [vector<vector<Item>> mut] nested{vector<vector<Item>>{}}
+}
+
+[return<Bag>]
+make_bag() {
+  return(Bag{})
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+
+// `body` starts on line 28 of the program.
+void checkBagRejectedAt(const std::string &body,
+                        const std::string &expected,
+                        int line,
+                        int column) {
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(
+      std::string(BagProgram) + body, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find(expected) != std::string::npos, error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == line);
+  CHECK(diagnosticInfo.primarySpan.column == column);
+}
+
+void checkBagAccepted(const std::string &body) {
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_MESSAGE(validateProgramReportingDiagnostic(
+                    std::string(BagProgram) + body, "/main", error, diagnosticInfo),
+                error);
+}
+
 } // namespace
 
 TEST_CASE("a field is not written through a read-only parameter") {
@@ -247,6 +300,148 @@ read([Counter] counter) {
 main() {
   [Counter] counter{Counter{}}
   return(minus(read(counter), 0i32))
+}
+)");
+}
+
+TEST_CASE("a field of a vector element is not written through a read-only parameter") {
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+write([Bag] bag) {
+  bag.items[0i32].n = 5i32
+}
+)",
+      "assign target must be a mutable binding: bag.items[...].n (bag is a read-only parameter; "
+      "take it as a [T mut] parameter)",
+      30,
+      3);
+}
+
+TEST_CASE("a mut method is not called on a vector element of a read-only parameter") {
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump([Bag] bag) {
+  bag.items[0i32].bump()
+}
+)",
+      "mutating method needs a mutable receiver: bag.items[...].bump() (bag is a read-only "
+      "parameter; take it as a [T mut] parameter)",
+      30,
+      3);
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump([Bag] bag) {
+  bag.items.at(0i32).bump()
+}
+)",
+      "mutating method needs a mutable receiver: bag.items[...].bump() (bag is a read-only",
+      30,
+      3);
+}
+
+TEST_CASE("an element of an array field and of a Vector field has the root of the field") {
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+write([Bag] bag) {
+  bag.fixed[0i32].n = 5i32
+}
+)",
+      "assign target must be a mutable binding: bag.fixed[...].n (bag is a read-only parameter",
+      30,
+      3);
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump([Bag] bag) {
+  bag.fixed[0i32].bump()
+}
+)",
+      "mutating method needs a mutable receiver: bag.fixed[...].bump() (bag is a read-only",
+      30,
+      3);
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+write([Bag] bag) {
+  bag.grown[0i32].n = 5i32
+}
+)",
+      "assign target must be a mutable binding: bag.grown[...].n (bag is a read-only parameter",
+      30,
+      3);
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump([Bag] bag) {
+  bag.grown[0i32].bump()
+}
+)",
+      "mutating method needs a mutable receiver: bag.grown[...].bump() (bag is a read-only",
+      30,
+      3);
+}
+
+TEST_CASE("an element of an element, of a local and of this has the same root") {
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump([Bag] bag) {
+  bag.nested[0i32][1i32].bump()
+}
+)",
+      "mutating method needs a mutable receiver: bag.nested[...][...].bump() (bag is a read-only",
+      30,
+      3);
+  checkBagRejectedAt(
+      R"([effects(heap_alloc) return<void>]
+bump() {
+  [vector<Item>] items{vector<Item>{}}
+  items[0i32].bump()
+}
+)",
+      "mutating method needs a mutable receiver: items[...].bump() (items is read-only; declare it "
+      "with mut: [T mut] items{...})",
+      31,
+      3);
+  checkBagRejectedAt(
+      R"([struct]
+Shelf() {
+  [vector<Item> mut] items{vector<Item>{}}
+  [effects(heap_alloc)] poke() {
+    this.items[0i32].n = 2i32
+  }
+}
+)",
+      "assign target must be a mutable binding: this.items[...].n (this is read-only in a method "
+      "that is not [mut]; mark the method [mut])",
+      32,
+      5);
+}
+
+TEST_CASE("elements reached through mut, a Reference or a call result are written") {
+  checkBagAccepted(R"([effects(heap_alloc) return<void>]
+write_mut([Bag mut] bag) {
+  bag.items[0i32].n = 5i32
+  bag.items[0i32].bump()
+  bag.fixed[0i32].bump()
+  bag.grown[0i32].bump()
+  bag.nested[0i32][1i32].bump()
+}
+
+[effects(heap_alloc) return<void>]
+write_reference([Reference<Bag>] bag) {
+  bag.items[0i32].n = 5i32
+  bag.items[0i32].bump()
+}
+
+[effects(heap_alloc) return<void>]
+write_references([args<Reference<Item>>] values) {
+  values[0i32].n = 5i32
+  values[0i32].bump()
+}
+
+[effects(heap_alloc) return<int>]
+read_and_write_temporary([Bag] bag) {
+  make_bag().items[0i32].bump()
+  [Bag mut] own{Bag{}}
+  own.items[0i32].bump()
+  return(bag.items[0i32].n)
 }
 )");
 }

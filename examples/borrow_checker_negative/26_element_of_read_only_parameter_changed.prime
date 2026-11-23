@@ -1,0 +1,29 @@
+// An element of a collection field belongs to the field's owner: a `[mut]` method is not called on it through a
+// read-only `[T]` parameter.
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] count{0i32}
+  [mut] bump() {
+    this.count = this.count + 1i32
+  }
+}
+
+[struct]
+Bag() {
+  [vector<Item> mut] items{vector<Item>{}}
+}
+
+[effects(heap_alloc) return<void>]
+bump_first([Bag] bag) {
+  bag.items[0i32].bump()
+}
+
+[effects(heap_alloc) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(Item{})
+  bump_first(bag)
+  return(bag.items[0i32].count)
+}

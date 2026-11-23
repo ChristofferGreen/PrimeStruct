@@ -746,6 +746,9 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
       rootLookup.fieldOf = [&](const Expr &receiver, const std::string &name, BindingInfo &out) {
         return this->resolveStructFieldBinding(params, locals, receiver, name, out);
       };
+      rootLookup.typeOf = [&](const Expr &typed, BindingInfo &out) {
+        return this->inferBindingTypeFromInitializer(typed, params, locals, out);
+      };
       if (const auto root = findReadOnlyRoot(fieldTarget, rootLookup, false);
           root.has_value() &&
           !(root->name == "this" &&
