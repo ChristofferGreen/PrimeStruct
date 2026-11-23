@@ -155,7 +155,7 @@ of sync with them.
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
-| TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | deferred | lib-shapes |
+| TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root | ready | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -310,9 +310,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6173: A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root
+- [~] TODO-6173: A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
   - created_at: 2026-11-21
   - phase: Modules and libraries (found with TODO-6032)
   - parallel_track: lib-shapes
