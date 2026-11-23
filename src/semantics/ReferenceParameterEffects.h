@@ -19,6 +19,12 @@ namespace primec::semantics {
 // a container, because the assignment frees the storage a view of the old field reads; assigning a scalar field
 // is not. The analysis reads definition bodies only and never reports a read-only parameter.
 //
+// A lambda is a closure struct with a field per capture and a `call` method (SemanticsValidateLambdaClosures.h), and
+// the lambda expression is a call of its factory. Passing the parameter to the factory counts as a change when the
+// factory takes it by `Reference` and the closure's `call` changes the field that holds it, so a lambda that
+// replaces or pushes to a captured parameter is a change and one that only reads it is not, whether or not it is
+// called. A call of an opaque `Function` value has no definition to read: it is a known limit of the check.
+//
 // Answers are cached per (definition, parameter). A cycle assumes "no change" for the call that closes it, so a
 // recursive definition is flagged only when some other path in the cycle changes the parameter; an answer that
 // relied on such an assumption is not cached.
@@ -43,7 +49,16 @@ public:
   bool changesStructurally(const std::string &definitionPath, size_t parameterIndex);
 
 private:
-  bool analyze(const std::string &definitionPath, size_t parameterIndex);
+  // The capture of a closure whose `call` is analyzed: the field of `this` that holds the captured `Reference`,
+  // and the type that reference points to.
+  struct Capture {
+    std::string field;
+    std::string structTypeText;
+  };
+  bool changesStructurally(const std::string &definitionPath,
+                           size_t parameterIndex,
+                           const Capture *capture);
+  bool analyze(const std::string &definitionPath, size_t parameterIndex, const Capture *capture);
   // The parameter under analysis: the names that stand for its place (the parameter and its aliases), and the
   // type its fields are looked up in.
   struct Subject {
@@ -51,10 +66,14 @@ private:
     std::string parameterName;
     std::string structTypeText;
     std::string namespacePrefix;
+    // Set for the `call` of a closure: only the place held by this field of `this` is tracked.
+    std::string captureField;
   };
   bool exprChanges(const Expr &expr, Subject &subject);
   bool callChanges(const Expr &call, const Subject &subject);
   bool assignReplacesContainerField(const Expr &call, const Subject &subject) const;
+  bool
+  lambdaFactoryChanges(const Expr &call, const std::string &factoryPath, const Subject &subject);
 
   const DefinitionMap &definitions_;
   const ParameterMap &parameters_;

@@ -2372,6 +2372,95 @@ main() {
   }
 }
 
+TEST_CASE("a lambda that changes a captured Reference parameter ends a live view") {
+  // The lambda is a closure struct with a `call` method; creating it from a plain `Reference` parameter is a
+  // change when `call` changes what the capture reaches (docs/spec/type-system.md, Memory safety). A call of an
+  // opaque `Function` value has no body to read and is a known limit of the check.
+  const std::string helpers = R"(
+import /std/collections/*
+
+[struct]
+Bag() {
+  [vector<i32> mut] items{vector<i32>()}
+  [i32 mut] hits{0i32}
+}
+
+[effects(heap_alloc), return<void>]
+reset_via_lambda([Reference<Bag>] bag) {
+  [auto] f{[bag]() { bag.items = vector<i32>(7i32) }}
+  f()
+}
+
+[effects(heap_alloc), return<void>]
+push_via_lambda([Reference<Bag>] bag) {
+  [auto] f{[bag]() { bag.items.push(3i32) }}
+  f()
+}
+
+[effects(heap_alloc), return<void>]
+reset_via_nested_lambda([Reference<Bag>] bag) {
+  [auto] outer{[bag]() {
+    [auto] inner{[bag]() { bag.items = vector<i32>(7i32) }}
+    inner()
+  }}
+  outer()
+}
+
+[effects(heap_alloc), return<int>]
+read_via_lambda([Reference<Bag>] bag) {
+  [auto] f{[bag]() { return(bag.items.count()) }}
+  return(f())
+}
+
+[return<void>]
+bump_via_lambda([Reference<Bag>] bag) {
+  [auto] f{[bag]() { bag.hits = 3i32 }}
+  f()
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(1i32)
+  [vector<i32>] view{bag.items}
+)";
+  const std::vector<std::pair<std::string, std::string>> rejected = {
+      {"field assignment", "  reset_via_lambda(location(bag))\n  return(view.count())\n}\n"},
+      {"push", "  push_via_lambda(location(bag))\n  return(view.count())\n}\n"},
+      {"nested lambda", "  reset_via_nested_lambda(location(bag))\n  return(view.count())\n}\n"},
+  };
+  for (const auto &[name, tail] : rejected) {
+    INFO(name);
+    const std::string source = helpers + tail;
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find("borrowed binding: bag (root: bag, sink: view") != std::string::npos,
+                  error);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    const size_t offset = source.find("(location(bag))");
+    REQUIRE(offset != std::string::npos);
+    const size_t lineStart = source.rfind('\n', offset) + 1;
+    int line = 1;
+    for (size_t i = 0; i < lineStart; ++i) {
+      line += source[i] == '\n' ? 1 : 0;
+    }
+    CHECK(diagnosticInfo.primarySpan.line == line);
+  }
+  const std::vector<std::pair<std::string, std::string>> accepted = {
+      {"read only", "  return(plus(read_via_lambda(location(bag)), view.count()))\n}\n"},
+      {"scalar field", "  bump_via_lambda(location(bag))\n  return(view.count())\n}\n"},
+      {"view ends first",
+       "  [i32] seen{view.count()}\n  reset_via_lambda(location(bag))\n  return(seen)\n}\n"},
+  };
+  for (const auto &[name, tail] : accepted) {
+    INFO(name);
+    std::string error;
+    CHECK(validateProgram(helpers + tail, "/main", error));
+    CHECK(error.empty());
+  }
+}
+
 TEST_CASE("vector and map public helpers stay callable from safe code") {
   const std::string source = R"(
 import /std/collections/*

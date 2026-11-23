@@ -64,9 +64,12 @@
   `Reference<container>` parameter whose body changes it structurally (directly or through callees) is a
   `borrowed binding` error while the view is still read afterwards; read-only `Reference` parameters are fine.
   Assigning a field that owns a container (`state.items = vector<i32>(7i32)`) counts as a structural change of the
-  struct, because it frees the storage a view of the old field reads; assigning a scalar field does not. A lambda
-  or a `Function` value that changes the container is not followed yet (TODO-6171, a lambda or `Function` value
-  that changes a viewed container).
+  struct, because it frees the storage a view of the old field reads; assigning a scalar field does not. A lambda in
+  the callee counts through its capture list: creating a lambda that captures the parameter by `Reference` is a
+  change when its body replaces a container field of the capture or calls a structural helper on it, whether or not
+  the lambda is called; a lambda that only reads, or writes a scalar field, is not. A call of an opaque `Function`
+  value has no body to read, so the check cannot see what it changes: a callee that changes the container through a
+  `Function` it is given is not followed (a documented limit of the view check; there is no `Function<..., mut>`).
   - Runnable example (exit code 15: the struct changes through a plain reference, the `i32` needs `mut`):
     ```
     [struct]

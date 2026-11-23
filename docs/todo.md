@@ -129,7 +129,6 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6197 | Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std` | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
-| TODO-6171 | A view stays live across a lambda or a `Function` value that changes its container | ready | safety-borrows |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -167,13 +166,11 @@ of sync with them.
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
 - TODO-5933 (lib-embed): `ScriptEngine::addLibrary` and a source-hash compiler build id
-- TODO-6171 (safety-borrows): a lambda's capture list counts as a change of a viewed container
 
 ### Immediate Next 10
 
 1. TODO-5603
 6. TODO-5933
-7. TODO-6171
 
 ### Priority Lanes
 
@@ -183,7 +180,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933; ready outside Ready Now TODO-6032 (decided 2026-11-22); deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready TODO-6171 (a lambda changes a viewed container); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): TODO-6121; deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -312,22 +309,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
-
-- [~] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
-  - owner: ai
-  - status: ready
-  - claimed_by: vec-ref (worktree-agent-af817b3f6b645ec22), 2026-11-23
-  - created_at: 2026-11-21
-  - phase: Correctness audit 2026-10 (found with TODO-6170)
-  - parallel_track: safety-borrows
-  - scope: the callee-effect analysis (src/semantics/ReferenceParameterEffects.cpp) reads definition bodies and the definitions a call resolves to. Two ways of changing a viewed container escape it. (1) A lambda: its body is hoisted into a definition of its own (`/reset_via_lambda__lambda0/call`) that holds the captures, so a plain `Reference` parameter captured by a lambda that replaces or pushes to what it reaches is not counted when the callee calls the lambda. (2) A callee reached only through an unresolved call: a call of a `Function` value (`f(bag)` where `f` is a `Function<void, Reference<Bag>>`) has no definition, so passing the parameter to it is not counted. Counting every pass to such a call as a change would reject read-only callbacks (a false positive on stdlib and UI code), so it needs either the capture list of the hoisted lambda (case 1, sound) or a decision for case 2.
-  - decision: 2026-11-22 (owner): case 1 (a lambda): the hoisted lambda definition is counted through its capture list, so a lambda that replaces or pushes to a captured plain `Reference` parameter is a change. Case 2 (a `Function` value call) is option A: left open and documented as a limit of the view check (it cannot see through type erasure); no `Function<..., mut>` language change.
-  - acceptance:
-    - case 1: a lambda in the callee that replaces a container field of a captured plain `Reference` parameter, or calls `push` on it, counts as a change; a lambda that only reads does not; negative example with line and column; the stdlib, examples, UI and web code compile
-    - case 2 decided and, if B or C, enforced with a negative example
-    - full release gate green
-  - stop_rule: lambdas and `Function` values in the callee-effect analysis; no new borrow kinds.
-  - repro: (1) `import /std/collections/*  [struct] Bag() { [vector<i32> mut] items{vector<i32>()} } [effects(heap_alloc), return<void>] reset_via_lambda([Reference<Bag>] bag) { [auto] f{[bag]() { bag.items = vector<i32>(7i32) }} f() } [effects(heap_alloc), return<int>] main() { [Bag mut] bag{Bag{}} bag.items.push(1i32) [vector<i32>] view{bag.items} reset_via_lambda(location(bag)) return(view.count()) }` compiles. (2) the same with `reset_via_function([Reference<Bag>] bag, [Function<void, Reference<Bag>>] f) { f(bag) }` called with `Function<void, Reference<Bag>>{swap_items}` where `swap_items([Reference<Bag> mut] bag)` assigns `bag.items`, compiles.
 
 - [ ] TODO-6173: A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a library root
   - owner: ai
