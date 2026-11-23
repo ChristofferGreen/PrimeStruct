@@ -331,9 +331,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6190: Reading a struct element of a `Vector` struct field is `unaligned indirect address` on the VM
+- [~] TODO-6190: Reading a struct element of a `Vector` struct field is `unaligned indirect address` on the VM
   - owner: ai
   - status: ready
+  - claimed_by: vector-elements (worktree-agent-a200af4774795b81c), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the read-only element rule)
   - parallel_track: vector-field-element-read
