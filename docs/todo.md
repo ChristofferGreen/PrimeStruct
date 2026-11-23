@@ -331,9 +331,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
+- [~] TODO-5804: GET handlers that only read the state run at the same time under `RwLock`
   - owner: ai
   - status: ready
+  - claimed_by: readonly-a (worktree-agent-a62a19ddaa7886f74), 2026-11-23
   - created_at: 2026-11-09
   - phase: Multithreading and Web apps (docs/MultithreadingPrototype.md, The Server)
   - parallel_track: mt-server
