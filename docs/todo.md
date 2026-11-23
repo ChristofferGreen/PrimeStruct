@@ -758,9 +758,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
 
-- [ ] TODO-5933: The embed API loads a library at run time (`ScriptEngine::addLibrary`)
+- [~] TODO-5933: The embed API loads a library at run time (`ScriptEngine::addLibrary`)
   - owner: ai
   - status: ready
+  - claimed_by: ai-libshapes (worktree-agent-ae7b8cc36b25dd2d2), 2026-11-23
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 14)
   - parallel_track: lib-embed
