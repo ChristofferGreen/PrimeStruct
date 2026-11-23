@@ -19,8 +19,8 @@ namespace std {
 
   [public struct collection_type sendable]
   Vector<T>() {
-    [private i32] fieldCount
-    [private i32] fieldCapacity
+    [private i32] fieldCount{0i32}
+    [private i32] fieldCapacity{0i32}
     [private Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1)}
     [private bool mut] ownsData{true}
 

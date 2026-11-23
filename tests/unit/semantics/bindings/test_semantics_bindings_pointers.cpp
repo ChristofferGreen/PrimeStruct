@@ -2494,4 +2494,75 @@ TEST_CASE("container storage fields are private outside the collections namespac
   }
 }
 
+TEST_CASE("an empty brace stdlib Vector is a local's initializer") {
+  // docs/spec/literals-and-composite-construction.md, Vector binding forms: every field of `Vector` has an
+  // initializer, so `Vector<T>{}` is the empty vector.
+  const std::string source = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Item> mut] local{Vector<Item>{}}
+  local.push(Item{3i32})
+  [auto mut] inferred{Vector<i32>{}}
+  inferred.push(4i32)
+  return(local.count() + inferred.count())
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("an empty brace stdlib Vector is a field's initializer") {
+  const std::string source = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(Item{3i32})
+  return(bag.items.count())
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("a brace stdlib Vector with an entry names a private field") {
+  // The entries of the braces are the storage fields, which are private: only the empty form builds a Vector.
+  const std::string source = R"(import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{Vector<i32>{1i32}}
+  return(0i32)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(
+      error.find("private field is not accessible: /std/collections/vector/Vector/fieldCount") !=
+          std::string::npos,
+      error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 5);
+  CHECK(diagnosticInfo.primarySpan.column == 24);
+}
+
 TEST_SUITE_END();

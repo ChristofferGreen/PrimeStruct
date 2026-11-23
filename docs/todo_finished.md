@@ -2583,6 +2583,7 @@ are left unarchived.
 | TODO-6186 | Implicit template inference does not see through a `Reference<Box<T>>` argument | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6189 | An element of a collection field of a read-only root is written and has a `[mut]` method called | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6190 | Reading a struct element of a `Vector` struct field is `unaligned indirect address` on the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6192 | `Vector<T>{}` is accepted as a field initializer and rejected as a local's | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
 

@@ -352,6 +352,56 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("an empty brace stdlib Vector is the empty vector for a local and for a field") {
+  // `Vector<T>{}` fills every field from its initializer: count and capacity 0 and storage of its own, so the
+  // vector grows, and nothing is left live when it goes.
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_empty_brace";
+  program.source = R"(
+import /std/text/*
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [i32] blocks{heapLiveBlocks()}
+  if(true) {
+    [Vector<Item> mut] local{Vector<Item>{}}
+    [i32] localCount{local.count()}
+    print_line(localCount)
+    local.push(Item{3i32})
+    local.push(Item{4i32})
+    print_line(local[1i32].n)
+    [Bag mut] bag{Bag{}}
+    [i32] fieldCount{bag.items.count()}
+    print_line(fieldCount)
+    bag.items.push(Item{5i32})
+    print_line(bag.items[0i32].n)
+    [auto mut] inferred{Vector<i32>{}}
+    inferred.push(9i32)
+    print_line(inferred[0i32])
+    [Vector<i32>] empty{Vector<i32>{}}
+    print_line(empty.capacity())
+  }
+  print_line(heapLiveBlocks() - blocks)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n4\n0\n5\n9\n0\n0\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a struct element of a stdlib Vector field is read through the field") {
   // The receiver of the element read is a field, not a local: a field of the element and the whole element.
   program_matrix::ProgramCase program;

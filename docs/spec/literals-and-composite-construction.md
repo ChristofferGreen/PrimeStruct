@@ -336,6 +336,12 @@
   - Vector binding forms:
     - `[vector<T> mut] v{vector<T>{}}` and `[mut] v{vector<T>{}}` are both valid.
     - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>{}}`.
+    - The stdlib struct spelled `Vector<T>` follows the struct rule: every field has an initializer, so
+      `Vector<T>{}` is the empty vector (count and capacity 0, storage of its own) as a local's initializer and as a
+      struct field's (`[Vector<Item> mut] items{Vector<Item>{}}`), the same value as
+      `/std/collections/vector/vector<T>()`. Its fields are private, so braces with an entry
+      (`Vector<i32>{1i32}`) are `private field is not accessible: /std/collections/vector/Vector/fieldCount` outside
+      the collections module.
   - `soa<T>` is an explicit structure-of-arrays container (SoA). It is separate
     from `vector<T>`; the compiler must not silently rewrite AoS (`vector`) to
     SoA (`soa`). `soa_vector<T>` is now a rejected compatibility spelling.
