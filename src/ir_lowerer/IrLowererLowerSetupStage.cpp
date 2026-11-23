@@ -47,6 +47,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.hasMathImport = false;
   stateOut.inferenceSetupBootstrap = {};
   stateOut.expandedSource = input.expandedSource;
+  stateOut.userSourceColumns = input.userSourceColumns;
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
@@ -197,7 +198,11 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
       }
       if (input.expandedSource != nullptr && definition->sourceLine > 0 && definition->sourceColumn > 0) {
         const std::optional<SourceUnitLocation> location =
-            mapExpandedSourceLocation(*input.expandedSource, definition->sourceLine, definition->sourceColumn);
+            input.userSourceColumns
+                ? mapFilteredSourceLocation(
+                      *input.expandedSource, definition->sourceLine, definition->sourceColumn)
+                : mapExpandedSourceLocation(
+                      *input.expandedSource, definition->sourceLine, definition->sourceColumn);
         if (location.has_value()) {
           if (location->line > 0) {
             provenance.line = static_cast<uint32_t>(location->line);

@@ -605,6 +605,13 @@ arguments that the instance's `Definition` records (`instanceOfTemplate`, `insta
   - breakpoints: `setInstructionBreakpoints`, `setSourceBreakpoints`
 - Stack-frame responses use source-map metadata when available (`sourceUnit`, `line`, `column`, provenance) and keep the
   same call-site mapping behavior used by VM fault stack traces.
+- The `line` and `column` of a frame, and the position a source breakpoint matches, are those of the text the user
+  wrote, not of the text the text filters rewrote (`a = a + 5i32` after `a{1i32 + 1i32}` on one line is further right
+  once the operators are `assign(a, plus(a, 5i32))`). The lowerer moves each position back when the compile is for a
+  debugger (`--debug-dap`, `--debug-json`, `--debug-trace`) or writes a serialized module (`--emit=ir`) that a debugger
+  reads later; that builds the text filters' offset map, a second run of the filters. Any other compile keeps the
+  parser's columns and never builds the map, so its compile time and startup are the same as before
+  (`tests/unit/compile_run/smoke/test_compile_run_smoke_debug_columns.cpp`).
 - Adapter calls append deterministic transcript lines through `transcript()` to support protocol transcript tests and
   replay checks.
 - Snapshot payloads now carry per-frame locals (`frame_locals`) so `scopes/variables` return concrete local values for

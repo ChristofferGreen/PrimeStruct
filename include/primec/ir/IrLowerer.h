@@ -31,7 +31,11 @@ class IrLowerer {
        // `--emit=lib`: the paths of the public functions a library holds. Each is lowered as a function
        // with the address ABI whatever calls it, with what it reaches. `entryPath` names a stub that is lowered with
        // them and removed, so `out.entryIndex` is -1.
-       const std::vector<std::string> *libraryRoots = nullptr) const;
+       const std::vector<std::string> *libraryRoots = nullptr,
+       // The instruction source map and the function provenance carry the columns of the text the user wrote
+       // (a debugger matches breakpoints against them), not those of the text the filters rewrote. Moving a
+       // position back builds the filters' offset map, so it costs a second run of them.
+       bool userSourceColumns = false) const;
 };
 
 } // namespace primec

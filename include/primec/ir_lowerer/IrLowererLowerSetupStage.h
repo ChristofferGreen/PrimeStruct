@@ -35,6 +35,8 @@ struct LowerSetupStageInput {
   // `--emit=lib`: the paths of the public functions that are roots of the library, each reserved as a real call
   // Null for a program.
   const std::vector<std::string> *libraryRoots = nullptr;
+  // See `IrLowerer::lower`.
+  bool userSourceColumns = false;
 };
 
 struct LowerSetupStageState {
@@ -57,6 +59,7 @@ struct LowerSetupStageState {
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
   std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
   const primec::ExpandedSource *expandedSource = nullptr;
+  bool userSourceColumns = false;
   // Remembers where a failing expression sits so `IrLowerer::lower` can locate the error; null when nothing locates.
   LoweringErrorLocator *errorLocator = nullptr;
   // Per-scope cleanup: a non-negative entry is a file handle local to close, a negative entry

@@ -196,7 +196,11 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     }
     if (setupStage.expandedSource != nullptr && expr.sourceLine > 0 && expr.sourceColumn > 0) {
       const std::optional<SourceUnitLocation> location =
-          mapExpandedSourceLocation(*setupStage.expandedSource, expr.sourceLine, expr.sourceColumn);
+          setupStage.userSourceColumns
+              ? mapFilteredSourceLocation(
+                    *setupStage.expandedSource, expr.sourceLine, expr.sourceColumn)
+              : mapExpandedSourceLocation(
+                    *setupStage.expandedSource, expr.sourceLine, expr.sourceColumn);
       if (location.has_value()) {
         if (location->line > 0) {
           range.line = static_cast<uint32_t>(location->line);

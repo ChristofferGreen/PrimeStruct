@@ -45,6 +45,12 @@ struct Options {
   std::string debugReplayPath;
   std::optional<uint64_t> debugReplaySequence;
   DebugJsonSnapshotMode debugJsonSnapshotMode = DebugJsonSnapshotMode::None;
+  // Whether the instruction source map is read by a debugger, or is written into a serialized module a debugger
+  // reads later (`--emit=ir`): it then carries the columns of the text the user wrote. An ordinary compile keeps
+  // the parser's columns and never builds the offset map that moves them.
+  bool wantsUserSourceColumns() const {
+    return debugJson || debugDap || !debugTracePath.empty() || emitKind == "ir";
+  }
   bool collectDiagnostics = false;
   std::string inputPath;
   // When set, the pipeline compiles this text instead of reading `inputPath`;

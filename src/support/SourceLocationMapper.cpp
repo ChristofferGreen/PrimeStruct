@@ -482,6 +482,12 @@ std::optional<SourceUnitLocation> mapExpandedSourceLocation(
   return cachedMapperFor(source).mapExpandedSourceLocation(flattenedLine, flattenedColumn);
 }
 
+std::optional<SourceUnitLocation>
+mapFilteredSourceLocation(const ExpandedSource &source, int filteredLine, int filteredColumn) {
+  const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);
+  return cachedMapperFor(source).mapFilteredSourceLocation(filteredLine, filteredColumn);
+}
+
 DiagnosticSpan mapDiagnosticSpanToSourceUnit(const ExpandedSource &source,
                                              const DiagnosticSpan &span) {
   const std::lock_guard<std::mutex> lock(source.mapperCache.mutex);

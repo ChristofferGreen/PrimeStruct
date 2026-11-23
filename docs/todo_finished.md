@@ -2532,6 +2532,7 @@ are left unarchived.
 | TODO-6115 | A `Function` field of a lambda parameter cannot be called: `b.f(x)` is `unknown method` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6116 | Calling a `Function` through a read-only place is accepted although `call` is `mut` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6120 | The snippet of a diagnostic in an imported file is cut from the primary file's text | [undated.md](todo_archive/undated.md) | - |
+| TODO-6121 | The VM debugger reports the column of the text-filtered source for a rewritten expression | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6122 | The library cutoff of the build runner passed the cache hash as the compiler build id | [undated.md](todo_archive/undated.md) | - |
 | TODO-6123 | The build command hashes the 22 MB `primec` twice per run | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6125 | Integer division by zero under the WASI profile ends with `proc_exit(3)` and the VM's message | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |

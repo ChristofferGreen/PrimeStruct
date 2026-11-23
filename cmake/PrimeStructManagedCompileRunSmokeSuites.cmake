@@ -75,3 +75,10 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SOURCE_FILE "*test_compile_run_smoke_debug_tasks.cpp"
                                   TOTAL_CASES 1
                                   CASES_PER_SHARD 1)
+
+addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
+                                  TIMEOUT 300
+                                  SHARD_PREFIX "debug_columns"
+                                  SOURCE_FILE "*test_compile_run_smoke_debug_columns.cpp"
+                                  TOTAL_CASES 2
+                                  CASES_PER_SHARD 1)

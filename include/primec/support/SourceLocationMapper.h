@@ -90,6 +90,12 @@ std::optional<SourceUnitLocation> mapExpandedSourceLocation(
     int flattenedLine,
     int flattenedColumn);
 
+// The same for a position of the parser's text: it is moved to the text the user wrote first. This builds the
+// offset map of the text filters on the first call, so only a consumer that reports the user's columns (the IR
+// source map of a debugger) calls it; a compile that does not never builds the map.
+std::optional<SourceUnitLocation>
+mapFilteredSourceLocation(const ExpandedSource &source, int filteredLine, int filteredColumn);
+
 DiagnosticSpan mapDiagnosticSpanToSourceUnit(const ExpandedSource &source,
                                              const DiagnosticSpan &span);
 

@@ -118,7 +118,8 @@ bool IrLowerer::lower(const Program &program,
                       IrValidationTarget validationTarget,
                       const ExpandedSource *expandedSource,
                       std::vector<std::string> *loweringNotes,
-                      const std::vector<std::string> *libraryRoots) const {
+                      const std::vector<std::string> *libraryRoots,
+                      bool userSourceColumns) const {
   out = IrModule{};
   error.clear();
   const SemanticProductIndexCacheScope semanticIndexCacheScope;
@@ -165,6 +166,7 @@ bool IrLowerer::lower(const Program &program,
               .validationTarget = validationTarget,
               .outModule = &out,
               .libraryRoots = libraryRoots,
+              .userSourceColumns = userSourceColumns,
           },
           setupStage,
           error)) {
