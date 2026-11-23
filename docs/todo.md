@@ -351,9 +351,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - landed: 2026-11-22. `AppRouter.view` and `WebApp.view` (GET only; a view wins over a `get` of the same pattern; 405 for another method on a view-only path), `StateViewHandler<State>`, `AppView<State>`, the `readsOnly`/`callView` overloads for `AppRouter`, `WebApp` and `RequestLog<Next>` (`withRequestLog` returns it), the workers generic over `Handler` over an `RwLock<Handler>` (a view runs inside `read` after a `readsOnly` check, the rest inside `write`), `todo_web`'s page and benchmarks/http `GET /work` on `view`. Tests (scripted net, no sockets, clocks or sleeps): view and get answer, a get after a post sees the change, two views are inside the read lock together (the second sees the first: a server that ran views one at a time answers "alone"; checked by forcing `readsOnly` to false), the same behind `RequestLog`, `serve` answers both. Measured (docs/WebAppsPlan.md, Concurrency): `GET /work` 6.01x, 3.95x and 3.48x and the list page 1.14x, 3.00x and 2.60x with 4 workers in three runs at a load average of 15 to 64 on 11 processors. Left: the compile-error test for a view that writes its state; the diagnostic itself landed with the read-only roots rule (a field declared `mut` is no longer writable through a `[State]` parameter, nor a `[mut]` method callable on it).
   - decision: 2026-11-22 (owner): option (a): readsOnly/callView overloads for `AppRouter<State>` and `WebApp<State>` with a generic default of "writes"; `withRequestLog` becomes a struct `RequestLog<Next>` with the same overloads forwarding to `next`; the workers are generic over `Handler` and hold `RwLock<Handler>`; `AppRouter` gains a `views` route table whose handlers are `Function<void, State, Request, Reference<Response>>` cloned per request (a `mut` clone, per TODO-6113). TODO-6112 (a concrete generic struct parameter beats an unbound `H`) is finished.
 
-- [ ] TODO-6186: Implicit template inference does not see through a `Reference<Box<T>>` argument
+- [~] TODO-6186: Implicit template inference does not see through a `Reference<Box<T>>` argument
   - owner: ai
   - status: ready
+  - claimed_by: readonly-a (worktree-agent-a62a19ddaa7886f74), 2026-11-23
   - created_at: 2026-11-22
   - phase: Template inference (found with TODO-6185)
   - parallel_track: template-infer-reference
