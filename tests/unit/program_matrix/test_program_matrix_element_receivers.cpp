@@ -466,4 +466,37 @@ Bag() {
                     "1\n1\n1\n4\n3\n5\n1\n4\n");
 }
 
+TEST_CASE("an element of a stdlib Vector field of strings is a copy that is destroyed") {
+  // `holder.names[i]` of a `[Vector<String>]` field calls the stdlib `at`, which returns a copy: the copy is a
+  // temporary the read destroys and the element stays the vector's, so nothing is left live.
+  runElementProgram("element_receiver_stdlib_vector_field",
+                    R"(
+[struct]
+Holder() {
+  [Vector<String> mut] names{/std/collections/vector/vector<String>()}
+
+  [effects(heap_alloc), return<i32>]
+  firstByte() {
+    return(convert<i32>(this.names[0i32].byteAt(0i32)))
+  }
+}
+)",
+                    R"(
+    [Holder mut] holder{Holder{}}
+    holder.names.push(label(2i32))
+    holder.names.push(label(3i32))
+    print_line(holder.names[0i32].view().count())
+    print_line(convert<i32>(holder.names[1i32].byteAt(0i32)))
+    print_line(holder.firstByte())
+    [String] copied{holder.names[0i32]}
+    holder.names.push(label(4i32))
+    print_line(convert<i32>(copied.byteAt(0i32)))
+    print_line(convert<i32>(holder.names.at(2i32).byteAt(0i32)))
+    [i32] total{holder.names.count()}
+    print_line(total)
+)",
+                    "1\n51\n50\n50\n52\n3\n",
+                    "import /std/collections/*\n");
+}
+
 TEST_SUITE_END();

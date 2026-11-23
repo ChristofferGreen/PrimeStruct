@@ -896,6 +896,12 @@
                     targetInfoOut.isVectorTarget = true;
                     targetInfoOut.elemKind = fieldInfo.valueKind;
                     targetInfoOut.structTypeName = fieldInfo.structPath;
+                    // A field spelled `Vector<Item>` holds the stdlib record and has no collection fact to
+                    // size a struct element with (a scalar element was classified above): the builtin
+                    // access would load one slot as the element, so `at` goes to the real helper, as for a
+                    // local of that type. A `vector<Item>` field keeps the builtin access.
+                    targetInfoOut.isStructBoxedRecordTarget =
+                        ir_lowerer::isCollectionVectorRecordPath(fieldInfo.structPath);
                     return true;
                   }
                 }

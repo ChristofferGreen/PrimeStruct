@@ -275,6 +275,18 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
             return false;
           }
         }
+        // So does a field that holds the stdlib vector struct, spelled with the capital; a `vector<Item>` field
+        // is the builtin vector.
+        const Expr &receiver = callExpr.args.front();
+        if (receiver.kind == Expr::Kind::Call && receiver.isFieldAccess &&
+            receiver.args.size() == 1) {
+          const std::string ownerPath = inferStructExprPath(receiver.args.front(), locals);
+          StructSlotFieldInfo fieldInfo;
+          if (!ownerPath.empty() && resolveStructFieldSlot(ownerPath, receiver.name, fieldInfo) &&
+              ir_lowerer::isCollectionVectorRecordPath(fieldInfo.structPath)) {
+            return false;
+          }
+        }
         const auto receiverInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(
             callExpr.args.front(),
             locals,

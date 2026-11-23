@@ -352,6 +352,156 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a struct element of a stdlib Vector field is read through the field") {
+  // The receiver of the element read is a field, not a local: a field of the element and the whole element.
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_field_struct_element";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(Item{})
+  bag.items.push(Item{4i32})
+  [i32] c{bag.items[0i32].n}
+  print_line(c)
+  [Item] it{bag.items[1i32]}
+  print_line(it.n)
+  [i32] total{bag.items.count()}
+  print_line(total)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n4\n2\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a struct element read past the end of a stdlib Vector field is the bounds fault") {
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_field_struct_element_bounds";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(Item{})
+  print_line(bag.items[0i32].n)
+  [i32] c{bag.items[3i32].n}
+  print_line(c)
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "0\n";
+  program.vmStderr = "array index out of bounds\n";
+  program.nativeStderr = "array index out of bounds\n";
+  program.cppStderr = "array index out of bounds\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("a struct element of a stdlib Vector field is read through every kind of root") {
+  // A nested field, `this` of a read-only method, a read-only parameter, a `Reference` parameter and a call
+  // result; `[i]`, `at(i)` and `at_unsafe(i)`.
+  program_matrix::ProgramCase program;
+  program.name = "stdlib_vector_field_struct_element_roots";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{5i32}
+  [i32 mut] m{6i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{/std/collections/vector/vector<Item>()}
+
+  [return<i32>]
+  firstM() {
+    return(this.items[0i32].m)
+  }
+
+  [return<i32>]
+  sum() {
+    [i32 mut] total{0i32}
+    for([i32 mut] i{0i32}, i < this.items.count(), i++) {
+      total = total + this.items[i].n + this.items.at(i).m
+    }
+    return(total)
+  }
+}
+
+[struct]
+Outer() {
+  [Bag mut] bag{Bag{}}
+}
+
+[return<i32>]
+read_parameter([Bag] bag) {
+  return(bag.items[1i32].n)
+}
+
+[return<i32>]
+read_reference([Reference<Bag>] bag) {
+  return(bag.items[1i32].m)
+}
+
+[effects(heap_alloc) return<Bag>]
+make_bag() {
+  [Bag mut] bag{Bag{}}
+  bag.items.push(Item{3i32, 4i32})
+  return(bag)
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Outer mut] outer{Outer{}}
+  outer.bag.items.push(Item{})
+  outer.bag.items.push(Item{7i32, 8i32})
+  print_line(outer.bag.items[1i32].m)
+  [Item] it{outer.bag.items[1i32]}
+  print_line(it.n)
+  print_line(outer.bag.firstM())
+  print_line(outer.bag.sum())
+  print_line(read_parameter(outer.bag))
+  print_line(read_reference(location(outer.bag)))
+  print_line(outer.bag.items.at_unsafe(1i32).n)
+  print_line(make_bag().items[0i32].m)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "8\n7\n6\n26\n7\n8\n7\n4\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a binding from a Function-holding element clones the closure") {
   // The copy's closure state is its own: 5 + 5 on the copy, 1 on the element, and the copy still
   // runs after the element is removed.
