@@ -250,7 +250,9 @@ TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the b
   }
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
   CHECK(validateIrModule(zext, IrValidationTarget::Native, error) == nativeHasBytes);
-  CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Wasm, error));
+  // Wasm lowers the u8 wrap and the u8 access of slots; its byte regions (HeapAllocBytes) are refused above.
+  CHECK(validateIrModule(zext, IrValidationTarget::Wasm, error));
+  CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Glsl, error));
 }
 
 TEST_CASE("heap core reuses the smallest free run that fits and coalesces neighbours") {

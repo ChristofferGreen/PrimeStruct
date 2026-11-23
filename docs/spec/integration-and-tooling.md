@@ -92,12 +92,15 @@ an allocation past that, or one the host's memory refuses, is the overflow fault
 shadow stack included) instead of the 576 of the old fixed capacity.
 An array index error and `panic` (which is an index of an empty array) are the same runtime error: `array index out of bounds` on stderr and exit code 3 under the WASI profile, a trap in the browser profile.
 
+`u8` arithmetic and conversions run on Wasm: `ZextU8` cuts a slot to its low byte, and `LoadU8` and `StoreU8` of a local or
+slot address read the slot's low byte and write the byte as the whole slot, with the VM's address faults.
+
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
 wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`. Today that
 covers byte regions (`String`), the length of a string and the bytes of a run-time `String`, host
 calls (a module answers only the string heap statistic `__pstext_stat`, which is what `heapLiveBlocks()` reads; any other
-`__pstext_*` function is refused with a note that the string heap is not available on Wasm), `u8` and byte memory, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
+`__pstext_*` function is refused with a note that the string heap is not available on Wasm), byte regions behind a byte-region address, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
 and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
 profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position
 past the end is `string index out of bounds` on stderr and exit code 3, as on the VM.

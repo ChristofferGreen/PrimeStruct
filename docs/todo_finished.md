@@ -2611,6 +2611,7 @@ are left unarchived.
 | TODO-6216 | The compiler build id is a hash of the compiler sources | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6218 | A program linked against a library carries every function of the archive, used or not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6220 | Wasm `ZextU8` and the u8 loads and stores of local and slot addresses | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

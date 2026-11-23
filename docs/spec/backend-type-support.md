@@ -15,7 +15,8 @@
   backend"), and calls `[host]` functions as C functions imported by
   name from libSystem or from a `.dylib` named with `--link-arg` (integer, floating-point, static-string, `String` and
   text-returning signatures; the AppKit backend is built as such a dylib); the
-  Linux/x86_64 native backend, Wasm and GLSL reject the byte opcodes and `u8`/text host values at validation. The simple
+  Linux/x86_64 native backend and GLSL reject the byte opcodes and `u8`/text host values at validation; Wasm lowers
+  `ZextU8` and the `u8` load and store of slot addresses and rejects byte regions (`HeapAllocBytes`) and the text host values. The simple
   C++ emitters (`cpp`, `exe`) accept them: a module that uses bytes or text is emitted by the optimized emitter (same
   runtime and output as `optcpp`/`optexe`), any other module by the simple emitter as before.
 - **VM/native emitter restrictions (current):** lambdas run as closure structs (`value-lifecycle.md`); `equal`/

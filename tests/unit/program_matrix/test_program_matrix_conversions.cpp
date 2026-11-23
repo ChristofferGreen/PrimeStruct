@@ -34,10 +34,8 @@ void runConversionRows(const std::string &name,
   program.exitCode = 0;
   program.stdoutText = expected;
   program.skipConfigs = skipConfigs;
-  // Wasm runs the rows of these programs; the u8 rows need the byte conversions it lacks (TODO-6127).
-  if (name != "conv_integer_to_u8" && name != "conv_float_to_u8") {
-    program.extraConfigs = {"wasm-wasi"};
-  }
+  // Wasm runs the rows of these programs, the u8 rows included (`ZextU8` cuts the byte).
+  program.extraConfigs = {"wasm-wasi"};
   program_matrix::runProgramMatrix(program);
 }
 

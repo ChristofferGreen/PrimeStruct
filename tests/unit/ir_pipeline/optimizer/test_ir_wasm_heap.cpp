@@ -430,6 +430,36 @@ TEST_CASE("wasm frames and heap regions relocate each other and keep their value
   expectMatchesVm(recursionWithHeapProgram(1500, 121), "recursion_with_heap", "--stack-size=3900");
 }
 
+TEST_CASE("wasm u8 opcodes over slots match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // ZextU8 cuts a slot to its low byte (4660 is 0x1234, -1 is all ones). LoadU8 reads the low byte of the slot an address
+  // names (a heap slot and a local); StoreU8 writes the byte as the whole slot and leaves the byte on the stack.
+  expectMatchesVm(
+      mainOf({"PushI64 4660", "ZextU8",           "PrintI64 1",   "PushI64 -1",       "ZextU8",
+              "PrintI64 1",   "PushI32 7",        "ZextU8",       "PrintI64 1",       "PushI64 3",
+              "HeapAlloc",    "StoreLocal 0",     "LoadLocal 0",  "PushI64 4660",     "StoreU8",
+              "PrintI64 1",   "LoadLocal 0",      "LoadIndirect", "PrintI64 1",       "LoadLocal 0",
+              "PushI64 4660", "StoreIndirect",    "Pop",          "LoadLocal 0",      "LoadU8",
+              "PrintI64 1",   "PushI64 300",      "StoreLocal 1", "AddressOfLocal 1", "LoadU8",
+              "PrintI64 1",   "AddressOfLocal 1", "PushI64 513",  "StoreU8",          "Pop",
+              "LoadLocal 1",  "PrintI64 1",       "PushI32 0",    "ReturnI32"}),
+      "u8_over_slots");
+}
+
+TEST_CASE("wasm u8 loads and stores of a bad address are the VM's faults") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  expectMatchesVm(mainOf({"PushI64 17", "LoadU8", "Pop", "ReturnVoid"}), "u8_load_unaligned");
+  expectMatchesVm(mainOf({"PushI64 0", "LoadU8", "Pop", "ReturnVoid"}), "u8_load_null");
+  expectMatchesVm(mainOf({"PushI64 4096", "PushI64 1", "StoreU8", "Pop", "ReturnVoid"}),
+                  "u8_store_invalid");
+}
+
 TEST_CASE("wasm heap addresses of random alloc, free and realloc sequences match the VM") {
   if (!nodeAvailable()) {
     MESSAGE("SKIP: node is unavailable");

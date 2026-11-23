@@ -23,6 +23,7 @@ constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpI32Load = 0x28;
 constexpr uint8_t WasmOpI32Const = 0x41;
 constexpr uint8_t WasmOpI64Const = 0x42;
+constexpr uint8_t WasmOpI64And = 0x83;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmOpI32Eq = 0x46;
 constexpr uint8_t WasmOpI32Ne = 0x47;
@@ -170,6 +171,11 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       return true;
     case IrOpcode::SextI32:
       // i32 values already wrap in wasm; nothing to emit.
+      return true;
+    case IrOpcode::ZextU8:
+      out.push_back(WasmOpI64Const);
+      appendS64Leb(0xff, out);
+      out.push_back(WasmOpI64And);
       return true;
     case IrOpcode::AddI64:
       out.push_back(WasmOpI64Add);

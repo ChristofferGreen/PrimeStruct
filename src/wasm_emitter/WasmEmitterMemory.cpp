@@ -137,7 +137,8 @@ bool wasmModuleUsesLocalMemory(const IrModule &module) {
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::AddressOfLocal || inst.op == IrOpcode::LoadIndirect ||
-          inst.op == IrOpcode::StoreIndirect || inst.op == IrOpcode::HeapAlloc ||
+          inst.op == IrOpcode::StoreIndirect || inst.op == IrOpcode::LoadU8 ||
+          inst.op == IrOpcode::StoreU8 || inst.op == IrOpcode::HeapAlloc ||
           inst.op == IrOpcode::HeapFree || inst.op == IrOpcode::HeapRealloc) {
         return true;
       }

@@ -14,6 +14,7 @@ constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpLocalTee = 0x22;
 constexpr uint8_t WasmOpI64Const = 0x42;
+constexpr uint8_t WasmOpI64And = 0x83;
 constexpr uint8_t WasmOpI64Ne = 0x52;
 constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
 constexpr uint8_t WasmOpI64ExtendI32S = 0xac;
@@ -70,6 +71,7 @@ bool opSignature(IrOpcode op, OpSignature &sig) {
     sig = {{I64, I64}, I64};
     return true;
   case IrOpcode::NegI64:
+  case IrOpcode::ZextU8:
     sig = {{I64}, I64};
     return true;
   case IrOpcode::CmpEqI32:
@@ -644,6 +646,34 @@ bool emitTypedInstruction(const IrInstruction &inst,
     popTypes(localLayout, 1);
     pushType(localLayout, WasmTypeSlot);
     return true;
+  case IrOpcode::LoadU8:
+    // The byte of a slot (a pointer to a `u8` local or slot field): the slot's low byte.
+    if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    emitWasmIndirectLoad(runtime, out);
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(0xff, out);
+    out.push_back(WasmOpI64And);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  case IrOpcode::StoreU8: {
+    // The byte goes to the slot as the whole slot, and stays on the stack.
+    if (!coerceOperands(localLayout, {WasmTypeI64, WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(0xff, out);
+    out.push_back(WasmOpI64And);
+    const uint32_t byteLocal = acquireScratch(localLayout, WasmTypeI64);
+    out.push_back(WasmOpLocalSet);
+    appendU32Leb(byteLocal, out);
+    emitWasmIndirectStore(byteLocal, runtime, out);
+    popTypes(localLayout, 2);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  }
   case IrOpcode::StoreIndirect: {
     // The value goes to the slot as its raw bits and stays on the stack (as a slot, which converts back to its type).
     if (!coerceOperands(localLayout, {WasmTypeI64, WasmTypeUnknown}, out, error, functionName)) {

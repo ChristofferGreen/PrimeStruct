@@ -640,13 +640,12 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   // The message names the opcode and the language feature that needs it.
   CHECK_ERROR_CONTAINS(error, "HeapAllocBytes (byte regions, needed by `String`");
 
-  // The refusals of atomics, channels, `u8` and host calls name the opcode too.
+  // The refusals of atomics, channels and host calls name the opcode too.
   const std::pair<primec::IrOpcode, const char *> namedRefusals[] = {
       {primec::IrOpcode::AtomicAdd,
        "atomic operations are not supported by the wasm backend: AtomicAdd"},
       {primec::IrOpcode::ConditionNotify,
        "channel operations are not supported by the wasm backend: ConditionNotify"},
-      {primec::IrOpcode::LoadU8, "arm64 native backend: LoadU8 (`u8` values and byte memory)"},
       {primec::IrOpcode::CallHost, "serialized bytecode: CallHost (a host function call)"},
   };
   for (const auto &[opcode, expected] : namedRefusals) {

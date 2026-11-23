@@ -89,6 +89,15 @@ bool isByteOpcode(IrOpcode op) {
          op == IrOpcode::ZextU8;
 }
 
+// Whether `op` is refused by the target as a byte-memory opcode. The Wasm targets lower the u8 wrap and the u8 access of
+// slots; they have no byte regions yet, so `HeapAllocBytes` stays refused there.
+bool byteOpcodeRefusedFor(IrOpcode op, IrValidationTarget target) {
+  if (!isByteOpcode(op)) {
+    return false;
+  }
+  return !(isWasmTarget(target) && op != IrOpcode::HeapAllocBytes);
+}
+
 // Whether the native emitter of this build emits byte memory: only its arm64 emitter does.
 constexpr bool nativeEmitsByteMemory() {
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
@@ -124,10 +133,6 @@ const char *wasmOpcodeFeature(IrOpcode op) {
     return "byte regions, needed by `String` and byte buffers";
   case IrOpcode::CallHost:
     return "a host function call";
-  case IrOpcode::LoadU8:
-  case IrOpcode::StoreU8:
-  case IrOpcode::ZextU8:
-    return "`u8` values and byte memory";
   case IrOpcode::TaskSpawn:
   case IrOpcode::TaskWait:
     return "tasks";
@@ -383,7 +388,9 @@ bool validateFunction(const IrModule &module,
     }
     if (target != IrValidationTarget::Any && target != IrValidationTarget::Vm &&
         target != IrValidationTarget::Serialized && target != IrValidationTarget::OptCpp &&
-        target != IrValidationTarget::Cpp && !(target == IrValidationTarget::Native && nativeEmitsByteMemory()) && isByteOpcode(inst.op)) {
+        target != IrValidationTarget::Cpp &&
+        !(target == IrValidationTarget::Native && nativeEmitsByteMemory()) &&
+        byteOpcodeRefusedFor(inst.op, target)) {
       return failInstruction(functionIndex,
                              function.name,
                              instructionIndex,
