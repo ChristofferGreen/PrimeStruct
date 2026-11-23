@@ -327,9 +327,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6212: `count(make())` of a call result that is a stdlib `Vector` of structs answers a wrong number and leaks the vector
+- [~] TODO-6212: `count(make())` of a call result that is a stdlib `Vector` of structs answers a wrong number and leaks the vector
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with TODO-6211)
   - parallel_track: vector-call-result-count
