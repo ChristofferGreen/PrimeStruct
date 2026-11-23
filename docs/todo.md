@@ -152,7 +152,7 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | deferred | lib-embed |
-| TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
+| TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | ready | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
@@ -739,9 +739,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the bytecode of a linked script; no new link rules.
   - repro: `Script::bytecode` of a script that calls a library function, then `loadBytecode` in another process.
 
-- [ ] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
+- [~] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 2)
   - parallel_track: lib-shapes
