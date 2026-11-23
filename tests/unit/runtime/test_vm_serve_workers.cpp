@@ -911,4 +911,59 @@ TEST_CASE("two views are inside the read lock together, with and without Request
   }
 }
 
+// A view takes its state as `[State]`, a read-only borrow, so the compiler rejects a view that writes it or calls a
+// `[mut]` method on it (docs/spec/value-lifecycle.md, Read-only roots); a `get` takes `Reference<State>` and may.
+TEST_CASE("a view handler that writes its state is a compile error") {
+  {
+    // A named view: the write to `counter.hits` through the `[Counter]` parameter.
+    std::string source = viewServer(PlainWorkers);
+    const std::string shown = "  response.body.append(\"view \")\n";
+    source.replace(
+        source.find(shown), shown.size(), "  counter.hits = counter.hits + 1i32\n" + shown);
+    IrModule module;
+    std::string error;
+    CHECK_FALSE(compileVm(source, module, error));
+    CHECK_MESSAGE(
+        error.find("assign target must be a mutable binding: counter.hits (counter is a read-only "
+                   "parameter; take it as a [T mut] parameter)") != std::string::npos,
+        error);
+  }
+  {
+    // A lambda view: the same write inside the closure body.
+    std::string source = viewServer(PlainWorkers);
+    const std::string arrive = "    arrived.add(1i32)\n";
+    source.replace(source.find(arrive), arrive.size(), "    counter.hits = 0i32\n" + arrive);
+    IrModule module;
+    std::string error;
+    CHECK_FALSE(compileVm(source, module, error));
+    CHECK_MESSAGE(
+        error.find("assign target must be a mutable binding: counter.hits (counter is a read-only "
+                   "parameter; take it as a [T mut] parameter)") != std::string::npos,
+        error);
+  }
+  {
+    // A view that calls a `[mut]` method of its state.
+    std::string source = viewServer(PlainWorkers);
+    const std::string field = "  [i32 mut] hits{0i32}\n";
+    source.replace(
+        source.find(field), field.size(), field + "  [mut] touch() {\n    this.hits = 1i32\n  }\n");
+    const std::string shown = "  response.body.append(\"view \")\n";
+    source.replace(source.find(shown), shown.size(), "  counter.touch()\n" + shown);
+    IrModule module;
+    std::string error;
+    CHECK_FALSE(compileVm(source, module, error));
+    CHECK_MESSAGE(
+        error.find(
+            "mutating method needs a mutable receiver: counter.touch() (counter is a read-only "
+            "parameter; take it as a [T mut] parameter)") != std::string::npos,
+        error);
+  }
+  {
+    // The same state is written by a `post`, which takes `Reference<Counter>`: that compiles.
+    IrModule module;
+    std::string error;
+    CHECK_MESSAGE(compileVm(viewServer(PlainWorkers), module, error), error);
+  }
+}
+
 TEST_SUITE_END();

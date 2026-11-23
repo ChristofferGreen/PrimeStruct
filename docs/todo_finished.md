@@ -2255,6 +2255,7 @@ are left unarchived.
 | TODO-5801 | arm64 native runs `Atomic`, `Mutex` and `Channel` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-11 |
 | TODO-5802 | `serveWorkers`: one thread polls and accepts, N workers answer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5803 | The web apps run on workers and their gain is measured | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-5804 | GET handlers that only read the state run at the same time under `RwLock` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-5805 | The server keeps connections alive between requests | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5807 | `[left right] wait(a, b)` destructures the results of several tasks | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5808 | `ps_ui_*` entry points fault when called off the main thread | [2026-11.md](todo_archive/2026-11.md) | - |
