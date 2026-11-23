@@ -345,9 +345,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the sum parameter of a library root; no new ABI shape.
   - repro: the program in scope, `primec --emit=lib sum.prime -o sum.psa`.
 
-- [ ] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
+- [~] TODO-6201: A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver`
   - owner: ai
   - status: ready
+  - claimed_by: vec-ref (worktree-agent-af817b3f6b645ec22), 2026-11-23
   - created_at: 2026-11-23
   - phase: Collections (stdlib `Vector`; found with the stdlib `Vector` element places)
   - parallel_track: vector-reference-element
