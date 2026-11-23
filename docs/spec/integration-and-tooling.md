@@ -232,7 +232,9 @@ slots; a stub entry that lowering needs stands in for `main` and is removed. A r
 argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
 /packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); so is a
 parameter that is a sum, borrowed or by `Reference` or `Pointer` (`parameter `value` is a sum, which a real call does not
-take: a function with a sum parameter stays inline`); a result,
+take: a function with a sum parameter stays inline`); so is a result that is a sum, the packed builtin `Result<T, E>` or a stdlib
+error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`), each with its rule named (`its result `Pick` is a sum, which a
+real call does not return: a function with a sum result stays inline`; a library cannot return them yet); a result,
 receiver or body rule gets its own text (`its result `vector<i32>` is not one a real call returns: ...`, `its body uses `try``,
 `it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,

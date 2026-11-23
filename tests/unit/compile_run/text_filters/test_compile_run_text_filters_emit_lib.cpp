@@ -310,6 +310,23 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "use_ref([Reference<Pick>] value) {\n  return(2i32)\n}\n",
        "public function /use_ref cannot be compiled into a library: parameter `value` is a sum, "
        "which a real call does not take"},
+      // A sum, the packed builtin `Result` and a stdlib error struct are not returned by a real call: the rule is named.
+      {"sum_result",
+       "[sum] Pick { [i32] number [bool] flag }\n\n[public return<Pick>]\nmake_pick() {\n"
+       "  return(Pick{[number] 1i32})\n}\n",
+       "public function /make_pick cannot be compiled into a library: its result `Pick` is a sum, "
+       "which a real call does not return: a function with a sum result stays inline"},
+      {"packed_result",
+       "[public return<Result<i32, i32>>]\nmake_result() {\n  return(Result.ok(5i32))\n}\n",
+       "public function /make_result cannot be compiled into a library: its result "
+       "`Result<i32, i32>` is a packed `Result`, which a real call does not return: a function "
+       "with a `Result` result stays inline"},
+      {"error_struct_result",
+       "import /std/file/*\n\n[public return<FileError>]\nmake_eof() {\n  "
+       "return(FileError.eof())\n}\n",
+       "public function /make_eof cannot be compiled into a library: its result `FileError` is a "
+       "packed error value, a frame address that a real call does not return: a function with an "
+       "error struct result stays inline"},
   };
   for (const auto &[name, source, message] : refused) {
     INFO(name);
@@ -328,6 +345,34 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
           "1i32)\n}\n");
   CHECK(runCommand("./primec --emit=vm " + quoteShellArg((dir / "whole.prime").string()) +
                    " --entry /main") == 42);
+
+  // The functions the refusal names still run in a whole program, on the VM and on optexe.
+  const std::vector<std::pair<std::string, std::string>> whole = {
+      {"sum_result",
+       "[sum] Pick { [i32] number [bool] flag }\n\n[return<Pick>]\nmake_pick() {\n"
+       "  return(Pick{[number] 41i32})\n}\n\n[return<i32>]\nmain() {\n"
+       "  [Pick] picked{make_pick()}\n"
+       "  return(pick(picked) {\n    number(value) {\n      plus(value, 1i32)\n    }\n"
+       "    flag(value) {\n      0i32\n    }\n  })\n}\n"},
+      {"packed_result",
+       "[return<Result<i32, i32>>]\nmake_result() {\n  return(Result.ok(42i32))\n}\n\n"
+       "[return<Result<i32, i32>>]\nmain() {\n  return(make_result())\n}\n"},
+      {"error_struct_result",
+       "import /std/file/*\n\n[return<FileError>]\nmake_eof() {\n  return(FileError.eof())\n}\n\n"
+       "[return<i32>]\nmain() {\n  [FileError] err{make_eof()}\n"
+       "  if(FileError.isEof(err), then() { return(42i32) }, else() { return(1i32) })\n"
+       "  return(2i32)\n}\n"},
+  };
+  for (const auto &[name, source] : whole) {
+    INFO(name);
+    writeIn(dir, "whole_" + name + ".prime", source);
+    const std::string wholePath = quoteShellArg((dir / ("whole_" + name + ".prime")).string());
+    CHECK(runCommand("./primec --emit=vm " + wholePath + " --entry /main") == 42);
+    const std::string exePath = (dir / ("whole_" + name + ".exe")).string();
+    REQUIRE(runCommand("./primec --emit=optexe " + wholePath + " -o " + quoteShellArg(exePath) +
+                       " --entry /main") == 0);
+    CHECK(runCommand(quoteShellArg(exePath)) == 42);
+  }
 }
 
 TEST_CASE("emit-lib: a module with no public function has an empty code module, and a changed file "

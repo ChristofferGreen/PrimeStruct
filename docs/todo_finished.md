@@ -2609,6 +2609,7 @@ are left unarchived.
 | TODO-6210 | `dereference(r)` of a `Reference<Vector<T>>` as the receiver argument of the inlined stdlib `at` is an `una... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6211 | Reading an element of a call result that is a stdlib `Vector` of structs is `unaligned indirect address` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6212 | `count(make())` of a call result that is a stdlib `Vector` of structs answers a wrong number and leaks the... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6213 | A public function with a sum, `Result` or packed error result is a named refusal as a library root (step 1... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 | TODO-6216 | The compiler build id is a hash of the compiler sources | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6218 | A program linked against a library carries every function of the archive, used or not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

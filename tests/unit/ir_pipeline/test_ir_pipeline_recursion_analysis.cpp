@@ -434,6 +434,48 @@ TEST_CASE("a library function refuses a sum parameter and names the rule") {
   CHECK(libraryParameterBlocker("/main/Holder", "mut", false).empty());
 }
 
+namespace {
+
+// The reason a function that returns `resultType` is not a function of a library, empty when it is one. `kind` is the
+// transform of the result's type definition (`sum`, `struct`).
+std::string libraryResultBlocker(const std::string &resultType, const std::string &kind) {
+  primec::Definition makeFn = makeDef("/main/make");
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back(resultType);
+  makeFn.transforms.push_back(returnTransform);
+  primec::Definition typeDef = makeDef("/main/Item");
+  primec::Transform typeTransform;
+  typeTransform.name = kind;
+  typeDef.transforms.push_back(typeTransform);
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {makeFn.fullPath, &makeFn},
+      {typeDef.fullPath, &typeDef},
+  };
+  const std::unordered_set<std::string> structNames = {"/main/Item"};
+  primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
+  context.allowSlotResults = true;
+  context.refuseSumParameters = true;
+  context.refuseSumResults = true;
+  return primec::ir_lowerer::realCallBlockerReason(makeFn, context);
+}
+} // namespace
+
+TEST_CASE("a library function refuses a sum, Result and error struct result and names the rule") {
+  CHECK(
+      libraryResultBlocker("/main/Item", "sum") ==
+      "its result `/main/Item` is a sum, which a real call does not return: a function with a sum "
+      "result stays inline");
+  CHECK(libraryResultBlocker("Result<i32, i32>", "struct") ==
+        "its result `Result<i32, i32>` is a packed `Result`, which a real call does not return: a "
+        "function with a `Result` result stays inline");
+  CHECK(libraryResultBlocker("/std/file/FileError", "struct") ==
+        "its result `/std/file/FileError` is a packed error value, a frame address that a real "
+        "call does not return: a function with an error struct result stays inline");
+  // A struct result keeps its struct-result path.
+  CHECK(libraryResultBlocker("/main/Item", "struct").empty());
+}
+
 TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "move"));
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "copy"));

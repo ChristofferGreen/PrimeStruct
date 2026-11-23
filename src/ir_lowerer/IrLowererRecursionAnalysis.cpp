@@ -704,6 +704,33 @@ bool isSumParameter(const Definition &def,
                              definitionsByPath);
 }
 
+// The blocker of a result a real call cannot return, for a function of a library: a sum, the packed builtin
+// `Result<T, E>` and a stdlib error struct (a scalar that is a frame address). `None` for any other result.
+AddressAbiBlocker unreturnableResultBlocker(
+    const Definition &def,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(returnType, base, argText)) {
+      return trimTemplateTypeText(base) == "Result" ? AddressAbiBlocker::PackedResult
+                                                    : AddressAbiBlocker::None;
+    }
+    const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
+    if (isPackedErrorStructTypeName(returnType) || isPackedErrorStructTypeName(path)) {
+      return AddressAbiBlocker::PackedErrorResult;
+    }
+    return isSumDefinitionPath(path, definitionsByPath) ? AddressAbiBlocker::SumResult
+                                                        : AddressAbiBlocker::None;
+  }
+  return AddressAbiBlocker::None;
+}
+
 AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
                                          const RealCallShapeContext &context) {
   const auto &byPath = *context.definitionsByPath;
@@ -765,6 +792,12 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     }
     if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
       return AddressAbiBlocker::SumParameter;
+    }
+  }
+  if (context.refuseSumResults) {
+    const AddressAbiBlocker resultBlocker = unreturnableResultBlocker(def, structNames, byPath);
+    if (resultBlocker != AddressAbiBlocker::None) {
+      return resultBlocker;
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.

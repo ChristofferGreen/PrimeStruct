@@ -105,6 +105,10 @@ struct RealCallShapeContext {
   // since it leaves sums out of its struct names: a library root and a function a library declares must agree with
   // it, and the refusal names the rule.
   bool refuseSumParameters = false;
+  // A sum result, the packed builtin `Result<T, E>` and a stdlib error struct (`FileError`, `ImageError`,
+  // `ContainerError`, `GfxError`, returned as a frame address) are refused for the same functions, each with its
+  // rule named: a real call returns none of them.
+  bool refuseSumResults = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
