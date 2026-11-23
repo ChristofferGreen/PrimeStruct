@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the chosen lowering or diagnostic, with matrix coverage
   - stop_rule: the decision and its first slice; no change to the VM or native task models.
 
-- [ ] TODO-6121: The VM debugger reports the column of the text-filtered source for a rewritten expression
+- [~] TODO-6121: The VM debugger reports the column of the text-filtered source for a rewritten expression
   - owner: ai
   - status: ready
+  - claimed_by: vec-ref (worktree-agent-af817b3f6b645ec22), 2026-11-23
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6080)
   - parallel_track: debugger-filtered-columns
