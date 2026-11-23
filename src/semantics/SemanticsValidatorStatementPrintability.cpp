@@ -325,6 +325,19 @@ bool SemanticsValidator::isPrintableStatementExpr(const Expr &arg,
   if (kind == ReturnKind::Void || kind == ReturnKind::Array) {
     return false;
   }
+  // A method of a collection that a struct field holds (`bag.items.count()`) has no return kind above; the type a
+  // binding from the same call gets says what it yields.
+  if (arg.kind == Expr::Kind::Call && !isPointerLikeExpr(arg, params, locals)) {
+    BindingInfo inferred;
+    if (inferBindingTypeFromInitializer(arg, params, locals, inferred)) {
+      const ReturnKind inferredKind = returnKindForStatementBinding(inferred);
+      if (inferredKind == ReturnKind::Int || inferredKind == ReturnKind::Int64 ||
+          inferredKind == ReturnKind::UInt64 || inferredKind == ReturnKind::UInt8 ||
+          inferredKind == ReturnKind::Bool || inferredKind == ReturnKind::String) {
+        return true;
+      }
+    }
+  }
   if (arg.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, arg.name)) {
       ReturnKind paramKind = returnKindForStatementBinding(*paramBinding);

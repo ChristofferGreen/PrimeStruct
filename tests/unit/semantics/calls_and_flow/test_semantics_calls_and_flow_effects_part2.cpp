@@ -1074,4 +1074,57 @@ log_file_error([FileError] err) {
   CHECK(error.empty());
 }
 
+TEST_CASE("print takes the count of a Vector field and still rejects its element") {
+  // `bag.items.count()` yields an i32 like the same call bound to a local; a struct element is not printable.
+  const std::string program = R"(import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+  [Vector<i32> mut] numbers{Vector<i32>{}}
+}
+
+[struct]
+Outer() {
+  [Bag mut] bag{Bag{}}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  [Outer mut] outer{Outer{}}
+)";
+  const std::string accepted = program + R"(  print_line(bag.items.count())
+  print_line(outer.bag.items.count())
+  print_line(bag.numbers.count())
+  print_line(bag.items.capacity())
+  print(outer.bag.numbers.capacity())
+  return(0i32)
+}
+)";
+  std::string acceptedError;
+  CHECK_MESSAGE(validateProgram(accepted, "/main", acceptedError), acceptedError);
+
+  const std::string rejected = program + R"(  bag.items.push(Item{})
+  print_line(bag.items[0i32])
+  return(0i32)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(rejected, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(
+      error.find("print_line requires an integer/bool or string literal/binding argument") !=
+          std::string::npos,
+      error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 24);
+  CHECK(diagnosticInfo.primarySpan.column == 3);
+}
+
 TEST_SUITE_END();

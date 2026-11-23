@@ -744,4 +744,56 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("the count of a stdlib Vector field is a print argument") {
+  // `print_line(bag.items.count())`: the method of a collection a field holds, for a field, a nested field and
+  // `this`, with `count` and `capacity`.
+  program_matrix::ProgramCase program;
+  program.name = "vector_field_count_print";
+  program.source = R"(
+import /std/collections/*
+
+[struct]
+Item() {
+  [i32 mut] n{0i32}
+}
+
+[struct]
+Bag() {
+  [Vector<Item> mut] items{Vector<Item>{}}
+  [Vector<i32> mut] numbers{Vector<i32>{}}
+
+  [effects(io_out)]
+  show() {
+    print_line(this.items.count())
+  }
+}
+
+[struct]
+Outer() {
+  [Bag mut] bag{Bag{}}
+}
+
+[effects(heap_alloc, io_out) return<int>]
+main() {
+  [Bag mut] bag{Bag{}}
+  [Outer mut] outer{Outer{}}
+  print_line(bag.items.count())
+  bag.items.push(Item{})
+  bag.items.push(Item{})
+  outer.bag.items.push(Item{})
+  outer.bag.numbers.reserve(4i32)
+  print_line(bag.items.count())
+  print_line(outer.bag.items.count())
+  print_line(bag.numbers.count())
+  print_line(outer.bag.numbers.capacity())
+  bag.show()
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n2\n1\n0\n4\n2\n";
+  program.onlyConfigs = allBackendConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

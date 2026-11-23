@@ -2588,6 +2588,7 @@ are left unarchived.
 | TODO-6192 | `Vector<T>{}` is accepted as a field initializer and rejected as a local's | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6193 | `push` of a `string` into a `Vector<string>` or `vector<string>` is an internal lowering error | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6194 | The `optexe` precompiled header is refused on every compile and the compile runs twice | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6195 | `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6196 | A struct field's default initializer is not validated as a local's is | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 
 <!-- INDEX-END -->
