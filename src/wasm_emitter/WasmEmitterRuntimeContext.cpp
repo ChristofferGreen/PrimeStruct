@@ -71,10 +71,10 @@ uint32_t layoutHeapRegions(uint32_t start, WasmRuntimeContext &runtime) {
     start = begin + bytes;
     return begin;
   };
-  runtime.heapValues = place(WasmHeapSlots * 8u);
-  runtime.heapStates = place(WasmHeapSlots * 2u);
-  runtime.heapCounts = place(WasmHeapSlots * 4u);
-  runtime.heapRuns = place(WasmHeapRunCapacity * 8u);
+  runtime.heapValues = place(WasmHeapInitialSlots * 8u);
+  runtime.heapStates = place(WasmHeapInitialSlots * 2u);
+  runtime.heapCounts = place(WasmHeapInitialSlots * 4u);
+  runtime.heapRuns = place((WasmHeapInitialSlots / 2u + 1u) * 8u);
   return start;
 }
 

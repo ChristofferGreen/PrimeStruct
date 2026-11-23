@@ -124,6 +124,12 @@ public:
     op(0x00);
   }
 
+  // memory.grow (pages on the stack): the old size in pages, or -1 when the host refuses.
+  void memoryGrow() {
+    op(0x40);
+    op(0x00);
+  }
+
   void i32Eqz() {
     op(0x45);
   }
@@ -180,6 +186,9 @@ public:
   }
   void i32ShrU() {
     op(0x76);
+  }
+  void i64Mul() {
+    op(0x7e);
   }
   void i64Add() {
     op(0x7c);

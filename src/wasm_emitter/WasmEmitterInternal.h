@@ -138,9 +138,11 @@ struct WasmLocalLayout {
 enum class WasmDivisionOp : uint8_t { I32 = 0, I64 = 1, U64 = 2 };
 inline constexpr size_t WasmDivisionOpCount = 3;
 
-// The slot heap (WasmEmitterHeap.cpp): a fixed region of the linear memory below the shadow stack, and the helper
-// functions appended after the shadow-stack helpers. `WasmHeapSlots` is the capacity in VM slots; the runs table
-// holds at most one free run between two live allocations.
+// The slot heap (WasmEmitterHeap.cpp): four regions of the linear memory (values, states, counts, free runs) whose
+// base addresses are mutable globals, and the helper functions appended after the shadow-stack helpers. The regions
+// start with `WasmHeapInitialSlots` slots; when the slots handed out outgrow them the helper `ensureCapacity` moves
+// all four to the end of the memory (`memory.grow`) with room for twice as many, up to `WasmHeapMaxSlots`. The runs
+// table holds at most one free run between two live allocations.
 enum class WasmHeapHelper : uint8_t {
   Fault,
   Find,
@@ -150,19 +152,36 @@ enum class WasmHeapHelper : uint8_t {
   InsertRun,
   TakeFront,
   Release,
+  EnsureCapacity,
   Alloc,
   GrowInPlace,
   Realloc,
   Free,
 };
-inline constexpr size_t WasmHeapHelperCount = 12;
-inline constexpr uint32_t WasmHeapSlots = 1u << 21;
-inline constexpr uint32_t WasmHeapRunCapacity = WasmHeapSlots / 2u + 1u;
+inline constexpr size_t WasmHeapHelperCount = 13;
+inline constexpr uint32_t WasmHeapInitialSlots = 1u << 14;
+inline constexpr uint32_t WasmHeapMaxSlots = 1u << 27;
+// The bytes the four regions take for `slots` slots: 8 + 2 + 4 per slot, and a free run table of 8 bytes for each of
+// the at most `slots / 2 + 1` runs.
+inline constexpr uint64_t wasmHeapRegionBytes(uint64_t slots) {
+  return slots * 18u + 8u;
+}
 // The mutable `i32` globals after the shadow stack's two: the slots handed out so far, the number of free runs and
-// the number of live allocations (`__pstext_stat(8)`, the VM's `liveSlotAllocationCount`).
+// the number of live allocations (`__pstext_stat(8)`, the VM's `liveSlotAllocationCount`); then the base addresses
+// of the values, states, counts and runs regions, the slots they have room for, the base address of the shadow
+// stack (it moves when the memory has to grow past another region) and whether the shadow stack is the last region
+// of the memory, which is the only place it grows in place.
 inline constexpr uint32_t WasmGlobalHeapSize = 2;
 inline constexpr uint32_t WasmGlobalRunCount = 3;
 inline constexpr uint32_t WasmGlobalLiveBlocks = 4;
+inline constexpr uint32_t WasmGlobalValuesBase = 5;
+inline constexpr uint32_t WasmGlobalStatesBase = 6;
+inline constexpr uint32_t WasmGlobalCountsBase = 7;
+inline constexpr uint32_t WasmGlobalRunsBase = 8;
+inline constexpr uint32_t WasmGlobalHeapCapacity = 9;
+inline constexpr uint32_t WasmGlobalShadowBase = 10;
+inline constexpr uint32_t WasmGlobalStackLast = 11;
+inline constexpr uint32_t WasmGlobalCountWithHeap = 12;
 
 struct WasmRuntimeContext {
   bool enabled = false;
@@ -208,6 +227,7 @@ struct WasmRuntimeContext {
   bool hasHeap = false;
   // Per host import of the module: it is `__pstext_stat`, the one host function a Wasm module answers itself.
   std::vector<bool> statHostImports;
+  // The initial base addresses of the heap regions (the globals hold the current ones).
   uint32_t heapValues = 0;
   uint32_t heapStates = 0;
   uint32_t heapCounts = 0;
@@ -344,10 +364,11 @@ bool encodeMemorySection(const std::vector<WasmMemoryLimit> &memories,
                          std::vector<uint8_t> &payload,
                          std::string &error);
 
-// Two mutable `i32` globals: the number of live slots of the shadow stack (initially 0) and the number of slots its
-// memory holds (initially `capacitySlots`).
+// Mutable `i32` globals: the number of live slots of the shadow stack (initially 0) and the number of slots its
+// memory holds (initially `capacitySlots`); with a heap, the globals from `WasmGlobalHeapSize` on, with the initial
+// values in `heapGlobalInitials` in the order of their indexes.
 bool encodeShadowStackGlobalSection(uint32_t capacitySlots,
-                                    bool hasHeap,
+                                    const std::vector<uint32_t> &heapGlobalInitials,
                                     std::vector<uint8_t> &payload,
                                     std::string &error);
 
@@ -578,6 +599,12 @@ void emitWasmFramePrologue(const WasmLocalLayout &layout,
                            const WasmRuntimeContext &runtime,
                            std::vector<uint8_t> &out);
 void emitWasmFrameEpilogue(const WasmLocalLayout &layout, std::vector<uint8_t> &out);
+// Recomputes `framePtrLocal` from the frame base and the current base of the shadow stack. A call can move the shadow
+// stack (a callee's frame that does not fit relocates it), so a function that keeps a frame emits this after each
+// call; a module without a heap never moves it and needs none.
+void emitWasmFramePointerReload(const WasmLocalLayout &layout,
+                                const WasmRuntimeContext &runtime,
+                                std::vector<uint8_t> &out);
 void emitWasmFrameLoad(uint64_t slot, const WasmLocalLayout &layout, std::vector<uint8_t> &out);
 void emitWasmFrameStore(uint64_t slot,
                         uint32_t valueLocal,

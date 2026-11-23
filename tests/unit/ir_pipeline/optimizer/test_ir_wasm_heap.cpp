@@ -94,7 +94,11 @@ struct NodeRun {
 };
 
 // Emits the module for the profile and runs it under node with `runner`.
-NodeRun runOnNode(const primec::IrModule &module, const std::string &name, bool browser) {
+// `nodeFlags` is put after `node` (a deep recursion needs a bigger stack than the default).
+NodeRun runOnNode(const primec::IrModule &module,
+                  const std::string &name,
+                  bool browser,
+                  const std::string &nodeFlags = "") {
   NodeRun run;
   primec::WasmEmitter emitter;
   emitter.browserProfile = browser;
@@ -112,8 +116,9 @@ NodeRun runOnNode(const primec::IrModule &module, const std::string &name, bool 
   std::ofstream(runnerPath) << (browser ? BrowserRunner : NodeRunner);
   const std::filesystem::path outPath = scratch(name + ".stdout");
   const std::filesystem::path errPath = scratch(name + ".stderr");
-  const std::string command = "node '" + runnerPath.string() + "' '" + wasmPath.string() + "' > '" +
-                              outPath.string() + "' 2> '" + errPath.string() + "'";
+  const std::string command = "node " + nodeFlags + " '" + runnerPath.string() + "' '" +
+                              wasmPath.string() + "' > '" + outPath.string() + "' 2> '" +
+                              errPath.string() + "'";
   const int status = std::system(command.c_str());
 #if defined(__unix__) || defined(__APPLE__)
   run.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
@@ -126,10 +131,13 @@ NodeRun runOnNode(const primec::IrModule &module, const std::string &name, bool 
 }
 
 // The Wasm module behaves like the VM: stdout, exit code (the result of `main` modulo 256, or 3 with the fault text).
-void expectMatchesVm(const primec::IrModule &module, const std::string &name) {
+void expectMatchesVm(const primec::IrModule &module,
+                     const std::string &name,
+                     const std::string &nodeFlags = "") {
   const Outcome expected = optimizer_test::run(module, {"program"});
-  const NodeRun actual = runOnNode(module, name, false);
+  const NodeRun actual = runOnNode(module, name, false, nodeFlags);
   INFO(name);
+  CAPTURE(actual.err);
   REQUIRE_MESSAGE(actual.built, actual.buildError);
   CHECK(actual.out == expected.output);
   if (expected.ok) {
@@ -277,17 +285,149 @@ TEST_CASE("a wasm allocation the heap cannot serve is the VM's overflow fault") 
     MESSAGE("SKIP: node is unavailable");
     return;
   }
-  // More slots than the VM's 2^37 limit: both fault the same way. (The Wasm heap holds fewer, WasmHeapSlots.)
+  // More slots than the VM's 2^37 limit: both fault the same way. (The Wasm heap holds at most WasmHeapMaxSlots.)
   expectMatchesVm(mainOf({"PushI64 1099511627776", "HeapAlloc", "Pop", "ReturnVoid"}), "overflow");
   const NodeRun beyond =
-      runOnNode(mainOf({"PushI64 2097153", "HeapAlloc", "Pop", "ReturnVoid"}), "capacity", false);
+      runOnNode(mainOf({"PushI64 134217729", "HeapAlloc", "Pop", "ReturnVoid"}), "capacity", false);
   REQUIRE(beyond.built);
   CHECK(beyond.exitCode == 3);
   CHECK(beyond.err == "VM error: VM heap allocation overflow\n");
-  const NodeRun within = runOnNode(
-      mainOf({"PushI64 2097152", "HeapAlloc", "HeapFree", "ReturnVoid"}), "within", false);
-  REQUIRE(within.built);
-  CHECK(within.exitCode == 0);
+}
+
+TEST_CASE(
+    "a wasm heap holds more slots than it starts with and reads and writes the last of them") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 2,097,153 slots (the old fixed capacity plus one): the first and the last slot are written and read back, the block
+  // grows past 4 million slots (a move), the old last slot is still there, and the freed block is reused.
+  expectMatchesVm(mainOf({"PushI64 2097153",  "HeapAlloc",        "StoreLocal 0",
+                          "LoadLocal 0",      "PrintU64 1",       "LoadLocal 0",
+                          "PushI64 7",        "StoreIndirect",    "Pop",
+                          "LoadLocal 0",      "PushI64 33554432", "AddI64",
+                          "PushI64 9",        "StoreIndirect",    "Pop",
+                          "LoadLocal 0",      "LoadIndirect",     "PrintI64 1",
+                          "LoadLocal 0",      "PushI64 33554432", "AddI64",
+                          "LoadIndirect",     "PrintI64 1",       "LoadLocal 0",
+                          "PushI64 4200000",  "HeapRealloc",      "StoreLocal 0",
+                          "LoadLocal 0",      "PrintU64 1",       "LoadLocal 0",
+                          "LoadIndirect",     "PrintI64 1",       "LoadLocal 0",
+                          "PushI64 33554432", "AddI64",           "LoadIndirect",
+                          "PrintI64 1",       "LoadLocal 0",      "HeapFree",
+                          "PushI64 3",        "HeapAlloc",        "PrintU64 1",
+                          "PushI32 0",        "ReturnI32"}),
+                  "beyond_old_capacity");
+}
+
+TEST_CASE("wasm heap regions that move keep every value and address") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Sixty blocks of 1000 slots (60,000 slots, past the initial regions: several moves), each holding its number at its
+  // first slot; every other block is freed, new blocks reuse the holes, and every first slot is printed at the end.
+  std::vector<std::string> code;
+  constexpr int Blocks = 60;
+  for (int i = 0; i < Blocks; ++i) {
+    code.push_back("PushI64 1000");
+    code.push_back("HeapAlloc");
+    code.push_back("StoreLocal " + std::to_string(i));
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PrintU64 1");
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PushI64 " + std::to_string(1000 + i));
+    code.push_back("StoreIndirect");
+    code.push_back("Pop");
+  }
+  for (int i = 0; i < Blocks; i += 2) {
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("HeapFree");
+  }
+  for (int i = 0; i < Blocks; i += 4) {
+    code.push_back("PushI64 1500");
+    code.push_back("HeapAlloc");
+    code.push_back("StoreLocal " + std::to_string(i));
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PrintU64 1");
+  }
+  for (int i = 1; i < Blocks; i += 2) {
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("LoadIndirect");
+    code.push_back("PrintI64 1");
+  }
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(mainOf(code), "regions_move");
+  // The count of live blocks (a global the move leaves alone) is still what the VM says.
+  const std::vector<std::string> counted = {"PushI64 20000",
+                                            "HeapAlloc",
+                                            "Pop",
+                                            "PushI64 40000",
+                                            "HeapAlloc",
+                                            "Pop",
+                                            "PushI64 8",
+                                            "CallHost 0",
+                                            "PrintU64 1",
+                                            "PushI32 0",
+                                            "ReturnI32"};
+  expectMatchesVm(withStat(mainOf(counted)), "regions_move_stat");
+}
+
+namespace {
+
+// A recursion whose frames take a local address (so they live on the shadow stack) and each allocate heap: the stack
+// outgrows its pages and the heap outgrows its regions, in turn, so the memory is relocated both ways and every frame
+// still reads, through its address, what it wrote into its own local after the callee returned.
+primec::IrModule recursionWithHeapProgram(int depth, int frameLocals) {
+  primec::IrModule module = optimizer_test::moduleOf({});
+  const std::string marker = std::to_string(frameLocals - 1);
+  module.functions[0] =
+      optimizer_test::functionOf("/main",
+                                 {optimizer_test::assembleOne("PushI64 " + std::to_string(depth)),
+                                  optimizer_test::assembleOne("Call 1"),
+                                  optimizer_test::assembleOne("PrintI64 1"),
+                                  optimizer_test::assembleOne("PushI32 0"),
+                                  optimizer_test::assembleOne("ReturnI32")});
+  std::vector<primec::IrInstruction> body;
+  for (const std::string &line : std::vector<std::string>{"StoreLocal 0",
+                                                          "PushI64 3",
+                                                          "StoreLocal " + marker,
+                                                          "PushI64 100",
+                                                          "HeapAlloc",
+                                                          "Pop",
+                                                          "LoadLocal 0",
+                                                          "JumpIfZero 18",
+                                                          "LoadLocal 0",
+                                                          "PushI64 1",
+                                                          "SubI64",
+                                                          "Call 1",
+                                                          "PushI64 5",
+                                                          "StoreLocal " + marker,
+                                                          "AddressOfLocal " + marker,
+                                                          "LoadIndirect",
+                                                          "AddI64",
+                                                          "ReturnI64",
+                                                          "AddressOfLocal " + marker,
+                                                          "LoadIndirect",
+                                                          "ReturnI64"}) {
+    body.push_back(optimizer_test::assembleOne(line));
+  }
+  module.functions.push_back(optimizer_test::functionOf("/f", std::move(body), 1));
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("wasm frames and heap regions relocate each other and keep their values") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 1500 frames of 121 slots (181,500 slots, past the stack's first 131,072) and 150,000 heap slots (past the initial
+  // regions): the heap moves behind the stack, then the stack has to move behind the heap.
+  // Each wasm frame of the recursion holds the 121 locals of the function: more than the default stack of node.
+  expectMatchesVm(recursionWithHeapProgram(1500, 121), "recursion_with_heap", "--stack-size=3900");
 }
 
 TEST_CASE("wasm heap addresses of random alloc, free and realloc sequences match the VM") {
@@ -353,6 +493,31 @@ TEST_CASE("the browser profile has the heap and traps on a bad address") {
       mainOf({"PushI64 9223372036854775824", "HeapFree", "ReturnVoid"}), "browser_trap", true);
   REQUIRE_MESSAGE(trap.built, trap.buildError);
   CHECK(trap.out == "trap\n");
+}
+
+TEST_CASE("the browser profile grows its heap past the old capacity") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const NodeRun grown = runOnNode(mainOf({"PushI64 2200000",
+                                          "HeapAlloc",
+                                          "StoreLocal 0",
+                                          "LoadLocal 0",
+                                          "PushI64 35199984",
+                                          "AddI64",
+                                          "PushI64 42",
+                                          "StoreIndirect",
+                                          "Pop",
+                                          "LoadLocal 0",
+                                          "PushI64 35199984",
+                                          "AddI64",
+                                          "LoadIndirect",
+                                          "ReturnI64"}),
+                                  "browser_grown",
+                                  true);
+  REQUIRE_MESSAGE(grown.built, grown.buildError);
+  CHECK(grown.out == "42\n");
 }
 
 TEST_CASE("wasm answers the live allocation count like the VM") {

@@ -85,8 +85,11 @@ The slot heap (`HeapAlloc`, `HeapFree`, `HeapRealloc`: `vector`, `map` and every
 the VM's `VmHeapCore` (docs/spec/vm-design.md, Heap): the same tagged addresses and generations, best-fit reuse, merging
 of free runs and in-place growth, so a printed address and the fault texts (`invalid heap free address in IR: <address>`,
 `invalid heap realloc address in IR: <address>`, `VM heap allocation overflow`, exit code 3 under the WASI profile, a trap
-in the browser profile) are the VM's. Its storage is a fixed region of the linear memory below the shadow stack with room
-for 2,097,152 slots (the VM reserves a million and keeps growing): an allocation past that is the overflow fault.
+in the browser profile) are the VM's. Its storage is four regions of the linear memory (values, states, allocation sizes
+and free runs) that start with room for 16,384 slots and are moved to the end of the memory, with room for twice as many,
+when the slots handed out outgrow them, up to 134,217,728 slots (2.25 GiB of memory; the VM keeps growing to 2^37 slots):
+an allocation past that, or one the host's memory refuses, is the overflow fault. A module that has a heap declares 21 pages (1.3 MiB, the
+shadow stack included) instead of the 576 of the old fixed capacity.
 An array index error and `panic` (which is an index of an empty array) are the same runtime error: `array index out of bounds` on stderr and exit code 3 under the WASI profile, a trap in the browser profile.
 
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the

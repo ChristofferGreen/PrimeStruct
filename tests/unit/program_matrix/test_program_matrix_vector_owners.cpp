@@ -1720,4 +1720,30 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A vector that holds more than the 2,097,152 slots the Wasm heap had when its capacity was fixed: the block is 2.2
+// million slots, so the heap regions move on Wasm (docs/spec/vm-design.md, Heap). Two configs keep the case cheap.
+TEST_CASE("a vector reserves more than two million slots") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_reserve_two_million_slots";
+  program.onlyConfigs = {"vm-O2", "wasm-wasi"};
+  program.source = R"(
+import /std/collections/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [Vector<i64> mut] values{vector<i64>()}
+  vectorReserve<i64>(values, 2200000i32)
+  vectorPush<i64>(values, 11i64)
+  vectorPush<i64>(values, 22i64)
+  print_line(vectorCount<i64>(values))
+  print_line(vectorCapacity<i64>(values))
+  print_line(vectorAt<i64>(values, 1i32))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "2\n2200000\n22\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

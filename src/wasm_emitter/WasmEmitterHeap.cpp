@@ -1,6 +1,7 @@
 #include "WasmEmitterHeap.h"
 
 #include "WasmEmitterAsm.h"
+#include "WasmEmitterHeapRegions.h"
 
 namespace primec {
 
@@ -9,7 +10,8 @@ namespace primec {
 // single-arena heap the VM and the C++ runtimes share, so a program sees the same addresses, the same reuse of freed
 // memory and the same fault texts on every backend.
 //
-// The state lives in the linear memory, in regions below the shadow stack (WasmEmitterRuntimeContext.cpp):
+// The state lives in four regions of the linear memory (WasmEmitterRuntimeContext.cpp), whose base addresses are
+// mutable globals because the heap relocates them when it grows (`ensureCapacity`):
 //   values  8 bytes per slot, the raw 64 bits of a VM slot;
 //   states  2 bytes per slot, `LiveBit | generation` while an allocation holds the slot and the generation it was
 //           last allocated with once freed (zero if it never was): an address is live when `states[slot]` equals
@@ -20,9 +22,12 @@ namespace primec {
 // never leave it) and the number of free runs. Every slot below the first is either live or inside a free run, so
 // the runs are the whole free list: the best fit scans them in address order and keeps the first of the shortest
 // that fits, which is the VM's "smallest run, lowest base among equals". The heap has a fixed capacity of
-// `WasmHeapSlots`; an allocation past it ends with the VM's `VM heap allocation overflow` fault.
+// `WasmHeapMaxSlots` (about 4 GiB of memory); an allocation past it, or one the host's memory refuses, ends with the
+// VM's `VM heap allocation overflow` fault.
 
 namespace {
+
+using namespace wasm_heap;
 
 constexpr int64_t OffsetMask48 = (int64_t{1} << 48) - 1;
 constexpr uint32_t LiveBit = 0x8000;
@@ -34,23 +39,6 @@ constexpr int32_t RuntimeErrorExitCode = 3;
 constexpr int32_t FaultFree = 0;
 constexpr int32_t FaultRealloc = 1;
 constexpr int32_t FaultOverflow = 2;
-
-uint32_t fn(const WasmRuntimeContext &runtime, WasmHeapHelper helper) {
-  return runtime.heapFunction[static_cast<size_t>(helper)];
-}
-
-void declareLocals(WasmCodeBody &body, uint32_t i32Count, uint32_t i64Count) {
-  uint32_t groups = (i32Count != 0 ? 1u : 0u) + (i64Count != 0 ? 1u : 0u);
-  appendU32Leb(groups, body.localDecls);
-  if (i32Count != 0) {
-    appendU32Leb(i32Count, body.localDecls);
-    body.localDecls.push_back(WasmTypeI32);
-  }
-  if (i64Count != 0) {
-    appendU32Leb(i64Count, body.localDecls);
-    body.localDecls.push_back(WasmTypeI64);
-  }
-}
 
 // The address a slot range starts at: Tag | generation << 48 | slot * 16 (the VM's encoding, arena 0).
 void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
@@ -65,13 +53,6 @@ void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
   a.i64Const(4);
   a.i64Shl();
   a.i64Or();
-}
-
-// local = memory address of the entry `index * stride` of a region: `index << shift`.
-void emitScaled(WasmAsm &a, uint32_t indexLocal, int32_t shift) {
-  a.localGet(indexLocal);
-  a.i32Const(shift);
-  a.i32Shl();
 }
 
 // The fault: the VM's message (and the address for the two address faults) on stderr, `proc_exit(3)` on the WASI
@@ -136,7 +117,7 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
 // find(address i64) -> i32: the first slot of the live allocation `address` names, or -1 when it names none (not a
 // heap address, not 16-byte aligned, beyond the heap, not the start of an allocation, or from an earlier generation
 // of the slot).
-WasmCodeBody buildFind(const WasmRuntimeContext &runtime) {
+WasmCodeBody buildFind(const WasmRuntimeContext &) {
   constexpr uint32_t Address = 0;
   constexpr uint32_t Index = 1;
   WasmCodeBody body;
@@ -174,14 +155,16 @@ WasmCodeBody buildFind(const WasmRuntimeContext &runtime) {
   a.i32WrapI64();
   a.i32Const(2);
   a.i32Shl();
-  a.i32Load(runtime.heapCounts);
+  regionAdd(a, WasmGlobalCountsBase);
+  a.i32Load(0);
   a.i32Eqz();
   returnMissing();
   a.localGet(Index);
   a.i32WrapI64();
   a.i32Const(1);
   a.i32Shl();
-  a.i32Load16U(runtime.heapStates);
+  regionAdd(a, WasmGlobalStatesBase);
+  a.i32Load16U(0);
   a.localGet(Address);
   a.i64Const(48);
   a.i64ShrU();
@@ -197,7 +180,7 @@ WasmCodeBody buildFind(const WasmRuntimeContext &runtime) {
 }
 
 // newGeneration(base i32, count i32) -> i32: a generation no earlier allocation of these slots had (until it wraps).
-WasmCodeBody buildNewGeneration(const WasmRuntimeContext &runtime) {
+WasmCodeBody buildNewGeneration(const WasmRuntimeContext &) {
   constexpr uint32_t Base = 0;
   constexpr uint32_t Count = 1;
   constexpr uint32_t Index = 2;
@@ -220,7 +203,8 @@ WasmCodeBody buildNewGeneration(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Index, 1);
-  a.i32Load16U(runtime.heapStates);
+  regionAdd(a, WasmGlobalStatesBase);
+  a.i32Load16U(0);
   a.i32Const(static_cast<int32_t>(GenerationMask));
   a.i32And();
   a.localSet(Current);
@@ -246,7 +230,7 @@ WasmCodeBody buildNewGeneration(const WasmRuntimeContext &runtime) {
 }
 
 // fillStates(base i32, count i32, state i32): states[base, base + count) = state.
-WasmCodeBody buildFillStates(const WasmRuntimeContext &runtime) {
+WasmCodeBody buildFillStates(const WasmRuntimeContext &) {
   constexpr uint32_t Base = 0;
   constexpr uint32_t Count = 1;
   constexpr uint32_t State = 2;
@@ -268,120 +252,12 @@ WasmCodeBody buildFillStates(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Index, 1);
+  regionAdd(a, WasmGlobalStatesBase);
   a.localGet(State);
-  a.i32Store16(runtime.heapStates);
+  a.i32Store16(0);
   a.i32Increment(Index);
   a.br(0);
   a.end();
-  a.end();
-  a.end();
-  return body;
-}
-
-// removeRun(position i32): drops the run, shifting the later ones down.
-WasmCodeBody buildRemoveRun(const WasmRuntimeContext &runtime) {
-  constexpr uint32_t Position = 0;
-  WasmCodeBody body;
-  declareLocals(body, 0, 0);
-  WasmAsm a(body.instructions);
-  // memory.copy(runs + position * 8, runs + (position + 1) * 8, (count - position - 1) * 8)
-  emitScaled(a, Position, 3);
-  a.i32Const(static_cast<int32_t>(runtime.heapRuns));
-  a.i32Add();
-  a.localGet(Position);
-  a.i32Const(1);
-  a.i32Add();
-  a.i32Const(3);
-  a.i32Shl();
-  a.i32Const(static_cast<int32_t>(runtime.heapRuns));
-  a.i32Add();
-  a.globalGet(WasmGlobalRunCount);
-  a.localGet(Position);
-  a.i32Sub();
-  a.i32Const(1);
-  a.i32Sub();
-  a.i32Const(3);
-  a.i32Shl();
-  a.memoryCopy();
-  a.globalGet(WasmGlobalRunCount);
-  a.i32Const(1);
-  a.i32Sub();
-  a.globalSet(WasmGlobalRunCount);
-  a.end();
-  return body;
-}
-
-// insertRun(position i32, base i32, length i32): puts the run at `position`, shifting the later ones up.
-WasmCodeBody buildInsertRun(const WasmRuntimeContext &runtime) {
-  constexpr uint32_t Position = 0;
-  constexpr uint32_t Base = 1;
-  constexpr uint32_t Length = 2;
-  WasmCodeBody body;
-  declareLocals(body, 0, 0);
-  WasmAsm a(body.instructions);
-  // memory.copy(runs + (position + 1) * 8, runs + position * 8, (count - position) * 8)
-  a.localGet(Position);
-  a.i32Const(1);
-  a.i32Add();
-  a.i32Const(3);
-  a.i32Shl();
-  a.i32Const(static_cast<int32_t>(runtime.heapRuns));
-  a.i32Add();
-  emitScaled(a, Position, 3);
-  a.i32Const(static_cast<int32_t>(runtime.heapRuns));
-  a.i32Add();
-  a.globalGet(WasmGlobalRunCount);
-  a.localGet(Position);
-  a.i32Sub();
-  a.i32Const(3);
-  a.i32Shl();
-  a.memoryCopy();
-  emitScaled(a, Position, 3);
-  a.localGet(Base);
-  a.i32Store(runtime.heapRuns);
-  emitScaled(a, Position, 3);
-  a.localGet(Length);
-  a.i32Store(runtime.heapRuns + 4);
-  a.globalGet(WasmGlobalRunCount);
-  a.i32Const(1);
-  a.i32Add();
-  a.globalSet(WasmGlobalRunCount);
-  a.end();
-  return body;
-}
-
-// takeFront(position i32, count i32): removes the first `count` slots of the run (all of it when it is that long).
-WasmCodeBody buildTakeFront(const WasmRuntimeContext &runtime, uint32_t removeRun) {
-  constexpr uint32_t Position = 0;
-  constexpr uint32_t Count = 1;
-  constexpr uint32_t Entry = 2;
-  constexpr uint32_t Length = 3;
-  WasmCodeBody body;
-  declareLocals(body, 2, 0);
-  WasmAsm a(body.instructions);
-  emitScaled(a, Position, 3);
-  a.localSet(Entry);
-  a.localGet(Entry);
-  a.i32Load(runtime.heapRuns + 4);
-  a.localSet(Length);
-  a.localGet(Length);
-  a.localGet(Count);
-  a.i32GtU();
-  a.ifThen();
-  a.localGet(Entry);
-  a.localGet(Entry);
-  a.i32Load(runtime.heapRuns);
-  a.localGet(Count);
-  a.i32Add();
-  a.i32Store(runtime.heapRuns);
-  a.localGet(Entry);
-  a.localGet(Length);
-  a.localGet(Count);
-  a.i32Sub();
-  a.i32Store(runtime.heapRuns + 4);
-  a.elseArm();
-  a.localGet(Position);
-  a.call(removeRun);
   a.end();
   a.end();
   return body;
@@ -403,10 +279,12 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   declareLocals(body, 8, 0);
   WasmAsm a(body.instructions);
   emitScaled(a, Base, 2);
-  a.i32Load(runtime.heapCounts);
+  regionAdd(a, WasmGlobalCountsBase);
+  a.i32Load(0);
   a.localSet(Count);
   emitScaled(a, Base, 1);
-  a.i32Load16U(runtime.heapStates);
+  regionAdd(a, WasmGlobalStatesBase);
+  a.i32Load16U(0);
   a.i32Const(static_cast<int32_t>(GenerationMask));
   a.i32And();
   a.localSet(Generation);
@@ -423,18 +301,21 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Index, 3);
+  regionAdd(a, WasmGlobalValuesBase);
   a.i64Const(0);
-  a.i64Store(runtime.heapValues);
+  a.i64Store(0);
   emitScaled(a, Index, 1);
+  regionAdd(a, WasmGlobalStatesBase);
   a.localGet(Generation);
-  a.i32Store16(runtime.heapStates);
+  a.i32Store16(0);
   a.i32Increment(Index);
   a.br(0);
   a.end();
   a.end();
   emitScaled(a, Base, 2);
+  regionAdd(a, WasmGlobalCountsBase);
   a.i32Const(0);
-  a.i32Store(runtime.heapCounts);
+  a.i32Store(0);
   a.globalGet(WasmGlobalLiveBlocks);
   a.i32Const(1);
   a.i32Sub();
@@ -450,7 +331,8 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Position, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   a.localGet(Base);
   a.i32GtU();
   a.brIf(1);
@@ -466,14 +348,16 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   a.i32LtU();
   a.ifThen();
   emitScaled(a, Position, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   a.localGet(Base);
   a.localGet(Count);
   a.i32Add();
   a.i32Eq();
   a.ifThen();
   emitScaled(a, Position, 3);
-  a.i32Load(runtime.heapRuns + 4);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(4);
   a.localGet(Length);
   a.i32Add();
   a.localSet(Length);
@@ -491,21 +375,22 @@ WasmCodeBody buildRelease(const WasmRuntimeContext &runtime) {
   a.i32Sub();
   a.i32Const(3);
   a.i32Shl();
+  regionAdd(a, WasmGlobalRunsBase);
   a.localSet(Entry);
   a.localGet(Entry);
-  a.i32Load(runtime.heapRuns);
+  a.i32Load(0);
   a.localGet(Entry);
-  a.i32Load(runtime.heapRuns + 4);
+  a.i32Load(4);
   a.i32Add();
   a.localGet(Base);
   a.i32Eq();
   a.ifThen();
   a.localGet(Entry);
   a.localGet(Entry);
-  a.i32Load(runtime.heapRuns + 4);
+  a.i32Load(4);
   a.localGet(Length);
   a.i32Add();
-  a.i32Store(runtime.heapRuns + 4);
+  a.i32Store(4);
   a.i32Const(1);
   a.localSet(Merged);
   a.end();
@@ -554,7 +439,8 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns + 4);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(4);
   a.localSet(Length);
   a.localGet(Length);
   a.i64ExtendI32U();
@@ -588,7 +474,8 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.i32WrapI64();
   a.localSet(Count32);
   emitScaled(a, Best, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   a.localSet(Base);
   a.localGet(Best);
   a.localGet(Count32);
@@ -608,23 +495,26 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.i32Sub();
   a.localSet(Index);
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns + 4);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(4);
   a.i32Add();
   a.globalGet(WasmGlobalHeapSize);
   a.i32Eq();
   a.ifThen();
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   a.localSet(Base);
   a.localGet(Index);
   a.localSet(TailRun);
   a.end();
   a.end();
-  // more than the heap holds is the VM's overflow fault
+  // more than the heap can hold, or a host that refuses the memory, is the VM's overflow fault
   a.localGet(Count);
-  a.i64Const(WasmHeapSlots);
+  a.i64Const(WasmHeapMaxSlots);
   a.i64GtU();
   a.ifThen();
   a.i32Const(FaultOverflow);
@@ -638,8 +528,8 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.i64ExtendI32U();
   a.localGet(Count);
   a.i64Add();
-  a.i64Const(WasmHeapSlots);
-  a.i64GtU();
+  a.call(fn(runtime, WasmHeapHelper::EnsureCapacity));
+  a.i32Eqz();
   a.ifThen();
   a.i32Const(FaultOverflow);
   a.i64Const(0);
@@ -673,8 +563,9 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.i32Or();
   a.call(fn(runtime, WasmHeapHelper::FillStates));
   emitScaled(a, Base, 2);
+  regionAdd(a, WasmGlobalCountsBase);
   a.localGet(Count32);
-  a.i32Store(runtime.heapCounts);
+  a.i32Store(0);
   a.globalGet(WasmGlobalLiveBlocks);
   a.i32Const(1);
   a.i32Add();
@@ -709,7 +600,7 @@ WasmCodeBody buildGrowInPlace(const WasmRuntimeContext &runtime) {
     a.end();
   };
   a.localGet(Count);
-  a.i64Const(WasmHeapSlots);
+  a.i64Const(WasmHeapMaxSlots);
   a.i64GtU();
   returnZero();
   a.localGet(Count);
@@ -719,8 +610,8 @@ WasmCodeBody buildGrowInPlace(const WasmRuntimeContext &runtime) {
   a.i64ExtendI32U();
   a.localGet(Count);
   a.i64Add();
-  a.i64Const(WasmHeapSlots);
-  a.i64GtU();
+  a.call(fn(runtime, WasmHeapHelper::EnsureCapacity));
+  a.i32Eqz();
   returnZero();
   a.localGet(Base);
   a.localGet(Old);
@@ -739,14 +630,16 @@ WasmCodeBody buildGrowInPlace(const WasmRuntimeContext &runtime) {
   a.i32GeU();
   a.brIf(1);
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(0);
   a.localGet(End);
   a.i32Eq();
   a.ifThen();
   a.localGet(Index);
   a.localSet(Run);
   emitScaled(a, Index, 3);
-  a.i32Load(runtime.heapRuns + 4);
+  regionAdd(a, WasmGlobalRunsBase);
+  a.i32Load(4);
   a.localSet(RunLength);
   a.br(2);
   a.end();
@@ -799,8 +692,9 @@ WasmCodeBody buildGrowInPlace(const WasmRuntimeContext &runtime) {
   a.i32Or();
   a.call(fn(runtime, WasmHeapHelper::FillStates));
   emitScaled(a, Base, 2);
+  regionAdd(a, WasmGlobalCountsBase);
   a.localGet(Count32);
-  a.i32Store(runtime.heapCounts);
+  a.i32Store(0);
   emitAddress(a, Generation, Base);
   a.end();
   return body;
@@ -876,7 +770,8 @@ WasmCodeBody buildRealloc(const WasmRuntimeContext &runtime) {
   a.call(fn(runtime, WasmHeapHelper::Fault));
   a.end();
   emitScaled(a, Base, 2);
-  a.i32Load(runtime.heapCounts);
+  regionAdd(a, WasmGlobalCountsBase);
+  a.i32Load(0);
   a.localSet(Old);
   a.localGet(Count);
   a.localGet(Old);
@@ -916,11 +811,9 @@ WasmCodeBody buildRealloc(const WasmRuntimeContext &runtime) {
   a.select();
   a.localSet(Copied);
   emitScaled(a, NewBase, 3);
-  a.i32Const(static_cast<int32_t>(runtime.heapValues));
-  a.i32Add();
+  regionAdd(a, WasmGlobalValuesBase);
   emitScaled(a, Base, 3);
-  a.i32Const(static_cast<int32_t>(runtime.heapValues));
-  a.i32Add();
+  regionAdd(a, WasmGlobalValuesBase);
   a.localGet(Copied);
   a.i32Const(3);
   a.i32Shl();
@@ -961,6 +854,10 @@ WasmFunctionType wasmHeapHelperType(WasmHeapHelper helper) {
   case WasmHeapHelper::TakeFront:
     type.params = {WasmTypeI32, WasmTypeI32};
     break;
+  case WasmHeapHelper::EnsureCapacity:
+    type.params = {WasmTypeI64};
+    type.results = {WasmTypeI32};
+    break;
   case WasmHeapHelper::Alloc:
     type.params = {WasmTypeI64};
     type.results = {WasmTypeI64};
@@ -995,9 +892,11 @@ WasmCodeBody buildWasmHeapHelperBody(WasmHeapHelper helper, const WasmRuntimeCon
   case WasmHeapHelper::InsertRun:
     return buildInsertRun(runtime);
   case WasmHeapHelper::TakeFront:
-    return buildTakeFront(runtime, fn(runtime, WasmHeapHelper::RemoveRun));
+    return buildTakeFront(runtime);
   case WasmHeapHelper::Release:
     return buildRelease(runtime);
+  case WasmHeapHelper::EnsureCapacity:
+    return buildEnsureCapacity(runtime);
   case WasmHeapHelper::Alloc:
     return buildAlloc(runtime);
   case WasmHeapHelper::GrowInPlace:

@@ -431,6 +431,10 @@ bool emitSimpleInstructionImpl(const IrInstruction &inst,
       if (inst.op == IrOpcode::CallVoid && !functionTypes[static_cast<size_t>(inst.imm)].results.empty()) {
         out.push_back(WasmOpDrop);
       }
+      if (localLayout.addressed && runtime.hasHeap) {
+        // The callee may have moved the shadow stack to make room for its frame.
+        emitWasmFramePointerReload(localLayout, runtime, out);
+      }
       return true;
     }
     case IrOpcode::Trap:

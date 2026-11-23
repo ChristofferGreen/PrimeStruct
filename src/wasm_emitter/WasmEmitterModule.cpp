@@ -293,8 +293,23 @@ bool WasmEmitter::emitModule(const IrModule &input,
       (!encodeMemorySection(memories, payload, error) || !appendSection(WasmSectionMemory, payload, out, error))) {
     return false;
   }
+  std::vector<uint32_t> heapGlobalInitials;
+  if (runtime.hasHeap) {
+    // In the order of WasmGlobalHeapSize on: nothing handed out, no free runs, no live blocks; the regions and their
+    // room; the shadow stack's base, which is the last region of the memory.
+    heapGlobalInitials = {0u,
+                          0u,
+                          0u,
+                          runtime.heapValues,
+                          runtime.heapStates,
+                          runtime.heapCounts,
+                          runtime.heapRuns,
+                          WasmHeapInitialSlots,
+                          runtime.shadowBase,
+                          1u};
+  }
   if (runtime.hasLocalMemory &&
-      (!encodeShadowStackGlobalSection(runtime.shadowSlots, runtime.hasHeap, payload, error) ||
+      (!encodeShadowStackGlobalSection(runtime.shadowSlots, heapGlobalInitials, payload, error) ||
        !appendSection(WasmSectionGlobal, payload, out, error))) {
     return false;
   }

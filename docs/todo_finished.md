@@ -2581,6 +2581,7 @@ are left unarchived.
 | TODO-6172 | A refused library root names the rule it breaks | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6173 | A public function with a borrowed sum parameter passes the real-call shape check and is still refused as a... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6174 | The `optexe` and `exe` C++ compile parses the runtime's standard headers on every program | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
+| TODO-6175 | The Wasm slot heap has a fixed capacity of 2,097,152 slots | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6176 | The matrix Wasm runner has no WASI preopen, so a program that opens files differs from the VM | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6182 | A failed file open reads as an open file on Wasm, and closing it crashes node | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

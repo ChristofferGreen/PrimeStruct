@@ -79,14 +79,17 @@
   the VM's order (an address that is not a multiple of 16 is `unaligned indirect address in IR: <address>`; address 0, an
   address beyond the live slots and a heap address are `invalid indirect address in IR: <address>`), writes `VM error: ...`
   and the address in decimal to stderr and calls `proc_exit(3)` on the WASI profile, and traps (`unreachable`) on the browser
-  profile. The shadow stack is the last region of the memory and starts with 131072 slots (16 pages after the module's static
-  data). A frame that does not fit grows the memory with `memory.grow` (the helper `growShadowStack` takes half again as
-  many pages as the memory has, or what the frame needs when the host refuses that), as the VM's locals arena grows;
+  profile. The shadow stack starts with 131072 slots (16 pages after the module's static data and the heap regions). A
+  frame that does not fit grows the memory with `memory.grow` (the helper `growShadowStack` takes half again as many slots
+  as the stack has, or what the frame needs when the host refuses that), as the VM's locals arena grows. The stack grows
+  where it is while it is the last region of the memory; once the heap has moved its regions to the end (below), the
+  stack moves to a new region at the end instead (the live slots are copied; local addresses are numbered from the base,
+  so none changes, and a function that keeps a frame recomputes its frame pointer after each call);
   a host that refuses the pages the frame needs gives the VM's `VM error: VM call stack overflow` and exit code 3 on the
   WASI profile and a wasm trap on the browser profile. A single frame of more than 2^28 slots (2 GiB) is refused at
   compile time. The call depth is not counted (a recursion past the VM's 4096 frames is the host's stack, TODO-6143), and
-  the stack owns the memory above its base, so a heap added to the module (TODO-6149) lives below the base or shares the
-  grower. Frames are not zeroed: a slot is written before it is read.
+  the base of the stack is a mutable global of a module that has a heap. Frames are not zeroed: a slot is written before
+  it is read.
   Indirect addresses must be 16-byte aligned. The step kernel resolves a local address against the current frame first
   and then the frames below it; the fast kernel and the optimized C++ emitter keep the same numbering (the fast kernel's
   locals arena is laid out that way, and generated C++ registers each addressable frame). The arm64 native backend
@@ -499,9 +502,12 @@
   prints `invalid heap free address` / `invalid heap realloc address` and exits with code 3
   (`src/native_emitter/NativeEmitterInternalsArm64Heap.h`). The x86_64 native backend maps every block on its own.
   Wasm ports `VmHeapCore`'s single-arena algorithm to hand-assembled helper functions of the module
-  (`src/wasm_emitter/WasmEmitterHeap.cpp`) over fixed regions of its linear memory below the shadow stack (values, states,
-  allocation sizes and a sorted table of free runs), so its addresses, reuse and fault texts equal the VM's; the capacity is
-  2,097,152 slots (an allocation past it is `VM heap allocation overflow`). A module answers `__pstext_stat` itself: statistic 8
+  (`src/wasm_emitter/WasmEmitterHeap.cpp`, `WasmEmitterHeapRegions.cpp`) over four regions of its linear memory (values,
+  states, allocation sizes and a sorted table of free runs; their base addresses are mutable globals), so its addresses,
+  reuse and fault texts equal the VM's. The regions start with room for 16,384 slots; when the slots handed out outgrow
+  them the helper `ensureCapacity` takes `memory.grow` pages at the end of the memory for twice the slots, copies the
+  four regions and switches the bases (the old pages stay unused), up to 134,217,728 slots; an allocation past that, or one
+  the host refuses, is `VM heap allocation overflow`. A module answers `__pstext_stat` itself: statistic 8
   (`heapLiveBlocks()`) is the number of live slot allocations, kept in a mutable global that every allocation and release
   updates; statistics 0 to 7 count blocks of the string heap, which Wasm does not have yet, so they read 0 (as on the VM for
   a program that allocates no text). Byte regions and the other `__pstext_*` functions (`String`) are not there yet and are
