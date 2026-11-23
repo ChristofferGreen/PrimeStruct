@@ -76,7 +76,7 @@ namespace std {
 
     [mut]
     setTable([i32] slot, [i32] entry) {
-      [Slice<i32, Write>] cells{vectorSliceMut<i32>(this.table, 0i32, vectorCount<i32>(this.table))}
+      [Slice<i32, Write> mut] cells{vectorSliceMut<i32>(this.table, 0i32, vectorCount<i32>(this.table))}
       cells.set(slot, entry)
     }
 
@@ -180,7 +180,7 @@ namespace std {
     // Sets the value of entry `index`.
     [mut]
     storeValue([i32] index, [V] value) {
-      [Slice<V, Write>] cells{vectorSliceMut<V>(this.values, 0i32, vectorCount<V>(this.values))}
+      [Slice<V, Write> mut] cells{vectorSliceMut<V>(this.values, 0i32, vectorCount<V>(this.values))}
       cells.set(index, value)
     }
 
@@ -252,11 +252,11 @@ namespace std {
           where = this.nextSlot(where)
         }
         this.setTable(where, entry)
-        [Slice<i32, Write>] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, last + 1i32)}
+        [Slice<i32, Write> mut] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, last + 1i32)}
         offsetCells.set(entry, vectorAt<i32>(this.offsets, last))
-        [Slice<i32, Write>] lengthCells{vectorSliceMut<i32>(this.lengths, 0i32, last + 1i32)}
+        [Slice<i32, Write> mut] lengthCells{vectorSliceMut<i32>(this.lengths, 0i32, last + 1i32)}
         lengthCells.set(entry, vectorAt<i32>(this.lengths, last))
-        [Slice<u64, Write>] hashCells{vectorSliceMut<u64>(this.hashes, 0i32, last + 1i32)}
+        [Slice<u64, Write> mut] hashCells{vectorSliceMut<u64>(this.hashes, 0i32, last + 1i32)}
         hashCells.set(entry, vectorAt<u64>(this.hashes, last))
         this.storeValue(entry, vectorAt<V>(this.values, last))
       }
@@ -272,7 +272,7 @@ namespace std {
     compact() {
       [String mut] fresh{stringWithCapacity(this.pool.count() - this.garbage)}
       [i32] total{vectorCount<i32>(this.offsets)}
-      [Slice<i32, Write>] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, total)}
+      [Slice<i32, Write> mut] offsetCells{vectorSliceMut<i32>(this.offsets, 0i32, total)}
       for([i32 mut] entry{0i32}, entry < total, entry++) {
         [i32] newOffset{fresh.count()}
         fresh.appendBytes(/std/text/textAddress(this.pool.data, vectorAt<i32>(this.offsets, entry)), vectorAt<i32>(this.lengths, entry))

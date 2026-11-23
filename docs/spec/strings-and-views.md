@@ -48,7 +48,7 @@ that takes `[string]` parameters, returns literals or prints literals keeps its 
 [Vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
 [Slice<i32, Read>] all{values.view()}
 [Slice<i32, Read>] middle{values.slice(1i32, 3i32)}   // 7, 9
-[Slice<i32, Write>] tail{values.sliceMut(2i32, 4i32)}
+[Slice<i32, Write> mut] tail{values.sliceMut(2i32, 4i32)}
 ```
 
 - `view()` covers the whole container; `slice(start, end)` and `sliceMut(start, end)` cover `[start, end)`. The range

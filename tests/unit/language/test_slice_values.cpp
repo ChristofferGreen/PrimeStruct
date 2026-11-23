@@ -219,7 +219,9 @@ TEST_CASE("a vector has the view, slice and sliceMut method spellings and a view
 TEST_CASE("the method spellings work on vector<u8> and a read view cannot be indexed for writing") {
   const std::string bytes = "  [vector<u8> mut] all{vector<u8>(1u8, 2u8, 3u8)}\n";
   CHECK(runBody(bytes + "  [Slice<u8, Read>] s{all.view()}\n  return(convert<i32>(s[2i32]) + s.count() * 10i32)").exitCode == 33);
-  CHECK(runBody(bytes + "  [Slice<u8, Write>] w{all.sliceMut(0i32, 2i32)}\n  w[1i32] = 9u8\n  return(convert<i32>(all.at(1i32)))").exitCode == 9);
+  CHECK(runBody(bytes + "  [Slice<u8, Write> mut] w{all.sliceMut(0i32, 2i32)}\n  w[1i32] = 9u8\n  "
+                        "return(convert<i32>(all.at(1i32)))")
+            .exitCode == 9);
   const Outcome readOnly = runBody(bytes + "  [Slice<u8, Read>] s{all.view()}\n  s[0i32] = 5u8\n  return(0i32)");
   CHECK_FALSE(readOnly.compiled);
 }
@@ -264,11 +266,12 @@ TEST_CASE("an array<i32> has the view, slice and sliceMut method spellings and v
   const std::string sumHelper =
       "[return<int>]\nsumView([Slice<i32, Read>] window) {\n  [i32 mut] total{0i32}\n"
       "  for([i32 mut] i{0i32}, i < window.count(), i++) {\n    total = total + window[i]\n  }\n  return(total)\n}\n\n";
-  const std::string source = Prelude + "\n" + sumHelper +
-                             "[return<int>]\nmain() {\n  [array<i32> mut] a{array<i32>(5i32, 6i32, 7i32, 8i32)}\n"
-                             "  [Slice<i32, Read>] all{a.view()}\n  [Slice<i32, Read>] middle{a.slice(1i32, 3i32)}\n"
-                             "  [Slice<i32, Write>] tail{a.sliceMut(2i32, 4i32)}\n  tail[0i32] = 70i32\n"
-                             "  return(sumView(all) + sumView(middle) * 100i32 + a[2i32])\n}\n";
+  const std::string source =
+      Prelude + "\n" + sumHelper +
+      "[return<int>]\nmain() {\n  [array<i32> mut] a{array<i32>(5i32, 6i32, 7i32, 8i32)}\n"
+      "  [Slice<i32, Read>] all{a.view()}\n  [Slice<i32, Read>] middle{a.slice(1i32, 3i32)}\n"
+      "  [Slice<i32, Write> mut] tail{a.sliceMut(2i32, 4i32)}\n  tail[0i32] = 70i32\n"
+      "  return(sumView(all) + sumView(middle) * 100i32 + a[2i32])\n}\n";
   ScriptEngine engine;
   const auto script = engine.compileSource("/array_views.prime", source);
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
@@ -301,23 +304,33 @@ TEST_CASE("location of an array element is the address of that slot and is range
 
 TEST_CASE("a Write view conflicts with any other live view of the same owner and a read view with a Write view") {
   const std::string values = "  [vector<i32> mut] all{vector<i32>(1i32, 2i32, 3i32, 4i32)}\n";
-  const Outcome writeThenRead = runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, Read>] r{all.view()}\n"
-                                                 "  w[0i32] = 9i32\n  return(r.count())");
+  const Outcome writeThenRead = runBody(
+      values +
+      "  [Slice<i32, Write> mut] w{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, Read>] r{all.view()}\n"
+      "  w[0i32] = 9i32\n  return(r.count())");
   CHECK_FALSE(writeThenRead.compiled);
   CHECK(writeThenRead.diagnostics.find("borrowed binding: all (root: all, sink: r)") != std::string::npos);
-  const Outcome readThenWrite = runBody(values + "  [Slice<i32, Read>] r{all.view()}\n  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n"
-                                                 "  w[0i32] = 9i32\n  return(r.count())");
+  const Outcome readThenWrite = runBody(
+      values +
+      "  [Slice<i32, Read>] r{all.view()}\n  [Slice<i32, Write> mut] w{all.sliceMut(0i32, 2i32)}\n"
+      "  w[0i32] = 9i32\n  return(r.count())");
   CHECK_FALSE(readThenWrite.compiled);
   CHECK(readThenWrite.diagnostics.find("borrowed binding: all (root: all") != std::string::npos);
-  const Outcome twoWrites = runBody(values + "  [Slice<i32, Write>] a{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, Write>] b{all.sliceMut(2i32, 4i32)}\n"
-                                             "  a[0i32] = 1i32\n  b[0i32] = 2i32\n  return(0i32)");
+  const Outcome twoWrites =
+      runBody(values + "  [Slice<i32, Write> mut] a{all.sliceMut(0i32, 2i32)}\n  [Slice<i32, "
+                       "Write> mut] b{all.sliceMut(2i32, 4i32)}\n"
+                       "  a[0i32] = 1i32\n  b[0i32] = 2i32\n  return(0i32)");
   CHECK_FALSE(twoWrites.compiled);
   // Two read views overlap, a Write view narrows to a Write view, and a Write view whose last use is behind is no conflict.
   CHECK(runBody(values + "  [Slice<i32, Read>] a{all.view()}\n  [Slice<i32, Read>] b{all.slice(1i32, 3i32)}\n  return(a.count() + b.count())").exitCode == 6);
-  CHECK(runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 4i32)}\n  [Slice<i32, Write>] n{w.slice(1i32, 3i32)}\n"
-                         "  n[0i32] = 50i32\n  return(all.at(1i32))").exitCode == 50);
-  CHECK(runBody(values + "  [Slice<i32, Write>] w{all.sliceMut(0i32, 2i32)}\n  w[0i32] = 8i32\n  [Slice<i32, Read>] r{all.view()}\n"
-                         "  return(r.at(0i32))").exitCode == 8);
+  CHECK(runBody(values + "  [Slice<i32, Write> mut] w{all.sliceMut(0i32, 4i32)}\n  [Slice<i32, "
+                         "Write> mut] n{w.slice(1i32, 3i32)}\n"
+                         "  n[0i32] = 50i32\n  return(all.at(1i32))")
+            .exitCode == 50);
+  CHECK(runBody(values + "  [Slice<i32, Write> mut] w{all.sliceMut(0i32, 2i32)}\n  w[0i32] = "
+                         "8i32\n  [Slice<i32, Read>] r{all.view()}\n"
+                         "  return(r.at(0i32))")
+            .exitCode == 8);
 }
 
 TEST_CASE("an owner passed to a mut or move parameter while a view of it is live is rejected") {

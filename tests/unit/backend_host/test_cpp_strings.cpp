@@ -198,7 +198,7 @@ TEST_CASE("slice and sliceMut on a vector field of a local struct read and write
           "  for([i32 mut] i{0i32}, i < 5i32, i++) {\n"
           "    holder.bytes.push(convert<u8>(i + 1i32))\n"
           "  }\n"
-          "  [Slice<u8, Write>] middle{holder.bytes.sliceMut(1i32, 4i32)}\n"
+          "  [Slice<u8, Write> mut] middle{holder.bytes.sliceMut(1i32, 4i32)}\n"
           "  middle.set(0i32, 40u8)\n"
           "  middle.set(2i32, 60u8)\n"
           "  [Slice<u8, Read>] head{holder.bytes.slice(0i32, 3i32)}\n"
@@ -220,7 +220,7 @@ TEST_CASE("slice and sliceMut on a vector field of a mut struct parameter write 
           9 + 1 + 2,
           ByteHolder + "\n[return<int>]\n"
                        "overwrite_tail([Holder mut] holder) {\n"
-                       "  [Slice<u8, Write>] tail{holder.bytes.sliceMut(1i32, 3i32)}\n"
+                       "  [Slice<u8, Write> mut] tail{holder.bytes.sliceMut(1i32, 3i32)}\n"
                        "  tail.set(1i32, 9u8)\n"
                        "  return(convert<i32>(tail.at(1i32)))\n"
                        "}\n"

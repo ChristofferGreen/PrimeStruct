@@ -377,7 +377,7 @@ TEST_CASE("struct push helper statement call is not treated as builtin vector he
   const std::string source = R"(
 Counter {
   [i32 mut] value{0i32}
-  push([i32] next) {
+  [mut] push([i32] next) {
     assign(this.value, next)
   }
 }
@@ -398,7 +398,7 @@ TEST_CASE("struct push helper expression call is not treated as builtin vector h
   const std::string source = R"(
 Counter {
   [i32 mut] value{0i32}
-  [return<int>]
+  [mut return<int>]
   push([i32] next) {
     assign(this.value, next)
     return(this.value)

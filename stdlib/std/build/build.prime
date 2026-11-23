@@ -676,19 +676,22 @@ namespace build {
     // `export`, with `"incomplete":true` after the problems when `incomplete` is set: later stages follow.
     [return<String> effects(heap_alloc)]
     exportStage([bool] incomplete) {
-      this.sortNodes()
+      // The sort fills the `order` cache, a field, so it runs on a copy of the graph: an export reads this graph and
+      // changes nothing in it, and a script holds its graph in a binding that is not `mut`.
+      [Graph mut] sorted{this}
+      sorted.sortNodes()
       [Writer mut] json{Writer{}}
       json.beginObject()
       json.key("version")
       json.i64Value(convert<i64>(export_version()))
       json.key("nodes")
       json.beginArray()
-      this.writeNodes(json)
+      sorted.writeNodes(json)
       json.endArray()
       json.key("problems")
       json.beginArray()
-      this.writeProblems(json)
-      this.writeAfterProblems(json)
+      sorted.writeProblems(json)
+      sorted.writeAfterProblems(json)
       for([i32 mut] i{0i32}, i < this.buildProblems.count(), i++) {
         json.stringValue(this.buildProblems[i].view())
       }

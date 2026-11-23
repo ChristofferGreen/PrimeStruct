@@ -45,7 +45,7 @@ Pair() {
 Bag() {
   [vector<String> mut] names{vector<String>{}}
 
-  [return<void> effects(heap_alloc)]
+  [mut return<void> effects(heap_alloc)]
   copyFirstOver([i32] at) {
     this.names[at] = this.names[0i32]
   }

@@ -161,7 +161,7 @@ forward([args<Reference<Holder>>] values) {
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
   [i32] extra_value{1i32}
-  [Holder] extra
+  [Holder mut] extra
   assign(extra.value_storage, extra_value)
   return(score_refs(location(extra.value_ref),
                     location(values.at(0i32).value_ref),
@@ -173,9 +173,9 @@ main() {
   [i32] a0{1i32}
   [i32] a1{2i32}
   [i32] a2{3i32}
-  [Holder] h0
-  [Holder] h1
-  [Holder] h2
+  [Holder mut] h0
+  [Holder mut] h1
+  [Holder mut] h2
   assign(h0.value_storage, a0)
   assign(h1.value_storage, a1)
   assign(h2.value_storage, a2)
@@ -186,9 +186,9 @@ main() {
   [i32] b0{4i32}
   [i32] b1{5i32}
   [i32] b2{6i32}
-  [Holder] i0
-  [Holder] i1
-  [Holder] i2
+  [Holder mut] i0
+  [Holder mut] i1
+  [Holder mut] i2
   assign(i0.value_storage, b0)
   assign(i1.value_storage, b1)
   assign(i2.value_storage, b2)
@@ -198,8 +198,8 @@ main() {
 
   [i32] c0{7i32}
   [i32] c1{8i32}
-  [Holder] j0
-  [Holder] j1
+  [Holder mut] j0
+  [Holder mut] j1
   assign(j0.value_storage, c0)
   assign(j1.value_storage, c1)
   [Reference<Holder>] t0{location(j0)}

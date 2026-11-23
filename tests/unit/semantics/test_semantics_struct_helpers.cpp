@@ -234,7 +234,7 @@ Thing() {
 
 [return<i32>]
 main() {
-  [Thing] t{Thing{}}
+  [Thing mut] t{Thing{}}
   t.set(7i32)
   return(0i32)
 }
