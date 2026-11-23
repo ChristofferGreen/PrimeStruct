@@ -313,9 +313,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
+- [~] TODO-6171: A view stays live across a lambda or a `Function` value that changes its container
   - owner: ai
   - status: ready
+  - claimed_by: vec-ref (worktree-agent-af817b3f6b645ec22), 2026-11-23
   - created_at: 2026-11-21
   - phase: Correctness audit 2026-10 (found with TODO-6170)
   - parallel_track: safety-borrows
