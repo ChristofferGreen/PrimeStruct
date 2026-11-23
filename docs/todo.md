@@ -838,9 +838,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the three false positives only; no general diagnostics refactor (TODO-5977).
   - notes: Touches the collector that TODO-5960 merged; do not run alongside TODO-5977.
 
-- [ ] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
+- [~] TODO-6113: Calling a `Function` field of a read-only value says `unknown method`
   - owner: ai
   - status: ready
+  - claimed_by: readonly-roots (worktree-agent-ac0d2c9985def801a), 2026-11-23
   - created_at: 2026-11-20
   - phase: Frontend and diagnostics (docs/spec/value-lifecycle.md, Function values; found with TODO-5804)
   - parallel_track: function-call-diagnostic
@@ -852,9 +853,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision above is made and recorded here; then a diagnostic or a spec change with a semantics test and the full release gate green
   - stop_rule: this one decision and the diagnostic or spec line it needs; TODO-6115 and TODO-6116 carry the mechanical parts.
 
-- [ ] TODO-6116: Calling a `Function` through a read-only place is accepted although `call` is `mut`
+- [~] TODO-6116: Calling a `Function` through a read-only place is accepted although `call` is `mut`
   - owner: ai
   - status: ready
+  - claimed_by: readonly-roots (worktree-agent-ac0d2c9985def801a), 2026-11-23
   - created_at: 2026-11-20
   - phase: Function values (docs/spec/value-lifecycle.md; found with TODO-6113)
   - parallel_track: function-call-mutability
