@@ -74,7 +74,8 @@ private:
                     const std::string &entryPath,
                     std::shared_ptr<Script::Module> &module,
                     std::string &diagnostics,
-                    std::vector<std::string> *sourceFiles = nullptr) const;
+                    std::vector<std::string> *sourceFiles = nullptr,
+                    std::vector<LibraryReference> *libraries = nullptr) const;
 
   std::vector<std::string> importPaths_;
   std::vector<std::string> libraryPaths_;

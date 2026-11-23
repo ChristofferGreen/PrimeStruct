@@ -213,6 +213,11 @@ writes the same serialized module; `Script::loadBytecode` loads it.
 Loaded modules are validated for the VM target; corrupt, truncated, or
 wrong-version bytes produce an invalid `Script` with a diagnostic.
 
+A script linked with libraries (`addLibrary`, above) carries their code in its module, so its bytecode runs without the
+archives and without the host that compiled it. `Script::libraries()` names the libraries the script imported, each with
+the hash of its interface at compile time; `saveBytecode` writes them beside the code (a `PSBN` bundle of version 2)
+and `loadBytecode` reads them back. A script that imports no library is saved as before, byte for byte.
+
 ## Bytecode compatibility
 
 Bytecode is the serialized `IrModule` (magic `RISP`, then a format version).

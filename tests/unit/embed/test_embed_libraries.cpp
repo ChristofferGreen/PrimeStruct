@@ -190,4 +190,120 @@ TEST_CASE("a script cannot reach a library the host did not add") {
   CHECK_FALSE(script.diagnostics().empty());
 }
 
+namespace {
+
+std::string interfaceHashOf(const std::string &archive) {
+  primec::LibraryArchiveExpectations expected;
+  expected.compilerBuildId = primec::compilerSourceBuildId();
+  primec::LibraryArchiveContent content;
+  std::string error;
+  REQUIRE_MESSAGE(primec::readLibraryArchiveFile(archive, expected, content, error), error);
+  return content.manifest.interfaceHash;
+}
+
+} // namespace
+
+TEST_CASE("the bytecode of a script records its libraries and runs without the archive") {
+  const auto dir = embedTestDir("library_bytecode");
+  const std::string archive = buildWithHostCompiler(dir, primec::compilerSourceBuildId());
+  ScriptEngine engine;
+  engine.addLibrary(archive);
+  const Script script = engine.compileSource("/library_bytecode.prime", ImportLines + ScriptBody);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  REQUIRE(script.libraries().size() == 1);
+  CHECK(script.libraries()[0].name == "tools");
+  CHECK(script.libraries()[0].interfaceHash == interfaceHashOf(archive));
+
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE_MESSAGE(script.saveBytecode(bytes, error), error);
+  // The same bytes every time, and a host that has no archive and no engine loads them.
+  std::vector<uint8_t> again;
+  REQUIRE_MESSAGE(script.saveBytecode(again, error), error);
+  CHECK(bytes == again);
+  const Script loaded = Script::loadBytecode(bytes, "library_bytecode");
+  REQUIRE_MESSAGE(loaded.valid(), loaded.diagnostics());
+  REQUIRE(loaded.libraries().size() == 1);
+  CHECK(loaded.libraries()[0].name == "tools");
+  CHECK(loaded.libraries()[0].interfaceHash == script.libraries()[0].interfaceHash);
+  const Outcome outcome = runScript(loaded);
+  CHECK_MESSAGE(outcome.ok, outcome.diagnostics);
+  CHECK(outcome.exitCode == 42);
+  CHECK(outcome.out == "from the library\n12\n");
+
+  // A loaded script saves again to the same bytes.
+  std::vector<uint8_t> resaved;
+  REQUIRE_MESSAGE(loaded.saveBytecode(resaved, error), error);
+  CHECK(resaved == bytes);
+}
+
+TEST_CASE("the bytecode of a script that imports no library is the plain module") {
+  const auto dir = embedTestDir("library_bytecode_unused");
+  const std::string archive = buildWithHostCompiler(dir, primec::compilerSourceBuildId());
+  ScriptEngine without;
+  ScriptEngine with;
+  with.addLibrary(archive);
+  const std::string plain = "[return<i32>]\nmain() {\n  return(7i32)\n}\n";
+  const Script first = without.compileSource("/library_bytecode_unused.prime", plain);
+  const Script second = with.compileSource("/library_bytecode_unused.prime", plain);
+  CHECK(second.libraries().empty());
+  std::vector<uint8_t> firstBytes;
+  std::vector<uint8_t> secondBytes;
+  std::string error;
+  REQUIRE_MESSAGE(first.saveBytecode(firstBytes, error), error);
+  REQUIRE_MESSAGE(second.saveBytecode(secondBytes, error), error);
+  // No library is imported, so none is linked and none is recorded: the bytes are those of the script alone.
+  CHECK(firstBytes == secondBytes);
+  CHECK(Script::loadBytecode(secondBytes).run().exitCode == 7);
+}
+
+TEST_CASE("a bytecode bundle with a damaged library record is refused") {
+  const auto dir = embedTestDir("library_bytecode_damaged");
+  const std::string archive = buildWithHostCompiler(dir, primec::compilerSourceBuildId());
+  ScriptEngine engine;
+  engine.addLibrary(archive);
+  const Script script =
+      engine.compileSource("/library_bytecode_damaged.prime", ImportLines + ScriptBody);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE_MESSAGE(script.saveBytecode(bytes, error), error);
+
+  // Cut inside the record of the library, and add bytes after it.
+  std::vector<uint8_t> truncated(bytes.begin(), bytes.end() - 3);
+  const Script cut = Script::loadBytecode(truncated);
+  CHECK_FALSE(cut.valid());
+  CHECK(cut.libraries().empty());
+  CHECK(cut.diagnostics().find("invalid bytecode bundle") != std::string::npos);
+
+  std::vector<uint8_t> extended = bytes;
+  extended.push_back(0);
+  const Script trailing = Script::loadBytecode(extended);
+  CHECK_FALSE(trailing.valid());
+  CHECK(trailing.diagnostics().find("trailing bytes") != std::string::npos);
+}
+
+TEST_CASE("a script with an exported function keeps its libraries in the bytecode") {
+  const auto dir = embedTestDir("library_bytecode_exports");
+  const std::string archive = buildWithHostCompiler(dir, primec::compilerSourceBuildId());
+  ScriptEngine engine;
+  engine.addLibrary(archive);
+  engine.exportFunction<int32_t(int32_t)>("quad_of");
+  const std::string source = ImportLines +
+                             "[return<i32>]\nquad_of([i32] value) {\n  return(quad(value))\n}\n"
+                             "[return<i32>]\nmain() {\n  return(0i32)\n}\n";
+  const Script script = engine.compileSource("/library_bytecode_exports.prime", source);
+  REQUIRE_MESSAGE(script.valid(), script.diagnostics());
+  REQUIRE(script.libraries().size() == 1);
+  std::vector<uint8_t> bytes;
+  std::string error;
+  REQUIRE_MESSAGE(script.saveBytecode(bytes, error), error);
+  const Script loaded = Script::loadBytecode(bytes);
+  REQUIRE_MESSAGE(loaded.valid(), loaded.diagnostics());
+  REQUIRE(loaded.libraries().size() == 1);
+  const auto result = loaded.call<int32_t>("quad_of", 5);
+  CHECK_MESSAGE(result.ok, result.diagnostics);
+  CHECK(result.value == 20);
+}
+
 TEST_SUITE_END();

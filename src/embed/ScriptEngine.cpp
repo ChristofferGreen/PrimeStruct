@@ -6,6 +6,7 @@
 #include "primec/ir/IrPreparation.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/pipeline/CompilePipeline.h"
+#include "primec/pipeline/LibraryLink.h"
 #include "primec/support/Options.h"
 #include "../pipeline/EmitDeps.h"
 
@@ -155,7 +156,8 @@ bool ScriptEngine::compileEntry(const std::string &path,
                                 const std::string &entryPath,
                                 std::shared_ptr<Script::Module> &module,
                                 std::string &diagnostics,
-                                std::vector<std::string> *sourceFiles) const {
+                                std::vector<std::string> *sourceFiles,
+                                std::vector<LibraryReference> *libraries) const {
   Options options;
   options.emitKind = "vm";
   options.inputPath = path;
@@ -183,6 +185,11 @@ bool ScriptEngine::compileEntry(const std::string &path,
   if (sourceFiles != nullptr) {
     *sourceFiles = collectSourceDependencies(output.expandedSource);
   }
+  if (libraries != nullptr) {
+    for (const LibraryManifestDependency &library : importedLibraries(output.expandedSource)) {
+      libraries->push_back({library.name, library.interfaceHash});
+    }
+  }
 
   module = std::make_shared<Script::Module>();
   IrPreparationFailure irFailure;
@@ -209,8 +216,8 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
 
   std::shared_ptr<Script::Module> mainModule;
   std::string diagnostics;
-  const bool mainOk =
-      compileEntry(path, source, entryPath_, mainModule, diagnostics, &script.sourceFiles_);
+  const bool mainOk = compileEntry(
+      path, source, entryPath_, mainModule, diagnostics, &script.sourceFiles_, &script.libraries_);
   const bool missingMain = !mainOk && diagnostics.find("missing entry definition " + entryPath_) != std::string::npos;
   if (!mainOk && !(missingMain && !exports_.empty())) {
     script.diagnostics_ = diagnostics;
@@ -226,8 +233,15 @@ Script ScriptEngine::compile(const std::string &path, const std::string *text) c
       std::shared_ptr<Script::Module> module;
       std::string exportDiagnostics;
       const std::string entryName = "/__ps_call_" + std::to_string(i);
-      if (!compileEntry(path, source + exportWrapperSource(entry.name, entry.signature, i), entryName, module,
-                        exportDiagnostics)) {
+      // Every entry of the script imports the same libraries; a script with no main takes them from its first export.
+      std::vector<LibraryReference> *libraries = !mainOk && i == 0 ? &script.libraries_ : nullptr;
+      if (!compileEntry(path,
+                        source + exportWrapperSource(entry.name, entry.signature, i),
+                        entryName,
+                        module,
+                        exportDiagnostics,
+                        nullptr,
+                        libraries)) {
         script.diagnostics_ = "export '" + entry.name + "': " + exportDiagnostics;
         return script;
       }

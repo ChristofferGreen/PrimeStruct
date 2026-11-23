@@ -377,7 +377,10 @@ bool Script::callRaw(std::string_view name,
 }
 
 namespace {
+// Version 1 holds the modules; version 2 adds the libraries the script was linked with after the exports. A script
+// without libraries is still written as version 1 (or as a plain module), so older readers keep loading it.
 constexpr uint32_t BundleVersion = 1;
+constexpr uint32_t BundleVersionWithLibraries = 2;
 constexpr char BundleMagic[4] = {'P', 'S', 'B', 'N'};
 
 void putU32(std::vector<uint8_t> &out, uint32_t value) {
@@ -456,12 +459,12 @@ bool Script::saveBytecode(std::vector<uint8_t> &out, std::string &error) const {
     error = diagnostics_.empty() ? "script was not compiled successfully" : diagnostics_;
     return false;
   }
-  if (exports_ == nullptr) {
+  if (exports_ == nullptr && libraries_.empty()) {
     return serializeIr(module_->ir, out, error);
   }
-  // Bundle: magic, version, optional main module, then each export module.
+  // Bundle: magic, version, optional main module, each export module, then (version 2) the libraries.
   out.assign(BundleMagic, BundleMagic + 4);
-  putU32(out, BundleVersion);
+  putU32(out, libraries_.empty() ? BundleVersion : BundleVersionWithLibraries);
   std::vector<uint8_t> blob;
   putU32(out, module_ != nullptr ? 1u : 0u);
   if (module_ != nullptr) {
@@ -470,8 +473,11 @@ bool Script::saveBytecode(std::vector<uint8_t> &out, std::string &error) const {
     }
     putBlob(out, blob);
   }
-  putU32(out, static_cast<uint32_t>(exports_->entries.size()));
-  for (const auto &entry : exports_->entries) {
+  const std::vector<ExportTable::Entry> noEntries;
+  const std::vector<ExportTable::Entry> &entries =
+      exports_ != nullptr ? exports_->entries : noEntries;
+  putU32(out, static_cast<uint32_t>(entries.size()));
+  for (const auto &entry : entries) {
     putBlob(out, std::vector<uint8_t>(entry.name.begin(), entry.name.end()));
     putU32(out, static_cast<uint32_t>(entry.signature.parameters.size()));
     for (const HostType type : entry.signature.parameters) {
@@ -482,6 +488,14 @@ bool Script::saveBytecode(std::vector<uint8_t> &out, std::string &error) const {
       return false;
     }
     putBlob(out, blob);
+  }
+  if (!libraries_.empty()) {
+    putU32(out, static_cast<uint32_t>(libraries_.size()));
+    for (const LibraryReference &library : libraries_) {
+      putBlob(out, std::vector<uint8_t>(library.name.begin(), library.name.end()));
+      putBlob(out,
+              std::vector<uint8_t>(library.interfaceHash.begin(), library.interfaceHash.end()));
+    }
   }
   return true;
 }
@@ -509,10 +523,12 @@ Script Script::loadBytecode(const std::vector<uint8_t> &bytes, const std::string
     // A partially decoded bundle must not leave a half-valid script behind.
     script.module_.reset();
     script.exports_.reset();
+    script.libraries_.clear();
     script.diagnostics_ = "invalid bytecode bundle: " + detail;
     return script;
   };
-  if (!reader.u32(magic) || !reader.u32(version) || version != BundleVersion) {
+  if (!reader.u32(magic) || !reader.u32(version) ||
+      (version != BundleVersion && version != BundleVersionWithLibraries)) {
     return fail("unsupported version");
   }
   if (!reader.u32(hasMain) || hasMain > 1) {
@@ -561,6 +577,20 @@ Script Script::loadBytecode(const std::vector<uint8_t> &bytes, const std::string
       return fail(error);
     }
     table->entries.push_back(std::move(entry));
+  }
+  if (version == BundleVersionWithLibraries) {
+    uint32_t libraryCount = 0;
+    if (!reader.u32(libraryCount) || libraryCount == 0 || libraryCount > reader.remaining()) {
+      return fail("truncated library list");
+    }
+    for (uint32_t i = 0; i < libraryCount; ++i) {
+      LibraryReference library;
+      if (!reader.text(library.name) || !reader.text(library.interfaceHash) ||
+          library.name.empty() || library.interfaceHash.empty()) {
+        return fail("invalid library record");
+      }
+      script.libraries_.push_back(std::move(library));
+    }
   }
   if (reader.remaining() != 0) {
     return fail("trailing bytes");

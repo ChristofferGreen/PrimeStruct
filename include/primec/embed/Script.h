@@ -265,6 +265,13 @@ struct RunOptions {
   std::string syncReplay;
 };
 
+// A library a script was linked with (ScriptEngine::addLibrary): the library's name and the hash of its interface at
+// the time the script was compiled.
+struct LibraryReference {
+  std::string name;
+  std::string interfaceHash;
+};
+
 // A compiled script. Cheap to copy (shares the compiled module); `run` may be
 // called repeatedly without recompiling.
 class Script {
@@ -278,6 +285,12 @@ public:
   // absolute, sorted, without duplicates. Empty for a script loaded from bytecode.
   const std::vector<std::string> &sourceFiles() const {
     return sourceFiles_;
+  }
+
+  // The libraries whose interface the script imported, sorted by name: the code of each is merged into the compiled
+  // module, so the script runs without the archives. `saveBytecode` records them and `loadBytecode` reads them back.
+  const std::vector<LibraryReference> &libraries() const {
+    return libraries_;
   }
 
   // Runs the entry definition. `args` become the script's argv after the
@@ -333,7 +346,8 @@ public:
   bool checkHostBindings(std::string &error) const;
 
   // Serializes the compiled module to portable bytecode. Returns false with
-  // `error` set when the script is not valid. Ship the bytes to a host that
+  // `error` set when the script is not valid. A script linked with libraries is saved with their names and interface
+  // hashes beside the code (`libraries()`). Ship the bytes to a host that
   // links only the runtime-only library (for example iOS, where in-process
   // code generation is unavailable) and load them with `loadBytecode`.
   bool saveBytecode(std::vector<uint8_t> &out, std::string &error) const;
@@ -365,6 +379,7 @@ private:
   std::string name_;
   std::string diagnostics_;
   std::vector<std::string> sourceFiles_;
+  std::vector<LibraryReference> libraries_;
   HostBindings hostBindings_;
 };
 

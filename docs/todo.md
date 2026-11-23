@@ -151,7 +151,7 @@ of sync with them.
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
-| TODO-6217 | `Script::bytecode` records the libraries a script was linked with | ready | lib-embed |
+| TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
@@ -177,7 +177,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; deferred TODO-6217 (bytecode of a linked script); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, then TODO-6213 (sum results; the options are in its block and wait for the owner), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, then TODO-6213 (sum results; the options are in its block and wait for the owner), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6175 (Wasm heap capacity), TODO-6182 (Wasm file open errors), TODO-6177 (Wasm byte regions), TODO-6178 (Wasm string heap), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -725,20 +725,25 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
 
-- [~] TODO-6217: `Script::bytecode` records the libraries a script was linked with
+- [ ] TODO-6219: `loadBytecode` of a script linked with a library says whether that library changed
   - owner: ai
-  - status: ready
-  - claimed_by: worker-lib (worktree agent-afd94d4ad6f718fed), 2026-11-23
+  - status: deferred
   - created_at: 2026-11-23
-  - phase: Modules and libraries (split from TODO-5933, slice 2)
+  - phase: Modules and libraries (split from TODO-6217: the check at load)
   - parallel_track: lib-embed
-  - scope: A script linked with a library has its code merged into its IR, so the bytecode is already self-contained in the IR; the leaf records the library names and their interface hashes beside it, and `loadBytecode` checks them, so a script compiled against a library that changed is refused at load instead of running stale code.
-  - decision: 2026-11-22 (owner): slice 2 after `ScriptEngine::addLibrary`: `Script::bytecode` records the libraries so `loadBytecode` stays self-contained.
+  - blocked_on: owner decision, options below
+  - scope: `Script::bytecode` records the name and interface hash of each library a script was linked with (done), and the code of each library is merged into the module, so the bytecode is self-contained and cannot run stale library code. TODO-6217 asked that `loadBytecode` also "check" the records so that a script compiled against a library that changed is refused at load. `Script::loadBytecode(bytes, name)` is static and holds no library, so there is nothing to compare the records with unless the caller supplies it. The question is what the check is.
+  - question: what does `loadBytecode` compare the recorded libraries with, and what is refused?
+  - options:
+    - A. Nothing: the records are information (`Script::libraries()`), the bytecode is self-contained, and a changed archive has no effect on a script compiled before it. Costs: nothing built; a host that wants to know whether its scripts are older than an archive compares `libraries()` itself.
+    - B. `Script::loadBytecode(bytes, name, libraries)` with the archives (or their manifests) the host has: a recorded library that is missing or has another interface hash is `library ui changed since this script was compiled; rebuild` (the text of the compile-time check in `linkProgramLibraries`). Costs: a new overload in the runtime-only library, which must read an archive manifest (today only the full library does), and a host that passes none gets option A.
+    - C. `ScriptEngine::loadBytecode(bytes)`, a member that checks the records against the libraries the engine was given with `addLibrary` and then calls the static function. Costs: a second entry point for loading; the runtime-only library stays as it is.
+  - recommendation: A until a host asks for the check, then C: the engine already holds the archives and the compile-time check text, so the runtime-only library stays small. B only if a host without the full library needs it.
   - acceptance:
-    - a script linked with a library round-trips through `bytecode` and `loadBytecode` and runs without the archive
+    - the option the owner picks is implemented with a positive and a negative test (the changed library is refused with a message that names it), or the leaf is closed as option A with the doc line that says the records are information
     - full release gate green
-  - stop_rule: the bytecode of a linked script; no new link rules.
-  - repro: `Script::bytecode` of a script that calls a library function, then `loadBytecode` in another process.
+  - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
+  - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 - [ ] TODO-6213: A public function with a sum, `Result` or packed error result is a function of a library
   - owner: ai
