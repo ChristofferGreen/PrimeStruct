@@ -6,6 +6,7 @@
 
 #include "third_party/doctest.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -395,6 +396,124 @@ TEST_CASE("schema 40: a version 39 module loads unchanged and cannot hold a fuse
   setVersion(withFma, 39u);
   CHECK_FALSE(deserializeIr(withFma, loaded, error));
   CHECK(error == "unsupported IR opcode");
+}
+
+namespace {
+IrInstructionSourceMapEntry mapEntry(uint32_t debugId,
+                                     uint32_t line,
+                                     uint32_t column,
+                                     IrSourceMapProvenance provenance,
+                                     const std::string &unit) {
+  IrInstructionSourceMapEntry entry;
+  entry.debugId = debugId;
+  entry.line = line;
+  entry.column = column;
+  entry.provenance = provenance;
+  entry.sourceUnit = unit;
+  return entry;
+}
+
+std::vector<uint8_t> readFixture(const std::string &name) {
+  std::ifstream file(std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/ir/" + name,
+                     std::ios::binary);
+  return std::vector<uint8_t>((std::istreambuf_iterator<char>(file)),
+                              std::istreambuf_iterator<char>());
+}
+} // namespace
+
+TEST_CASE("schema 41: the source map names each unit once and round trips") {
+  IrModule module =
+      moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}})});
+  const std::string longUnit = "/" + std::string(70000, 'p') + "/long.prime";
+  module.instructionSourceMap = {
+      mapEntry(1, 3, 5, IrSourceMapProvenance::CanonicalAst, "/a/main.prime"),
+      mapEntry(2, 4, 1, IrSourceMapProvenance::CanonicalAst, ""),
+      mapEntry(7, 300000, 70000, IrSourceMapProvenance::SyntheticIr, longUnit),
+      mapEntry(3, 0, 0, IrSourceMapProvenance::CanonicalAst, "/a/main.prime"),
+      mapEntry(0xFFFFFFFFu, 0xFFFFFFFFu, 0xFFFFFFFFu, IrSourceMapProvenance::CanonicalAst, ""),
+  };
+  const std::vector<uint8_t> bytes = bytesOf(module);
+  size_t occurrences = 0;
+  for (size_t at = 0; at + 13 <= bytes.size(); ++at) {
+    if (std::equal(bytes.begin() + static_cast<std::ptrdiff_t>(at),
+                   bytes.begin() + static_cast<std::ptrdiff_t>(at) + 13,
+                   "/a/main.prime")) {
+      ++occurrences;
+    }
+  }
+  CHECK(occurrences == 1);
+  IrModule back;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(bytes, back, error), error);
+  CHECK(back.schemaVersion == IrSchemaVersion);
+  REQUIRE(back.instructionSourceMap.size() == module.instructionSourceMap.size());
+  for (size_t index = 0; index < module.instructionSourceMap.size(); ++index) {
+    const IrInstructionSourceMapEntry &want = module.instructionSourceMap[index];
+    const IrInstructionSourceMapEntry &got = back.instructionSourceMap[index];
+    CHECK(got.debugId == want.debugId);
+    CHECK(got.line == want.line);
+    CHECK(got.column == want.column);
+    CHECK(got.provenance == want.provenance);
+    CHECK(got.sourceUnit == want.sourceUnit);
+  }
+  CHECK(bytesOf(back) == bytes);
+}
+
+TEST_CASE("schema 41: a unit index outside the table is refused") {
+  IrModule module =
+      moduleOf({functionOf("/main", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}})});
+  module.instructionSourceMap = {
+      mapEntry(1, 1, 1, IrSourceMapProvenance::CanonicalAst, "/a.prime")};
+  std::vector<uint8_t> bytes = bytesOf(module);
+  // The entry ends with its unit index, a single byte 0 here, followed by the host import count (4 bytes), the
+  // section of the imported functions and the entry fields.
+  size_t at = 0;
+  for (; at + 8 < bytes.size(); ++at) {
+    if (bytes[at] == '/' && bytes[at + 1] == 'a' && bytes[at + 2] == '.') {
+      break;
+    }
+  }
+  REQUIRE(at + 8 < bytes.size());
+  // after "/a.prime" (8 bytes): delta, line, column, provenance, unit index
+  const size_t unitIndexAt = at + 8 + 4;
+  REQUIRE(bytes[unitIndexAt] == 0);
+  bytes[unitIndexAt] = 5;
+  IrModule back;
+  std::string error;
+  CHECK_FALSE(deserializeIr(bytes, back, error));
+  CHECK(error == "invalid IR instruction source map source unit index");
+}
+
+TEST_CASE(
+    "schema 41: a version 40 module with source units loads, runs and is rewritten as version 41") {
+  const std::vector<uint8_t> old = readFixture("schema40_two_units.bytecode");
+  REQUIRE(!old.empty());
+  IrModule loaded;
+  std::string error;
+  REQUIRE_MESSAGE(deserializeIr(old, loaded, error), error);
+  CHECK(loaded.schemaVersion == 40u);
+  REQUIRE(!loaded.instructionSourceMap.empty());
+  std::vector<std::string> units;
+  for (const IrInstructionSourceMapEntry &entry : loaded.instructionSourceMap) {
+    if (std::find(units.begin(), units.end(), entry.sourceUnit) == units.end()) {
+      units.push_back(entry.sourceUnit);
+    }
+  }
+  CHECK(units == std::vector<std::string>{"/fixture/main.prime", "/fixture/math.prime"});
+  CHECK(run(loaded).value == 0);
+  std::vector<uint8_t> rewritten;
+  REQUIRE_MESSAGE(serializeIr(loaded, rewritten, error), error);
+  CHECK(rewritten[4] == static_cast<uint8_t>(IrSchemaVersion));
+  CHECK(rewritten.size() < old.size());
+  IrModule again;
+  REQUIRE_MESSAGE(deserializeIr(rewritten, again, error), error);
+  REQUIRE(again.instructionSourceMap.size() == loaded.instructionSourceMap.size());
+  for (size_t index = 0; index < again.instructionSourceMap.size(); ++index) {
+    CHECK(again.instructionSourceMap[index].sourceUnit ==
+          loaded.instructionSourceMap[index].sourceUnit);
+    CHECK(again.instructionSourceMap[index].debugId == loaded.instructionSourceMap[index].debugId);
+    CHECK(again.instructionSourceMap[index].line == loaded.instructionSourceMap[index].line);
+  }
 }
 
 TEST_SUITE_END();

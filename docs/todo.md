@@ -125,7 +125,6 @@ of sync with them.
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
-| TODO-6232 | The instruction source map names each source unit once | ready | bytecode-size |
 | TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | ready | bytecode-bench |
 | TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | ready | bytecode-inline-report |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -484,21 +483,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the choice recorded here and the leaf either closed (A) or re-sliced into leaves with a measured acceptance each (B, C)
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
-
-- [~] TODO-6232: The instruction source map names each source unit once
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: bytecode-size
-  - scope: `serializeIr`/`deserializeIr` in `src/ir/IrSerializer.cpp` write every `instructionSourceMap` entry as `debugId, line, column, provenance` plus the whole `sourceUnit` string; 33,078 entries of the PNG program (`stdlib/std/image/image.prime` reads) take 3,949,939 of its 4,381,773 bytes. Write the distinct source units once (a table of strings) and each entry as a table index; bump `IrSchemaVersion` to 41 and keep reading versions down to `IrSchemaMinimumSupportedVersion` (the reader branches on the version, as it does for v38 and v39); document the change in the schema notes next to `IrSchemaVersion` and in docs/spec/vm-design.md (Bytecode). Also check `deserializeIr` for the per-entry `std::string` copy and share the strings in the in-memory `IrModule` only if the measurement shows the load still spends time there.
-  - acceptance:
-    - `primec --emit=ir` of the PNG program (`/std/image/png/read` of `input.png`, as in tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp) is at most 1.0 MB (4,381,773 bytes before); the program output is identical on the VM from the new bytecode, and a v40 file written by the previous compiler (a checked-in golden under tests/fixtures) still loads and runs
-    - `primevm png.psir` wall time before and after (median of 10) recorded in docs/todo_log.md under TODO-5536
-    - a round-trip test with two source units, an empty one and a long path; full release gate green
-  - stop_rule: the serialized form of the source map only; the in-memory `IrModule` layout stays unless the measurement says otherwise.
-  - repro: `primec --emit=ir png.prime -o png.psir && ls -l png.psir` (4,381,773 bytes on 2026-11-24).
 
 - [ ] TODO-6233: A startup benchmark: bytecode size and load time of a small, a medium and the PNG program
   - owner: ai

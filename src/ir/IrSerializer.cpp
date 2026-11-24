@@ -5,6 +5,7 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
 namespace primec {
 namespace {
@@ -44,6 +45,24 @@ bool appendString(std::vector<uint8_t> &out,
   return true;
 }
 
+// An unsigned LEB128 number: seven bits per byte, low bits first, the high bit set on every byte but the last.
+void appendVarint(std::vector<uint8_t> &out, uint64_t value) {
+  while (value >= 0x80u) {
+    out.push_back(static_cast<uint8_t>(value | 0x80u));
+    value >>= 7;
+  }
+  out.push_back(static_cast<uint8_t>(value));
+}
+
+// A signed number as an unsigned one with small magnitudes small: 0, -1, 1, -2 become 0, 1, 2, 3.
+uint64_t zigzagEncode(int64_t value) {
+  return (static_cast<uint64_t>(value) << 1) ^ static_cast<uint64_t>(value >> 63);
+}
+
+int64_t zigzagDecode(uint64_t value) {
+  return static_cast<int64_t>(value >> 1) ^ -static_cast<int64_t>(value & 1u);
+}
+
 // Every serialized element occupies at least one byte, so a count larger than
 // the bytes left is corrupt. Checking before `reserve` keeps hostile counts from
 // forcing huge allocations (std::bad_alloc) while loading untrusted bytecode.
@@ -80,6 +99,22 @@ bool readU64(const std::vector<uint8_t> &data, size_t &offset, uint64_t &outValu
   return true;
 }
 
+bool readVarint(const std::vector<uint8_t> &data, size_t &offset, uint64_t &outValue) {
+  outValue = 0;
+  for (uint32_t shift = 0; shift < 64; shift += 7) {
+    if (offset >= data.size()) {
+      return false;
+    }
+    const uint8_t byte = data[offset];
+    ++offset;
+    outValue |= static_cast<uint64_t>(byte & 0x7Fu) << shift;
+    if ((byte & 0x80u) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool readU8(const std::vector<uint8_t> &data, size_t &offset, uint8_t &outValue) {
   if (offset >= data.size()) {
     return false;
@@ -108,6 +143,171 @@ bool readString(const std::vector<uint8_t> &data,
   offset += len;
   return true;
 }
+// The instruction source map (v41): the entry count, and when it is not zero the distinct source units once, then each entry as the debug id (the difference
+// to the entry before), the line, the column, the provenance byte and the index of its unit. Before v41 every entry
+// carried its whole unit string, which made the map most of a large module.
+bool appendSourceMap(std::vector<uint8_t> &out,
+                     const std::vector<IrInstructionSourceMapEntry> &entries,
+                     std::string &error) {
+  if (entries.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
+    error = "too many IR instruction source map entries";
+    return false;
+  }
+  std::vector<const std::string *> units;
+  std::unordered_map<std::string_view, uint32_t> unitIndexes;
+  std::vector<uint32_t> entryUnits;
+  entryUnits.reserve(entries.size());
+  for (const IrInstructionSourceMapEntry &entry : entries) {
+    const auto inserted = unitIndexes.emplace(std::string_view(entry.sourceUnit),
+                                              static_cast<uint32_t>(units.size()));
+    if (inserted.second) {
+      units.push_back(&entry.sourceUnit);
+    }
+    entryUnits.push_back(inserted.first->second);
+  }
+  appendU32(out, static_cast<uint32_t>(entries.size()));
+  if (entries.empty()) {
+    return true;
+  }
+  appendU32(out, static_cast<uint32_t>(units.size()));
+  for (const std::string *unit : units) {
+    if (!appendString(out, *unit, "instruction source map source unit", error)) {
+      return false;
+    }
+  }
+  int64_t previousDebugId = 0;
+  for (size_t index = 0; index < entries.size(); ++index) {
+    const IrInstructionSourceMapEntry &entry = entries[index];
+    appendVarint(out, zigzagEncode(static_cast<int64_t>(entry.debugId) - previousDebugId));
+    previousDebugId = static_cast<int64_t>(entry.debugId);
+    appendVarint(out, entry.line);
+    appendVarint(out, entry.column);
+    out.push_back(static_cast<uint8_t>(entry.provenance));
+    appendVarint(out, entryUnits[index]);
+  }
+  return true;
+}
+
+bool checkSourceMapProvenance(uint8_t provenance, std::string &error) {
+  if (provenance > static_cast<uint8_t>(IrSourceMapProvenance::SyntheticIr)) {
+    error = "unsupported IR instruction source map provenance";
+    return false;
+  }
+  return true;
+}
+
+// The map of a module before v41: every entry holds its unit string.
+bool readSourceMapV40(const std::vector<uint8_t> &data,
+                      size_t &offset,
+                      std::vector<IrInstructionSourceMapEntry> &entries,
+                      std::string &error) {
+  uint32_t sourceMapCount = 0;
+  if (!readU32(data, offset, sourceMapCount) || !countFitsRemaining(data, offset, sourceMapCount)) {
+    error = "truncated IR instruction source map count";
+    return false;
+  }
+  entries.reserve(sourceMapCount);
+  for (uint32_t sourceMapIndex = 0; sourceMapIndex < sourceMapCount; ++sourceMapIndex) {
+    IrInstructionSourceMapEntry entry;
+    uint8_t provenance = 0;
+    if (!readU32(data, offset, entry.debugId) || !readU32(data, offset, entry.line) ||
+        !readU32(data, offset, entry.column) || !readU8(data, offset, provenance)) {
+      error = "truncated IR instruction source map entry";
+      return false;
+    }
+    if (!checkSourceMapProvenance(provenance, error)) {
+      return false;
+    }
+    entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
+    if (!readString(data,
+                    offset,
+                    entry.sourceUnit,
+                    "truncated IR instruction source map source unit",
+                    "truncated IR instruction source map source unit",
+                    error)) {
+      return false;
+    }
+    entries.push_back(std::move(entry));
+  }
+  return true;
+}
+
+bool readSourceMapV41(const std::vector<uint8_t> &data,
+                      size_t &offset,
+                      std::vector<IrInstructionSourceMapEntry> &entries,
+                      std::string &error) {
+  uint32_t sourceMapCount = 0;
+  if (!readU32(data, offset, sourceMapCount) || !countFitsRemaining(data, offset, sourceMapCount)) {
+    error = "truncated IR instruction source map count";
+    return false;
+  }
+  if (sourceMapCount == 0) {
+    return true;
+  }
+  uint32_t unitCount = 0;
+  if (!readU32(data, offset, unitCount) || !countFitsRemaining(data, offset, unitCount)) {
+    error = "truncated IR instruction source map unit count";
+    return false;
+  }
+  std::vector<std::string> units(unitCount);
+  for (std::string &unit : units) {
+    if (!readString(data,
+                    offset,
+                    unit,
+                    "truncated IR instruction source map source unit",
+                    "truncated IR instruction source map source unit",
+                    error)) {
+      return false;
+    }
+  }
+  entries.reserve(sourceMapCount);
+  int64_t debugId = 0;
+  for (uint32_t sourceMapIndex = 0; sourceMapIndex < sourceMapCount; ++sourceMapIndex) {
+    IrInstructionSourceMapEntry entry;
+    uint64_t delta = 0;
+    uint64_t line = 0;
+    uint64_t column = 0;
+    uint64_t unitIndex = 0;
+    uint8_t provenance = 0;
+    if (!readVarint(data, offset, delta) || !readVarint(data, offset, line) ||
+        !readVarint(data, offset, column) || !readU8(data, offset, provenance) ||
+        !readVarint(data, offset, unitIndex)) {
+      error = "truncated IR instruction source map entry";
+      return false;
+    }
+    debugId += zigzagDecode(delta);
+    if (debugId < 0 || debugId > static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) ||
+        line > std::numeric_limits<uint32_t>::max() ||
+        column > std::numeric_limits<uint32_t>::max()) {
+      error = "invalid IR instruction source map entry";
+      return false;
+    }
+    if (!checkSourceMapProvenance(provenance, error)) {
+      return false;
+    }
+    if (unitIndex >= units.size()) {
+      error = "invalid IR instruction source map source unit index";
+      return false;
+    }
+    entry.debugId = static_cast<uint32_t>(debugId);
+    entry.line = static_cast<uint32_t>(line);
+    entry.column = static_cast<uint32_t>(column);
+    entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
+    entry.sourceUnit = units[static_cast<size_t>(unitIndex)];
+    entries.push_back(std::move(entry));
+  }
+  return true;
+}
+
+bool readSourceMap(const std::vector<uint8_t> &data,
+                   size_t &offset,
+                   uint32_t version,
+                   std::vector<IrInstructionSourceMapEntry> &entries,
+                   std::string &error) {
+  return version >= 41u ? readSourceMapV41(data, offset, entries, error)
+                        : readSourceMapV40(data, offset, entries, error);
+}
+
 } // namespace
 
 bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string &error) {
@@ -222,15 +422,8 @@ bool serializeIr(const IrModule &module, std::vector<uint8_t> &out, std::string 
     error = "too many IR instruction source map entries";
     return false;
   }
-  appendU32(out, static_cast<uint32_t>(module.instructionSourceMap.size()));
-  for (const auto &entry : module.instructionSourceMap) {
-    appendU32(out, entry.debugId);
-    appendU32(out, entry.line);
-    appendU32(out, entry.column);
-    out.push_back(static_cast<uint8_t>(entry.provenance));
-    if (!appendString(out, entry.sourceUnit, "instruction source map source unit", error)) {
-      return false;
-    }
+  if (!appendSourceMap(out, module.instructionSourceMap, error)) {
+    return false;
   }
   if (module.hostImports.size() > static_cast<size_t>(std::numeric_limits<uint32_t>::max())) {
     error = "too many IR host imports";
@@ -522,38 +715,8 @@ bool deserializeIr(const std::vector<uint8_t> &data, IrModule &out, std::string 
     }
     out.functions.push_back(std::move(fn));
   }
-  uint32_t sourceMapCount = 0;
-  if (!readU32(data, offset, sourceMapCount)) {
-    error = "truncated IR instruction source map count";
+  if (!readSourceMap(data, offset, version, out.instructionSourceMap, error)) {
     return false;
-  }
-  if (!countFitsRemaining(data, offset, sourceMapCount)) {
-    error = "truncated IR instruction source map count";
-    return false;
-  }
-  out.instructionSourceMap.reserve(sourceMapCount);
-  for (uint32_t sourceMapIndex = 0; sourceMapIndex < sourceMapCount; ++sourceMapIndex) {
-    IrInstructionSourceMapEntry entry;
-    uint8_t provenance = 0;
-    if (!readU32(data, offset, entry.debugId) || !readU32(data, offset, entry.line) ||
-        !readU32(data, offset, entry.column) || !readU8(data, offset, provenance)) {
-      error = "truncated IR instruction source map entry";
-      return false;
-    }
-    if (provenance > static_cast<uint8_t>(IrSourceMapProvenance::SyntheticIr)) {
-      error = "unsupported IR instruction source map provenance";
-      return false;
-    }
-    entry.provenance = static_cast<IrSourceMapProvenance>(provenance);
-    if (!readString(data,
-                    offset,
-                    entry.sourceUnit,
-                    "truncated IR instruction source map source unit",
-                    "truncated IR instruction source map source unit",
-                    error)) {
-      return false;
-    }
-    out.instructionSourceMap.push_back(entry);
   }
   uint32_t hostImportCount = 0;
   if (!readU32(data, offset, hostImportCount)) {

@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 40u;
+constexpr uint32_t IrSchemaVersion = 41u;
 // v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes, v36 only MutexLock and MutexUnlock and v37
 // only ConditionWait and ConditionNotify, so a v33 to v36 module loads unchanged (it cannot hold the opcodes added
 // after it). v38 appends a section after the host imports (the functions that are imports of a library) and
@@ -22,6 +22,12 @@ constexpr uint32_t IrSchemaVersion = 40u;
 // supported version; a writer always writes v39, so a loaded older module keeps its false byte and runs unchanged.
 // v40 only appends FmaF32 and FmaF64, so a v33 to v39 module loads unchanged (it cannot hold them) and a writer always
 // writes v40. The format of a module is otherwise the same as v39.
+// v41 writes the instruction source map with each distinct source unit once: the entry count, and when it is not zero
+// a table of the unit strings, then every entry as the debug id (the zigzag difference to the entry before, a LEB128
+// number), the line and the column (LEB128 numbers), the provenance byte and the index of its unit (a LEB128 number).
+// An empty map is the same four bytes as before. Nothing else changes, and the in-memory IrModule is the same.
+// Migration: a loader reads the per-entry unit strings of v33 to v40 and the table of v41; a writer always writes v41,
+// so a loaded older module is rewritten with the table and runs unchanged.
 // The opcode bytes of a marked PushI32 and PushI64 in a serialized module (v39); no opcode may take these values, and
 // lowering uses them for the same pushes until it resolves them into IrInstruction::isStringLiteral.
 constexpr uint8_t IrStringPushI32Code = 0xFEu;

@@ -368,6 +368,10 @@
   `Script::loadBytecode`, `primevm`, `--link` and library archives validate for), so struct, `String` and collection
   calls are real calls with the address ABI and a threaded program (`serveWorkers`-style tasks) can be saved. The
   validation target `Serialized` stays for the checks that name it.
+  Schema v41 writes the instruction source map with each distinct source unit once (a table of strings; an entry holds a
+  delta debug id, line, column, provenance and a unit index as LEB128 numbers), so a large program's map no longer
+  repeats a file path per entry; v33 to v40 files still load and are rewritten as v41 (notes next to `IrSchemaVersion`
+  in `include/primec/ir/Ir.h`, golden `tests/fixtures/ir/schema40_two_units.bytecode`).
 - **IR link (`primevm --link`; TODO-5922; docs/ModulesAndLibrariesPlan.md, section 9):** `primevm <program> --link
   <module.psir>` (repeatable; `--link=<path>` too) runs a program merged with serialized IR modules. The program is a
   source file or a `.psir` file; a `.psir` input is loaded and run without compiling. `linkIrModule`
