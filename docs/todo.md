@@ -304,9 +304,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6241: A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage`
+- [~] TODO-6241: A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage`
   - owner: ai
   - status: ready
+  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
   - created_at: 2026-11-24
   - phase: Frontend and diagnostics (found with TODO-6197)
   - parallel_track: method-call-resolution
