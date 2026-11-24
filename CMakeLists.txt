@@ -705,6 +705,8 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitterTextMeta.cpp
   src/wasm_emitter/WasmEmitterTextLarge.cpp
   src/wasm_emitter/WasmEmitterTextArena.cpp
+  src/wasm_emitter/WasmEmitterTextOps.cpp
+  src/wasm_emitter/WasmEmitterTextHost.cpp
   src/wasm_emitter/WasmEmitterHeapRegions.cpp
   src/wasm_emitter/WasmEmitterIo.cpp
   src/wasm_emitter/WasmEmitterModule.cpp

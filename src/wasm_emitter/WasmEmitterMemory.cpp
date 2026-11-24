@@ -152,6 +152,12 @@ bool wasmModuleCallsTextHeap(const IrModule &module) {
       case NativeTextHost::SetLimit:
       case NativeTextHost::ArenaBegin:
       case NativeTextHost::ArenaEnd:
+      case NativeTextHost::Move:
+      case NativeTextHost::Fill:
+      case NativeTextHost::Compare:
+      case NativeTextHost::Find:
+      case NativeTextHost::Literal:
+      case NativeTextHost::Argument:
         return true;
       default:
         break;

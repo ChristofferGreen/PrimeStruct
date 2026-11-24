@@ -352,9 +352,9 @@ bool validateFunction(const IrModule &module,
                                "string heap function is not available on the native backend yet",
                                error);
       }
-      // A Wasm module answers the string heap statistics and the block allocation functions itself (`__pstext_stat`,
-      // `__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`, `_length`, `_usable`, `_set_limit`, `_arena_begin` and `_arena_end`); every other host function is
-      // refused.
+      // A Wasm module answers the string heap functions itself (`__pstext_stat`, `__pstext_alloc`, `_try_alloc`, `_free`,
+      // `_capacity`, `_length`, `_usable`, `_set_limit`, `_arena_begin`, `_arena_end`, `_move`, `_fill`, `_compare` and
+      // `_find`, and on the WASI profile `_literal` and `_argument`); every other host function is refused.
       const NativeTextHost wasmTextKind =
           isWasmTarget(target) && inst.imm < module.hostImports.size()
               ? nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)
@@ -364,7 +364,11 @@ bool validateFunction(const IrModule &module,
           wasmTextKind == NativeTextHost::TryAlloc || wasmTextKind == NativeTextHost::Free ||
           wasmTextKind == NativeTextHost::Capacity || wasmTextKind == NativeTextHost::Length ||
           wasmTextKind == NativeTextHost::Usable || wasmTextKind == NativeTextHost::SetLimit ||
-          wasmTextKind == NativeTextHost::ArenaBegin || wasmTextKind == NativeTextHost::ArenaEnd;
+          wasmTextKind == NativeTextHost::ArenaBegin || wasmTextKind == NativeTextHost::ArenaEnd ||
+          wasmTextKind == NativeTextHost::Move || wasmTextKind == NativeTextHost::Fill ||
+          wasmTextKind == NativeTextHost::Compare || wasmTextKind == NativeTextHost::Find ||
+          (target == IrValidationTarget::Wasm &&
+           (wasmTextKind == NativeTextHost::Literal || wasmTextKind == NativeTextHost::Argument));
       if (!nativeHost && !wasmStat && target != IrValidationTarget::Vm &&
           target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
           target != IrValidationTarget::OptCpp) {

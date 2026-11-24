@@ -87,6 +87,25 @@ uint32_t layoutHeapRegions(uint32_t start, WasmRuntimeContext &runtime) {
     runtime.textRecords = place(WasmTextInitialRecords * WasmTextRecordBytes);
     runtime.textMeta = place(WasmTextMetaBytes);
     runtime.textMetaHeads = place(WasmTextMetaBuckets * 4u);
+    if (runtime.enabled) {
+      // the literal tables: the address of each literal asked for (zero until then) and its (address, length) pair
+      runtime.textLiteralCount = static_cast<uint32_t>(runtime.stringPtrs.size());
+      runtime.textLiterals = place(runtime.textLiteralCount * 8u);
+      runtime.textLiteralInfo = place(runtime.textLiteralCount * 8u);
+      std::vector<uint8_t> info;
+      const auto appendWord = [&](uint32_t value) {
+        for (uint32_t shift = 0; shift < 32; shift += 8) {
+          info.push_back(static_cast<uint8_t>(value >> shift));
+        }
+      };
+      for (size_t i = 0; i < runtime.stringPtrs.size(); ++i) {
+        appendWord(runtime.stringPtrs[i]);
+        appendWord(runtime.stringLens[i]);
+      }
+      if (!info.empty()) {
+        appendDataSegmentAt(runtime.textLiteralInfo, info, runtime.dataSegments);
+      }
+    }
   }
   return start;
 }
@@ -119,6 +138,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
       }
       if (inst.op == IrOpcode::HeapAllocBytes) {
         runtime.hasBytes = true;
+      }
+      // `__pstext_argument` reads the arguments through `args_get`
+      if (inst.op == IrOpcode::CallHost && inst.imm < runtime.textHostKinds.size() &&
+          runtime.textHostKinds[static_cast<size_t>(inst.imm)] == NativeTextHost::Argument) {
+        runtime.hasArgvOps = true;
       }
     }
   }
@@ -282,6 +306,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
         static const std::string TextLimitMessage = "VM error: string memory limit exceeded\n";
         static const std::string TextArenaMessage =
             "VM error: string arena ended without one being open\n";
+        static const std::string TextRangeMessage = "VM error: invalid text range: ";
+        static const std::string TextRangeMidMessage = " bytes at ";
         appendMessage(TextFreeMessage, runtime.textFreeMessageAddr, runtime.textFreeMessageLength);
         appendMessage(
             TextTwiceMessage, runtime.textTwiceMessageAddr, runtime.textTwiceMessageLength);
@@ -291,6 +317,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
             TextLimitMessage, runtime.textLimitMessageAddr, runtime.textLimitMessageLength);
         appendMessage(
             TextArenaMessage, runtime.textArenaMessageAddr, runtime.textArenaMessageLength);
+        appendMessage(
+            TextRangeMessage, runtime.textRangeMessageAddr, runtime.textRangeMessageLength);
+        appendMessage(TextRangeMidMessage,
+                      runtime.textRangeMidMessageAddr,
+                      runtime.textRangeMidMessageLength);
       }
       if (runtime.hasBytes) {
         appendMessage(ByteMessage, runtime.byteMessageAddr, runtime.byteMessageLength);

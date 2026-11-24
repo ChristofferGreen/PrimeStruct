@@ -629,6 +629,24 @@ bool emitTypedInstruction(const IrInstruction &inst,
     case NativeTextHost::ArenaEnd:
       textHelper = WasmTextHelper::ArenaEnd;
       break;
+    case NativeTextHost::Move:
+      textHelper = WasmTextHelper::MoveBytes;
+      break;
+    case NativeTextHost::Fill:
+      textHelper = WasmTextHelper::FillBytes;
+      break;
+    case NativeTextHost::Compare:
+      textHelper = WasmTextHelper::CompareBytes;
+      break;
+    case NativeTextHost::Find:
+      textHelper = WasmTextHelper::FindByte;
+      break;
+    case NativeTextHost::Literal:
+      textHelper = WasmTextHelper::Literal;
+      break;
+    case NativeTextHost::Argument:
+      textHelper = WasmTextHelper::Argument;
+      break;
     default:
       isTextCall = false;
       break;
@@ -638,17 +656,31 @@ bool emitTypedInstruction(const IrInstruction &inst,
       // the import's kind (the helper answers an i64; a 32-bit kind wraps it).
       const bool arenaCall =
           textHelper == WasmTextHelper::ArenaBegin || textHelper == WasmTextHelper::ArenaEnd;
-      if (!arenaCall && !coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      const bool threeOperands =
+          textHelper == WasmTextHelper::MoveBytes || textHelper == WasmTextHelper::FillBytes ||
+          textHelper == WasmTextHelper::CompareBytes || textHelper == WasmTextHelper::FindByte;
+      const size_t operandCount = arenaCall ? 0u : (threeOperands ? 3u : 1u);
+      if ((textHelper == WasmTextHelper::Literal || textHelper == WasmTextHelper::Argument) &&
+          !runtime.enabled) {
+        error =
+            "wasm emitter string literals and entry arguments need the WASI profile in function: " +
+            functionName;
+        return false;
+      }
+      if (operandCount != 0 && !coerceOperands(localLayout,
+                                               std::vector<uint8_t>(operandCount, WasmTypeI64),
+                                               out,
+                                               error,
+                                               functionName)) {
         return false;
       }
       out.push_back(0x10); // call
       appendU32Leb(runtime.textFunction[static_cast<size_t>(textHelper)], out);
-      if (!arenaCall) {
-        popTypes(localLayout, 1);
-      }
+      popTypes(localLayout, operandCount);
       const IrHostValueKind returnKind = runtime.textHostReturns[static_cast<size_t>(inst.imm)];
       if (textHelper == WasmTextHelper::Free || textHelper == WasmTextHelper::SetLimit ||
-          arenaCall) {
+          arenaCall || textHelper == WasmTextHelper::MoveBytes ||
+          textHelper == WasmTextHelper::FillBytes) {
         if (returnKind != IrHostValueKind::Void) {
           out.push_back(WasmOpI64Const);
           appendS64Leb(0, out);

@@ -20,6 +20,8 @@
 
 #include "primec/testing/TestScratch.h"
 
+#include "program_matrix_wasm_strings.h"
+
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -463,8 +465,14 @@ inline void listWasmIf(ProgramCase &program, const std::vector<std::string> &was
 
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
-inline void runProgramMatrix(const ProgramCase &program,
+inline void runProgramMatrix(const ProgramCase &listedProgram,
                              std::vector<ExecutionConfig> configs = allConfigs()) {
+  ProgramCase program = listedProgram;
+  if (listed(wasmStringPrograms(), program.name) && !listed(program.skipConfigs, "wasm-wasi") &&
+      !listed(program.extraConfigs, "wasm-wasi") && !listed(program.onlyConfigs, "wasm-wasi")) {
+    (program.onlyConfigs.empty() ? program.extraConfigs : program.onlyConfigs)
+        .push_back("wasm-wasi");
+  }
   if (wasmCompileOnly()) {
     reportWasmCompile(program);
     return;

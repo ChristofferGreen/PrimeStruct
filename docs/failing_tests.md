@@ -22,14 +22,11 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-21T05:24:24Z`
+- Last updated: `2026-11-24T02:12:55Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`
 - Result: `ctest` failed with status `8`.
 - Failing CTest cases:
-  - `672`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_251_260`
-  - `703`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_561_570`
-  - `704`: `PrimeStruct_primestruct_semantics_calls_flow_collections_calls_flow_collections_571_580`
-  - `2194`: `PrimeStruct_primestruct_compile_run_native_backend_collections_apple_collections_91_100`
+  - `493`: `PrimeStruct_primestruct_ir_pipeline_validation_cases_1261_1270`
 <!-- compile.sh:failing-tests:end -->

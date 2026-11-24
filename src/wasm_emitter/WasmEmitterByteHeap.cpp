@@ -479,6 +479,93 @@ WasmCodeBody buildAccess(const WasmRuntimeContext &runtime) {
   return body;
 }
 
+// span(address i64, count i64) -> i32: the memory address of the first of `count` bytes starting at a byte-region
+// address, or 0 unless every one of them lies in the one live region of that address and generation (the VM's
+// `byteSpan`: no fault, the caller names it).
+WasmCodeBody buildSpan(const WasmRuntimeContext &) {
+  constexpr uint32_t Address = 0;
+  constexpr uint32_t Count = 1;
+  constexpr uint32_t Granule = 2;
+  constexpr uint32_t Start = 3;
+  constexpr uint32_t Within = 4;
+  constexpr uint32_t Offset = 5;
+  WasmCodeBody body;
+  declareLocals(body, 3, 1);
+  WasmAsm a(body.instructions);
+  const auto failIf = [&]() {
+    a.ifThen();
+    a.i32Const(0);
+    a.ret();
+    a.end();
+  };
+  emitWasmIsByteAddress(a, Address);
+  a.i32Eqz();
+  failIf();
+  a.localGet(Address);
+  a.i64Const(OffsetMask47);
+  a.i64And();
+  a.localSet(Offset);
+  a.localGet(Offset);
+  a.i64Const(3);
+  a.i64ShrU();
+  a.globalGet(WasmGlobalByteSize);
+  a.i64ExtendI32U();
+  a.i64GeU();
+  failIf();
+  a.localGet(Offset);
+  a.i64Const(3);
+  a.i64ShrU();
+  a.i32WrapI64();
+  a.localSet(Granule);
+  entryAddress(a, Granule, 2, WasmGlobalByteOwnerBase);
+  a.i32Load(0);
+  a.localSet(Start);
+  a.localGet(Start);
+  a.i32Eqz();
+  failIf();
+  a.localGet(Start);
+  a.i32Const(1);
+  a.i32Sub();
+  a.localSet(Start);
+  entryAddress(a, Start, 1, WasmGlobalByteGensBase);
+  a.i32Load16U(0);
+  a.localGet(Address);
+  a.i64Const(48);
+  a.i64ShrU();
+  a.i32WrapI64();
+  a.i32Const(static_cast<int32_t>(GenerationMask));
+  a.i32And();
+  a.i32Ne();
+  failIf();
+  // the offset within the region must be below its byte count, and the count must fit in what is left of it
+  a.localGet(Offset);
+  a.i32WrapI64();
+  a.localGet(Start);
+  a.i32Const(3);
+  a.i32Shl();
+  a.i32Sub();
+  a.localSet(Within);
+  a.localGet(Within);
+  entryAddress(a, Start, 2, WasmGlobalByteCountsBase);
+  a.i32Load(0);
+  a.i32GeU();
+  failIf();
+  a.localGet(Count);
+  entryAddress(a, Start, 2, WasmGlobalByteCountsBase);
+  a.i32Load(0);
+  a.localGet(Within);
+  a.i32Sub();
+  a.i64ExtendI32U();
+  a.i64GtU();
+  failIf();
+  a.localGet(Offset);
+  a.i32WrapI64();
+  a.globalGet(WasmGlobalByteBase);
+  a.i32Add();
+  a.end();
+  return body;
+}
+
 // alloc(count i64) -> i64: `count` zeroed bytes from the smallest free run that fits, else the free run at the end of
 // the storage extended, else new granules; address 0 for a count of 0.
 WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
@@ -861,6 +948,10 @@ WasmFunctionType wasmByteHelperType(WasmByteHelper helper) {
     type.params = {WasmTypeI64, WasmTypeI64};
     type.results = {WasmTypeI64};
     break;
+  case WasmByteHelper::Span:
+    type.params = {WasmTypeI64, WasmTypeI64};
+    type.results = {WasmTypeI32};
+    break;
   }
   return type;
 }
@@ -891,6 +982,8 @@ WasmCodeBody buildWasmByteHelperBody(WasmByteHelper helper, const WasmRuntimeCon
     return buildLoadU8(runtime);
   case WasmByteHelper::StoreU8:
     return buildStoreU8(runtime);
+  case WasmByteHelper::Span:
+    return buildSpan(runtime);
   }
   return WasmCodeBody{};
 }

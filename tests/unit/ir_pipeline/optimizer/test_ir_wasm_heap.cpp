@@ -36,7 +36,7 @@ const fs = require("node:fs");
 process.removeAllListeners("warning");
 process.on("warning", () => {});
 const { WASI } = require("node:wasi");
-const wasi = new WASI({ version: "preview1", args: [process.argv[2]], returnOnExit: true });
+const wasi = new WASI({ version: "preview1", args: ["program"], returnOnExit: true });
 class ProgramExit { constructor(code) { this.code = code; } }
 const imports = wasi.getImportObject();
 imports.wasi_snapshot_preview1.proc_exit = (code) => { throw new ProgramExit(code); };
@@ -1004,16 +1004,20 @@ constexpr int TextStat = 6;
 constexpr int TextSetLimit = 7;
 constexpr int TextArenaBegin = 8;
 constexpr int TextArenaEnd = 9;
+constexpr int TextMove = 10;
+constexpr int TextFill = 11;
+constexpr int TextCompare = 12;
+constexpr int TextFind = 13;
+constexpr int TextLiteral = 14;
+constexpr int TextArgument = 15;
 
-// The module with the string heap functions imported as host functions 0 to 9 (`TextAlloc` and the others above).
+// The module with the string heap functions imported as host functions 0 to 15 (`TextAlloc` and the others above).
 primec::IrModule withText(primec::IrModule module) {
   const auto add =
-      [&](const char *name, primec::IrHostValueKind returnKind, bool takesValue = true) {
+      [&](const char *name, primec::IrHostValueKind returnKind, size_t parameters = 1) {
         primec::IrHostImport import;
         import.name = std::string("std/text/") + name;
-        if (takesValue) {
-          import.parameters = {primec::IrHostValueKind::U64};
-        }
+        import.parameters.assign(parameters, primec::IrHostValueKind::U64);
         import.returnKind = returnKind;
         module.hostImports.push_back(import);
       };
@@ -1025,8 +1029,14 @@ primec::IrModule withText(primec::IrModule module) {
   add("__pstext_try_alloc", primec::IrHostValueKind::U64);
   add("__pstext_stat", primec::IrHostValueKind::U64);
   add("__pstext_set_limit", primec::IrHostValueKind::Void);
-  add("__pstext_arena_begin", primec::IrHostValueKind::Void, false);
-  add("__pstext_arena_end", primec::IrHostValueKind::Void, false);
+  add("__pstext_arena_begin", primec::IrHostValueKind::Void, 0);
+  add("__pstext_arena_end", primec::IrHostValueKind::Void, 0);
+  add("__pstext_move", primec::IrHostValueKind::Void, 3);
+  add("__pstext_fill", primec::IrHostValueKind::Void, 3);
+  add("__pstext_compare", primec::IrHostValueKind::I32, 3);
+  add("__pstext_find", primec::IrHostValueKind::I32, 3);
+  add("__pstext_literal", primec::IrHostValueKind::U64);
+  add("__pstext_argument", primec::IrHostValueKind::U64);
   return module;
 }
 
@@ -1748,6 +1758,248 @@ TEST_CASE("wasm string arena faults carry the VM's message and exit code 3") {
     CAPTURE(name);
     expectMatchesVm(module, "text_arena_fault_" + name);
   }
+}
+
+// The address `LoadLocal variable` plus `offset`.
+void pushTextAddress(std::vector<std::string> &code, int variable, uint64_t offset) {
+  code.push_back("LoadLocal " + std::to_string(variable));
+  if (offset != 0) {
+    code.push_back("PushI64 " + std::to_string(offset));
+    code.push_back("AddI64");
+  }
+}
+
+// `__pstext_move(to + toOffset, from + fromOffset, count)`.
+void moveText(std::vector<std::string> &code,
+              int to,
+              uint64_t toOffset,
+              int from,
+              uint64_t fromOffset,
+              uint64_t count) {
+  pushTextAddress(code, to, toOffset);
+  pushTextAddress(code, from, fromOffset);
+  code.push_back("PushI64 " + std::to_string(count));
+  code.push_back(callText(TextMove));
+}
+
+// `__pstext_fill(to + offset, value, count)`.
+void fillText(
+    std::vector<std::string> &code, int to, uint64_t offset, uint64_t value, uint64_t count) {
+  pushTextAddress(code, to, offset);
+  code.push_back("PushI64 " + std::to_string(value));
+  code.push_back("PushI64 " + std::to_string(count));
+  code.push_back(callText(TextFill));
+}
+
+// Prints the result of `__pstext_compare(a + aOffset, b + bOffset, count)`.
+void compareText(std::vector<std::string> &code,
+                 int a,
+                 uint64_t aOffset,
+                 int b,
+                 uint64_t bOffset,
+                 uint64_t count) {
+  pushTextAddress(code, a, aOffset);
+  pushTextAddress(code, b, bOffset);
+  code.push_back("PushI64 " + std::to_string(count));
+  code.push_back(callText(TextCompare));
+  code.push_back("PrintI32 1");
+}
+
+// Prints the result of `__pstext_find(variable + offset, count, value)`.
+void findText(
+    std::vector<std::string> &code, int variable, uint64_t offset, uint64_t count, uint64_t value) {
+  pushTextAddress(code, variable, offset);
+  code.push_back("PushI64 " + std::to_string(count));
+  code.push_back("PushI64 " + std::to_string(value));
+  code.push_back(callText(TextFind));
+  code.push_back("PrintI32 1");
+}
+
+TEST_CASE("wasm string byte operations move, fill, compare and find like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Two text blocks and a large one: a prefix written byte by byte, overlapping moves in both directions, fills,
+  // compares of equal and differing ranges (the first difference decides, bytes compare unsigned) and finds of a
+  // present, an absent and a 256 + value byte; every operation with a count of 0 on addresses that name nothing.
+  std::vector<std::string> code;
+  allocText(code, 0, 100);
+  allocText(code, 1, 100);
+  allocText(code, 2, 100000);
+  for (uint64_t i = 0; i < 10; ++i) {
+    storeByte(code, "LoadLocal 0", i, 65 + i);
+    storeByte(code, "LoadLocal 1", i, 65 + i);
+  }
+  storeByte(code, "LoadLocal 1", 6, 200);
+  storeByte(code, "LoadLocal 0", 20, 129);
+  printTextBlock(code, 0);
+  moveText(code, 0, 2, 0, 0, 8);
+  printTextBlock(code, 0);
+  moveText(code, 0, 0, 0, 3, 7);
+  printTextBlock(code, 0);
+  moveText(code, 2, 0, 0, 0, 40);
+  moveText(code, 2, 99990, 0, 0, 10);
+  moveText(code, 0, 50, 2, 99990, 10);
+  printTextBlock(code, 2);
+  printTextBlock(code, 0);
+  fillText(code, 1, 10, 88, 5);
+  fillText(code, 1, 0, 0x141, 3);
+  printTextBlock(code, 1);
+  compareText(code, 0, 0, 1, 0, 10);
+  compareText(code, 0, 0, 0, 0, 10);
+  compareText(code, 1, 3, 0, 3, 3);
+  compareText(code, 0, 6, 1, 6, 1);
+  compareText(code, 1, 6, 0, 6, 1);
+  compareText(code, 0, 20, 1, 20, 4);
+  compareText(code, 1, 20, 0, 20, 4);
+  findText(code, 0, 0, 100, 67);
+  findText(code, 0, 0, 100, 67 + 256);
+  findText(code, 0, 0, 100, 250);
+  findText(code, 0, 20, 80, 129);
+  findText(code, 0, 5, 2, 70);
+  findText(code, 2, 0, 100000, 65);
+  findText(code, 2, 99990, 10, 74);
+  // a count of 0 touches nothing, whatever the addresses are
+  for (const char *address : {"PushI64 0", "PushI64 4096", "PushI64 -9223231299358420480"}) {
+    code.push_back(address);
+    code.push_back(address);
+    code.push_back("PushI64 0");
+    code.push_back(callText(TextMove));
+    code.push_back(address);
+    code.push_back("PushI64 7");
+    code.push_back("PushI64 0");
+    code.push_back(callText(TextFill));
+    code.push_back(address);
+    code.push_back(address);
+    code.push_back("PushI64 0");
+    code.push_back(callText(TextCompare));
+    code.push_back("PrintI32 1");
+    code.push_back(address);
+    code.push_back("PushI64 0");
+    code.push_back("PushI64 7");
+    code.push_back(callText(TextFind));
+    code.push_back("PrintI32 1");
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_bytes", "", true);
+}
+
+TEST_CASE("wasm string byte operation faults carry the VM's message and exit code 3") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Two blocks of 100 bytes (variables 0 and 1, capacity 112) are made first.
+  const auto program = [&](const std::vector<std::string> &code) {
+    std::vector<std::string> all = {"PushI64 100",
+                                    callText(TextAlloc),
+                                    "StoreLocal 0",
+                                    "PushI64 100",
+                                    callText(TextAlloc),
+                                    "StoreLocal 1"};
+    all.insert(all.end(), code.begin(), code.end());
+    all.push_back("ReturnVoid");
+    return withText(mainOf(all));
+  };
+  std::vector<std::string> pastTheEnd;
+  moveText(pastTheEnd, 0, 0, 1, 0, 113);
+  std::vector<std::string> startsInside;
+  moveText(startsInside, 0, 100, 1, 0, 20);
+  std::vector<std::string> sourceBad;
+  sourceBad.push_back("LoadLocal 0");
+  sourceBad.push_back("PushI64 4096");
+  sourceBad.push_back("PushI64 8");
+  sourceBad.push_back(callText(TextMove));
+  const std::vector<std::string> fillSlot = {
+      "PushI64 4096", "PushI64 1", "PushI64 4", callText(TextFill)};
+  std::vector<std::string> compareSecond;
+  pushTextAddress(compareSecond, 0, 0);
+  compareSecond.push_back("PushI64 8");
+  compareSecond.push_back("PushI64 4");
+  compareSecond.push_back(callText(TextCompare));
+  compareSecond.push_back("Pop");
+  std::vector<std::string> findFreed;
+  findFreed.push_back("LoadLocal 1");
+  findFreed.push_back(callText(TextFree));
+  findText(findFreed, 1, 0, 5, 7);
+  std::vector<std::string> fillGeneration;
+  fillGeneration.push_back("LoadLocal 1");
+  fillGeneration.push_back(callText(TextFree));
+  fillGeneration.push_back("PushI64 100");
+  fillGeneration.push_back(callText(TextAlloc));
+  fillGeneration.push_back("Pop");
+  fillText(fillGeneration, 1, 0, 3, 10);
+  std::vector<std::string> hugeCount;
+  fillText(hugeCount, 0, 0, 3, 5000000000ull);
+  const std::vector<std::pair<std::string, primec::IrModule>> faults = {
+      {"move_past_the_end", program(pastTheEnd)},
+      {"move_starts_at_the_end", program(startsInside)},
+      {"move_from_a_slot_address", program(sourceBad)},
+      {"fill_a_slot_address", program(fillSlot)},
+      {"compare_with_an_invalid_second", program(compareSecond)},
+      {"find_a_freed_block", program(findFreed)},
+      {"fill_a_stale_generation", program(fillGeneration)},
+      {"fill_a_huge_count", program(hugeCount)},
+  };
+  for (const auto &[name, module] : faults) {
+    CAPTURE(name);
+    expectMatchesVm(module, "text_bytes_fault_" + name);
+  }
+}
+
+TEST_CASE("wasm string literals and entry arguments match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Literals are copied into byte regions the first time they are asked for (the address is cached, an empty one is 0);
+  // text blocks made after them show the generation they took; the bytes are read back and compared with a block.
+  std::vector<std::string> code;
+  for (const int index : {0, 2, 0, 1, 2}) {
+    code.push_back("PushI64 " + std::to_string(index));
+    code.push_back(callText(TextLiteral));
+    code.push_back("PrintU64 1");
+  }
+  code.push_back("PushI64 0");
+  code.push_back(callText(TextLiteral));
+  code.push_back("StoreLocal 0");
+  for (uint64_t i = 0; i < 6; ++i) {
+    printByte(code, "LoadLocal 0", i);
+  }
+  allocText(code, 1, 40);
+  code.push_back("LoadLocal 1");
+  code.push_back("PrintU64 1");
+  moveText(code, 1, 0, 0, 0, 6);
+  printTextBlock(code, 1);
+  compareText(code, 0, 0, 1, 0, 5);
+  compareText(code, 0, 0, 1, 0, 6);
+  findText(code, 0, 0, 5, 'l');
+  code.push_back("PushI64 2");
+  code.push_back(callText(TextLiteral));
+  code.push_back("StoreLocal 2");
+  compareText(code, 2, 0, 0, 0, 4);
+  findText(code, 2, 0, 10, 'w');
+  // arguments: index 0 is the program name, the others none
+  for (const int index : {0, 0, 1, -1, 5}) {
+    code.push_back("PushI32 " + std::to_string(index));
+    code.push_back(callText(TextArgument));
+    code.push_back("StoreLocal 3");
+    code.push_back("LoadLocal 3");
+    code.push_back("PrintU64 1");
+    code.push_back("LoadLocal 3");
+    code.push_back(callText(TextLength));
+    code.push_back("PrintI32 1");
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  primec::IrModule module = withText(mainOf(code));
+  module.stringTable = {"hello world", "", "world wide web"};
+  module.hostImports[static_cast<size_t>(TextArgument)].parameters = {primec::IrHostValueKind::I32};
+  expectMatchesVm(module, "text_literals", "", true);
 }
 
 TEST_CASE("the browser profile has a string heap and traps on a bad block address") {

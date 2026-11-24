@@ -861,6 +861,20 @@ WasmFunctionType wasmTextHelperType(WasmTextHelper helper) {
   case WasmTextHelper::ArenaBegin:
   case WasmTextHelper::ArenaEnd:
     break;
+  case WasmTextHelper::MoveBytes:
+  case WasmTextHelper::FillBytes:
+    type.params = {WasmTypeI64, WasmTypeI64, WasmTypeI64};
+    break;
+  case WasmTextHelper::CompareBytes:
+  case WasmTextHelper::FindByte:
+    type.params = {WasmTypeI64, WasmTypeI64, WasmTypeI64};
+    type.results = {WasmTypeI64};
+    break;
+  case WasmTextHelper::Literal:
+  case WasmTextHelper::Argument:
+    type.params = {WasmTypeI64};
+    type.results = {WasmTypeI64};
+    break;
   case WasmTextHelper::RoomFor:
     type.params = {WasmTypeI64};
     type.results = {WasmTypeI32};
@@ -921,6 +935,18 @@ WasmCodeBody buildWasmTextHelperBody(WasmTextHelper helper, const WasmRuntimeCon
     return buildArenaBegin(runtime);
   case WasmTextHelper::ArenaEnd:
     return buildArenaEnd(runtime);
+  case WasmTextHelper::MoveBytes:
+    return buildMoveBytes(runtime);
+  case WasmTextHelper::FillBytes:
+    return buildFillBytes(runtime);
+  case WasmTextHelper::CompareBytes:
+    return buildCompareBytes(runtime);
+  case WasmTextHelper::FindByte:
+    return buildFindByte(runtime);
+  case WasmTextHelper::Literal:
+    return buildLiteral(runtime);
+  case WasmTextHelper::Argument:
+    return buildArgument(runtime);
   }
   return WasmCodeBody{};
 }
@@ -932,6 +958,8 @@ std::vector<uint32_t> wasmTextGlobalInitials(const WasmRuntimeContext &runtime) 
           runtime.textMeta + WasmTextMetaBytes,
           runtime.textRecords,
           WasmTextInitialRecords,
+          0u,
+          0u,
           0u,
           0u,
           0u,

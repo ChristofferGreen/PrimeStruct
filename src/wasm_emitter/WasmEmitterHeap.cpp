@@ -46,6 +46,7 @@ constexpr int32_t FaultTextTwice = 5;
 constexpr int32_t FaultTextAddress = 6;
 constexpr int32_t FaultTextLimit = 7;
 constexpr int32_t FaultTextArena = 8;
+constexpr int32_t FaultTextRange = 9;
 
 // The address a slot range starts at: Tag | generation << 48 | slot * 16 (the VM's encoding, arena 0).
 void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
@@ -112,6 +113,28 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
     literalIf(FaultTextAddress, runtime.textAddressMessageAddr, runtime.textAddressMessageLength);
     literalIf(FaultTextLimit, runtime.textLimitMessageAddr, runtime.textLimitMessageLength);
     literalIf(FaultTextArena, runtime.textArenaMessageAddr, runtime.textArenaMessageLength);
+    // `invalid text range: <count> bytes at <address>`: the count is in the globals, the address follows below
+    a.localGet(Kind);
+    a.i32Const(FaultTextRange);
+    a.i32Eq();
+    a.ifThen();
+    emitWasiWriteLiteralFromFdLocal(
+        Fd, runtime.textRangeMessageAddr, runtime.textRangeMessageLength, runtime, out);
+    a.drop();
+    a.globalGet(WasmGlobalTextRangeHigh);
+    a.i64ExtendI32U();
+    a.i64Const(32);
+    a.i64Shl();
+    a.globalGet(WasmGlobalTextRangeLow);
+    a.i64ExtendI32U();
+    a.i64Or();
+    a.localSet(Digits);
+    emitWasiWriteDecimalFromI64Local(Fd, Digits, Rem, Ptr, Len, Neg, false, runtime, out);
+    a.drop();
+    emitWasiWriteLiteralFromFdLocal(
+        Fd, runtime.textRangeMidMessageAddr, runtime.textRangeMidMessageLength, runtime, out);
+    a.drop();
+    a.end();
   }
   // the faults whose message ends the line carry no address
   a.localGet(Kind);

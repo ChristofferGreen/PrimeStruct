@@ -41,6 +41,7 @@ inline constexpr int32_t FaultTextTwice = 5;
 inline constexpr int32_t FaultTextAddress = 6;
 inline constexpr int32_t FaultTextLimit = 7;
 inline constexpr int32_t FaultTextArena = 8;
+inline constexpr int32_t FaultTextRange = 9;
 
 inline uint32_t textFn(const WasmRuntimeContext &runtime, WasmTextHelper helper) {
   return runtime.textFunction[static_cast<size_t>(helper)];
@@ -74,6 +75,22 @@ inline void emitLimitFailure(WasmAsm &a, const WasmRuntimeContext &runtime) {
   a.i32Const(FaultTextLimit);
   a.i64Const(0);
   a.call(fn(runtime, WasmHeapHelper::Fault));
+}
+
+// The VM's `invalid text range: <count> bytes at <address>` fault of a byte operation whose range leaves its region.
+inline void emitRangeFailure(WasmAsm &a,
+                             const WasmRuntimeContext &runtime,
+                             uint32_t countLocal,
+                             uint32_t addressLocal) {
+  a.localGet(countLocal);
+  a.i32WrapI64();
+  a.globalSet(WasmGlobalTextRangeLow);
+  a.localGet(countLocal);
+  a.i64Const(32);
+  a.i64ShrU();
+  a.i32WrapI64();
+  a.globalSet(WasmGlobalTextRangeHigh);
+  faultWith(a, runtime, FaultTextRange, addressLocal);
 }
 
 // Pushes the memory address of chunk record `indexLocal`.
@@ -180,6 +197,14 @@ WasmCodeBody buildStat(const WasmRuntimeContext &runtime);
 WasmCodeBody buildRoomFor(const WasmRuntimeContext &runtime);
 WasmCodeBody buildAllocLarge(const WasmRuntimeContext &runtime);
 WasmCodeBody buildSetLimit(const WasmRuntimeContext &runtime);
+
+// The byte operations, string literals and entry arguments (WasmEmitterTextOps.cpp, WasmEmitterTextHost.cpp).
+WasmCodeBody buildMoveBytes(const WasmRuntimeContext &runtime);
+WasmCodeBody buildFillBytes(const WasmRuntimeContext &runtime);
+WasmCodeBody buildCompareBytes(const WasmRuntimeContext &runtime);
+WasmCodeBody buildFindByte(const WasmRuntimeContext &runtime);
+WasmCodeBody buildLiteral(const WasmRuntimeContext &runtime);
+WasmCodeBody buildArgument(const WasmRuntimeContext &runtime);
 
 // The string arenas (WasmEmitterTextArena.cpp).
 WasmCodeBody buildAllocInArena(const WasmRuntimeContext &runtime);

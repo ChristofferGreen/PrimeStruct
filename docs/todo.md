@@ -134,9 +134,10 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
-| TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | ready | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
+| TODO-6226 | Wasm refuses `LoadStringLength` of a runtime string | deferred | wasm-bytes-host |
+| TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -175,7 +176,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, then TODO-6222 (a public `[sum]` in the interface and a sum result, option A) and TODO-6223 (packed `Result` and error struct results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, large blocks and arenas landed), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals and arguments landed), TODO-6226 (Wasm `LoadStringLength`), TODO-6227 (Wasm literal and argument limits), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -531,19 +532,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
-- [~] TODO-6179: The Wasm `__pstext_*` byte operations and entry arguments
-  - owner: ai
-  - status: ready
-  - claimed_by: wasm-text-b (worktree-agent-a700f9f33ed9b5b01), 2026-11-24
-  - created_at: 2026-11-22
-  - phase: Backend parity (split from TODO-6150)
-  - parallel_track: wasm-bytes-host
-  - scope: `String` copies, fills, compares and searches bytes with `__pstext_move` (overlap allowed), `__pstext_fill`, `__pstext_compare` (-1, 0 or 1) and `__pstext_find`, reads a string literal with `__pstext_literal` (the address of the literal's bytes: the module already keeps the string table in a data segment, so the address is known at emit time) and `argumentText(index)` reads `__pstext_argument` (WASI `args_get`, the argument copied into a fresh block). Each has one range check per call in the VM (`VmHeapCore::byteSpan`) and the same fault texts. Lower them as helper functions over the byte regions of TODO-6177.
-  - acceptance:
-    - the `String` programs of the matrix that only need these (concatenation, slicing, comparison, search, literals, arguments) run on Wasm like the VM and list `wasm-wasi`
-    - full release gate green
-  - stop_rule: the byte operations, literals and arguments; allocation is TODO-6178, TODO-6224 and TODO-6225 (landed) and float text is TODO-6180.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
 - [ ] TODO-6180: Wasm formats and parses floats for `String`
   - owner: ai
   - status: deferred
@@ -554,7 +542,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - the option chosen is written here with a `decision:` line; then `String` formatting and parsing of floats run on Wasm like the VM (matrix programs that print floats through `String` list `wasm-wasi`)
     - full release gate green
-  - stop_rule: float text only. Blocked by TODO-6177 and TODO-6178.
+  - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
 - [ ] TODO-6181: A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text
   - owner: ai
@@ -568,6 +556,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
+- [ ] TODO-6226: Wasm refuses `LoadStringLength` of a runtime string
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Backend parity (found with TODO-6179)
+  - parallel_track: wasm-bytes-host
+  - scope: the matrix programs `namespaced_handler_fields` and `text_view_http_literals` are refused for `--emit=wasm --wasm-profile wasi` with `unsupported opcode for wasm target: LoadStringLength` (a `string` parameter or local whose length is read at run time); the VM answers it from the module string table. Lower `LoadStringLength` (and check `LoadStringByte`) from the table of string lengths the data segment already has for `PrintStringDynamic`, with the VM's out-of-bounds fault.
+  - acceptance:
+    - an IR module that reads the length of a string by a computed index runs like the VM under node, and the two matrix programs list `wasm-wasi`
+    - full release gate green
+  - stop_rule: the string length opcode and the byte read of a table string.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep LoadStringLength` from the release build directory.
+- [ ] TODO-6227: Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Backend parity (found with TODO-6179)
+  - parallel_track: wasm-bytes-host
+  - scope: three differences from the VM remain. (1) `__pstext_literal` of an index past the string table is the VM's runtime error `invalid string index passed to <import name>` with exit code 3; the Wasm helper executes `unreachable`. (2) `__pstext_argument` reads the arguments into the static buffers of 1024 pointers and 16 KiB; a program with more traps (`PrintArgv` has the same fixed buffers and no check at all). Read the sizes and take a region of the byte heap or grow the memory instead. (3) The browser profile has no data segments and no `args_get`, so a module that calls `__pstext_literal` or `__pstext_argument` is refused with a named error; a browser `String` needs its literals in a data segment of the browser module and arguments from the host.
+  - acceptance:
+    - IR tests run an invalid literal index (the VM's text, exit 3) and a run with 2000 arguments under node like the VM
+    - the browser profile either runs a literal or names the refusal in one sentence in the validator
+    - full release gate green
+  - stop_rule: the three differences above.
+  - repro: an IR module with a one-entry string table that calls `__pstext_literal` with index 5 exits 3 with `VM error: invalid string index passed to std/text/__pstext_literal` on the VM and traps under node.
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred

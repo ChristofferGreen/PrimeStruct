@@ -203,8 +203,9 @@ enum class WasmByteHelper : uint8_t {
   Realloc,
   LoadU8,
   StoreU8,
+  Span,
 };
-inline constexpr size_t WasmByteHelperCount = 12;
+inline constexpr size_t WasmByteHelperCount = 13;
 inline constexpr uint32_t WasmByteInitialGranules = 1u << 11;
 // The byte storage holds at most `WasmByteMaxGranules * 8` bytes (512 MiB); a region past it is the VM's overflow fault.
 inline constexpr uint32_t WasmByteMaxGranules = 1u << 26;
@@ -253,15 +254,22 @@ enum class WasmTextHelper : uint8_t {
   AllocInArena,
   ArenaBegin,
   ArenaEnd,
+  MoveBytes,
+  FillBytes,
+  CompareBytes,
+  FindByte,
+  Literal,
+  Argument,
 };
-inline constexpr size_t WasmTextHelperCount = 23;
+inline constexpr size_t WasmTextHelperCount = 29;
 // The mutable `i32` globals after `WasmGlobalCountWithBytes`: the next free byte and the end of the metadata area, the
 // chunk record table (base address, room and records in use), the bytes of text blocks handed out, the number of
 // allocations (low and high word), the bytes of chunk regions held, of those the bytes of chunks whose blocks are all
 // free, the chunk regions taken, and 1 while `__pstext_try_alloc` runs (a byte region that cannot be made returns 0
 // instead of the VM's overflow fault). After those come the byte limit of the heap (low and high word, 0 for none), the
 // large blocks held and their bytes, then the innermost open arena (its record plus one, 0 for none), the number of open
-// arenas and the bytes of the small blocks they handed out.
+// arenas and the bytes of the small blocks they handed out, and the count (low and high word) of the byte range
+// operation that faults.
 inline constexpr uint32_t WasmGlobalTextMetaBump = 21;
 inline constexpr uint32_t WasmGlobalTextMetaEnd = 22;
 inline constexpr uint32_t WasmGlobalTextRecords = 23;
@@ -281,7 +289,9 @@ inline constexpr uint32_t WasmGlobalTextLargeBytes = 36;
 inline constexpr uint32_t WasmGlobalTextArena = 37;
 inline constexpr uint32_t WasmGlobalTextArenaDepth = 38;
 inline constexpr uint32_t WasmGlobalTextArenaBytes = 39;
-inline constexpr uint32_t WasmGlobalCountWithText = 40;
+inline constexpr uint32_t WasmGlobalTextRangeLow = 40;
+inline constexpr uint32_t WasmGlobalTextRangeHigh = 41;
+inline constexpr uint32_t WasmGlobalCountWithText = 42;
 // The metadata area the module starts with (the records start with room for 64 of 64 bytes; both are powers of two so
 // a table that grew can return its old block to the metadata allocator), the class table (45 size classes of 16 bytes)
 // and the free list heads of the metadata allocator (one per power of two from 16 bytes).
@@ -368,6 +378,16 @@ struct WasmRuntimeContext {
   uint32_t textLimitMessageLength = 0;
   uint32_t textArenaMessageAddr = 0;
   uint32_t textArenaMessageLength = 0;
+  uint32_t textRangeMessageAddr = 0;
+  uint32_t textRangeMessageLength = 0;
+  uint32_t textRangeMidMessageAddr = 0;
+  uint32_t textRangeMidMessageLength = 0;
+  // The address and string count of the table that holds the address of every string literal the module asked
+  // `__pstext_literal` for (a `u64` per string index, 0 until asked for), and the table of the (address, length) pair of
+  // every literal in the data segment.
+  uint32_t textLiterals = 0;
+  uint32_t textLiteralInfo = 0;
+  uint32_t textLiteralCount = 0;
   // Per host import of the module: the string heap function it names and what it returns.
   std::vector<NativeTextHost> textHostKinds;
   std::vector<IrHostValueKind> textHostReturns;
@@ -735,7 +755,7 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
 bool wasmFunctionTakesLocalAddress(const IrFunction &function);
 bool wasmModuleUsesLocalMemory(const IrModule &module);
 // True when the module calls a string heap allocation function (`__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`,
-// `_length`, `_usable`, `_set_limit`, `_arena_begin` or `_arena_end`): it then has the byte regions and the string heap helpers.
+// `_length`, `_usable`, `_set_limit`, `_arena_begin`, `_arena_end`, the byte operations, `_literal` or `_argument`): it then has the byte regions and the string heap helpers.
 bool wasmModuleCallsTextHeap(const IrModule &module);
 // The type byte of the output for a type of the emitter (`WasmTypeSlot` is an `i64`, an unknown type an `i32`).
 uint8_t wasmValueTypeByte(uint8_t type);
