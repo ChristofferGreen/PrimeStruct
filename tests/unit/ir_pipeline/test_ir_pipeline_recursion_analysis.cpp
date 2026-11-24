@@ -474,6 +474,44 @@ TEST_CASE("a library function refuses a Result and error struct result and names
   CHECK(libraryResultBlocker("/main/Item", "struct").empty());
 }
 
+namespace {
+
+// The reason `/std/collections/helper(<paramType> value)` returning `resultType` is not a real call, empty when it is
+// one. `library` narrows the collections-root rule as the functions of a library do.
+std::string collectionsHelperBlocker(const std::string &paramType,
+                                     const std::string &resultType,
+                                     bool library) {
+  primec::Definition helper = makeDef("/std/collections/helper");
+  helper.namespacePrefix = "/std/collections";
+  helper.parameters.push_back(paramType == "vector" ? makeStructParam("value", paramType)
+                                                    : makeScalarParam("value", paramType));
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back(resultType);
+  helper.transforms.push_back(returnTransform);
+  const std::unordered_map<std::string, const primec::Definition *> byPath = {
+      {helper.fullPath, &helper},
+  };
+  const std::unordered_set<std::string> structNames = {"/std/collections/Vector"};
+  primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
+  context.narrowCollectionsRoot = library;
+  return primec::ir_lowerer::realCallBlockerReason(helper, context);
+}
+} // namespace
+
+TEST_CASE("a collections helper is a library function without collection records") {
+  const std::string rule = "it is a helper of the canonical collections, which are expanded inline";
+  // A program keeps the root rule for every helper.
+  CHECK(collectionsHelperBlocker("i32", "i32", false) == rule);
+  // A library root with scalar parameters and result is a function of the archive.
+  CHECK(collectionsHelperBlocker("i32", "i32", true).empty());
+  // A collection record as a parameter or result keeps the refusal, whatever the spelling.
+  CHECK(collectionsHelperBlocker("vector", "i32", true) == rule);
+  CHECK_FALSE(collectionsHelperBlocker("/std/collections/Vector", "i32", true).empty());
+  CHECK(collectionsHelperBlocker("i32", "vector<i32>", true) == rule);
+  CHECK(collectionsHelperBlocker("i32", "/std/collections/Vector", true) == rule);
+}
+
 TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "move"));
   CHECK(ownedParameterShapeEligible("/__Function2__t0123456789abcdef", "copy"));

@@ -113,6 +113,9 @@ struct RealCallShapeContext {
   // into a block of its caller, as a spawned task does. For the functions of a library; any other vector result
   // keeps the refusal that names the rule.
   bool allowVectorResults = false;
+  // The helpers under `/std/collections/` are expanded inline, which the root rule keeps. For the functions of a
+  // library the rule narrows: one that takes or returns a collection record is refused, a scalar helper is not.
+  bool narrowCollectionsRoot = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),

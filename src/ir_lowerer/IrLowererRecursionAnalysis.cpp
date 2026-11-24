@@ -1,4 +1,5 @@
 #include "IrLowererRecursionAnalysis.h"
+#include "IrLowererCollectionRecordShapes.h"
 #include "IrLowererPackedErrorTypes.h"
 #include "IrLowererRealCallBlockerText.h"
 #include "IrLowererStringParameterUse.h"
@@ -357,34 +358,6 @@ findReachableDefinitionPaths(const Program &program,
   return reachable;
 }
 
-namespace {
-
-// A struct type name as written inside `namespacePrefix`, resolved to its full path, or empty.
-std::string resolveStructTypeName(const std::string &typeName,
-                                  const std::string &namespacePrefix,
-                                  const std::unordered_set<std::string> &structNames) {
-  if (typeName.empty()) {
-    return {};
-  }
-  if (typeName.front() == '/') {
-    return structNames.count(typeName) != 0 ? typeName : std::string{};
-  }
-  std::string prefix = namespacePrefix;
-  while (true) {
-    const std::string candidate = prefix + "/" + typeName;
-    if (structNames.count(candidate) != 0) {
-      return candidate;
-    }
-    if (prefix.empty()) {
-      return {};
-    }
-    const size_t cut = prefix.find_last_of('/');
-    prefix = cut == std::string::npos ? std::string() : prefix.substr(0, cut);
-  }
-}
-
-} // namespace
-
 std::string builtinMapStoragePath(
     const std::vector<std::string> &templateArgs,
     const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
@@ -729,7 +702,8 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
   if (definitionHasTransform(def, "require")) {
     return AddressAbiBlocker::RequireContract;
   }
-  if (def.fullPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+  if (def.fullPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 &&
+      (!context.narrowCollectionsRoot || takesOrReturnsCollectionRecord(def, structNames))) {
     return AddressAbiBlocker::CollectionsHelper;
   }
   std::string parentStructPath;
@@ -1121,6 +1095,7 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
       definitionContext.structNames = &libraryStructNames;
       definitionContext.refuseSumParameters = true;
       definitionContext.allowVectorResults = true;
+      definitionContext.narrowCollectionsRoot = true;
     }
     if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, definitionContext)) {
       continue;

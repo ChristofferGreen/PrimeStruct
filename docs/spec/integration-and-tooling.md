@@ -249,7 +249,9 @@ function with a `vector<T>` result is one when every `return` hands back a `mut`
 record into a block of the caller, which owns the vector; any other vector result is refused (`its result `vector<i32>` is not
 always a `mut` vector local the function built, ...`). A result,
 receiver or body rule gets its own text (`its body uses `try``,
-`it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
+`it has an `on_error` handler`, `it is a helper of the canonical collections, ...`: a program expands every helper under
+`/std/collections/` inline, while a library root there is refused only when it takes or returns a collection record, so a
+helper with scalar parameters and result is a function of the archive). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,
 the archive is `<root file name>.psa` in the output directory.
 

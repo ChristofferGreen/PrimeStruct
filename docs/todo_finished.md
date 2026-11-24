@@ -2614,6 +2614,7 @@ are left unarchived.
 | TODO-6212 | `count(make())` of a call result that is a stdlib `Vector` of structs answers a wrong number and leaks the... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6213 | A public function with a sum, `Result` or packed error result is a named refusal as a library root (step 1... | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6215 | The collections-root rule is narrowed for library roots | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6216 | The compiler build id is a hash of the compiler sources | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6218 | A program linked against a library carries every function of the archive, used or not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

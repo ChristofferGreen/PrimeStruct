@@ -631,6 +631,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererLibraryRoots.cpp
   src/ir_lowerer/IrLowererRecursionAnalysis.cpp
   src/ir_lowerer/IrLowererPackedErrorTypes.cpp
+  src/ir_lowerer/IrLowererCollectionRecordShapes.cpp
   src/ir_lowerer/IrLowererRealCallBlockerText.cpp
   src/ir_lowerer/IrLowererStringParameterUse.cpp
   src/ir_lowerer/IrLowererScalarCallBlocker.cpp

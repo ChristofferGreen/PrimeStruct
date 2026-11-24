@@ -291,6 +291,42 @@ main() {
   }
 }
 
+TEST_CASE("library link: a scalar helper under the collections root is a function of the archive") {
+  // The helpers of the canonical collections are expanded inline in a program; a library function narrows that rule to
+  // the helpers that take or return a collection record.
+  const std::string source = R"(
+[namespace]
+std {
+  [namespace]
+  collections {
+    [public return<i32>]
+    probe_wrap([i32] index, [i32] capacity) {
+      if(index >= capacity) {
+        return(index - capacity)
+      }
+      return(index)
+    }
+  }
+}
+)";
+  const std::string body = "import /std/collections/*\n[return<i32>]\nmain() {\n"
+                           "  return(probe_wrap(7i32, 5i32) + probe_wrap(3i32, 5i32))\n}\n";
+  for (const std::string emit : {"vm", "optexe"}) {
+    INFO(emit);
+    const std::filesystem::path dir = testScratchPath("library_link_collections_scalar_" + emit);
+    writeIn(dir, "probe.prime", source);
+    writeIn(dir, "app.prime", "import<\"probe.prime\">\n" + body);
+    const Run whole = runApp(dir, emit, "");
+    REQUIRE_MESSAGE(whole.exitCode == 5, whole.err);
+
+    const std::string archive = buildLibrary(dir, "probe", source);
+    writeIn(dir, "app.prime", "import</std/collections>\n" + body);
+    const Run linked = runApp(dir, emit, "--library " + quoteShellArg(archive));
+    CHECK_MESSAGE(linked.err.empty(), linked.err);
+    CHECK(linked.exitCode == whole.exitCode);
+  }
+}
+
 TEST_CASE("library link: a program carries only the functions it reaches") {
   const std::filesystem::path dir = testScratchPath("library_link_reachable");
   const std::string ui = buildLibrary(dir, "ui", UiSource);
