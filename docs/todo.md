@@ -147,7 +147,7 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
-| TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | deferred | lib-shapes |
+| TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | ready | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -688,9 +688,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 
-- [ ] TODO-6223: A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library
+- [~] TODO-6223: A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lib-shapes (worktree-agent-ab62d8f1159536de2), 2026-11-24
   - created_at: 2026-11-24
   - phase: Modules and libraries (split from TODO-6213)
   - parallel_track: lib-shapes
