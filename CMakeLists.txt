@@ -1573,6 +1573,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_vm_threads_sync.cpp
     tests/unit/runtime/test_vm_threads_host.cpp
     tests/unit/runtime/test_vm_serve_workers.cpp
+    tests/unit/runtime/test_vm_os_random.cpp
     tests/unit/runtime/test_vm_sync_replay.cpp
     tests/unit/runtime/test_vm_atomics.cpp
     tests/unit/runtime/test_vm_mutexes.cpp
@@ -1660,6 +1661,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     NAME PrimeStruct_vm_serve_workers
     COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_vm_serve_workers
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # /std/os randomHex on the VM with a scripted host function.
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
+            "--test-suite=primestruct.runtime.vm_os_random"
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_vm_os_random
+    COMMAND ${testCommand})
+  set_tests_properties(PrimeStruct_vm_os_random
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   # Sync-order record and replay (TODO-5901): threaded runs write a log and the deterministic scheduler follows it.
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
@@ -1751,7 +1761,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # under a loaded gate: in one gate (load up to 40) host calls took 185 s for 20 cases, the VM string conformance
   # cases 419 s for 50, the optexe ones 458 s for 37 and the native UI cases 310 s for 9. TODO-6026: on a quiet machine
   # no shard takes more than about 8 s alone (host calls 2 cases, VM string conformance 3, optexe string conformance 2).
-  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 23 2 600
+  primestructAddDoctestShards(PrimeStruct_cpp_host_calls PrimeStruct_cpp_host_call_tests 25 2 600
                               "--test-suite=primestruct.backend.cpp_host_calls,primestruct.backend.cpp_strings")
   # The String / StringView differential suite (tests/unit/backend_host/test_string_conformance.cpp). Most of its time is
   # the host C++ compiler building optexe programs, so the cases that go through optexe are entries of their own and

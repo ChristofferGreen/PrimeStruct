@@ -1,0 +1,47 @@
+// /std/os randomHex on --emit=optexe with stdlib/std/os/os_posix.cpp linked (tests/unit/backend_host/test_cpp_strings.cpp).
+// The exit code is the number of the first case that failed, or 0.
+import /std/os/*
+import /std/text/*
+import /std/text/view/*
+
+// Whether every byte of `text` is a lower-case hex digit.
+[return<bool> effects(none)]
+all_hex([String] text) {
+  [StringView] view{text.view()}
+  [i32 mut] index{0i32}
+  while(index < view.count()) {
+    [u8] byte{view.byteAt(index)}
+    [bool] digit{byte >= 48u8 && byte <= 57u8}
+    [bool] lower{byte >= 97u8 && byte <= 102u8}
+    if(!digit && !lower) {
+      return(false)
+    }
+    index = index + 1i32
+  }
+  return(true)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [String] first{randomHex(16i32)}
+  [String] second{randomHex(16i32)}
+  if(first.count() != 32i32 || second.count() != 32i32) {
+    return(1i32)
+  }
+  if(!all_hex(first) || !all_hex(second)) {
+    return(2i32)
+  }
+  if(first.view().equals(second.view())) {
+    return(3i32)
+  }
+  if(randomHex(0i32).count() != 0i32 || randomHex(-1i32).count() != 0i32 || randomHex(65i32).count() != 0i32) {
+    return(4i32)
+  }
+  if(randomHex(1i32).count() != 2i32 || randomHex(64i32).count() != 128i32) {
+    return(5i32)
+  }
+  if(!all_hex(randomHex(64i32))) {
+    return(6i32)
+  }
+  return(0i32)
+}

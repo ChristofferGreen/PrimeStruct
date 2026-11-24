@@ -1,6 +1,7 @@
 // POSIX host side of /std/os (stdlib/std/os/os.prime), linked into an --emit=optexe program with --link-arg.
 #include <fcntl.h>
 #include <signal.h>
+#include <sys/random.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -124,6 +125,20 @@ int32_t ps_os_log_line(const char *line) {
     written += static_cast<size_t>(count);
   }
   return static_cast<int32_t>(written);
+}
+
+// Fills `count` bytes at `buffer` from the OS's entropy, `getentropy` in pieces of at most 256 bytes (its limit); 0,
+// or -100 - errno.
+int32_t ps_os_random_bytes(uint8_t *buffer, uint64_t count) {
+  uint64_t done = 0;
+  while (done < count) {
+    const uint64_t piece = count - done < 256 ? count - done : 256;
+    if (getentropy(buffer + done, static_cast<size_t>(piece)) != 0) {
+      return -100 - errno;
+    }
+    done += piece;
+  }
+  return 0;
 }
 
 // The size of a regular file, or -1 (not a regular file) / -100 - errno.

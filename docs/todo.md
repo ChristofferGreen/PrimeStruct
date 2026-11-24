@@ -117,7 +117,6 @@ of sync with them.
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
-| TODO-6237 | `/std/os` `randomHex(byteCount)` from the operating system's entropy | ready | os-random |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
@@ -166,7 +165,6 @@ of sync with them.
 - TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
-- TODO-6237 (os-random): `/std/os` `randomHex(byteCount)`
 
 ### Immediate Next 10
 
@@ -174,7 +172,6 @@ of sync with them.
 2. TODO-6233
 3. TODO-6240
 4. TODO-6232
-5. TODO-6237
 
 ### Priority Lanes
 
@@ -190,7 +187,7 @@ of sync with them.
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`) (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`) (`setCookie`) (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 - Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
@@ -362,20 +359,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision recorded here and the leaf re-sliced (store with expiry and tests on the scripted clock; the handler API; the `todo_web` example gets a per-session counter; docs/spec/stdlib-reference.md and docs/WebAppsPlan.md updated)
     - full release gate green
   - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
-
-- [~] TODO-6237: `/std/os` `randomHex(byteCount)` from the operating system's entropy
-  - owner: ai
-  - status: ready
-  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
-  - parallel_track: os-random
-  - scope: There is no random source in the stdlib or the shims today (`grep -rn "getentropy\|arc4random\|urandom" src stdlib` finds nothing). Add `[host] ps_os_random_bytes([Pointer<u8>] buffer, [u64] count) -> i32` to `stdlib/std/os/os.prime` and `os_posix.cpp` (`getentropy` in chunks of at most 256 bytes: it exists on macOS and on glibc 2.25 and later; 0 on success, -100 - errno on failure), and `std::os::randomHex(byteCount) -> String` (lower-case hex, an empty `String` when the call fails or `byteCount` is outside 1..64) that fills a heap buffer and formats it. Like the other `/std/os` functions it takes no effect; the VM has no binding (documented in docs/spec/stdlib-reference.md next to `envOr`), so tests bind a scripted host function the way tests/unit/runtime/test_vm_serve_workers.cpp binds `ps_os_monotonic_ms`.
-  - acceptance:
-    - an optexe test linking `os_posix.cpp` that calls `randomHex(16)` twice: 32 hex digits each, different values, and `randomHex(0)`, `randomHex(65)` empty; a VM test with a scripted binding checking the hex formatting of known bytes
-    - docs/spec/stdlib-reference.md (Operating system) documents it and says it is not for keys outside sessions (it is the OS's CSPRNG, so it is fine for session ids)
-    - full release gate green
-  - stop_rule: random bytes and hex only; no PRNG with a seed, no `Random` struct.
 
 - [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
   - owner: human

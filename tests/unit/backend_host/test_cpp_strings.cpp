@@ -376,6 +376,40 @@ TEST_CASE("std/os reads the environment, sees the clock advance and stops on SIG
   CHECK(readFile(code) == "111\n");
 }
 
+// randomHex(16) twice gives 32 hex digits each and different values; a count outside 1..64 gives an empty String
+// (tests/fixtures/host_calls/os_random.prime). The VM side, with a scripted host function, is
+// tests/unit/runtime/test_vm_os_random.cpp.
+TEST_CASE("std/os randomHex gives fresh hex digits from the operating system through optexe") {
+  const std::string program =
+      std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/os_random.prime";
+  const std::string shim = std::string(PRIMESTRUCT_SOURCE_DIR) + "/stdlib/std/os/os_posix.cpp";
+  const std::string exe = scratch("os_random_optexe");
+  const std::string log = exe + ".log";
+  const int status =
+      run(shellQuote(Primec) + " --emit=optexe " + shellQuote(program) + " -o " + shellQuote(exe) +
+          " --link-arg " + shellQuote(shim) + " > " + shellQuote(log) + " 2>&1");
+  REQUIRE_MESSAGE(status == 0, readFile(log));
+  const int failed = run(shellQuote(exe));
+  CHECK_MESSAGE(failed == 0,
+                "os_random case " << failed
+                                  << " failed (tests/fixtures/host_calls/os_random.prime)");
+}
+
+// The targets that cannot call a host function refuse the program at compile time instead of running it without
+// entropy: wasm names the rule, and the native backend refuses the byte buffer the call passes.
+TEST_CASE("std/os randomHex is refused by the wasm and native backends") {
+  const std::string program =
+      std::string(PRIMESTRUCT_SOURCE_DIR) + "/tests/fixtures/host_calls/os_random.prime";
+  const std::string source = readFile(program);
+  const Compiled wasm = compileWith("wasm", "os_random_refused", source);
+  CHECK(wasm.status != 0);
+  CHECK(wasm.diagnostics.find("host calls are only supported by the vm target") !=
+        std::string::npos);
+  const Compiled native = compileWith("native", "os_random_refused", source);
+  CHECK(native.status != 0);
+  CHECK_FALSE(native.diagnostics.empty());
+}
+
 TEST_CASE("std/os host functions are unbound on the VM") {
   ScriptEngine engine;
   const auto script = engine.compileSource("/os_vm.prime", R"(

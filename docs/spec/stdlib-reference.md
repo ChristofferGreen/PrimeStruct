@@ -582,13 +582,23 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/os/os_posix.cp
   that waits in `/std/net` `poll` watches it while `stopRequested()` is false: a signal that arrives between the
   check and the wait then ends the wait at once. Do not read from it or close it.
 
+- `randomHex(byteCount) -> String` (`heap_alloc`): `byteCount` random bytes, 1 to 64, as lower-case hex (twice as
+  many digits), for example `randomHex(16)` is a 32-digit session id. The bytes come from the operating system's
+  cryptographic generator (`getentropy`, which the shim calls in pieces of at most 256 bytes: it exists on macOS and on
+  glibc 2.25 and later), so a value is fine for a session id or a CSRF token; the function is not a seeded generator
+  and there is no `Random` struct. The result is an empty `String` when the call fails or `byteCount` is outside
+  1..64. It takes `heap_alloc` (the other functions take none) because the result is built in a `String` on the
+  heap. The host function is `ps_os_random_bytes(buffer, count) -> i32` (0, or -100 - errno). It runs on
+  `--emit=optexe` with the shim; on the VM it is unbound (`unbound host function: ps_os_random_bytes (bytes, u64) ->
+  i32`) until an embedder binds it, as tests/unit/runtime/test_vm_os_random.cpp does with a scripted source; the
+  native and wasm backends refuse the program at compile time like any program that calls a host function.
 - `fileSize(path) -> i64` (`file_read`): the size of the regular file `path` (a `String`), -1 for a file that is not
   regular (a directory), or -100 - errno.
 - `readFile(path, out, maxBytes) -> i32` (`file_read`, `heap_alloc`): replaces the `String` `out` with the bytes of
   the file (binary safe). Returns 0, -2 when the file is over `maxBytes`, or the negative code of `fileSize` or
   -100 - errno of a failed read.
 
-The other functions take no effect. Like every host call they leave the deterministic subset of the language
+The other functions take no effect, except `randomHex` and `readFile` above. Like every host call they leave the deterministic subset of the language
 (docs/spec/host-and-core-library.md), and a program that never calls them links without the shim. The VM and
 `primevm` have no binding for them and report `unbound host function: ps_os_env_or ...`.
 

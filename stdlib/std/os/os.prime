@@ -42,6 +42,11 @@ ps_os_file_size([String] path) {
 ps_os_read_file([String] path, [Pointer<u8>] buffer, [u64] capacity) {
 }
 
+// Fills `count` bytes at `buffer` from the operating system's entropy; 0, or -100 - errno.
+[host return<i32>]
+ps_os_random_bytes([Pointer<u8>] buffer, [u64] count) {
+}
+
 namespace std {
 namespace os {
 
@@ -94,6 +99,42 @@ namespace os {
     return(ps_os_log_line(line))
   }
 
+
+  // `byteCount` (1 to 64) random bytes from the operating system's entropy (`getentropy`), as lower-case hex: twice as
+  // many digits. An empty String when the call fails or `byteCount` is outside 1..64. It is the OS's cryptographic
+  // generator, so it is fine for a session id. The result is built on the heap, so it takes `heap_alloc`.
+  [public return<String> effects(heap_alloc)]
+  randomHex([i32] byteCount) {
+    [String mut] hex{String{}}
+    if(byteCount < 1i32 || byteCount > 64i32) {
+      return(hex)
+    }
+    [String mut] raw{String{}}
+    raw.reserve(byteCount)
+    if(ps_os_random_bytes(raw.data, convert<u64>(byteCount)) != 0i32) {
+      return(hex)
+    }
+    raw.fieldLength = byteCount
+    hex.reserve(byteCount * 2i32)
+    [i32 mut] index{0i32}
+    while(index < byteCount) {
+      [i32] byte{convert<i32>(raw.byteAt(index))}
+      [i32] high{byte / 16i32}
+      hex.pushByte(hex_digit(high))
+      hex.pushByte(hex_digit(byte - high * 16i32))
+      index = index + 1i32
+    }
+    return(hex)
+  }
+
+  // The lower-case hex digit of `value`, 0 to 15.
+  [return<u8> effects(none)]
+  hex_digit([i32] value) {
+    if(value < 10i32) {
+      return(convert<u8>(48i32 + value))
+    }
+    return(convert<u8>(87i32 + value))
+  }
 
   // The size in bytes of the regular file at `path`, or a negative code: -100 - errno when it cannot be read, -1 when
   // it is not a regular file.
