@@ -404,9 +404,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
 
-- [ ] TODO-6235: `Request.cookie(name)` reads the `Cookie` header
+- [~] TODO-6235: `Request.cookie(name)` reads the `Cookie` header
   - owner: ai
   - status: ready
+  - claimed_by: sonnet-options-agent (worktree-agent-ac8e94bcf84d8fb64), 2026-11-24
   - created_at: 2026-11-24
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: web-cookies
