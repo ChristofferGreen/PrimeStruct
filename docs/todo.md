@@ -124,7 +124,7 @@ of sync with them.
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | deferred | host-call-refusal-name |
+| TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | ready | host-call-refusal-name |
 | TODO-6251 | A stdlib `Vector` record parameter keeps the collections helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
@@ -454,9 +454,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
   - notes: deferred: small, not on the critical path of an open goal.
 
-- [ ] TODO-6257: The refusal of a host call on wasm and the other targets without host calls does not name the host function
+- [~] TODO-6257: The refusal of a host call on wasm and the other targets without host calls does not name the host function
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
   - parallel_track: host-call-refusal-name
