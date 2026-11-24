@@ -151,6 +151,10 @@ Baseline thresholds are stored in:
 
 - `benchmarks/benchmark_baseline.json`
 
+An entry with a `platform` (`system/machine` as the report spells it, for example `Linux/x86_64` or
+`Darwin/arm64`, or a list of them) is checked only on that platform; the native artifact sizes differ per
+platform, so those rows exist once per platform. An entry without `platform` applies everywhere.
+
 ## Semantic Memory Benchmark
 
 Semantic memory benchmark fixtures live under:

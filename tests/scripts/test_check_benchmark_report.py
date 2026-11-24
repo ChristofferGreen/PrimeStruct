@@ -32,6 +32,24 @@ def main() -> int:
                 "runtime_results": [{"benchmark": "b", "entry": "e", "mean_seconds": mean,
                                      "artifact_size_bytes": size}]}
 
+    platform_baseline = {
+        "schema": "primestruct_benchmark_baseline_v1",
+        "entries": [
+            {"phase": "runtime", "benchmark": "n", "entry": "e", "platform": "Linux/x86_64",
+             "max_artifact_size_bytes": 100},
+            {"phase": "runtime", "benchmark": "n", "entry": "e", "platform": ["Darwin/arm64", "Darwin/x86_64"],
+             "max_artifact_size_bytes": 1000},
+            {"phase": "runtime", "benchmark": "only_linux", "entry": "e", "platform": "Linux/x86_64",
+             "max_artifact_size_bytes": 100},
+        ],
+    }
+
+    def platform_report(system: str, machine: str, size: int) -> dict:
+        return {"schema": "primestruct_benchmark_report_v1",
+                "platform": {"system": system, "machine": machine},
+                "runtime_results": [{"benchmark": "n", "entry": "e", "mean_seconds": 0.0,
+                                     "artifact_size_bytes": size}]}
+
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         base = write_json(root / "baseline.json", baseline)
@@ -54,6 +72,23 @@ def main() -> int:
         bad_run = run(repo, "check_benchmark_report.py", "--baseline", str(bad),
                       "--report", str(write_json(root / "r.json", report(1.0, 1000))))
         checks.expect(bad_run.returncode == 2, "an unknown baseline schema is rejected")
+
+        pbase = write_json(root / "platform_baseline.json", platform_baseline)
+
+        def platform_check(rep: dict, name: str):
+            return run(repo, "check_benchmark_report.py", "--baseline", str(pbase),
+                       "--report", str(write_json(root / f"{name}.json", rep)))
+
+        mac = platform_check(platform_report("Darwin", "arm64", 900), "mac_ok")
+        checks.expect(mac.returncode == 0 and "(1 entries)" in mac.stdout,
+                      "an entry for another platform is not checked and a missing row of it is not an error")
+        mac_big = platform_check(platform_report("Darwin", "arm64", 2000), "mac_big")
+        checks.expect(mac_big.returncode == 1 and "artifact_size regression" in mac_big.stderr,
+                      "the entry of the report's own platform still fails a large artifact")
+        linux = platform_check(platform_report("Linux", "x86_64", 90), "linux_ok")
+        checks.expect(linux.returncode == 1 and "only_linux" in linux.stderr
+                      and "missing report entry" in linux.stderr,
+                      "a Linux report is checked against the Linux entries only")
     return checks.finish()
 
 

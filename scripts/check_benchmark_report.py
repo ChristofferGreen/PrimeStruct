@@ -25,6 +25,23 @@ def make_report_map(report: dict) -> dict:
   return mapped
 
 
+def report_platform(report: dict) -> str:
+  """The `system/machine` of the machine that wrote the report, e.g. `Darwin/arm64`."""
+  platform = report.get("platform", {})
+  return f"{platform.get('system', '')}/{platform.get('machine', '')}"
+
+
+def applies_to_platform(baseline_entry: dict, platform: str) -> bool:
+  """An entry without `platform` applies everywhere; otherwise `platform` is one
+  `system/machine` string or a list of them and the entry is checked only on those."""
+  wanted = baseline_entry.get("platform")
+  if wanted is None:
+    return True
+  if isinstance(wanted, str):
+    wanted = [wanted]
+  return platform in wanted
+
+
 def format_key(key) -> str:
   phase, bench, entry = key
   return f"{phase}:{bench}:{entry}"
@@ -61,6 +78,7 @@ def main() -> int:
     print("[check_benchmark_report] baseline entries must be an array", file=sys.stderr)
     return 2
 
+  platform = report_platform(report)
   failures = []
   checked = 0
 
@@ -69,6 +87,8 @@ def main() -> int:
                                    it.get("phase", ""),
                                    it.get("benchmark", ""),
                                    it.get("entry", ""))):
+    if not applies_to_platform(baseline_entry, platform):
+      continue
     phase = baseline_entry.get("phase", "")
     benchmark = baseline_entry.get("benchmark", "")
     entry = baseline_entry.get("entry", "")
