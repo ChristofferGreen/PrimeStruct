@@ -3,37 +3,37 @@ import /std/math/*
 
 namespace std {
   namespace scene {
-  [public return<i32>]
+  [public return<i32> effects(none)]
   projection_orthographic() {
     return(1i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   primitive_rect() {
     return(1i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   primitive_sdf_button() {
     return(2i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   light_ambient() {
     return(1i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   light_key() {
     return(2i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   unsupported_id() {
     return(-1i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   scene_to_milli([f32] value) {
     return(convert<i32>(value * 1000.0f32))
   }
@@ -62,33 +62,33 @@ namespace std {
   }
 
   namespace Camera {
-    [public return<bool>]
+    [public return<bool> effects(none)]
     isOrthographic([Camera] self) {
       return(self.projectionMode == projection_orthographic())
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     sceneXForPixel([Camera] self, [i32] pixelX) {
       return(self.originX + convert<f32>(pixelX) * self.unitsPerPixel)
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     sceneYForPixel([Camera] self, [i32] pixelY) {
       return(self.originY + convert<f32>(pixelY) * self.unitsPerPixel)
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     pixelXForScene([Camera] self, [f32] sceneX) {
       return(convert<i32>((sceneX - self.originX) / self.unitsPerPixel))
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     pixelYForScene([Camera] self, [f32] sceneY) {
       return(convert<i32>((sceneY - self.originY) / self.unitsPerPixel))
     }
   }
 
-  [public return<Camera>]
+  [public return<Camera> effects(none)]
   ui_camera([i32] widthPx, [i32] heightPx) {
     return(Camera{
       [projectionMode] projection_orthographic(),
@@ -181,27 +181,27 @@ namespace std {
   }
 
   namespace Scene {
-    [public return<i32>]
+    [public return<i32> effects(none)]
     nodeCount([Scene] self) {
       return(self.nodeParentIds.count())
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     primitiveCount([Scene] self) {
       return(self.primitiveKinds.count())
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     materialCount([Scene] self) {
       return(self.materialRs.count())
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     lightCount([Scene] self) {
       return(self.lightKinds.count())
     }
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     cameraCount([Scene] self) {
       return(self.cameraModes.count())
     }
@@ -324,7 +324,7 @@ namespace std {
       return(id)
     }
 
-    [public return<Camera>]
+    [public return<Camera> effects(none)]
     cameraAt([Scene] self, [i32] cameraId) {
       return(Camera{
         [projectionMode] at(self.cameraModes, cameraId),
@@ -338,7 +338,7 @@ namespace std {
       })
     }
 
-    [public return<Node>]
+    [public return<Node> effects(none)]
     nodeAt([Scene] self, [i32] nodeId) {
       return(Node{
         [id] nodeId,

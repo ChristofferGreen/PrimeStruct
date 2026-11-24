@@ -2,32 +2,32 @@ import /std/math/*
 import /std/file/*
 import /std/collections/vector
 
-[public return<string>]
+[public return<string> effects(none)]
 /ImageError/why([ImageError] err) {
   return(/std/image/ImageError/why(err))
 }
 
-[public return<Result<ImageError>>]
+[public return<Result<ImageError>> effects(none)]
 /ImageError/status([ImageError] err) {
   return(/std/image/ImageError/status(err))
 }
 
-[public return<ImageError>]
+[public return<ImageError> effects(none)]
 /ImageError/read_unsupported() {
   return(/std/image/ImageError/read_unsupported())
 }
 
-[public return<ImageError>]
+[public return<ImageError> effects(none)]
 /ImageError/write_unsupported() {
   return(/std/image/ImageError/write_unsupported())
 }
 
-[public return<ImageError>]
+[public return<ImageError> effects(none)]
 /ImageError/invalid_operation() {
   return(/std/image/ImageError/invalid_operation())
 }
 
-[public return<Result<T, ImageError>>]
+[public return<Result<T, ImageError>> effects(none)]
 /ImageError/result<T>([ImageError] err) {
   return(/std/image/ImageError/result<T>(err))
 }
@@ -40,7 +40,7 @@ namespace std {
   }
 
   namespace ImageError {
-    [public return<string>]
+    [public return<string> effects(none)]
     why([ImageError] err) {
       if(err.code == 1i32) {
         return("image_read_unsupported"utf8)
@@ -51,73 +51,73 @@ namespace std {
       return("image_invalid_operation"utf8)
     }
 
-    [public return<Result<ImageError>>]
+    [public return<Result<ImageError>> effects(none)]
     status([ImageError] err) {
       return(err.code)
     }
 
-    [public return<ImageError>]
+    [public return<ImageError> effects(none)]
     read_unsupported() {
       return(ImageError{1i32})
     }
 
-    [public return<ImageError>]
+    [public return<ImageError> effects(none)]
     write_unsupported() {
       return(ImageError{2i32})
     }
 
-    [public return<ImageError>]
+    [public return<ImageError> effects(none)]
     invalid_operation() {
       return(ImageError{3i32})
     }
 
-    [public return<Result<T, ImageError>>]
+    [public return<Result<T, ImageError>> effects(none)]
     result<T>([ImageError] err) {
       return(convert<i64>(err.code) * 4294967296i64)
     }
   }
 
-  [public return<ImageError>]
+  [public return<ImageError> effects(none)]
   imageReadUnsupported() {
     return(/std/image/ImageError/read_unsupported())
   }
 
-  [public return<ImageError>]
+  [public return<ImageError> effects(none)]
   imageWriteUnsupported() {
     return(/std/image/ImageError/write_unsupported())
   }
 
-  [public return<ImageError>]
+  [public return<ImageError> effects(none)]
   imageInvalidOperation() {
     return(/std/image/ImageError/invalid_operation())
   }
 
-  [public return<Result<ImageError>>]
+  [public return<Result<ImageError>> effects(none)]
   imageErrorStatus([ImageError] err) {
     return(/std/image/ImageError/status(err))
   }
 
-  [public return<Result<T, ImageError>>]
+  [public return<Result<T, ImageError>> effects(none)]
   imageErrorResult<T>([ImageError] err) {
     return(/std/image/ImageError/result<T>(err))
   }
 
-  [return<Result<ImageError>>]
+  [return<Result<ImageError>> effects(none)]
   unsupported_read() {
     return(imageErrorStatus(/ImageError/read_unsupported()))
   }
 
-  [return<Result<ImageError>>]
+  [return<Result<ImageError>> effects(none)]
   unsupported_write() {
     return(imageErrorStatus(/ImageError/write_unsupported()))
   }
 
-  [return<Result<ImageError>>]
+  [return<Result<ImageError>> effects(none)]
   invalidOperation() {
     return(imageErrorStatus(/ImageError/invalid_operation()))
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   ignoreFileError([FileError] err) {
   }
 
@@ -126,17 +126,17 @@ namespace std {
   // substrate plumbing rather than the public-facing image wrapper layer
   // above, which should prefer the readable surface syntax when possible.
 
-  [return<bool>]
+  [return<bool> effects(none)]
   ppmIsWhitespace([i32] value) {
     return(value == 32i32 || value == 9i32 || value == 10i32 || value == 13i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   ppmIsDigit([i32] value) {
     return(value >= 48i32 && value <= 57i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   ppmDigitValue([i32] value) {
     return(value - 48i32)
   }
@@ -252,7 +252,7 @@ namespace std {
     clear(pixels)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   imageRgbWritePixelCount([i32] width, [i32] height, [i32 mut] pixelCount) {
     pixelCount = 0i32
     if(width <= 0i32 || height <= 0i32) {
@@ -267,7 +267,7 @@ namespace std {
     return(true)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   ppmWriteInputValid([i32] width, [i32] height, [vector<i32>] pixels) {
     pixelCount{pixels.count()}
     [mut] expectedPixelCount{0i32}
@@ -354,37 +354,37 @@ namespace std {
     return(ppmReadByteStatus(file, d))
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkIsIhdr([i32] a, [i32] b, [i32] c, [i32] d) {
     return(a == 73i32 && b == 72i32 && c == 68i32 && d == 82i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkIsIdat([i32] a, [i32] b, [i32] c, [i32] d) {
     return(a == 73i32 && b == 68i32 && c == 65i32 && d == 84i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkIsIend([i32] a, [i32] b, [i32] c, [i32] d) {
     return(a == 73i32 && b == 69i32 && c == 78i32 && d == 68i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkIsPlte([i32] a, [i32] b, [i32] c, [i32] d) {
     return(a == 80i32 && b == 76i32 && c == 84i32 && d == 69i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkIsAncillary([i32] a) {
     return(a >= 97i32 && a <= 122i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngBitDepthAllowed([i32] bitDepth, [i32] a, [i32] b, [i32] c, [i32] d, [i32] valueE) {
     return(bitDepth == a || bitDepth == b || bitDepth == c || bitDepth == d || bitDepth == valueE)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngIhdrFieldsValid([i32] bitDepth, [i32] colorType, [i32] compression, [i32] filter, [i32] interlace) {
     if(compression != 0i32 || filter != 0i32 || interlace != 0i32 && interlace != 1i32) {
       return(false)
@@ -518,17 +518,17 @@ namespace std {
     return(0i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngMod([i32] value, [i32] divisor) {
     return(value - value / divisor * divisor)
   }
 
-  [return<u64>]
+  [return<u64> effects(none)]
   pngModU64([u64] value, [u64] divisor) {
     return(value - value / divisor * divisor)
   }
 
-  [return<u64>]
+  [return<u64> effects(none)]
   pngXorU64([u64] left, [u64] right) {
     [mut] currentLeft{left}
     [mut] currentRight{right}
@@ -564,7 +564,7 @@ namespace std {
     push(out, pngMod(value, 256i32))
   }
 
-  [return<u64>]
+  [return<u64> effects(none)]
   pngCrc32UpdateByte([u64] crc, [i32] byte) {
     [mut] current{pngXorU64(crc, convert<u64>(byte))}
     [mut] bit{0i32}
@@ -579,7 +579,7 @@ namespace std {
     return(current)
   }
 
-  [return<u64>]
+  [return<u64> effects(none)]
   pngChunkCrc([i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD, [vector<i32>] payload) {
     [mut] crc{4294967295u64}
     crc = pngCrc32UpdateByte(crc, typeA)
@@ -594,7 +594,7 @@ namespace std {
     return(pngXorU64(crc, 4294967295u64))
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngChunkCrcMatches([i32] typeA, [i32] typeB, [i32] typeC, [i32] typeD, [vector<i32>] payload,
                      [i32] crcA, [i32] crcB, [i32] crcC, [i32] crcD) {
     crc{pngChunkCrc(typeA, typeB, typeC, typeD, payload)}
@@ -701,7 +701,7 @@ namespace std {
     return(pngWriteU32BeU64(file, pngXorU64(crc, 4294967295u64)))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngStoredBlockCount([i32] rawByteCount) {
     if(rawByteCount <= 0i32) {
       return(0i32)
@@ -709,12 +709,12 @@ namespace std {
     return((rawByteCount + 65534i32) / 65535i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngZlibStoredPayloadLength([i32] rawByteCount) {
     return(rawByteCount + pngStoredBlockCount(rawByteCount) * 5i32 + 6i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngWriteSizingValid([i32] width, [i32] height, [i32 mut] rawByteCount, [i32 mut] payloadLength) {
     rawByteCount = 0i32
     payloadLength = 0i32
@@ -739,7 +739,7 @@ namespace std {
     return(true)
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   pngAdlerUpdateByte([i32] byte, [i32 mut] a, [i32 mut] b) {
     a = pngMod(a + byte, 65521i32)
     b = pngMod(b + a, 65521i32)
@@ -989,7 +989,7 @@ namespace std {
     return(pngWriteChunkClose(file, crc))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
     predictor{left + up - upLeft}
     leftDistance{/std/math/abs(predictor - left)}
@@ -1004,7 +1004,7 @@ namespace std {
     return(upLeft)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngColorTypeSamplesPerPixel([i32] colorType) {
     if(colorType == 0i32 || colorType == 3i32) {
       return(1i32)
@@ -1018,7 +1018,7 @@ namespace std {
     return(4i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngDecodeBitDepthSupported([i32] bitDepth, [i32] colorType) {
     if(colorType == 0i32) {
       return(pngBitDepthAllowed(bitDepth, 1i32, 2i32, 4i32, 8i32, 16i32))
@@ -1035,17 +1035,17 @@ namespace std {
     return(false)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngFilterBytesPerPixel([i32] bitDepth, [i32] colorType) {
     return((pngColorTypeSamplesPerPixel(colorType) * bitDepth + 7i32) / 8i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngScanlineBytes([i32] width, [i32] bitDepth, [i32] colorType) {
     return((width * pngColorTypeSamplesPerPixel(colorType) * bitDepth + 7i32) / 8i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngScanlineBytesValid([i32] width, [i32] bitDepth, [i32] colorType, [i32 mut] scanlineBytes) {
     scanlineBytes = 0i32
     if(width <= 0i32) {
@@ -1064,7 +1064,7 @@ namespace std {
     return(true)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngSampleValueCount([i32] bitDepth) {
     [mut] valueCount{1i32}
     [mut] shift{0i32}
@@ -1075,7 +1075,7 @@ namespace std {
     return(valueCount)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngPackedSampleAt([vector<i32>] rowBytes, [i32] pixelIndex, [i32] bitDepth) {
     samplesPerByte{8i32 / bitDepth}
     byteIndex{pixelIndex / samplesPerByte}
@@ -1090,7 +1090,7 @@ namespace std {
     return(pngMod(shifted, pngSampleValueCount(bitDepth)))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngScalePackedSampleToByte([i32] sample, [i32] bitDepth) {
     maxSample{pngSampleValueCount(bitDepth) - 1i32}
     if(maxSample <= 0i32) {
@@ -1099,12 +1099,12 @@ namespace std {
     return(sample * 255i32 / maxSample)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngScaleU16SampleToByte([i32] highByte, [i32] lowByte) {
     return((highByte * 256i32 + lowByte) / 257i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngScanlineChannelByte([vector<i32>] rowBytes, [i32] byteIndex, [i32] bitDepth) {
     if(bitDepth == 16i32) {
       return(pngScaleU16SampleToByte(rowBytes[byteIndex], rowBytes[byteIndex + 1i32]))
@@ -1112,7 +1112,7 @@ namespace std {
     return(rowBytes[byteIndex])
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngAdam7PassStartX([i32] passIndex) {
     if(passIndex == 0i32 || passIndex == 2i32 || passIndex == 4i32 || passIndex == 6i32) {
       return(0i32)
@@ -1126,7 +1126,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngAdam7PassStartY([i32] passIndex) {
     if(passIndex == 0i32 || passIndex == 1i32 || passIndex == 3i32 || passIndex == 5i32) {
       return(0i32)
@@ -1140,7 +1140,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngAdam7PassStepX([i32] passIndex) {
     if(passIndex == 0i32 || passIndex == 1i32) {
       return(8i32)
@@ -1154,7 +1154,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngAdam7PassStepY([i32] passIndex) {
     if(passIndex == 0i32 || passIndex == 1i32 || passIndex == 2i32) {
       return(8i32)
@@ -1165,7 +1165,7 @@ namespace std {
     return(2i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngAdam7PassSpan([i32] size, [i32] start, [i32] step) {
     if(size <= start) {
       return(0i32)
@@ -1329,7 +1329,7 @@ namespace std {
     return(0i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngZlibHeaderValid([i32] cmf, [i32] flg) {
     if(pngMod(cmf, 16i32) != 8i32 || cmf / 16i32 > 7i32) {
       return(false)
@@ -1358,7 +1358,7 @@ namespace std {
     return(0i32)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   pngAdlerValid([vector<i32>] bytes, [i32] bHigh, [i32] bLow, [i32] aHigh, [i32] aLow) {
     [mut] a{1i32}
     [mut] b{0i32}
@@ -1372,7 +1372,7 @@ namespace std {
     return(b / 256i32 == bHigh && pngMod(b, 256i32) == bLow && a / 256i32 == aHigh && pngMod(a, 256i32) == aLow)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngReadBits([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32] countBits, [i32 mut] value) {
     value = 0i32
     len{count(bytes)}
@@ -1413,7 +1413,7 @@ namespace std {
     return(reversed)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngCountCodeLength([vector<i32>] lengths, [i32] targetLength) {
     lengthCount{count(lengths)}
     [mut] matches{0i32}
@@ -1427,7 +1427,7 @@ namespace std {
     return(matches)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngCanonicalCodeForSymbol([vector<i32>] lengths, [i32] targetSymbol) {
     targetLength{lengths[targetSymbol]}
     if(targetLength == 0i32) {
@@ -1518,7 +1518,7 @@ namespace std {
     }
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngHuffmanMaxBits([vector<i32>] lengths) {
     [mut] maxBits{0i32}
     [mut] index{0i32}
@@ -1531,7 +1531,7 @@ namespace std {
     return(maxBits)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngCodeLengthCodeOrder([i32] index) {
     if(index == 0i32) {
       return(16i32)
@@ -1753,7 +1753,7 @@ namespace std {
     return(0i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngSplitLiteralLengthAt([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] symbol) {
     if(symbol < count(literalLengthsLow)) {
       return(literalLengthsLow[symbol])
@@ -1765,7 +1765,7 @@ namespace std {
     return(literalLengthsHigh[highIndex])
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngCountSplitLiteralLength([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] targetLength) {
     [mut] matches{0i32}
     [mut] index{0i32}
@@ -1787,7 +1787,7 @@ namespace std {
     return(matches)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngCanonicalCodeForSplitLiteralSymbol([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] targetSymbol) {
     targetLength{pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, targetSymbol)}
     if(targetLength <= 0i32) {
@@ -1813,7 +1813,7 @@ namespace std {
     return(code + offset)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pngHuffmanMaxBitsSplitLiteralLengths([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh) {
     lowMax{pngHuffmanMaxBits(literalLengthsLow)}
     highMax{pngHuffmanMaxBits(literalLengthsHigh)}
@@ -1857,7 +1857,7 @@ namespace std {
     return(1i32)
   }
 
-  [return<int>]
+  [return<int> effects(none)]
   pngLengthInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
     baseOut = 0i32
     extraBitsOut = 0i32
@@ -1891,7 +1891,7 @@ namespace std {
     return(0i32)
   }
 
-  [return<int>]
+  [return<int> effects(none)]
   pngDistanceInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
     baseOut = 0i32
     extraBitsOut = 0i32

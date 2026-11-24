@@ -26,34 +26,34 @@ namespace events {
     [public static i32] altBit{4i32}
     [public static i32] metaBit{8i32}
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     shift() {
       return(this.has(Modifiers.shiftBit))
     }
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     control() {
       return(this.has(Modifiers.controlBit))
     }
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     alt() {
       return(this.has(Modifiers.altBit))
     }
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     meta() {
       return(this.has(Modifiers.metaBit))
     }
 
     // Whether any modifier is held.
-    [public return<bool>]
+    [public return<bool> effects(none)]
     any() {
       return(this.bits != 0i32)
     }
 
     // Whether `bit`, a power of two, is set. There are no bitwise operators, so the bit is taken by division.
-    [return<bool>]
+    [return<bool> effects(none)]
     has([i32] bit) {
       [i32] above{this.bits / bit}
       return(above - (above / 2i32) * 2i32 == 1i32)
@@ -81,13 +81,13 @@ namespace events {
     [public static Key] pageDown{Key{[code] -13i32}}
 
     // Whether the key types a character, such as "a" or a space.
-    [public return<bool>]
+    [public return<bool> effects(none)]
     isCharacter() {
       return(this.code >= 0i32)
     }
 
     // The code point the key types, or -1 for a named key.
-    [public return<i32>]
+    [public return<i32> effects(none)]
     character() {
       if(this.code >= 0i32) {
         return(this.code)
@@ -97,7 +97,7 @@ namespace events {
   }
 
   // The key that types the character `codePoint`, such as `characterKey(97i32)` for "a".
-  [public return<Key>]
+  [public return<Key> effects(none)]
   characterKey([i32] codePoint) {
     return(Key{[code] codePoint})
   }

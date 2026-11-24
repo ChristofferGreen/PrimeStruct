@@ -537,132 +537,132 @@ namespace native {
 Window() {
   [public u64] handle{0u64}
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setTitle([/std/text/String] title) {
     return(ps_ui_window_set_title(this.handle, title))
   }
 
   // Remembers the window's position and size between runs under `name`.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setAutosaveName([string] name) {
     return(ps_ui_window_set_autosave_name(this.handle, name))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setContent([TextView] view) {
     return(ps_ui_window_set_content(this.handle, view.handle))
   }
 
   // A control (usually a form or tabs) as the window's content, as in a settings window.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setContentWidget([Widget] widget) {
     return(ps_ui_window_set_content(this.handle, widget.handle))
   }
 
   // A settings window: never a tab, sized to fit its content, no minimize or zoom.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setSettingsStyle() {
     return(ps_ui_window_set_style(this.handle, 1i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setEdited([bool] edited) {
     return(ps_ui_window_set_edited(this.handle, edited))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   show() {
     return(ps_ui_window_show(this.handle))
   }
 
   // Joins `tab` to this window's tab group and selects it.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addTab([Window] tab) {
     return(ps_ui_window_add_tab(this.handle, tab.handle))
   }
 
   // Joins `tab` to this window's tab group right after this window, behind the selected tab: it is neither shown nor
   // selected, and the platform builds what it shows (layout, toolbar, preview page) when the user first picks it.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addBackgroundTab([Window] tab) {
     return(ps_ui_window_add_background_tab(this.handle, tab.handle))
   }
 
   // The tabs of this window's group in tab-bar order (1 when it has no group).
-  [public return<i32>]
+  [public return<i32> effects(none)]
   tabCount() {
     return(ps_ui_window_tab_count(this.handle))
   }
 
-  [public return<Window>]
+  [public return<Window> effects(none)]
   tabAt([i32] index) {
     [Window] found{[handle] ps_ui_window_tab_at(this.handle, index)}
     return(found)
   }
 
   // Selects this window's tab and makes it the active window.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   select() {
     return(ps_ui_window_select(this.handle))
   }
 
-  [public return<TextView>]
+  [public return<TextView> effects(none)]
   content() {
     [TextView] view{[handle] ps_ui_window_content(this.handle)}
     return(view)
   }
 
   // The file the window's document is saved to ("" when none); stored by the backend.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setPath([/std/text/String] file) {
     return(ps_ui_window_set_path(this.handle, file))
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   path() {
     return(ps_ui_window_path(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   hasPath() {
     return(ps_ui_window_has_path(this.handle))
   }
 
   // The markdown preview beside the window's text view: on or off, whether it is on, and rendering it
   // again after the text changed.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setPreview([bool] on) {
     return(ps_ui_window_set_preview(this.handle, on))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   hasPreview() {
     return(ps_ui_window_has_preview(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   refreshPreview() {
     return(ps_ui_window_refresh_preview(this.handle))
   }
 
   // How much of the window the preview takes: 0 the text alone, 1 text and page, 2 the page alone.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setPreviewMode([i32] mode) {
     return(ps_ui_window_set_preview_mode(this.handle, mode))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   previewMode() {
     return(ps_ui_window_preview_mode(this.handle))
   }
 
   // Shows `bar` above the content; hideToolbar() takes it away again.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setToolbar([Toolbar] bar) {
     return(ps_ui_window_set_toolbar(this.handle, bar.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   hideToolbar() {
     return(ps_ui_window_set_toolbar(this.handle, 0u64))
   }
@@ -670,49 +670,49 @@ Window() {
   // Runs PrimeScript `text` (named `name`) on the embedded interpreter and shows its output in the output pane under
   // the content; `endCommand` arrives as a command when the run ends. False when a run is going or the interpreter
   // cannot load.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   runScript([/std/text/String] name, [/std/text/String] text, [i32] endCommand) {
     return(ps_ui_script_run(this.handle, name, text, endCommand))
   }
 
   // The same run whose end calls the handler of `end` (`AppHandlers.command`).
-  [public return<bool>]
+  [public return<bool> effects(none)]
   runScriptCommand([/std/text/String] name, [/std/text/String] text, [Command] end) {
     return(ps_ui_script_run(this.handle, name, text, end.id))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   stopScript() {
     return(ps_ui_script_stop(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   scriptRunning() {
     return(ps_ui_script_running(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setOutputVisible([bool] visible) {
     return(ps_ui_window_set_output_visible(this.handle, visible))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   outputVisible() {
     return(ps_ui_window_output_visible(this.handle))
   }
 
   // Marks the segment with `commandId` of the toolbar as selected.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   selectToolbarItem([i32] commandId) {
     return(ps_ui_window_toolbar_select(this.handle, commandId))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   selectToolbarCommand([Command] command) {
     return(ps_ui_window_toolbar_select(this.handle, command.id))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   close() {
     return(ps_ui_window_close(this.handle))
   }
@@ -723,48 +723,48 @@ TextView() {
   [public u64] handle{0u64}
 
   // The generic handle of the view, for the pointer and key handlers of `AppHandlers` (`onKeyDown(text.widget(), h)`).
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   text() {
     return(ps_ui_text_view_get_text(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setText([/std/text/String] value) {
     return(ps_ui_text_view_set_text(this.handle, value))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setMonospace([bool] monospace) {
     return(ps_ui_text_view_set_monospace(this.handle, monospace))
   }
 
   // The size of the text in points (6 to 96).
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setFontSize([i32] points) {
     return(ps_ui_text_view_set_font_size(this.handle, points))
   }
 
   // The backend reads the UTF-8 file itself; false (see App.lastError()) when it
   // cannot be read or is not valid UTF-8. A successful load leaves the view unmodified.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   loadFile([/std/text/String] path) {
     return(ps_ui_text_view_load_file(this.handle, path))
   }
 
   // Writes the text to the file; call clearModified() once the text counts as saved.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   saveFile([/std/text/String] path) {
     return(ps_ui_text_view_save_file(this.handle, path))
   }
 
   // Removes all style runs (see addStyle).
-  [public return<bool>]
+  [public return<bool> effects(none)]
   clearStyles() {
     return(ps_ui_text_view_clear_styles(this.handle))
   }
@@ -772,49 +772,49 @@ TextView() {
   // Colours the UTF-8 byte range [startByte, endByte) with 0xRRGGBB; flags: 1 bold, 2 italic.
   // False for an empty range or one that is not on code point boundaries inside the text.
   // Later runs win where they overlap; replacing the text drops all runs.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addStyle([i32] startByte, [i32] endByte, [i32] rgb, [i32] flags) {
     return(ps_ui_text_view_add_style(this.handle, startByte, endByte, rgb, flags))
   }
 
   // Syntax highlighting for the language of the file name `path` (by extension:
   // .prime, C/C++, .py, .json, .md); anything else just clears the styles.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   highlight([/std/text/String] path) {
     return(ps_ui_text_view_highlight(this.handle, path))
   }
 
   // Shows or hides a bar of line numbers (one per paragraph) to the left of the text.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setLineNumbers([bool] visible) {
     return(ps_ui_text_view_set_line_numbers(this.handle, visible))
   }
 
   // Wraps long lines at the view's width (the default) or lets them run to the right.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setWrapping([bool] wrap) {
     return(ps_ui_text_view_set_wrapping(this.handle, wrap))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   isModified() {
     return(ps_ui_text_view_is_modified(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   clearModified() {
     return(ps_ui_text_view_clear_modified(this.handle))
   }
 
   // Applies a markdown editing operation (PS_UI_MARKDOWN_*: bold, a list, a table row, ...) to the text and the
   // selection as one undoable change; `a` and `b` are its arguments. False when it does not apply.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   markdownEdit([i32] operation, [i32] a, [i32] b) {
     return(ps_ui_text_view_markdown_edit(this.handle, operation, a, b))
   }
 
   // Tab and Shift-Tab move between the cells of a markdown table.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setMarkdownEditing([bool] on) {
     return(ps_ui_text_view_set_markdown_editing(this.handle, on))
   }
@@ -825,43 +825,43 @@ TextView() {
 Toolbar() {
   [public u64] handle{0u64}
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   button([string] title, [string] symbol, [i32] commandId) {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, commandId))
   }
 
   // A button that calls the handler of `command` (`AppHandlers.command`).
-  [public return<bool>]
+  [public return<bool> effects(none)]
   button([string] title, [string] symbol, [Command] command) {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, command.id))
   }
 
   // `button` of a command, for an argument that is a method call such as `commands.at(1i32)`: the overloads of
   // `button` are chosen by the type of the argument, and a method call has no type known there.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   commandButton([string] title, [string] symbol, [Command] command) {
     return(ps_ui_toolbar_add_button(this.handle, title, symbol, command.id))
   }
 
   // Segments titled by `titles` (separated by |) with the commands firstCommandId, firstCommandId + 1, ...
-  [public return<bool>]
+  [public return<bool> effects(none)]
   segments([string] titles, [i32] firstCommandId) {
     return(ps_ui_toolbar_add_segments(this.handle, titles, firstCommandId))
   }
 
   // Segments that call the handler of `commands` (`AppHandlers.commandRange`) with the offset of the chosen one; the
   // range has one command per title.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   commandSegments([string] titles, [CommandRange] commands) {
     return(ps_ui_toolbar_add_segments(this.handle, titles, commands.first))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   menu([string] title, [string] symbol, [Menu] items) {
     return(ps_ui_toolbar_add_menu(this.handle, title, symbol, items.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   separator() {
     return(ps_ui_toolbar_add_separator(this.handle))
   }
@@ -871,205 +871,205 @@ Toolbar() {
 Menu() {
   [public u64] handle{0u64}
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   item([string] title, [string] shortcut, [i32] commandId) {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, commandId))
   }
 
   // An item that calls the handler of `command` (`AppHandlers.command`) when it is chosen.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   item([string] title, [string] shortcut, [Command] command) {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, command.id))
   }
 
   // `item` of a command, for an argument that is a method call such as `commands.at(1i32)`: the overloads of `item`
   // are chosen by the type of the argument, and a method call has no type known there.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   commandItem([string] title, [string] shortcut, [Command] command) {
     return(ps_ui_menu_add_item(this.handle, title, shortcut, command.id))
   }
 
   // Puts or removes a check mark on the items added with `commandId`.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setChecked([i32] commandId, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, commandId, checked))
   }
 
   // Puts or removes the check mark on the items of `command`.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setChecked([Command] command, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, command.id, checked))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setCommandChecked([Command] command, [bool] checked) {
     return(ps_ui_menu_set_checked(this.handle, command.id, checked))
   }
 
   // The check mark of the items with `commandId` shows whether the active window has a preview.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   followPreview([i32] commandId) {
     return(ps_ui_menu_follow_preview(this.handle, commandId))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   followPreviewCommand([Command] command) {
     return(ps_ui_menu_follow_preview(this.handle, command.id))
   }
 
   // Adds an item that opens `child`, a menu that is not in the bar.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   submenu([string] title, [Menu] child) {
     return(ps_ui_menu_add_submenu(this.handle, title, child.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   clear() {
     return(ps_ui_menu_clear(this.handle))
   }
 
   // Appends one item per recent file (most recent first, at most maxItems) with the command ids
   // firstCommandId, firstCommandId + 1, ...; returns how many it added.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   addRecentFiles([i32] firstCommandId, [i32] maxItems) {
     return(ps_ui_menu_add_recent_files(this.handle, firstCommandId, maxItems))
   }
 
   // The same items with the commands of `commands` (`AppHandlers.commandRange`), at most one per command: choosing
   // the file at offset i calls the range's handler with i, the index `App.recentPath` takes.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   addRecentFileCommands([CommandRange] commands) {
     return(ps_ui_menu_add_recent_files(this.handle, commands.first, commands.count))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   separator() {
     return(ps_ui_menu_add_separator(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addToBar() {
     return(ps_ui_menu_bar_add(this.handle))
   }
 
   // The application menu replaces the platform's default one and comes first.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addToBarAsApp() {
     return(ps_ui_menu_bar_add_role(this.handle, 1i32))
   }
 
   // The platform lists the open windows in the Window menu.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addToBarAsWindow() {
     return(ps_ui_menu_bar_add_role(this.handle, 2i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addToBarAsHelp() {
     return(ps_ui_menu_bar_add_role(this.handle, 3i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   hide() {
     return(ps_ui_menu_add_standard(this.handle, 10i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   hideOthers() {
     return(ps_ui_menu_add_standard(this.handle, 11i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   minimize() {
     return(ps_ui_menu_add_standard(this.handle, 12i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   zoom() {
     return(ps_ui_menu_add_standard(this.handle, 13i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   bringAllToFront() {
     return(ps_ui_menu_add_standard(this.handle, 14i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   fullScreen() {
     return(ps_ui_menu_add_standard(this.handle, 15i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   help() {
     return(ps_ui_menu_add_standard(this.handle, 16i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   showTabBar() {
     return(ps_ui_menu_add_standard(this.handle, 17i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   mergeAllWindows() {
     return(ps_ui_menu_add_standard(this.handle, 18i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   moveTabToNewWindow() {
     return(ps_ui_menu_add_standard(this.handle, 19i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   nextTab() {
     return(ps_ui_menu_add_standard(this.handle, 20i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   previousTab() {
     return(ps_ui_menu_add_standard(this.handle, 21i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   undo() {
     return(ps_ui_menu_add_standard(this.handle, 1i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   redo() {
     return(ps_ui_menu_add_standard(this.handle, 2i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   cut() {
     return(ps_ui_menu_add_standard(this.handle, 3i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   copy() {
     return(ps_ui_menu_add_standard(this.handle, 4i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   paste() {
     return(ps_ui_menu_add_standard(this.handle, 5i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   selectAll() {
     return(ps_ui_menu_add_standard(this.handle, 6i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   find() {
     return(ps_ui_menu_add_standard(this.handle, 7i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   quit() {
     return(ps_ui_menu_add_standard(this.handle, 8i32))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   about() {
     return(ps_ui_menu_add_standard(this.handle, 9i32))
   }
@@ -1086,13 +1086,13 @@ Widget() {
 Label() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setText([string] value) {
     return(ps_ui_label_set_text(this.handle, value))
   }
@@ -1102,19 +1102,19 @@ Label() {
 CheckBox() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
   // The program's own change: it produces no event.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setChecked([bool] checked) {
     return(ps_ui_checkbox_set_checked(this.handle, checked))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   isChecked() {
     return(ps_ui_checkbox_checked(this.handle))
   }
@@ -1124,25 +1124,25 @@ CheckBox() {
 Popup() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
   // Items are added in order; the first one is chosen at first.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addItem([string] title) {
     return(ps_ui_popup_add_item(this.handle, title))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   select([i32] index) {
     return(ps_ui_popup_select(this.handle, index))
   }
 
   // The chosen item's index (-1 without items).
-  [public return<i32>]
+  [public return<i32> effects(none)]
   selected() {
     return(ps_ui_popup_selected(this.handle))
   }
@@ -1153,13 +1153,13 @@ Popup() {
 Button() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setTitle([/std/text/String] title) {
     return(ps_ui_button_set_title(this.handle, title))
   }
@@ -1171,33 +1171,33 @@ Button() {
 ItemList() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addItem([/std/text/String] text) {
     return(ps_ui_list_add_item(this.handle, text))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setItem([i32] index, [/std/text/String] text) {
     return(ps_ui_list_set_item(this.handle, index, text))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   count() {
     return(ps_ui_list_item_count(this.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setSelected([i32] index, [bool] selected) {
     return(ps_ui_list_set_selected(this.handle, index, selected))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   isSelected([i32] index) {
     return(ps_ui_list_is_selected(this.handle, index))
   }
@@ -1208,23 +1208,23 @@ ItemList() {
 Form() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   heading([string] title) {
     return(ps_ui_form_add_heading(this.handle, title))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   row([string] label, [Widget] control) {
     return(ps_ui_form_add_row(this.handle, label, control.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   control([Widget] control) {
     return(ps_ui_form_add_control(this.handle, control.handle))
   }
@@ -1235,18 +1235,18 @@ Form() {
 Tabs() {
   [public u64] handle{0u64}
 
-  [public return<Widget>]
+  [public return<Widget> effects(none)]
   widget() {
     [Widget] generic{[handle] this.handle}
     return(generic)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   add([string] title, [Widget] content) {
     return(ps_ui_tabs_add(this.handle, title, content.handle))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   select([i32] index) {
     return(ps_ui_tabs_select(this.handle, index))
   }
@@ -1269,79 +1269,79 @@ AppEvent {
 App() {
   [public bool] started{false}
 
-  [public return<void>]
+  [public return<void> effects(none)]
   quit() {
     ps_ui_quit()
   }
 
-  [public return<Window>]
+  [public return<Window> effects(none)]
   window([string] title, [i32] width, [i32] height) {
     [Window] created{[handle] ps_ui_window_create(title, width, height)}
     return(created)
   }
 
   // The window the user is working in (the selected tab); handle 0 when none is open.
-  [public return<Window>]
+  [public return<Window> effects(none)]
   activeWindow() {
     [Window] active{[handle] ps_ui_active_window()}
     return(active)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   windowCount() {
     return(ps_ui_window_count())
   }
 
   // The index-th open window in creation order.
-  [public return<Window>]
+  [public return<Window> effects(none)]
   windowAt([i32] index) {
     [Window] found{[handle] ps_ui_window_at(index)}
     return(found)
   }
 
-  [public return<TextView>]
+  [public return<TextView> effects(none)]
   textView() {
     [TextView] created{[handle] ps_ui_text_view_create()}
     return(created)
   }
 
-  [public return<Menu>]
+  [public return<Menu> effects(none)]
   menu([string] title) {
     [Menu] created{[handle] ps_ui_menu_create(title)}
     return(created)
   }
 
-  [public return<Toolbar>]
+  [public return<Toolbar> effects(none)]
   toolbar() {
     [Toolbar] created{[handle] ps_ui_toolbar_create()}
     return(created)
   }
 
-  [public return<Label>]
+  [public return<Label> effects(none)]
   label([string] text) {
     [Label] created{[handle] ps_ui_label_create(text)}
     return(created)
   }
 
-  [public return<CheckBox>]
+  [public return<CheckBox> effects(none)]
   checkBox([string] title, [bool] checked) {
     [CheckBox] created{[handle] ps_ui_checkbox_create(title, checked)}
     return(created)
   }
 
-  [public return<Popup>]
+  [public return<Popup> effects(none)]
   popup() {
     [Popup] created{[handle] ps_ui_popup_create()}
     return(created)
   }
 
-  [public return<Form>]
+  [public return<Form> effects(none)]
   form() {
     [Form] created{[handle] ps_ui_form_create()}
     return(created)
   }
 
-  [public return<Tabs>]
+  [public return<Tabs> effects(none)]
   tabs() {
     [Tabs] created{[handle] ps_ui_tabs_create()}
     return(created)
@@ -1349,7 +1349,7 @@ App() {
 
   // How the source and the page of a markdown preview scroll together: 0 independently, 1 linearly (the same
   // fraction), 2 by block (the same source line; the default), 3 the page follows the text cursor.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setPreviewScrollMode([i32] mode) {
     return(ps_ui_preview_set_scroll_mode(mode))
   }
@@ -1361,7 +1361,7 @@ App() {
     handlers.run()
   }
 
-  [public return<AppEvent>]
+  [public return<AppEvent> effects(none)]
   waitEvent() {
     [i32] kind{ps_ui_wait_event()}
     if(kind == 1i32) {
@@ -1392,139 +1392,139 @@ App() {
   }
 
   // The path of the file an `openFile` event asks to open (valid until the next waitEvent).
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   eventText() {
     return(ps_ui_event_text())
   }
 
-  [public return<ItemList>]
+  [public return<ItemList> effects(none)]
   itemList() {
     [ItemList] created{[handle] ps_ui_list_create()}
     return(created)
   }
 
-  [public return<Button>]
+  [public return<Button> effects(none)]
   button([string] title) {
     [Button] created{[handle] ps_ui_button_create(title)}
     return(created)
   }
 
   // The file types the app declares it can open: a name ("Markdown") and its extensions ("md,markdown").
-  [public return<i32>]
+  [public return<i32> effects(none)]
   documentTypeCount() {
     return(ps_ui_document_type_count())
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   documentTypeName([i32] index) {
     return(ps_ui_document_type_name(index))
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   documentTypeExtensions([i32] index) {
     return(ps_ui_document_type_extensions(index))
   }
 
   // The path of this app's bundle ("" when it does not run from one).
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   appPath() {
     return(ps_ui_app_path())
   }
 
   // The application the system opens files of this extension with ("" when unknown).
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   defaultApp([/std/text/String] extension) {
     return(ps_ui_default_app(extension))
   }
 
   // Makes the application at the path `application` ("" for this app) the default for the comma separated
   // extensions.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setDefaultApp([/std/text/String] extensions, [/std/text/String] application) {
     return(ps_ui_set_default_app(extensions, application))
   }
 
   // Why the last loadFile/saveFile failed; empty when none has.
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   lastError() {
     return(ps_ui_last_error())
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   openPanel([string] title) {
     return(ps_ui_open_panel(title))
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   savePanel([string] title, [string] suggestedName) {
     return(ps_ui_save_panel(title, suggestedName))
   }
 
   // The recent files list (the platform's, kept between runs).
-  [public return<bool>]
+  [public return<bool> effects(none)]
   addRecent([/std/text/String] path) {
     return(ps_ui_recent_add(path))
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   recentPath([i32] index) {
     return(ps_ui_recent_path(index))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   clearRecent() {
     return(ps_ui_recent_clear())
   }
 
   // Integers and lists of texts the app keeps between runs.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   intPref([string] key, [i32] fallback) {
     return(ps_ui_pref_get_int(key, fallback))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setIntPref([string] key, [i32] value) {
     return(ps_ui_pref_set_int(key, value))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   listClear([string] key) {
     return(ps_ui_pref_list_clear(key))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   listAdd([string] key, [/std/text/String] item) {
     return(ps_ui_pref_list_add(key, item))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   listCount([string] key) {
     return(ps_ui_pref_list_count(key))
   }
 
-  [public return</std/text/String>]
+  [public return</std/text/String> effects(none)]
   listGet([string] key, [i32] index) {
     return(ps_ui_pref_list_get(key, index))
   }
 
   // A boolean the app keeps between runs: the stored value, or `fallback` when none was stored.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   boolPref([string] key, [bool] fallback) {
     return(ps_ui_pref_get_bool(key, fallback))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   setBoolPref([string] key, [bool] value) {
     return(ps_ui_pref_set_bool(key, value))
   }
 
   // True when the last openPanel/savePanel returned a path, false when cancelled.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   panelChosen() {
     return(ps_ui_panel_chosen())
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   alert([string] message, [/std/text/String] detail, [string] buttons) {
     return(ps_ui_alert(message, detail, buttons))
   }
@@ -1532,7 +1532,7 @@ App() {
 
 // Starts the app on the calling thread; `started` is false when the backend
 // cannot start.
-[public return<App>]
+[public return<App> effects(none)]
 start_app([string] name) {
   [bool] ok{ps_ui_init(name)}
   [App] app{[started] ok}

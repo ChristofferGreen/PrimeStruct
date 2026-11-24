@@ -74,8 +74,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
 
   const size_t resetReadOutputsStart = imageStdlib.find("resetReadOutputs(");
-  const size_t imageRgbWritePixelCountStart =
-      imageStdlib.find("\n  [return<bool>]\n  imageRgbWritePixelCount(", resetReadOutputsStart);
+  const size_t imageRgbWritePixelCountStart = imageStdlib.find(
+      "\n  [return<bool> effects(none)]\n  imageRgbWritePixelCount(", resetReadOutputsStart);
   REQUIRE(resetReadOutputsStart != std::string::npos);
   REQUIRE(imageRgbWritePixelCountStart != std::string::npos);
   REQUIRE(imageRgbWritePixelCountStart > resetReadOutputsStart);

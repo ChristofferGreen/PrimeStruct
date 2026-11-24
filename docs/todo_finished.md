@@ -2633,6 +2633,7 @@ are left unarchived.
 | TODO-6242 | `effects(none)` declares a definition without effects | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6243 | Annotate the effects of the collections stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6244 | Annotate the effects of the text, math and tuple stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6245 | Annotate the effects of the gfx, image, scene and UI stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

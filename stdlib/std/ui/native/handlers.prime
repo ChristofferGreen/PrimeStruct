@@ -31,7 +31,7 @@ namespace native {
     [public i32] count{0i32}
 
     // The command at `offset`, 0 to count - 1.
-    [public return<Command>]
+    [public return<Command> effects(none)]
     at([i32] offset) {
       [i32] id{this.first + offset}
       return(Command{[id] id})
@@ -327,6 +327,7 @@ namespace native {
     }
 
     // Asks the platform for the events of `widget` that have handlers.
+    [effects(none)]
     watchWidget([u64] widget) {
       [i32 mut] mask{0i32}
       for([i32 mut] index{0i32}; index < this.pointerWidgets.count(); ++index) {
@@ -596,13 +597,13 @@ namespace native {
   }
 
   // The id `AppHandlers.command` gives its first command; the next one gets the next id, and so on.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   first_command_id() {
     return(1000000i32)
   }
 
   // Whether the watch bit `bit`, a power of two, is set in `mask`. There are no bitwise operators.
-  [return<bool>]
+  [return<bool> effects(none)]
   has_watch_bit([i32] mask, [i32] bit) {
     [i32] above{mask / bit}
     return(above - (above / 2i32) * 2i32 == 1i32)
@@ -610,7 +611,7 @@ namespace native {
 
   // The watch bit of a pointer event kind: 1 for the pointer entering (7), 2 for a press (9), 4 for a release (10);
   // 0 for the pointer leaving (8), which has no handler.
-  [return<i32>]
+  [return<i32> effects(none)]
   pointer_watch_bit([i32] kind) {
     if(kind == 7i32) {
       return(1i32)
@@ -625,7 +626,7 @@ namespace native {
   }
 
   // The watch bit of a key event kind: 8 for a key down (11), 16 for a key up (12).
-  [return<i32>]
+  [return<i32> effects(none)]
   key_watch_bit([i32] kind) {
     if(kind == 11i32) {
       return(8i32)
@@ -634,7 +635,7 @@ namespace native {
   }
 
   // The pointer event the platform reports now.
-  [return<PointerEvent>]
+  [return<PointerEvent> effects(none)]
   pointer_event() {
     [i32] code{ps_ui_event_button()}
     [PointerButton mut] button{PointerButton.none}
@@ -655,7 +656,7 @@ namespace native {
   }
 
   // The key event the platform reports now.
-  [return<KeyEvent>]
+  [return<KeyEvent> effects(none)]
   key_event() {
     [Key] key{Key{[code] ps_ui_event_key()}}
     [Modifiers] modifiers{Modifiers{[bits] ps_ui_event_modifiers()}}
@@ -664,7 +665,7 @@ namespace native {
   }
 
   // The change event of `widget`, read from it now: a check box (`kind` 1), a pop-up (2) or a list (3).
-  [return<ChangeEvent>]
+  [return<ChangeEvent> effects(none)]
   change_event([u64] widget, [i32] kind) {
     if(kind == 1i32) {
       return(ChangeEvent{[checked] ps_ui_checkbox_checked(widget)})

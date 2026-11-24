@@ -40,19 +40,19 @@ content_hash = 8e7ed7b5a45432e9
 path = /std/gfx/experimental/Window/is_open
 start_line = 45
 end_line = 48
-content_hash = 4679bde8dc986cc7
+content_hash = cbb63a8f648880f8
 
 [symbol]
 path = /std/gfx/experimental/Window/poll_events
 start_line = 50
 end_line = 53
-content_hash = 3c27cb15a3c5007
+content_hash = 61d0aa50ec573710
 
 [symbol]
 path = /std/gfx/experimental/Window/aspect_ratio
 start_line = 55
 end_line = 61
-content_hash = 13315f076aed10b
+content_hash = aac793ae15f9b138
 
 [symbol]
 path = /std/gfx/experimental/Device
@@ -64,25 +64,25 @@ content_hash = 348163c866b7e18a
 path = /std/gfx/experimental/Device/default_queue
 start_line = 68
 end_line = 71
-content_hash = 6d7fee67aa26615e
+content_hash = 4908751f9559e5c9
 
 [symbol]
 path = /std/gfx/experimental/Device/create_swapchain
 start_line = 73
 end_line = 96
-content_hash = 106d82451577ae75
+content_hash = 39df89b0671c71ce
 
 [symbol]
 path = /std/gfx/experimental/Device/create_mesh
 start_line = 98
 end_line = 117
-content_hash = f7ebeb6b23fe9b65
+content_hash = 5e3904b4a2e017aa
 
 [symbol]
 path = /std/gfx/experimental/Device/create_pipeline_VertexColored
 start_line = 119
 end_line = 134
-content_hash = 29cdac575b1517c9
+content_hash = d5f0f7bb7911a306
 
 [symbol]
 path = /std/gfx/experimental/Queue
@@ -100,7 +100,7 @@ content_hash = a4c1ffabe1820479
 path = /std/gfx/experimental/Swapchain/frame
 start_line = 149
 end_line = 157
-content_hash = a1734f26d7293e5c
+content_hash = 9ab166dee5580853
 
 [symbol]
 path = /std/gfx/experimental/Frame
@@ -112,19 +112,19 @@ content_hash = 27cabb66ad7f5df9
 path = /std/gfx/experimental/Frame/render_pass
 start_line = 164
 end_line = 174
-content_hash = 980d5c9981d5ab56
+content_hash = c3fad1b7e8133dab
 
 [symbol]
 path = /std/gfx/experimental/Frame/submit
 start_line = 176
 end_line = 179
-content_hash = df309fb0c064ad06
+content_hash = f5ccb3724dd03081
 
 [symbol]
 path = /std/gfx/experimental/Frame/present
 start_line = 181
 end_line = 184
-content_hash = 91ac28d8f7d34be4
+content_hash = a78d2b808393b68f
 
 [symbol]
 path = /std/gfx/experimental/RenderPass
@@ -136,13 +136,13 @@ content_hash = b3055a37f8e4467d
 path = /std/gfx/experimental/RenderPass/draw_mesh
 start_line = 191
 end_line = 204
-content_hash = f664fb1d5e38b3b7
+content_hash = 6beca1257cc432ce
 
 [symbol]
 path = /std/gfx/experimental/RenderPass/end
 start_line = 206
 end_line = 214
-content_hash = d1de7547b5df57c6
+content_hash = 28ad3874abcfcde9
 
 [symbol]
 path = /std/gfx/experimental/Buffer
@@ -154,19 +154,19 @@ content_hash = a280aa9b6a939b60
 path = /std/gfx/experimental/Buffer/count
 start_line = 222
 end_line = 225
-content_hash = d4bff41a2286baf2
+content_hash = c177e7623d4eb169
 
 [symbol]
 path = /std/gfx/experimental/Buffer/empty
 start_line = 227
 end_line = 230
-content_hash = 1610f60d9fcc8bd3
+content_hash = ba9e2ce2e6b75584
 
 [symbol]
 path = /std/gfx/experimental/Buffer/is_valid
 start_line = 232
 end_line = 235
-content_hash = fd325da701569319
+content_hash = bac962d7f5ba17c
 
 [symbol]
 path = /Buffer/readback
@@ -178,13 +178,13 @@ content_hash = 279e86337f89d5e8
 path = /Buffer/load
 start_line = 244
 end_line = 248
-content_hash = d7e28d6909e6cd2d
+content_hash = e463d7d4bb246a20
 
 [symbol]
 path = /Buffer/store
 start_line = 250
 end_line = 255
-content_hash = d05c44a5a314164b
+content_hash = fbe7ab2f293f3302
 
 [symbol]
 path = /Buffer/allocate
@@ -226,7 +226,7 @@ content_hash = 2b6d86dcddf33ef6
 path = /std/gfx/experimental/Pipeline/material
 start_line = 292
 end_line = 298
-content_hash = a461967db57ec57b
+content_hash = 6eaa7836cc26d802
 
 [symbol]
 path = /std/gfx/experimental/Material
@@ -334,172 +334,172 @@ content_hash = eb9463b7d33d46f7
 path = /std/gfx/experimental/gfxError
 start_line = 416
 end_line = 419
-content_hash = becf4105b3c0b8c0
+content_hash = 81cfe0915b6b7de1
 
 [symbol]
 path = /std/gfx/experimental/ignoreGfxError
 start_line = 421
 end_line = 424
-content_hash = 2f8578b5431e6919
+content_hash = 524966a5d5c0bee4
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createWindow
 start_line = 427
 end_line = 434
-content_hash = 272943901c4696a2
+content_hash = 96f002a0d8460a91
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createDevice
 start_line = 436
 end_line = 442
-content_hash = 95e1581a375c5285
+content_hash = 3e9a59794187d9c2
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createQueue
 start_line = 444
 end_line = 450
-content_hash = 4de6947afbac6788
+content_hash = 5f540142fbdee215
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createSwapchain
 start_line = 452
 end_line = 459
-content_hash = 5cb4632d803bdaab
+content_hash = beb08fcd6e133fdc
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createMesh
 start_line = 461
 end_line = 468
-content_hash = aaba2c2c0be81d66
+content_hash = 2faf77bd25279c71
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/createPipeline
 start_line = 470
 end_line = 476
-content_hash = 6bdf9d7f4973e4b1
+content_hash = 94c516293e758028
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/acquireFrame
 start_line = 478
 end_line = 484
-content_hash = 6c3d8379f46ecefe
+content_hash = cd8f3ff857c3bbf5
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/beginRenderPass
 start_line = 486
 end_line = 493
-content_hash = d1a1a584d2a26d37
+content_hash = b163beb1803aaac
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/openRenderPass
 start_line = 495
 end_line = 501
-content_hash = d1c476fac12aea76
+content_hash = 2aaa44d9540381b7
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/drawMesh
 start_line = 503
 end_line = 510
-content_hash = 2e51615493c7b666
+content_hash = 5bbe245fe91e7105
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/endRenderPass
 start_line = 512
 end_line = 518
-content_hash = 56d014f3ed35e7d8
+content_hash = 896f7a856538e727
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/submitFrame
 start_line = 520
 end_line = 526
-content_hash = 8879113c2610eb0f
+content_hash = 13847f51fb1a3e9c
 
 [symbol]
 path = /std/gfx/experimental/GraphicsSubstrate/presentFrame
 start_line = 528
 end_line = 534
-content_hash = 64db0c5266b0ff3e
+content_hash = 50ecfb1ee2cca235
 
 [symbol]
 path = /std/gfx/experimental/windowCreate
 start_line = 537
 end_line = 542
-content_hash = 2a76ae0908fd284d
+content_hash = 419c00c1035871a
 
 [symbol]
 path = /std/gfx/experimental/deviceCreate
 start_line = 544
 end_line = 554
-content_hash = 2074d904725cb474
+content_hash = 986513c7b34e7bc3
 
 [symbol]
 path = /std/gfx/experimental/GfxError/why
 start_line = 557
 end_line = 587
-content_hash = 641155650eddac08
+content_hash = c3d7110e7cfa96b
 
 [symbol]
 path = /std/gfx/experimental/GfxError/status
 start_line = 589
 end_line = 592
-content_hash = bae5710f8b23138d
+content_hash = 415d3655d8d5f3aa
 
 [symbol]
 path = /std/gfx/experimental/GfxError/result
 start_line = 594
 end_line = 597
-content_hash = a91f326f7d9feffb
+content_hash = 5ca2d5825a21d900
 
 [symbol]
 path = /std/gfx/experimental/windowCreateFailed
 start_line = 600
 end_line = 603
-content_hash = ce071203d6012938
+content_hash = 8830b147c9774dbd
 
 [symbol]
 path = /std/gfx/experimental/deviceCreateFailed
 start_line = 605
 end_line = 608
-content_hash = e49bff735202eb47
+content_hash = 6f8bb87d9f88b10a
 
 [symbol]
 path = /std/gfx/experimental/swapchainCreateFailed
 start_line = 610
 end_line = 613
-content_hash = 894bb8670d8fa266
+content_hash = 3736e2dfd534f4f9
 
 [symbol]
 path = /std/gfx/experimental/meshCreateFailed
 start_line = 615
 end_line = 618
-content_hash = 4ba089dceca395ea
+content_hash = f5f8dc15c0f733b3
 
 [symbol]
 path = /std/gfx/experimental/pipelineCreateFailed
 start_line = 620
 end_line = 623
-content_hash = 517635ccd10806a
+content_hash = 138b9360355643e3
 
 [symbol]
 path = /std/gfx/experimental/materialCreateFailed
 start_line = 625
 end_line = 628
-content_hash = 8f904327867f77e4
+content_hash = a3d39f784b7eb6e1
 
 [symbol]
 path = /std/gfx/experimental/frameAcquireFailed
 start_line = 630
 end_line = 633
-content_hash = b8f7b51f2b1e1c9d
+content_hash = 86067e13021af204
 
 [symbol]
 path = /std/gfx/experimental/queueSubmitFailed
 start_line = 635
 end_line = 638
-content_hash = 7fc5a2daf0bbe6a4
+content_hash = 91ce883b059542f7
 
 [symbol]
 path = /std/gfx/experimental/framePresentFailed
 start_line = 640
 end_line = 643
-content_hash = 794c93f46a60641c
+content_hash = 7c3f3e990bf73679
