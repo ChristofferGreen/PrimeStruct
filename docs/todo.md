@@ -538,9 +538,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred until the owner chooses; a backend leaf needs a machine that can build and run it.
 
-- [ ] TODO-6239: Shortcut text is parsed once, for every backend
+- [~] TODO-6239: Shortcut text is parsed once, for every backend
   - owner: ai
   - status: ready
+  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-shortcuts
