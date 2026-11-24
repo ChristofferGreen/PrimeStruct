@@ -135,7 +135,7 @@ of sync with them.
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
-| TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile | deferred | wasm-bytes-host |
+| TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile | ready | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -538,9 +538,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
-- [ ] TODO-6227: Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile
+- [~] TODO-6227: Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lib-shapes (worktree-agent-ab62d8f1159536de2), 2026-11-24
   - created_at: 2026-11-24
   - phase: Backend parity (found with TODO-6179)
   - parallel_track: wasm-bytes-host
