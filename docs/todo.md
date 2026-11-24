@@ -556,9 +556,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
-- [ ] TODO-6226: Wasm refuses `LoadStringLength` of a runtime string
+- [~] TODO-6226: Wasm refuses `LoadStringLength` of a runtime string
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: wasm-len (worktree-agent-a12fa5df80cd9e813), 2026-11-24
   - created_at: 2026-11-24
   - phase: Backend parity (found with TODO-6179)
   - parallel_track: wasm-bytes-host
