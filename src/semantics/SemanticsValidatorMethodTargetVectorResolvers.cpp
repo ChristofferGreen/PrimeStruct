@@ -752,8 +752,8 @@ bool SemanticsValidator::resolveCollectionVectorMetadataMethodTarget(
     const std::unordered_map<std::string, BindingInfo> &locals, std::string &resolvedOut,
     bool &isBuiltinOut) {
   auto isCollectionVectorMetadataMethodName = [](std::string_view name) {
-    return name == "field_count" || name == "field_capacity" ||
-           name == "set_field_count" || name == "set_field_capacity";
+    return name == "field_count" || name == "field_capacity" || name == "set_field_count" ||
+           name == "set_field_capacity" || name == "owns_storage";
   };
   if (!isCollectionVectorMetadataMethodName(normalizedMethodName)) {
     return false;

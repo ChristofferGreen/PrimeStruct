@@ -166,13 +166,13 @@ TEST_CASE("an empty vector literal owns its storage") {
   program.source = R"(
 import /std/collections/*
 
-// The storage flag is private to the vector module: read it from a definition in it.
+// The storage flag is private to the vector module: ask it from a definition in it.
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<bool>]
+      [public return<bool> effects(none)]
       ownsStorageProbe([Vector<i32>] values) {
-        return(values.ownsData)
+        return(values.owns_storage())
       }
     }
   }

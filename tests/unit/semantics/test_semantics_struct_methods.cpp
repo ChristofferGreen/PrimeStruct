@@ -722,4 +722,46 @@ main() {
                 error);
 }
 
+TEST_CASE("a private method of Vector resolves on a Vector parameter inside the vector module") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<bool> effects(none)]
+      ownsStorageProbe([Vector<i32>] values) {
+        return(values.owns_storage())
+      }
+    }
+  }
+}
+
+[effects(io_out heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] items{vector<i32>()}
+  print_line(/std/collections/vector/ownsStorageProbe(items))
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a private method of Vector is refused outside the vector module") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(io_out heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] items{vector<i32>()}
+  print_line(items.owns_storage())
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(error.find("private") != std::string::npos, error);
+}
+
 TEST_SUITE_END();

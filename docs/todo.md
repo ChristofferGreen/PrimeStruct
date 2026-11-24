@@ -131,7 +131,6 @@ of sync with them.
 | TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
-| TODO-6241 | A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage` | ready | method-call-resolution |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -303,21 +302,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
-
-- [~] TODO-6241: A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage`
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Frontend and diagnostics (found with TODO-6197)
-  - parallel_track: method-call-resolution
-  - scope: `values.owns_storage()` on a `[Vector<i32>] values` parameter (or `[Vector<T> mut]`, generic or not) of a definition written under `/std/collections/vector` is `unknown call target: owns_storage` with or without `[private]` on the method, while `values.field_count()` on the same parameter resolves, and `items.owns_storage()` from `main` resolves (and is `is private` now). The method exists in the struct body (stdlib/std/collections/vector.prime), so the method lookup for a `Vector` receiver inside the namespace skips it; the resolvers for `Vector` receivers (src/semantics/SemanticsValidatorMethodTargetVectorResolvers.cpp and the lowerer's list of internal Vector methods in src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp) name the count and capacity helpers only. The program matrix probe of the storage flag reads the private field `ownsData` from such a definition instead.
-  - acceptance:
-    - the program below compiles and prints 1 then 0 on the VM, optexe and native, with a semantics case and a program-matrix case
-    - full release gate green
-  - stop_rule: the method lookup of a `Vector` receiver; no change to which methods are private.
-  - repro: `import /std/collections/*  namespace std { namespace collections { namespace vector { [public return<bool>] ownsStorageProbe([Vector<i32>] values) { return(values.owns_storage()) } } } }  [effects(io_out heap_alloc) return<int>] main() { [Vector<i32> mut] items{vector<i32>()}  print_line(/std/collections/vector/ownsStorageProbe(items))  return(0i32) }` with `primec --emit=vm -I stdlib` is `unknown call target: owns_storage`.
-
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai

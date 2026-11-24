@@ -2634,6 +2634,7 @@ are left unarchived.
 | TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6235 | `Request.cookie(name)` reads the `Cookie` header | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6240 | `primec --emit=ir` lowers for the VM target | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6241 | A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6242 | `effects(none)` declares a definition without effects | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6243 | Annotate the effects of the collections stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6244 | Annotate the effects of the text, math and tuple stdlib | [2026-11.md](todo_archive/2026-11.md) | - |

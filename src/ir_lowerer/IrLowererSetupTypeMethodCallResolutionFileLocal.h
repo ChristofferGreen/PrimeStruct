@@ -222,8 +222,8 @@ inline bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &tar
 
 inline bool isCollectionVectorMetadataMethodPath(const std::string &methodPath) {
   const std::string leaf = extractMethodLeafName(methodPath);
-  return leaf == "field_count" || leaf == "field_capacity" ||
-         leaf == "set_field_count" || leaf == "set_field_capacity";
+  return leaf == "field_count" || leaf == "field_capacity" || leaf == "set_field_count" ||
+         leaf == "set_field_capacity" || leaf == "owns_storage";
 }
 
 inline bool isCollectionVectorOwnerPath(const std::string &path) {

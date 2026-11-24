@@ -198,10 +198,9 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   };
   auto isCollectionVectorMetadataMethodName = [&]() {
-    return normalizedMethodName == "field_count" ||
-           normalizedMethodName == "field_capacity" ||
+    return normalizedMethodName == "field_count" || normalizedMethodName == "field_capacity" ||
            normalizedMethodName == "set_field_count" ||
-           normalizedMethodName == "set_field_capacity";
+           normalizedMethodName == "set_field_capacity" || normalizedMethodName == "owns_storage";
   };
   auto findExperimentalVectorMetadataDefinition =
       [&](const std::string &candidate) -> const Definition * {
