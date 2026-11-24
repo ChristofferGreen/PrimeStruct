@@ -596,6 +596,58 @@ bool emitTypedInstruction(const IrInstruction &inst,
     // `__pstext_stat(which) -> u64`: statistic 8 is the number of live slot allocations of the heap; 0 to 7 count the
     // blocks of the string heap, which a Wasm module does not have, so they read 0; any other number is the VM's
     // unknown-statistic fault (a trap here).
+    const NativeTextHost textKind = inst.imm < runtime.textHostKinds.size()
+                                        ? runtime.textHostKinds[static_cast<size_t>(inst.imm)]
+                                        : NativeTextHost::NotText;
+    WasmTextHelper textHelper = WasmTextHelper::Alloc;
+    bool isTextCall = true;
+    switch (textKind) {
+    case NativeTextHost::Alloc:
+      textHelper = WasmTextHelper::Alloc;
+      break;
+    case NativeTextHost::TryAlloc:
+      textHelper = WasmTextHelper::TryAlloc;
+      break;
+    case NativeTextHost::Free:
+      textHelper = WasmTextHelper::Free;
+      break;
+    case NativeTextHost::Capacity:
+      textHelper = WasmTextHelper::Capacity;
+      break;
+    case NativeTextHost::Length:
+      textHelper = WasmTextHelper::Length;
+      break;
+    case NativeTextHost::Usable:
+      textHelper = WasmTextHelper::Usable;
+      break;
+    default:
+      isTextCall = false;
+      break;
+    }
+    if (isTextCall && runtime.hasText) {
+      // The string heap functions (WasmEmitterTextHeap.cpp): one address or size operand, a result of the import's kind
+      // (the helper answers an i64; a 32-bit kind wraps it).
+      if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+        return false;
+      }
+      out.push_back(0x10); // call
+      appendU32Leb(runtime.textFunction[static_cast<size_t>(textHelper)], out);
+      popTypes(localLayout, 1);
+      const IrHostValueKind returnKind = runtime.textHostReturns[static_cast<size_t>(inst.imm)];
+      if (textHelper == WasmTextHelper::Free) {
+        if (returnKind != IrHostValueKind::Void) {
+          out.push_back(WasmOpI64Const);
+          appendS64Leb(0, out);
+          pushType(localLayout, WasmTypeI64);
+        }
+      } else if (returnKind == IrHostValueKind::I32 || returnKind == IrHostValueKind::Bool) {
+        out.push_back(WasmOpI32WrapI64);
+        pushType(localLayout, WasmTypeI32);
+      } else {
+        pushType(localLayout, WasmTypeI64);
+      }
+      return true;
+    }
     if (inst.imm >= runtime.statHostImports.size() ||
         !runtime.statHostImports[static_cast<size_t>(inst.imm)]) {
       error =

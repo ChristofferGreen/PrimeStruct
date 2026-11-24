@@ -7,6 +7,7 @@
 #include "test_ir_runtime_programs.h"
 #include "test_ir_vm_run.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
@@ -978,6 +979,435 @@ TEST_CASE("the browser profile has byte regions and traps on a bad byte address"
       mainOf({"PushI64 4", "HeapAllocBytes", "PushI64 4", "AddI64", "LoadU8", "ReturnI64"}),
       "browser_byte_trap",
       true);
+  REQUIRE_MESSAGE(trap.built, trap.buildError);
+  CHECK(trap.out == "trap\n");
+}
+
+// ---- the string heap (`__pstext_alloc` and its relatives) ----
+//
+// The string heap of a Wasm module (src/wasm_emitter/WasmEmitterTextHeap.cpp) is a port of the VM's `VmTextHeap`: the same
+// size classes, chunks, block addresses (which carry the generation of the chunk's byte region), reuse, and fault texts.
+
+namespace {
+
+constexpr int TextAlloc = 0;
+constexpr int TextFree = 1;
+constexpr int TextCapacity = 2;
+constexpr int TextLength = 3;
+constexpr int TextUsable = 4;
+constexpr int TextTryAlloc = 5;
+constexpr int TextStat = 6;
+
+// The module with the string heap functions imported as host functions 0 to 6 (`TextAlloc` and the others above).
+primec::IrModule withText(primec::IrModule module) {
+  const auto add = [&](const char *name, primec::IrHostValueKind returnKind) {
+    primec::IrHostImport import;
+    import.name = std::string("std/text/") + name;
+    import.parameters = {primec::IrHostValueKind::U64};
+    import.returnKind = returnKind;
+    module.hostImports.push_back(import);
+  };
+  add("__pstext_alloc", primec::IrHostValueKind::U64);
+  add("__pstext_free", primec::IrHostValueKind::Void);
+  add("__pstext_capacity", primec::IrHostValueKind::U64);
+  add("__pstext_length", primec::IrHostValueKind::I32);
+  add("__pstext_usable", primec::IrHostValueKind::U64);
+  add("__pstext_try_alloc", primec::IrHostValueKind::U64);
+  add("__pstext_stat", primec::IrHostValueKind::U64);
+  return module;
+}
+
+std::string callText(int function) {
+  return "CallHost " + std::to_string(function);
+}
+
+// The block size `VmTextHeap::blockSizeFor` gives a text of `size` bytes (a size of at most 64 KiB).
+uint64_t textBlockSize(uint64_t size) {
+  if (size <= 32) {
+    return 32;
+  }
+  uint64_t base = 32;
+  while (base * 2 < size) {
+    base *= 2;
+  }
+  const uint64_t step = base / 4;
+  return base + (size - base + step - 1) / step * step;
+}
+
+// Prints the statistics the string heap answers: chunks, bytes in use, bytes free and allocations.
+void printTextStats(std::vector<std::string> &code) {
+  for (const int which : {0, 1, 2, 5}) {
+    code.push_back("PushI64 " + std::to_string(which));
+    code.push_back(callText(TextStat));
+    code.push_back("PrintU64 1");
+  }
+}
+
+// Prints the address, the capacity, the usable bytes and the length of the block in variable `variable`.
+void printTextBlock(std::vector<std::string> &code, int variable) {
+  const std::string load = "LoadLocal " + std::to_string(variable);
+  code.push_back(load);
+  code.push_back("PrintU64 1");
+  code.push_back(load);
+  code.push_back(callText(TextCapacity));
+  code.push_back("PrintU64 1");
+  code.push_back(load);
+  code.push_back(callText(TextUsable));
+  code.push_back("PrintU64 1");
+  code.push_back(load);
+  code.push_back(callText(TextLength));
+  code.push_back("PrintI32 1");
+}
+
+void allocText(std::vector<std::string> &code,
+               int variable,
+               uint64_t size,
+               int function = TextAlloc) {
+  code.push_back("PushI64 " + std::to_string(size));
+  code.push_back(callText(function));
+  code.push_back("StoreLocal " + std::to_string(variable));
+}
+
+void freeText(std::vector<std::string> &code, int variable) {
+  code.push_back("LoadLocal " + std::to_string(variable));
+  code.push_back(callText(TextFree));
+}
+
+// A random sequence of allocations (sizes from one byte to 64 KiB), text writes, frees and queries over ten address
+// variables, printing the address, capacity, usable bytes and length of every new block and the statistics, so size
+// classes, chunk growth, the lowest chunk with a free block, the retained free chunk and its return, and the zeroing
+// of freed blocks all show in the output.
+primec::IrModule randomTextProgram(uint64_t seed, int steps) {
+  uint64_t state = seed * 2685821657736338717ull + 1442695040888963407ull;
+  const auto next = [&](uint64_t bound) {
+    state ^= state << 13;
+    state ^= state >> 7;
+    state ^= state << 17;
+    return state % bound;
+  };
+  constexpr int Variables = 10;
+  std::vector<uint64_t> size(Variables, 0);
+  std::vector<std::string> code;
+  for (int step = 0; step < steps; ++step) {
+    const int variable = static_cast<int>(next(Variables));
+    const uint64_t choice = next(12);
+    const bool live = size[static_cast<size_t>(variable)] != 0;
+    if (choice < 6 || !live) {
+      if (live) {
+        freeText(code, variable);
+        size[static_cast<size_t>(variable)] = 0;
+      }
+      const uint64_t kind = next(100);
+      uint64_t request = 1 + next(120);
+      if (kind >= 55 && kind < 85) {
+        request = 121 + next(2880);
+      } else if (kind >= 85 && kind < 97) {
+        request = 3001 + next(17000);
+      } else if (kind >= 97) {
+        request = 20001 + next(45535);
+      }
+      allocText(code, variable, request, next(4) == 0 ? TextTryAlloc : TextAlloc);
+      size[static_cast<size_t>(variable)] = request;
+      printTextBlock(code, variable);
+      // a prefix of text: the length is what was written (a block holds `blockSize - 1` bytes of text)
+      const uint64_t written = std::min<uint64_t>(next(6), textBlockSize(request) - 1);
+      for (uint64_t i = 0; i < written; ++i) {
+        storeByte(code, "LoadLocal " + std::to_string(variable), i, 65 + i);
+      }
+      code.push_back("LoadLocal " + std::to_string(variable));
+      code.push_back(callText(TextLength));
+      code.push_back("PrintI32 1");
+    } else if (choice < 10) {
+      freeText(code, variable);
+      size[static_cast<size_t>(variable)] = 0;
+      // a freed block still has its size, and no text
+      code.push_back("PushI64 0");
+      code.push_back("StoreLocal " + std::to_string(variable));
+    } else {
+      printTextBlock(code, variable);
+    }
+    if (step % 5 == 4) {
+      printTextStats(code);
+    }
+  }
+  for (int variable = 0; variable < Variables; ++variable) {
+    if (size[static_cast<size_t>(variable)] != 0) {
+      freeText(code, variable);
+    }
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  return withText(mainOf(code));
+}
+
+} // namespace
+
+TEST_CASE("wasm string heap blocks have the VM's addresses, capacities and lengths") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Blocks of every size class edge, written, queried and freed, then the same sizes again (reuse of the freed blocks
+  // in the VM's order), with the statistics after each phase.
+  std::vector<std::string> code;
+  const std::vector<uint64_t> sizes = {1,    31,   32,   33,    40,    41,    64,    65,    80,
+                                       81,   100,  128,  129,   200,   256,   1000,  4095,  4096,
+                                       4097, 5000, 9999, 16384, 20000, 32768, 40000, 65535, 65536};
+  int variable = 0;
+  for (const uint64_t size : sizes) {
+    allocText(code, variable, size);
+    printTextBlock(code, variable);
+    storeByte(code, "LoadLocal " + std::to_string(variable), 0, 72);
+    storeByte(code, "LoadLocal " + std::to_string(variable), 1, 105);
+    code.push_back("LoadLocal " + std::to_string(variable));
+    code.push_back(callText(TextLength));
+    code.push_back("PrintI32 1");
+    ++variable;
+  }
+  printTextStats(code);
+  for (int i = 0; i < variable; i += 2) {
+    freeText(code, i);
+  }
+  printTextStats(code);
+  for (int i = 0; i < variable; i += 2) {
+    allocText(code, i, sizes[static_cast<size_t>(i)]);
+    printTextBlock(code, i);
+  }
+  for (int i = 0; i < variable; ++i) {
+    freeText(code, i);
+  }
+  printTextStats(code);
+  allocText(code, 0, 0);
+  code.push_back("LoadLocal 0");
+  code.push_back("PrintU64 1");
+  code.push_back("PushI64 0");
+  code.push_back(callText(TextCapacity));
+  code.push_back("PrintU64 1");
+  code.push_back("PushI64 0");
+  code.push_back(callText(TextLength));
+  code.push_back("PrintI32 1");
+  code.push_back("PushI64 0");
+  code.push_back(callText(TextUsable));
+  code.push_back("PrintU64 1");
+  code.push_back("PushI64 0");
+  code.push_back(callText(TextFree));
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_classes");
+}
+
+// The block counts of the chunks a size class takes one after the other (the VM's rule: the first chunk is 4096 bytes
+// or one block, each further one as large as the class holds, up to 256 KiB), up to and including the second chunk of
+// 256 KiB.
+std::vector<uint64_t> textChunkPlan(uint64_t blockBytes) {
+  std::vector<uint64_t> plan;
+  uint64_t held = 0;
+  int full = 0;
+  while (full < 2) {
+    const uint64_t bytes =
+        std::min<uint64_t>(std::max<uint64_t>(std::max<uint64_t>(4096, blockBytes), held), 262144);
+    plan.push_back(bytes / blockBytes);
+    held += bytes;
+    full += bytes == 262144 ? 1 : 0;
+  }
+  return plan;
+}
+
+TEST_CASE("wasm string heap chunks grow, fill, empty and return like the VM's") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 600 blocks of 100 bytes (class 112: chunks of 4096, 4096, 8192, ... bytes), every fifth address printed; every
+  // second block freed (the lowest chunk with a free block is reused first), 150 blocks made again, the rest freed in
+  // reverse order (chunks that are all free: one kept per class, the others returned), then blocks of three other
+  // classes, and the heap emptied again; the statistics after each phase show the chunk counts and bytes.
+  std::vector<std::string> code;
+  constexpr int Blocks = 600;
+  for (int i = 0; i < Blocks; ++i) {
+    allocText(code, i, 100);
+    if (i % 5 == 0) {
+      code.push_back("LoadLocal " + std::to_string(i));
+      code.push_back("PrintU64 1");
+    }
+  }
+  printTextStats(code);
+  for (int i = 1; i < Blocks; i += 2) {
+    freeText(code, i);
+  }
+  printTextStats(code);
+  for (int i = 1; i < Blocks; i += 4) {
+    allocText(code, i, 100);
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PrintU64 1");
+  }
+  printTextStats(code);
+  for (int i = Blocks - 1; i >= 0; --i) {
+    if (i % 2 == 0 || i % 4 == 1) {
+      freeText(code, i);
+    }
+    if (i % 100 == 0) {
+      printTextStats(code);
+    }
+  }
+  for (int round = 0; round < 3; ++round) {
+    for (int i = 0; i < 40; ++i) {
+      allocText(code, i, 100 + 700 * static_cast<uint64_t>(round));
+      code.push_back("LoadLocal " + std::to_string(i));
+      code.push_back("PrintU64 1");
+    }
+    printTextStats(code);
+    for (int i = 0; i < 40; ++i) {
+      freeText(code, i);
+    }
+    printTextStats(code);
+  }
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_chunks");
+}
+
+TEST_CASE("wasm string heap returns the largest free chunks past the limit of free chunks") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Six size classes each take chunks up to a second chunk of 256 KiB and free the blocks of that last chunk: a class
+  // keeps one chunk that is all free, so the chunks kept together pass 1 MiB and the largest go back first; blocks made
+  // afterwards show which chunks the heap kept (an address that reuses a kept chunk has its generation), and the
+  // statistics show the bytes.
+  std::vector<std::string> code;
+  int variable = 0;
+  std::vector<std::pair<int, int>>
+      lastChunk; // first variable and count of the blocks of each class's last chunk
+  const std::vector<uint64_t> sizes = {4000, 8000, 16000, 32000, 60000, 2000};
+  for (const uint64_t size : sizes) {
+    const std::vector<uint64_t> plan = textChunkPlan(textBlockSize(size));
+    uint64_t total = 0;
+    for (const uint64_t blocks : plan) {
+      total += blocks;
+    }
+    const int first = variable;
+    for (uint64_t i = 0; i < total; ++i) {
+      allocText(code, variable++, size);
+    }
+    code.push_back("LoadLocal " + std::to_string(variable - 1));
+    code.push_back("PrintU64 1");
+    lastChunk.push_back(
+        {static_cast<int>(first + total - plan.back()), static_cast<int>(plan.back())});
+    printTextStats(code);
+  }
+  for (const auto &[first, count] : lastChunk) {
+    for (int i = first; i < first + count; ++i) {
+      freeText(code, i);
+    }
+    printTextStats(code);
+  }
+  for (const uint64_t size : sizes) {
+    allocText(code, 0, size);
+    code.push_back("LoadLocal 0");
+    code.push_back("PrintU64 1");
+    freeText(code, 0);
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_free_chunks");
+}
+
+TEST_CASE("wasm string heap addresses of random alloc, free and query sequences match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  for (const uint64_t seed : {1ull, 2ull, 3ull, 4ull, 5ull, 6ull, 7ull, 8ull}) {
+    expectMatchesVm(randomTextProgram(seed, 160), "text_random_" + std::to_string(seed));
+  }
+}
+
+TEST_CASE("wasm string heap faults carry the VM's message and exit code 3") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const std::vector<std::string> alloc100 = {"PushI64 100", callText(TextAlloc), "StoreLocal 0"};
+  const auto withTail = [&](std::vector<std::string> tail) {
+    std::vector<std::string> code = alloc100;
+    code.insert(code.end(), tail.begin(), tail.end());
+    code.push_back("ReturnVoid");
+    return withText(mainOf(code));
+  };
+  const std::string load = "LoadLocal 0";
+  const std::vector<std::pair<std::string, primec::IrModule>> faults = {
+      {"free_twice", withTail({load, callText(TextFree), load, callText(TextFree)})},
+      {"free_inside_a_block", withTail({load, "PushI64 8", "AddI64", callText(TextFree)})},
+      {"free_a_slot_address", withTail({"PushI64 4096", callText(TextFree)})},
+      {"free_a_byte_address_of_no_chunk",
+       withTail({"PushI64 -9223231299358420480", callText(TextFree)})},
+      {"free_a_byte_region", withTail({"PushI64 8", "HeapAllocBytes", callText(TextFree)})},
+      {"free_a_stale_generation",
+       withTail({load,
+                 callText(TextFree),
+                 "PushI64 8",
+                 "HeapAllocBytes",
+                 "Pop",
+                 load,
+                 callText(TextFree)})},
+      {"capacity_inside_a_block",
+       withTail({load, "PushI64 3", "AddI64", callText(TextCapacity), "Pop"})},
+      {"capacity_of_a_slot_address", withTail({"PushI64 4096", callText(TextCapacity), "Pop"})},
+      {"capacity_of_a_returned_chunk",
+       withTail({load,
+                 callText(TextFree),
+                 "PushI64 20000",
+                 callText(TextAlloc),
+                 "Pop",
+                 load,
+                 callText(TextCapacity),
+                 "Pop"})},
+      {"length_inside_a_block",
+       withTail({load, "PushI64 1", "AddI64", callText(TextLength), "Pop"})},
+      {"usable_of_a_byte_region",
+       withTail({"PushI64 8", "HeapAllocBytes", callText(TextUsable), "Pop"})},
+  };
+  for (const auto &[name, module] : faults) {
+    CAPTURE(name);
+    expectMatchesVm(module, "text_fault_" + name);
+  }
+}
+
+TEST_CASE("the browser profile has a string heap and traps on a bad block address") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const NodeRun value = runOnNode(withText(mainOf({"PushI64 100",
+                                                   callText(TextAlloc),
+                                                   "StoreLocal 0",
+                                                   "LoadLocal 0",
+                                                   "PushI64 65",
+                                                   "StoreU8",
+                                                   "Pop",
+                                                   "LoadLocal 0",
+                                                   callText(TextLength),
+                                                   "LoadLocal 0",
+                                                   callText(TextCapacity),
+                                                   "AddI64",
+                                                   "ReturnI64"})),
+                                  "browser_text",
+                                  true);
+  REQUIRE_MESSAGE(value.built, value.buildError);
+  // length 1 (one byte written), capacity 112
+  CHECK(value.out == "113\n");
+  const NodeRun trap = runOnNode(withText(mainOf({"PushI64 100",
+                                                  callText(TextAlloc),
+                                                  "PushI64 8",
+                                                  "AddI64",
+                                                  callText(TextFree),
+                                                  "ReturnVoid"})),
+                                 "browser_text_trap",
+                                 true);
   REQUIRE_MESSAGE(trap.built, trap.buildError);
   CHECK(trap.out == "trap\n");
 }

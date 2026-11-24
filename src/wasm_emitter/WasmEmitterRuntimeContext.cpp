@@ -82,6 +82,12 @@ uint32_t layoutHeapRegions(uint32_t start, WasmRuntimeContext &runtime) {
     runtime.byteGens = place(WasmByteInitialGranules * 2u);
     runtime.byteRuns = place((WasmByteInitialGranules / 2u + 1u) * 8u);
   }
+  if (runtime.hasText) {
+    runtime.textClasses = place(WasmTextClassCount * 16u);
+    runtime.textRecords = place(WasmTextInitialRecords * WasmTextRecordBytes);
+    runtime.textMeta = place(WasmTextMetaBytes);
+    runtime.textMetaHeads = place(WasmTextMetaBuckets * 4u);
+  }
   return start;
 }
 
@@ -97,6 +103,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
   runtime.hasLocalMemory = wasmModuleUsesLocalMemory(module);
   for (const IrHostImport &hostImport : module.hostImports) {
     runtime.statHostImports.push_back(nativeTextHost(hostImport.name) == NativeTextHost::Stat);
+    runtime.textHostKinds.push_back(nativeTextHost(hostImport.name));
+    runtime.textHostReturns.push_back(hostImport.returnKind);
+  }
+  runtime.hasText = wasmModuleCallsTextHeap(module);
+  if (runtime.hasText) {
+    runtime.hasHeap = true;
+    runtime.hasBytes = true;
   }
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
@@ -262,6 +275,16 @@ bool buildWasiRuntimeContext(const IrModule &module,
       static const std::string OverflowMessage = "VM error: VM heap allocation overflow\n";
       static const std::string ByteMessage = "VM error: invalid byte address in IR: ";
       static const std::string SlotByteMessage = "VM error: slot access to a byte region in IR: ";
+      if (runtime.hasText) {
+        static const std::string TextFreeMessage = "VM error: invalid string heap free address: ";
+        static const std::string TextTwiceMessage = "VM error: string heap block freed twice: ";
+        static const std::string TextAddressMessage = "VM error: invalid string heap address: ";
+        appendMessage(TextFreeMessage, runtime.textFreeMessageAddr, runtime.textFreeMessageLength);
+        appendMessage(
+            TextTwiceMessage, runtime.textTwiceMessageAddr, runtime.textTwiceMessageLength);
+        appendMessage(
+            TextAddressMessage, runtime.textAddressMessageAddr, runtime.textAddressMessageLength);
+      }
       if (runtime.hasBytes) {
         appendMessage(ByteMessage, runtime.byteMessageAddr, runtime.byteMessageLength);
         appendMessage(SlotByteMessage, runtime.slotByteMessageAddr, runtime.slotByteMessageLength);

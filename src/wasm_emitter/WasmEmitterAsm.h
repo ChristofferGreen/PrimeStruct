@@ -168,6 +168,24 @@ public:
   void i32GeU() {
     op(0x4f);
   }
+  void i32Mul() {
+    op(0x6c);
+  }
+  void i32DivU() {
+    op(0x6e);
+  }
+  void i32RemU() {
+    op(0x70);
+  }
+  void i32Xor() {
+    op(0x73);
+  }
+  void i64Xor() {
+    op(0x85);
+  }
+  void i64LeU() {
+    op(0x58);
+  }
   void i64Eqz() {
     op(0x50);
   }

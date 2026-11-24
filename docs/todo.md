@@ -134,8 +134,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
-| TODO-6178 | The Wasm string heap, part 1: size classes, chunks and free lists with the allocation functions | ready | wasm-bytes-host |
-| TODO-6224 | The Wasm string heap, part 2: large blocks and `__pstext_set_limit` | blocked | wasm-bytes-host |
+| TODO-6224 | The Wasm string heap, part 2: large blocks and `__pstext_set_limit` | ready | wasm-bytes-host |
 | TODO-6225 | The Wasm string heap, part 3: string arenas and statistics 0 to 7 | blocked | wasm-bytes-host |
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
@@ -178,7 +177,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, then TODO-6222 (a public `[sum]` in the interface and a sum result, option A) and TODO-6223 (packed `Result` and error struct results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors), TODO-6178 (Wasm string heap, claimed), TODO-6224 (Wasm large text blocks and limit), TODO-6225 (Wasm string arenas and statistics), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, claimed), TODO-6224 (Wasm large text blocks and limit), TODO-6225 (Wasm string arenas and statistics), TODO-6179 (Wasm `__pstext_*` byte operations), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -534,25 +533,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
-- [~] TODO-6178: The Wasm string heap, part 1: size classes, chunks and free lists with `__pstext_alloc`, `__pstext_try_alloc`, `__pstext_free`, `__pstext_capacity`, `__pstext_length` and `__pstext_usable`
-  - owner: ai
-  - status: ready
-  - claimed_by: wasm-text-heap (worktree-agent-a3555c5b77128cfe3), 2026-11-24
-  - created_at: 2026-11-22
-  - phase: Backend parity (split from TODO-6150)
-  - parallel_track: wasm-bytes-host
-  - scope: `String` allocates its blocks with `__pstext_alloc`, `__pstext_try_alloc`, `__pstext_free`, `__pstext_capacity`, `__pstext_length` and `__pstext_usable`, which the VM answers with `VmTextHeap` (include/primec/runtime/VmTextHeapBody.inc). A Wasm module refuses them (`host calls are only supported by the vm target, ...; the string heap (`String`) is not available on wasm`). Port the small-block half of `VmTextHeap` over the byte regions (src/wasm_emitter/WasmEmitterByteHeap.{h,cpp}): the 45 size classes (`blockSizeFor`), the chunks (a byte region each, the first of a class 4 KiB, doubling to 256 KiB), the per-chunk free list (most recently freed block first, a freed block zeroed, a block freed twice is the VM's fault), the lowest chunk with a free block, the one fully free chunk a class keeps and the 1 MiB limit of the free chunks, so that block addresses (generations and offsets), capacities, reuse and the fault texts (`invalid string heap free address: N`, `string heap block freed twice: N`, `invalid string heap address: N`) equal the VM's. The chunk records, the free lists and the class table live in a metadata area of their own (not in byte regions: a region would change the generation and the offset of every later block). Statistics 0, 1, 2 and 5 of `__pstext_stat` read the heap's counters.
-  - acceptance:
-    - node-against-VM IR tests of block addresses, capacities, lengths, reuse, chunk growth and return, and the three fault texts, over fixed and random alloc/free sequences of blocks up to 64 KiB, pass; `__pstext_try_alloc` equals `__pstext_alloc` while there is no limit
-    - the validator accepts the six functions for the Wasm targets and still refuses the others
-    - full release gate green
-  - stop_rule: blocks up to `LargeThreshold` (64 KiB) with no limit and no arena; larger blocks and `__pstext_set_limit` are TODO-6224 and arenas and statistics 3, 4, 6 and 7 are TODO-6225; the byte operations are TODO-6179 and float text is TODO-6180. A request above 64 KiB traps until TODO-6224.
-  - implementation_notes: 2026-11-24: helpers over the byte regions in src/wasm_emitter/WasmEmitterTextHeap.{h,cpp}; the chunk free list is an intrusive list over a per-chunk `u32` state array (0 allocated, bit 31 plus next index plus one when free) in the metadata area, so the double free check is O(1) and the pop order equals the VM's vector.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
 - [ ] TODO-6224: The Wasm string heap, part 2: large blocks and `__pstext_set_limit`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6178
+  - status: ready
   - created_at: 2026-11-24
   - phase: Backend parity (split from TODO-6178)
   - parallel_track: wasm-bytes-host

@@ -29,7 +29,8 @@ TEST_CASE("ir validator wasm target accepts heap_alloc effects and capabilities"
   CHECK_ERROR_CONTAINS(error, "unsupported capability mask bits for wasm target");
 }
 
-TEST_CASE("ir validator wasm targets answer only the string heap statistic host function") {
+TEST_CASE("ir validator wasm targets answer only the string heap statistic and allocation host "
+          "functions") {
   const auto moduleCalling = [](const std::string &importName) {
     primec::IrModule module;
     module.entryIndex = 0;
@@ -51,7 +52,7 @@ TEST_CASE("ir validator wasm targets answer only the string heap statistic host 
        {primec::IrValidationTarget::Wasm, primec::IrValidationTarget::WasmBrowser}) {
     CHECK(primec::validateIrModule(moduleCalling("std/text/__pstext_stat"), target, error));
     CHECK(error.empty());
-    CHECK_FALSE(primec::validateIrModule(moduleCalling("std/text/__pstext_alloc"), target, error));
+    CHECK_FALSE(primec::validateIrModule(moduleCalling("std/text/__pstext_move"), target, error));
     CHECK_ERROR_CONTAINS(error, "host calls are only supported by the vm target");
     CHECK_ERROR_CONTAINS(error, "the string heap (`String`) is not available on wasm");
     CHECK_FALSE(primec::validateIrModule(moduleCalling("host_add"), target, error));

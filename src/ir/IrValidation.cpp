@@ -352,12 +352,18 @@ bool validateFunction(const IrModule &module,
                                "string heap function is not available on the native backend yet",
                                error);
       }
-      // A Wasm module answers the string heap statistics itself (`__pstext_stat`: the live slot allocations, and no
-      // text blocks, since Wasm has no string heap); every other host function is refused.
+      // A Wasm module answers the string heap statistics and the block allocation functions itself (`__pstext_stat`,
+      // `__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`, `_length` and `_usable`); every other host function is
+      // refused.
+      const NativeTextHost wasmTextKind =
+          isWasmTarget(target) && inst.imm < module.hostImports.size()
+              ? nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)
+              : NativeTextHost::NotText;
       const bool wasmStat =
-          isWasmTarget(target) && inst.imm < module.hostImports.size() &&
-          nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name) ==
-              NativeTextHost::Stat;
+          wasmTextKind == NativeTextHost::Stat || wasmTextKind == NativeTextHost::Alloc ||
+          wasmTextKind == NativeTextHost::TryAlloc || wasmTextKind == NativeTextHost::Free ||
+          wasmTextKind == NativeTextHost::Capacity || wasmTextKind == NativeTextHost::Length ||
+          wasmTextKind == NativeTextHost::Usable;
       if (!nativeHost && !wasmStat && target != IrValidationTarget::Vm &&
           target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
           target != IrValidationTarget::OptCpp) {

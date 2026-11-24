@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "primec/ir/Ir.h"
+#include "primec/ir/IrNativeTextHost.h"
 
 namespace primec {
 
@@ -224,6 +225,57 @@ inline constexpr uint32_t WasmGlobalByteGensBase = 19;
 inline constexpr uint32_t WasmGlobalByteRunsBase = 20;
 inline constexpr uint32_t WasmGlobalCountWithBytes = 21;
 
+// The string heap (WasmEmitterTextHeap.cpp), present when the module calls a `__pstext_*` allocation function: the
+// VM's `VmTextHeap` over the byte regions. Its chunk records, free lists and class table live in a metadata area of the
+// linear memory of their own (a byte region would take a generation and an offset the VM's blocks do not). The helper
+// functions follow the byte helpers.
+enum class WasmTextHelper : uint8_t {
+  MetaAlloc,
+  MetaFree,
+  ClassIndex,
+  BlockSizeFor,
+  Find,
+  NewRecord,
+  RescanLow,
+  ReturnChunk,
+  ReturnFreeChunk,
+  LargestFreeChunk,
+  Alloc,
+  TryAlloc,
+  Free,
+  Capacity,
+  Length,
+  Usable,
+  Stat,
+};
+inline constexpr size_t WasmTextHelperCount = 17;
+// The mutable `i32` globals after `WasmGlobalCountWithBytes`: the next free byte and the end of the metadata area, the
+// chunk record table (base address, room and records in use), the bytes of text blocks handed out, the number of
+// allocations (low and high word), the bytes of chunk regions held, of those the bytes of chunks whose blocks are all
+// free, the chunk regions taken, and 1 while `__pstext_try_alloc` runs (a byte region that cannot be made returns 0
+// instead of the VM's overflow fault).
+inline constexpr uint32_t WasmGlobalTextMetaBump = 21;
+inline constexpr uint32_t WasmGlobalTextMetaEnd = 22;
+inline constexpr uint32_t WasmGlobalTextRecords = 23;
+inline constexpr uint32_t WasmGlobalTextRecordCap = 24;
+inline constexpr uint32_t WasmGlobalTextRecordHigh = 25;
+inline constexpr uint32_t WasmGlobalTextInUse = 26;
+inline constexpr uint32_t WasmGlobalTextAllocLow = 27;
+inline constexpr uint32_t WasmGlobalTextAllocHigh = 28;
+inline constexpr uint32_t WasmGlobalTextChunkBytes = 29;
+inline constexpr uint32_t WasmGlobalTextFreeChunkBytes = 30;
+inline constexpr uint32_t WasmGlobalTextChunkRegions = 31;
+inline constexpr uint32_t WasmGlobalTextTry = 32;
+inline constexpr uint32_t WasmGlobalCountWithText = 33;
+// The metadata area the module starts with (the records start with room for 64 of 64 bytes; both are powers of two so
+// a table that grew can return its old block to the metadata allocator), the class table (45 size classes of 16 bytes)
+// and the free list heads of the metadata allocator (one per power of two from 16 bytes).
+inline constexpr uint32_t WasmTextMetaBytes = 32768;
+inline constexpr uint32_t WasmTextInitialRecords = 64;
+inline constexpr uint32_t WasmTextRecordBytes = 64;
+inline constexpr uint32_t WasmTextClassCount = 45;
+inline constexpr uint32_t WasmTextMetaBuckets = 28;
+
 struct WasmRuntimeContext {
   bool enabled = false;
   bool hasArgvOps = false;
@@ -283,6 +335,23 @@ struct WasmRuntimeContext {
   uint32_t byteGens = 0;
   uint32_t byteRuns = 0;
   uint32_t byteFunction[WasmByteHelperCount] = {};
+  // The module calls a string heap allocation function (`__pstext_alloc` and its relatives): the string heap helpers
+  // over the byte regions, their messages and the static tables (the globals hold the dynamic ones).
+  bool hasText = false;
+  uint32_t textFunction[WasmTextHelperCount] = {};
+  uint32_t textClasses = 0;
+  uint32_t textRecords = 0;
+  uint32_t textMeta = 0;
+  uint32_t textMetaHeads = 0;
+  uint32_t textFreeMessageAddr = 0;
+  uint32_t textFreeMessageLength = 0;
+  uint32_t textTwiceMessageAddr = 0;
+  uint32_t textTwiceMessageLength = 0;
+  uint32_t textAddressMessageAddr = 0;
+  uint32_t textAddressMessageLength = 0;
+  // Per host import of the module: the string heap function it names and what it returns.
+  std::vector<NativeTextHost> textHostKinds;
+  std::vector<IrHostValueKind> textHostReturns;
   uint32_t byteMessageAddr = 0;
   uint32_t byteMessageLength = 0;
   uint32_t slotByteMessageAddr = 0;
@@ -646,6 +715,9 @@ bool consumeWasmCondition(WasmLocalLayout &localLayout,
 // Local addresses and indirect memory access (WasmEmitterMemory.cpp).
 bool wasmFunctionTakesLocalAddress(const IrFunction &function);
 bool wasmModuleUsesLocalMemory(const IrModule &module);
+// True when the module calls a string heap allocation function (`__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`,
+// `_length` or `_usable`): it then has the byte regions and the string heap helpers.
+bool wasmModuleCallsTextHeap(const IrModule &module);
 // The type byte of the output for a type of the emitter (`WasmTypeSlot` is an `i64`, an unknown type an `i32`).
 uint8_t wasmValueTypeByte(uint8_t type);
 void emitWasmSlotConversion(uint8_t from, uint8_t to, std::vector<uint8_t> &out);

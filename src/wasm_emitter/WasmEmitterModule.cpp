@@ -3,6 +3,7 @@
 #include "WasmEmitterByteHeap.h"
 #include "WasmEmitterHeap.h"
 #include "WasmEmitterInternal.h"
+#include "WasmEmitterTextHeap.h"
 
 #include <cctype>
 #include <iterator>
@@ -182,6 +183,11 @@ bool WasmEmitter::emitModule(const IrModule &input,
       runtime.byteFunction[helper] = nextHelperFunction++;
     }
   }
+  if (runtime.hasText) {
+    for (size_t helper = 0; helper < WasmTextHelperCount; ++helper) {
+      runtime.textFunction[helper] = nextHelperFunction++;
+    }
+  }
 
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
   std::vector<std::vector<uint8_t>> irLocalTypes;
@@ -267,6 +273,13 @@ bool WasmEmitter::emitModule(const IrModule &input,
       codeBodies.push_back(buildWasmByteHelperBody(static_cast<WasmByteHelper>(helper), runtime));
     }
   }
+  if (runtime.hasText) {
+    for (size_t helper = 0; helper < WasmTextHelperCount; ++helper) {
+      functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+      types.push_back(wasmTextHelperType(static_cast<WasmTextHelper>(helper)));
+      codeBodies.push_back(buildWasmTextHelperBody(static_cast<WasmTextHelper>(helper), runtime));
+    }
+  }
 
   std::vector<WasmExport> exports;
   if (module.entryIndex >= 0) {
@@ -333,6 +346,10 @@ bool WasmEmitter::emitModule(const IrModule &input,
                                  runtime.byteCounts,
                                  runtime.byteGens,
                                  runtime.byteRuns});
+    }
+    if (runtime.hasText) {
+      const std::vector<uint32_t> textInitials = wasmTextGlobalInitials(runtime);
+      heapGlobalInitials.insert(heapGlobalInitials.end(), textInitials.begin(), textInitials.end());
     }
   }
   if (runtime.hasLocalMemory &&

@@ -44,6 +44,14 @@ void entryAddress(WasmAsm &a, uint32_t indexLocal, int32_t shift, uint32_t baseG
 }
 
 void emitFault(WasmAsm &a, const WasmRuntimeContext &runtime, int32_t kind) {
+  if (runtime.hasText && kind == FaultOverflow) {
+    // `__pstext_try_alloc` answers a region it cannot make with 0.
+    a.globalGet(WasmGlobalTextTry);
+    a.ifThen();
+    a.i64Const(0);
+    a.ret();
+    a.end();
+  }
   a.i32Const(kind);
   a.i64Const(0);
   a.call(fn(runtime, WasmHeapHelper::Fault));

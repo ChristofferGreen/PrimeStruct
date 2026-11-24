@@ -136,7 +136,32 @@ bool wasmFunctionTakesLocalAddress(const IrFunction &function) {
   return false;
 }
 
+bool wasmModuleCallsTextHeap(const IrModule &module) {
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &inst : function.instructions) {
+      if (inst.op != IrOpcode::CallHost || inst.imm >= module.hostImports.size()) {
+        continue;
+      }
+      switch (nativeTextHost(module.hostImports[static_cast<size_t>(inst.imm)].name)) {
+      case NativeTextHost::Alloc:
+      case NativeTextHost::TryAlloc:
+      case NativeTextHost::Free:
+      case NativeTextHost::Capacity:
+      case NativeTextHost::Length:
+      case NativeTextHost::Usable:
+        return true;
+      default:
+        break;
+      }
+    }
+  }
+  return false;
+}
+
 bool wasmModuleUsesLocalMemory(const IrModule &module) {
+  if (wasmModuleCallsTextHeap(module)) {
+    return true;
+  }
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::AddressOfLocal || inst.op == IrOpcode::LoadIndirect ||
@@ -673,8 +698,8 @@ WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime) {
 }
 
 // The statistic of the string heap functions a Wasm module answers (`__pstext_stat`): 8 is the number of live slot
-// allocations of the heap, 0 to 7 count the blocks of the string heap, which a Wasm module does not have (they read 0,
-// as in a VM program that never allocates text), and any other number is the VM's unknown-statistic fault, a trap.
+// allocations of the heap, 0 to 7 count the blocks of the string heap (the counters of its helpers when the module calls
+// the allocation functions, else 0 as in a VM program that never allocates text), and any other number is the VM's unknown-statistic fault, a trap.
 void emitWasmStringHeapStat(uint32_t whichLocal,
                             const WasmRuntimeContext &runtime,
                             std::vector<uint8_t> &out) {
@@ -703,7 +728,15 @@ void emitWasmStringHeapStat(uint32_t whichLocal,
   out.push_back(WasmBlockTypeVoid);
   out.push_back(WasmOpUnreachable);
   out.push_back(WasmOpEnd);
-  appendI64Const(0, out);
+  if (runtime.hasText) {
+    // The counters of the string heap (WasmEmitterTextHeap.cpp).
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(whichLocal, out);
+    out.push_back(0x10); // call
+    appendU32Leb(runtime.textFunction[static_cast<size_t>(WasmTextHelper::Stat)], out);
+  } else {
+    appendI64Const(0, out);
+  }
   out.push_back(WasmOpEnd);
 }
 
