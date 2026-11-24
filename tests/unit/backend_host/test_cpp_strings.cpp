@@ -405,6 +405,11 @@ TEST_CASE("std/os randomHex is refused by the wasm and native backends") {
   CHECK(wasm.status != 0);
   CHECK(wasm.diagnostics.find("host calls are only supported by the vm target") !=
         std::string::npos);
+  // The refusal names the host function the program calls.
+  CHECK(wasm.diagnostics.find(
+            "host calls are only supported by the vm target, the C++ targets and serialized "
+            "bytecode: CallHost of ps_os_random_bytes (a host function call)") !=
+        std::string::npos);
   const Compiled native = compileWith("native", "os_random_refused", source);
   CHECK(native.status != 0);
   CHECK_FALSE(native.diagnostics.empty());

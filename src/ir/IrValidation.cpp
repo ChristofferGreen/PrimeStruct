@@ -172,12 +172,18 @@ std::string wasmUnsupportedOpcodeMessage(IrOpcode op, IrValidationTarget target)
 
 // ": AtomicAdd (atomic operations)" after a refusal that names a group of opcodes; the feature is the one the Wasm
 // message gives, so only a Wasm target has it.
-std::string refusedOpcodeSuffix(IrOpcode op, IrValidationTarget target) {
+// `hostName` is the host function a CallHost refusal calls; it follows the opcode name
+// ("CallHost of ps_os_random_bytes").
+std::string
+refusedOpcodeSuffix(IrOpcode op, IrValidationTarget target, const std::string &hostName = "") {
   const IrOpcodeInfo *info = irOpcodeInfo(op);
   if (info == nullptr) {
     return "";
   }
   std::string suffix = std::string(": ") + info->name;
+  if (!hostName.empty()) {
+    suffix += " of " + hostName;
+  }
   if (isWasmTarget(target)) {
     const std::string feature = wasmOpcodeFeature(op);
     if (!feature.empty()) {
@@ -382,7 +388,11 @@ bool validateFunction(const IrModule &module,
             instructionIndex,
             "host calls are only supported by the vm target, the C++ targets "
             "and serialized bytecode" +
-                refusedOpcodeSuffix(inst.op, target) +
+                refusedOpcodeSuffix(inst.op,
+                                    target,
+                                    inst.imm < module.hostImports.size()
+                                        ? module.hostImports[static_cast<size_t>(inst.imm)].name
+                                        : std::string()) +
                 (wasmText ? "; the string heap (`String`) is not available on wasm" : "") +
                 (wasmText && target == IrValidationTarget::WasmBrowser &&
                          (wasmTextKind == NativeTextHost::Literal ||

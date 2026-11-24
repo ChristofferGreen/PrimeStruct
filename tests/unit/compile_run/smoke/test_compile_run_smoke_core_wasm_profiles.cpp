@@ -645,10 +645,10 @@ main() {
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("\"version\":1") != std::string::npos);
   CHECK(diagnostics.find("host calls are only supported by the vm target") != std::string::npos);
-  // The opcode and the features that need it are named.
+  // The opcode, the host function and the features that need it are named.
   CHECK(diagnostics.find(
             "host calls are only supported by the vm target, the C++ targets and serialized "
-            "bytecode: CallHost (a host function call)") != std::string::npos);
+            "bytecode: CallHost of host_add (a host function call)") != std::string::npos);
   CHECK(diagnostics.find("\"notes\":[\"backend: wasm\",\"stage: ir-validate\"]") !=
         std::string::npos);
   CHECK(diagnostics.find("Usage: primec") == std::string::npos);

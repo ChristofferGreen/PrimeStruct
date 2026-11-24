@@ -124,7 +124,6 @@ of sync with them.
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | ready | host-call-refusal-name |
 | TODO-6251 | A stdlib `Vector` record parameter keeps the collections helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
@@ -453,22 +452,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the key equivalent of named keys in the AppKit backend; no change to the parser or to the headless backend.
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
   - notes: deferred: small, not on the critical path of an open goal.
-
-- [~] TODO-6257: The refusal of a host call on wasm and the other targets without host calls does not name the host function
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
-  - parallel_track: host-call-refusal-name
-  - scope: A program that calls a host function (`/std/os` `randomHex`, `monotonicMs`, ...) on `--emit=wasm` is refused with `invalid IR instruction 245 in /main: host calls are only supported by the vm target, the C++ targets and serialized bytecode: CallHost (a host function call)`: it names the opcode, not the function the program called. `src/ir/IrValidation.cpp` has the import index (`inst.imm`) and `module.hostImports[...].name`; add the name (`... : CallHost of ps_os_random_bytes (a host function call)`) for the targets that refuse host calls, and keep the tests that match the text (`tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_profiles.cpp`, `..._wasm_limits.cpp`) matching its start.
-  - acceptance:
-    - the diagnostic names the host function for wasm, wasm-browser and the other refusing targets, with a test of the full text for a `/std/os` program
-    - full release gate green
-  - stop_rule: the text of this one diagnostic.
-  - repro: `primec --emit=wasm tests/fixtures/host_calls/os_random.prime -o x.wasm` prints the diagnostic quoted in the scope.
-  - notes: deferred: small, not on the critical path of an open goal.
-
 
 - [ ] TODO-6251: A stdlib `Vector` record parameter keeps the collections helpers inline
   - owner: ai
