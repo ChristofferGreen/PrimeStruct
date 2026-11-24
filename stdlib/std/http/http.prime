@@ -715,6 +715,51 @@ namespace http {
       this.header("Location", location)
     }
 
+    // Adds `Set-Cookie: name=value; Path=/; HttpOnly; SameSite=Lax`, the attributes of a session cookie that the page's
+    // scripts cannot read and other sites cannot send along. Returns false and adds no header when `name` is empty or
+    // has a byte outside the cookie-octet set of RFC 6265 (controls, space, `"`, `,`, `;`, `\`, `=`, non-ASCII) or
+    // when `value` has one, so a handler cannot split the header or add an attribute of its own.
+    [mut return<bool> effects(heap_alloc)]
+    setCookie([StringView] name, [StringView] value) {
+      return(this.addCookie(name, value, false, 0i32))
+    }
+
+    // `setCookie(name, value)` with `; Max-Age=<maxAgeSeconds>`: the browser drops the cookie after that many seconds.
+    // A negative `maxAgeSeconds` is refused like a bad byte.
+    [mut return<bool> effects(heap_alloc)]
+    setCookie([StringView] name, [StringView] value, [i32] maxAgeSeconds) {
+      return(this.addCookie(name, value, true, maxAgeSeconds))
+    }
+
+    // Tells the browser to drop the cookie `name`: the same cookie with an empty value and `Max-Age=0`. False, and no
+    // header, for a `name` that `setCookie` refuses.
+    [mut return<bool> effects(heap_alloc)]
+    clearCookie([StringView] name) {
+      return(this.addCookie(name, "", true, 0i32))
+    }
+
+    // The header of `setCookie` and `clearCookie`.
+    [private mut return<bool> effects(heap_alloc)]
+    addCookie([StringView] name, [StringView] value, [bool] withMaxAge, [i32] maxAgeSeconds) {
+      if(name.empty() || !cookie_octets_ok(name) || name.indexOfByte(61u8) >= 0i32 || !cookie_octets_ok(value)) {
+        return(false)
+      }
+      if(withMaxAge && maxAgeSeconds < 0i32) {
+        return(false)
+      }
+      [String mut] line{String{}}
+      line.appendBytes(name.data, name.count())
+      line.append("=")
+      line.appendBytes(value.data, value.count())
+      line.append("; Path=/; HttpOnly; SameSite=Lax")
+      if(withMaxAge) {
+        line.append("; Max-Age=")
+        line.appendI64(convert<i64>(maxAgeSeconds))
+      }
+      this.header("Set-Cookie", line.view())
+      return(true)
+    }
+
     // Back to an empty 200 response, keeping the buffers for the next request.
     [mut effects(none)]
     clear() {
@@ -754,6 +799,21 @@ namespace http {
       }
       return(out)
     }
+  }
+
+  // Whether every byte of `text` is a cookie-octet of RFC 6265 (section 4.1.1): visible ASCII other than `"`, `,`, `;`
+  // and `\`. An empty text is fine.
+  [return<bool> effects(none)]
+  cookie_octets_ok([StringView] text) {
+    [i32 mut] index{0i32}
+    while(index < text.count()) {
+      [u8] byte{text.byteAt(index)}
+      if(byte <= 32u8 || byte >= 127u8 || byte == 34u8 || byte == 44u8 || byte == 59u8 || byte == 92u8) {
+        return(false)
+      }
+      index = index + 1i32
+    }
+    return(true)
   }
 
   // Whether a response with `code` has no body.

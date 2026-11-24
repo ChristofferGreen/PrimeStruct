@@ -117,7 +117,6 @@ of sync with them.
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
-| TODO-6236 | `Response.setCookie` and `clearCookie` write `Set-Cookie` | ready | web-set-cookie |
 | TODO-6237 | `/std/os` `randomHex(byteCount)` from the operating system's entropy | ready | os-random |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
@@ -167,7 +166,6 @@ of sync with them.
 - TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
-- TODO-6236 (web-set-cookie): `Response.setCookie` and `clearCookie`
 - TODO-6237 (os-random): `/std/os` `randomHex(byteCount)`
 
 ### Immediate Next 10
@@ -176,8 +174,7 @@ of sync with them.
 2. TODO-6233
 3. TODO-6240
 4. TODO-6232
-5. TODO-6236
-6. TODO-6237
+5. TODO-6237
 
 ### Priority Lanes
 
@@ -193,7 +190,7 @@ of sync with them.
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`), TODO-6236 (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`) (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 - Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
@@ -365,20 +362,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision recorded here and the leaf re-sliced (store with expiry and tests on the scripted clock; the handler API; the `todo_web` example gets a per-session counter; docs/spec/stdlib-reference.md and docs/WebAppsPlan.md updated)
     - full release gate green
   - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
-
-- [~] TODO-6236: `Response.setCookie` and `clearCookie` write `Set-Cookie`
-  - owner: ai
-  - status: ready
-  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
-  - parallel_track: web-set-cookie
-  - scope: Add to `Response` (`stdlib/std/http/http.prime`) `setCookie(name, value)` and `setCookie(name, value, maxAgeSeconds)` that add `Set-Cookie: name=value; Path=/; HttpOnly; SameSite=Lax` (plus `; Max-Age=N` for the second form) through `header()`, and `clearCookie(name)` that adds the same cookie with an empty value and `Max-Age=0`. Name and value bytes outside the RFC 6265 cookie-octet set (controls, space, `"`, `,`, `;`, `\`, non-ASCII) are refused by dropping the header and returning `false` from the call (the methods return `bool`), so a handler cannot split the header block; `header()` already drops CR and LF. A `Secure` attribute is a later, separate parameter (TODO-5806 decides).
-  - acceptance:
-    - a fixture beside tests/fixtures/http/response_bytes.prime checking the serialized bytes of each form, a refused value (`;` and a space inside), and two cookies in one response (two header lines)
-    - docs/spec/stdlib-reference.md lists the methods and the attributes they always write
-    - full release gate green
-  - stop_rule: writing the header only; no session logic.
 
 - [ ] TODO-6237: `/std/os` `randomHex(byteCount)` from the operating system's entropy
   - owner: ai

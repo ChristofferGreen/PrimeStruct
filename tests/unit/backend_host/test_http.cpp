@@ -234,6 +234,20 @@ TEST_CASE("responses serialize byte for byte through optexe") {
   CHECK_MESSAGE(failed == 0, "response_bytes case " << failed << " failed (tests/fixtures/http/response_bytes.prime)");
 }
 
+TEST_CASE("set-cookie headers are byte for byte on the VM") {
+  const int failed = runOnVm("response_cookies");
+  CHECK_MESSAGE(failed == 0,
+                "response_cookies case " << failed
+                                         << " failed (tests/fixtures/http/response_cookies.prime)");
+}
+
+TEST_CASE("set-cookie headers are byte for byte through optexe") {
+  const int failed = runThroughOptexe("response_cookies");
+  CHECK_MESSAGE(failed == 0,
+                "response_cookies case " << failed
+                                         << " failed (tests/fixtures/http/response_cookies.prime)");
+}
+
 TEST_CASE("an html page with a form and its response are byte for byte on the VM") {
   const int failed = runOnVm("html_page");
   CHECK_MESSAGE(failed == 0,

@@ -717,7 +717,7 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   value of the first pair `name=value` whose name equals `name` (case-sensitive), or an empty view; `hasCookie(name)`
   tells an absent cookie from one with an empty value. Pairs are separated by `;` with white space around them; a pair
   without `=` or with an empty name is skipped, a value in double quotes loses them, and nothing is percent-decoded. The
-  views point into the request, so nothing allocates. Writing a cookie is `Response.setCookie` (TODO-6236).
+  views point into the request, so nothing allocates. Writing a cookie is `Response.setCookie` (below).
 
   Query and form parameters are read the same way, by scanning:
   - `queryParam(name) -> String` gives the decoded value of the first parameter of `query` whose decoded name is
@@ -756,6 +756,14 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   - `redirect(location)` answers 303 See Other with a `Location` header, the reply to a form POST that the browser
     follows with a GET (post/redirect/get); `redirect(status, location)` takes another status, such as 301, 302, 307
     or 308. Both empty the body, so the response serializes with `Content-Length: 0`;
+  - `setCookie(name, value) -> bool` adds `Set-Cookie: name=value; Path=/; HttpOnly; SameSite=Lax`, and
+    `setCookie(name, value, maxAgeSeconds) -> bool` adds `; Max-Age=<n>` after those attributes. `clearCookie(name) ->
+    bool` adds the same cookie with an empty value and `Max-Age=0`, which tells the browser to drop it. These
+    attributes are always written (there is no `Secure` yet: it needs a way to know the connection is TLS). A call
+    returns false and adds no header when the name is empty or holds `=`, when the name or the value holds a byte
+    outside the cookie-octet set of RFC 6265 (controls, space, `"`, `,`, `;`, `\`, non-ASCII), or when
+    `maxAgeSeconds` is negative; a handler therefore cannot add an attribute or split the header block. Each call
+    adds a header line, so two cookies are two `Set-Cookie` lines;
   - `clear()` makes it an empty 200 again and keeps its buffers.
 
   `serialize()` gives the bytes to send: the status line with its reason phrase (`reasonPhrase(code)`, empty for codes
