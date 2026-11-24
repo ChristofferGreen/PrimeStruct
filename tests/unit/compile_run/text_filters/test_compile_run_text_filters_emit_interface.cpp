@@ -175,6 +175,16 @@ TEST_CASE("emit-interface prints inferred return types resolved") {
         std::string::npos);
 }
 
+TEST_CASE("emit-interface keeps effects(none) of a function") {
+  const InterfaceRun run =
+      runEmit("emit_interface_none",
+              "[public effects(none) return<i32>]\ndouble_it([i32] a) {\n  return(a + a)\n}\n",
+              "interface");
+  CHECK(run.exitCode == 0);
+  CHECK(run.out == "[public, effects(none), return<i32>, imported(emit_interface_none)] "
+                   "double_it([i32] a) {}\n");
+}
+
 TEST_CASE("emit-interface printed twice is byte-identical") {
   const InterfaceRun first = runEmit("emit_interface_twice", ModuleSource, "interface");
   const InterfaceRun second = runEmit("emit_interface_twice", ModuleSource, "interface");

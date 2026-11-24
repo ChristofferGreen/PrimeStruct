@@ -5,6 +5,7 @@
 #include "primec/frontend/StringLiteral.h"
 #include "primec/support/TransformRegistry.h"
 
+#include <algorithm>
 #include <sstream>
 #include <utility>
 
@@ -359,6 +360,17 @@ bool Parser::parseTransformList(std::vector<Transform> &out) {
     }
     if (!expect(TokenKind::RParen, "expected ')'")) {
       return false;
+    }
+    if (transform.name == "effects") {
+      // `effects(none)` declares that a definition has no effects: the transform stays, its set is
+      // empty.
+      const auto &args = transform.arguments;
+      if (std::find(args.begin(), args.end(), "none") != args.end()) {
+        if (transform.arguments.size() != 1) {
+          return fail("effects(none) cannot be combined with other effects");
+        }
+        transform.arguments.clear();
+      }
     }
     return true;
   };

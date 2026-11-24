@@ -275,7 +275,7 @@ addPrimeStructManagedDoctestSuite(
 addPrimeStructManagedDoctestSuite(
   "primestruct.semantics.calls_flow.effects"
   ${PrimeStructManagedSemanticsCommon}
-  TOTAL_CASES 148
+  TOTAL_CASES 151
   SHARD_PREFIX "calls_flow_effects"
 )
 

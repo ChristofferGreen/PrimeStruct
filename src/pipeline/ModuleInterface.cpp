@@ -112,6 +112,9 @@ std::string parametersText(const Definition &definition) {
 }
 
 std::string effectsWord(const std::vector<std::string> &effects) {
+  if (effects.empty()) {
+    return "effects(none)";
+  }
   std::string out = "effects(";
   for (size_t i = 0; i < effects.size(); ++i) {
     out += i == 0 ? "" : ", ";
@@ -133,17 +136,19 @@ bool functionHeader(const Definition &definition,
       words.push_back(flag);
     }
   }
-  // The effects a caller must have are the ones the definition declares: a function that declares none needs nothing
-  // of its caller, whatever its body does under the default effects.
+  // The declared effects are printed, `effects(none)` for the empty set. A function that declares nothing has the
+  // default set, which the reader of the interface applies again.
   std::vector<std::string> declared;
+  bool declaresEffects = false;
   for (const Transform &transform : definition.transforms) {
     if (transform.name == "effects" && transform.templateArgs.empty()) {
+      declaresEffects = true;
       declared.insert(declared.end(), transform.arguments.begin(), transform.arguments.end());
     }
   }
   std::sort(declared.begin(), declared.end());
   declared.erase(std::unique(declared.begin(), declared.end()), declared.end());
-  if (!declared.empty()) {
+  if (declaresEffects) {
     words.push_back(effectsWord(declared));
   }
   if (const Transform *capabilities = findTransform(definition.transforms, "capabilities")) {

@@ -66,6 +66,45 @@ main() {
   CHECK(error.find("transform argument list cannot be empty") != std::string::npos);
 }
 
+TEST_CASE("effects(none) parses to an empty effects transform") {
+  const std::string source = R"(
+[effects(none) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK(parser.parse(program, error));
+  CHECK(error.empty());
+  REQUIRE(program.definitions.size() == 1);
+  const primec::Transform *effects = nullptr;
+  for (const auto &transform : program.definitions[0].transforms) {
+    if (transform.name == "effects") {
+      effects = &transform;
+    }
+  }
+  REQUIRE(effects != nullptr);
+  CHECK(effects->arguments.empty());
+}
+
+TEST_CASE("effects(none) cannot be combined with other effects") {
+  const std::string source = R"(
+[effects(none, io_out) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("effects(none) cannot be combined with other effects") != std::string::npos);
+}
+
 TEST_CASE("transform arguments reject punctuation token") {
   const std::string source = R"(
 [tag(.)]

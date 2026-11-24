@@ -2630,6 +2630,7 @@ are left unarchived.
 | TODO-6228 | A real call that returns a sum built from a unit variant copies slots past the callee's frame | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6229 | Wasm `PrintArgv` prints the NUL terminator of the argument | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6235 | `Request.cookie(name)` reads the `Cookie` header | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6242 | `effects(none)` declares a definition without effects | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

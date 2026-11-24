@@ -113,7 +113,6 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | ready | effects-transitive |
-| TODO-6242 | `effects(none)` declares a definition without effects | ready | effects-transitive |
 | TODO-6243 | Annotate the effects of the collections stdlib | blocked | effects-transitive |
 | TODO-6244 | Annotate the effects of the text, math and tuple stdlib | blocked | effects-transitive |
 | TODO-6245 | Annotate the effects of the gfx, image, scene and UI stdlib | blocked | effects-transitive |
@@ -175,7 +174,6 @@ of sync with them.
 - TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
-- TODO-6242 (effects-transitive): `effects(none)` declares a definition without effects
 - TODO-6236 (web-set-cookie): `Response.setCookie` and `clearCookie`
 - TODO-6237 (os-random): `/std/os` `randomHex(byteCount)`
 
@@ -185,16 +183,15 @@ of sync with them.
 2. TODO-6233
 3. TODO-6240
 4. TODO-6232
-5. TODO-6242
-6. TODO-6236
-7. TODO-6237
+5. TODO-6236
+6. TODO-6237
 
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now TODO-6234 (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
-- Effects (docs/spec/language-core.md, Effects): TODO-5688 (tracker, option B decided 2026-11-24: an unannotated callee declares the default set) with TODO-6242 (`effects(none)`), then TODO-6243 to TODO-6246 (stdlib annotation sweeps), TODO-6247 (the rule), TODO-6248 (examples, cases, docs), in this order; deferred TODO-6231 (inference, optional)
+- Effects (docs/spec/language-core.md, Effects): TODO-5688 (tracker, option B decided 2026-11-24: an unannotated callee declares the default set) with  (`effects(none)`), then TODO-6243 to TODO-6246 (stdlib annotation sweeps), TODO-6247 (the rule), TODO-6248 (examples, cases, docs), in this order; deferred TODO-6231 (inference, optional)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
@@ -288,20 +285,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
   - options_considered: A (infer), B (default set, chosen), C (warning only); see the decision.
-
-- [~] TODO-6242: `effects(none)` declares a definition without effects
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-effects-b (worktree agent-a6a9b8fba2caa9623), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Effects
-  - parallel_track: effects-transitive
-  - scope: Option B of TODO-5688 needs a way to write "no effects" (`[effects()]` is a parse error: `transform argument list cannot be empty`). Chosen spelling: `[effects(none)]`, the word the command line already uses (`--default-effects=none`, `--allow-effects none`). The parser turns it into an `effects` transform with an empty argument list (so every consumer that reads the declared set sees the empty set and the declaration still counts as present, which is what stops the default set from applying); `none` combined with another effect is a parse error. Rejected: (a) allow `[effects()]`: the empty-list error is shared by every transform and exists to catch a forgotten argument, and an empty set reads as "unspecified"; (b) a flag transform `[pure]`: a second word for the same family, and `pure` already suggests more than the absence of effects (no reads of globals); (c) `[effects(-)]` or `[no_effects]`: new tokens with no precedent. Documented in docs/spec/language-core.md (Effects) with a minimal example; the module interface prints `effects(none)` for a definition that declares it, so a library keeps the declaration.
-  - acceptance:
-    - parse, semantics and IR/backends accept `effects(none)` on definitions and executions (an `effects(none)` definition that prints is rejected with `requires io_out effect`), `effects(none, io_out)` is rejected, the interface text round-trips it; positive and negative tests
-    - full release gate green
-  - stop_rule: the spelling only; the call-site rule is TODO-6247.
-  - repro: `[effects(), return<int>] main() { return(1i32) }` fails with `transform argument list cannot be empty`.
 
 - [ ] TODO-6243: Annotate the effects of the collections stdlib
   - owner: ai

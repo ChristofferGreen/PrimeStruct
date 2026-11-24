@@ -365,6 +365,23 @@ module {
   ```
   `primevm reach.prime --allow-effects heap_alloc,file_read` fails with `definition /reach declares effect net_io,
   outside the allowed effects: heap_alloc,file_read`; with `--allow-effects heap_alloc,net_io` it runs and exits 7.
+- **No effects:** `[effects(none)]` declares a definition or execution that has no effects at all: the transform is
+  present with an empty set, so the default set does not apply and the body is checked against nothing (`print_line`,
+  allocation, file access and every other effect is a diagnostic). `none` is the word the command line already uses
+  (`--default-effects=none`, `--allow-effects none`); it cannot be combined with other effects (`effects(none, io_out)`
+  is a parse error) and `[effects()]` stays a parse error, because every transform rejects an empty argument list. The
+  module interface (`--emit=interface`) prints it as `effects(none)`.
+  ```
+  [effects(none), return<i32>]
+  twice([i32] value) {
+    return(value + value)
+  }
+
+  [effects(heap_alloc), return<i32>]
+  main() {
+    return(twice(21i32))
+  }
+  ```
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.

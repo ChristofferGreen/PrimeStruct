@@ -281,4 +281,47 @@ main() {
   CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
+TEST_CASE("effects(none) declares a definition without effects") {
+  const std::string source = R"(
+[effects(none), return<int>]
+twice([int] value) {
+  return(value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(twice(2i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("effects(none) definition cannot print") {
+  const std::string source = R"(
+[effects(none), return<int>]
+main() {
+  print_line("hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line requires io_out effect") != std::string::npos);
+}
+
+TEST_CASE("effects(none) execution cannot print") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [effects(none)] print_line("hi"utf8)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("print_line requires io_out effect") != std::string::npos);
+}
+
 TEST_SUITE_END();
