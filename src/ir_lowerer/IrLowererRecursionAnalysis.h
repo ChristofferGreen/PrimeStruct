@@ -97,18 +97,15 @@ struct RealCallShapeContext {
   // value is made, copied or destroyed; one reached again from inside its own expansion (a `Function` whose closure
   // holds a `Function`) is lowered as a function instead, since an expansion into itself never ends.
   bool allowLifecycleHelpers = false;
-  // A `string` or `Pointer<T>` result, one slot returned as a scalar is: only for the functions of a library (a root
-  // it writes and a function it declares to a consumer). A program's own call whose result is a string stays inline,
-  // since a string a call returns cannot be indexed on every target.
+  // A `string`, `Pointer<T>` or builtin packed `Result<T, E>` result, one slot returned as a scalar is, and a stdlib
+  // error struct (`ContainerError`, `ImageError`, `GfxError`) returned in a block of the caller like any struct: only for
+  // the functions of a library (a root it writes and a function it declares to a consumer). A program's own call
+  // whose result is a string stays inline, since a string a call returns cannot be indexed on every target.
   bool allowSlotResults = false;
   // A sum parameter (borrowed, `mut` or by `Reference` or `Pointer`) is refused, as the eligibility pass refuses it
   // since it leaves sums out of its struct names: a library root and a function a library declares must agree with
   // it, and the refusal names the rule.
   bool refuseSumParameters = false;
-  // The packed builtin `Result<T, E>` and a stdlib error struct (`FileError`, `ImageError`, `ContainerError`,
-  // `GfxError`, returned as a frame address) are refused for the same functions, each with its rule named: a real
-  // call returns neither of them. A sum result is not refused: it returns in a heap block like a struct.
-  bool refusePackedResults = false;
   // A builtin `vector<T>` result that is always a `mut` vector local the function built: the callee copies the record
   // into a block of its caller, as a spawned task does. For the functions of a library; any other vector result
   // keeps the refusal that names the rule.
@@ -169,15 +166,19 @@ bool isSupportedScalarTypeName(const std::string &typeName);
 bool paramHasMutTransform(const Expr &paramExpr);
 std::string extractParameterTypeNameStatic(const Expr &paramExpr);
 // The struct a definition returns by value as a real call: the declared `return<T>` names a struct (not a sum, not a
-// collection record, not a packed error struct), or empty when the result is a scalar, void or not eligible. The
-// callee moves or copies the result into a heap block and the call site moves it into a block of its frame.
+// collection record, not a packed error struct unless `includeErrorStructs`), or empty when the result is a scalar,
+// void or not eligible. The callee moves or copies the result into a heap block and the call site moves it into a
+// block of its frame. A stdlib error struct (`ContainerError`, ...) is a struct a real call returns that way too, for
+// the functions of a library, instead of the scalar that is the address of the callee's frame.
 // The storage struct (the stdlib struct declared with `key_value_type`, specialized for these type arguments) of a
 // builtin key/value collection, or empty when the program holds no such specialization.
 std::string
 builtinMapStoragePath(const std::vector<std::string> &templateArgs,
                       const std::unordered_map<std::string, const Definition *> &definitionsByPath);
-std::string realCallStructReturnPath(const Definition &def,
-                                     const std::unordered_set<std::string> &structNames,
-                                     const std::unordered_map<std::string, const Definition *> &definitionsByPath);
+std::string realCallStructReturnPath(
+    const Definition &def,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath,
+    bool includeErrorStructs = false);
 
 } // namespace primec::ir_lowerer

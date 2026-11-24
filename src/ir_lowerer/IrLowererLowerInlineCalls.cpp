@@ -722,9 +722,9 @@ bool emitInlineDefinitionCallImpl(
       constexpr int32_t VectorRecordSlots = 5;
       int32_t resultSlots = 0;
       if (const std::string resultStructPath =
-              returnInfo.returnsVoid
-                  ? std::string{}
-                  : ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
+              returnInfo.returnsVoid ? std::string{}
+                                     : ir_lowerer::realCallStructReturnPath(
+                                           callee, structNames, setupStage.defMap, true);
           !resultStructPath.empty()) {
         StructSlotLayoutInfo resultLayout;
         if (!resolveStructSlotLayout(resultStructPath, resultLayout) ||

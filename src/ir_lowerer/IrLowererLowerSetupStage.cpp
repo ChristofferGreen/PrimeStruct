@@ -130,7 +130,6 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                                       stateOut.realCallAllowStrings};
     shapeContext.allowSlotResults = true;
     shapeContext.refuseSumParameters = true;
-    shapeContext.refusePackedResults = true;
     shapeContext.allowVectorResults = true;
     shapeContext.narrowCollectionsRoot = true;
     for (const std::string &root : *input.libraryRoots) {
@@ -169,7 +168,6 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
                                         stateOut.realCallAllowStrings};
       shapeContext.allowSlotResults = true;
       shapeContext.refuseSumParameters = true;
-      shapeContext.refusePackedResults = true;
       shapeContext.allowVectorResults = true;
       shapeContext.narrowCollectionsRoot = true;
       for (const std::string &path : importedPaths) {

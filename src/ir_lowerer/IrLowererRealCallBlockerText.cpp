@@ -95,14 +95,6 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
            "stays inline";
   case AddressAbiBlocker::CollectionResult:
     return "its result is a struct of the canonical collections, which a real call does not return";
-  case AddressAbiBlocker::PackedResult:
-    return "its result `" + returnTypeText(def) +
-           "` is a packed `Result`, which a real call does not return: a function with a `Result` "
-           "result stays inline";
-  case AddressAbiBlocker::PackedErrorResult:
-    return "its result `" + returnTypeText(def) +
-           "` is a packed error value, a frame address that a real call does not return: a "
-           "function with an error struct result stays inline";
   case AddressAbiBlocker::VectorResultNotOwned:
     return "its result `" + returnTypeText(def) +
            "` is not always a `mut` vector local the function built, which a real call returns by "
@@ -111,11 +103,9 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
   case AddressAbiBlocker::UnsupportedResult: {
     const std::string result = returnTypeText(def);
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +
-           " is not one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer` or "
-           "a "
-           "struct are; a sum (such as `Result`), a packed error value, a `Reference` and a "
-           "builtin "
-           "`vector<T>` are not";
+           " is not one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer`, a "
+           "struct and, for a function of a library, a sum, a packed `Result` and a `vector<T>` "
+           "are; a `Reference` is not";
   }
   case AddressAbiBlocker::UsesTry:
     return "its body uses `try`";

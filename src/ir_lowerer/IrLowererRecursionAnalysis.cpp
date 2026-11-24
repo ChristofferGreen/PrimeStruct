@@ -382,9 +382,11 @@ std::string builtinMapStoragePath(
   return found;
 }
 
-std::string realCallStructReturnPath(const Definition &def,
-                                     const std::unordered_set<std::string> &structNames,
-                                     const std::unordered_map<std::string, const Definition *> &definitionsByPath) {
+std::string realCallStructReturnPath(
+    const Definition &def,
+    const std::unordered_set<std::string> &structNames,
+    const std::unordered_map<std::string, const Definition *> &definitionsByPath,
+    bool includeErrorStructs) {
   for (const Transform &transform : def.transforms) {
     if (transform.name != "return") {
       continue;
@@ -400,15 +402,16 @@ std::string realCallStructReturnPath(const Definition &def,
         trimTemplateTypeText(returnBase) == "map" && splitTemplateArgs(returnArgText, returnArgs)) {
       return builtinMapStoragePath(returnArgs, definitionsByPath);
     }
-    if (returnType.empty() || returnType.find('<') != std::string::npos || isSupportedScalarTypeName(returnType) ||
-        returnType == "void") {
+    const bool errorStruct = includeErrorStructs && isPackedErrorStructTypeName(returnType);
+    if (returnType.empty() || returnType.find('<') != std::string::npos ||
+        (!errorStruct && isSupportedScalarTypeName(returnType)) || returnType == "void") {
       return {};
     }
     // The callee moves (or copies) the result into a heap block and the call site moves it into its own frame, so a
     // struct with lifecycle helpers returns the same way as a plain one.
     const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
-    if (path.empty() || isPackedErrorStructTypeName(returnType) ||
-        isPackedErrorStructTypeName(path)) {
+    if (path.empty() || (!includeErrorStructs && (isPackedErrorStructTypeName(returnType) ||
+                                                  isPackedErrorStructTypeName(path)))) {
       return {};
     }
     const auto defIt = definitionsByPath.find(path);
@@ -607,13 +610,13 @@ bool hasSlotResultReturn(const Definition &def) {
       continue;
     }
     const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
-    if (returnType == "string") {
+    if (returnType == "string" || isPackedErrorStructTypeName(returnType)) {
       return true;
     }
     std::string base;
     std::string argText;
     return splitTemplateTypeName(returnType, base, argText) &&
-           trimTemplateTypeText(base) == "Pointer";
+           (trimTemplateTypeText(base) == "Pointer" || trimTemplateTypeText(base) == "Result");
   }
   return false;
 }
@@ -654,30 +657,6 @@ bool isSumParameter(const Definition &def,
   }
   return isSumDefinitionPath(resolveStructTypeName(name, def.namespacePrefix, structNames),
                              definitionsByPath);
-}
-
-// The blocker of a result a real call cannot return, for a function of a library: the packed builtin `Result<T, E>`
-// and a stdlib error struct (a scalar that is a frame address). `None` for any other result.
-AddressAbiBlocker unreturnableResultBlocker(const Definition &def,
-                                            const std::unordered_set<std::string> &structNames) {
-  for (const Transform &transform : def.transforms) {
-    if (transform.name != "return" || transform.templateArgs.size() != 1) {
-      continue;
-    }
-    const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(returnType, base, argText)) {
-      return trimTemplateTypeText(base) == "Result" ? AddressAbiBlocker::PackedResult
-                                                    : AddressAbiBlocker::None;
-    }
-    const std::string path = resolveStructTypeName(returnType, def.namespacePrefix, structNames);
-    if (isPackedErrorStructTypeName(returnType) || isPackedErrorStructTypeName(path)) {
-      return AddressAbiBlocker::PackedErrorResult;
-    }
-    return AddressAbiBlocker::None;
-  }
-  return AddressAbiBlocker::None;
 }
 
 AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
@@ -744,16 +723,12 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
       return AddressAbiBlocker::SumParameter;
     }
   }
-  if (context.refusePackedResults) {
-    const AddressAbiBlocker resultBlocker = unreturnableResultBlocker(def, structNames);
-    if (resultBlocker != AddressAbiBlocker::None) {
-      return resultBlocker;
-    }
-  }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
-  const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath);
+  const std::string structResultPath =
+      realCallStructReturnPath(def, structNames, byPath, context.allowSlotResults);
   if (!context.allowCollections &&
-      structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
+      structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 &&
+      !isPackedErrorStructTypeName(structResultPath)) {
     return AddressAbiBlocker::CollectionResult;
   }
   if (context.allowVectorResults && structResultPath.empty() &&

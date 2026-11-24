@@ -241,9 +241,9 @@ slots; a stub entry that lowering needs stands in for `main` and is removed. A r
 argument pack, a `vector<T>` result that is not an owned local, ...) is a diagnostic that names the function and the reason: `public function
 /packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); so is a
 parameter that is a sum, borrowed or by `Reference` or `Pointer` (`parameter `value` is a sum, which a real call does not
-take: a function with a sum parameter stays inline`); so is a result that is the packed builtin `Result<T, E>` or a stdlib
-error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`), each with its rule named (`its result `Result<i32, i32>` is a
-packed `Result`, which a real call does not return: ...`; a library cannot return them yet). A public sum result is a function of
+take: a function with a sum parameter stays inline`); a public function with a packed builtin `Result<T, E>` result is a function of the archive, the value one slot like a scalar,
+and so is one whose result is a stdlib error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`): a struct one is returned in a block
+of the caller's frame like any struct result, so no address of the callee's frame leaves it. A public sum result is a function of
 the archive: the callee fills a block of the caller's frame like a struct result and the caller destroys the payload. A public
 function with a `vector<T>` result is one when every `return` hands back a `mut` vector local it built: the callee copies the
 record into a block of the caller, which owns the vector; any other vector result is refused (`its result `vector<i32>` is not

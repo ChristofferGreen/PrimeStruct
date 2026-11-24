@@ -1,5 +1,6 @@
 #include "IrLowererCollectionRecordShapes.h"
 
+#include "IrLowererPackedErrorTypes.h"
 #include "IrLowererRecursionAnalysis.h"
 
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
@@ -60,8 +61,10 @@ bool isCollectionRecordType(const std::string &name,
   if (isBuiltinCollectionBase(name)) {
     return true;
   }
+  // `ContainerError` lives under the collections root but is a one-field error struct, not a collection record.
   const std::string path = resolveStructTypeName(name, namespacePrefix, structNames);
-  return path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0;
+  return path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 &&
+         !isPackedErrorStructTypeName(path);
 }
 
 } // namespace

@@ -534,6 +534,70 @@ import /std/collections/vector
   print_line(a[4i32] + a[5i32])
   return(a.count() + b.count())
 })"},
+    // The packed builtin `Result` is one slot like a scalar; a stdlib error struct is returned in a block of the caller.
+    {"packed_result",
+     R"(import /std/file/*
+
+[namespace] ui {
+  [public return<Result<i32, i32>>] make_result([i32] x) {
+    return(Result.ok(x))
+  }
+  [public return<Result<i32, FileError>>] make_eof() {
+    return(FileError.result<i32>(FileError.eof()))
+  }
+  [public return<Result<i32, FileError>>] make_fine([i32] x) {
+    return(Result.ok(x))
+  }
+  [public return<FileError>] eof_code() {
+    return(FileError.eof())
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+import /std/file/*
+[return<i32> effects(io_out)] main() {
+  [Result<i32, i32>] a{make_result(3i32)}
+  [Result<i32, FileError>] b{make_eof()}
+  [Result<i32, FileError>] c{make_fine(4i32)}
+  [FileError] code{eof_code()}
+  [i32 mut] total{0i32}
+  if(Result.error(a)) {
+    total = total + 100i32
+  }
+  if(Result.error(b)) {
+    total = total + 10i32
+  }
+  if(Result.error(c)) {
+    total = total + 1000i32
+  }
+  if(FileError.isEof(code)) {
+    total = total + 20i32
+  }
+  print_line(total)
+  return(total + 5i32)
+})"},
+    {"error_struct_result",
+     R"(import /std/collections/*
+
+[namespace] ui {
+  [public return<ContainerError>] make_full([i32] pad) {
+    [i32] unused{pad + 1i32}
+    return(ContainerError.capacityExceeded())
+  }
+  [public return<ContainerError>] make_empty() {
+    return(ContainerError{3i32})
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+import /std/collections/*
+[return<i32> effects(io_out)] main() {
+  [ContainerError] a{make_full(1i32)}
+  [ContainerError] b{make_empty()}
+  print_line(ContainerError.why(a))
+  print_line(ContainerError.why(b))
+  return(a.code * 10i32 + b.code)
+})"},
 };
 
 constexpr size_t CorpusSize = sizeof(Corpus) / sizeof(Corpus[0]);
@@ -683,7 +747,15 @@ TEST_CASE("library corpus on the vm: a sum result with an owned payload") {
 }
 
 TEST_CASE("library corpus on the vm: a vector result") {
-  checkRange(31, CorpusSize, "vm");
+  checkRange(31, 32, "vm");
+}
+
+TEST_CASE("library corpus on the vm: a packed Result result") {
+  checkRange(32, 33, "vm");
+}
+
+TEST_CASE("library corpus on the vm: an error struct result") {
+  checkRange(33, CorpusSize, "vm");
 }
 
 TEST_CASE("library corpus on optexe: structs and methods") {
@@ -747,7 +819,15 @@ TEST_CASE("library corpus on optexe: a sum result with an owned payload") {
 }
 
 TEST_CASE("library corpus on optexe: a vector result") {
-  checkRange(31, CorpusSize, "optexe");
+  checkRange(31, 32, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: a packed Result result") {
+  checkRange(32, 33, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: an error struct result") {
+  checkRange(33, CorpusSize, "optexe");
 }
 
 TEST_SUITE_END();

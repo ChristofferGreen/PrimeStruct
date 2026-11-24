@@ -287,11 +287,9 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "[public return<Reference<i32>>]\nview([Reference<i32>] value) {\n  return(value)\n}\n",
        "public function /view cannot be compiled into a library: its result `Reference<i32>` is "
        "not "
-       "one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer` or a struct "
-       "are; "
-       "a sum (such as `Result`), a packed error value, a `Reference` and a builtin `vector<T>` "
-       "are "
-       "not"},
+       "one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer`, a struct "
+       "and, for a function of a library, a sum, a packed `Result` and a `vector<T>` are; a "
+       "`Reference` is not"},
       {"vector",
        "import /std/collections/vector\n\n[public effects(heap_alloc) return<vector<i32>>]\nmake() "
        "{\n"
@@ -309,18 +307,6 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "use_ref([Reference<Pick>] value) {\n  return(2i32)\n}\n",
        "public function /use_ref cannot be compiled into a library: parameter `value` is a sum, "
        "which a real call does not take"},
-      // The packed builtin `Result` and a stdlib error struct are not returned by a real call: the rule is named.
-      {"packed_result",
-       "[public return<Result<i32, i32>>]\nmake_result() {\n  return(Result.ok(5i32))\n}\n",
-       "public function /make_result cannot be compiled into a library: its result "
-       "`Result<i32, i32>` is a packed `Result`, which a real call does not return: a function "
-       "with a `Result` result stays inline"},
-      {"error_struct_result",
-       "import /std/file/*\n\n[public return<FileError>]\nmake_eof() {\n  "
-       "return(FileError.eof())\n}\n",
-       "public function /make_eof cannot be compiled into a library: its result `FileError` is a "
-       "packed error value, a frame address that a real call does not return: a function with an "
-       "error struct result stays inline"},
   };
   for (const auto &[name, source, message] : refused) {
     INFO(name);

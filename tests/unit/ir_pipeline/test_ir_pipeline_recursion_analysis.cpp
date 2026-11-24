@@ -456,60 +456,18 @@ std::string libraryResultBlocker(const std::string &resultType, const std::strin
   primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
   context.allowSlotResults = true;
   context.refuseSumParameters = true;
-  context.refusePackedResults = true;
   return primec::ir_lowerer::realCallBlockerReason(makeFn, context);
 }
 } // namespace
 
-TEST_CASE("a library function refuses a Result and error struct result and names the rule") {
-  // A sum result returns in a heap block like a struct result.
+TEST_CASE("a library function returns a packed Result, an error value and a struct") {
+  // A sum result returns in a heap block like a struct result, the packed `Result` is one slot like a scalar, and a
+  // stdlib error struct returns in a block of the caller.
   CHECK(libraryResultBlocker("/main/Item", "sum").empty());
-  CHECK(libraryResultBlocker("Result<i32, i32>", "struct") ==
-        "its result `Result<i32, i32>` is a packed `Result`, which a real call does not return: a "
-        "function with a `Result` result stays inline");
-  CHECK(libraryResultBlocker("/std/file/FileError", "struct") ==
-        "its result `/std/file/FileError` is a packed error value, a frame address that a real "
-        "call does not return: a function with an error struct result stays inline");
-  // A struct result keeps its struct-result path.
   CHECK(libraryResultBlocker("/main/Item", "struct").empty());
-}
-
-namespace {
-
-// The reason `/std/collections/helper(<paramType> value)` returning `resultType` is not a real call, empty when it is
-// one. `library` narrows the collections-root rule as the functions of a library do.
-std::string collectionsHelperBlocker(const std::string &paramType,
-                                     const std::string &resultType,
-                                     bool library) {
-  primec::Definition helper = makeDef("/std/collections/helper");
-  helper.namespacePrefix = "/std/collections";
-  helper.parameters.push_back(paramType == "vector" ? makeStructParam("value", paramType)
-                                                    : makeScalarParam("value", paramType));
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back(resultType);
-  helper.transforms.push_back(returnTransform);
-  const std::unordered_map<std::string, const primec::Definition *> byPath = {
-      {helper.fullPath, &helper},
-  };
-  const std::unordered_set<std::string> structNames = {"/std/collections/Vector"};
-  primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
-  context.narrowCollectionsRoot = library;
-  return primec::ir_lowerer::realCallBlockerReason(helper, context);
-}
-} // namespace
-
-TEST_CASE("a collections helper is a library function without collection records") {
-  const std::string rule = "it is a helper of the canonical collections, which are expanded inline";
-  // A program keeps the root rule for every helper.
-  CHECK(collectionsHelperBlocker("i32", "i32", false) == rule);
-  // A library root with scalar parameters and result is a function of the archive.
-  CHECK(collectionsHelperBlocker("i32", "i32", true).empty());
-  // A collection record as a parameter or result keeps the refusal, whatever the spelling.
-  CHECK(collectionsHelperBlocker("vector", "i32", true) == rule);
-  CHECK_FALSE(collectionsHelperBlocker("/std/collections/Vector", "i32", true).empty());
-  CHECK(collectionsHelperBlocker("i32", "vector<i32>", true) == rule);
-  CHECK(collectionsHelperBlocker("i32", "/std/collections/Vector", true) == rule);
+  CHECK(libraryResultBlocker("Result<i32, i32>", "struct").empty());
+  CHECK(libraryResultBlocker("/std/file/FileError", "struct").empty());
+  CHECK(libraryResultBlocker("/std/collections/ContainerError", "struct").empty());
 }
 
 TEST_CASE("address ABI accepts a Function parameter taken by move or copy") {

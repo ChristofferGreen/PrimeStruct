@@ -188,7 +188,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       // A struct or builtin vector result goes through a block of the caller, whose address is the last parameter.
       const bool returnsStruct =
           input.realCallAddressAbi && input.structNames != nullptr &&
-          (!realCallStructReturnPath(def, *input.structNames, *input.defMap).empty() ||
+          (!realCallStructReturnPath(def, *input.structNames, *input.defMap, true).empty() ||
            !declaredBuiltinVectorReturnElementText(def).empty());
 
       input.resetDefinitionLoweringState();

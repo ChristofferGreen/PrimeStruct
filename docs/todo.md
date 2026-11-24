@@ -147,7 +147,6 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
-| TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | ready | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -169,7 +168,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results) and TODO-6215 (collections-root rule for library roots) landed, then TODO-6223 (packed `Result` and error struct results)
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -687,21 +686,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
-
-- [~] TODO-6223: A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library
-  - owner: ai
-  - status: ready
-  - claimed_by: lib-shapes (worktree-agent-ab62d8f1159536de2), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Modules and libraries (split from TODO-6213)
-  - parallel_track: lib-shapes
-  - scope: `Result<T, E>` (the packed builtin) and the stdlib error structs `FileError`, `ImageError`, `ContainerError` and `GfxError` are returned as a scalar that is a frame address, which a real call must not do (the callee's frame is gone when the caller reads it). A library function needs a result path that is not a frame address (a packed value held in the result slot, or a heap block), the 4 of the 9 stdlib results that the refusal names.
-  - decision: 2026-11-23 (owner): its own leaf; needs a result path that is not a frame address.
-  - acceptance:
-    - a public function with a `Result<i32, i32>` result and one returning `FileError` are functions of the archive and give the same results as the whole-program build when linked, on the VM and optexe
-    - full release gate green
-  - stop_rule: packed `Result` and the four stdlib error structs as library results; no sum result (landed with TODO-6222) and no vector result.
-  - repro: `[public return<Result<i32, i32>>] make_result() { return(Result.ok(5i32)) }`, `primec --emit=lib r.prime -o r.psa`: refused with `its result `Result<i32, i32>` is a packed `Result`, which a real call does not return`.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
