@@ -26,14 +26,15 @@
 // fully free chunk plus one at 4 (0 none) and its lowest chunk with a free block plus one at 8.
 //
 // A block above `LargeThreshold` (64 KiB) is a byte region of its own and a record of kind 2 (WasmEmitterTextLarge.cpp, which
-// also holds the byte limit); the arenas are not ported yet.
+// also holds the byte limit). An arena is a record of kind 4 (WasmEmitterTextArena.cpp): its chunks and large blocks name
+// it in the record's arena field (its record plus one), so they are found and returned together when it ends.
 namespace primec {
 
 using namespace wasm_text;
 
 namespace wasm_text {
 
-// alloc(size i64) -> i64: the VM's `VmTextHeap::allocate` with no arena: a zeroed block of the request's size class from
+// alloc(size i64) -> i64: the VM's `VmTextHeap::allocate`: a zeroed block of the request's size class from
 // the class's lowest chunk with a free block, else from a new chunk (when the limit leaves room); a large block for a
 // request above `LargeThreshold`; address 0 for a size of 0.
 WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
@@ -77,6 +78,13 @@ WasmCodeBody buildAlloc(const WasmRuntimeContext &runtime) {
   a.ifThen();
   a.localGet(Size);
   a.call(textFn(runtime, WasmTextHelper::AllocLarge));
+  a.ret();
+  a.end();
+  // while an arena is open every small block is a bump block of the innermost one
+  a.globalGet(WasmGlobalTextArena);
+  a.ifThen();
+  a.localGet(Size);
+  a.call(textFn(runtime, WasmTextHelper::AllocInArena));
   a.ret();
   a.end();
   a.localGet(Size);
@@ -344,6 +352,12 @@ WasmCodeBody buildFree(const WasmRuntimeContext &runtime) {
   recordAddress(a, Record);
   a.localSet(Entry);
   // a large block: its byte region goes back (the byte regions fault on a stale generation) and its record is gone
+  // a block of an arena is freed with the arena
+  a.localGet(Entry);
+  a.i32Load(RecArena);
+  a.ifThen();
+  a.ret();
+  a.end();
   a.localGet(Entry);
   a.i32Load(RecKind);
   a.i32Const(2);
@@ -704,7 +718,7 @@ WasmCodeBody buildUsable(const WasmRuntimeContext &runtime) {
 }
 
 // stat(which i64) -> i64: statistics 0 (chunks), 1 (bytes in use), 2 (bytes free), 3 (large blocks), 4 (their bytes) and 5
-// (allocations); the others read 0 until the arenas are ported.
+// (allocations), 6 (open arenas) and 7 (bytes the open arenas handed out).
 WasmCodeBody buildStat(const WasmRuntimeContext &) {
   constexpr uint32_t Which = 0;
   constexpr uint32_t Index = 1;
@@ -733,6 +747,14 @@ WasmCodeBody buildStat(const WasmRuntimeContext &) {
   });
   answer(4, [&]() {
     a.globalGet(WasmGlobalTextLargeBytes);
+    a.i64ExtendI32U();
+  });
+  answer(6, [&]() {
+    a.globalGet(WasmGlobalTextArenaDepth);
+    a.i64ExtendI32U();
+  });
+  answer(7, [&]() {
+    a.globalGet(WasmGlobalTextArenaBytes);
     a.i64ExtendI32U();
   });
   answer(5, [&]() {
@@ -832,8 +854,12 @@ WasmFunctionType wasmTextHelperType(WasmTextHelper helper) {
     type.params = {WasmTypeI32};
     break;
   case WasmTextHelper::AllocLarge:
+  case WasmTextHelper::AllocInArena:
     type.params = {WasmTypeI64};
     type.results = {WasmTypeI64};
+    break;
+  case WasmTextHelper::ArenaBegin:
+  case WasmTextHelper::ArenaEnd:
     break;
   case WasmTextHelper::RoomFor:
     type.params = {WasmTypeI64};
@@ -889,6 +915,12 @@ WasmCodeBody buildWasmTextHelperBody(WasmTextHelper helper, const WasmRuntimeCon
     return buildAllocLarge(runtime);
   case WasmTextHelper::SetLimit:
     return buildSetLimit(runtime);
+  case WasmTextHelper::AllocInArena:
+    return buildAllocInArena(runtime);
+  case WasmTextHelper::ArenaBegin:
+    return buildArenaBegin(runtime);
+  case WasmTextHelper::ArenaEnd:
+    return buildArenaEnd(runtime);
   }
   return WasmCodeBody{};
 }
@@ -900,6 +932,9 @@ std::vector<uint32_t> wasmTextGlobalInitials(const WasmRuntimeContext &runtime) 
           runtime.textMeta + WasmTextMetaBytes,
           runtime.textRecords,
           WasmTextInitialRecords,
+          0u,
+          0u,
+          0u,
           0u,
           0u,
           0u,

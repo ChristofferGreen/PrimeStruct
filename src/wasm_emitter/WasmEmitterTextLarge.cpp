@@ -104,6 +104,10 @@ WasmCodeBody buildAllocLarge(const WasmRuntimeContext &runtime) {
   a.localGet(Entry);
   a.i32Const(2);
   a.i32Store(RecKind);
+  // a block made while an arena is open belongs to the innermost one
+  a.localGet(Entry);
+  a.globalGet(WasmGlobalTextArena);
+  a.i32Store(RecArena);
   globalAddLocal(a, WasmGlobalTextLargeBytes, Bytes, false);
   globalAddLocal(a, WasmGlobalTextInUse, Bytes, false);
   a.globalGet(WasmGlobalTextLargeBlocks);

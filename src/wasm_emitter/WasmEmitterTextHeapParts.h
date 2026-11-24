@@ -10,7 +10,7 @@ namespace wasm_text {
 // The pieces of the string heap (WasmEmitterTextHeap.cpp describes it): the layout constants and the small emitters
 // both components use, the metadata component (the metadata allocator, size classes, chunk records and the return of
 // chunks: WasmEmitterTextMeta.cpp) and the block component (allocation, free, capacity, length, usable and the
-// statistics: WasmEmitterTextHeap.cpp) and the large blocks and the byte limit (WasmEmitterTextLarge.cpp).
+// statistics: WasmEmitterTextHeap.cpp) and the large blocks and the byte limit (WasmEmitterTextLarge.cpp) and the string arenas (WasmEmitterTextArena.cpp).
 
 using namespace wasm_heap;
 
@@ -29,6 +29,7 @@ inline constexpr uint32_t RecFreeCount = 20;
 inline constexpr uint32_t RecHead = 24;
 inline constexpr uint32_t RecState = 28;
 inline constexpr uint32_t RecKind = 32;
+inline constexpr uint32_t RecArena = 36;
 inline constexpr uint32_t ClassHeld = 0;
 inline constexpr uint32_t ClassFree = 4;
 inline constexpr uint32_t ClassLow = 8;
@@ -39,6 +40,7 @@ inline constexpr int32_t FaultTextFree = 4;
 inline constexpr int32_t FaultTextTwice = 5;
 inline constexpr int32_t FaultTextAddress = 6;
 inline constexpr int32_t FaultTextLimit = 7;
+inline constexpr int32_t FaultTextArena = 8;
 
 inline uint32_t textFn(const WasmRuntimeContext &runtime, WasmTextHelper helper) {
   return runtime.textFunction[static_cast<size_t>(helper)];
@@ -178,6 +180,11 @@ WasmCodeBody buildStat(const WasmRuntimeContext &runtime);
 WasmCodeBody buildRoomFor(const WasmRuntimeContext &runtime);
 WasmCodeBody buildAllocLarge(const WasmRuntimeContext &runtime);
 WasmCodeBody buildSetLimit(const WasmRuntimeContext &runtime);
+
+// The string arenas (WasmEmitterTextArena.cpp).
+WasmCodeBody buildAllocInArena(const WasmRuntimeContext &runtime);
+WasmCodeBody buildArenaBegin(const WasmRuntimeContext &runtime);
+WasmCodeBody buildArenaEnd(const WasmRuntimeContext &runtime);
 
 } // namespace wasm_text
 } // namespace primec

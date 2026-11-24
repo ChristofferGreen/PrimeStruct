@@ -280,6 +280,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
         static const std::string TextTwiceMessage = "VM error: string heap block freed twice: ";
         static const std::string TextAddressMessage = "VM error: invalid string heap address: ";
         static const std::string TextLimitMessage = "VM error: string memory limit exceeded\n";
+        static const std::string TextArenaMessage =
+            "VM error: string arena ended without one being open\n";
         appendMessage(TextFreeMessage, runtime.textFreeMessageAddr, runtime.textFreeMessageLength);
         appendMessage(
             TextTwiceMessage, runtime.textTwiceMessageAddr, runtime.textTwiceMessageLength);
@@ -287,6 +289,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
             TextAddressMessage, runtime.textAddressMessageAddr, runtime.textAddressMessageLength);
         appendMessage(
             TextLimitMessage, runtime.textLimitMessageAddr, runtime.textLimitMessageLength);
+        appendMessage(
+            TextArenaMessage, runtime.textArenaMessageAddr, runtime.textArenaMessageLength);
       }
       if (runtime.hasBytes) {
         appendMessage(ByteMessage, runtime.byteMessageAddr, runtime.byteMessageLength);

@@ -150,6 +150,8 @@ bool wasmModuleCallsTextHeap(const IrModule &module) {
       case NativeTextHost::Length:
       case NativeTextHost::Usable:
       case NativeTextHost::SetLimit:
+      case NativeTextHost::ArenaBegin:
+      case NativeTextHost::ArenaEnd:
         return true;
       default:
         break;
@@ -699,8 +701,9 @@ WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime) {
 }
 
 // The statistic of the string heap functions a Wasm module answers (`__pstext_stat`): 8 is the number of live slot
-// allocations of the heap, 0 to 7 count the blocks of the string heap (the counters of its helpers when the module calls
-// the allocation functions, else 0 as in a VM program that never allocates text), and any other number is the VM's unknown-statistic fault, a trap.
+// allocations of the heap, 0 to 7 count the blocks and arenas of the string heap (the counters of its helpers when the
+// module calls the allocation functions, else 0 as in a VM program that never allocates text), and any other number is
+// the VM's unknown-statistic fault, a trap.
 void emitWasmStringHeapStat(uint32_t whichLocal,
                             const WasmRuntimeContext &runtime,
                             std::vector<uint8_t> &out) {

@@ -594,7 +594,7 @@ bool emitTypedInstruction(const IrInstruction &inst,
   }
   case IrOpcode::CallHost: {
     // `__pstext_stat(which) -> u64`: statistic 8 is the number of live slot allocations of the heap; 0 to 7 count the
-    // blocks of the string heap, which a Wasm module does not have, so they read 0; any other number is the VM's
+    // blocks and arenas of the string heap (0 for a module that never calls it); any other number is the VM's
     // unknown-statistic fault (a trap here).
     const NativeTextHost textKind = inst.imm < runtime.textHostKinds.size()
                                         ? runtime.textHostKinds[static_cast<size_t>(inst.imm)]
@@ -623,21 +623,32 @@ bool emitTypedInstruction(const IrInstruction &inst,
     case NativeTextHost::SetLimit:
       textHelper = WasmTextHelper::SetLimit;
       break;
+    case NativeTextHost::ArenaBegin:
+      textHelper = WasmTextHelper::ArenaBegin;
+      break;
+    case NativeTextHost::ArenaEnd:
+      textHelper = WasmTextHelper::ArenaEnd;
+      break;
     default:
       isTextCall = false;
       break;
     }
     if (isTextCall && runtime.hasText) {
-      // The string heap functions (WasmEmitterTextHeap.cpp): one address or size operand, a result of the import's kind
-      // (the helper answers an i64; a 32-bit kind wraps it).
-      if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      // The string heap functions (WasmEmitterTextHeap.cpp): one address or size operand (none for an arena), a result of
+      // the import's kind (the helper answers an i64; a 32-bit kind wraps it).
+      const bool arenaCall =
+          textHelper == WasmTextHelper::ArenaBegin || textHelper == WasmTextHelper::ArenaEnd;
+      if (!arenaCall && !coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
         return false;
       }
       out.push_back(0x10); // call
       appendU32Leb(runtime.textFunction[static_cast<size_t>(textHelper)], out);
-      popTypes(localLayout, 1);
+      if (!arenaCall) {
+        popTypes(localLayout, 1);
+      }
       const IrHostValueKind returnKind = runtime.textHostReturns[static_cast<size_t>(inst.imm)];
-      if (textHelper == WasmTextHelper::Free || textHelper == WasmTextHelper::SetLimit) {
+      if (textHelper == WasmTextHelper::Free || textHelper == WasmTextHelper::SetLimit ||
+          arenaCall) {
         if (returnKind != IrHostValueKind::Void) {
           out.push_back(WasmOpI64Const);
           appendS64Leb(0, out);

@@ -134,8 +134,12 @@ NodeRun runOnNode(const primec::IrModule &module,
 // The Wasm module behaves like the VM: stdout, exit code (the result of `main` modulo 256, or 3 with the fault text).
 void expectMatchesVm(const primec::IrModule &module,
                      const std::string &name,
-                     const std::string &nodeFlags = "") {
+                     const std::string &nodeFlags = "",
+                     bool mustSucceed = false) {
   const Outcome expected = optimizer_test::run(module, {"program"});
+  if (mustSucceed) {
+    CHECK_MESSAGE(expected.ok, name << ": " << expected.error);
+  }
   const NodeRun actual = runOnNode(module, name, false, nodeFlags);
   INFO(name);
   CAPTURE(actual.err);
@@ -998,16 +1002,21 @@ constexpr int TextUsable = 4;
 constexpr int TextTryAlloc = 5;
 constexpr int TextStat = 6;
 constexpr int TextSetLimit = 7;
+constexpr int TextArenaBegin = 8;
+constexpr int TextArenaEnd = 9;
 
-// The module with the string heap functions imported as host functions 0 to 7 (`TextAlloc` and the others above).
+// The module with the string heap functions imported as host functions 0 to 9 (`TextAlloc` and the others above).
 primec::IrModule withText(primec::IrModule module) {
-  const auto add = [&](const char *name, primec::IrHostValueKind returnKind) {
-    primec::IrHostImport import;
-    import.name = std::string("std/text/") + name;
-    import.parameters = {primec::IrHostValueKind::U64};
-    import.returnKind = returnKind;
-    module.hostImports.push_back(import);
-  };
+  const auto add =
+      [&](const char *name, primec::IrHostValueKind returnKind, bool takesValue = true) {
+        primec::IrHostImport import;
+        import.name = std::string("std/text/") + name;
+        if (takesValue) {
+          import.parameters = {primec::IrHostValueKind::U64};
+        }
+        import.returnKind = returnKind;
+        module.hostImports.push_back(import);
+      };
   add("__pstext_alloc", primec::IrHostValueKind::U64);
   add("__pstext_free", primec::IrHostValueKind::Void);
   add("__pstext_capacity", primec::IrHostValueKind::U64);
@@ -1016,6 +1025,8 @@ primec::IrModule withText(primec::IrModule module) {
   add("__pstext_try_alloc", primec::IrHostValueKind::U64);
   add("__pstext_stat", primec::IrHostValueKind::U64);
   add("__pstext_set_limit", primec::IrHostValueKind::Void);
+  add("__pstext_arena_begin", primec::IrHostValueKind::Void, false);
+  add("__pstext_arena_end", primec::IrHostValueKind::Void, false);
   return module;
 }
 
@@ -1036,10 +1047,10 @@ uint64_t textBlockSize(uint64_t size) {
   return base + (size - base + step - 1) / step * step;
 }
 
-// Prints the statistics the string heap answers: chunks, bytes in use, bytes free, large blocks, their bytes and
-// allocations.
+// Prints the statistics the string heap answers: chunks, bytes in use, bytes free, large blocks, their bytes,
+// allocations, open arenas and the bytes they handed out.
 void printTextStats(std::vector<std::string> &code) {
-  for (const int which : {0, 1, 2, 3, 4, 5}) {
+  for (const int which : {0, 1, 2, 3, 4, 5, 6, 7}) {
     code.push_back("PushI64 " + std::to_string(which));
     code.push_back(callText(TextStat));
     code.push_back("PrintU64 1");
@@ -1080,7 +1091,8 @@ void freeText(std::vector<std::string> &code, int variable) {
 // variables, printing the address, capacity, usable bytes and length of every new block and the statistics, so size
 // classes, chunk growth, the lowest chunk with a free block, the retained free chunk and its return, and the zeroing
 // of freed blocks all show in the output.
-primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = false) {
+primec::IrModule
+randomTextProgram(uint64_t seed, int steps, bool withLarge = false, bool withArenas = false) {
   uint64_t state = seed * 2685821657736338717ull + 1442695040888963407ull;
   const auto next = [&](uint64_t bound) {
     state ^= state << 13;
@@ -1090,8 +1102,29 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = fa
   };
   constexpr int Variables = 10;
   std::vector<uint64_t> size(Variables, 0);
+  // the arena depth a block was made at (0 for none): a block of an arena is gone when its arena ends
+  std::vector<int> madeAt(Variables, 0);
+  int depth = 0;
+  const auto endArena = [&](std::vector<std::string> &lines) {
+    lines.push_back(callText(TextArenaEnd));
+    for (int i = 0; i < Variables; ++i) {
+      if (madeAt[static_cast<size_t>(i)] == depth) {
+        size[static_cast<size_t>(i)] = 0;
+        madeAt[static_cast<size_t>(i)] = 0;
+      }
+    }
+    --depth;
+  };
   std::vector<std::string> code;
   for (int step = 0; step < steps; ++step) {
+    if (withArenas && next(7) == 0) {
+      if (depth == 0 || (depth < 3 && next(2) == 0)) {
+        code.push_back(callText(TextArenaBegin));
+        ++depth;
+      } else {
+        endArena(code);
+      }
+    }
     const int variable = static_cast<int>(next(Variables));
     const uint64_t choice = next(12);
     const bool live = size[static_cast<size_t>(variable)] != 0;
@@ -1099,6 +1132,7 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = fa
       if (live) {
         freeText(code, variable);
         size[static_cast<size_t>(variable)] = 0;
+        madeAt[static_cast<size_t>(variable)] = 0;
       }
       const uint64_t kind = next(100);
       uint64_t request = 1 + next(120);
@@ -1114,6 +1148,7 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = fa
       }
       allocText(code, variable, request, next(4) == 0 ? TextTryAlloc : TextAlloc);
       size[static_cast<size_t>(variable)] = request;
+      madeAt[static_cast<size_t>(variable)] = depth;
       printTextBlock(code, variable);
       // a prefix of text: the length is what was written (a block holds `blockSize - 1` bytes of text)
       const uint64_t written =
@@ -1127,6 +1162,7 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = fa
     } else if (choice < 10) {
       freeText(code, variable);
       size[static_cast<size_t>(variable)] = 0;
+      madeAt[static_cast<size_t>(variable)] = 0;
       // a freed block still has its size, and no text
       code.push_back("PushI64 0");
       code.push_back("StoreLocal " + std::to_string(variable));
@@ -1136,6 +1172,9 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = fa
     if (step % 5 == 4) {
       printTextStats(code);
     }
+  }
+  while (depth > 0) {
+    endArena(code);
   }
   for (int variable = 0; variable < Variables; ++variable) {
     if (size[static_cast<size_t>(variable)] != 0) {
@@ -1421,7 +1460,7 @@ TEST_CASE("wasm string heap large blocks have the VM's addresses, capacities and
   printTextStats(code);
   code.push_back("PushI32 0");
   code.push_back("ReturnI32");
-  expectMatchesVm(withText(mainOf(code)), "text_large");
+  expectMatchesVm(withText(mainOf(code)), "text_large", "", true);
 }
 
 TEST_CASE("wasm string heap addresses of random sequences with large blocks match the VM") {
@@ -1430,8 +1469,8 @@ TEST_CASE("wasm string heap addresses of random sequences with large blocks matc
     return;
   }
   for (const uint64_t seed : {11ull, 12ull, 13ull, 14ull}) {
-    expectMatchesVm(randomTextProgram(seed, 120, true),
-                    "text_random_large_" + std::to_string(seed));
+    expectMatchesVm(
+        randomTextProgram(seed, 120, true), "text_random_large_" + std::to_string(seed), "", true);
   }
 }
 
@@ -1491,7 +1530,7 @@ TEST_CASE("wasm string heap limit returns free chunks to make room and refuses t
   printTextStats(code);
   code.push_back("PushI32 0");
   code.push_back("ReturnI32");
-  expectMatchesVm(withText(mainOf(code)), "text_limit");
+  expectMatchesVm(withText(mainOf(code)), "text_limit", "", true);
 }
 
 TEST_CASE("wasm string heap large block and limit faults carry the VM's message and exit code 3") {
@@ -1569,6 +1608,145 @@ TEST_CASE("wasm string heap large block and limit faults carry the VM's message 
   for (const auto &[name, module] : faults) {
     CAPTURE(name);
     expectMatchesVm(module, "text_large_fault_" + name);
+  }
+}
+
+TEST_CASE("wasm string arenas bump blocks, nest, free at once and match the VM's statistics") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Blocks of several size classes in an arena (chunks of 4096 bytes or four blocks, doubling), `free` of an arena
+  // block (nothing happens), a nested arena with large blocks, the inner one ended (the outer one keeps filling its
+  // chunk), the outer one ended, then ordinary blocks (the byte regions the arenas returned are reused); the
+  // statistics after each step show the chunks, bytes in use, large blocks, depth and arena bytes.
+  std::vector<std::string> code;
+  const std::vector<uint64_t> sizes = {
+      10, 100, 100, 3000, 3000, 3000, 70000, 40, 40, 20000, 20000, 65536, 100};
+  code.push_back(callText(TextArenaBegin));
+  int variable = 0;
+  for (int round = 0; round < 3; ++round) {
+    for (const uint64_t size : sizes) {
+      allocText(code, variable % 40, size);
+      printTextBlock(code, variable % 40);
+      ++variable;
+    }
+    printTextStats(code);
+    freeText(code, 3);
+    freeText(code, 6);
+    printTextStats(code);
+    code.push_back(callText(TextArenaBegin));
+  }
+  for (int i = 0; i < 100; ++i) {
+    allocText(code, 40 + i % 5, 100 + static_cast<uint64_t>(i) * 7);
+    code.push_back("LoadLocal " + std::to_string(40 + i % 5));
+    code.push_back("PrintU64 1");
+  }
+  printTextStats(code);
+  for (int round = 0; round < 4; ++round) {
+    code.push_back(callText(TextArenaEnd));
+    printTextStats(code);
+    allocText(code, 50, 200);
+    code.push_back("LoadLocal 50");
+    code.push_back("PrintU64 1");
+  }
+  for (const uint64_t size : {100ull, 5000ull, 70000ull, 100ull}) {
+    allocText(code, 51, size);
+    code.push_back("LoadLocal 51");
+    code.push_back("PrintU64 1");
+    freeText(code, 51);
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_arenas", "", true);
+}
+
+TEST_CASE("wasm string heap addresses of random sequences with arenas match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  for (const uint64_t seed : {21ull, 22ull, 23ull, 24ull, 25ull, 26ull}) {
+    expectMatchesVm(randomTextProgram(seed, 140, seed % 2 == 0, true),
+                    "text_random_arena_" + std::to_string(seed),
+                    "",
+                    true);
+  }
+}
+
+TEST_CASE("wasm string arenas count their chunks in the limit") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // A limit of 20000 bytes: an arena takes chunks of 4096, 8192 (a class's second chunk doubles) and then no more room;
+  // `try_alloc` answers 0 for the block that needs the third chunk, ending the arena makes room again.
+  std::vector<std::string> code;
+  setTextLimit(code, 20000);
+  code.push_back(callText(TextArenaBegin));
+  for (int i = 0; i < 20; ++i) {
+    allocText(code, i, 1000, TextTryAlloc);
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PrintU64 1");
+  }
+  printTextStats(code);
+  code.push_back(callText(TextArenaEnd));
+  printTextStats(code);
+  for (int i = 0; i < 20; ++i) {
+    allocText(code, i, 1000, TextTryAlloc);
+    code.push_back("LoadLocal " + std::to_string(i));
+    code.push_back("PrintU64 1");
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_arena_limit", "", true);
+}
+
+TEST_CASE("wasm string arena faults carry the VM's message and exit code 3") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const auto program = [&](std::vector<std::string> code) {
+    code.push_back("ReturnVoid");
+    return withText(mainOf(code));
+  };
+  const std::string load = "LoadLocal 0";
+  const std::vector<std::pair<std::string, primec::IrModule>> faults = {
+      {"end_without_begin", program({callText(TextArenaEnd)})},
+      {"end_twice",
+       program({callText(TextArenaBegin), callText(TextArenaEnd), callText(TextArenaEnd)})},
+      {"capacity_after_end",
+       program({callText(TextArenaBegin),
+                "PushI64 100",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                callText(TextArenaEnd),
+                load,
+                callText(TextCapacity),
+                "Pop"})},
+      {"capacity_of_a_large_block_after_end",
+       program({callText(TextArenaBegin),
+                "PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                callText(TextArenaEnd),
+                load,
+                callText(TextCapacity),
+                "Pop"})},
+      {"limit_in_an_arena",
+       program({"PushI64 3000",
+                callText(TextSetLimit),
+                callText(TextArenaBegin),
+                "PushI64 100",
+                callText(TextAlloc),
+                "Pop"})},
+  };
+  for (const auto &[name, module] : faults) {
+    CAPTURE(name);
+    expectMatchesVm(module, "text_arena_fault_" + name);
   }
 }
 
