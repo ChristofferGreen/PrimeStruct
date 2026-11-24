@@ -2617,6 +2617,7 @@ are left unarchived.
 | TODO-6217 | `Script::bytecode` records the libraries a script was linked with | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6218 | A program linked against a library carries every function of the archive, used or not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6220 | Wasm `ZextU8` and the u8 loads and stores of local and slot addresses | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6221 | A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6222 | A public `[sum]` is printed in the interface and a library function may return one | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6224 | The Wasm string heap, part 2: large blocks and `__pstext_set_limit` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6225 | The Wasm string heap, part 3: string arenas and statistics 0 to 7 | [2026-11.md](todo_archive/2026-11.md) | - |

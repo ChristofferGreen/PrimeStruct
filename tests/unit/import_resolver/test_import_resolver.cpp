@@ -1,10 +1,17 @@
 #include "test_import_resolver_helpers.h"
 
+#include "primec/ast/Ast.h"
+#include "primec/ast/AstPrinter.h"
+#include "primec/frontend/Lexer.h"
+#include "primec/frontend/Parser.h"
+#include "primec/frontend/StdlibSymbolManifest.h"
 #include "primec/pipeline/CompilePipeline.h"
+#include "primec/support/Hash.h"
 #include "primec/pipeline/CliDriver.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -40,6 +47,59 @@ primec::Options diagnosticPipelineOptions(const std::string &inputPath) {
   options.collectDiagnostics = true;
   options.skipSemanticProductForNonConsumingPath = true;
   return options;
+}
+
+// A module with a namespace block and two members, and the manifest text of its entries as an older
+// `generate_stdlib_manifest` wrote them: the two namespace blocks and each member.
+const char *const NamespaceModuleSource = "namespace std {\n"
+                                          "namespace zmod {\n"
+                                          "[public return<int>]\n"
+                                          "used() { return(1i32) }\n"
+                                          "\n"
+                                          "[public return<int>]\n"
+                                          "unused() { return(2i32) }\n"
+                                          "}\n"
+                                          "}\n";
+
+// The content hash a manifest entry holds: the canonical print of the definition reparsed from its slice.
+std::string manifestEntryText(const primec::ManifestModuleSource &module,
+                              const std::string &path,
+                              int startLine,
+                              int endLine) {
+  std::string slice;
+  for (int line = startLine; line <= endLine; ++line) {
+    slice += (line > startLine ? "\n" : "") + module.lines[static_cast<size_t>(line)];
+  }
+  const std::string wrapped = primec::wrapDefinitionInNamespace(path, slice);
+  primec::Lexer lexer(wrapped);
+  primec::Parser parser(lexer.tokenize(), true);
+  primec::Program program;
+  std::string error;
+  REQUIRE_MESSAGE(parser.parse(program, error), error);
+  const auto definition =
+      std::find_if(program.definitions.begin(),
+                   program.definitions.end(),
+                   [&](const primec::Definition &def) { return def.fullPath == path; });
+  REQUIRE(definition != program.definitions.end());
+  primec::Program single;
+  single.definitions.push_back(*definition);
+  char hash[32];
+  std::snprintf(
+      hash,
+      sizeof(hash),
+      "%llx",
+      static_cast<unsigned long long>(primec::nameHash(primec::AstPrinter().print(single))));
+  return "[symbol]\npath = " + path + "\nstart_line = " + std::to_string(startLine) +
+         "\nend_line = " + std::to_string(endLine) + "\ncontent_hash = " + hash + "\n";
+}
+
+std::string namespaceModuleManifest(const std::filesystem::path &sourcePath) {
+  primec::ManifestModuleSource module;
+  std::string error;
+  REQUIRE_MESSAGE(primec::loadManifestModuleSource(sourcePath.string(), module, error), error);
+  return manifestEntryText(module, "/std", 1, 9) + manifestEntryText(module, "/std/zmod", 2, 8) +
+         manifestEntryText(module, "/std/zmod/used", 3, 4) +
+         manifestEntryText(module, "/std/zmod/unused", 6, 7);
 }
 
 std::filesystem::path repositoryStdlibPath() {
@@ -953,4 +1013,53 @@ TEST_CASE("supports semicolon separated imports") {
   CHECK(source.find(markerA) != std::string::npos);
   CHECK(source.find(markerB) != std::string::npos);
 }
+TEST_CASE("lazy stdlib import ignores a manifest entry for a namespace block") {
+  const auto baseDir = importResolverPath("stdlib_manifest_namespace_entry");
+  std::filesystem::remove_all(baseDir);
+  const std::filesystem::path stdlibRoot = baseDir / "stdlib";
+  const std::filesystem::path modulePath = stdlibRoot / "std" / "zmod" / "zmod.prime";
+  writeFile(modulePath, NamespaceModuleSource);
+  writeFile(stdlibRoot / "std" / "zmod" / "zmod.psmeta", namespaceModuleManifest(modulePath));
+  const std::string srcPath = writeFile(baseDir / "main.prime",
+                                        "import /std/zmod/*\n"
+                                        "[return<int>]\n"
+                                        "main() { return(used()) }\n");
+
+  primec::Options options = preAstPipelineOptions(srcPath, stdlibRoot);
+  options.experimentalLazyStdlibImports = true;
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  REQUIRE_MESSAGE(primec::runCompilePipeline(options, output, errorStage, error), error);
+  // Only the member the program names is spliced: the namespace entries are not a slice of the whole block.
+  CHECK(output.expandedSource.text.find("used()") != std::string::npos);
+  CHECK(output.expandedSource.text.find("unused") == std::string::npos);
+}
+
+TEST_CASE("a manifest entry for a namespace block is reported as one and has nothing to splice") {
+  const auto baseDir = importResolverPath("stdlib_manifest_namespace_flag");
+  std::filesystem::remove_all(baseDir);
+  const std::filesystem::path modulePath = baseDir / "zmod.prime";
+  writeFile(modulePath, NamespaceModuleSource);
+  const std::filesystem::path manifestPath =
+      writeFile(baseDir / "zmod.psmeta", namespaceModuleManifest(modulePath));
+  std::vector<primec::StdlibSymbolManifestEntry> entries;
+  std::string error;
+  REQUIRE_MESSAGE(primec::readStdlibSymbolManifest(manifestPath.string(), entries, error), error);
+  REQUIRE(entries.size() == 4);
+  primec::ManifestModuleSource module;
+  REQUIRE_MESSAGE(primec::loadManifestModuleSource(modulePath.string(), module, error), error);
+  const std::vector<bool> expectedNamespace = {true, true, false, false};
+  for (size_t i = 0; i < entries.size(); ++i) {
+    CAPTURE(entries[i].path);
+    std::string text;
+    bool isNamespace = !expectedNamespace[i];
+    REQUIRE_MESSAGE(primec::extractAndVerifyManifestedSymbolSource(
+                        entries[i], module, text, error, &isNamespace),
+                    error);
+    CHECK(isNamespace == expectedNamespace[i]);
+    CHECK(text.empty() == expectedNamespace[i]);
+  }
+}
+
 TEST_SUITE_END();

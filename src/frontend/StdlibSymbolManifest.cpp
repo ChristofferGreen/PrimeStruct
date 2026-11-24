@@ -215,7 +215,11 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
 bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
                                             const ManifestModuleSource &moduleSource,
                                             std::string &outSourceText,
-                                            std::string &error) {
+                                            std::string &error,
+                                            bool *outIsNamespace) {
+  if (outIsNamespace != nullptr) {
+    *outIsNamespace = false;
+  }
   const std::string &moduleSourcePath = moduleSource.path;
   const std::vector<std::string> &lines = moduleSource.lines;
   if (entry.startLine < 1 || entry.endLine < entry.startLine ||
@@ -256,6 +260,15 @@ bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &ent
             " (module source has likely drifted since the manifest was generated; "
             "regenerate it with tools/generate_stdlib_manifest)";
     return false;
+  }
+
+  if (outIsNamespace != nullptr &&
+      std::any_of(definitionIt->transforms.begin(),
+                  definitionIt->transforms.end(),
+                  [](const Transform &transform) { return transform.name == "namespace"; })) {
+    *outIsNamespace = true;
+    outSourceText.clear();
+    return true;
   }
 
   Program single;

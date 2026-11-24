@@ -82,10 +82,14 @@ bool loadManifestModuleSource(const std::string &moduleSourcePath,
                               ManifestModuleSource &out,
                               std::string &error);
 
-// extractAndVerifyManifestedSymbolSource over an already loaded module.
+// extractAndVerifyManifestedSymbolSource over an already loaded module. A `namespace` block is the `[namespace]`
+// definition of its members' prefix, not a symbol: its slice is the whole block, so splicing it would pull every member
+// in. When `outIsNamespace` is given and the entry's definition is a namespace, it is set, `outSourceText` is left
+// empty and the call succeeds without a hash check (there is nothing to splice); the caller skips the entry.
 bool extractAndVerifyManifestedSymbolSource(const StdlibSymbolManifestEntry &entry,
                                             const ManifestModuleSource &moduleSource,
                                             std::string &outSourceText,
-                                            std::string &error);
+                                            std::string &error,
+                                            bool *outIsNamespace = nullptr);
 
 } // namespace primec

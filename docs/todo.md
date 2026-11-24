@@ -118,7 +118,6 @@ of sync with them.
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
-| TODO-6221 | A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace | ready | stdlib-manifest-drift |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
@@ -198,20 +197,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [~] TODO-6221: A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace
-  - owner: ai
-  - status: ready
-  - claimed_by: manifest-ns (worktree-agent-a12fa5df80cd9e813), 2026-11-24
-  - created_at: 2026-11-23
-  - phase: Modules and libraries (found with TODO-6199)
-  - parallel_track: stdlib-manifest-drift
-  - scope: `computeLazyStdlibModuleClosureSource` (src/pipeline/CompilePipelineStdlib.cpp) includes every manifest entry whose leaf name appears as a word in the text it scans, so an entry for a `namespace` block (`/std/image`, leaf `image`) is included as soon as the program says `import /std/image/*`, and its slice is the whole block: every member and the imports written inside the file are compiled, which defeats the slicing and made `--allow-import` reject the stdlib file's own imports. `generate_stdlib_manifest` used to write those entries (the parser turns a namespace block into a `[namespace]` definition); it was fixed under TODO-6199 and a ctest entry keeps the tracked files equal to its output, but the reader still trusts whatever a manifest holds, so a hand-written or older manifest with a namespace entry repeats it silently.
-  - acceptance:
-    - the reader ignores (or the manifest verifier rejects with the file and entry named) an entry whose definition is a namespace, with a test that reads a manifest holding one and a program that imports the module
-    - full release gate green
-  - stop_rule: namespace entries in `.psmeta` files; no change to the manifest format.
-  - repro: put the three entries `/std`, `/std/image` and `/std/image/ppm` (start_line and end_line of the namespace blocks, `content_hash` from `generate_stdlib_manifest` before the TODO-6199 fix) back into stdlib/std/image/image.psmeta and run `primec --emit=vm --allow-import /std/image` on a program that only has `import /std/image/*`: `import /std/math/* is outside the allowed imports: /std/image` (positions inside the stdlib file).
-  - notes: deferred: only a stale or hand-written manifest triggers it.
 
 - [ ] TODO-6019: PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person
   - owner: ai

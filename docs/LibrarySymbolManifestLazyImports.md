@@ -101,6 +101,11 @@ uses to resolve undefined symbols from an archive:
 The validation/lowering stages themselves do not need to change; only the
 text-assembly step feeding them does.
 
+A manifest entry whose definition is a `namespace` block (the `[namespace]` definition of its members' prefix, such as
+`/std/image`) is not a symbol: its slice is the whole block, and splicing it would pull every member and the imports
+written inside the file. `generate_stdlib_manifest` does not write such entries, and the reader skips one that a stale
+or hand-written manifest holds, once it has reparsed the slice and seen the `namespace` transform.
+
 ## Precedent in Other Toolchains
 
 Checked this plan against how Go, Rust, C++20 modules, and Python handle

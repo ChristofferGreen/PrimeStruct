@@ -21,7 +21,7 @@ addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
 addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"
   TARGET PrimeStruct_misc_tests
   TIMEOUT 300
-  TOTAL_CASES 37
+  TOTAL_CASES 39
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.lexer"

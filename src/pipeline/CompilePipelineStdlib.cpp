@@ -639,11 +639,16 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
           return false;
         }
         std::string extractedText;
+        bool isNamespace = false;
         if (!extractAndVerifyManifestedSymbolSource(
-                entry, module.loadedSource, extractedText, error)) {
+                entry, module.loadedSource, extractedText, error, &isNamespace)) {
           return false;
         }
         module.includedPaths.insert(entry.path);
+        if (isNamespace) {
+          // A stale or hand-written manifest entry for a `namespace` block: its members are manifested on their own.
+          continue;
+        }
         extracted.push_back(LazyStdlibExtractedSymbol{&module, &entry, extractedText});
         pendingTexts.push_back(extractedText);
       }
