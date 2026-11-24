@@ -2619,6 +2619,7 @@ are left unarchived.
 | TODO-6220 | Wasm `ZextU8` and the u8 loads and stores of local and slot addresses | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6224 | The Wasm string heap, part 2: large blocks and `__pstext_set_limit` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6225 | The Wasm string heap, part 3: string arenas and statistics 0 to 7 | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6226 | Wasm refuses `LoadStringLength` of a runtime string | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

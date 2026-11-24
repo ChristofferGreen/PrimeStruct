@@ -162,6 +162,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
         runtime.hasTrap = true;
         runtime.enabled = true;
       }
+      if (wasi && inst.op == IrOpcode::LoadStringLength) {
+        runtime.hasStringLength = true;
+        runtime.hasTrap = true;
+        runtime.enabled = true;
+      }
       if (wasi && (inst.op == IrOpcode::DivI32 || inst.op == IrOpcode::DivI64 ||
                    inst.op == IrOpcode::DivU64)) {
         // The division helper writes the fault message (memory and `fd_write`) and ends the program (`proc_exit`).
@@ -282,6 +287,27 @@ bool buildWasiRuntimeContext(const IrModule &module,
     stringBlob.insert(stringBlob.end(), StringByteMessage.begin(), StringByteMessage.end());
   }
 
+  if (runtime.hasStringLength) {
+    static const std::string StringIndexMessage = "VM error: invalid string index in IR\n";
+    runtime.stringIndexMessageAddr = stringBase + static_cast<uint32_t>(stringBlob.size());
+    runtime.stringIndexMessageLength = static_cast<uint32_t>(StringIndexMessage.size());
+    appendDataSegmentAt(runtime.stringIndexMessageAddr,
+                        std::vector<uint8_t>(StringIndexMessage.begin(), StringIndexMessage.end()),
+                        runtime.dataSegments);
+    stringBlob.insert(stringBlob.end(), StringIndexMessage.begin(), StringIndexMessage.end());
+    std::vector<uint8_t> lengths;
+    for (const uint32_t length : runtime.stringLens) {
+      for (uint32_t shift = 0; shift < 32; shift += 8) {
+        lengths.push_back(static_cast<uint8_t>(length >> shift));
+      }
+    }
+    runtime.stringLengthTableAddr = stringBase + static_cast<uint32_t>(stringBlob.size());
+    if (!lengths.empty()) {
+      appendDataSegmentAt(runtime.stringLengthTableAddr, lengths, runtime.dataSegments);
+      stringBlob.insert(stringBlob.end(), lengths.begin(), lengths.end());
+    }
+  }
+
   if (runtime.hasMemoryFault) {
     static const std::string UnalignedMessage = "VM error: unaligned indirect address in IR: ";
     static const std::string InvalidMessage = "VM error: invalid indirect address in IR: ";
@@ -347,7 +373,7 @@ bool buildWasiRuntimeContext(const IrModule &module,
   }
 
   if (runtime.hasOutputOps || runtime.hasFileWriteOps || runtime.hasDivisionFault ||
-      runtime.hasMemoryFault || runtime.hasStringByteFault) {
+      runtime.hasMemoryFault || runtime.hasStringByteFault || runtime.hasStringLength) {
     WasmFunctionType fdWriteType;
     fdWriteType.params = {WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32, WasmValueTypeI32};
     fdWriteType.results = {WasmValueTypeI32};

@@ -592,6 +592,22 @@ bool emitTypedInstruction(const IrInstruction &inst,
     pushType(localLayout, WasmTypeI32);
     return true;
   }
+  case IrOpcode::LoadStringLength: {
+    if (!runtime.hasStringLength) {
+      error = "wasm emitter missing string length runtime support in function: " + functionName;
+      return false;
+    }
+    if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      return false;
+    }
+    emitWasmStringLengthLoad(acquireScratch(localLayout, WasmTypeI64),
+                             static_cast<uint32_t>(runtime.stringPtrs.size()),
+                             runtime,
+                             out);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  }
   case IrOpcode::CallHost: {
     // `__pstext_stat(which) -> u64`: statistic 8 is the number of live slot allocations of the heap; 0 to 7 count the
     // blocks and arenas of the string heap (0 for a module that never calls it); any other number is the VM's

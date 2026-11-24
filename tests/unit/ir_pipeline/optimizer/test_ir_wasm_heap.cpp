@@ -2037,4 +2037,34 @@ TEST_CASE("the browser profile has a string heap and traps on a bad block addres
   CHECK(trap.out == "trap\n");
 }
 
+TEST_CASE("wasm reads the length of a table string by a computed index like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const auto withStrings = [&](std::vector<std::string> code) {
+    primec::IrModule module = mainOf(code);
+    module.stringTable = {"abc", "", "hello world"};
+    return module;
+  };
+  expectMatchesVm(withStrings({"PushI64 2", "LoadStringLength", "ReturnI64"}),
+                  "string_length_last");
+  expectMatchesVm(withStrings({"PushI64 1", "LoadStringLength", "ReturnI64"}),
+                  "string_length_empty");
+  expectMatchesVm(withStrings({"PushI64 0",
+                               "LoadStringLength",
+                               "PushI64 2",
+                               "LoadStringLength",
+                               "AddI64",
+                               "ReturnI64"}),
+                  "string_length_sum");
+  // the VM's fault for an index past the table and for a negative one, which it reads as an unsigned value
+  expectMatchesVm(withStrings({"PushI64 3", "LoadStringLength", "ReturnI64"}),
+                  "string_length_past");
+  expectMatchesVm(withStrings({"PushI64 -1", "LoadStringLength", "ReturnI64"}),
+                  "string_length_negative");
+  expectMatchesVm(mainOf({"PushI64 0", "LoadStringLength", "ReturnI64"}),
+                  "string_length_empty_table");
+}
+
 TEST_SUITE_END();

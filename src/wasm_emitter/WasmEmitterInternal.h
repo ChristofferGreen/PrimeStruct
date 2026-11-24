@@ -331,6 +331,12 @@ struct WasmRuntimeContext {
   // WASI profile only: `LoadStringByte` checks the position against the length of the string and ends the program with
   // the VM's message (`string index out of bounds in IR`) and `proc_exit(3)` when it is not below it.
   bool hasStringByteFault = false;
+  // WASI profile only: `LoadStringLength` reads the length of the string at a computed index from `stringLengthTable`
+  // (one `u32` per string of the module table); an index past the table is the VM's `invalid string index in IR`.
+  bool hasStringLength = false;
+  uint32_t stringLengthTableAddr = 0;
+  uint32_t stringIndexMessageAddr = 0;
+  uint32_t stringIndexMessageLength = 0;
   uint32_t stringByteMessageAddr = 0;
   uint32_t stringByteMessageLength = 0;
   // The module takes a local address or reads or writes through one: a mutable `i32` global (index 0) holds the number
@@ -708,6 +714,13 @@ void emitWasmStringByteLoad(uint32_t positionLocal,
                             uint32_t length,
                             const WasmRuntimeContext &runtime,
                             std::vector<uint8_t> &out);
+
+// `LoadStringLength`: the string index (an `i64` on the stack) becomes the length of that string as an `i64`; an index
+// past the table of `count` strings is the VM's fault. `indexLocal` is an `i64` scratch local.
+void emitWasmStringLengthLoad(uint32_t indexLocal,
+                              uint32_t count,
+                              const WasmRuntimeContext &runtime,
+                              std::vector<uint8_t> &out);
 
 // Whether the leading `StoreLocal`s of the function (its parameter prologue) store the parameters anywhere but to the
 // locals 0..parameterCount-1, which are the wasm parameters (a struct passed by value keeps its slots in the locals
