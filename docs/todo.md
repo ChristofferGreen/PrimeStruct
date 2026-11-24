@@ -131,6 +131,7 @@ of sync with them.
 | TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
+| TODO-6250 | `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits | ready | benchmark-baseline-platform |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -302,6 +303,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
+
+- [ ] TODO-6250: `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Build robustness (found while adding the startup rows of TODO-6233)
+  - parallel_track: benchmark-baseline-platform
+  - scope: `benchmarks/benchmark_baseline.json` holds one limit per row, measured on Linux x86_64 (`primestruct_native` is 4,096 bytes at most). On macOS arm64 the native artifact is 16,538 bytes, so `scripts/check_benchmark_report.py` reports `runtime:aggregate:primestruct_native artifact_size regression: observed=16538 allowed<=4300` (also call_fib, float_series, json_scan and json_parse) after a normal run. Make the baseline per platform (a `platform` key on an entry or one file per `platform.system`/`machine` of the report) and add the macOS arm64 limits (measured, with the usual headroom), keeping the Linux rows as they are.
+  - acceptance:
+    - `./scripts/benchmark.sh --build-dir build-release --report-json build-release/benchmarks/benchmark_report.json --baseline-json benchmarks/benchmark_baseline.json` passes on macOS arm64; a test of `check_benchmark_report.py` covers an entry that applies to one platform only
+    - full release gate green
+  - stop_rule: the platform split of the baseline; no change to what the benchmarks measure.
+  - repro: the command in acceptance prints the five `primestruct_native` artifact_size regressions on macOS arm64.
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai
