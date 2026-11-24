@@ -87,6 +87,25 @@ namespace http {
       return(false)
     }
 
+    // The value of the cookie called `name` in the `Cookie` header (the first such header line), or an empty view
+    // when there is none. Names match exactly (case-sensitive), the first pair of a repeated name wins, a pair
+    // without `=` is skipped, and a value in double quotes loses them. Nothing is percent-decoded. A view into the
+    // request, so nothing allocates.
+    [return<StringView>]
+    cookie([StringView] name) {
+      [StringView] pair{cookie_pair(this.header("Cookie"), name)}
+      if(pair.empty()) {
+        return(StringView{})
+      }
+      return(cookie_pair_value(pair))
+    }
+
+    // Whether the `Cookie` header has a cookie called `name`, even one with an empty value.
+    [return<bool>]
+    hasCookie([StringView] name) {
+      return(!cookie_pair(this.header("Cookie"), name).empty())
+    }
+
     // How many header lines the request has.
     [return<i32>]
     headerCount() {
@@ -238,6 +257,41 @@ namespace http {
       index = index + 1i32
     }
     return(false)
+  }
+
+  // The first pair of the `Cookie` header value `text` ("a=1; b=2") whose name is `name`, trimmed, or an empty view
+  // when there is none. A pair that matches holds a `=`, so it is never empty.
+  [return<StringView>]
+  cookie_pair([StringView] text, [StringView] name) {
+    if(name.empty()) {
+      return(StringView{})
+    }
+    [i32 mut] start{0i32}
+    while(start < text.count()) {
+      [i32] found{text.indexOfFrom(";", start)}
+      [i32] end{if(found < 0i32, then() { text.count() }, else() { found })}
+      [StringView] pair{text.slice(start, end).trim()}
+      [i32] equals{pair.indexOfByte(61u8)}
+      if(equals > 0i32) {
+        [StringView] key{pair.slice(0i32, equals).trim()}
+        if(key.equals(name)) {
+          return(pair)
+        }
+      }
+      start = end + 1i32
+    }
+    return(StringView{})
+  }
+
+  // The value of a cookie pair `name=value`, trimmed, without one pair of surrounding double quotes.
+  [return<StringView>]
+  cookie_pair_value([StringView] pair) {
+    [i32] equals{pair.indexOfByte(61u8)}
+    [StringView] value{pair.slice(equals + 1i32, pair.count()).trim()}
+    if(value.count() >= 2i32 && value.byteAt(0i32) == 34u8 && value.byteAt(value.count() - 1i32) == 34u8) {
+      return(value.slice(1i32, value.count() - 1i32))
+    }
+    return(value)
   }
 
   // The part of a header line before its colon.

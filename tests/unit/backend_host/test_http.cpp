@@ -296,6 +296,18 @@ TEST_CASE("an AppRouter passes its state to every route through optexe") {
                 "app_router case " << failed << " failed (tests/fixtures/http/app_router.prime)");
 }
 
+TEST_CASE("Request.cookie reads the Cookie header on the VM") {
+  const int failed = runOnVm("cookies");
+  CHECK_MESSAGE(failed == 0,
+                "cookies case " << failed << " failed (tests/fixtures/http/cookies.prime)");
+}
+
+TEST_CASE("Request.cookie reads the Cookie header through optexe") {
+  const int failed = runThroughOptexe("cookies");
+  CHECK_MESSAGE(failed == 0,
+                "cookies case " << failed << " failed (tests/fixtures/http/cookies.prime)");
+}
+
 TEST_CASE("query and form parameters decode and reject malformed values on the VM") {
   const int failed = runOnVm("query_params");
   CHECK_MESSAGE(failed == 0,

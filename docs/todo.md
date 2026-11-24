@@ -118,7 +118,6 @@ of sync with them.
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
-| TODO-6235 | `Request.cookie(name)` reads the `Cookie` header | ready | web-cookies |
 | TODO-6236 | `Response.setCookie` and `clearCookie` write `Set-Cookie` | ready | web-set-cookie |
 | TODO-6237 | `/std/os` `randomHex(byteCount)` from the operating system's entropy | ready | os-random |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -170,7 +169,6 @@ of sync with them.
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
 - TODO-6231 (effects-inference): the effects each definition demands, inferred over the call graph
-- TODO-6235 (web-cookies): `Request.cookie(name)`
 - TODO-6236 (web-set-cookie): `Response.setCookie` and `clearCookie`
 - TODO-6237 (os-random): `/std/os` `randomHex(byteCount)`
 
@@ -181,9 +179,8 @@ of sync with them.
 3. TODO-6240
 4. TODO-6232
 5. TODO-6231
-6. TODO-6235
-7. TODO-6236
-8. TODO-6237
+6. TODO-6236
+7. TODO-6237
 
 ### Priority Lanes
 
@@ -199,7 +196,7 @@ of sync with them.
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions: TODO-6235 (`Request.cookie`), TODO-6236 (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`), TODO-6236 (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 - Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
@@ -403,19 +400,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decision recorded here and the leaf re-sliced (store with expiry and tests on the scripted clock; the handler API; the `todo_web` example gets a per-session counter; docs/spec/stdlib-reference.md and docs/WebAppsPlan.md updated)
     - full release gate green
   - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
-
-- [~] TODO-6235: `Request.cookie(name)` reads the `Cookie` header
-  - owner: ai
-  - status: ready
-  - claimed_by: sonnet-options-agent (worktree-agent-ac8e94bcf84d8fb64), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
-  - parallel_track: web-cookies
-  - scope: `Request` (`stdlib/std/http/http.prime`) has `header(name)` and no cookie access. Add `cookie(name) -> StringView` (the value of the first pair named `name` in the `Cookie` header, empty when there is none) and `hasCookie(name) -> bool`, parsing `name=value; name2=value2` per RFC 6265 section 4.2.1: pairs split at `;`, one optional space after it, names compared exactly (case-sensitive), the value kept as sent (surrounding double quotes removed), a pair without `=` skipped, no percent-decoding. A view into the request buffer, like the other `Request` accessors, so nothing allocates. Document in docs/spec/stdlib-reference.md (next to `header`).
-  - acceptance:
-    - a matrix fixture in tests/fixtures/http (suite `primestruct.backend.http`, the `parse_matrix.prime` style, VM and optexe): no header, one pair, several pairs, a quoted value, a pair without `=`, a name that is a prefix of another (`a` against `ab=1`), a repeated name (the first wins), spaces after `;`, an empty value
-    - full release gate green
-  - stop_rule: reading cookies only; `Set-Cookie` is TODO-6236.
 
 - [ ] TODO-6236: `Response.setCookie` and `clearCookie` write `Set-Cookie`
   - owner: ai

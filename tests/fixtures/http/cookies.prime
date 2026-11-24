@@ -1,0 +1,136 @@
+// /std/http cookies (tests/unit/backend_host/test_http.cpp): `Request.cookie` and `hasCookie` read the Cookie header
+// (RFC 6265, section 4.2.1). The exit code is the number of the first case that failed, or 0.
+import /std/collections/*
+import /std/http/*
+import /std/text/*
+import /std/text/view/*
+
+// The request of case `index`.
+[return<string>]
+case_request([i32] index) {
+  if(index == 1i32) {
+    return("GET / HTTP/1.1\r\n\r\n")
+  }
+  if(index == 2i32) {
+    return("GET / HTTP/1.1\r\nCookie: sid=abc123\r\n\r\n")
+  }
+  if(index == 3i32 || index == 4i32) {
+    return("GET / HTTP/1.1\r\nCookie: a=1; sid=abc123; b=2\r\n\r\n")
+  }
+  if(index == 5i32) {
+    return("GET / HTTP/1.1\r\nCookie: sid=\"quoted value\"\r\n\r\n")
+  }
+  if(index == 6i32) {
+    return("GET / HTTP/1.1\r\nCookie: flag; sid=abc123\r\n\r\n")
+  }
+  if(index == 7i32) {
+    return("GET / HTTP/1.1\r\nCookie: ab=1; a=2\r\n\r\n")
+  }
+  if(index == 8i32) {
+    return("GET / HTTP/1.1\r\nCookie: sid=first; sid=second\r\n\r\n")
+  }
+  if(index == 9i32) {
+    return("GET / HTTP/1.1\r\nCookie: a=1;b=2;  c=3\r\n\r\n")
+  }
+  if(index == 10i32 || index == 11i32) {
+    return("GET / HTTP/1.1\r\nCookie: empty=; other=1\r\n\r\n")
+  }
+  if(index == 12i32) {
+    return("GET / HTTP/1.1\r\nCookie: SID=upper\r\n\r\n")
+  }
+  if(index == 13i32) {
+    return("GET / HTTP/1.1\r\nCookie: a=b=c\r\n\r\n")
+  }
+  if(index == 14i32) {
+    return("GET / HTTP/1.1\r\nCOOKIE: sid=lowerheader\r\n\r\n")
+  }
+  return("GET / HTTP/1.1\r\nCookie: =novalue; sid=ok\r\n\r\n")
+}
+
+// The cookie name case `index` looks up.
+[return<string>]
+case_name([i32] index) {
+  if(index == 4i32) {
+    return("b")
+  }
+  if(index == 7i32) {
+    return("a")
+  }
+  if(index == 9i32) {
+    return("c")
+  }
+  if(index == 10i32) {
+    return("empty")
+  }
+  if(index == 11i32) {
+    return("other")
+  }
+  if(index == 13i32) {
+    return("a")
+  }
+  return("sid")
+}
+
+// The value case `index` expects.
+[return<string>]
+case_value([i32] index) {
+  if(index == 2i32 || index == 3i32 || index == 6i32) {
+    return("abc123")
+  }
+  if(index == 4i32) {
+    return("2")
+  }
+  if(index == 5i32) {
+    return("quoted value")
+  }
+  if(index == 7i32) {
+    return("2")
+  }
+  if(index == 8i32) {
+    return("first")
+  }
+  if(index == 9i32) {
+    return("3")
+  }
+  if(index == 11i32) {
+    return("1")
+  }
+  if(index == 13i32) {
+    return("b=c")
+  }
+  if(index == 14i32) {
+    return("lowerheader")
+  }
+  if(index == 15i32) {
+    return("ok")
+  }
+  return("")
+}
+
+// Whether case `index` has the cookie: no header, a pair without `=` and a name of other case do not.
+[return<bool>]
+case_present([i32] index) {
+  return(index != 1i32 && index != 12i32)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [i32 mut] index{1i32}
+  while(index <= 15i32) {
+    [String] text{stringFrom(case_request(index))}
+    [Request] request{parseRequest(text.view(), 256i32)}
+    [String] name{stringFrom(case_name(index))}
+    [String] expected{stringFrom(case_value(index))}
+    if(!request.isComplete()) {
+      return(index)
+    }
+    if(!request.cookie(name.view()).equals(expected.view())) {
+      return(index)
+    }
+    if(request.hasCookie(name.view()) != case_present(index)) {
+      return(index)
+    }
+    index = index + 1i32
+  }
+  return(0i32)
+}

@@ -713,6 +713,12 @@ no chunked encoding and no TLS; `Connection: keep-alive` and `close` are honored
   `hasHeader(name)`, `headerCount()`, `headerName(i)` and `headerValue(i)`. Header lookups scan the header block; there
   is no header table.
 
+  Cookies are read from the first `Cookie` header line (RFC 6265, section 4.2.1): `cookie(name) -> StringView` is the
+  value of the first pair `name=value` whose name equals `name` (case-sensitive), or an empty view; `hasCookie(name)`
+  tells an absent cookie from one with an empty value. Pairs are separated by `;` with white space around them; a pair
+  without `=` or with an empty name is skipped, a value in double quotes loses them, and nothing is percent-decoded. The
+  views point into the request, so nothing allocates. Writing a cookie is `Response.setCookie` (TODO-6236).
+
   Query and form parameters are read the same way, by scanning:
   - `queryParam(name) -> String` gives the decoded value of the first parameter of `query` whose decoded name is
     `name`; `formParam(name) -> String` does the same over the body when it is a form. Parameters are separated by

@@ -1800,8 +1800,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
   set_tests_properties(PrimeStruct_http
                        PROPERTIES TIMEOUT 600 LABELS "parallel-safe")
-  # (9 cases, 135 s in a loaded gate: shards of two.)
-  primestructAddDoctestShards(PrimeStruct_http_optexe PrimeStruct_cpp_host_call_tests 9 2 900
+  # (10 cases, 135 s in a loaded gate: shards of two.)
+  primestructAddDoctestShards(PrimeStruct_http_optexe PrimeStruct_cpp_host_call_tests 10 2 900
                               "--test-suite=primestruct.backend.http"
                               "--test-case=*through optexe*")
   primestructWatchedCommand(testCommand 1200 $<TARGET_FILE:PrimeStruct_cpp_host_call_tests>
