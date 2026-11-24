@@ -260,8 +260,10 @@ public:
     return Diagnostics;
   }
 
+  // A `.psir` file is VM bytecode: every consumer loads it for the VM (`Script::loadBytecode`, `primevm`,
+  // `--link`, library archives), so the module is lowered for the VM, with real calls and tasks.
   IrValidationTarget validationTarget(const Options & /*options*/) const override {
-    return IrValidationTarget::Serialized;
+    return IrValidationTarget::Vm;
   }
 
   bool requiresOutputPath() const override {

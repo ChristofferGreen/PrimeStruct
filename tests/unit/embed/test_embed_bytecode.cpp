@@ -1,10 +1,13 @@
 #include "embed_fixture_bytecode.h"
 #include "embed_fixture_programs.h"
+#include "embed_test_support.h"
 #include "primec/embed/ScriptEngine.h"
 
 #include "third_party/doctest.h"
 
 #include <cstdint>
+#include <fstream>
+#include <iterator>
 #include <random>
 #include <string>
 #include <vector>
@@ -194,5 +197,25 @@ TEST_CASE("bytecode with a valid header but random body never crashes") {
     }
   }
 }
+
+#ifdef PRIMESTRUCT_TEST_PRIMEC_PATH
+TEST_CASE("primec --emit=ir saves a threaded program as VM bytecode that loads") {
+  // `--emit=ir` lowers for the VM target, so a program whose worker tasks take a lock-guarded parameter (real
+  // calls the serialized target refused) is saved, and `Script::loadBytecode` validates it for the VM.
+  const auto dir = embedTestDir("emit_ir_threaded");
+  const std::string output = (dir / "todo_web.psir").string();
+  const std::string source =
+      std::string(PRIMESTRUCT_SOURCE_DIR) + "/examples/apps/todo_web/main.prime";
+  const EmbedProcessResult result =
+      embedRunPrimec("--emit=ir \"" + source + "\" -o \"" + output + "\"");
+  REQUIRE_MESSAGE(result.exitCode == 0, result.output);
+  std::ifstream in(output, std::ios::binary);
+  std::vector<uint8_t> bytes((std::istreambuf_iterator<char>(in)),
+                             std::istreambuf_iterator<char>());
+  REQUIRE(!bytes.empty());
+  const Script loaded = Script::loadBytecode(bytes, "todo_web");
+  CHECK_MESSAGE(loaded.valid(), loaded.diagnostics());
+}
+#endif
 
 TEST_SUITE_END();

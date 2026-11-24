@@ -208,7 +208,9 @@ auto loaded = primec::embed::Script::loadBytecode(bytes); // runtime-only OK
 ```
 
 Offline from the command line: `primec --emit=ir main.prime -o main.psir`
-writes the same serialized module; `Script::loadBytecode` loads it.
+writes the same serialized module; `Script::loadBytecode` loads it. A `.psir` file is VM bytecode: `--emit=ir`
+lowers the program for the VM target (struct, `String` and collection calls are real calls, and tasks run on the
+VM's scheduler), the target every consumer of the file loads it for.
 
 Loaded modules are validated for the VM target; corrupt, truncated, or
 wrong-version bytes produce an invalid `Script` with a diagnostic.

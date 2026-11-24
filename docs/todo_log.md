@@ -359,3 +359,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 ## TODO-6226
 
 - 2026-11-24 (release build, macOS arm64, node 24.2, `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests`, 557 cases, every case on `vm-O2` and as `--wasm-profile wasi` under node). Before (after the byte operations): 456 agree, 1 differs, 80 refused. After `LoadStringLength`: 458 agree, 1 differs (`file_io_errno_newline_png`, exit 139, the node 24 crash of TODO-6187), 78 refused; the two that moved are `namespaced_handler_fields` and `text_view_http_literals`.
+
+## TODO-5536
+
+- 2026-11-24 (release build, macOS arm64, `ls -l` of `primec --emit=ir -I stdlib <program> -o x.psir`; before and after TODO-6240 lowers `--emit=ir` for the VM target; the PNG row is the reader of `/std/image/png/read` printing width, height and pixel count, so it is smaller than the 4,381,773-byte program of TODO-6232): PNG reader 2,121,846 to 1,305,658 bytes; `examples/apps/text_editor` 22,186,715 to 6,445,640; `examples/apps/web_app` 14,610,447 to 4,749,980; `examples/apps/http_hello` 12,613,431 to 4,012,423; `examples/native_ui/hello_button` 1,671,596 to 1,415,917; `examples/apps/todo_web` failed (`IR backend does not support recursive calls: run_workers<...>`) and is now 8,493,566.

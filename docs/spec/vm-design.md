@@ -364,6 +364,10 @@
   on a fresh VM; the runs' output follows one another and the exit code is the runs' common one, and a run that exits
   otherwise ends the process with exit code 1 and a `vm-repeat: run <k> exited <x> but run 0 exited <y>` line. The
   concurrent corpus of `tests/vm_threads_corpus.txt` uses it so the front end is paid once per program (TODO-6030).
+- **Bytecode (`primec --emit=ir`):** a `.psir` file is VM bytecode. `--emit=ir` lowers for the VM target (the one
+  `Script::loadBytecode`, `primevm`, `--link` and library archives validate for), so struct, `String` and collection
+  calls are real calls with the address ABI and a threaded program (`serveWorkers`-style tasks) can be saved. The
+  validation target `Serialized` stays for the checks that name it.
 - **IR link (`primevm --link`; TODO-5922; docs/ModulesAndLibrariesPlan.md, section 9):** `primevm <program> --link
   <module.psir>` (repeatable; `--link=<path>` too) runs a program merged with serialized IR modules. The program is a
   source file or a `.psir` file; a `.psir` input is loaded and run without compiling. `linkIrModule`

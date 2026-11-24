@@ -125,7 +125,6 @@ of sync with them.
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
-| TODO-6240 | `primec --emit=ir` lowers for the VM target | ready | bytecode-vm-target |
 | TODO-6232 | The instruction source map names each source unit once | ready | bytecode-size |
 | TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | ready | bytecode-bench |
 | TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | ready | bytecode-inline-report |
@@ -527,22 +526,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the report and the leaves it leads to; no change to which definitions are real calls.
   - repro: `primec --dump-stage ir-lowered png.prime | grep '^function'` shows `/main ... instructions=32582` and 14 small functions.
-
-- [~] TODO-6240: `primec --emit=ir` lowers for the VM target
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: bytecode-vm-target
-  - scope: `--emit=ir` (`src/ir/IrBackends.cpp`, `validationTarget` returns `IrValidationTarget::Serialized`) lowers without the address ABI of real calls (`realCallAllowStructs` and `realCallAllowStrings` are false for `Serialized` in `IrLowererLowerSetupStage.cpp`), so every struct, `String` and vector call is expanded in place; yet the only consumers of a `.psir` run it on the VM (`Script::loadBytecode` validates for `IrValidationTarget::Vm`, `primevm`, `--link`, library archives). Lower `--emit=ir` for the VM target, as the embed API's `ScriptEngine` does for `saveBytecode`. Keep `Serialized` for the checks that name it (host calls allowed), and say in docs/Embedding.md and docs/spec/vm-design.md (Bytecode) that a `.psir` is VM bytecode. The experiment of 2026-11-24 (one line changed, not committed): PNG reader 4,381,773 to 2,644,063 bytes, `examples/apps/text_editor` 22,186,715 to 6,445,640, `examples/apps/web_app` 14,610,447 to 4,749,980, `examples/apps/http_hello` 12,613,431 to 4,012,423, `examples/native_ui/hello_button` 1,671,596 to 1,415,917, and `examples/apps/todo_web` compiles (8,493,566 bytes) where `--emit=ir` fails today with `IR backend does not support recursive calls: run_workers<RequestLog<WebApp<TodoList>>, serveWorkers__lambda7> (it stays inline because parameter `app` is a `RwLock<...>`)`: a threaded program cannot be saved as bytecode, which this also fixes.
-  - acceptance:
-    - the sizes above (or smaller) with `scripts/benchmark.sh` rows of TODO-6233 if it has landed, otherwise measured with `ls -l` and written into docs/todo_log.md under TODO-5536
-    - `primec --emit=ir examples/apps/todo_web/main.prime -o x.psir` succeeds, and a test that saves a program with `serveWorkers`-style tasks and loads it with `Script::loadBytecode`
-    - every test that runs a program from `--emit=ir` bytecode, `bundle_macos_app.sh` (checked by its CTest guard without opening a window) and the golden IR dumps pass; programs print the same output from the old and the new bytecode on the VM; a v40 `.psir` still loads
-    - full release gate green
-  - stop_rule: the target `--emit=ir` lowers for; no format change (TODO-6232), no new lowering rules.
-  - repro: `primec --emit=ir examples/apps/todo_web/main.prime -o x.psir` fails today.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

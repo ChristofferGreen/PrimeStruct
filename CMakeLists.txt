@@ -1410,7 +1410,8 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # CLI-level host call tests shell out to primec (emit rejection, offline bytecode).
   add_dependencies(PrimeStruct_embed_tests primec primevm)
   target_compile_definitions(PrimeStruct_embed_tests PRIVATE
-    PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>")
+    PRIMESTRUCT_TEST_PRIMEC_PATH="$<TARGET_FILE:primec>"
+    PRIMESTRUCT_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   primestructEnableWarnings(PrimeStruct_embed_tests)
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_embed_tests>
             "--test-suite=primestruct.embed.script_engine"
