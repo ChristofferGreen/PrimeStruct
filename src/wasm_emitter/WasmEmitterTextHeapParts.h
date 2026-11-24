@@ -42,6 +42,7 @@ inline constexpr int32_t FaultTextAddress = 6;
 inline constexpr int32_t FaultTextLimit = 7;
 inline constexpr int32_t FaultTextArena = 8;
 inline constexpr int32_t FaultTextRange = 9;
+inline constexpr int32_t FaultTextIndex = 10;
 
 inline uint32_t textFn(const WasmRuntimeContext &runtime, WasmTextHelper helper) {
   return runtime.textFunction[static_cast<size_t>(helper)];

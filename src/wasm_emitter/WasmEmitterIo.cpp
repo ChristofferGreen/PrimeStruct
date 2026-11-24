@@ -30,6 +30,7 @@ constexpr uint8_t WasmOpI64Const = 0x42;
 constexpr uint8_t WasmOpI32Eqz = 0x45;
 constexpr uint8_t WasmOpI32Eq = 0x46;
 constexpr uint8_t WasmOpI32GeU = 0x4f;
+constexpr uint8_t WasmOpI32GtU = 0x4b;
 constexpr uint8_t WasmOpI32Add = 0x6a;
 constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
@@ -201,6 +202,20 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Eqz);
       out.push_back(WasmOpIf);
       out.push_back(WasmBlockTypeVoid);
+      // more arguments than the static buffers hold: a trap, not a write past them
+      emitI32LoadAtAddress(runtime.argcAddr, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsCapacityBytes / 4), out);
+      out.push_back(WasmOpI32GtU);
+      emitI32LoadAtAddress(runtime.argvBufSizeAddr, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvBufferCapacityBytes), out);
+      out.push_back(WasmOpI32GtU);
+      out.push_back(WasmOpI32Or);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+      out.push_back(WasmOpUnreachable);
+      out.push_back(WasmOpEnd);
       out.push_back(WasmOpI32Const);
       appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
       out.push_back(WasmOpI32Const);
@@ -282,6 +297,14 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpLocalSet);
       appendU32Leb(localLayout.argvLenLocal, out);
       out.push_back(WasmOpEnd);
+      // the text of the argument is what comes before its NUL
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(1, out);
+      out.push_back(WasmOpI32Sub);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvLenLocal, out);
 
       emitWasiWritePtrLen(fd, localLayout.argvPtrLocal, localLayout.argvLenLocal, runtime, out);
       if ((flags & PrintFlagNewline) != 0) {

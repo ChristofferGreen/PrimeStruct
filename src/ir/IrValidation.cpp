@@ -383,7 +383,14 @@ bool validateFunction(const IrModule &module,
             "host calls are only supported by the vm target, the C++ targets "
             "and serialized bytecode" +
                 refusedOpcodeSuffix(inst.op, target) +
-                (wasmText ? "; the string heap (`String`) is not available on wasm" : ""),
+                (wasmText ? "; the string heap (`String`) is not available on wasm" : "") +
+                (wasmText && target == IrValidationTarget::WasmBrowser &&
+                         (wasmTextKind == NativeTextHost::Literal ||
+                          wasmTextKind == NativeTextHost::Argument)
+                     ? ": the browser profile has no data segments or `args_get`, so a literal "
+                       "(`__pstext_literal`) or an entry argument (`__pstext_argument`) needs the "
+                       "WASI profile"
+                     : ""),
             error);
       }
       if (inst.imm >= module.hostImports.size()) {

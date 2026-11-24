@@ -2624,7 +2624,9 @@ are left unarchived.
 | TODO-6224 | The Wasm string heap, part 2: large blocks and `__pstext_set_limit` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6225 | The Wasm string heap, part 3: string arenas and statistics 0 to 7 | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6226 | Wasm refuses `LoadStringLength` of a runtime string | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browse... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6228 | A real call that returns a sum built from a unit variant copies slots past the callee's frame | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6229 | Wasm `PrintArgv` prints the NUL terminator of the argument | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

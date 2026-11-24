@@ -334,6 +334,18 @@ bool buildWasiRuntimeContext(const IrModule &module,
             "VM error: string arena ended without one being open\n";
         static const std::string TextRangeMessage = "VM error: invalid text range: ";
         static const std::string TextRangeMidMessage = " bytes at ";
+        // the VM names the host function that was called with the bad index
+        std::string literalImport = "std/text/__pstext_literal";
+        for (size_t i = 0; i < module.hostImports.size(); ++i) {
+          if (runtime.textHostKinds[i] == NativeTextHost::Literal) {
+            literalImport = module.hostImports[i].name;
+            break;
+          }
+        }
+        const std::string textIndexMessage =
+            "VM error: invalid string index passed to " + literalImport + "\n";
+        appendMessage(
+            textIndexMessage, runtime.textIndexMessageAddr, runtime.textIndexMessageLength);
         appendMessage(TextFreeMessage, runtime.textFreeMessageAddr, runtime.textFreeMessageLength);
         appendMessage(
             TextTwiceMessage, runtime.textTwiceMessageAddr, runtime.textTwiceMessageLength);

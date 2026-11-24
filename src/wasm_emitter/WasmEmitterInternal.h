@@ -384,6 +384,8 @@ struct WasmRuntimeContext {
   uint32_t textLimitMessageLength = 0;
   uint32_t textArenaMessageAddr = 0;
   uint32_t textArenaMessageLength = 0;
+  uint32_t textIndexMessageAddr = 0;
+  uint32_t textIndexMessageLength = 0;
   uint32_t textRangeMessageAddr = 0;
   uint32_t textRangeMessageLength = 0;
   uint32_t textRangeMidMessageAddr = 0;

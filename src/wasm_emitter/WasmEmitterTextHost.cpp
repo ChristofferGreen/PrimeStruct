@@ -22,7 +22,10 @@ WasmCodeBody buildLiteral(const WasmRuntimeContext &runtime) {
   a.i64Const(runtime.textLiteralCount);
   a.i64GeU();
   a.ifThen();
-  a.unreachable();
+  // the VM's `invalid string index passed to <import name>`
+  a.i32Const(FaultTextIndex);
+  a.i64Const(0);
+  a.call(fn(runtime, WasmHeapHelper::Fault));
   a.end();
   a.localGet(Index);
   a.i32WrapI64();
@@ -83,7 +86,9 @@ WasmCodeBody buildLiteral(const WasmRuntimeContext &runtime) {
 }
 
 // argument(index i64) -> i64: the entry argument at the index copied into a fresh text block (0 for none or an empty
-// one), read with `args_sizes_get` and `args_get` into the static argument buffers.
+// one). `args_sizes_get` gives the sizes, the pointer table and the text of all the arguments are read with `args_get`
+// into two blocks of the metadata area (taken for the call and returned, so any number of arguments fits), and the
+// text block is made last, as the VM does.
 WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   constexpr uint32_t Index = 0;
   constexpr uint32_t Position = 1;
@@ -92,9 +97,11 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   constexpr uint32_t Pointer = 4;
   constexpr uint32_t End = 5;
   constexpr uint32_t Length = 6;
-  constexpr uint32_t Address = 7;
+  constexpr uint32_t Pointers = 7;
+  constexpr uint32_t Buffer = 8;
+  constexpr uint32_t Address = 9;
   WasmCodeBody body;
-  declareLocals(body, 6, 1);
+  declareLocals(body, 8, 1);
   WasmAsm a(body.instructions);
   if (!runtime.hasArgvOps) {
     // no `args_get` import: the module never asks for an argument
@@ -102,6 +109,16 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
     a.end();
     return body;
   }
+  const auto freeBlocks = [&]() {
+    a.localGet(Pointers);
+    a.localGet(Count);
+    a.i32Const(2);
+    a.i32Shl();
+    a.call(textFn(runtime, WasmTextHelper::MetaFree));
+    a.localGet(Buffer);
+    a.localGet(BufferBytes);
+    a.call(textFn(runtime, WasmTextHelper::MetaFree));
+  };
   a.localGet(Index);
   a.i32WrapI64();
   a.localSet(Position);
@@ -126,28 +143,26 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   a.i64Const(0);
   a.ret();
   a.end();
-  // more arguments than the static buffers hold
   a.localGet(Count);
-  a.i32Const(static_cast<int32_t>(runtime.argvPtrsCapacityBytes / 4));
-  a.i32GtU();
+  a.i32Const(2);
+  a.i32Shl();
+  a.call(textFn(runtime, WasmTextHelper::MetaAlloc));
+  a.localSet(Pointers);
   a.localGet(BufferBytes);
-  a.i32Const(static_cast<int32_t>(runtime.argvBufferCapacityBytes));
-  a.i32GtU();
-  a.i32Or();
-  a.ifThen();
-  a.unreachable();
-  a.end();
-  a.i32Const(static_cast<int32_t>(runtime.argvPtrsBase));
-  a.i32Const(static_cast<int32_t>(runtime.argvBufferBase));
+  a.call(textFn(runtime, WasmTextHelper::MetaAlloc));
+  a.localSet(Buffer);
+  a.localGet(Pointers);
+  a.localGet(Buffer);
   a.call(runtime.argsGetImportIndex);
   a.ifThen();
+  freeBlocks();
   a.i64Const(0);
   a.ret();
   a.end();
   a.localGet(Position);
   a.i32Const(2);
   a.i32Shl();
-  a.i32Const(static_cast<int32_t>(runtime.argvPtrsBase));
+  a.localGet(Pointers);
   a.i32Add();
   a.i32Load(0);
   a.localSet(Pointer);
@@ -158,7 +173,7 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   a.localGet(Count);
   a.i32Eq();
   a.ifThen();
-  a.i32Const(static_cast<int32_t>(runtime.argvBufferBase));
+  a.localGet(Buffer);
   a.localGet(BufferBytes);
   a.i32Add();
   a.localSet(End);
@@ -168,7 +183,7 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   a.i32Add();
   a.i32Const(2);
   a.i32Shl();
-  a.i32Const(static_cast<int32_t>(runtime.argvPtrsBase));
+  a.localGet(Pointers);
   a.i32Add();
   a.i32Load(0);
   a.localSet(End);
@@ -183,6 +198,7 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   a.localGet(Length);
   a.i32Eqz();
   a.ifThen();
+  freeBlocks();
   a.i64Const(0);
   a.ret();
   a.end();
@@ -197,6 +213,7 @@ WasmCodeBody buildArgument(const WasmRuntimeContext &runtime) {
   a.localGet(Pointer);
   a.localGet(Length);
   a.memoryCopy();
+  freeBlocks();
   a.localGet(Address);
   a.end();
   return body;

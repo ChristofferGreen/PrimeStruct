@@ -47,6 +47,7 @@ constexpr int32_t FaultTextAddress = 6;
 constexpr int32_t FaultTextLimit = 7;
 constexpr int32_t FaultTextArena = 8;
 constexpr int32_t FaultTextRange = 9;
+constexpr int32_t FaultTextIndex = 10;
 
 // The address a slot range starts at: Tag | generation << 48 | slot * 16 (the VM's encoding, arena 0).
 void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
@@ -113,6 +114,7 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
     literalIf(FaultTextAddress, runtime.textAddressMessageAddr, runtime.textAddressMessageLength);
     literalIf(FaultTextLimit, runtime.textLimitMessageAddr, runtime.textLimitMessageLength);
     literalIf(FaultTextArena, runtime.textArenaMessageAddr, runtime.textArenaMessageLength);
+    literalIf(FaultTextIndex, runtime.textIndexMessageAddr, runtime.textIndexMessageLength);
     // `invalid text range: <count> bytes at <address>`: the count is in the globals, the address follows below
     a.localGet(Kind);
     a.i32Const(FaultTextRange);
@@ -146,6 +148,10 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
   a.i32And();
   a.localGet(Kind);
   a.i32Const(FaultTextArena);
+  a.i32Ne();
+  a.i32And();
+  a.localGet(Kind);
+  a.i32Const(FaultTextIndex);
   a.i32Ne();
   a.i32And();
   a.ifThen();

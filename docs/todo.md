@@ -135,7 +135,7 @@ of sync with them.
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
-| TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile | ready | wasm-bytes-host |
+| TODO-6230 | Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -171,7 +171,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results) and TODO-6215 (collections-root rule for library roots) landed, then TODO-6223 (packed `Result` and error struct results)
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6227 (Wasm literal and argument limits), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -538,20 +538,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the unknown-statistic fault only.
   - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
-- [~] TODO-6227: Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browser profile
+- [ ] TODO-6230: Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers
   - owner: ai
-  - status: ready
-  - claimed_by: lib-shapes (worktree-agent-ab62d8f1159536de2), 2026-11-24
+  - status: deferred
   - created_at: 2026-11-24
-  - phase: Backend parity (found with TODO-6179)
+  - phase: Backend parity (found with TODO-6227)
   - parallel_track: wasm-bytes-host
-  - scope: three differences from the VM remain. (1) `__pstext_literal` of an index past the string table is the VM's runtime error `invalid string index passed to <import name>` with exit code 3; the Wasm helper executes `unreachable`. (2) `__pstext_argument` reads the arguments into the static buffers of 1024 pointers and 16 KiB; a program with more traps (`PrintArgv` has the same fixed buffers and no check at all). Read the sizes and take a region of the byte heap or grow the memory instead. (3) The browser profile has no data segments and no `args_get`, so a module that calls `__pstext_literal` or `__pstext_argument` is refused with a named error; a browser `String` needs its literals in a data segment of the browser module and arguments from the host.
+  - scope: `PrintArgv` reads the arguments with `args_get` into the static table of 1024 pointers and the buffer of 16 KiB (`argvPtrsBase`, `argvBufferBase`, src/wasm_emitter/WasmEmitterIo.cpp), which the VM does not have. A program with more arguments or more argument text now traps (a check before `args_get`; it used to write past the buffers and corrupt the memory that follows). `__pstext_argument` has no such limit: it takes the sizes from `args_sizes_get` and two blocks of the string heap's metadata area (TODO-6227), which a module without the string heap does not have. Give `PrintArgv` the same: take the blocks from the memory (`memory.grow` with the shadow stack no longer the last region, as `metaAlloc` does) or print the argument in pieces.
   - acceptance:
-    - IR tests run an invalid literal index (the VM's text, exit 3) and a run with 2000 arguments under node like the VM
-    - the browser profile either runs a literal or names the refusal in one sentence in the validator
+    - an IR module that calls `PrintArgv` with 2000 arguments and one with 100 arguments of 300 bytes print what the VM prints under node on the WASI profile
     - full release gate green
-  - stop_rule: the three differences above.
-  - repro: an IR module with a one-entry string table that calls `__pstext_literal` with index 5 exits 3 with `VM error: invalid string index passed to std/text/__pstext_literal` on the VM and traps under node.
+  - stop_rule: the static argument buffers of `PrintArgv` and `PrintArgvUnsafe`.
+  - repro: an IR module `PushI32 1; PrintArgv 1; PushI32 0; ReturnI32` run under node with 2000 arguments traps (exit code 99 of the test runner) where the VM prints the second argument.
+
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred

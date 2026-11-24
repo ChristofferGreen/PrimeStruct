@@ -1,6 +1,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/backend/WasmEmitter.h"
+#include "primec/ir/IrValidation.h"
 #include "primec/testing/TestScratch.h"
 
 #include "test_ir_optimizer_helpers.h"
@@ -36,7 +37,8 @@ const fs = require("node:fs");
 process.removeAllListeners("warning");
 process.on("warning", () => {});
 const { WASI } = require("node:wasi");
-const wasi = new WASI({ version: "preview1", args: ["program"], returnOnExit: true });
+const extraArgs = process.argv[3] ? JSON.parse(fs.readFileSync(process.argv[3], "utf8")) : [];
+const wasi = new WASI({ version: "preview1", args: ["program", ...extraArgs], returnOnExit: true });
 class ProgramExit { constructor(code) { this.code = code; } }
 const imports = wasi.getImportObject();
 imports.wasi_snapshot_preview1.proc_exit = (code) => { throw new ProgramExit(code); };
@@ -96,10 +98,12 @@ struct NodeRun {
 
 // Emits the module for the profile and runs it under node with `runner`.
 // `nodeFlags` is put after `node` (a deep recursion needs a bigger stack than the default).
+// `extraArgs` are the program arguments after its name (the WASI profile only).
 NodeRun runOnNode(const primec::IrModule &module,
                   const std::string &name,
                   bool browser,
-                  const std::string &nodeFlags = "") {
+                  const std::string &nodeFlags = "",
+                  const std::vector<std::string> &extraArgs = {}) {
   NodeRun run;
   primec::WasmEmitter emitter;
   emitter.browserProfile = browser;
@@ -117,9 +121,20 @@ NodeRun runOnNode(const primec::IrModule &module,
   std::ofstream(runnerPath) << (browser ? BrowserRunner : NodeRunner);
   const std::filesystem::path outPath = scratch(name + ".stdout");
   const std::filesystem::path errPath = scratch(name + ".stderr");
+  std::string argsFile;
+  if (!extraArgs.empty()) {
+    const std::filesystem::path argsPath = scratch(name + ".args.json");
+    std::ofstream json(argsPath);
+    json << "[";
+    for (size_t i = 0; i < extraArgs.size(); ++i) {
+      json << (i == 0 ? "" : ",") << "\"" << extraArgs[i] << "\"";
+    }
+    json << "]";
+    argsFile = " '" + argsPath.string() + "'";
+  }
   const std::string command = "node " + nodeFlags + " '" + runnerPath.string() + "' '" +
-                              wasmPath.string() + "' > '" + outPath.string() + "' 2> '" +
-                              errPath.string() + "'";
+                              wasmPath.string() + "'" + argsFile + " > '" + outPath.string() +
+                              "' 2> '" + errPath.string() + "'";
   const int status = std::system(command.c_str());
 #if defined(__unix__) || defined(__APPLE__)
   run.exitCode = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
@@ -135,14 +150,19 @@ NodeRun runOnNode(const primec::IrModule &module,
 void expectMatchesVm(const primec::IrModule &module,
                      const std::string &name,
                      const std::string &nodeFlags = "",
-                     bool mustSucceed = false) {
-  const Outcome expected = optimizer_test::run(module, {"program"});
+                     bool mustSucceed = false,
+                     const std::vector<std::string> &extraArgs = {}) {
+  std::vector<std::string_view> programArgs = {"program"};
+  programArgs.insert(programArgs.end(), extraArgs.begin(), extraArgs.end());
+  const Outcome expected = optimizer_test::run(module, programArgs);
   if (mustSucceed) {
     CHECK_MESSAGE(expected.ok, name << ": " << expected.error);
   }
-  const NodeRun actual = runOnNode(module, name, false, nodeFlags);
+  const NodeRun actual = runOnNode(module, name, false, nodeFlags, extraArgs);
   INFO(name);
   CAPTURE(actual.err);
+  CAPTURE(expected.output);
+  CAPTURE(expected.error);
   REQUIRE_MESSAGE(actual.built, actual.buildError);
   CHECK(actual.out == expected.output);
   if (expected.ok) {
@@ -2000,6 +2020,142 @@ TEST_CASE("wasm string literals and entry arguments match the VM") {
   module.stringTable = {"hello world", "", "world wide web"};
   module.hostImports[static_cast<size_t>(TextArgument)].parameters = {primec::IrHostValueKind::I32};
   expectMatchesVm(module, "text_literals", "", true);
+}
+
+namespace {
+
+// `count` program arguments of at least `length` characters each (the VM and node get the same text).
+std::vector<std::string> manyArguments(size_t count, size_t length) {
+  std::vector<std::string> args;
+  for (size_t i = 0; i < count; ++i) {
+    std::string arg = "a" + std::to_string(i);
+    arg.resize(std::max(arg.size(), length), 'x');
+    args.push_back(arg);
+  }
+  return args;
+}
+
+// A program that reads the arguments at `indexes` with `__pstext_argument` and prints each block's address, length
+// and first bytes, after the number of arguments.
+primec::IrModule argumentsProgram(const std::vector<int> &indexes) {
+  std::vector<std::string> code;
+  code.push_back("PushArgc");
+  code.push_back("PrintI32 1");
+  for (const int index : indexes) {
+    code.push_back("PushI32 " + std::to_string(index));
+    code.push_back(callText(TextArgument));
+    code.push_back("StoreLocal 3");
+    code.push_back("LoadLocal 3");
+    code.push_back("PrintU64 1");
+    code.push_back("LoadLocal 3");
+    code.push_back(callText(TextLength));
+    code.push_back("PrintI32 1");
+    if (index >= 0) {
+      for (uint64_t i = 0; i < 3; ++i) {
+        printByte(code, "LoadLocal 3", i);
+      }
+    }
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  primec::IrModule module = withText(mainOf(code));
+  module.hostImports[static_cast<size_t>(TextArgument)].parameters = {primec::IrHostValueKind::I32};
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("wasm reads more arguments than the old static table held like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 2000 arguments are more than the 1024 pointers the static table held.
+  expectMatchesVm(argumentsProgram({0, 1, 1023, 1024, 1999, 2000, -1}),
+                  "text_arguments_many",
+                  "",
+                  true,
+                  manyArguments(2000, 0));
+}
+
+TEST_CASE("wasm reads arguments whose text is larger than the old static buffer like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 100 arguments of 300 bytes are 30 KB of text, more than the 16 KiB the static buffer held.
+  expectMatchesVm(argumentsProgram({0, 1, 50, 99, 100}),
+                  "text_arguments_long",
+                  "",
+                  true,
+                  manyArguments(100, 300));
+}
+
+TEST_CASE("wasm PrintArgv prints arguments that fit the static buffers and traps on more") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  primec::IrModule module = mainOf({"PushI32 1", "PrintArgv 1", "PushI32 0", "ReturnI32"});
+  // 1000 arguments and 100 of 100 bytes fit the table (1024 pointers) and the buffer (16 KiB) like on the VM
+  expectMatchesVm(module, "print_argv_fits", "", true, manyArguments(1000, 0));
+  expectMatchesVm(module, "print_argv_fits_text", "", true, manyArguments(100, 100));
+  // more than they hold is a trap, not a write past the static buffers
+  const NodeRun tooMany = runOnNode(module, "print_argv_many", false, "", manyArguments(2000, 0));
+  REQUIRE_MESSAGE(tooMany.built, tooMany.buildError);
+  CHECK(tooMany.exitCode == 99);
+  CHECK(tooMany.out.empty());
+  const NodeRun tooLong = runOnNode(module, "print_argv_long", false, "", manyArguments(100, 300));
+  REQUIRE_MESSAGE(tooLong.built, tooLong.buildError);
+  CHECK(tooLong.exitCode == 99);
+  CHECK(tooLong.out.empty());
+}
+
+TEST_CASE("wasm string literal of an invalid index is the VM's fault") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const auto literalAt = [&](const char *index, std::vector<std::string> table) {
+    primec::IrModule module =
+        withText(mainOf({std::string("PushI64 ") + index, callText(TextLiteral), "ReturnI64"}));
+    module.stringTable = std::move(table);
+    return module;
+  };
+  // past the one entry, a negative index (the VM reads it as an unsigned value) and an empty table
+  expectMatchesVm(literalAt("5", {"only"}), "text_literal_past");
+  expectMatchesVm(literalAt("1", {"only"}), "text_literal_one_past");
+  expectMatchesVm(literalAt("-1", {"only"}), "text_literal_negative");
+  expectMatchesVm(literalAt("0", {}), "text_literal_empty_table");
+  // the last entry is still a literal
+  expectMatchesVm(literalAt("0", {"only"}), "text_literal_last", "", true);
+}
+
+TEST_CASE("the browser profile names why it refuses string literals and entry arguments") {
+  const auto refusal = [&](primec::IrModule module, const primec::IrValidationTarget target) {
+    std::string error;
+    CHECK_FALSE(primec::validateIrModule(module, target, error));
+    return error;
+  };
+  primec::IrModule literal = withText(mainOf({"PushI64 0", callText(TextLiteral), "ReturnI64"}));
+  literal.stringTable = {"only"};
+  primec::IrModule argument = withText(mainOf({"PushI32 0", callText(TextArgument), "ReturnI64"}));
+  argument.hostImports[static_cast<size_t>(TextArgument)].parameters = {
+      primec::IrHostValueKind::I32};
+  for (primec::IrModule module : {literal, argument}) {
+    // the browser profile has no effects, so the host call is the first thing it refuses
+    module.functions[0].metadata.effectMask = 0;
+    module.functions[0].metadata.capabilityMask = 0;
+    const std::string browser = refusal(module, primec::IrValidationTarget::WasmBrowser);
+    CHECK(browser.find("the browser profile has no data segments or `args_get`") !=
+          std::string::npos);
+    CHECK(browser.find("needs the WASI profile") != std::string::npos);
+  }
+  // the WASI profile takes both
+  std::string error;
+  CHECK(primec::validateIrModule(literal, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("the browser profile has a string heap and traps on a bad block address") {
