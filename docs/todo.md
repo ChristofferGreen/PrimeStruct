@@ -533,9 +533,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the tests and shared costs the message names; no timeout is raised and no test is retried.
   - repro: run `./scripts/compile.sh --release` while a second one runs in another worktree, then read `build-release/Testing/Temporary/LastTestsFailed.log` and the kill message in `LastTest.log`.
 
-- [ ] TODO-6224: The Wasm string heap, part 2: large blocks and `__pstext_set_limit`
+- [~] TODO-6224: The Wasm string heap, part 2: large blocks and `__pstext_set_limit`
   - owner: ai
   - status: ready
+  - claimed_by: wasm-text-b (worktree-agent-a700f9f33ed9b5b01), 2026-11-24
   - created_at: 2026-11-24
   - phase: Backend parity (split from TODO-6178)
   - parallel_track: wasm-bytes-host
