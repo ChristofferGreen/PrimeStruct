@@ -363,9 +363,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
 
-- [ ] TODO-6237: `/std/os` `randomHex(byteCount)` from the operating system's entropy
+- [~] TODO-6237: `/std/os` `randomHex(byteCount)` from the operating system's entropy
   - owner: ai
   - status: ready
+  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
   - created_at: 2026-11-24
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: os-random
