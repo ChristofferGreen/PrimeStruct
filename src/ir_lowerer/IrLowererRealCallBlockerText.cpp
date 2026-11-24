@@ -95,10 +95,6 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
            "stays inline";
   case AddressAbiBlocker::CollectionResult:
     return "its result is a struct of the canonical collections, which a real call does not return";
-  case AddressAbiBlocker::SumResult:
-    return "its result `" + returnTypeText(def) +
-           "` is a sum, which a real call does not return: a function with a sum result stays "
-           "inline";
   case AddressAbiBlocker::PackedResult:
     return "its result `" + returnTypeText(def) +
            "` is a packed `Result`, which a real call does not return: a function with a `Result` "

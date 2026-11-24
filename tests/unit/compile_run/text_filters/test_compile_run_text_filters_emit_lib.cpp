@@ -310,12 +310,7 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "use_ref([Reference<Pick>] value) {\n  return(2i32)\n}\n",
        "public function /use_ref cannot be compiled into a library: parameter `value` is a sum, "
        "which a real call does not take"},
-      // A sum, the packed builtin `Result` and a stdlib error struct are not returned by a real call: the rule is named.
-      {"sum_result",
-       "[sum] Pick { [i32] number [bool] flag }\n\n[public return<Pick>]\nmake_pick() {\n"
-       "  return(Pick{[number] 1i32})\n}\n",
-       "public function /make_pick cannot be compiled into a library: its result `Pick` is a sum, "
-       "which a real call does not return: a function with a sum result stays inline"},
+      // The packed builtin `Result` and a stdlib error struct are not returned by a real call: the rule is named.
       {"packed_result",
        "[public return<Result<i32, i32>>]\nmake_result() {\n  return(Result.ok(5i32))\n}\n",
        "public function /make_result cannot be compiled into a library: its result "

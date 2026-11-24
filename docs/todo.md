@@ -148,7 +148,6 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
-| TODO-6222 | A public `[sum]` is printed in the interface and a library function may return one | ready | lib-shapes |
 | TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
@@ -173,7 +172,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
 - Effects (docs/spec/language-core.md, Effects): TODO-5688
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, then TODO-6222 (a public `[sum]` in the interface and a sum result, option A) and TODO-6223 (packed `Result` and error struct results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, then TODO-6223 (packed `Result` and error struct results), TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots), in that order
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6227 (Wasm literal and argument limits), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
@@ -704,21 +703,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
-- [~] TODO-6222: A public `[sum]` is printed in the interface and a library function may return one
-  - owner: ai
-  - status: ready
-  - claimed_by: lib-sum (worktree-agent-a12fa5df80cd9e813), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Modules and libraries (step 2 of TODO-6213, option A)
-  - parallel_track: lib-shapes
-  - scope: print a public `[sum]` in the interface like a public struct (variants, summary, in the interface hash; src/pipeline/ModuleInterface.cpp and its read-back) so a library may return its own sums; the consumer expands the copy and destroy of the payloads inline from the declaration and the result is a heap block the callee fills and the caller destroys (the struct-result path). A sum parameter stays refused (the TODO-6173 rule).
-  - decision: 2026-11-23 (owner): "C now, then A"; the named refusal of TODO-6213 landed first.
-  - acceptance:
-    - `[sum] Pick { [i32] number [bool] flag } [public return<Pick>] make_pick() { return(Pick{[number] 1i32}) }` is a function of the archive, and a program that links it gets the same results as the whole-program build on the VM and optexe; an owned payload is destroyed once
-    - the interface hash of a library with a public sum changes and the libraries are rebuilt; a sum parameter keeps its named refusal
-    - full release gate green
-  - stop_rule: user `[sum]` results of library roots; no packed `Result` and no error struct (TODO-6223).
-  - repro: the program in acceptance, `primec --emit=lib sum.prime -o sum.psa`: refused today with `its result `Pick` is a sum, which a real call does not return`.
 
 - [ ] TODO-6223: A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library
   - owner: ai
@@ -731,7 +715,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - a public function with a `Result<i32, i32>` result and one returning `FileError` are functions of the archive and give the same results as the whole-program build when linked, on the VM and optexe
     - full release gate green
-  - stop_rule: packed `Result` and the four stdlib error structs as library results; no sum result (TODO-6222) and no vector result.
+  - stop_rule: packed `Result` and the four stdlib error structs as library results; no sum result (landed with TODO-6222) and no vector result.
   - repro: `[public return<Result<i32, i32>>] make_result() { return(Result.ok(5i32)) }`, `primec --emit=lib r.prime -o r.psa`: refused with `its result `Result<i32, i32>` is a packed `Result`, which a real call does not return`.
 
 - [ ] TODO-6214: A public function with a `vector<T>` result is a function of a library
@@ -740,7 +724,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 3)
   - parallel_track: lib-shapes
-  - depends_on: TODO-6222
   - scope: a `vector<T>` result (`scene`) with the owned-local rule a spawned call already uses (`vectorResultReturnsOwnedLocals`, the task shape of a spawned call).
   - decision: 2026-11-22 (owner): after the sum results.
   - acceptance:

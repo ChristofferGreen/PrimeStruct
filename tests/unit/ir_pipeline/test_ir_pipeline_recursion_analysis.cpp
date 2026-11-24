@@ -456,16 +456,14 @@ std::string libraryResultBlocker(const std::string &resultType, const std::strin
   primec::ir_lowerer::RealCallShapeContext context{&byPath, &structNames, true};
   context.allowSlotResults = true;
   context.refuseSumParameters = true;
-  context.refuseSumResults = true;
+  context.refusePackedResults = true;
   return primec::ir_lowerer::realCallBlockerReason(makeFn, context);
 }
 } // namespace
 
-TEST_CASE("a library function refuses a sum, Result and error struct result and names the rule") {
-  CHECK(
-      libraryResultBlocker("/main/Item", "sum") ==
-      "its result `/main/Item` is a sum, which a real call does not return: a function with a sum "
-      "result stays inline");
+TEST_CASE("a library function refuses a Result and error struct result and names the rule") {
+  // A sum result returns in a heap block like a struct result.
+  CHECK(libraryResultBlocker("/main/Item", "sum").empty());
   CHECK(libraryResultBlocker("Result<i32, i32>", "struct") ==
         "its result `Result<i32, i32>` is a packed `Result`, which a real call does not return: a "
         "function with a `Result` result stays inline");

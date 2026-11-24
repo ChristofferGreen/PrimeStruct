@@ -459,6 +459,50 @@ import /ui/*
   [Pair] q{Pair{1i32, 2i32}}
   return(p.dot(q) + p.add(q).dot(q))
 })"},
+    // A public sum is printed in the interface and a function returns one in a heap block the caller owns.
+    {"sum_result",
+     R"([namespace] ui {
+  [public sum summary("Which kind of pick.")] Pick {
+    none
+    [i32] number
+    [bool] flag
+  }
+  [public return<Pick>] make_pick([i32] value) { return(Pick{[number] value}) }
+  [public return<Pick>] make_none() { return(Pick{none}) }
+  [public return<Pick>] make_flag([bool] value) { return(Pick{[flag] value}) }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32> effects(io_out)] main() {
+  [Pick] a{make_pick(5i32)}
+  [Pick] b{make_none()}
+  [Pick] c{make_flag(true)}
+  print_line(pick(a) { none { 0i32 } number(n) { n } flag(f) { 100i32 } })
+  print_line(pick(b) { none { 10i32 } number(n) { n } flag(f) { 100i32 } })
+  return(pick(c) { none { 0i32 } number(n) { n } flag(f) { 7i32 } })
+})"},
+    {"sum_result_owned_payload",
+     R"([namespace] ui {
+  [public struct] Noisy() {
+    [public i32 mut] id{0i32}
+    [public effects(io_out)] Destroy() { print_line(this.id) }
+  }
+  [public sum] Slot {
+    empty
+    [Noisy] held
+  }
+  [public effects(io_out) return<Slot>] fill([i32] id) { return(Slot{[held] Noisy{id}}) }
+  [public effects(io_out) return<Slot>] empty_slot() { return(Slot{empty}) }
+})",
+     R"(@IMPORT@
+import /ui/*
+[return<i32> effects(io_out)] main() {
+  [Slot] a{fill(3i32)}
+  [Slot] b{empty_slot()}
+  [i32] total{pick(a) { empty { 0i32 } held(n) { n.id } }}
+  print_line(total + pick(b) { empty { 40i32 } held(n) { n.id } })
+  return(total)
+})"},
 };
 
 constexpr size_t CorpusSize = sizeof(Corpus) / sizeof(Corpus[0]);
@@ -596,7 +640,15 @@ TEST_CASE("library corpus on the vm: lifecycle helpers reaching a private functi
 }
 
 TEST_CASE("library corpus on the vm: methods with an explicit self") {
-  checkRange(28, CorpusSize, "vm");
+  checkRange(28, 29, "vm");
+}
+
+TEST_CASE("library corpus on the vm: a sum result") {
+  checkRange(29, 30, "vm");
+}
+
+TEST_CASE("library corpus on the vm: a sum result with an owned payload") {
+  checkRange(30, CorpusSize, "vm");
 }
 
 TEST_CASE("library corpus on optexe: structs and methods") {
@@ -648,7 +700,15 @@ TEST_CASE("library corpus on optexe: lifecycle helpers reaching a private functi
 }
 
 TEST_CASE("library corpus on optexe: methods with an explicit self") {
-  checkRange(28, CorpusSize, "optexe");
+  checkRange(28, 29, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: a sum result") {
+  checkRange(29, 30, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: a sum result with an owned payload") {
+  checkRange(30, CorpusSize, "optexe");
 }
 
 TEST_SUITE_END();

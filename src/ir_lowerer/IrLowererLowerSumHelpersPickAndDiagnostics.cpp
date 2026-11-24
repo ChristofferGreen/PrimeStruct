@@ -1115,4 +1115,15 @@ namespace primec::ir_lowerer {
       return LoweredSumPickEmitResult::Emitted;
     }
 
+    void SumHelpersContext::emitKeepSumBlockInFrame(const std::string &structPath) {
+      if (resolveSumDefinitionByPath(structPath) == nullptr) {
+        return;
+      }
+      // A frame is as large as its highest local that an instruction names, and a sum built from a unit variant never
+      // names its payload slots; a copy of the whole block reads them, so a local after the block is written.
+      const int32_t frameEndLocal = nextLocal++;
+      function.instructions.push_back({IrOpcode::PushI32, 0});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(frameEndLocal)});
+    }
+
 } // namespace primec::ir_lowerer

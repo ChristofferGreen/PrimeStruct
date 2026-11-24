@@ -245,6 +245,33 @@ TEST_CASE("emit-interface prints structs and enums that read back unchanged") {
   CHECK(first.out.find("[public, enum<i64>] Shade {") != std::string::npos);
 }
 
+TEST_CASE("emit-interface prints a public sum with its variants and reads it back") {
+  const std::string source =
+      "[public sum summary(\"Which kind.\")]\nPick {\n  none\n  [i32] number\n  [bool] flag\n}\n\n"
+      "[sum]\nHidden {\n  [i32] value\n}\n";
+  const InterfaceRun first = runEmit("emit_interface_sum", source, "interface");
+  REQUIRE(first.exitCode == 0);
+  CHECK(
+      first.out ==
+      "[public, sum, summary(\"Which kind.\")] Pick {\n  none\n  [i32] number\n  [bool] flag\n}\n");
+  // The printed text is a program: printing it again gives the same text.
+  const InterfaceRun second = runEmit("emit_interface_sum_again", first.out, "interface");
+  CHECK(second.exitCode == 0);
+  CHECK(second.out == first.out);
+}
+
+TEST_CASE(
+    "emit-symbols: a changed variant of a public sum moves its signature and the interface hash") {
+  const InterfaceRun before = runEmit(
+      "emit_interface_sum_a", "[public sum]\nPick {\n  none\n  [i32] number\n}\n", "symbols");
+  const InterfaceRun after = runEmit(
+      "emit_interface_sum_b", "[public sum]\nPick {\n  none\n  [i64] number\n}\n", "symbols");
+  CHECK(tableField(before.out, "/Pick", "signature").size() == 64);
+  CHECK(tableField(before.out, "/Pick", "signature") !=
+        tableField(after.out, "/Pick", "signature"));
+  CHECK(interfaceHashOf(before.out) != interfaceHashOf(after.out));
+}
+
 TEST_CASE("emit-interface prints a generic in full with the private definitions it reaches") {
   const std::string source = "[namespace]\nui {\n"
                              "  [return<i32>]\n  helper([i32] a) { return(a + 1i32) }\n"

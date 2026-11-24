@@ -181,7 +181,9 @@ The interface holds the public (`public`, and not `private`) definitions, sorted
 
 Transform lists are separated by commas, because an absolute type path after a space (`[static /ui/Color]`) would be
 rewritten as a division by the operator filter. A private definition that no generic or lifecycle helper reaches, an
-entry, a sum type and the stdlib are not printed.
+entry and the stdlib are not printed. A public `[sum]` is printed with its variants in source order (a payload variant as
+`[i32] number`, a unit variant as its bare name) and its `summary`, like a struct: a library function may return it, and
+the consumer expands the copy and destroy of the payloads from the declaration.
 
 ```
 [namespace summary("Drawing.")]
@@ -239,9 +241,10 @@ slots; a stub entry that lowering needs stands in for `main` and is removed. A r
 argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
 /packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); so is a
 parameter that is a sum, borrowed or by `Reference` or `Pointer` (`parameter `value` is a sum, which a real call does not
-take: a function with a sum parameter stays inline`); so is a result that is a sum, the packed builtin `Result<T, E>` or a stdlib
-error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`), each with its rule named (`its result `Pick` is a sum, which a
-real call does not return: a function with a sum result stays inline`; a library cannot return them yet); a result,
+take: a function with a sum parameter stays inline`); so is a result that is the packed builtin `Result<T, E>` or a stdlib
+error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`), each with its rule named (`its result `Result<i32, i32>` is a
+packed `Result`, which a real call does not return: ...`; a library cannot return them yet). A public sum result is a function of
+the archive: the callee fills a block of the caller's frame like a struct result and the caller destroys the payload; a result,
 receiver or body rule gets its own text (`its result `vector<i32>` is not one a real call returns: ...`, `its body uses `try``,
 `it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,

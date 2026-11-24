@@ -93,6 +93,9 @@ public:
   bool selectExplicitSumVariantForConstructor(const Expr &initializer, const Definition &targetSum, LoweredSumVariantSelection &selectionOut);
   bool selectSumVariantForInitializer(const Expr &initializer, const Definition &targetSum, const LocalMap &valueLocals, LoweredSumVariantSelection &selectionOut);
   void emitLoweredSumHeader(int32_t baseLocal, int32_t totalSlots);
+  // Keeps every slot of a sum block of `structPath` inside the frame of the function that copies it (a no-op for a
+  // struct).
+  void emitKeepSumBlockInFrame(const std::string &structPath);
   std::optional<bool> emitPackedResultIntoSum(const Definition &sumDef,
                                               int32_t baseLocal,
                                               const std::function<bool()> &emitPackedValue);

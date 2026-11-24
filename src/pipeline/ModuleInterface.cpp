@@ -212,6 +212,29 @@ std::string structText(const Definition &definition,
   return out + "}";
 }
 
+// A `[sum]` with its variants in source order: a payload variant is a binding (`[i32] number`), a unit variant is its
+// bare name. The consumer expands the copy and destroy of the payloads from this declaration.
+std::string
+sumText(const Definition &definition, const std::string &summary, const std::string &name) {
+  std::vector<std::string> header;
+  if (hasTransform(definition.transforms, "public")) {
+    header.push_back("public");
+  }
+  header.push_back("sum");
+  if (!summary.empty()) {
+    header.push_back(summaryWord(summary));
+  }
+  std::string out = bracketed(header) + name + " {\n";
+  for (const Expr &statement : definition.statements) {
+    if (statement.isBinding) {
+      out += "  " + declarationParameterText(statement) + "\n";
+    } else if (statement.kind == Expr::Kind::Name) {
+      out += "  " + statement.name + "\n";
+    }
+  }
+  return out + "}";
+}
+
 const Transform *typeTransformOf(const Expr &binding) {
   for (const Transform &transform : binding.transforms) {
     if (transform.name != "public" && transform.name != "private" && transform.name != "static" &&
@@ -324,6 +347,7 @@ std::string importedWord(const std::string &libraryName) {
 bool buildItem(const Definition &definition,
                const DefinitionFacts &facts,
                const std::set<std::string> &structPaths,
+               const std::set<std::string> &sumPaths,
                const std::map<std::string, std::vector<std::string>> &methodsByStruct,
                const std::string &libraryName,
                Item &item,
@@ -336,6 +360,12 @@ bool buildItem(const Definition &definition,
                                       ? lastSegment(definition.fullPath)
                                       : definition.fullPath;
   std::vector<std::string> header;
+  if (sumPaths.count(definition.fullPath) != 0) {
+    item.kind = "sum";
+    item.signatureText = sumText(definition, "", definition.fullPath);
+    item.displayText = sumText(definition, item.summary, displayName);
+    return true;
+  }
   if (structPaths.count(definition.fullPath) != 0) {
     if (enumText(definition, "", definition.fullPath, item.signatureText) &&
         enumText(definition, item.summary, displayName, item.displayText)) {
@@ -503,9 +533,12 @@ bool buildModuleInterface(const Program &program,
   out = {};
   const DefinitionFacts facts = collectFacts(semanticProgram);
   std::set<std::string> structPaths;
+  std::set<std::string> sumPaths;
   for (const auto &category : facts.categories) {
     if (category.second == "struct" || category.second == "enum") {
       structPaths.insert(category.first);
+    } else if (category.second == "sum") {
+      sumPaths.insert(category.first);
     }
   }
 
@@ -566,7 +599,9 @@ bool buildModuleInterface(const Program &program,
       }
       Item item;
       item.definition = &definition;
-      item.kind = hasTransform(definition.transforms, "struct") ? "struct" : "function";
+      item.kind = hasTransform(definition.transforms, "struct") ? "struct"
+                  : hasTransform(definition.transforms, "sum")  ? "sum"
+                                                                : "function";
       item.section = sectionOfDefinition(definition, structPaths);
       const std::string displayName = parentDefinitionPath(definition.fullPath) == item.section
                                           ? lastSegment(definition.fullPath)
@@ -590,11 +625,11 @@ bool buildModuleInterface(const Program &program,
     }
     const auto category = facts.categories.find(definition.fullPath);
     if (category != facts.categories.end() && category->second != "struct" &&
-        category->second != "enum") {
+        category->second != "enum" && category->second != "sum") {
       continue;
     }
     Item item;
-    if (!buildItem(definition, facts, structPaths, {}, libraryName, item, error)) {
+    if (!buildItem(definition, facts, structPaths, sumPaths, {}, libraryName, item, error)) {
       return false;
     }
     // A lifecycle helper is printed in full: the consumer expands it where a value is created, copied or destroyed.
@@ -630,8 +665,14 @@ bool buildModuleInterface(const Program &program,
         continue;
       }
       Item rebuilt;
-      if (!buildItem(
-              *item.definition, facts, structPaths, methodsByStruct, libraryName, rebuilt, error)) {
+      if (!buildItem(*item.definition,
+                     facts,
+                     structPaths,
+                     sumPaths,
+                     methodsByStruct,
+                     libraryName,
+                     rebuilt,
+                     error)) {
         return false;
       }
       item = std::move(rebuilt);

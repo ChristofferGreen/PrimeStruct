@@ -23,7 +23,6 @@ enum class AddressAbiBlocker {
   Parameter,
   SumParameter,
   CollectionResult,
-  SumResult,
   PackedResult,
   PackedErrorResult,
   UnsupportedResult,

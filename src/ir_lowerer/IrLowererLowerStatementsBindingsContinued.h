@@ -1036,8 +1036,7 @@
         return false;
       }
       if (shouldStabilizeAggregateReturn) {
-        // A real call returns the struct in the caller's result block, whose address is its last parameter (this
-        // frame's blocks go away with the call): the value is copied straight there.
+        // A real call copies the struct straight into the caller's result block, its last parameter.
         const bool intoCallerBlock = realCallStructReturnLocal >= 0 && !returnInlineContext.has_value();
         int32_t baseLocal = -1;
         int32_t ptrLocal = realCallStructReturnLocal;
@@ -1056,6 +1055,7 @@
           return false;
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        sumHelpers.emitKeepSumBlockInFrame(intoCallerBlock ? aggregateStructPath : std::string());
         if (intoCallerBlock ? !emitStructCopyFromPtrs(ptrLocal, srcPtrLocal, layout.totalSlots)
                             : !emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
           return false;

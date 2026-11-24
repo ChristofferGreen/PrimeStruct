@@ -67,6 +67,7 @@ What it contains, in canonical PrimeStruct syntax:
 | Item | Form in the interface |
 | --- | --- |
 | A public struct or enum | Complete: fields, their types and visibility (a consumer needs the layout), static fields, `[summary]` |
+| A public `[sum]` | Complete: its variants in source order (a payload variant as `[i32] number`, a unit variant by name) and `[summary]`; a library function may return one |
 | A public non-generic function | A declaration with resolved parameter types, resolved return type, `[effects]` and `[summary]`, and no body. It carries `[imported(<library>)]`, a marker the compiler accepts only in interface files |
 | A public generic definition | Complete, with its body, because instantiation needs the call sites; monomorphization happens in the consumer |
 | A private definition a public generic reaches | A declaration (or the definition, if it is itself generic), marked private and in the same namespace, so the visibility check of the generic's body still passes |
