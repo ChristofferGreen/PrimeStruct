@@ -148,7 +148,7 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | deferred | lib-shapes |
-| TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
+| TODO-6215 | The collections-root rule is narrowed for library roots | ready | lib-shapes |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -703,9 +703,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: packed `Result` and the four stdlib error structs as library results; no sum result (landed with TODO-6222) and no vector result.
   - repro: `[public return<Result<i32, i32>>] make_result() { return(Result.ok(5i32)) }`, `primec --emit=lib r.prime -o r.psa`: refused with `its result `Result<i32, i32>` is a packed `Result`, which a real call does not return`.
 
-- [ ] TODO-6215: The collections-root rule is narrowed for library roots
+- [~] TODO-6215: The collections-root rule is narrowed for library roots
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lib-shapes (worktree-agent-ab62d8f1159536de2), 2026-11-24
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6032, option 5)
   - parallel_track: lib-shapes
