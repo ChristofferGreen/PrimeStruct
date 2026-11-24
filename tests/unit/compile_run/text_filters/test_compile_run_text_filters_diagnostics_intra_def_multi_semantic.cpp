@@ -114,7 +114,7 @@ main() {
 
 TEST_CASE("primec collect-diagnostics keeps user vector arg-shape diagnostics") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -148,7 +148,7 @@ main() {
 
 TEST_CASE("primevm collect-diagnostics keeps user vector arg-shape diagnostics") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector([i32] value) {
   return(value)
 }

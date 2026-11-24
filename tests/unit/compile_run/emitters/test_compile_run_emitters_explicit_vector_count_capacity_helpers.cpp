@@ -33,12 +33,12 @@ main() {
 
 TEST_CASE("wrapper explicit vector count capacity aliases through same-path helpers in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(18i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(19i32)
 }
@@ -62,12 +62,12 @@ main() {
 
 TEST_CASE("local explicit vector count capacity calls through same-path helpers in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(14i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(15i32)
 }

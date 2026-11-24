@@ -299,7 +299,7 @@ Key() {
   [i32] value{0i32}
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 /Key/equal([Key] left, [Key] right) {
   return(equal(left.value, right.value))
 }
@@ -399,7 +399,7 @@ make_point([i32] x, [i32] y) {
   return(Point{[x] x, [y] y})
 }
 
-[return<int>]
+[return<int> effects(none)]
 sum([Point] value) {
   return(plus(value.x, value.y))
 }
@@ -590,7 +590,7 @@ GfxError() {
 }
 
 namespace GfxError {
-  [return<string>]
+  [return<string> effects(none)]
   why([GfxError] err) {
     return(if(equal(err.code, 7i32), then() { "frame_acquire_failed"utf8 }, else() { "queue_submit_failed"utf8 }))
   }
@@ -601,7 +601,7 @@ acquire_frame_ok() {
   return(Result.ok(9i32))
 }
 
-[return<Result<i32, GfxError>>]
+[return<Result<i32, GfxError>> effects(none)]
 acquire_frame_fail() {
   return(7i64)
 }
@@ -666,7 +666,7 @@ main() {
 
 TEST_CASE("C++ emitter uses copy to force by-value params") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 sum([vector<i32>] values, [copy vector<i32>] copy_values) {
   return(0i32)
 }

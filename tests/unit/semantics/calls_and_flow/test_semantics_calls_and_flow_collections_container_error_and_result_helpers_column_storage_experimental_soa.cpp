@@ -98,7 +98,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -127,7 +127,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -158,7 +158,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -203,7 +203,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -238,7 +238,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -280,7 +280,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -416,7 +416,7 @@ TEST_CASE("experimental soa storage borrow-slot helper validates reference retur
   const std::string source = R"(
 import /std/collections/soa_storage/*
 
-[unsafe return<Reference<i32>>]
+[unsafe return<Reference<i32>> effects(none)]
 borrow_second([SoaColumn<i32>] values) {
   return(soaColumnBorrowSlot<i32>(values, 1i32))
 }
@@ -438,7 +438,7 @@ TEST_CASE("experimental vector borrow-slot helper validates reference return") {
   const std::string source = R"(
 import /std/collections/vector/*
 
-[unsafe return<Reference<i32>>]
+[unsafe return<Reference<i32>> effects(none)]
 borrow_second([Vector<i32>] values) {
   return(vectorBorrowSlot<i32>(values, 1i32))
 }

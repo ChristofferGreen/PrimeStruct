@@ -66,7 +66,7 @@ TEST_CASE("ir lowerer supports vector method calls") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /vector/first([vector<i32>] items) {
   return(items[0i32])
 }

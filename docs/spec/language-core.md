@@ -385,13 +385,17 @@ module {
 - **Execution effects:** executions may also carry `[effects(...)]`. The execution’s effects must be a subset of the
   enclosing definition’s active effects; otherwise it is a diagnostic. The default set is controlled by
   `--default-effects` in the compiler/VM.
-- **Callee effects:** every effect a callee *declares* with `[effects(...)]` must be active in the caller (its explicit
-  or default set, after implications, so a caller with `file_write` may call a `file_read` callee). The check runs in
-  semantics, so every backend sees it, and covers plain calls, method calls and calls to monomorphized templates (a
-  specialization keeps its template's `[effects]`). A callee without `[effects]` places no requirement on its
-  caller: its default set is not propagated (the full transitive rule is deferred, see `docs/todo.md`). A lambda body
-  is checked against the effects of the definition the lambda is written in, and calling a lambda, or a `Function`
-  value holding one, requires no effects.
+- **Callee effects:** every effect in a callee's *active* set must be active in the caller (after implications, so a
+  caller with `file_write` may call a `file_read` callee). The active set of a callee is the one it declares with
+  `[effects(...)]`; a callee without `[effects]` counts as declaring the default set (`io_out` for `primec`,
+  or what `--default-effects` says), so a caller must hold those too, and a definition that has no effects says so with
+  `[effects(none)]` (see No effects). The check runs in semantics, so every backend sees it, and covers plain calls,
+  method calls and calls to monomorphized templates (a specialization keeps its template's `[effects]`). Building a
+  struct value is not a call, a `[host]` function carries no effects, and the helpers the compiler generates for
+  `[reflect]` types (comparison, hash, clone, serialization, the Soa schema helpers) are pure, except `DebugPrint`, which
+  declares `effects(io_out)`. A lambda
+  body is checked against the effects of the definition the lambda is written in, and calling a lambda, or a
+  `Function` value holding one (also one made from a named function), requires no effects.
   Calls in the arguments of a top-level execution are checked against that execution's effects. `[host]` functions
   carry no effects. The diagnostic names the callee, the missing effect and the caller:
   ```
@@ -403,6 +407,20 @@ module {
   }
   ```
   Without `effects(net_io)` on `main` this is rejected with `/std/net/listen requires net_io effect in /main`.
+  An unannotated callee is reported the same way and the message says what to write:
+  ```
+  [return<i32>]
+  twice([i32] value) {
+    return(value + value)
+  }
+
+  [effects(heap_alloc), return<i32>]
+  main() {
+    return(twice(21i32))
+  }
+  ```
+  is rejected with `/twice requires io_out effect in /main (the callee declares no [effects], so it has the default
+  effects; write [effects(none)] on it if it has none)`; with `[effects(none)]` on `twice` it compiles.
 - **Task effect prototype:** the first structured-concurrency surface uses `[effects(task)]` on definitions that request
   source-visible task work. The parser accepts `[spawn] f(...)` as an execution transform on call envelopes and parses
   `wait(task)` as the first task-handle join expression. The semantic pass publishes `Task<T>` binding facts for
@@ -424,7 +442,7 @@ module {
   ```prime
   import /std/text/*
 
-  [return<i32>]
+  [return<i32> effects(none)]
   measure([String] text) {
     return(text.count())
   }

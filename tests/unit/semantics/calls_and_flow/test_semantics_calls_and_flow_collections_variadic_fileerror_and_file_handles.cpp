@@ -657,7 +657,7 @@ namespace ContainerError {
   }
 }
 
-[public return<Result<int, ContainerError>>]
+[public return<Result<int, ContainerError>> effects(none)]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -690,7 +690,7 @@ namespace ContainerError {
   }
 }
 
-[public return<Result<int, ContainerError>>]
+[public return<Result<int, ContainerError>> effects(none)]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Result.ok(17i32))
 }
@@ -745,7 +745,7 @@ main() {
 
 TEST_CASE("stdlib canonical map helpers validate method-call sugar") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(91i32)
 }
@@ -836,7 +836,7 @@ Outer() {
   [Holder mut] holder{Holder{}}
 }
 
-[return<Reference<map<i32, i32>>>]
+[return<Reference<map<i32, i32>>> effects(none)]
 borrowValues([Reference<map<i32, i32>>] values) {
   return(values)
 }
@@ -866,7 +866,7 @@ Holder() {
   [map<i32, i32> mut] values{map<i32, i32>()}
 }
 
-[return<Reference<map<i32, i32>>>]
+[return<Reference<map<i32, i32>>> effects(none)]
 borrowValues([Reference<map<i32, i32>>] values) {
   return(values)
 }
@@ -888,7 +888,7 @@ main() {
 
 TEST_CASE("stdlib canonical map helper validates method-call sugar for slash return type") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }

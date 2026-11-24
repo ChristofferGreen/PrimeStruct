@@ -294,7 +294,7 @@ main() {
 
 TEST_CASE("rejects vm stdlib canonical vector helper method-precedence forwarding") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -321,7 +321,7 @@ main() {
 
 TEST_CASE("rejects vm templated stdlib canonical vector helper method template args") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -348,7 +348,7 @@ main() {
 
 TEST_CASE("rejects vm vector namespaced call aliases without alias definitions") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values) {
   return(90i32)
 }
@@ -375,7 +375,7 @@ main() {
 
 TEST_CASE("rejects vm vector namespaced templated canonical helper alias call without alias definition") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -397,12 +397,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias arity-mismatch compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -426,12 +426,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias compatibility template forwarding on bool type mismatch") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [i32] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -450,12 +450,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias compatibility template forwarding on non-bool type mismatch") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [string] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -477,12 +477,12 @@ TEST_CASE("rejects vm vector alias compatibility template forwarding on struct t
 MarkerA() {}
 MarkerB() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [MarkerA] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -505,12 +505,12 @@ TEST_CASE("rejects vm vector alias compatibility template forwarding on construc
 MarkerA() {}
 MarkerB() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [MarkerA] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -533,17 +533,17 @@ MarkerA() {}
 MarkerB() {}
 Holder() {}
 
-[return<MarkerB>]
+[return<MarkerB> effects(none)]
 /Holder/fetch([Holder] self) {
   return(MarkerB())
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [MarkerA] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -568,22 +568,22 @@ MarkerB() {}
 Middle() {}
 Holder() {}
 
-[return<Middle>]
+[return<Middle> effects(none)]
 /Holder/first([Holder] self) {
   return(Middle())
 }
 
-[return<MarkerB>]
+[return<MarkerB> effects(none)]
 /Middle/next([Middle] self) {
   return(MarkerB())
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [MarkerA] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [MarkerB] marker) {
   return(90i32)
 }
@@ -604,12 +604,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias compatibility template forwarding on array envelope element mismatch") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [array<i32>] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [array<i64>] marker) {
   return(90i32)
 }
@@ -629,12 +629,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias compatibility template forwarding on map envelope mismatch") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }
@@ -659,12 +659,12 @@ makeMarker() {
   return(map<i32, i64>(1i32, 2i64))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [map<i32, string>] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [map<i32, i64>] marker) {
   return(90i32)
 }

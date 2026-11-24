@@ -131,7 +131,7 @@ Point {
   [i32] y
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 sum([Point] p) {
   return(plus(p.x, p.y))
 }
@@ -365,7 +365,7 @@ Counter() {
   [i64 mut] total{start + 1i64}
   [i64 mut] doubled{start * 2i64}
 
-  [return<i64>]
+  [return<i64> effects(none)]
   sum() {
     return(this.total + this.doubled)
   }

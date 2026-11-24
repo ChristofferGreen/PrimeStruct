@@ -183,7 +183,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -222,7 +222,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -261,7 +261,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -301,7 +301,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -341,7 +341,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -385,7 +385,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -429,7 +429,7 @@ namespace std {
         values.set_field_count(value)
       }
 
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCapacity([Vector<i32> mut] values, [i32] value) {
         values.set_field_capacity(value)
       }
@@ -468,7 +468,7 @@ namespace std {
         values.set_field_count(value)
       }
 
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCapacity([Vector<i32> mut] values, [i32] value) {
         values.set_field_capacity(value)
       }
@@ -502,7 +502,7 @@ import /std/collections/vector/*
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCount([Vector<i32> mut] values, [i32] value) {
         values.set_field_count(value)
       }
@@ -545,7 +545,7 @@ namespace std {
         values.set_field_count(value)
       }
 
-      [public return<void>]
+      [public return<void> effects(none)]
       forgeCapacity([Vector<i32> mut] values, [i32] value) {
         values.set_field_capacity(value)
       }

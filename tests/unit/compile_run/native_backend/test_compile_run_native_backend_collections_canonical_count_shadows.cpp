@@ -13,12 +13,12 @@ TEST_CASE("native keeps imported wrapper-returned canonical map reference access
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
@@ -50,12 +50,12 @@ main() {
 
 TEST_CASE("native keeps canonical map unknown-target diagnostics on wrapper-returned map reference access") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -82,7 +82,7 @@ main() {
 
 TEST_CASE("rejects native map method sugar on wrapper-returned canonical map references without imported helpers") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -110,7 +110,7 @@ main() {
 
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -136,7 +136,7 @@ main() {
 
 TEST_CASE("native keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -162,12 +162,12 @@ main() {
 
 TEST_CASE("native keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -191,12 +191,12 @@ main() {
 
 TEST_CASE("rejects native canonical vector unsafe access count shadow with expression-call diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -224,12 +224,12 @@ main() {
 
 TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -257,12 +257,12 @@ main() {
 
 TEST_CASE("rejects native canonical vector unsafe method access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -290,17 +290,17 @@ main() {
 
 TEST_CASE("rejects native direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -326,22 +326,22 @@ main() {
 
 TEST_CASE("rejects native wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -368,7 +368,7 @@ main() {
 
 TEST_CASE("rejects native wrapper-returned slash-method map access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -383,7 +383,7 @@ TEST_CASE("rejects native wrapper-returned slash-method map access count shadow"
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -409,7 +409,7 @@ main() {
 
 TEST_CASE("rejects native slash-method vector access string count fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -446,7 +446,7 @@ main() {
 
 TEST_CASE("native keeps wrapper-returned vector access primitive count diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -509,12 +509,12 @@ main() {
 
 TEST_CASE("rejects native canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(87i32)
 }
@@ -541,7 +541,7 @@ main() {
 
 TEST_CASE("rejects native wrapper-returned canonical vector count slash-method on map receiver") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -565,7 +565,7 @@ main() {
 
 TEST_CASE("rejects native wrapper-returned canonical vector capacity slash-method on map receiver") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -596,7 +596,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(88i32)
 }

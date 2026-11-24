@@ -561,7 +561,7 @@ main() {
 
 TEST_CASE("native canonical implicit-template map count call with wrapper slash return envelope") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
@@ -634,7 +634,7 @@ main() {
 
 TEST_CASE("rejects native canonical map reference string access without imported canonical helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -691,7 +691,7 @@ main() {
 
 TEST_CASE("native rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -726,7 +726,7 @@ TEST_CASE("native user string count method shadow on wrapper-returned canonical 
   return(91i32)
 }
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }

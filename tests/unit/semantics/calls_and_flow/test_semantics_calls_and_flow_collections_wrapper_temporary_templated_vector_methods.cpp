@@ -132,12 +132,12 @@ main() {
 
 TEST_CASE("vector namespaced count and stdlib namespaced capacity accept same-path helpers on builtin vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(14i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(15i32)
 }
@@ -185,12 +185,12 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count accepts same-path helper on map target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(53i32)
 }
 
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -207,7 +207,7 @@ main() {
 
 TEST_CASE("vector namespaced count accepts same-path helper on map target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([map<i32, i32>] values) {
   return(43i32)
 }
@@ -495,7 +495,7 @@ main() {
 
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(44i32)
 }
@@ -517,7 +517,7 @@ main() {
 
 TEST_CASE("array namespaced count accepts same-path helper on vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/count([vector<i32>] values, [bool] marker) {
   return(45i32)
 }
@@ -535,7 +535,7 @@ main() {
 
 TEST_CASE("array namespaced count accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/count([vector<i32>] values, [bool] marker) {
   return(46i32)
 }
@@ -557,7 +557,7 @@ main() {
 
 TEST_CASE("array namespaced capacity accepts same-path helper on vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/capacity([vector<i32>] values, [bool] marker) {
   return(47i32)
 }
@@ -575,7 +575,7 @@ main() {
 
 TEST_CASE("array namespaced capacity accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/capacity([vector<i32>] values, [bool] marker) {
   return(48i32)
 }
@@ -597,7 +597,7 @@ main() {
 
 TEST_CASE("array namespaced at accepts same-path helper on vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
   return(47i32)
 }
@@ -615,7 +615,7 @@ main() {
 
 TEST_CASE("array namespaced at accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
   return(48i32)
 }
@@ -637,7 +637,7 @@ main() {
 
 TEST_CASE("array namespaced at_unsafe accepts same-path helper on vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
   return(49i32)
 }
@@ -655,7 +655,7 @@ main() {
 
 TEST_CASE("array namespaced at_unsafe accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
   return(50i32)
 }
@@ -768,13 +768,13 @@ main() {
 TEST_CASE("stdlib namespaced vector count wrapper vector chain accepts same-path helper") {
   const std::string source = R"(
 namespace i32 {
-  [return<int>]
+  [return<int> effects(none)]
   tag([i32] value) {
     return(plus(value, 1i32))
   }
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values) {
   return(41i32)
 }
@@ -880,7 +880,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity accepts same-path helper on map target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/capacity([map<i32, i32>] values) {
   return(41i32)
 }
@@ -898,7 +898,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity accepts same-path helper on map target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([map<i32, i32>] values) {
   return(42i32)
 }
@@ -916,7 +916,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity accepts same-path helper on builtin vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(44i32)
 }
@@ -934,7 +934,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity accepts same-path helper on wrapper vector target") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(44i32)
 }
@@ -982,13 +982,13 @@ main() {
 TEST_CASE("stdlib namespaced vector capacity wrapper vector chain accepts same-path helper") {
   const std::string source = R"(
 namespace i32 {
-  [return<int>]
+  [return<int> effects(none)]
   tag([i32] value) {
     return(plus(value, 1i32))
   }
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(45i32)
 }

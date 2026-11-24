@@ -27,7 +27,7 @@ const char *FaultSource = R"(
 boom([i32] code) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 spin() {
   [i32 mut] n{0i32}
   while(true) {
@@ -36,7 +36,7 @@ spin() {
   return(n)
 }
 
-[return<int>]
+[return<int> effects(none)]
 fail_now() {
   return(boom(7i32))
 }
@@ -56,7 +56,7 @@ const char *CancelSource = R"(
 raise_cancel([i32] unused) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 spin_after_cancel() {
   [i32 mut] n{raise_cancel(0i32)}
   while(true) {
@@ -88,7 +88,7 @@ const char *SpawnedThreadSource = R"(
 where([i32] unused) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 task_where() {
   return(where(0i32))
 }

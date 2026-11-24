@@ -52,9 +52,9 @@ main() {
   CHECK(error.find("/make_count requires heap_alloc effect in /main") != std::string::npos);
 }
 
-TEST_CASE("callee without effects transform needs no caller effects") {
+TEST_CASE("callee with effects(none) needs no caller effects") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 add_one([i32] value) {
   return(plus(value, 1i32))
 }
@@ -220,7 +220,7 @@ Pair() {
   [i32] right{0i32}
 }
 
-[return<Result<Pair, i32>>]
+[return<Result<Pair, i32>> effects(none)]
 make_pair() {
   return(Result.ok(Pair{[left] 1i32, [right] 2i32}))
 }
@@ -260,7 +260,7 @@ main() {
 
 TEST_CASE("field access on a try of a scalar payload needs a struct receiver") {
   const std::string source = R"(
-[return<Result<i32, i32>>]
+[return<Result<i32, i32>> effects(none)]
 make_value() {
   return(Result.ok(1i32))
 }
@@ -322,6 +322,135 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("print_line requires io_out effect") != std::string::npos);
+}
+
+TEST_CASE("unannotated callee requires the default effects in the caller") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(1i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(helper())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/helper requires io_err effect in /main") != std::string::npos);
+  CHECK(error.find("the callee declares no [effects]") != std::string::npos);
+  CHECK(error.find("[effects(none)]") != std::string::npos);
+}
+
+TEST_CASE("unannotated callee requires every default effect") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(1i32)
+}
+
+[effects(io_out), return<int>]
+main() {
+  return(helper())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/helper requires io_err effect in /main") != std::string::npos);
+}
+
+TEST_CASE("unannotated callee passes when the caller holds the default effects") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(1i32)
+}
+
+[effects(heap_alloc, io_out, io_err), return<int>]
+main() {
+  return(helper())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unannotated callee passes from an unannotated caller") {
+  const std::string source = R"(
+[return<int>]
+helper() {
+  return(1i32)
+}
+
+[return<int>]
+main() {
+  return(helper())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("unannotated method requires the default effects in the caller") {
+  const std::string source = R"(
+[struct]
+Counter() {
+  [i32] value{0i32}
+
+  [return<i32>]
+  current() {
+    return(this.value)
+  }
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Counter] counter{Counter{}}
+  return(counter.current())
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("/Counter/current requires io_err effect in /main") != std::string::npos);
+}
+
+TEST_CASE("building a struct value needs no effects of the caller") {
+  const std::string source = R"(
+[struct]
+Point() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[effects(none), return<int>]
+main() {
+  [Point] point{Point{1i32, 2i32}}
+  return(point.x)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("an effects(none) callee called from an effects(none) caller passes") {
+  const std::string source = R"(
+[effects(none), return<int>]
+helper() {
+  return(1i32)
+}
+
+[effects(none), return<int>]
+main() {
+  return(helper())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();

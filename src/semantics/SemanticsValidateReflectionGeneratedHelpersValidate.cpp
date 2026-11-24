@@ -73,6 +73,7 @@ bool emitReflectionValidateHelper(ReflectionGeneratedHelperContext &context) {
     hook.sourceColumn = context.def.sourceColumn;
 
     appendPublicVisibility(hook);
+    appendNoEffects(hook);
     Transform returnTransform;
     returnTransform.name = "return";
     returnTransform.templateArgs.push_back("bool");
@@ -93,6 +94,7 @@ bool emitReflectionValidateHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("Result<FileError>");
@@ -163,6 +165,7 @@ bool emitReflectionSoaSchemaHelpers(ReflectionGeneratedHelperContext &context) {
     helper.sourceLine = context.def.sourceLine;
     helper.sourceColumn = context.def.sourceColumn;
     appendPublicVisibility(helper);
+    appendNoEffects(helper);
     Transform returnTransform;
     returnTransform.name = "return";
     returnTransform.templateArgs.push_back(returnType);
@@ -388,12 +391,14 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   };
 
   Definition storageNewHelper = makeHelper("SoaSchemaStorageNew", storageNewHelperPath, storageStructPath, false);
+  appendNoEffects(storageNewHelper);
   storageNewHelper.returnExpr = makeBraceConstructorCall(storageStructPath);
   storageNewHelper.hasReturnStatement = true;
   context.rewrittenDefinitions.push_back(std::move(storageNewHelper));
   context.definitionPaths.insert(storageNewHelperPath);
 
   Definition storageCountHelper = makeHelper("SoaSchemaStorageCount", storageCountHelperPath, "i32", false);
+  appendNoEffects(storageCountHelper);
   storageCountHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageCountHelper.namespacePrefix));
   if (!chunkTemplateArgs.empty()) {
     storageCountHelper.returnExpr = makeHelperCallExpr(
@@ -408,6 +413,7 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
   context.definitionPaths.insert(storageCountHelperPath);
 
   Definition storageCapacityHelper = makeHelper("SoaSchemaStorageCapacity", storageCapacityHelperPath, "i32", false);
+  appendNoEffects(storageCapacityHelper);
   storageCapacityHelper.parameters.push_back(makeTypeBinding("value", storageStructPath, storageCapacityHelper.namespacePrefix));
   if (!chunkTemplateArgs.empty()) {
     storageCapacityHelper.returnExpr = makeHelperCallExpr(

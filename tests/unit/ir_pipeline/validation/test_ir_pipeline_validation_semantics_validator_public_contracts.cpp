@@ -23,7 +23,7 @@ TEST_CASE("semantic product publishes validator inference routing facts") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 id_i32([i32] value) {
   return(value)
 }

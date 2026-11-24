@@ -49,7 +49,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -102,7 +102,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -144,7 +144,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -181,7 +181,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -232,7 +232,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -274,84 +274,84 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(none)]
 cloneValues() {
   return(SoaVector<Particle>{})
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /shadow/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /shadow/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /shadow/soa/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /shadow/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /shadow/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /shadow/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /shadow/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /shadow/soa/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<void>]
+[return<void> effects(none)]
 /shadow/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /shadow/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
@@ -387,7 +387,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -417,12 +417,14 @@ main() {
   [int] helpersB{plus(plus(firstB.x, secondB.x), plus(firstD.x, secondD.y))}
   [int] unpackedCountsB{plus(count(unpackedB), countB)}
   [int] fieldTotals{
+    [effects(none)]
     plus(location(holder.pickBorrowed(location(values))).y()[0i32],
          plus(dereference(location(holder.pickBorrowed(location(values)))).y()[1i32],
               plus(y(location(holder.pickBorrowed(location(values))))[0i32],
                    y(dereference(location(holder.pickBorrowed(location(values)))))[1i32])))
   }
   [int] total{
+    [effects(none)]
     plus(helpersA,
          plus(unpackedCountsA,
               plus(helpersB,
@@ -459,7 +461,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -584,12 +586,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pass([Reference<Particle>] value) {
   return(value)
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pick([SoaVector<Particle>] values) {
   return(pass(values.ref(0i32)))
 }
@@ -685,12 +687,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pass([Reference<Particle>] value) {
   return(value)
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pick([SoaVector<Particle>] values) {
   return(pass(values.ref(0i32)))
 }
@@ -718,12 +720,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pass([Reference<Particle>] value) {
   return(value)
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pick([SoaVector<Particle>] values) {
   return(pass(values.ref(0i32)))
 }
@@ -752,7 +754,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -784,7 +786,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -977,7 +979,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1007,7 +1009,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1037,7 +1039,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1158,7 +1160,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1187,7 +1189,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1213,7 +1215,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1247,7 +1249,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1286,7 +1288,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1316,7 +1318,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1424,7 +1426,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1436,6 +1438,7 @@ main() {
   push(values, Particle(9i32, 12i32))
   [Reference<SoaVector<Particle>>] borrowed{location(values)}
   [int] total{
+    [effects(none)]
     plus(
       y(values)[0i32],
       plus(

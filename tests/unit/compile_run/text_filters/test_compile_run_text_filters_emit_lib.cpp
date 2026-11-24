@@ -23,7 +23,7 @@ ui {
   Point() {
     [public i32] x{1i32}
     [public i32] y{2i32}
-    [public return<i32>]
+    [public return<i32> effects(none)]
     sum([Point] self) { return(self.x + self.y) }
   }
 

@@ -33,7 +33,7 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<uninitialized<Result<map<string, i32>, ContainerError>>>>]
+[return<Reference<uninitialized<Result<map<string, i32>, ContainerError>>>> effects(none)]
 borrowStorage([Reference<uninitialized<Result<map<string, i32>, ContainerError>>>] storage) {
   return(storage)
 }
@@ -266,7 +266,7 @@ Holder() {
   [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -302,7 +302,7 @@ Holder() {
   [uninitialized<map<string, i32>> mut] storage{uninitialized<map<string, i32>>()}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -379,7 +379,7 @@ Holder() {
       uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -415,7 +415,7 @@ Holder() {
       uninitialized<Result<map<string, i32>, ContainerError>>()}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }

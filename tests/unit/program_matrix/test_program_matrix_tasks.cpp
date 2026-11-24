@@ -201,7 +201,7 @@ Named() {
   [String] text{String{}}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   [i32 mut] extra{value}
   extra = extra + value
@@ -315,7 +315,7 @@ TEST_CASE("tasks are waited together, destructured and returned") {
   program.source = R"(
 import /std/tuple/*
 
-[return<i32>]
+[return<i32> effects(none)]
 add([i32] a, [i32] b) {
   [i32 mut] total{a}
   total = total + b
@@ -363,13 +363,13 @@ TEST_CASE("a spawned call a real call cannot take yet still runs") {
   program.source = R"(
 import /std/text/*
 
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   value = value + 1i32
   return(value)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([string] text) {
   return(text.count())
 }
@@ -608,7 +608,7 @@ make_reply([String] text, [i32] code) {
   return(Reply{body, code})
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 twice([i32] value) {
   [i32 mut] result{value}
   result = result + value
@@ -1593,7 +1593,7 @@ TEST_CASE("a name bound twice by a destructuring inside a block is a duplicate b
     file << R"(
 import /std/tuple/*
 
-[return<tuple<i32, bool>>]
+[return<tuple<i32, bool>> effects(none)]
 make_pair() {
   return(tuple<i32, bool>{7i32, true})
 }
@@ -1715,13 +1715,13 @@ TEST_CASE("a task takes a closure it borrows or owns") {
   program.source = R"(
 import /std/text/*
 
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32>] step, [i32] value) {
   [Function<i32, i32> mut] own{step}
   return(own(value))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 apply_owned([Function<i32, i32> move mut] step, [i32] value) {
   return(step(value))
 }

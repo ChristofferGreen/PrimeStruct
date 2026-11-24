@@ -608,7 +608,7 @@ Pair() {
 Holder() {
   [Pair] kept{Pair{}}
 
-  [return<bool>]
+  [return<bool> effects(none)]
   same([Pair] other) {
     return(equal(this.kept, other))
   }

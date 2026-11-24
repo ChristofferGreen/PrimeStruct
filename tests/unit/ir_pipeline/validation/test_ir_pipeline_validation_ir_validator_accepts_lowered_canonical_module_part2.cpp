@@ -674,7 +674,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -717,7 +717,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }

@@ -656,7 +656,7 @@ consume([Reference<array<i32>>] values) {
   return(viaParam)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 score([args<Reference<i32>>] refs) {
   [i32] viaArgs{count(refs)}
   return(viaArgs)

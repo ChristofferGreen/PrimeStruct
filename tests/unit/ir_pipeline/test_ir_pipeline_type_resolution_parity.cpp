@@ -168,6 +168,7 @@ main() {
       {
           "direct_local_auto_vector_helper_call_success",
           R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -277,6 +278,7 @@ main() {
       {
           "query_local_auto_vector_helper_call_boundary",
           R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -596,7 +598,7 @@ main() {
       {
           "shared_collection_receiver_classifiers",
           R"(
-[return<int>]
+[return<int> effects(none)]
 packScore([args<string>] values) {
   return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
 }
@@ -625,7 +627,7 @@ main() {
       {
           "auto_collection_receiver_classifiers",
           R"(
-[return<auto>]
+[return<auto> effects(none)]
 packScore([args<string>] values) {
   return(plus(values.at(0i32).count(), values.at_unsafe(1i32).count()))
 }

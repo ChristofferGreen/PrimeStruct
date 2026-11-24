@@ -584,7 +584,7 @@ make([i32] id) {
   return(Noisy{id})
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 peek([Noisy] n) {
   return(n.id)
 }
@@ -594,7 +594,7 @@ bump([Noisy mut] n) {
   n.id = n.id + 1i32
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 keep([Noisy copy] n) {
   return(n.id)
 }

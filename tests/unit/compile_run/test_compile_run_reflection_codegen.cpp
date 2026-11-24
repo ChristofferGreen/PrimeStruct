@@ -130,7 +130,8 @@ main() {
   const std::string ast = readFile(astOutPath);
   const std::string ir = readFile(irOutPath);
   CHECK(ast.find("/Pair/Hash64(") != std::string::npos);
-  CHECK(ast.find("[public, return<u64>] /Pair/Hash64([/Pair] value)") != std::string::npos);
+  CHECK(ast.find("[public, effects(none), return<u64>] /Pair/Hash64([/Pair] value)") !=
+        std::string::npos);
   CHECK(ir.find("return /Pair/Hash64(value)") != std::string::npos);
 }
 

@@ -10,7 +10,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow mismatch") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -44,7 +44,7 @@ main() {
 
 TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow value mismatch") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -81,7 +81,7 @@ main() {
 
 TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow arity mismatch") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -116,7 +116,7 @@ main() {
 
 TEST_CASE("rejects vm user wrapper temporary unsafe parity shadow missing arguments") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -194,7 +194,7 @@ main() {
 
 TEST_CASE("rejects vm user wrapper temporary syntax parity shadow mismatch") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -228,7 +228,7 @@ main() {
 
 TEST_CASE("rejects vm user wrapper temporary syntax parity shadow value mismatch") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }

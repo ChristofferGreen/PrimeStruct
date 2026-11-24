@@ -711,7 +711,7 @@ cloneValues() {
   return(soa_vector<Particle>())
 }
 
-[return<Reference<soa_vector<Particle>>>]
+[return<Reference<soa_vector<Particle>>> effects(none)]
 borrowValues([Reference<soa_vector<Particle>>] values) {
   return(values)
 }
@@ -758,7 +758,7 @@ cloneValues() {
   return(soa_vector<Particle>())
 }
 
-[return<Reference<soa_vector<Particle>>>]
+[return<Reference<soa_vector<Particle>>> effects(none)]
 borrowValues([Reference<soa_vector<Particle>>] values) {
   return(values)
 }
@@ -792,7 +792,7 @@ cloneValues() {
   return(soa_vector<Particle>())
 }
 
-[return<Reference<soa_vector<Particle>>>]
+[return<Reference<soa_vector<Particle>>> effects(none)]
 borrowValues([Reference<soa_vector<Particle>>] values) {
   return(values)
 }
@@ -825,7 +825,7 @@ cloneValues() {
   return(soa_vector<Particle>())
 }
 
-[return<Reference<soa_vector<Particle>>>]
+[return<Reference<soa_vector<Particle>>> effects(none)]
 borrowValues([Reference<soa_vector<Particle>>] values) {
   return(values)
 }
@@ -870,7 +870,7 @@ cloneValues() {
   return(7i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 consume([int] value) {
   return(value)
 }
@@ -900,12 +900,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/count([vector<Particle>] values) {
   return(6i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/get([vector<Particle>] values, [i32] index) {
   return(7i32)
 }
@@ -937,17 +937,17 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([vector<Particle>] values) {
   return(9i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 consume([int] value) {
   return(value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 pick([vector<Particle>] values) {
   return(values.to_aos())
 }
@@ -1034,22 +1034,22 @@ main() {
 
 TEST_CASE("vector-target method push and reserve keep same-path soa helpers") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 pickPush([vector<i32>] values) {
   return(values.push(4i32))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 pickReserve([vector<i32>] values) {
   return(values.reserve(6i32))
 }
@@ -1337,7 +1337,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<soa_vector<Particle>>>]
+[return<Reference<soa_vector<Particle>>> effects(none)]
 pickBorrowed([Reference<soa_vector<Particle>>] values) {
   return(values)
 }

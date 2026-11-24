@@ -17,10 +17,10 @@ const char *CounterStruct = R"(
 [struct]
 Counter() {
   [i32 mut] total{0i32}
-  [mut] bump() {
+  [mut effects(none)] bump() {
     this.total = this.total + 1i32
   }
-  [return<int>] peek() {
+  [return<int> effects(none)] peek() {
     return(this.total)
   }
 }
@@ -50,7 +50,7 @@ const char *BagProgram = R"(import /std/collections/*
 [struct]
 Item() {
   [i32 mut] n{0i32}
-  [mut] bump() {
+  [mut effects(none)] bump() {
     this.n = this.n + 1i32
   }
 }
@@ -63,7 +63,7 @@ Bag() {
   [vector<vector<Item>> mut] nested{vector<vector<Item>>{}}
 }
 
-[return<Bag>]
+[return<Bag> effects(none)]
 make_bag() {
   return(Bag{})
 }
@@ -117,8 +117,9 @@ main() {
 }
 
 TEST_CASE("a mut method is not called on a read-only parameter") {
-  checkRejectedAt(R"(
-[return<void>]
+  checkRejectedAt(
+      R"(
+[return<void> effects(none)]
 bump([Counter] counter) {
   counter.bump()
 }
@@ -128,9 +129,10 @@ main() {
   return(0i32)
 }
 )",
-                  "mutating method needs a mutable receiver: counter.bump() (counter is a read-only parameter; "
-                  "take it as a [T mut] parameter)",
-                  15, 3);
+      "mutating method needs a mutable receiver: counter.bump() (counter is a read-only parameter; "
+      "take it as a [T mut] parameter)",
+      15,
+      3);
 }
 
 TEST_CASE("a copy parameter is read-only too") {
@@ -293,7 +295,7 @@ main() {
 
 TEST_CASE("reading through a read-only root and calling a plain method are accepted") {
   checkAccepted(R"(
-[return<int>]
+[return<int> effects(none)]
 read([Counter] counter) {
   [i32] seen{counter.total}
   return(plus(seen, counter.peek()))
@@ -468,7 +470,7 @@ main() {
       19,
       10);
   checkRejectedAt(R"(
-[return<int>]
+[return<int> effects(none)]
 apply([Function<i32, i32>] g) {
   return(g(1i32))
 }
@@ -484,7 +486,7 @@ main() {
                   15,
                   10);
   checkRejectedAt(R"(
-[return<int>]
+[return<int> effects(none)]
 apply_owned([Function<i32, i32> move] g) {
   return(g(1i32))
 }
@@ -504,7 +506,7 @@ TEST_CASE("a Function field is not called through a read-only struct or this") {
 [struct]
 Holder() {
   [Function<i32, i32> mut] f{}
-  [return<int>] run() {
+  [return<int> effects(none)] run() {
     return(this.f(1i32))
   }
 }
@@ -576,17 +578,17 @@ TEST_CASE("a Function is called through mut, a mut copy, a Reference and a mut o
 [struct]
 Box() {
   [Function<i32, i32> mut] f{}
-  [mut return<int>] run() {
+  [mut return<int> effects(none)] run() {
     return(this.f(1i32))
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 apply([Function<i32, i32> mut] g) {
   return(g(1i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 apply_owned([Function<i32, i32> move mut] g) {
   return(g(1i32))
 }
@@ -664,7 +666,7 @@ Bag() {
   [map<i32, Item> mut] table{map<i32, Item>{}}
 }
 
-[return<void>]
+[return<void> effects(none)]
 poke([Item mut] item) {
   item.n = 9i32
 }
@@ -773,7 +775,7 @@ TEST_CASE("an element of a stdlib Vector reached through a Reference is a place"
 [struct]
 Item() {
   [i32 mut] n{0i32}
-  [mut return<void>]
+  [mut return<void> effects(none)]
   bump() {
     this.n = this.n + 1i32
   }
@@ -801,12 +803,12 @@ reset([Reference<Vector<Item>>] values) {
   CHECK(diagnosticInfo.primarySpan.line == position.first);
   CHECK(diagnosticInfo.primarySpan.column == position.second);
 
-  const std::string accepted = prelude + R"([return<int>]
+  const std::string accepted = prelude + R"([return<int> effects(none)]
 read([Reference<Vector<Item>>] values) {
   return(values[0i32].n + values.at(0i32).n)
 }
 
-[return<void>]
+[return<void> effects(none)]
 poke([Reference<Vector<Item>>] values) {
   values[0i32].n = 5i32
   values[0i32].bump()

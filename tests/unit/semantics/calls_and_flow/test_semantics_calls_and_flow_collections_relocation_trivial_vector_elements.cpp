@@ -593,7 +593,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[return<void> effects(none)]
 touch([soa_vector<Particle> mut] values) {
   pop(values)
 }

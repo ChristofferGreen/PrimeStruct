@@ -1150,10 +1150,10 @@ TEST_CASE(
                   std::to_string(i + 1) + "i32";
     }
     source += "}\n\n";
-    source += "[return<i32>]\nweigh" + std::to_string(slots) + "([" + name +
+    source += "[return<i32> effects(none)]\nweigh" + std::to_string(slots) + "([" + name +
               " copy] b) {\n  return(" + expected + ")\n}\n\n";
-    source += "[return<" + name + ">]\nmake" + std::to_string(slots) + "([i32] base) {\n  [" +
-              name + " mut] b{" + name + "{}}\n";
+    source += "[return<" + name + "> effects(none)]\nmake" + std::to_string(slots) +
+              "([i32] base) {\n  [" + name + " mut] b{" + name + "{}}\n";
     for (int i = 0; i < slots; ++i) {
       source += "  b.f" + std::to_string(i) + " = base + " + std::to_string(i) + "i32\n";
     }

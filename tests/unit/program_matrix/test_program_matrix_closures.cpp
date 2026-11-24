@@ -233,7 +233,7 @@ main() {
 TEST_CASE("a lambda whose capture list starts with mut is a call argument") {
   runClosureProgram("closure_mut_capture_argument",
                     R"(
-[return<int>]
+[return<int> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -254,12 +254,12 @@ main() {
 TEST_CASE("a labeled call value and a lambda in an assignment parse") {
   runClosureProgram("closure_labeled_call_values",
                     R"(
-[return<int>]
+[return<int> effects(none)]
 five() {
   return(5i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -474,7 +474,7 @@ Hook() {
   [Function<i64, i64> mut] run
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 apply([Function<i64, i64> mut] step, [i64] value) {
   return(step(value))
 }
@@ -515,7 +515,7 @@ main() {
 TEST_CASE("a closure passes straight to a Function parameter") {
   runClosureProgram("function_implicit_parameter",
                     R"(
-[return<i32>]
+[return<i32> effects(none)]
 apply_twice([Function<i32, i32> mut] f, [i32] x) {
   return(f(f(x)))
 }
@@ -543,7 +543,8 @@ main() {
 }
 
 TEST_CASE("a router of named handlers and closures converts at every expected-type site") {
-  runClosureProgram("function_router_named_handlers", R"(
+  runClosureProgram("function_router_named_handlers",
+                    R"(
 import /std/collections/*
 
 [struct]
@@ -579,14 +580,14 @@ double([i32] x) {
   return(x * 2i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 increment([i32] x) {
   return(x + 1i32)
 }
 
 [struct]
 Tripler {
-  [return<i32>]
+  [return<i32> effects(none)]
   call([i32] x) {
     return(x * 3i32)
   }
@@ -770,7 +771,7 @@ main() {
 TEST_CASE("a closure moves into a Function at every expected-type site") {
   runClosureProgram("closure_move_into_function",
                     R"(
-[return<int>]
+[return<int> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -882,18 +883,18 @@ main() {
 TEST_CASE("a call that returns a Reference is a closure and a parameter argument") {
   runClosureProgram("closure_reference_returning_call_argument",
                     R"(
-[return<Reference<i64>>]
+[return<Reference<i64>> effects(none)]
 borrow_of([Pointer<uninitialized<i64>> mut] slot) {
   return(borrow(dereference(slot)))
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 value_of([Pointer<uninitialized<i64>> mut] slot) {
   [i64] copy{dereference(slot)}
   return(copy)
 }
 
-[return<void>]
+[return<void> effects(none)]
 bump([Reference<i64> mut] value) {
   value = value + 1i64
 }
@@ -929,22 +930,22 @@ main() {
 TEST_CASE("a call that returns a Reference read as a value yields its referent") {
   runClosureProgram("closure_reference_returning_call_value",
                     R"(
-[return<Reference<i64>>]
+[return<Reference<i64>> effects(none)]
 borrow_of([Pointer<uninitialized<i64>> mut] slot) {
   return(borrow(dereference(slot)))
 }
 
-[return<Reference<i64>>]
+[return<Reference<i64>> effects(none)]
 forward([Pointer<uninitialized<i64>> mut] slot) {
   return(borrow_of(slot))
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 plain([i64] value) {
   return(value)
 }
 
-[return<void>]
+[return<void> effects(none)]
 bump([Reference<i64> mut] value) {
   value = value + 1i64
 }
@@ -1003,7 +1004,7 @@ namespace zed {
   Boss {
     [i32] rank{1i32}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     score([Reference<Job>] j, [Job] k) {
       return(j.id + k.weight + this.rank)
     }
@@ -1072,14 +1073,15 @@ main() {
 }
 
 TEST_CASE("ref-captured vector is indexed in the lambda body and in a method") {
-  runClosureProgram("closure_ref_capture_vector_index", R"(
+  runClosureProgram("closure_ref_capture_vector_index",
+                    R"(
 import /std/collections/*
 
 [struct]
 Picker {
   [i32] base
 
-  [return<i32>]
+  [return<i32> effects(none)]
   pick([Reference<vector<i32>>] values, [i32] input) {
     return(values[input] + this.base)
   }
@@ -1222,7 +1224,7 @@ namespace probe {
       this.items.push(Handler<State>{[id] id, [kind] kind, [handler] handler})
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     kindOf([StringView] id) {
       for([i32 mut] index{0i32}; index < this.items.count(); ++index) {
         [StringView] existing{textOf(this.items[index].id)}
@@ -1743,7 +1745,7 @@ import /std/text/*
 Wrap {
   [Function<i32, i32> mut] handler
 
-  [mut return<i32>]
+  [mut return<i32> effects(none)]
   run([i32] x) {
     return(this.handler(x))
   }
@@ -1781,7 +1783,7 @@ Counter() {
   [mut i32] count{0i32}
 }
 
-[return<void>]
+[return<void> effects(none)]
 bump([Reference<Counter>] counter, [i32] by) {
   counter.count = counter.count + by
 }
@@ -1819,7 +1821,7 @@ Box() {
   [i32] base{0i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 run<Body>([Body mut] body, [Box] box) {
   return(body(box))
 }
@@ -2117,7 +2119,7 @@ import /std/ui/events/*
 Filter() {
   [Key] wanted{Key.escape}
 
-  [return<bool>]
+  [return<bool> effects(none)]
   matches([KeyEvent] event) {
     return(event.key == this.wanted)
   }

@@ -178,7 +178,7 @@ TEST_CASE("C++ emitter keeps wrapper-returned canonical map references through r
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -207,7 +207,7 @@ TEST_CASE("C++ emitter keeps canonical diagnostics on wrapper-returned canonical
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }

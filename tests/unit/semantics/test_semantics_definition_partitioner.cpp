@@ -1207,12 +1207,12 @@ TEST_CASE("semantic product index families are equivalent across worker counts 1
     std::ofstream file(tempPath);
     REQUIRE(file.good());
     file << R"(
-[return<Result<int, i32>>]
+[return<Result<int, i32>> effects(none)]
 id([i32] value) {
   return(Result.ok(value))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /vector/count([vector<i32>] self) {
   return(17i32)
 }

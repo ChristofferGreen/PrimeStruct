@@ -164,7 +164,7 @@ main() {
 
 TEST_CASE("native rejects variadic pointer string packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Pointer<string>>] values) {
   return(count(values))
 }
@@ -188,7 +188,7 @@ main() {
 
 TEST_CASE("native rejects variadic reference string packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Reference<string>>] values) {
   return(count(values))
 }

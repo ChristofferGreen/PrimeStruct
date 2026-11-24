@@ -745,7 +745,7 @@ PixelRows() {
   [i32] stride{4i32}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 stride_of([PixelRows] rows) {
   return(rows.stride)
 }

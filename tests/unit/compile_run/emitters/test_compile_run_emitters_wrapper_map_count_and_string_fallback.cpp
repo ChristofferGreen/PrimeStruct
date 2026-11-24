@@ -7,7 +7,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access count with same-path diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -22,7 +22,7 @@ TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access count wi
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -47,7 +47,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects wrapper-returned slash-method map access count before deleted stubs") {
   const std::string source = R"(
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8, 2i32, "bye"utf8))
 }
@@ -70,12 +70,12 @@ main() {
 
 TEST_CASE("C++ emitter rejects explicit canonical map count slash-method receiver fallback") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /i32/tag([i32] self) {
   return(plus(self, 40i32))
 }
@@ -95,12 +95,12 @@ main() {
 
 TEST_CASE("rejects canonical vector access direct-call string count fallback in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -155,17 +155,17 @@ main() {
 
 TEST_CASE("C++ emitter keeps slash-method vector access count through builtin string length") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[return<string>]
+[return<string> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -201,7 +201,7 @@ main() {
 
 TEST_CASE("vm counts helper-return vector access string via slash-method receiver") {
   const std::string source = R"(
-[return<string>]
+[return<string> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -224,7 +224,7 @@ main() {
 
 TEST_CASE("vm counts helper-return vector access string via direct call") {
   const std::string source = R"(
-[return<string>]
+[return<string> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -300,12 +300,12 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical vector unsafe direct-call count via builtin string length") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -329,12 +329,12 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical vector method helper return precedence over string count shadow at runtime") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -353,12 +353,12 @@ main() {
 
 TEST_CASE("C++ emitter rejects canonical vector unsafe method string count forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }

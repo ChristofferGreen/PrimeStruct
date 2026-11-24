@@ -125,7 +125,7 @@ import /ui/*
 })"},
     {"task",
      R"([namespace] ui {
-  [public return<i32>] work([i32] n) { return(n * n) }
+  [public return<i32> effects(none)] work([i32] n) { return(n * n) }
 })",
      R"(@IMPORT@
 import /ui/*

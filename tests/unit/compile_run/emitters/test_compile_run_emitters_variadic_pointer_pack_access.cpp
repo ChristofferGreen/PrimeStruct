@@ -224,7 +224,7 @@ TEST_CASE("C++ emitter indexes variadic vector packs with at sugar under collect
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 packScore([args<vector<i32>>] values) {
   return(plus(values.at(1i32)[1i32], values.at_unsafe(2i32)[2i32]))
 }

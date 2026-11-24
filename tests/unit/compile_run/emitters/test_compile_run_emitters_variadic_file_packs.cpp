@@ -206,7 +206,7 @@ TEST_CASE("C++ emitter materializes variadic pointer File handle packs with inde
 
 TEST_CASE("C++ emitter rejects variadic pointer string packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Pointer<string>>] values) {
   return(count(values))
 }
@@ -230,7 +230,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects variadic reference string packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Reference<string>>] values) {
   return(count(values))
 }
@@ -254,7 +254,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects variadic reference packs without location forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Reference<i32>>] values) {
   return(count(values))
 }
@@ -278,7 +278,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects variadic pointer packs without location forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Pointer<i32>>] values) {
   return(count(values))
 }

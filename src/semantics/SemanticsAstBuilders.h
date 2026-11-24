@@ -13,6 +13,8 @@ namespace primec::semantics {
 
 // Adds the `public` visibility transform.
 void appendPublicVisibility(Definition &helper);
+// Declares `effects(none)`: a compiler-generated helper is pure, and a call to one needs no effects of the caller.
+void appendNoEffects(Definition &helper);
 void appendPublicVisibility(Expr &binding);
 
 // A binding named `bindingName` of `typeName` (`Box<i32>` becomes transform `Box` with template argument

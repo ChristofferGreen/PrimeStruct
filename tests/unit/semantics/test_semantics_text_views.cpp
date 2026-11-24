@@ -83,7 +83,7 @@ TEST_CASE("an owned String still needs view() for a StringView parameter") {
 import /std/text/*
 import /std/text/view/*
 
-[return<i32>]
+[return<i32> effects(none)]
 width([StringView] text) {
   return(text.count())
 }

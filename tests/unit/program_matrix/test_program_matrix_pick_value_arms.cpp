@@ -35,7 +35,7 @@ label([i32] id) {
   return(text)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 first_byte([String] text) {
   return(convert<i32>(text.byteAt(0i32)))
 }

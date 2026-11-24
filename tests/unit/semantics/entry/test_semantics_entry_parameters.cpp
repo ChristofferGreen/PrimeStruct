@@ -582,7 +582,7 @@ count_values([spread] 1i32)
 
 TEST_CASE("variadic pointer string pack declaration is rejected") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 score([args<Pointer<string>>] values) {
   return(count(values))
 }
@@ -602,7 +602,7 @@ main() {
 
 TEST_CASE("variadic reference string pack declaration is rejected") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 score([args<Reference<string>>] values) {
   return(count(values))
 }

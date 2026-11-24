@@ -349,7 +349,7 @@ Holder() {}
   return(soaVectorNew<Particle>())
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /to_aos([SoaVector<Particle>] values) {
   [vector<Particle>] shadowed{vector<Particle>()}
   return(shadowed)
@@ -384,7 +384,7 @@ Holder() {}
   return(soaVectorNew<Particle>())
 }
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([SoaVector<Particle>] values) {
   return(7i32)
 }

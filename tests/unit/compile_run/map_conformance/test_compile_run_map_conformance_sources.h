@@ -430,7 +430,7 @@ inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   source += "  }\n";
   source += "}\n";
   source += "\n";
-  source += "[return<Reference<Map<string, Owned>>>]\n";
+  source += "[return<Reference<Map<string, Owned>>> effects(none)]\n";
   source += "borrowExperimentalMap([Reference<Map<string, Owned>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n";
@@ -891,7 +891,7 @@ inline std::string makeBuiltinCanonicalMapInsertNestedNonLocalGrowthConformanceS
   source += "Outer() {\n";
   source += "  [Holder mut] holder{Holder()}\n";
   source += "}\n\n";
-  source += "[return<Reference<map<i32, i32>>>]\n";
+  source += "[return<Reference<map<i32, i32>>> effects(none)]\n";
   source += "borrowValues([Reference<map<i32, i32>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
@@ -916,7 +916,7 @@ inline std::string makeBuiltinCanonicalMapInsertHelperReturnBorrowedMethodConfor
   source += "Holder() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
   source += "}\n\n";
-  source += "[return<Reference<map<i32, i32>>>]\n";
+  source += "[return<Reference<map<i32, i32>>> effects(none)]\n";
   source += "borrowValues([Reference<map<i32, i32>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
@@ -986,7 +986,7 @@ inline std::string makeBuiltinCanonicalMapInsertBorrowedHolderFieldDirectConform
   source += "Holder() {\n";
   source += "  [map<i32, i32> mut] values{map<i32, i32>()}\n";
   source += "}\n\n";
-  source += "[return<Reference<Holder>>]\n";
+  source += "[return<Reference<Holder>> effects(none)]\n";
   source += "borrowHolder([Reference<Holder>] holder) {\n";
   source += "  return(holder)\n";
   source += "}\n\n";
@@ -1052,7 +1052,7 @@ inline std::string makeExperimentalMapIndexConformanceSource() {
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
-  source += "[return<Reference<Map<string, i32>>>]\n";
+  source += "[return<Reference<Map<string, i32>>> effects(none)]\n";
   source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";
@@ -1135,7 +1135,7 @@ inline std::string makeCanonicalMapNamespaceExperimentalReferenceConformanceSour
   source += "import /std/collections/*\n";
   source += "import /std/collections/map/*\n";
   source += "import /std/collections/map/*\n\n";
-  source += "[return<Reference<Map<string, i32>>>]\n";
+  source += "[return<Reference<Map<string, i32>>> effects(none)]\n";
   source += "borrowExperimentalMap([Reference<Map<string, i32>>] values) {\n";
   source += "  return(values)\n";
   source += "}\n\n";

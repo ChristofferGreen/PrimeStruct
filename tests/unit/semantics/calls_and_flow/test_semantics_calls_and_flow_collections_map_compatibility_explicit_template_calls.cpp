@@ -557,7 +557,7 @@ TEST_CASE("wrapper-returned canonical map keeps print statement string validatio
   const std::string source = R"(
 import /std/collections/*
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -582,7 +582,7 @@ TEST_CASE("wrapper-returned referenced canonical map keeps print statement strin
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
@@ -631,7 +631,7 @@ TEST_CASE("wrapper-returned canonical map keeps if string branch compatibility")
 import /std/collections/*
 import /std/collections/map/*
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }

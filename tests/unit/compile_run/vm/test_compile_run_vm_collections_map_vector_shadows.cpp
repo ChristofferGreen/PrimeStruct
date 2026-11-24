@@ -383,7 +383,7 @@ main() {
 
 TEST_CASE("runs vm with user vector constructor shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -564,7 +564,7 @@ main() {
 
 TEST_CASE("runs vm with user vector constructor block shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -572,6 +572,7 @@ vector([i32] value) {
 [return<int>]
 main() {
   [i32 mut] result{0i32}
+  [effects(none)]
   vector(9i32) {
     assign(result, 4i32)
   }

@@ -119,7 +119,7 @@ main() {
 
 TEST_CASE("ir lowerer materializes variadic args packs for direct calls") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([i32] head, [args<i32>] values) {
   return(plus(head, plus(values.count(), values[1i32])))
 }

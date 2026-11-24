@@ -659,7 +659,7 @@ Hook {
   [Function<i32, i32> mut] run
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -692,7 +692,7 @@ Tally {
   [vector<i64>] values{vector<i64>()}
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 apply([Function<i64, i64> mut] step, [i64] value) {
   return(step(value))
 }

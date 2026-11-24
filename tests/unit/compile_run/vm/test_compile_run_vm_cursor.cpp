@@ -9,7 +9,7 @@ TEST_CASE("vm forward cursor traversal sums a vector without skipping the final 
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_vector([vector<i32>] values) {
   [Cursor<i32> mut] it{startVector<i32>(values)}
   [Cursor<i32>] lim{limitVector<i32>(values)}
@@ -39,7 +39,7 @@ TEST_CASE("native forward cursor traversal sums a vector without skipping the fi
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_vector([vector<i32>] values) {
   [Cursor<i32> mut] it{startVector<i32>(values)}
   [Cursor<i32>] lim{limitVector<i32>(values)}
@@ -138,7 +138,7 @@ TEST_CASE("vector cursor read at limit fails deterministically") {
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 readAtLimit([vector<i32>] values) {
   [Cursor<i32>] lim{limitVector<i32>(values)}
   return(readVector<i32>(values, lim))
@@ -185,7 +185,7 @@ TEST_CASE("cursor comparisons reject unrelated element types at compile time") {
 import /std/collections/*
 import /std/cursor/*
 
-[return<bool>]
+[return<bool> effects(none)]
 compareUnrelated([vector<i32>] intValues, [vector<f32>] floatValues) {
   [Cursor<i32>] a{startVector<i32>(intValues)}
   [Cursor<f32>] b{startVector<f32>(floatValues)}
@@ -226,7 +226,7 @@ Holder {
   [i32] position{0i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 readIt([Holder] h) {
   return(h.owner[h.position])
 }
@@ -284,7 +284,7 @@ TEST_CASE("vm reverse cursor traversal visits a vector in reverse order exactly 
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_reverse_vector([vector<i32>] values) {
   [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
@@ -314,7 +314,7 @@ TEST_CASE("native reverse cursor traversal visits a vector in reverse order exac
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_reverse_vector([vector<i32>] values) {
   [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
@@ -378,7 +378,7 @@ TEST_CASE("empty vector reverse traversal produces zero iterations") {
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 count_reverse_iterations([vector<i32>] values) {
   [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
@@ -410,7 +410,7 @@ TEST_CASE("reading at reverse_limit fails deterministically") {
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 readAtReverseLimit([vector<i32>] values) {
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
   return(readVector<i32>(values, lim))

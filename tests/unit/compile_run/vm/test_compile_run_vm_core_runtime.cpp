@@ -51,7 +51,7 @@ main() {
 
 TEST_CASE("runs vm with single task spawn wait") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 computeLeft() {
   return(21i32)
 }
@@ -75,12 +75,12 @@ TEST_CASE("runs vm with multi task wait tuple") {
   const std::string source = R"(
 import /std/tuple/*
 
-[return<i32>]
+[return<i32> effects(none)]
 computeLeft() {
   return(11i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 computeRight() {
   return(13i32)
 }
@@ -134,7 +134,7 @@ TEST_CASE("runs vm with whitespace-separated imports") {
   const std::string source = R"(
 import /util /std/math/*
 namespace util {
-  [public return<int>]
+  [public return<int> effects(none)]
   add([i32] a, [i32] b) {
     return(plus(a, b))
   }

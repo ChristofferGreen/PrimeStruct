@@ -218,13 +218,13 @@ TEST_CASE("slice and sliceMut on a vector field of a mut struct parameter write 
           "  holder.bytes.push(3u8)\n"
           "  return(overwrite_tail(holder) + sum_head(holder))",
           9 + 1 + 2,
-          ByteHolder + "\n[return<int>]\n"
+          ByteHolder + "\n[return<int> effects(none)]\n"
                        "overwrite_tail([Holder mut] holder) {\n"
                        "  [Slice<u8, Write> mut] tail{holder.bytes.sliceMut(1i32, 3i32)}\n"
                        "  tail.set(1i32, 9u8)\n"
                        "  return(convert<i32>(tail.at(1i32)))\n"
                        "}\n"
-                       "\n[return<int>]\n"
+                       "\n[return<int> effects(none)]\n"
                        "sum_head([Holder mut] holder) {\n"
                        "  [Slice<u8, Read>] head{holder.bytes.slice(0i32, 2i32)}\n"
                        "  return(convert<i32>(head.at(0i32)) + convert<i32>(head.at(1i32)))\n"

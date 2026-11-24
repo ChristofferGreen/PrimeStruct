@@ -11,7 +11,7 @@ TEST_CASE("copy mut scalar parameter does not write back") {
   program.name = "copy_mut_scalar_parameter";
   program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
-[i32]
+[i32 effects(none)]
 bump([i32 copy mut] value) {
   assign(value, plus(value, 10i32))
   return(value)
@@ -163,6 +163,7 @@ swap_pair([Reference<Pair>] pair) {
   pair.right = left
 }
 
+[effects(none)]
 bump([i32 mut] counter, [i32] by) {
   counter = counter + by
   counter = counter * 2i32
@@ -367,7 +368,7 @@ tweak([Noisy copy mut] named) {
   return(named.id + named.text.count())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   [i32 mut] extra{value}
   extra = extra + value

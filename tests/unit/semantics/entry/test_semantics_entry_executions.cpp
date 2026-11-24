@@ -385,7 +385,7 @@ main() {
   return(1i32)
 }
 
-[return<void>]
+[return<void> effects(io_out)]
 execute_repeat([i32] x) {
   return()
 }

@@ -28,6 +28,7 @@ bool emitReflectionClearHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("void");
@@ -72,6 +73,7 @@ bool emitReflectionCopyFromHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("void");
@@ -110,6 +112,7 @@ bool emitReflectionDefaultHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back(context.def.fullPath);
@@ -138,6 +141,7 @@ bool emitReflectionIsDefaultHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("bool");

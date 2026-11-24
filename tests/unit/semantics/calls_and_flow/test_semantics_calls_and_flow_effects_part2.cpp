@@ -386,12 +386,12 @@ Thing() {
   [i32] value{1i32}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 vector<T>([T] value) {
   return(0i32)
 }
 
-[return<Thing>]
+[return<Thing> effects(none)]
 at([i32] value, [i32] index) {
   return(Thing{})
 }
@@ -740,7 +740,7 @@ log_file_error([FileError] err) {
 
 TEST_CASE("file write_bytes rejects user definition named array") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 array<T>([T] value) {
   return(0i32)
 }

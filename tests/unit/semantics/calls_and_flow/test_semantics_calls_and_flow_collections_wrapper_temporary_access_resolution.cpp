@@ -463,7 +463,7 @@ wrapVector() {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /i32/tag([i32] value) {
   return(plus(value, 50i32))
 }

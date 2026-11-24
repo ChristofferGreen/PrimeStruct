@@ -369,7 +369,7 @@ TEST_CASE("native materializes variadic pointer vector packs with indexed count 
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] head{dereference(at(values, 0i32))}
   [vector<i32>] tail{dereference(at(values, 2i32))}
@@ -377,7 +377,7 @@ score_ptrs([args<Pointer<vector<i32>>>] values) {
               /std/collections/vector/count(tail)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
@@ -428,7 +428,7 @@ TEST_CASE("native materializes variadic pointer vector packs with indexed derefe
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [vector<i32>] head{dereference(at(values, 0i32))}
   [vector<i32>] tail{dereference(at(values, 2i32))}
@@ -436,7 +436,7 @@ score_ptrs([args<Pointer<vector<i32>>>] values) {
               /std/collections/vector/capacity(tail)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }

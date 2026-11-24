@@ -501,7 +501,7 @@ TEST_CASE("native materializes variadic vector packs with indexed count methods"
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_vectors([args<vector<i32>>] values) {
   [vector<i32>] head{values[0i32]}
   [vector<i32>] tail{values[2i32]}
@@ -509,7 +509,7 @@ score_vectors([args<vector<i32>>] values) {
               /std/collections/vector/count(tail)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<vector<i32>>] values) {
   return(score_vectors([spread] values))
 }
@@ -548,7 +548,7 @@ TEST_CASE("native materializes variadic vector packs with indexed capacity metho
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_vectors([args<vector<i32>>] values) {
   [vector<i32>] head{values[0i32]}
   [vector<i32>] tail{values[2i32]}
@@ -556,7 +556,7 @@ score_vectors([args<vector<i32>>] values) {
               /std/collections/vector/capacity(tail)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<vector<i32>>] values) {
   return(score_vectors([spread] values))
 }

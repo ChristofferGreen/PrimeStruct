@@ -43,7 +43,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 copy_many([SharedString] text, [i32] rounds) {
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}
@@ -95,7 +95,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([SharedString] text) {
   return(text.count())
 }
@@ -172,7 +172,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([SharedString] text) {
   return(text.count())
 }
@@ -277,7 +277,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 copy_many([SharedString] text, [i32] rounds) {
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}

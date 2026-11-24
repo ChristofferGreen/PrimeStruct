@@ -90,7 +90,7 @@ main() {
 
 TEST_CASE("convert accepts user-defined vector-named operand call") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector<T>([T] value) {
   return(value)
 }

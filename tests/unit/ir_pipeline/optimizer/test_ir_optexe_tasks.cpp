@@ -691,7 +691,7 @@ twice([i64] value) {
   return(result)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   value = value + 1i32
   return(value)
@@ -945,7 +945,7 @@ Shape {
   [i32] square
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 look([Shape copy] s) {
   return(pick(s) {
     circle(c) { c }

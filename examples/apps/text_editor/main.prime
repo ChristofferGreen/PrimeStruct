@@ -74,7 +74,7 @@ ask_to_save([App] app) {
 
 // Selects the number-th tab (1 to 9) of the tab's group; 9 is the last tab, as in
 // other macOS apps. Numbers past the last tab do nothing.
-[return<bool>]
+[return<bool> effects(none)]
 select_tab([Window] tab, [i32] number) {
   [i32] count{tab.tabCount()}
   [i32 mut] index{number - 1i32}
@@ -91,7 +91,7 @@ select_tab([Window] tab, [i32] number) {
 
 // The preferences, kept between runs (the settings window changes them): the first value of each is the
 // default of a first launch. Every text view shows the editor ones.
-[return<bool>]
+[return<bool> effects(none)]
 apply_preferences([App] app, [TextView] view) {
   view.setLineNumbers(app.boolPref("lineNumbers", false))
   view.setWrapping(app.boolPref("wrapLines", true))
@@ -101,7 +101,7 @@ apply_preferences([App] app, [TextView] view) {
 }
 
 // The sizes the settings window's pop-up offers, in its order.
-[return<i32>]
+[return<i32> effects(none)]
 font_size_at([i32] index) {
   [i32 mut] size{13i32}
   if(index == 0i32) {
@@ -128,7 +128,7 @@ font_size_at([i32] index) {
   return(size)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 font_size_index([i32] size) {
   [i32 mut] index{2i32}
   if(size == 11i32) {
@@ -156,7 +156,7 @@ font_size_index([i32] size) {
 }
 
 // True when both texts are the same bytes.
-[return<bool>]
+[return<bool> effects(none)]
 same_text([String] a, [String] b) {
   [bool mut] same{a.count() == b.count()}
   [i32 mut] index{0i32}
@@ -340,7 +340,7 @@ build_settings([App] app) {
 }
 
 // Documents are the windows other than the settings window.
-[return<i32>]
+[return<i32> effects(none)]
 count_documents([App] app, [u64] settingsWindow) {
   [i32 mut] count{0i32}
   [i32 mut] index{0i32}
@@ -355,7 +355,7 @@ count_documents([App] app, [u64] settingsWindow) {
 }
 
 // The window the user works on: the active one, or the first document while the settings window is active.
-[return<Window>]
+[return<Window> effects(none)]
 document_window([App] app, [u64] settingsWindow) {
   [Window mut] found{app.activeWindow()}
   if(found.handle == settingsWindow) {
@@ -395,7 +395,7 @@ preview_if_markdown([App] app, [Window] tab, [String] path) {
 }
 
 // The Heading and Table menus, built once for the toolbar and once for the Format menu (a menu has one parent).
-[return<bool>]
+[return<bool> effects(none)]
 add_heading_items([Menu] menu, [CommandRange] heading) {
   menu.commandItem("Heading 1", "", heading.at(1i32))
   menu.commandItem("Heading 2", "", heading.at(2i32))
@@ -405,7 +405,7 @@ add_heading_items([Menu] menu, [CommandRange] heading) {
   return(true)
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 add_block_items([Menu] menu, [CommandRange] format) {
   menu.commandItem("Bulleted List", "", format.at(7i32))
   menu.commandItem("Numbered List", "", format.at(8i32))
@@ -417,7 +417,7 @@ add_block_items([Menu] menu, [CommandRange] format) {
   return(true)
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 add_table_items([Menu] menu, [EditorCommands] commands) {
   menu.commandItem("Insert 2 by 2", "", commands.table.at(0i32))
   menu.commandItem("Insert 3 by 3", "", commands.table.at(1i32))
@@ -438,7 +438,7 @@ add_table_items([Menu] menu, [EditorCommands] commands) {
 
 // The toolbar of a markdown window, built when the first one needs it: the view mode, the inline marks, a heading menu,
 // a menu of block formats and the tables (menus keep it short enough for a window of the default width).
-[return<Toolbar>]
+[return<Toolbar> effects(none)]
 build_toolbar([App] app, [EditorCommands] commands) {
   [Toolbar] bar{app.toolbar()}
   bar.commandSegments("Editor|Split|Preview", commands.mode)
@@ -464,7 +464,7 @@ build_toolbar([App] app, [EditorCommands] commands) {
 }
 
 // The toolbar of a script window: Run and Stop, and a button that hides or shows the output pane.
-[return<Toolbar>]
+[return<Toolbar> effects(none)]
 build_script_toolbar([App] app, [EditorCommands] commands) {
   [Toolbar] bar{app.toolbar()}
   bar.commandButton("Run", "play.fill", commands.run)
@@ -547,7 +547,7 @@ run_script([Window] tab, [Command] done) {
 }
 
 // A format command acts on the text; in the preview-only mode there is no text to see, so the window shows both first.
-[return<bool>]
+[return<bool> effects(none)]
 format_text([Window] tab, [i32] operation, [i32] a, [i32] b) {
   if(tab.previewMode() == 2i32) {
     [bool] split{tab.setPreviewMode(1i32)}
@@ -557,7 +557,7 @@ format_text([Window] tab, [i32] operation, [i32] a, [i32] b) {
 }
 
 // A new document: a window with its own text view, joined to host's tabs.
-[return<Window>]
+[return<Window> effects(none)]
 new_tab([App] app, [Window] host) {
   [Window] created{app.window("Untitled", 880i32, 480i32)}
   [TextView] view{app.textView()}
@@ -571,7 +571,7 @@ new_tab([App] app, [Window] host) {
 
 // A document of a restored session: a tab right after `host`, behind the selected one, so nothing of it is laid out
 // or built (its toolbar, its preview's page) until the user picks it.
-[return<Window>]
+[return<Window> effects(none)]
 background_tab([App] app, [Window] host) {
   [Window] created{app.window("Untitled", 880i32, 480i32)}
   [TextView] view{app.textView()}
@@ -584,7 +584,7 @@ background_tab([App] app, [Window] host) {
 
 // Writes the tab's text to its file (asking for one with Save As, or when it has
 // none yet). True when the text was saved.
-[return<bool>]
+[return<bool> effects(none)]
 save_document([App] app, [Window] tab, [bool] chooseFile) {
   [TextView] view{tab.content()}
   [bool mut] saved{false}
@@ -740,7 +740,7 @@ save_session([App] app, [Window] current) {
 }
 
 // Shows the preview of a restored tab when the last session had it on.
-[return<bool>]
+[return<bool> effects(none)]
 restore_preview([App] app, [Window] tab, [i32] position) {
   [bool mut] shown{false}
   if(position < app.listCount("session.previews")) {
@@ -872,7 +872,7 @@ Editor() {
   }
 
   // Every document shows the editor preferences; the View menu and the settings window show them too.
-  [return<bool>]
+  [return<bool> effects(none)]
   refreshPreferences() {
     [i32 mut] index{0i32}
     while(index < this.app.windowCount()) {
@@ -902,7 +902,7 @@ Editor() {
   }
 
   // Rebuilds File > Open Recent from the recent files list; returns how many files it shows.
-  [return<i32>]
+  [return<i32> effects(none)]
   refreshRecent() {
     this.recentMenu.clear()
     [i32] shown{this.recentMenu.addRecentFileCommands(this.commands.recent)}
@@ -1069,7 +1069,7 @@ Editor() {
   }
 
   // A command that needs no window: the end of a script run (the pane already shows how it ended).
-  [mut]
+  [mut effects(none)]
   noteCommand() {
     this.commanded = true
   }
@@ -1161,7 +1161,7 @@ Editor() {
 
   // A request to quit: `afterEvent` closes the tabs and ends the app when none is left, so the handler itself keeps
   // it running.
-  [mut return<bool>]
+  [mut return<bool> effects(none)]
   requestQuit() {
     this.quitRequested = true
     return(false)

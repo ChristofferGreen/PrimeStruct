@@ -270,12 +270,12 @@ TEST_CASE("semantic product query and try projections expose stable public looku
 unexpected_error([i32] err) {
 }
 
-[return<Result<int, i32>>]
+[return<Result<int, i32>> effects(none)]
 lookup_alpha() {
   return(Result.ok(4i32))
 }
 
-[return<Result<int, i32>>]
+[return<Result<int, i32>> effects(none)]
 lookup_beta() {
   return(Result.ok(5i32))
 }

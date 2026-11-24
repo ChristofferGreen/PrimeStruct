@@ -18,7 +18,7 @@ ui {
     [public i32] x{1i32}
     [public i32] y{2i32}
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     sum() { return(this.x + this.y) }
 
     [public mut]

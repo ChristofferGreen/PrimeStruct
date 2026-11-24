@@ -260,7 +260,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -286,7 +286,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on wrapper-returned map indexing") {
   const std::string source = R"(
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -314,12 +314,12 @@ TEST_CASE("C++ emitter keeps imported wrapper-returned canonical map reference a
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -351,17 +351,17 @@ main() {
 
 TEST_CASE("C++ emitter rejects direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -387,22 +387,22 @@ main() {
 
 TEST_CASE("C++ emitter rejects wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -433,7 +433,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on direct-call") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }

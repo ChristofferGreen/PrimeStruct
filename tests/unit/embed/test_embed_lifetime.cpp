@@ -71,7 +71,7 @@ import /std/text/*
 host_double([i32] value) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 measure([String] text, [i32] extra) {
   return(host_double(text.count()) + extra)
 }

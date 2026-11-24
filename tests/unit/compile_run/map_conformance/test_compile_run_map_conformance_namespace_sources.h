@@ -140,7 +140,7 @@ inline std::string makeCanonicalMapAccessImportRequirementSource(const std::stri
 inline std::string makeCanonicalMapNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "[return<int>]\n";
+  source += "[return<int> effects(none)]\n";
   source += "/count([map<string, i32>] values) {\n";
   source += "  return(91i32)\n";
   source += "}\n\n";
@@ -156,11 +156,11 @@ inline std::string makeCanonicalMapNamespaceCountShadowSource() {
 inline std::string makeCanonicalMapNamespaceAccessShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "[return<int>]\n";
+  source += "[return<int> effects(none)]\n";
   source += "/at([map<string, i32>] values, [string] key) {\n";
   source += "  return(88i32)\n";
   source += "}\n\n";
-  source += "[return<int>]\n";
+  source += "[return<int> effects(none)]\n";
   source += "/at_unsafe([map<string, i32>] values, [string] key) {\n";
   source += "  return(33i32)\n";
   source += "}\n\n";

@@ -31,7 +31,7 @@ TEST_CASE("bare vector helper resolves inside monomorphized templated caller") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 wrapped<K>([Vector<K>] values) {
   return(vectorCount<K>(values))
 }

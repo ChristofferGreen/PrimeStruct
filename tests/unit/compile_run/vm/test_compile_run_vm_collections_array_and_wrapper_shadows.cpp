@@ -33,7 +33,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(88i32)
 }
@@ -127,7 +127,7 @@ TEST_CASE("runs vm user map count call shadow without imported canonical helper"
   // vector receivers (TODO-4809). Method sugar (values.count()) is not
   // routed to the rooted shadow; see the method-shadow case below.
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(96i32)
 }
@@ -147,7 +147,7 @@ main() {
 
 TEST_CASE("rejects vm user map count method shadow without imported canonical helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(93i32)
 }
@@ -168,12 +168,12 @@ main() {
 
 TEST_CASE("runs vm canonical map sugar with current helper precedence") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(96i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(73i32)
 }
@@ -253,7 +253,7 @@ TEST_CASE("runs vm canonical map access string shadow through builtin storage") 
   return("hello"utf8)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(5i32)
 }
@@ -291,7 +291,7 @@ TEST_CASE("runs vm canonical map access same-path string shadow") {
   return(42i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(5i32)
 }
@@ -310,12 +310,12 @@ main() {
 
 TEST_CASE("runs vm rooted map count as ordinary user definition") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(96i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -339,12 +339,12 @@ main() {
 
 TEST_CASE("rejects vm map compatibility count call mismatch with canonical templated helper present") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(96i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -368,12 +368,12 @@ main() {
 
 TEST_CASE("runs vm map compatibility explicit-template count call with canonical templated helper present") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -397,12 +397,12 @@ main() {
 
 TEST_CASE("rejects vm map compatibility explicit-template count call with non-templated alias helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values, [bool] marker) {
   return(96i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -426,12 +426,12 @@ main() {
 
 TEST_CASE("rejects vm map compatibility explicit-template count method with non-templated alias helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values, [bool] marker) {
   return(96i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(false)
 }
@@ -456,12 +456,12 @@ main() {
 
 TEST_CASE("rejects vm canonical explicit-template map count call with non-templated canonical helper") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
@@ -486,12 +486,12 @@ main() {
 
 TEST_CASE("rejects vm canonical implicit-template map count call with canonical argument-shape diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(false)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/count<K, V>([map<K, V>] values) {
   return(96i32)
 }
@@ -515,7 +515,7 @@ main() {
 
 TEST_CASE("runs vm canonical implicit-template map count expression call with wrapper slash return envelope") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
   return(96i32)
 }
@@ -538,7 +538,7 @@ main() {
 
 TEST_CASE("runs vm with builtin string count before user call shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(94i32)
 }
@@ -556,7 +556,7 @@ main() {
 
 TEST_CASE("runs vm with builtin string count before user method shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(95i32)
 }
@@ -577,7 +577,7 @@ TEST_CASE("runs vm canonical map reference string access with imported canonical
 import /std/collections/*
 import /std/collections/map/*
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -615,7 +615,7 @@ main() {
 
 TEST_CASE("vm rejects bare builtin count on wrapper-returned canonical map access before lowering") {
   const std::string source = R"(
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -638,12 +638,12 @@ main() {
 
 TEST_CASE("vm rejects user string count method shadow on wrapper-returned canonical map access") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -663,12 +663,12 @@ TEST_CASE("vm keeps imported wrapper-returned canonical map reference access low
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
@@ -693,12 +693,12 @@ main() {
 
 TEST_CASE("vm keeps wrapper-returned canonical map reference primitive receiver diagnostics") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -722,7 +722,7 @@ main() {
 
 TEST_CASE("rejects vm user map method sugar on wrapper-returned canonical map references without imported helpers") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -748,7 +748,7 @@ main() {
 
 TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -772,7 +772,7 @@ main() {
 
 TEST_CASE("vm keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }

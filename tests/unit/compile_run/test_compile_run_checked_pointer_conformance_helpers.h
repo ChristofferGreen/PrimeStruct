@@ -60,7 +60,7 @@ Token() {
   }
 }
 
-[unsafe return<Pointer<uninitialized<Token>>>]
+[unsafe return<Pointer<uninitialized<Token>>> effects(none)]
 token_slot([Pointer<uninitialized<Token>>] values, [i32] index) {
   return(bufferOffsetUnsafe<uninitialized<Token>>(values, index))
 }

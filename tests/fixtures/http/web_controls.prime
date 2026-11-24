@@ -24,7 +24,7 @@ reset_panel([Reference<Panel>] panel, [PointerEvent] event) {
 }
 
 // The request of case `index`: method, path and an optional Referer.
-[return<string>]
+[return<string> effects(none)]
 case_request([i32] index) {
   if(index == 1i32) {
     return("POST /_on/press/click HTTP/1.1\r\n\r\n")
@@ -57,7 +57,7 @@ case_request([i32] index) {
 }
 
 // The status, Location and body case `index` must answer.
-[return<bool>]
+[return<bool> effects(none)]
 answer_is([i32] index, [Response] response) {
   [StringView] body{response.body.view()}
   [StringView] head{response.headerLines.view()}

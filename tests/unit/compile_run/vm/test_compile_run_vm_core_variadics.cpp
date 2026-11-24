@@ -37,7 +37,7 @@ main() {
 
 TEST_CASE("vm rejects variadic pointer string packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([args<Pointer<string>>] values) {
   return(count(values))
 }
@@ -509,7 +509,7 @@ compute_middle() {
   return(9i32)
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 compute_right() {
   return(11i64)
 }
@@ -544,13 +544,13 @@ TEST_CASE("runs vm with sendable spawn arguments copied into the task") {
   const std::string source = R"(
 import /std/text/*
 
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   value = value + 1i32
   return(value)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([String] text) {
   return(text.count())
 }
@@ -620,7 +620,7 @@ main() {
 
 TEST_CASE("the opt report names a spawned call that runs inline on the vm") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   value = value + 1i32
   return(value)

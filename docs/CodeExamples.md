@@ -784,7 +784,7 @@ ad-hoc unwrap patterns.
 ```prime
 import /std/file/*
 
-[Result<int, FileError>]
+[Result<int, FileError> effects(none)]
 count_ready([int] value) {
   return(Result.ok(value + 1))
 }
@@ -1262,7 +1262,7 @@ against the current release toolchain.
 ```prime
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_forward([vector<i32>] values) {
   [Cursor<i32> mut] it{startVector<i32>(values)}
   [Cursor<i32>] lim{limitVector<i32>(values)}
@@ -1304,7 +1304,7 @@ current release toolchain.
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_reverse([vector<i32>] values) {
   [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
@@ -1437,7 +1437,7 @@ vector it was made from. Views of a `vector<T>` come from `values.view()`, `valu
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
   for([i32 mut] i{0i32}, i < window.count(), i++) {

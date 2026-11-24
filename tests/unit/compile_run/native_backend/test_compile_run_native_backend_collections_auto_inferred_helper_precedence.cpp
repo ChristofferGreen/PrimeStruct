@@ -276,12 +276,12 @@ main() {
 
 TEST_CASE("native alias capacity array target accepts same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([array<i32>] values) {
   return(46i32)
 }
 
-[return<array<i32>>]
+[return<array<i32>> effects(none)]
 wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32, 4i32))
 }

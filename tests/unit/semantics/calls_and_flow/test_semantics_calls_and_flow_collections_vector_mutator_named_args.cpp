@@ -786,7 +786,7 @@ main() {
 
 TEST_CASE("vector helper method expression resolves through canonical stdlib helper") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
   return(value)
 }
@@ -805,7 +805,7 @@ main() {
 
 TEST_CASE("vector helper method expression reports canonical helper argument mismatch") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/push([vector<i32> mut] values, [bool] value) {
   return(convert<int>(value))
 }

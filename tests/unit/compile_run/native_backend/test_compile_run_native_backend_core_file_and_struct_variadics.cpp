@@ -435,7 +435,7 @@ main() {
 
 TEST_CASE("native materializes direct variadic args packs") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 score([i32] head, [args<i32>] values) {
   return(plus(head, plus(count(values), values[1i32])))
 }

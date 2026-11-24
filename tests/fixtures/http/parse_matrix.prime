@@ -7,7 +7,7 @@ import /std/text/*
 import /std/text/view/*
 
 // The bytes of case `index`; an empty string past the last case.
-[return<string>]
+[return<string> effects(none)]
 case_text([i32] index) {
   // Complete requests.
   if(index == 1i32) {
@@ -88,7 +88,7 @@ case_text([i32] index) {
 }
 
 // The outcome case `index` must have: 0 complete, 1 need more, or the status to answer.
-[return<i32>]
+[return<i32> effects(none)]
 case_outcome([i32] index) {
   if(index < 10i32) {
     return(0i32)
@@ -109,14 +109,14 @@ case_outcome([i32] index) {
 }
 
 // Whether `index` names a case.
-[return<bool>]
+[return<bool> effects(none)]
 is_case([i32] index) {
   return((index >= 1i32 && index <= 3i32) || (index >= 10i32 && index <= 13i32) || (index >= 20i32 && index <= 31i32) ||
          (index >= 40i32 && index <= 41i32) || (index >= 50i32 && index <= 51i32))
 }
 
 // The fields of the complete cases.
-[return<bool>]
+[return<bool> effects(none)]
 fields_match([i32] index, [Request] request, [i32] byteCount) {
   if(index == 1i32) {
     [StringView] accept{request.header(textOf("ACCEPT"))}

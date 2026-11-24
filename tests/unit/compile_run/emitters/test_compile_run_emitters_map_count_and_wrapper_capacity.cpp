@@ -17,12 +17,12 @@ void checkFileContains(const std::string &path, const char *fragment) {
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map count receivers") {
   const std::string source = R"(
-[return<string>]
+[return<string> effects(none)]
 /map/count([map<i32, string>] values) {
   return("hello"utf8)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, string>] values) {
   return(41i32)
 }
@@ -68,7 +68,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects user wrapper count/capacity shadow precedence on map count first") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -78,7 +78,7 @@ wrapVector() {
   return(vector<i32>(3i32, 4i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(77i32)
 }
@@ -112,7 +112,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects wrapper count/capacity builtin fallback on map count first") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -140,7 +140,7 @@ main() {
 
 TEST_CASE("rejects namespaced wrapper vector count map target in C++ emitter") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -188,7 +188,7 @@ main() {
 
 TEST_CASE("C++ emitter rejects mixed array-count wrapper fallback on array count first") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -221,12 +221,12 @@ main() {
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on map receiver") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(41i32)
 }
 
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -244,12 +244,12 @@ main() {
 
 TEST_CASE("C++ emitter keeps alias direct-call vector count same-path helper on map receiver") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([map<i32, i32>] values) {
   return(44i32)
 }
 
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -267,7 +267,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps vector-count diagnostic for alias direct-call vector count on map receiver") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32, 3i32, 4i32))
 }
@@ -368,7 +368,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps map receiver method diagnostic for slash-method vector count on map receiver") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -412,17 +412,17 @@ main() {
 
 TEST_CASE("C++ emitter rejects duplicate local canonical slash-method vector count overloads") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(31i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(32i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(33i32)
 }

@@ -97,7 +97,7 @@ main() {
 TEST_CASE("mut parameters borrow a mutable place") {
   // docs/spec/value-lifecycle.md, Parameter Passing: `[T mut]` is a mutable borrow of the argument.
   const std::string accepted = R"(
-[return<void>]
+[return<void> effects(none)]
 bump([i32 mut] value) {
   assign(value, plus(value, 1i32))
 }
@@ -122,7 +122,7 @@ main() {
 
   {
     const std::string rejected = R"(
-[return<void>]
+[return<void> effects(none)]
 bump([i32 mut] value) {
   assign(value, plus(value, 1i32))
 }
@@ -246,7 +246,7 @@ Owned() {
   }
 }
 
-[return<void>]
+[return<void> effects(none)]
 keep([Owned mut] slot, [Owned] item) {
   assign(slot, item)
 }
@@ -275,7 +275,7 @@ main() {
   CHECK(error.empty());
 
   const std::string scalar = R"(
-[return<int>]
+[return<int> effects(none)]
 same([i32] value) {
   return(value)
 }

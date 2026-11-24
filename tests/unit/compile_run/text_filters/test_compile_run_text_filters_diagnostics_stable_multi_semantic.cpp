@@ -349,7 +349,7 @@ execute_repeat(map(key=1i32, key=2i32), map())
 
 TEST_CASE("primec collect-diagnostics keeps execution vector arg-shape diagnostics") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -393,7 +393,7 @@ execute_repeat(vector(value=1i32, value=2i32), vector())
 
 TEST_CASE("primevm collect-diagnostics keeps execution vector arg-shape diagnostics") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector([i32] value) {
   return(value)
 }

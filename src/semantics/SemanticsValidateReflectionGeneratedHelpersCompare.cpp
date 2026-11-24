@@ -33,6 +33,7 @@ bool emitReflectionComparisonHelper(ReflectionGeneratedHelperContext &context,
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("bool");
@@ -77,6 +78,7 @@ bool emitReflectionCompareHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("i32");
@@ -168,6 +170,7 @@ bool emitReflectionHash64Helper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("u64");

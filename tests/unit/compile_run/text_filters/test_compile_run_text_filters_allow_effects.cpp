@@ -72,7 +72,7 @@ plain() {
   return(1i32)
 }
 
-[effects(heap_alloc), return<i32>]
+[return<i32>]
 main() {
   return(plain())
 }

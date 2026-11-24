@@ -257,7 +257,7 @@ show_count([Maybe<vector<i32>>] value) {
   }
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 twice([i32] value) {
   return(value * 2i32)
 }
@@ -279,7 +279,7 @@ TEST_CASE("a definition inlined into itself through an argument is still rejecte
   program_matrix::ProgramCase program;
   program.name = "sum_owner_recursive_argument_rejected";
   program.source = R"(
-[return<int>]
+[return<int> effects(none)]
 same([int] value) {
   return(value)
 }

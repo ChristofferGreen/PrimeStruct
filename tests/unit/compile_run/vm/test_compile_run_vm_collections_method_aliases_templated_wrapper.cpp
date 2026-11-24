@@ -210,12 +210,12 @@ Marker {
   [i32] value
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return(index)
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(plus(index, 40i32)))
 }
@@ -225,7 +225,7 @@ Marker {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(/vector/at(values, 2i32))
 }
@@ -253,22 +253,22 @@ Marker {
   [i32] value
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return(index)
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(plus(index, 40i32)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /i32/tag([i32] self, [bool] marker) {
   return(self)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(/vector/at(values, 2i32))
 }
@@ -329,12 +329,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -357,12 +357,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(/std/collections/vector/at_unsafe(values, 2i32).value)
 }

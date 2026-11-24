@@ -945,8 +945,9 @@ TEST_CASE("a view handler that writes its state is a compile error") {
     // A view that calls a `[mut]` method of its state.
     std::string source = viewServer(PlainWorkers);
     const std::string field = "  [i32 mut] hits{0i32}\n";
-    source.replace(
-        source.find(field), field.size(), field + "  [mut] touch() {\n    this.hits = 1i32\n  }\n");
+    source.replace(source.find(field),
+                   field.size(),
+                   field + "  [mut effects(none)] touch() {\n    this.hits = 1i32\n  }\n");
     const std::string shown = "  response.body.append(\"view \")\n";
     source.replace(source.find(shown), shown.size(), "  counter.touch()\n" + shown);
     IrModule module;

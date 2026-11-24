@@ -22,7 +22,7 @@ write_count([Reference<Writer>] page, [Reference<Panel>] panel) {
 }
 
 // The request of case `index`. Case 1 is the bytes a browser sends for the fragment script's fetch of a click.
-[return<string>]
+[return<string> effects(none)]
 case_request([i32] index) {
   if(index == 1i32) {
     return("POST /_on/press/click HTTP/1.1\r\nHost: localhost:8080\r\nContent-Type: application/x-www-form-urlencoded;charset=UTF-8\r\nX-PrimeStruct-Fragment: count\r\nOrigin: http://localhost:8080\r\nReferer: http://localhost:8080/panel\r\nContent-Length: 0\r\n\r\n")

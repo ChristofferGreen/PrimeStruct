@@ -343,7 +343,7 @@ wrapValues<T>([T move] values) {
   return(values)
 }
 
-[return<Reference<map<string, i32>>>]
+[return<Reference<map<string, i32>>> effects(none)]
 borrowValues([Reference<map<string, i32>>] values) {
   return(values)
 }
@@ -374,7 +374,7 @@ wrapValues<T>([T move] values) {
   return(values)
 }
 
-[return<Reference<map<string, i32>>>]
+[return<Reference<map<string, i32>>> effects(none)]
 borrowValues([Reference<map<string, i32>>] values) {
   return(values)
 }
@@ -403,7 +403,7 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<Result<map<string, i32>, ContainerError>>>]
+[return<Reference<Result<map<string, i32>, ContainerError>>> effects(none)]
 borrowStatus([Reference<Result<map<string, i32>, ContainerError>>] status) {
   return(status)
 }
@@ -442,7 +442,7 @@ wrapStatus<T>([T] status) {
   return(status)
 }
 
-[return<Reference<Result<map<string, i32>, ContainerError>>>]
+[return<Reference<Result<map<string, i32>, ContainerError>>> effects(none)]
 borrowStatus([Reference<Result<map<string, i32>, ContainerError>>] status) {
   return(status)
 }
@@ -579,7 +579,7 @@ wrapValues<T>([T move] values) {
   return(values)
 }
 
-[return<Reference<uninitialized<map<string, i32>>>>]
+[return<Reference<uninitialized<map<string, i32>>>> effects(none)]
 borrowStorage([Reference<uninitialized<map<string, i32>>>] storage) {
   return(storage)
 }

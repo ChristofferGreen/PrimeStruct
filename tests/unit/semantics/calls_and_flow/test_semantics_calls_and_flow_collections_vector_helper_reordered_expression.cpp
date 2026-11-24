@@ -122,7 +122,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
@@ -175,7 +175,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }

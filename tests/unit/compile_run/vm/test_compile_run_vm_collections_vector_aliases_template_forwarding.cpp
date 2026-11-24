@@ -10,17 +10,17 @@ TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
 TEST_CASE("rejects vm vector alias compatibility template forwarding on primitive mismatch from call return") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 makeMarker() {
   return(1i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [string] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -41,17 +41,17 @@ TEST_CASE("rejects vm vector alias compatibility template forwarding when unknow
   const std::string source = R"(
 Marker() {}
 
-[return<i32>]
+[return<i32> effects(none)]
 makeMarker() {
   return(1i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -72,12 +72,12 @@ TEST_CASE("rejects vm vector alias compatibility template forwarding when unknow
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -99,12 +99,12 @@ TEST_CASE("rejects vm vector alias compatibility template forwarding when unknow
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [vector<i32>] marker) {
   return(90i32)
 }
@@ -147,12 +147,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias named-argument compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -176,12 +176,12 @@ main() {
 
 TEST_CASE("rejects vm wrapper temporary templated vector method compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -215,7 +215,7 @@ TEST_CASE("rejects vm array alias templated forwarding to canonical vector helpe
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -233,7 +233,7 @@ main() {
 
 TEST_CASE("rejects vm stdlib templated vector count fallback to array alias") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
@@ -256,7 +256,7 @@ main() {
 
 TEST_CASE("vm array alias count through same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/count([vector<i32>] values, [bool] marker) {
   return(46i32)
 }
@@ -278,7 +278,7 @@ main() {
 
 TEST_CASE("vm array alias capacity through same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/capacity([vector<i32>] values, [bool] marker) {
   return(48i32)
 }
@@ -300,7 +300,7 @@ main() {
 
 TEST_CASE("vm array alias at through same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at([vector<i32>] values, [i32] index, [bool] marker) {
   return(48i32)
 }
@@ -322,7 +322,7 @@ main() {
 
 TEST_CASE("vm array alias at_unsafe through same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/at_unsafe([vector<i32>] values, [i32] index, [bool] marker) {
   return(50i32)
 }
@@ -393,12 +393,12 @@ main() {
 
 TEST_CASE("rejects vm vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -508,7 +508,7 @@ TEST_CASE("runs vm vector method call") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /vector/first([vector<i32>] items) {
   return(items[0i32])
 }

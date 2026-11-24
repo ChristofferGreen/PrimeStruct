@@ -15,7 +15,7 @@ TEST_CASE("rejects vm wrapper-returned canonical map access count shadow") {
   return(91i32)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -37,17 +37,17 @@ main() {
 
 TEST_CASE("rejects vm direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -71,22 +71,22 @@ main() {
 
 TEST_CASE("rejects vm wrapper-returned canonical map method access string receiver typing") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -111,7 +111,7 @@ main() {
 
 TEST_CASE("rejects vm builtin string count on wrapper-returned slash-method map access") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -126,7 +126,7 @@ TEST_CASE("rejects vm builtin string count on wrapper-returned slash-method map 
   return("abc"raw_utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -150,12 +150,12 @@ main() {
 
 TEST_CASE("runs vm canonical vector access string literal count fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -188,12 +188,12 @@ main() {
 
 TEST_CASE("runs vm canonical vector unsafe access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"raw_utf8)
 }
@@ -217,12 +217,12 @@ main() {
 
 TEST_CASE("runs vm canonical vector method access count shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }

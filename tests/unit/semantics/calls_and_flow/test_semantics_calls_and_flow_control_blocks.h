@@ -1,6 +1,6 @@
 TEST_CASE("statement call with block arguments validates") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 execute_repeat([i32] count) {
   return()
 }
@@ -8,6 +8,7 @@ execute_repeat([i32] count) {
 [return<int>]
 main() {
   [i32 mut] value{1i32}
+  [effects(none)]
   execute_repeat(2i32) {
     assign(value, 3i32)
   }
@@ -34,13 +35,14 @@ main() {
 
 TEST_CASE("statement call with block arguments accepts bindings") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 execute_repeat([i32] count) {
   return()
 }
 
 [return<int>]
 main() {
+  [effects(none)]
   execute_repeat(2i32) {
     [i32] temp{3i32}
   }
@@ -296,7 +298,7 @@ main() {
 
 TEST_CASE("if accepts bare map at before branch compatibility") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 at([map<i32, string>] values, [i32] key) {
   return(key)
 }

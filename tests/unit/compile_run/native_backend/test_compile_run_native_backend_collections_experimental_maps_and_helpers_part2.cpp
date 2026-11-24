@@ -214,7 +214,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -249,7 +249,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -286,12 +286,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
   return(19i32)
 }
@@ -416,7 +416,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -470,7 +470,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -519,7 +519,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -955,7 +955,7 @@ Key() {
   [i32] value{0i32}
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 /Key/equal([Key] left, [Key] right) {
   return(equal(left.value, right.value))
 }
@@ -1158,12 +1158,12 @@ TEST_CASE("rejects native templated stdlib wrapper temporary index forms") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(none)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
@@ -1191,12 +1191,12 @@ TEST_CASE("rejects native templated stdlib wrapper temporary syntax parity") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(none)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
@@ -1228,12 +1228,12 @@ TEST_CASE("rejects native templated stdlib wrapper temporary unsafe parity") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(none)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
@@ -1263,12 +1263,12 @@ TEST_CASE("rejects native templated stdlib wrapper temporary count capacity pari
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(none)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)

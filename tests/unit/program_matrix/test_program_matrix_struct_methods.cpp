@@ -43,14 +43,15 @@ void runMethodProgram(const std::string &name, const std::string &source, int ex
 } // namespace
 
 TEST_CASE("a generic struct's method calls clear on a reference parameter, a local and a vector field") {
-  runMethodProgram("struct_methods_generic_clear", R"(
+  runMethodProgram("struct_methods_generic_clear",
+                   R"(
 import /std/collections/*
 
 [struct]
 Cell() {
   [i32 mut] n{5i32}
 
-  [mut]
+  [mut effects(none)]
   clear() {
     this.n = 0i32
   }
@@ -67,12 +68,12 @@ Holder<T>() {
     this.items.push(2i32)
   }
 
-  [mut]
+  [mut effects(none)]
   wipeParam([Reference<Cell>] cell) {
     cell.clear()
   }
 
-  [mut]
+  [mut effects(none)]
   wipeLocal() {
     [Cell mut] mine{Cell{}}
     mine.clear()
@@ -85,7 +86,7 @@ Holder<T>() {
     this.own.clear()
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   total() {
     return(this.items.count() + this.own.n)
   }
@@ -181,23 +182,23 @@ Holder<T>() {
   [T mut] total{}
   [i32 mut] calls{0i32}
 
-  [mut]
+  [mut effects(none)]
   on([Tag] tag, [i32] weight) {
     this.calls = this.calls + weight
   }
 
-  [mut]
+  [mut effects(none)]
   on([Other] other, [i32] weight) {
     this.calls = this.calls + weight * 10i32
   }
 
-  [mut]
+  [mut effects(none)]
   run([Tag] tag, [Function<void, Reference<T>> move mut] handler) {
     handler(location(this.total))
     this.calls = this.calls + 1i32
   }
 
-  [mut]
+  [mut effects(none)]
   run([Other] other, [Function<void, Reference<T>> move mut] handler) {
     handler(location(this.total))
     this.calls = this.calls + 10i32
@@ -277,7 +278,8 @@ main() {
 }
 
 TEST_CASE("template arguments are inferred through a generic struct parameter of a function and a method") {
-  runMethodProgram("struct_methods_infer_through_generic_struct", R"(
+  runMethodProgram("struct_methods_infer_through_generic_struct",
+                   R"(
 namespace lib {
   [public struct]
   Pair<A, B>() {
@@ -293,7 +295,7 @@ Holder<S>() {
 
 [struct]
 Meter() {
-  [return<int>]
+  [return<int> effects(none)]
   measure<S>([Holder<S>] holder) {
     return(holder.state + 100i32)
   }
@@ -328,20 +330,21 @@ main() {
 }
 
 TEST_CASE("a method parameter naming a generic struct of the root resolves it") {
-  runMethodProgram("struct_methods_generic_struct_parameter", R"(
+  runMethodProgram("struct_methods_generic_struct_parameter",
+                   R"(
 [struct]
 Holder<S>() {
   [S mut] state{}
 }
 
-[return<int>]
+[return<int> effects(none)]
 read_state([Holder<i32>] holder) {
   return(holder.state + 100i32)
 }
 
 [struct]
 Meter() {
-  [return<int>]
+  [return<int> effects(none)]
   measure([Holder<i32>] holder) {
     return(holder.state + read_state(holder))
   }
@@ -485,12 +488,12 @@ Bag() {
   [vector<i32> mut] nodes{vector<i32>{}}
   [String] label{String{}}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   count() {
     return(70i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   capacity() {
     return(71i32)
   }
@@ -501,7 +504,7 @@ Bag() {
     this.nodes.push(value)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   total() {
     [i32] local{this.nodes.count()}
     if(this.nodes.count() > 1i32) {
@@ -510,7 +513,7 @@ Bag() {
     return(local)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   labelSize() {
     return(this.label.count())
   }
@@ -522,7 +525,7 @@ Bag() {
     this.nodes.push(6i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   both() {
     return(this.count() + this.nodes.count())
   }

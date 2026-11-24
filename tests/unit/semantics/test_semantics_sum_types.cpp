@@ -728,7 +728,7 @@ Maybe {
   [i32] some
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([Maybe] value) {
   return(pick(value) {
     none {
@@ -950,7 +950,7 @@ Maybe {
   [i32] some
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([Maybe] value) {
   return(pick(value) {
     none(n) {
@@ -992,7 +992,7 @@ Shape {
   [Rectangle] rectangle
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([Shape] shape) {
   return(pick(shape) {
     circle(circlePayload) {
@@ -1197,7 +1197,7 @@ Choice {
   [Payload] right
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 score([Payload] payload) {
   return(plus(payload.value, payload.bonus))
 }

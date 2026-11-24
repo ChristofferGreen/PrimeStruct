@@ -33,6 +33,7 @@ bool emitReflectionSerializeHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("array<u64>");
@@ -78,6 +79,7 @@ bool emitReflectionDeserializeHelper(ReflectionGeneratedHelperContext &context) 
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("Result<FileError>");

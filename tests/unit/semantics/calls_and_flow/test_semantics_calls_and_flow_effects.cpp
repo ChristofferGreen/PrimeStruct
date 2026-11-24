@@ -276,7 +276,7 @@ import /std/text/*
 Box() {
   [i32] n{0i32}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   twice() {
     return(this.n * 2i32)
   }
@@ -307,7 +307,7 @@ import /std/text/*
 Box() {
   [i32] n{0i32}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   twice() {
     return(this.n * 2i32)
   }
@@ -375,21 +375,25 @@ std::string destructuredWaitSource(const std::string &rightType,
   return R"(
 import /std/tuple/*
 
-[return<i32>]
+[return<i32> effects(none)]
 compute_left() {
   return(7i32)
 }
 
-[return<)" + rightType + R"(>]
+[return<)" +
+         rightType + R"(> effects(none)]
 compute_right() {
-  return()" + rightValue + R"()
+  return()" +
+         rightValue + R"()
 }
 
 [effects(task, io_out), return<int>]
 main() {
   [Task<i32>] left{[spawn] compute_left()};
-  [Task<)" + rightType + R"(>] right{[spawn] compute_right()};
-)" + tail + R"(
+  [Task<)" +
+         rightType + R"(>] right{[spawn] compute_right()};
+)" + tail +
+         R"(
 }
 )";
 }
@@ -436,12 +440,12 @@ Reply() {
   [i32] code{0i32}
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 compute_left() {
   return(7i64)
 }
 
-[return<Reply>]
+[return<Reply> effects(none)]
 compute_right() {
   return(Reply{11i32})
 }
@@ -804,7 +808,7 @@ TEST_CASE("definition validation context isolates effects between definitions") 
   return()
 }
 
-[return<int>]
+[return<int> effects(none)]
 /host() {
   /std/gpu/dispatch(/noop, 1i32, 1i32, 1i32)
   return(0i32)
@@ -849,7 +853,7 @@ main() {
 
 TEST_CASE("std gpu upload rejects user definition named array call target") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 array<T>([T] value) {
   return(0i32)
 }
@@ -1262,7 +1266,7 @@ vector<T>([T] value) {
   return(0i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 at([i32] value, [i32] index) {
   return(plus(value, index))
 }

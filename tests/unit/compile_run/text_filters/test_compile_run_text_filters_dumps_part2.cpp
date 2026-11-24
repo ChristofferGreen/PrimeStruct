@@ -20,7 +20,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -267,12 +267,12 @@ main() {
 
 TEST_CASE("dump ast-semantic rewrites vector-target old-explicit mutator shadows to direct helper path") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -304,12 +304,12 @@ main() {
 
 TEST_CASE("dump ast-semantic rewrites vector-target method mutator shadows to direct helper path") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -465,7 +465,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -512,7 +512,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -565,7 +565,7 @@ Holder() {}
   return(soaVectorNew<Particle>())
 }
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([SoaVector<Particle>] values) {
   return(7i32)
 }
@@ -610,7 +610,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([soa<Particle>] values) {
   return(7i32)
 }
@@ -652,12 +652,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
   return(41i32)
 }
@@ -828,7 +828,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }

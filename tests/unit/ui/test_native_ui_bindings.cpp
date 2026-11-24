@@ -104,7 +104,7 @@ ps_ui_save_panel([string] title, [string] suggestedName) {
 ps_ui_alert([string] message, [String] detail, [string] buttons) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 score([bool] ok) {
   if(ok) {
     return(1i32)

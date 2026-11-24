@@ -115,7 +115,7 @@ label([i32] id) {
   return(text)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 label_id([String] text) {
   [i32 mut] id{0i32}
   [i32 mut] at{4i32}

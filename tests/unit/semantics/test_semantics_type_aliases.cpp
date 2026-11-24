@@ -39,7 +39,7 @@ make_step() {
   return([]([i32] x) { return(x + 1i32) })
 }
 
-[return<IntBox>]
+[return<IntBox> effects(none)]
 unwrap([Wrapped<i32>] wrapped) {
   return(IntBox{[value] wrapped.value})
 }

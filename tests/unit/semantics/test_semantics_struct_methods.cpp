@@ -15,7 +15,7 @@ import /std/collections/*
 Cell() {
   [i32 mut] n{5i32}
 
-  [mut]
+  [mut effects(none)]
   clear() {
     this.n = 0i32
   }
@@ -26,17 +26,17 @@ Holder<T>() {
   [vector<i32> mut] items{vector<i32>()}
   [Cell mut] own{Cell{}}
 
-  [mut]
+  [mut effects(none)]
   wipeParam([Reference<Cell>] cell) {
     cell.clear()
   }
 
-  [mut]
+  [mut effects(none)]
   wipeValue([Cell mut] cell) {
     cell.clear()
   }
 
-  [mut]
+  [mut effects(none)]
   wipeLocal() {
     [Cell mut] mine{Cell{}}
     mine.clear()

@@ -27,8 +27,9 @@ struct Outcome {
 // Runs `body` as `main` (heap_alloc effect) with the String module imported.
 Outcome runBody(const std::string &body, const std::string &definitions = "") {
   ScriptEngine engine;
-  const std::string source =
-      Prelude + definitions + "\n[return<int> effects(heap_alloc)]\nmain() {\n" + body + "\n}\n";
+  const std::string source = Prelude + definitions +
+                             "\n[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n" +
+                             body + "\n}\n";
   const auto script = engine.compileSource("/string_owned.prime", source);
   Outcome outcome;
   outcome.compiled = script.valid();
@@ -396,12 +397,14 @@ TEST_CASE("a definition may return a view of one of its parameters") {
 namespace {
 const std::string RequestParser =
     "import /std/text/view/*\nimport /std/collections/vector/*\n\n"
-    "[struct]\nRequest() {\n  [/std/text/view/StringView] method{textOf(\"\")}\n  [/std/text/view/StringView] path{textOf(\"\")}\n}\n\n"
-    "[return<Request>]\nparseRequest([/std/text/view/StringView] line) {\n"
+    "[struct]\nRequest() {\n  [/std/text/view/StringView] method{textOf(\"\")}\n  "
+    "[/std/text/view/StringView] path{textOf(\"\")}\n}\n\n"
+    "[return<Request> effects(none)]\nparseRequest([/std/text/view/StringView] line) {\n"
     "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
     "  [/std/text/view/StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
     "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
-    "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, secondSpace)})\n}\n";
+    "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, "
+    "secondSpace)})\n}\n";
 }
 
 TEST_CASE("a struct of views is a loan on the buffers its views borrow") {
@@ -490,15 +493,17 @@ TEST_CASE("the result of a returns_borrow call is a loan on the named argument o
 }
 
 TEST_CASE("an imported struct type can be written with its bare name in parameters, returns, fields and locals") {
-  const std::string parser =
-      "import /std/text/view/*\n\n"
-      "[struct]\nRequest() {\n  [StringView] method{textOf(\"\")}\n  [StringView] path{textOf(\"\")}\n}\n\n"
-      "[return<Request>]\nparseRequest([StringView] line) {\n"
-      "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
-      "  [StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
-      "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
-      "  return(Request{[method] line.slice(0i32, firstSpace), [path] rest.slice(0i32, secondSpace)})\n}\n\n"
-      "[return<StringView>]\nfirstWord([StringView] text) {\n  return(text.slice(0i32, text.indexOf(textOf(\" \"))))\n}\n";
+  const std::string parser = "import /std/text/view/*\n\n"
+                             "[struct]\nRequest() {\n  [StringView] method{textOf(\"\")}\n  "
+                             "[StringView] path{textOf(\"\")}\n}\n\n"
+                             "[return<Request> effects(none)]\nparseRequest([StringView] line) {\n"
+                             "  [i32] firstSpace{line.indexOf(textOf(\" \"))}\n"
+                             "  [StringView] rest{line.slice(firstSpace + 1i32, line.count())}\n"
+                             "  [i32] secondSpace{rest.indexOf(textOf(\" \"))}\n"
+                             "  return(Request{[method] line.slice(0i32, firstSpace), [path] "
+                             "rest.slice(0i32, secondSpace)})\n}\n\n"
+                             "[return<StringView>]\nfirstWord([StringView] text) {\n  "
+                             "return(text.slice(0i32, text.indexOf(textOf(\" \"))))\n}\n";
   CHECK(exitOf("  [String] buffer{stringFrom(\"GET /index.html HTTP/1.1\")}\n  [Request] req{parseRequest(buffer.view())}\n"
                "  [StringView] word{firstWord(buffer.view())}\n  return(req.method.count() * 100i32 + req.path.count() + word.count())",
                parser) == (300 + 11 + 3));
@@ -753,11 +758,11 @@ TEST_CASE("appending literals of every length keeps the bytes in order") {
 // byte (`append` is inlined into `main`), and it makes the two bulk host calls (the literal's address and the move).
 TEST_CASE("String append has no per-byte loop over its literal") {
   ScriptEngine engine;
-  const auto script =
-      engine.compileSource("/string_append_ir.prime",
-                           Prelude + "[return<int> effects(heap_alloc)]\nmain() {\n  [String mut] "
-                                     "s{String{}}\n  s.append(\"abc\")\n"
-                                     "  return(s.count())\n}\n");
+  const auto script = engine.compileSource(
+      "/string_append_ir.prime",
+      Prelude + "[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n  [String mut] "
+                "s{String{}}\n  s.append(\"abc\")\n"
+                "  return(s.count())\n}\n");
   REQUIRE(script.valid());
   std::vector<uint8_t> bytes;
   std::string error;

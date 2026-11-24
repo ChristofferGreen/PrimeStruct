@@ -291,13 +291,13 @@ main() {
           R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_ptrs([args<Pointer<vector<i32>>>] values) {
   [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
   return(plus(head, dereference(at(values, 2i32)).at(0i32)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<Pointer<vector<i32>>>] values) {
   return(score_ptrs([spread] values))
 }
@@ -343,7 +343,7 @@ TEST_CASE("borrowed vector packs count their elements after forwarding") {
           R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 score_refs([args<Reference<vector<i32>>>] values) {
   [vector<i32>] head{dereference(at(values, 0i32))}
   [vector<i32>] tail{dereference(at(values, 2i32))}
@@ -351,7 +351,7 @@ score_refs([args<Reference<vector<i32>>>] values) {
               /std/collections/vector/count(tail)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 forward([args<Reference<vector<i32>>>] values) {
   return(score_refs([spread] values))
 }

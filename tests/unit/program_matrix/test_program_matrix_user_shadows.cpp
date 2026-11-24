@@ -75,7 +75,7 @@ push([i32] left, [i32] right) {
   return(plus(left, right))
 }
 
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -103,7 +103,7 @@ TEST_CASE("user vector and map functions take a block") {
   program.name = "shadow_builtin_names_blocks";
   program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -117,6 +117,7 @@ map([i32] key, [i32] value) {
 main() {
   [i32 mut] block_vector{0i32}
   [i32 mut] block_map{0i32}
+  [effects(none)]
   vector(9i32) {
     assign(block_vector, 4i32)
   }
@@ -138,12 +139,12 @@ TEST_CASE("a block-form call and a value call of one user function share a body"
   program.name = "user_call_block_and_value_calls";
   program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
-[return<int>]
+[return<int> effects(none)]
 twice([i32] value) {
   return(plus(value, value))
 }
 
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -156,6 +157,7 @@ map([i32] key, [i32] value) {
 [effects(io_out), return<int>]
 main() {
   [i32 mut] seen{0i32}
+  [effects(none)]
   twice(9i32) {
     assign(seen, 4i32)
   }
@@ -164,6 +166,7 @@ main() {
   [i32] kept{twice(7i32) { assign(seen, 6i32) }}
   print_line(kept)
   print_line(seen)
+  [effects(none)]
   vector(9i32) {
     assign(seen, 8i32)
   }

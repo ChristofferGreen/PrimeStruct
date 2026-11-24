@@ -134,7 +134,7 @@ Point {
   [i32] y{0i32}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 sum([args<Point>] points) {
   return(points[0i32].x + points[1i32].y)
 }

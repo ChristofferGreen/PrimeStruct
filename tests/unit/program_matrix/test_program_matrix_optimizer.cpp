@@ -386,7 +386,7 @@ Point() {
   [i64 mut] x{0i64}
   [i64 mut] y{0i64}
 
-  [return<i64>]
+  [return<i64> effects(none)]
   sum() {
     return(this.x + this.y)
   }

@@ -41,12 +41,12 @@ main() {
 
 TEST_CASE("rejects native vector alias named-argument compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -73,12 +73,12 @@ main() {
 
 TEST_CASE("rejects native wrapper temporary templated vector method compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -108,7 +108,7 @@ main() {
 
 TEST_CASE("native array alias count through same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /array/count([vector<i32>] values, [bool] marker) {
   return(46i32)
 }
@@ -135,12 +135,12 @@ main() {
 
 TEST_CASE("rejects native vector alias templated forwarding past non-templated compatibility helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -249,7 +249,7 @@ TEST_CASE("native vector method call") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /vector/first([vector<i32>] items) {
   return(items[0i32])
 }

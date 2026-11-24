@@ -12,7 +12,7 @@ Shelf() {
   [vector<i32> mut] items{vector<i32>()}
 
   // The sum of the items, read through indexing.
-  [return<i32>]
+  [return<i32> effects(none)]
   total() {
     [i32 mut] sum{0i32}
     for([i32 mut] index{0i32}; index < this.items.count(); ++index) {
@@ -32,7 +32,7 @@ show_shelf([Reference<Shelf>] shelf, [Request] request, [Reference<Response>] re
 }
 
 // The request of case `index`.
-[return<string>]
+[return<string> effects(none)]
 case_request([i32] index) {
   if(index == 1i32) {
     return("GET / HTTP/1.1\r\n\r\n")
@@ -59,7 +59,7 @@ case_request([i32] index) {
 }
 
 // The status and body case `index` must answer.
-[return<bool>]
+[return<bool> effects(none)]
 answer_is([i32] index, [i32] status, [StringView] body) {
   if(index == 1i32) {
     return(status == 200i32 && body.equalsText("1 0"))

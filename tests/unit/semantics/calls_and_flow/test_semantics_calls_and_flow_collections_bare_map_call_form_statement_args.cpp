@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("bare map call form statement body arguments fall back to canonical helper target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -24,7 +24,7 @@ main() {
 
 TEST_CASE("bare map call form statement body arguments keep validating through canonical helper target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(90i32)
 }
@@ -44,7 +44,7 @@ main() {
 
 TEST_CASE("bare map helper expression body arguments keep canonical alias diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -62,7 +62,7 @@ main() {
 
 TEST_CASE("bare map call form expression body arguments reject unresolved count target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -81,7 +81,7 @@ main() {
 
 TEST_CASE("bare map call form expression body arguments reject before canonical mismatch") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(90i32)
 }
@@ -100,12 +100,12 @@ main() {
 
 TEST_CASE("reference-wrapped map helper receiver expression body arguments fall back to canonical helper target") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count_ref([Reference</std/collections/map<i32, i32>>] values, [bool] marker) {
   return(90i32)
 }
@@ -123,12 +123,12 @@ main() {
 
 TEST_CASE("reference-wrapped map helper receiver expression body arguments keep canonical mismatch diagnostics") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count_ref([Reference</std/collections/map<i32, i32>>] values) {
   return(90i32)
 }
@@ -146,7 +146,7 @@ main() {
 
 TEST_CASE("map namespaced count method expression body arguments validate through stdlib helper target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -182,7 +182,7 @@ main() {
 
 TEST_CASE("map stdlib call form expression body arguments use canonical helper target") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(90i32)
 }
@@ -288,12 +288,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -315,12 +315,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(/std/collections/vector/at_unsafe(values, 2i32).value)
 }
@@ -342,12 +342,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -509,17 +509,17 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector([i32] seed) {
   return(Marker(seed))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project() {
   return(/std/collections/vector/vector(9i32).tag())
 }
@@ -540,7 +540,7 @@ TEST_CASE("canonical vector constructor auto binding infers same-path helper ret
   [T] value{0i32}
 }
 
-[public return</std/collections/vector/Box<T>>]
+[public return</std/collections/vector/Box<T>> effects(none)]
 /std/collections/vector/vector<T>([T] seed) {
   return(Box<T>(seed))
 }
@@ -566,12 +566,12 @@ TEST_CASE("canonical vector constructor auto binding ignores experimental constr
   [i32] alt{0i32}
 }
 
-[public return</std/collections/vector/Box<T>>]
+[public return</std/collections/vector/Box<T>> effects(none)]
 /std/collections/vector/vector<T>([T] seed) {
   return(Box<T>(seed))
 }
 
-[public return</std/collections/experimental_vector/Other>]
+[public return</std/collections/experimental_vector/Other> effects(none)]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Other(7i32))
 }
@@ -597,12 +597,12 @@ Other() {
   [i32] alt{0i32}
 }
 
-[public return<Box>]
+[public return<Box> effects(none)]
 /std/collections/vector/vector([i32] seed) {
   return(Box(seed))
 }
 
-[public return<Other>]
+[public return<Other> effects(none)]
 /std/collections/vector/vector([i32] first, [i32] second) {
   return(Other(plus(first, second)))
 }
@@ -624,7 +624,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector([i32] seed) {
   return(Marker(seed))
 }
@@ -645,7 +645,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
@@ -666,7 +666,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
@@ -687,7 +687,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/experimental_vector/vector<T>([T] seed) {
   return(Marker(9i32))
 }
@@ -713,7 +713,7 @@ Marker {
   return(Marker(seed))
 }
 
-[return<Marker>]
+[return<Marker> effects(none)]
 project() {
   return(/vector/vector(9i32))
 }
@@ -734,12 +734,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector([i32] first, [i32] second) {
   return(Marker(plus(first, second)))
 }
 
-[return<Marker>]
+[return<Marker> effects(none)]
 project() {
   return(/std/collections/vector/vector(9i32, 11i32))
 }
@@ -782,7 +782,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/vector([i32] seed) {
   return(Marker(seed))
 }

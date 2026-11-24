@@ -373,7 +373,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 score_refs([args<Reference<SoaVector<Particle>>>] values) {
   return(0i32)
 }

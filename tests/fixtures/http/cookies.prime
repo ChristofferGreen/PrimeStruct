@@ -6,7 +6,7 @@ import /std/text/*
 import /std/text/view/*
 
 // The request of case `index`.
-[return<string>]
+[return<string> effects(none)]
 case_request([i32] index) {
   if(index == 1i32) {
     return("GET / HTTP/1.1\r\n\r\n")
@@ -48,7 +48,7 @@ case_request([i32] index) {
 }
 
 // The cookie name case `index` looks up.
-[return<string>]
+[return<string> effects(none)]
 case_name([i32] index) {
   if(index == 4i32) {
     return("b")
@@ -72,7 +72,7 @@ case_name([i32] index) {
 }
 
 // The value case `index` expects.
-[return<string>]
+[return<string> effects(none)]
 case_value([i32] index) {
   if(index == 2i32 || index == 3i32 || index == 6i32) {
     return("abc123")
@@ -108,7 +108,7 @@ case_value([i32] index) {
 }
 
 // Whether case `index` has the cookie: no header, a pair without `=` and a name of other case do not.
-[return<bool>]
+[return<bool> effects(none)]
 case_present([i32] index) {
   return(index != 1i32 && index != 12i32)
 }

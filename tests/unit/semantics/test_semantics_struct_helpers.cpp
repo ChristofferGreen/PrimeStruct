@@ -79,7 +79,7 @@ TEST_CASE("implicit auto helper inference works through method-call sugar") {
 Box() {
   [i32] seed{1i32}
 
-  [return<auto>]
+  [return<auto> effects(none)]
   echo([auto] value) {
     return(value)
   }

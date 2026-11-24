@@ -6,9 +6,11 @@ TEST_CASE("experimental sixteen-column soa storage helpers validate ownership-se
   const std::string source = R"(
 import /std/collections/soa_storage/*
 
+[effects(none)]
 Mover() {
   [i32] value{0i32}
 
+  [effects(none)]
   Destroy() {
   }
 }
@@ -29,6 +31,7 @@ main() {
 
 TEST_CASE("get helper rejects soa binding without soa import") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -49,6 +52,7 @@ main() {
 
 TEST_CASE("get method rejects soa binding without soa import") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -91,6 +95,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa get validates retired binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -112,6 +117,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa get slash-method validates retired binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -133,6 +139,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa get_ref validates retired soa binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -154,6 +161,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa get_ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -296,7 +304,7 @@ Holder() {
   }
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/get([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
@@ -314,6 +322,7 @@ main() {
 
 TEST_CASE("ref helper rejects soa binding without soa import") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -356,6 +365,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -377,6 +387,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa ref_ref validates retired soa binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -398,6 +409,7 @@ main() {
 
 TEST_CASE("explicit old-surface soa ref_ref slash-method validates retired soa binding spelling") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -544,7 +556,7 @@ Holder() {
   }
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [int] index) {
   return(Particle(7i32))
 }
@@ -578,7 +590,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
@@ -620,7 +632,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
@@ -656,7 +668,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [int] index) {
   return(7i32)
 }
@@ -691,13 +703,13 @@ Particle() {
 
 [struct]
 Holder() {
-  [return<Reference<SoaVector<Particle>>>]
+  [return<Reference<SoaVector<Particle>>> effects(none)]
   borrowValues([Reference<SoaVector<Particle>>] values) {
     return(values)
   }
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/ref_ref([Reference<SoaVector<Particle>>] values, [i32] index) {
   return(17i32)
 }
@@ -733,7 +745,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/get([SoaVector<Particle>] values, [int] index) {
   return(9i32)
 }
@@ -769,7 +781,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/get([SoaVector<Particle>] values, [int] index) {
   return(9i32)
 }
@@ -804,7 +816,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
@@ -840,7 +852,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
@@ -875,7 +887,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
@@ -911,7 +923,7 @@ Holder() {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
@@ -947,12 +959,12 @@ Holder() {
   }
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 10i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 20i32)))
 }
@@ -964,12 +976,12 @@ Holder() {
   return(out)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
@@ -1014,12 +1026,12 @@ Holder() {
   }
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 10i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 20i32)))
 }
@@ -1031,22 +1043,22 @@ Holder() {
   return(out)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
-[public return<Particle>]
+[public return<Particle> effects(none)]
 /std/collections/soa/get([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[public return<Particle>]
+[public return<Particle> effects(none)]
 /std/collections/soa/ref([SoaVector<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
@@ -1056,23 +1068,23 @@ Holder() {
   return(vector<Particle>())
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /std/collections/soa/SoaVector__Particle/get([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /std/collections/soa/SoaVector__Particle/ref([SoaVector<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
@@ -1083,12 +1095,12 @@ Holder() {
   return(vector<Particle>())
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
@@ -1221,11 +1233,12 @@ main() {
 
 TEST_CASE("push helper call-form validates retired soa user-helper parameter") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
 
-[return<void>]
+[return<void> effects(none)]
 /push([soa<Particle> mut] values, [i32] value) {
 }
 
@@ -1245,6 +1258,7 @@ main() {
 
 TEST_CASE("to_soa helper validates on vector binding") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -1263,6 +1277,7 @@ main() {
 
 TEST_CASE("to_soa method validates on vector binding") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -1281,6 +1296,7 @@ main() {
 
 TEST_CASE("explicit to_soa slash-method validates on vector binding") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }
@@ -1299,6 +1315,7 @@ main() {
 
 TEST_CASE("to_aos helper rejects soa binding without soa import") {
   const std::string source = R"(
+[effects(none)]
 Particle() {
   [i32] x{1i32}
 }

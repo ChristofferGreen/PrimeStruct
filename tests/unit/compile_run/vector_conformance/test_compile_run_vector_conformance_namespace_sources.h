@@ -296,7 +296,7 @@ inline std::string makeBareVectorMutatorMethodImportRequirementSource(const std:
 inline std::string makeCanonicalVectorNamespaceCountShadowSource() {
   std::string source;
   source += "import /std/collections/*\n\n";
-  source += "[return<int>]\n";
+  source += "[return<int> effects(none)]\n";
   source += "/count([vector<i32>] values) {\n";
   source += "  return(91i32)\n";
   source += "}\n\n";

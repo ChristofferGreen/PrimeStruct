@@ -24,6 +24,15 @@ std::string stripSpecializationSuffix(const std::string &path) {
   return path.substr(0, suffix);
 }
 
+bool isHostFunction(const Definition &def) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name == "host") {
+      return true;
+    }
+  }
+  return false;
+}
+
 void expandEffectImplications(std::unordered_set<std::string> &effects) {
   if (effects.count("file_write") != 0) {
     effects.insert("file_read");
@@ -87,9 +96,9 @@ bool SemanticsValidator::validateCapabilitiesSubset(const std::vector<Transform>
 }
 
 bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definition &callee) {
-  // docs/spec/language-core.md, Callee effects: every effect the callee declares must be active in the caller. A
-  // callee without `[effects]` places no requirement (its default set is not propagated, TODO-5688), and a lambda's
-  // closure `call` was already checked where the lambda is written, so calling it needs no effects.
+  // docs/spec/language-core.md, Callee effects: every effect of the callee's active set must be active in the caller,
+  // a callee without `[effects]` counting as declaring the default set. A lambda's closure `call` was already
+  // checked where the lambda is written, so calling it needs no effects.
   if (callee.fullPath.find(LambdaClosureStructPrefix) != std::string::npos) {
     return true;
   }
@@ -100,10 +109,23 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
     return true;
   }
   std::vector<std::string> required;
+  bool declaresEffects = false;
   for (const auto &transform : callee.transforms) {
     if (transform.name == "effects" && transform.templateArgs.empty()) {
+      declaresEffects = true;
       required.insert(required.end(), transform.arguments.begin(), transform.arguments.end());
     }
+  }
+  // A callee without `[effects]` declares the default set; `[host]` functions carry no effects and building a struct
+  // value is not a call.
+  // The `call` of a function forwarder (`/double__fnref/call`) forwards to a named function and only runs through a
+  // `Function` value, so its default effects are not a requirement of the caller either.
+  const bool inheritsDefaults = !declaresEffects && !isHostFunction(callee) &&
+                                !isStructLikeDefinition(callee) &&
+                                callee.fullPath.find(FunctionForwarderSuffix) == std::string::npos;
+  if (inheritsDefaults) {
+    const auto defaults = resolveEffects(callee.transforms, false);
+    required.assign(defaults.begin(), defaults.end());
   }
   if (required.empty()) {
     return true;
@@ -146,8 +168,13 @@ bool SemanticsValidator::validateCalleeEffects(const Expr &expr, const Definitio
                                     stripSpecializationSuffix(callee.fullPath) + " in " +
                                     callerKind + caller);
     }
-    return failExprDiagnostic(expr, stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
-                                        " effect in " + callerKind + caller);
+    std::string message = stripSpecializationSuffix(callee.fullPath) + " requires " + effect +
+                          " effect in " + callerKind + caller;
+    if (inheritsDefaults) {
+      message += " (the callee declares no [effects], so it has the default effects; write "
+                 "[effects(none)] on it if it has none)";
+    }
+    return failExprDiagnostic(expr, std::move(message));
   }
   return true;
 }

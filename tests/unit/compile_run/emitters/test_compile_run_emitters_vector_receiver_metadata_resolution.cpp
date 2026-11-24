@@ -64,22 +64,22 @@ main() {
 
 TEST_CASE("runs vector namespaced count capacity aliases through explicit alias helpers in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(20i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values) {
   return(8i32)
 }

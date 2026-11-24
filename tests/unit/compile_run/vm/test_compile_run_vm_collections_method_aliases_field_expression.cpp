@@ -124,12 +124,12 @@ Marker {
   return(Marker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([map<i32, i32>] values) {
   return(values./std/collections/map/at(2i32).tag())
 }
@@ -157,12 +157,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(key))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([map<i32, i32>] values) {
   return(values.at(2i32).value)
 }
@@ -189,12 +189,12 @@ CanonicalMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return(AliasMarker(plus(index, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(CanonicalMarker(index))
 }
@@ -216,7 +216,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -248,7 +248,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
@@ -351,7 +351,7 @@ wrapMap() {
   return(Marker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -483,17 +483,17 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(values./std/collections/vector/at(2i32).tag())
 }
@@ -675,7 +675,7 @@ TEST_CASE("rejects vm templated stdlib map return envelope nested arg") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<map<string, array<i32>>>]
+[return<map<string, array<i32>>> effects(none)]
 wrapMapNestedValue([string] key, [i32] value) {
   return(mapSingle<string, i32>(key, value))
 }

@@ -16,12 +16,12 @@ Marker {
   return(Marker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([map<i32, i32>] values) {
   return(values./std/collections/map/at_unsafe(2i32).tag())
 }
@@ -92,7 +92,7 @@ wrapMap() {
   return(Marker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -122,17 +122,17 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(values./std/collections/vector/at(2i32).tag())
 }

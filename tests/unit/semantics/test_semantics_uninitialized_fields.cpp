@@ -78,7 +78,7 @@ TEST_CASE("uninitialized field borrow infers return kind") {
 Box() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   peek() {
     return(borrow(this.storage))
   }
@@ -117,7 +117,7 @@ TEST_CASE("uninitialized field borrow validates reference binding") {
 Box() {
   [uninitialized<i32>] storage{uninitialized<i32>()}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   peek() {
     [Reference<i32>] ref{borrow(this.storage)}
     return(dereference(ref))

@@ -446,7 +446,7 @@ main() {
 
 TEST_CASE("bare map at uses canonical helper signature for mismatch diagnostics") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [bool] key) {
   return(67i32)
 }

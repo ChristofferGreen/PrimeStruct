@@ -203,7 +203,7 @@ TEST_CASE("stdlib definitions are not reported for uninitialized-storage builtin
   const std::string source = R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 bad() {
   return(missing_fn(1i32))
 }

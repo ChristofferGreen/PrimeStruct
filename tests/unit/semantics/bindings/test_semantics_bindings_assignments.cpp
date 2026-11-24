@@ -271,7 +271,7 @@ Grid() {
 }
 
 namespace Grid {
-  [return<void>]
+  [return<void> effects(none)]
   assign_rect([Grid mut] self, [i32] nodeId, [i32] x) {
     self.rectXs[nodeId] = x
   }

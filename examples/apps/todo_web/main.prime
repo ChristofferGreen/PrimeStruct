@@ -44,7 +44,7 @@ TodoList() {
   }
 
   // The index of todo `id`, or -1 when there is none.
-  [return<i32>]
+  [return<i32> effects(none)]
   indexOf([i32] id) {
     for([i32 mut] index{0i32}; index < this.todos.count(); ++index) {
       if(this.todos[index].id == id) {
@@ -54,7 +54,7 @@ TodoList() {
     return(-1i32)
   }
 
-  [mut]
+  [mut effects(none)]
   toggle([i32] id) {
     [i32] index{this.indexOf(id)}
     if(index >= 0i32) {
@@ -156,7 +156,7 @@ todo_page([TodoList] list) {
 }
 
 // The id in a /todos/:id/... route, or 0, which no todo has.
-[return<i32>]
+[return<i32> effects(none)]
 todo_id([Request] request) {
   [StringView] id{request.pathParam("id")}
   return(id.parseI32Or(0i32))

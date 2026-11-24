@@ -802,7 +802,7 @@ Pair() {
   [i32] right{0i32}
 }
 
-[return<Result<Pair, FileError>>]
+[return<Result<Pair, FileError>> effects(none)]
 make_pair([i32] left, [i32] right) {
   return(Result.ok(Pair{[left] left, [right] right}))
 }
@@ -996,7 +996,7 @@ make_buffer() {
   return(Result.ok(/std/gfx/Buffer/upload(values)))
 }
 
-[return<int> on_error<GfxError, /swallow_gfx_error>]
+[return<int> on_error<GfxError, /swallow_gfx_error> effects(none)]
 consume_error() {
   [GfxError] err{queueSubmitFailed()}
   [Result<Buffer<i32>, GfxError>] failed{err.result<Buffer<i32>>()}

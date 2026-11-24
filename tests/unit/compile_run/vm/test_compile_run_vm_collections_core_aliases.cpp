@@ -504,7 +504,7 @@ Marker {
   [i32] value
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }

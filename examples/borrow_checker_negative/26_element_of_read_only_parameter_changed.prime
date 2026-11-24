@@ -5,7 +5,7 @@ import /std/collections/*
 [struct]
 Item() {
   [i32 mut] count{0i32}
-  [mut] bump() {
+  [mut effects(none)] bump() {
     this.count = this.count + 1i32
   }
 }

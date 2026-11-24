@@ -29,7 +29,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on string receiver") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(81i32)
 }
@@ -49,7 +49,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on map receiver") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(82i32)
 }
@@ -69,7 +69,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on array receiver") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(83i32)
 }
@@ -131,7 +131,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps rooted vector count same-path helper on string receiver") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([string] values) {
   return(96i32)
 }

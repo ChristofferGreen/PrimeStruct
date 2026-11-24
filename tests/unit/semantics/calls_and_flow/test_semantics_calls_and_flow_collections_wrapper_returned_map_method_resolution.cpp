@@ -4,7 +4,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("wrapper-returned canonical map method ignores alias helper when canonical helper is absent") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(71i32)
 }
@@ -43,7 +43,7 @@ main() {
 
 TEST_CASE("stdlib canonical map slash return type keeps canonical method diagnostics") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(73i32)
 }
@@ -65,7 +65,7 @@ main() {
 
 TEST_CASE("stdlib canonical map count method auto inference falls back to canonical helper return") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -84,7 +84,7 @@ main() {
 
 TEST_CASE("stdlib canonical map count method auto inference keeps return mismatch diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -104,12 +104,12 @@ main() {
 
 TEST_CASE("stdlib canonical map count method auto inference keeps canonical precedence over alias helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(41i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -128,12 +128,12 @@ main() {
 
 TEST_CASE("stdlib canonical map count method auto inference keeps canonical mismatch diagnostics over alias helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(41i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -156,12 +156,12 @@ TEST_CASE("map count call auto inference prefers rooted same-path shadow over ca
   // (returns int) ahead of /std/collections/map/count (returns bool), so
   // the inferred local is int and the bool return mismatches.
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(41i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -182,12 +182,12 @@ main() {
 TEST_CASE("map count call auto inference accepts rooted same-path shadow return type") {
   // TODO-4809: the rooted /map/count shadow returns int, matching main.
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(41i32)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(false)
 }
@@ -206,27 +206,27 @@ main() {
 
 TEST_CASE("stdlib canonical map access count shadow keeps canonical precedence over alias helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/at([map<i32, string>] values, [i32] key) {
   return(41i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/at_unsafe([map<i32, string>] values, [i32] key) {
   return(42i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(5i32)
 }
@@ -244,27 +244,27 @@ main() {
 
 TEST_CASE("stdlib canonical map access count shadow currently validates mixed canonical and alias returns") {
   const std::string source = R"(
-[return<string>]
+[return<string> effects(none)]
 /map/at([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/at([map<i32, string>] values, [i32] key) {
   return(41i32)
 }
 
-[return<string>]
+[return<string> effects(none)]
 /map/at_unsafe([map<i32, string>] values, [i32] key) {
   return("hello"utf8)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/at_unsafe([map<i32, string>] values, [i32] key) {
   return(42i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(5i32)
 }
@@ -282,7 +282,7 @@ main() {
 
 TEST_CASE("rejects stdlib canonical vector helper method-precedence forwarding in method-call sugar") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -305,7 +305,7 @@ main() {
 
 TEST_CASE("array namespaced vector helper alias keeps unknown-method diagnostics for auto inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -324,7 +324,7 @@ main() {
 
 TEST_CASE("array namespaced vector helper alias keeps unknown-method diagnostics for typed inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -343,7 +343,7 @@ main() {
 
 TEST_CASE("vector namespaced helper alias keeps unknown-method auto-inference diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -400,7 +400,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector helper alias uses same-path helper auto inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -419,7 +419,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access alias uses same-path helper auto inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
   return(false)
 }
@@ -438,7 +438,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access alias method-call inference keeps return mismatch diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [bool] index) {
   return(false)
 }
@@ -458,7 +458,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector helper alias method-call inference keeps return mismatch diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -478,7 +478,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity alias uses same-path helper auto inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -497,7 +497,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity alias method-call inference keeps return mismatch diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
   return(false)
 }
@@ -517,7 +517,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access unsafe alias uses same-path helper auto inference") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [bool] index) {
   return(false)
 }
@@ -536,7 +536,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector access unsafe alias method-call inference keeps return mismatch diagnostics") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [bool] index) {
   return(false)
 }
@@ -609,12 +609,12 @@ TEST_CASE("stdlib namespaced vector count method local same-path overload set re
   // coexist as an overload set, so this duplicate-rejection test pins the
   // still-rejected case - same path, same arity, SAME parameter type.
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(31i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(33i32)
 }
@@ -671,7 +671,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method keeps local string same-path helper") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(37i32)
 }
@@ -689,7 +689,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method keeps local array same-path helper") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(38i32)
 }
@@ -707,7 +707,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method keeps local map same-path helper") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(39i32)
 }
@@ -725,7 +725,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method rejects incompatible local same-path helper") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(39i32)
 }
@@ -782,7 +782,7 @@ main() {
 
 TEST_CASE("vector namespaced count method rejects local string same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([string] values) {
   return(34i32)
 }
@@ -801,7 +801,7 @@ main() {
 
 TEST_CASE("vector namespaced count method rejects local array same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([array<i32>] values) {
   return(35i32)
 }
@@ -820,7 +820,7 @@ main() {
 
 TEST_CASE("vector namespaced count method rejects local map same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([map<i32, i32>] values) {
   return(36i32)
 }
@@ -838,7 +838,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method rejects wrapper map receiver without helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -855,12 +855,12 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method rejects wrapper map same-path helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([map<i32, i32>] values) {
   return(47i32)
 }
@@ -882,7 +882,7 @@ wrapArray() {
   return(array<i32>(1i32, 2i32, 3i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([array<i32>] values) {
   return(48i32)
 }
@@ -904,7 +904,7 @@ wrapText() {
   return("abc"raw_utf8)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([string] values) {
   return(49i32)
 }
@@ -955,7 +955,7 @@ main() {
 
 TEST_CASE("vector namespaced count method on builtin vector receiver requires same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(31i32)
 }
@@ -974,7 +974,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count method on builtin vector receiver rejects rooted helper fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(31i32)
 }
@@ -1176,7 +1176,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity method on builtin vector receiver requires same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(41i32)
 }
@@ -1194,7 +1194,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity method on builtin vector receiver rejects rooted helper fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(41i32)
 }
@@ -1212,7 +1212,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map receiver without helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -1229,7 +1229,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector capacity method rejects wrapper map same-path helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -1295,7 +1295,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity method rejects wrapper map receiver without helper") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -1337,7 +1337,7 @@ main() {
 
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -1356,7 +1356,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector helper alias rejects statement body arguments") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }

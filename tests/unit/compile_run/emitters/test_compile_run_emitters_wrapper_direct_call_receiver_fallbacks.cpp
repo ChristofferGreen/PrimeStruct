@@ -16,12 +16,12 @@ wrapValues() {
   return(vector<i32>(5i32, 6i32, 7i32))
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(plus(index, 40i32)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -284,7 +284,7 @@ main() {
 
 TEST_CASE("rejects user wrapper temporary access shadow precedence in C++ emitter") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -337,7 +337,7 @@ main() {
 
 TEST_CASE("rejects user wrapper temporary access shadow value mismatch in C++ emitter") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }

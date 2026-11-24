@@ -235,12 +235,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -270,12 +270,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(Marker(index))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 project([vector<i32>] values) {
   return(/std/collections/vector/at_unsafe(values, 61i32).value)
 }
@@ -300,12 +300,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[return<Marker> effects(none)]
 /map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(plus(key, 40i32)))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(key)
 }
@@ -344,17 +344,17 @@ AliasMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /map/at([map<i32, i32>] values, [i32] key) {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /CanonicalMarker/tag([CanonicalMarker] self) {
   return(self.value)
 }
@@ -383,12 +383,12 @@ Marker {
   [i32] value
 }
 
-[return<Marker>]
+[return<Marker> effects(none)]
 /map/at([map<i32, i32>] values, [i32] key) {
   return(Marker(plus(key, 40i32)))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
   return(key)
 }

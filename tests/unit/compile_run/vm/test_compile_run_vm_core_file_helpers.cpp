@@ -312,7 +312,7 @@ GfxError() {
 }
 
 namespace GfxError {
-  [return<string>]
+  [return<string> effects(none)]
   why([GfxError] err) {
     return(if(equal(err.code, 7i32), then() { "frame_acquire_failed"utf8 }, else() { "queue_submit_failed"utf8 }))
   }
@@ -328,7 +328,7 @@ acquire_frame_ok() {
   return(Result.ok(9i32))
 }
 
-[return<Result<i32, GfxError>>]
+[return<Result<i32, GfxError>> effects(none)]
 acquire_frame_fail() {
   return(7i64)
 }
@@ -374,7 +374,7 @@ ParseError() {
 }
 
 namespace ParseError {
-  [return<string>]
+  [return<string> effects(none)]
   why([ParseError] err) {
     return("parse failed"utf8)
   }

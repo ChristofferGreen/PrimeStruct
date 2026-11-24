@@ -189,7 +189,7 @@ TEST_CASE("native file write keeps full helper-returned string") {
   std::string source = R"(
 import /std/file/*
 
-[return<string>]
+[return<string> effects(none)]
 make_text() {
   return("hello file"utf8)
 }

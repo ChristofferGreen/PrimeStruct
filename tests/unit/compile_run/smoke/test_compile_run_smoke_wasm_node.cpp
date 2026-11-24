@@ -1113,7 +1113,7 @@ Counter() {
   [i64 mut] total{1i64}
   [i64 mut] doubled{2i64}
 
-  [return<i64>]
+  [return<i64> effects(none)]
   sum() {
     return(this.total + this.doubled)
   }

@@ -154,7 +154,7 @@ main() {
 
 TEST_CASE("pointer helper roots allow uninitialized borrow binding") {
   const std::string source = R"(
-[unsafe return<Pointer<uninitialized<i32>>>]
+[unsafe return<Pointer<uninitialized<i32>>> effects(none)]
 slot([Pointer<uninitialized<i32>>] values, [i32] index) {
   return(/std/intrinsics/memory/at_unsafe(values, index))
 }
@@ -606,7 +606,7 @@ main() {
 
 TEST_CASE("location accepts parameters") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 read([i32] x) {
   [Pointer<i32>] ptr{location(x)}
   return(dereference(ptr))
@@ -624,7 +624,7 @@ main() {
 
 TEST_CASE("dereference accepts pointer parameters") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 read([Pointer<i32>] ptr) {
   return(dereference(ptr))
 }
@@ -1756,7 +1756,7 @@ Holder() {
   [i32 mut] dummy{0i32}
   [Pointer<i32> mut] target{location(dummy)}
 
-  [mut]
+  [mut effects(none)]
   keep([Pointer<i32> move] ptr) {
     assign(this.target, ptr)
   }
@@ -2105,17 +2105,17 @@ wipe_after_recursion([Reference<vector<i32>>] target, [i32] depth) {
   }
 }
 
-[return<int>]
+[return<int> effects(none)]
 count_ref([Reference<vector<i32>>] target) {
   return(dereference(target).count())
 }
 
-[return<int>]
+[return<int> effects(none)]
 count_through_callee([Reference<vector<i32>>] target) {
   return(count_ref(target))
 }
 
-[return<int>]
+[return<int> effects(none)]
 count_recursive([Reference<vector<i32>>] target, [i32] depth) {
   if(depth > 0i32) {
     return(count_recursive(target, minus(depth, 1i32)))
@@ -2320,12 +2320,12 @@ reset_through_callee([Reference<Bag>] target) {
   reset(target)
 }
 
-[return<void>]
+[return<void> effects(none)]
 bump([Reference<Bag>] target) {
   target.hits = 3i32
 }
 
-[return<int>]
+[return<int> effects(none)]
 read_items([Reference<Bag>] target) {
   return(target.items.count())
 }
@@ -2412,7 +2412,7 @@ read_via_lambda([Reference<Bag>] bag) {
   return(f())
 }
 
-[return<void>]
+[return<void> effects(none)]
 bump_via_lambda([Reference<Bag>] bag) {
   [auto] f{[bag]() { bag.hits = 3i32 }}
   f()
@@ -2492,7 +2492,7 @@ namespace box {
     [private i32 mut] secret{7i32}
     [public i32 mut] open{1i32}
 
-    [public return<int>]
+    [public return<int> effects(none)]
     peek() {
       return(this.secret)
     }
@@ -2760,7 +2760,7 @@ const char *PrivateProbePrelude = R"(namespace std {
       return(1i32)
     }
 
-    [private return<int>]
+    [private return<int> effects(none)]
     marked() {
       return(2i32)
     }
@@ -2774,12 +2774,12 @@ const char *PrivateProbePrelude = R"(namespace std {
     Counter() {
       [i32 mut] total{5i32}
 
-      [private return<int>]
+      [private return<int> effects(none)]
       raw() {
         return(this.total)
       }
 
-      [return<int>]
+      [return<int> effects(none)]
       peek() {
         return(this.raw())
       }
@@ -2870,7 +2870,7 @@ TEST_CASE("a definition added to a library namespace calls its private helpers")
 namespace std {
   namespace collections {
     namespace vector {
-      [public return<int>]
+      [public return<int> effects(none)]
       checked_count([Vector<i32>] values) {
         vectorCheckShape<i32>(values)
         return(vectorCount<i32>(values))
@@ -2893,12 +2893,12 @@ main() {
 
 TEST_CASE("outside /std a private definition is not callable from another namespace") {
   const std::string source = R"(namespace util {
-  [return<int>]
+  [return<int> effects(none)]
   helper() {
     return(3i32)
   }
 
-  [private return<int>]
+  [private return<int> effects(none)]
   marked() {
     return(4i32)
   }
@@ -2920,12 +2920,12 @@ main() {
 TEST_CASE(
     "outside /std a private definition is callable from its namespace and the ones nested in it") {
   const std::string source = R"(namespace util {
-  [private return<int>]
+  [private return<int> effects(none)]
   marked() {
     return(4i32)
   }
 
-  [return<int>]
+  [return<int> effects(none)]
   helper() {
     return(marked())
   }

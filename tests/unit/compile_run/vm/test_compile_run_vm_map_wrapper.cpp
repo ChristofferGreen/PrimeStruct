@@ -76,7 +76,7 @@ Key() {
   [i32] value{0i32}
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 /Key/equal([Key] left, [Key] right) {
   return(equal(left.value, right.value))
 }

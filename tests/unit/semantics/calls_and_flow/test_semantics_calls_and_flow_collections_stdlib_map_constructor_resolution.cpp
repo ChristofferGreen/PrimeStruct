@@ -87,7 +87,7 @@ TEST_CASE("canonical namespaced map helpers validate borrowed canonical map rece
 import /std/collections/*
 import /std/collections/map/*
 
-[return<Reference<map<string, i32>>>]
+[return<Reference<map<string, i32>>> effects(none)]
 borrowExperimentalMap([Reference<map<string, i32>>] values) {
   return(values)
 }
@@ -109,7 +109,7 @@ TEST_CASE("canonical namespaced map ref helpers validate borrowed experimental m
 import /std/collections/*
 import /std/collections/map/*
 
-[return<Reference<map<string, i32>>>]
+[return<Reference<map<string, i32>>> effects(none)]
 borrowExperimentalMap([Reference<map<string, i32>>] values) {
   return(values)
 }
@@ -178,7 +178,7 @@ Key() {
   return(equal(left.value, right.value))
 }
 
-[return<Reference<map<Key, i32>>>]
+[return<Reference<map<Key, i32>>> effects(none)]
 borrowExperimentalMap([Reference<map<Key, i32>>] values) {
   return(values)
 }
@@ -214,7 +214,7 @@ Key() {
   return(equal(left.value, right.value))
 }
 
-[return<Reference<map<Key, i32>>>]
+[return<Reference<map<Key, i32>>> effects(none)]
 borrowExperimentalMap([Reference<map<Key, i32>>] values) {
   return(values)
 }

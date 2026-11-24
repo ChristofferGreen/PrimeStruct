@@ -24,7 +24,7 @@ TEST_CASE("runs vm with Read-capability slice parameter") {
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
   [i32 mut] i{0i32}
@@ -52,7 +52,7 @@ TEST_CASE("runs vm with ReadWrite-capability mut slice parameter") {
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 overwrite_first([Slice<i32, ReadWrite> mut] window) {
   window.set(0i32, 99i32)
   return(window.at(0i32))
@@ -77,7 +77,7 @@ TEST_CASE("rejects mutation attempted through a Read-capability slice parameter"
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 f([Slice<i32, Read>] window) {
   window.set(0i32, 99i32)
   return(window.at(0i32))
@@ -100,7 +100,7 @@ TEST_CASE("rejects a Write slice where a Read slice is expected") {
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 f([Slice<i32, Read>] window) {
   return(window.at(0i32))
 }
@@ -122,7 +122,7 @@ TEST_CASE("readOnly turns a Write slice into a Read slice") {
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 f([Slice<i32, Read>] window) {
   return(window.at(1i32))
 }

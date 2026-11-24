@@ -135,8 +135,10 @@ std::string exportWrapperSource(const std::string &name, const ExportSignature &
     call += "__psa" + std::to_string(i);
   }
   call += ")";
-  source += std::string(usesText ? "[return<int> effects(heap_alloc)]" : "[return<int>]") + "\n__ps_call_" +
-            std::to_string(index) + "() {\n" + locals;
+  // The wrapper holds the default effects an unannotated export needs, and allocates for text.
+  source += std::string(usesText ? "[return<int> effects(heap_alloc, io_out, io_err)]"
+                                 : "[return<int>]") +
+            "\n__ps_call_" + std::to_string(index) + "() {\n" + locals;
   if (signature.returnType == HostType::Void) {
     source += "  " + call + "\n";
   } else if (signature.returnType == HostType::String) {

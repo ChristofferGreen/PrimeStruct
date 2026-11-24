@@ -6,7 +6,7 @@ TEST_CASE("wrapper-returned referenced canonical map keeps if string branch comp
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
@@ -92,7 +92,7 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map keeps pathspace string diagnostics") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -166,7 +166,7 @@ TEST_CASE("wrapper-returned referenced canonical map keeps if string branch diag
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -193,7 +193,7 @@ TEST_CASE("wrapper-returned referenced canonical map keeps builtin key diagnosti
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
@@ -211,7 +211,7 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
@@ -221,7 +221,7 @@ TEST_CASE("wrapper-returned canonical map access count call auto inference keeps
   return("abc"utf8)
 }
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -239,7 +239,7 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map method access count keeps builtin string helper shadow") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -254,7 +254,7 @@ TEST_CASE("wrapper-returned canonical map method access count keeps builtin stri
   return(8i32)
 }
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -272,7 +272,7 @@ main() {
 
 TEST_CASE("wrapper-returned direct canonical map access count keeps primitive diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -282,7 +282,7 @@ TEST_CASE("wrapper-returned direct canonical map access count keeps primitive di
   return("abc"utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -301,7 +301,7 @@ TEST_CASE("field-bound map access count keeps builtin string fallback") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -323,7 +323,7 @@ main() {
 
 TEST_CASE("wrapper-returned canonical map method access count keeps string receiver typing") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -338,7 +338,7 @@ TEST_CASE("wrapper-returned canonical map method access count keeps string recei
   return("abc"utf8)
 }
 
-[return</std/collections/map<i32, i32>>]
+[return</std/collections/map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 4i32))
 }
@@ -356,12 +356,12 @@ main() {
 
 TEST_CASE("canonical vector access count call rejects builtin string helper shadow after override") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -385,12 +385,12 @@ main() {
 
 TEST_CASE("canonical vector unsafe access count call keeps primitive diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -408,12 +408,12 @@ main() {
 
 TEST_CASE("canonical vector method access count keeps builtin string fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/at([vector<string>] values, [i32] index) {
   return(7i32)
 }
@@ -431,12 +431,12 @@ main() {
 
 TEST_CASE("canonical vector unsafe method access count keeps primitive receiver diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
 
-[public return<string>]
+[public return<string> effects(none)]
 /std/collections/vector/at_unsafe([vector<i32>] values, [i32] index) {
   return("abc"utf8)
 }
@@ -454,7 +454,7 @@ main() {
 
 TEST_CASE("slash-method vector access count keeps builtin string fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -483,7 +483,7 @@ main() {
 
 TEST_CASE("slash-method vector access count keeps primitive diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -512,7 +512,7 @@ main() {
 
 TEST_CASE("wrapper-returned vector access count keeps builtin string helper shadow") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
@@ -546,7 +546,7 @@ main() {
 
 TEST_CASE("wrapper-returned vector access count keeps primitive diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -581,12 +581,12 @@ TEST_CASE("wrapper-returned canonical map access count call auto inference keeps
   const std::string source = R"(
 import /std/collections/*
 
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
 
-[return</std/collections/map<i32, string>>]
+[return</std/collections/map<i32, string>> effects(none)]
 wrapMap() {
   return(map<i32, string>(1i32, "hello"utf8))
 }
@@ -605,7 +605,7 @@ main() {
 
 TEST_CASE("wrapper-returned referenced canonical map access count call auto inference keeps string helper shadow") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
@@ -620,7 +620,7 @@ TEST_CASE("wrapper-returned referenced canonical map access count call auto infe
   return("abc"utf8)
 }
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
@@ -641,12 +641,12 @@ TEST_CASE("imported wrapper-returned canonical map reference access count keeps 
   const std::string source = R"(
 import /std/collections/*
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -664,12 +664,12 @@ main() {
 
 TEST_CASE("non-imported wrapper-returned canonical map reference access rejects missing at_ref") {
   const std::string source = R"(
-[return<Reference</std/collections/map<i32, i32>>>]
+[return<Reference</std/collections/map<i32, i32>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /string/count([string] values) {
   return(91i32)
 }
@@ -692,12 +692,12 @@ TEST_CASE("wrapper-returned referenced canonical map access count call auto infe
   const std::string source = R"(
 import /std/collections/*
 
-[return<bool>]
+[return<bool> effects(none)]
 /string/count([string] values) {
   return(false)
 }
 
-[return<Reference</std/collections/map<i32, string>>>]
+[return<Reference</std/collections/map<i32, string>>> effects(none)]
 borrowMap([Reference</std/collections/map<i32, string>>] values) {
   return(values)
 }

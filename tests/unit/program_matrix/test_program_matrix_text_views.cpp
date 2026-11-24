@@ -20,7 +20,8 @@ void runTextViewProgram(const std::string &name, const std::string &source, int 
 } // namespace
 
 TEST_CASE("a string literal and a string value pass where a StringView is expected") {
-  runTextViewProgram("text_view_expected_type_sites", R"(
+  runTextViewProgram("text_view_expected_type_sites",
+                     R"(
 import /std/text/*
 import /std/text/view/*
 
@@ -29,12 +30,12 @@ Label {
   [StringView] text{StringView{}}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 width([StringView] text) {
   return(text.count())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 widths([StringView] first, [args<StringView>] rest) {
   [i32 mut] total{first.count()}
   [i32 mut] i{0i32}
@@ -45,17 +46,17 @@ widths([StringView] first, [args<StringView>] rest) {
   return(total)
 }
 
-[return<StringView>]
+[return<StringView> effects(none)]
 fallback() {
   return("none")
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 describe([string] text) {
   return(1i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 describe([StringView] text) {
   return(10i32)
 }
@@ -91,7 +92,7 @@ TEST_CASE(
   program.source = R"(
 import /std/text/*
 
-[return<i32>]
+[return<i32> effects(none)]
 weigh([string] text, [i32] times) {
   [i32 mut] i{0i32}
   [i32 mut] total{0i32}
@@ -210,7 +211,7 @@ make_line([i32] size) {
   return(out)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 view_size([StringView] text) {
   return(text.count())
 }

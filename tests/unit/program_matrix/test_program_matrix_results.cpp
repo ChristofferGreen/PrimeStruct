@@ -290,7 +290,7 @@ TEST_CASE("Result.ok calls pass as stdlib Result arguments") {
   program.source = R"(
 import /std/result/*
 
-[return<i32>]
+[return<i32> effects(none)]
 show([Result<i32, i32>] r) {
   return(pick(r) {
     ok(v) { v }
@@ -298,12 +298,12 @@ show([Result<i32, i32>] r) {
   })
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 failed([Result<i32, i32>] r) {
   return(Result.error(r))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 twice([Result<i32, i32>] a, [Result<i32, i32>] b) {
   return(show(a) + show(b))
 }

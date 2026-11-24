@@ -91,7 +91,7 @@ main() {
 
 TEST_CASE("vector literal validates") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 use([vector<i32>] x) {
   return(1i32)
 }

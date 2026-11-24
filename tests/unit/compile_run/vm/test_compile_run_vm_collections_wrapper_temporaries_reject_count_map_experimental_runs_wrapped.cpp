@@ -108,7 +108,7 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<map<K, V>> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
@@ -140,7 +140,7 @@ wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<map<K, V>>]
+[return<map<K, V>> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)
@@ -170,7 +170,7 @@ TEST_CASE("runs vm with templated stdlib wrapper temporary call forms") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<map<K, V>>]
+[return<map<K, V>> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [map<K, V>] values{/std/collections/map/map<K, V>(key, value)}
   return(values)

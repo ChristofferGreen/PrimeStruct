@@ -79,7 +79,7 @@ main() {
 
 TEST_CASE("lambda parameter default rejects user-defined array call") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 array([i32] value) {
   return(value)
 }
@@ -246,7 +246,7 @@ Hook {
   [Function<i32, i32> mut] run
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -271,7 +271,7 @@ main() {
 
 TEST_CASE("a closure with the wrong parameter type cannot become a Function parameter") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -334,12 +334,12 @@ main() {
 
 TEST_CASE("a named definition with the wrong arity cannot become a Function") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 add([i32] a, [i32] b) {
   return(plus(a, b))
 }
@@ -358,7 +358,7 @@ main() {
 
 TEST_CASE("a ref lambda passed to a Function parameter escapes") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 apply([Function<i32, i32> mut] f, [i32] x) {
   return(f(x))
 }
@@ -908,7 +908,7 @@ main() {
   }
   SUBCASE("a lambda nested in a generic Body call") {
     const std::string source = box + R"(
-[return<int>]
+[return<int> effects(none)]
 run<Body>([Body mut] body, [Box] box) {
   return(body(box))
 }

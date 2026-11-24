@@ -6,7 +6,7 @@ TEST_SUITE_BEGIN("primestruct.semantics.effects");
 
 TEST_CASE("execution effects transform validates") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 task([i32] x) {
   return(x)
 }
@@ -26,7 +26,7 @@ task(1i32)
 
 TEST_CASE("execution capabilities transform validates") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(io_out)]
 task([i32] x) {
   return(x)
 }

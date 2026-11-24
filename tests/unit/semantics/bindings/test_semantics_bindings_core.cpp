@@ -132,7 +132,7 @@ main() {
 
 TEST_CASE("binding inference prefers user definition named vector template call") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 vector<T>([T] value) {
   return(value)
 }
@@ -291,12 +291,12 @@ cloneValues() {
   return(values)
 }
 
-[return<Reference<soa<Particle>>>]
+[return<Reference<soa<Particle>>> effects(none)]
 borrowValues([Reference<soa<Particle>>] values) {
   return(values)
 }
 
-[return<Pointer<soa<Particle>>>]
+[return<Pointer<soa<Particle>>> effects(none)]
 pointValues([Pointer<soa<Particle>>] values) {
   return(values)
 }

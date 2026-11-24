@@ -265,7 +265,7 @@ Choice {
   [Payload] right
 }
 
-[return<int>]
+[return<int> effects(none)]
 score([Payload] payload) {
   return(plus(payload.value, payload.bonus))
 }

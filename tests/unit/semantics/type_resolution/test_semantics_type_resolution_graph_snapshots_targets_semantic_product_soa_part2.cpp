@@ -18,7 +18,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -60,12 +60,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
   return(23i32)
 }
@@ -150,21 +150,21 @@ Particle() {
   [i32] y{2i32}
 }
 
-[public return<void>]
+[public return<void> effects(none)]
 /std/collections/soa/push([soa<Particle> mut] values, [Particle] value) {
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/count([soa<Particle>] values) {
   return(2i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/count_ref([Reference<soa<Particle>>] values) {
   return(2i32)
 }
 
-[public return<Particle>]
+[public return<Particle> effects(none)]
 /std/collections/soa/get_ref([Reference<soa<Particle>>] values, [i32] index) {
   return(Particle(0i32, 0i32))
 }
@@ -172,7 +172,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<soa<Particle>>>]
+[return<Reference<soa<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<soa<Particle>>] values) {
   return(values)
 }
@@ -225,37 +225,37 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<SoaVector<Particle>>]
+[return<SoaVector<Particle>> effects(none)]
 cloneValues() {
   return(SoaVector<Particle>{})
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(count)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/reserve([SoaVector<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/push([SoaVector<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/reserve([SoaVector<Particle>] values,
                                                                       [i32] count) {
 }
@@ -349,7 +349,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -397,7 +397,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -540,7 +540,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -609,85 +609,85 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<soa<Particle>>]
+[return<soa<Particle>> effects(none)]
 cloneValues() {
   [soa<Particle>] values{soa<Particle>()}
   return(values)
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/get([soa<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([soa<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([soa<Particle>] values, [i32] count) {
   return(count)
 }
 
-[public return<Particle>]
+[public return<Particle> effects(none)]
 /std/collections/soa/get([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[public return<Particle>]
+[public return<Particle> effects(none)]
 /std/collections/soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(plus(index, 100i32)))
 }
 
-[public return<vector<Particle>>]
+[public return<vector<Particle>> effects(none)]
 /std/collections/soa/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/push([soa<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/reserve([soa<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /std/collections/soa/SoaVector__Particle/get([soa<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /std/collections/soa/SoaVector__Particle/ref([soa<Particle>] values,
                                                                   [i32] index) {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /std/collections/soa/SoaVector__Particle/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/push([soa<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/reserve([soa<Particle>] values,
                                                                       [i32] count) {
 }
@@ -899,13 +899,13 @@ Picker {
   [i32] seed
 }
 
-[return<Choice>]
+[return<Choice> effects(none)]
 makeChoice() {
   [Choice] choice{[right] 41i32}
   return(choice)
 }
 
-[return<Choice>]
+[return<Choice> effects(none)]
 /Picker/makeChoice([Picker] self) {
   [Choice] choice{[right] self.seed}
   return(choice)
@@ -915,17 +915,21 @@ makeChoice() {
 main() {
   [Picker] picker{Picker{7i32}}
   [i32] first{pick(makeChoice()) {
+    [effects(none)]
     left(value) {
       plus(value, 1i32)
     }
+    [effects(none)]
     right(value) {
       plus(value, 2i32)
     }
   }}
   return(pick(picker.makeChoice()) {
+    [effects(none)]
     left(value) {
       plus(first, value)
     }
+    [effects(none)]
     right(value) {
       plus(first, value)
     }
@@ -1082,9 +1086,11 @@ Choice {
 main() {
   [Choice] choice{[right] 41i32}
   return(pick(choice) {
+    [effects(none)]
     left(value) {
       plus(value, 1i32)
     }
+    [effects(none)]
     right(value) {
       plus(value, 2i32)
     }

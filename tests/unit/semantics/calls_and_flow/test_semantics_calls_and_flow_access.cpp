@@ -272,7 +272,7 @@ TEST_CASE("map method calls reject retired count helper definitions") {
   return(/std/collections/map/count(items))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] items) {
   return(1i32)
 }
@@ -321,7 +321,7 @@ main() {
   CHECK(error.find("unknown call target: /map/count") != std::string::npos);
 
   const std::string explicitSource = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(1i32)
 }
@@ -343,7 +343,7 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/map/custom([map<i32, i32>] values) {
   return(Marker(7i32))
 }
@@ -385,7 +385,7 @@ TEST_CASE("vector method calls resolve to definitions") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /vector/size([vector<i32>] items) {
   return(2i32)
 }
@@ -462,7 +462,7 @@ namespace i32 {
   }
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 vector([i32] value) {
   return(value)
 }

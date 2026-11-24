@@ -497,7 +497,7 @@ Bag() {
     return(this.items[0i32].m)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   sum() {
     [i32 mut] total{0i32}
     for([i32 mut] i{0i32}, i < this.items.count(), i++) {
@@ -565,7 +565,7 @@ Route() {
   [i32] code{0i32}
   [Function<i32, i32> mut] handler
 
-  [mut return<i32>]
+  [mut return<i32> effects(none)]
   run([i32] x) {
     return(this.handler(x))
   }

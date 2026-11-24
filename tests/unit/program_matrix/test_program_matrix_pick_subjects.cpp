@@ -95,7 +95,7 @@ const std::string BoxDefinitions = R"(
 Box {
   [i32] value{3i32}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   twice() {
     return(this.value * 2i32)
   }
@@ -386,7 +386,7 @@ TEST_CASE("a method is called on a struct payload binding") {
   program.name = "pick_payload_struct_method";
   program.extraConfigs = {"wasm-wasi"};
   program.source = "import /std/maybe/*\n" + BoxDefinitions + R"(
-[return<i32>]
+[return<i32> effects(none)]
 measure([Shape] shape) {
   return(pick(shape) { boxed(inner) { inner.twice() } plain(number) { number } })
 }

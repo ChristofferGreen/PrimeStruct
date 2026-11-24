@@ -224,7 +224,7 @@ Holder() {
   [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -258,7 +258,7 @@ Holder() {
   [map<string, i32> mut] values{/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32)}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -291,7 +291,7 @@ Holder() {
   [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }
@@ -334,7 +334,7 @@ Holder() {
   [Result<map<string, i32>, ContainerError> mut] status{Result.ok(/std/collections/map/map<string, i32>("seed"raw_utf8, 0i32))}
 }
 
-[return<Reference<Holder>>]
+[return<Reference<Holder>> effects(none)]
 borrowHolder([Reference<Holder>] holder) {
   return(holder)
 }

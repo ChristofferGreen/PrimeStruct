@@ -191,11 +191,11 @@ main() {
 
 TEST_CASE("vector helper statement user shadow resolves on variadic vector pack receivers") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 /vector/push([vector<i32> mut] values, [i32] value) {
 }
 
-[return<int>]
+[return<int> effects(none)]
 mutate([args<vector<i32>> mut] values) {
   push(at(values, 0i32), 9i32)
   values[0i32].push(3i32)
@@ -559,7 +559,7 @@ main() {
 
 TEST_CASE("user definition named vector accepts named arguments") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -610,7 +610,7 @@ main() {
 
 TEST_CASE("user definition named vector accepts block arguments") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 vector([i32] value) {
   return(value)
 }
@@ -618,6 +618,7 @@ vector([i32] value) {
 [return<int>]
 main() {
   [i32 mut] result{0i32}
+  [effects(none)]
   vector(9i32) {
     assign(result, 4i32)
   }

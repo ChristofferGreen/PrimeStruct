@@ -2166,6 +2166,7 @@ are left unarchived.
 | TODO-5685 | Loopback echo test over `/std/net` on optexe | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5686 | HTTP hello-world example over `/std/net` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5687 | Calls require the effects their callee declares | [2026-11.md](todo_archive/2026-11.md) | 2026-11-06 |
+| TODO-5688 | Calls require the callee's whole active effect set | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5689 | `/std/http` request parser with a carrier `Request` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5690 | `/std/http` `Response` and its wire form | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-5691 | `/std/http` `Router` dispatch | [2026-11.md](todo_archive/2026-11.md) | - |
@@ -2635,6 +2636,8 @@ are left unarchived.
 | TODO-6244 | Annotate the effects of the text, math and tuple stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6245 | Annotate the effects of the gfx, image, scene and UI stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6246 | Annotate the effects of the http, web, net, sync, build and remaining stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6247 | A call requires the callee's whole active effect set | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6248 | Examples, semantics cases and docs align with the callee effect rule | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 
 <!-- INDEX-END -->
 

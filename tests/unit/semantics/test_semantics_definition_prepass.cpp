@@ -316,7 +316,7 @@ TEST_CASE("semantic product formatting distinguishes type-pack parameters") {
 
 TEST_CASE("definition prepass is read-only over the program and repeat-run stable") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 sum([i32] left, [i32] right) {
   return(add_i32(left, right))
 }

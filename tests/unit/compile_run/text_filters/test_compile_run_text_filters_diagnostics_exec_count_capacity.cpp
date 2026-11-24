@@ -424,7 +424,7 @@ execute_repeat(wrapMap().count(), wrapVector().capacity())
 
 TEST_CASE("primec collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -479,7 +479,7 @@ execute_repeat(wrapVector().capacity(), wrapMap().count())
 
 TEST_CASE("primevm collect-diagnostics keeps execution wrapper method count capacity pair missing-arg reverse diagnostics") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }

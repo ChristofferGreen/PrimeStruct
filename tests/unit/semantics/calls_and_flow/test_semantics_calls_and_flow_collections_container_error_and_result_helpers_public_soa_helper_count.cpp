@@ -104,7 +104,7 @@ namespace std {
       return(count(values))
     }
 
-    [public return<int>]
+    [public return<int> effects(none)]
     array_count([array<i32>] values) {
       return(count(values))
     }
@@ -173,7 +173,7 @@ main() {
 
 TEST_CASE("count method on vector binding accepts same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
@@ -444,7 +444,7 @@ Holder() {
   }
 }
 
-[return<string>]
+[return<string> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return("shadow"utf8)
 }
@@ -631,7 +631,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -694,7 +694,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 /helper<T>([soa<T>] values) {
   return(/std/collections/soa/count<T>(values))
 }

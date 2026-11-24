@@ -19,7 +19,7 @@ main() {
 
 TEST_CASE("reference return allows parameter-rooted borrow expression") {
   const std::string source = R"(
-[return<Reference<i32>>]
+[return<Reference<i32>> effects(none)]
 peek([Reference<uninitialized<i32>>] slot) {
   return(borrow(dereference(slot)))
 }
@@ -125,7 +125,7 @@ main() {
 
 TEST_CASE("unsafe reference rejects safe-call boundary escape") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -145,7 +145,7 @@ main() {
 
 TEST_CASE("unsafe reference allows unsafe-call boundary") {
   const std::string source = R"(
-[unsafe, return<void>]
+[unsafe, return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -165,7 +165,7 @@ main() {
 
 TEST_CASE("unsafe parameter reference allows named safe-call boundary") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -196,7 +196,7 @@ forward([Reference<i32>] input) {
   return(input)
 }
 
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -285,7 +285,7 @@ main() {
 
 TEST_CASE("unsafe pointer-converted reference rejects safe-call boundary escape") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -311,7 +311,7 @@ forward([Reference<i32>] input) {
   return(input)
 }
 
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -331,7 +331,7 @@ main() {
 
 TEST_CASE("unsafe reference rejects safe-call boundary escape through if expression") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -351,7 +351,7 @@ main() {
 
 TEST_CASE("unsafe reference rejects safe-call boundary escape through block return expression") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -371,7 +371,7 @@ main() {
 
 TEST_CASE("unsafe reference rejects safe-call boundary escape through match expression") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }
@@ -392,7 +392,7 @@ main() {
 
 TEST_CASE("unsafe parameter reference allows safe-call boundary") {
   const std::string source = R"(
-[return<void>]
+[return<void> effects(none)]
 consume([Reference<i32>] input) {
   return()
 }

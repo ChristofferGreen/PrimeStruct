@@ -47,7 +47,7 @@ TEST_CASE("builtin map at comparisons allow root at fallback") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 at([map<i32, string>] values, [i32] key) {
   return(key)
 }
@@ -132,7 +132,7 @@ TEST_CASE("stdlib map constructor validates through imported helper") {
   const std::string source = R"(
 import /std/collections/map
 
-[return<int>]
+[return<int> effects(none)]
 use([map<i32, i32>] x) {
   return(count(x))
 }

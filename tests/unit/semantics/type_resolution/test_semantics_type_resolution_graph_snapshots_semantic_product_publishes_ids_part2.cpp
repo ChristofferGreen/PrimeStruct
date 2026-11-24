@@ -9,12 +9,12 @@ TEST_CASE("semantic product keeps vector and map bridge parity") {
 import /std/collections/vector
 import /std/collections/map
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(1i32)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/map/count<K, V>([map<K, V>] values) {
   return(2i32)
 }

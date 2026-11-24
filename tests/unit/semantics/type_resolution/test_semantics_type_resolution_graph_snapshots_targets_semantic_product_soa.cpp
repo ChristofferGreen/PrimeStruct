@@ -280,7 +280,7 @@ TEST_CASE("semantic product publishes stdlib surface ids for direct, method, and
   const std::string source = R"(
 import /std/collections/vector
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/count([vector<i32>] self) {
   return(17i32)
 }
@@ -422,7 +422,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[public return<void>]
+[public return<void> effects(none)]
 /std/collections/soa/push<T>([soa<T> mut] values, [T] value) {
 }
 
@@ -668,38 +668,38 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<soa<Particle>>]
+[return<soa<Particle>> effects(none)]
 cloneValues() {
   [soa<Particle>] values{soa<Particle>()}
   return(values)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([soa<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([soa<Particle>] values, [i32] count) {
   return(count)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/push([soa<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/reserve([soa<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/push([soa<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/reserve([soa<Particle>] values,
                                                                       [i32] count) {
 }
@@ -760,38 +760,38 @@ Particle() {
 
 Holder() {}
 
-[return<soa<Particle>>]
+[return<soa<Particle>> effects(none)]
 /Holder/cloneValues([Holder] self) {
   [soa<Particle>] values{soa<Particle>()}
   return(values)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([soa<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([soa<Particle>] values, [i32] count) {
   return(count)
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/push([soa<Particle>] values, [Particle] value) {
   return(plus(value.x, 100i32))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/reserve([soa<Particle>] values, [i32] count) {
   return(plus(count, 100i32))
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/push([soa<Particle>] values,
                                                                    [Particle] value) {
 }
 
-[return<void>]
+[return<void> effects(none)]
 /std/collections/soa/SoaVector__Particle/reserve([soa<Particle>] values,
                                                                       [i32] count) {
 }
@@ -855,7 +855,7 @@ Particle() {
 
 Holder() {}
 
-[return<soa<Particle>>]
+[return<soa<Particle>> effects(none)]
 /Holder/cloneValues([Holder] self) {
   [soa<Particle>] values{soa<Particle>()}
   return(values)
@@ -866,12 +866,12 @@ Holder() {}
   return(Particle(index))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -886,7 +886,7 @@ Holder() {}
   return(Particle(plus(index, 100i32)))
 }
 
-[public return<vector<Particle>>]
+[public return<vector<Particle>> effects(none)]
 /std/collections/soa/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -903,7 +903,7 @@ Holder() {}
   return(Particle(plus(index, 200i32)))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /std/collections/soa/SoaVector__Particle/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -999,7 +999,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<soa<Particle>>]
+[return<soa<Particle>> effects(none)]
 cloneValues() {
   [soa<Particle>] values{soa<Particle>()}
   return(values)
@@ -1010,12 +1010,12 @@ cloneValues() {
   return(Particle(index))
 }
 
-[return<Particle>]
+[return<Particle> effects(none)]
 /soa/ref([soa<Particle>] values, [i32] index) {
   return(Particle(index))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -1030,7 +1030,7 @@ cloneValues() {
   return(Particle(plus(index, 100i32)))
 }
 
-[public return<vector<Particle>>]
+[public return<vector<Particle>> effects(none)]
 /std/collections/soa/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -1047,7 +1047,7 @@ cloneValues() {
   return(Particle(plus(index, 200i32)))
 }
 
-[return<vector<Particle>>]
+[return<vector<Particle>> effects(none)]
 /std/collections/soa/SoaVector__Particle/to_aos([soa<Particle>] values) {
   return(vector<Particle>())
 }
@@ -1120,7 +1120,7 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }

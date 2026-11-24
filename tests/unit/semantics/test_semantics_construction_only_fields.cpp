@@ -105,7 +105,7 @@ main() {
 
 TEST_CASE("ctor_only on a parameter is rejected") {
   checkRejected(R"(
-[return<int>]
+[return<int> effects(none)]
 bump([ctor_only i64] amount) {
   return(0i32)
 }

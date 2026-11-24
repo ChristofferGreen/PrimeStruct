@@ -36,7 +36,7 @@ Job() {
   [vector<i32>] values{vector<i32>()}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([String] text) {
   return(text.count())
 }
@@ -46,7 +46,7 @@ total([vector<i32>] values) {
   return(values.count())
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 job_size([Job] job) {
   return(job.name.count())
 }
@@ -74,12 +74,12 @@ Mode() {
   slow
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 mode_code([Mode] mode) {
   return(1i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 run([Function<i32, i32> mut] step, [i32] value) {
   return(step(value))
 }
@@ -102,13 +102,13 @@ main() {
 
 TEST_CASE("a mut binding is a spawn argument and the task works on its copy") {
   checkAccepted(R"(
-[return<i32>]
+[return<i32> effects(none)]
 bump([i32 copy mut] value) {
   assign(value, plus(value, 1i32))
   return(value)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 echo([i32] value) {
   return(value)
 }
@@ -134,7 +134,7 @@ PixelRows() {
   [i32] stride{4i32}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 stride_of([PixelRows] rows) {
   return(rows.stride)
 }
@@ -152,7 +152,7 @@ main() {
 
 TEST_CASE("spawn rejects a Pointer argument") {
   checkRejected(R"(
-[return<i32>]
+[return<i32> effects(none)]
 fill([Pointer<u8>] data) {
   return(1i32)
 }
@@ -170,7 +170,7 @@ main() {
 
 TEST_CASE("spawn rejects a Reference argument") {
   checkRejected(R"(
-[return<i32>]
+[return<i32> effects(none)]
 read([Reference<i32>] valueRef) {
   return(dereference(valueRef))
 }
@@ -183,7 +183,8 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `valueRef` of /read is not sendable: it is Reference<i32>" + SharingNote);
+                "spawn argument `valueRef` of /read is not sendable: it is Reference<i32>" +
+                    SharingNote);
 }
 
 TEST_CASE("spawn rejects a StringView argument") {
@@ -191,7 +192,7 @@ TEST_CASE("spawn rejects a StringView argument") {
 import /std/text/*
 import /std/text/view/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([StringView] view) {
   return(view.count())
 }
@@ -203,12 +204,14 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `view` of /measure is not sendable: it is StringView" + SharingNote);
+                "spawn argument `view` of /measure is not sendable: it is StringView" +
+                    SharingNote);
 }
 
 TEST_CASE("spawn rejects a closure with a ref capture") {
-  checkRejected(R"(
-[return<i32>]
+  checkRejected(
+      R"(
+[return<i32> effects(none)]
 run<F>([F] step) {
   return(step.call())
 }
@@ -221,7 +224,7 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `step` of /run<closure> is not sendable: capture `total` is Reference<i32>");
+      "spawn argument `step` of /run<closure> is not sendable: capture `total` is Reference<i32>");
 }
 
 TEST_CASE("spawn rejects a struct with a Reference field") {
@@ -231,7 +234,7 @@ Cache() {
   [Reference<i32>] entries
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 size([Cache] cache) {
   return(1i32)
 }
@@ -244,7 +247,8 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `cache` of /size is not sendable: field `entries` of Cache is Reference<i32>" +
+                "spawn argument `cache` of /size is not sendable: field `entries` of Cache is "
+                "Reference<i32>" +
                     SharingNote);
 }
 
@@ -262,7 +266,7 @@ Job() {
   [PixelRows] rows
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 render([Job] job) {
   return(job.id)
 }
@@ -275,16 +279,18 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `job` of /render is not sendable: field `rows` of Job, field `bytes` of PixelRows is "
+                "spawn argument `job` of /render is not sendable: field `rows` of Job, field "
+                "`bytes` of PixelRows is "
                 "Pointer<u8>" +
                     SharingNote);
 }
 
 TEST_CASE("spawn names the instantiation chain of a generic callee") {
-  checkRejected(R"(
+  checkRejected(
+      R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 consume<T>([T] value) {
   return(1i32)
 }
@@ -303,14 +309,15 @@ main() {
   return(relay(view))
 }
 )",
-                "spawn argument `value` of /consume<ReadSlice<i32>> is not sendable: it is ReadSlice<i32> "
-                "(instantiated from /relay<ReadSlice<i32>>, instantiated from /main)" +
-                    SharingNote);
+      "spawn argument `value` of /consume<ReadSlice<i32>> is not sendable: it is ReadSlice<i32> "
+      "(instantiated from /relay<ReadSlice<i32>>, instantiated from /main)" +
+          SharingNote);
 }
 
 TEST_CASE("spawn rejects a borrowed mut parameter") {
-  checkRejected(R"(
-[return<i32>]
+  checkRejected(
+      R"(
+[return<i32> effects(none)]
 bump([i32 mut] value) {
   assign(value, plus(value, 1i32))
   return(value)
@@ -323,8 +330,8 @@ main() {
   return(wait(t))
 }
 )",
-                "spawn argument `value` of /bump is a mutable borrow of the spawner's value: a task works on "
-                "copies, take it as `[i32 copy mut]`");
+      "spawn argument `value` of /bump is a mutable borrow of the spawner's value: a task works on "
+      "copies, take it as `[i32 copy mut]`");
 }
 
 TEST_CASE("sendable on a user struct needs unsafe") {
@@ -356,7 +363,7 @@ TEST_CASE("a String made in an open arena cannot be a spawn argument") {
   checkRejected(R"(
 import /std/text/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([String] text) {
   return(text.count())
 }
@@ -379,7 +386,7 @@ TEST_CASE("a spawned method checks its receiver by value") {
 Counter() {
   [i32 mut] value{1i32}
 
-  [return<i32>]
+  [return<i32> effects(none)]
   current() {
     return(this.value)
   }
@@ -398,7 +405,7 @@ main() {
 Counter() {
   [i32 mut] value{1i32}
 
-  [mut return<i32>]
+  [mut return<i32> effects(none)]
   bump() {
     assign(this.value, plus(this.value, 1i32))
     return(this.value)
@@ -413,13 +420,15 @@ main() {
   return(value)
 }
 )",
-                "spawn receiver of /Counter/bump is a mutable borrow of the spawner's value: a task works on copies");
-  checkRejected(R"(
+                "spawn receiver of /Counter/bump is a mutable borrow of the spawner's value: a "
+                "task works on copies");
+  checkRejected(
+      R"(
 [struct]
 Holder() {
   [Reference<i32>] entry
 
-  [return<i32>]
+  [return<i32> effects(none)]
   read() {
     return(1i32)
   }
@@ -434,7 +443,8 @@ main() {
   return(got)
 }
 )",
-                "spawn receiver of /Holder/read is not sendable: field `entry` of Holder is Reference<i32>" + SharingNote);
+      "spawn receiver of /Holder/read is not sendable: field `entry` of Holder is Reference<i32>" +
+          SharingNote);
 }
 
 TEST_CASE("return(wait(task)) waits once, with or without a struct local") {
@@ -446,7 +456,7 @@ Rows() {
   [i32] count{0i32}
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 add([i32] a, [i32] b) {
   return(plus(a, b))
 }
@@ -459,7 +469,7 @@ main() {
 }
 )");
   checkAccepted(R"(
-[return<i32>]
+[return<i32> effects(none)]
 add([i32] a, [i32] b) {
   return(plus(a, b))
 }
@@ -471,7 +481,7 @@ main() {
 }
 )");
   checkRejected(R"(
-[return<i32>]
+[return<i32> effects(none)]
 add([i32] a, [i32] b) {
   return(plus(a, b))
 }
@@ -505,7 +515,7 @@ Hook() {
   [Function<i64, i64> mut] run
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 apply([Function<i64, i64> mut] step, [i64] value) {
   return(step(value))
 }
@@ -515,7 +525,7 @@ triple([i64] x) {
   return(x * 3i64)
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 run_twice([Function<i64, i64> copy mut] step, [i64] value) {
   return(step(step(value)))
 }
@@ -566,7 +576,7 @@ PixelRows() {
   [i32] stride{4i32}
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 apply([Function<i64, i64> mut] step, [i64] value) {
   return(step(value))
 }
@@ -626,7 +636,7 @@ main() {
 // Diagnostics spell the lowered `Function` box (`__FunctionN`) as the user wrote it.
 TEST_CASE("a borrowed mut Function spawn argument suggests a Function copy") {
   checkRejected(R"(
-[return<i64>]
+[return<i64> effects(none)]
 step_twice([Function<i64, i64> mut] step, [i64] value) {
   return(step(step(value)))
 }
@@ -638,7 +648,8 @@ main() {
   return(convert<i32>(wait(t)))
 }
 )",
-                "spawn argument `step` of /step_twice is a mutable borrow of the spawner's value: a task works on "
+                "spawn argument `step` of /step_twice is a mutable borrow of the spawner's value: "
+                "a task works on "
                 "copies, take it as `[Function<i64, i64> copy mut]`");
 }
 
@@ -649,7 +660,7 @@ Hooks() {
   [Pointer<Function<i64, i64>>] first
 }
 
-[return<i64>]
+[return<i64> effects(none)]
 run_hooks([Hooks] hooks) {
   return(1i64)
 }
@@ -685,7 +696,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([SharedString] text) {
   return(text.count())
 }
@@ -709,7 +720,7 @@ import /std/text/*
 import /std/text/view/*
 import /std/text/shared/*
 
-[return<i32>]
+[return<i32> effects(none)]
 measure([SharedString] text) {
   return(text.count())
 }

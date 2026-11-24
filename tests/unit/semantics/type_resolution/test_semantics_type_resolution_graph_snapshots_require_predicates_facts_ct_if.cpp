@@ -274,7 +274,7 @@ Vec2 {
 }
 
 [return<i32> require(typeof<value> == Vec2, has_trait<Vec2>(Additive),
-                     can_copy<Vec2>(), N > 0)]
+                     can_copy<Vec2>(), N > 0) effects(none)]
 measure<T, N>([T] value) {
   [i32 mut] result{0i32}
   ct_if(type_equals<typeof<value>, Vec2>()) {

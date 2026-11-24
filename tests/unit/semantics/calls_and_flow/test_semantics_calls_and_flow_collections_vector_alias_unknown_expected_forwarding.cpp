@@ -6,17 +6,17 @@ TEST_CASE("vector namespaced unknown expected primitive call return keeps builti
   const std::string source = R"(
 Marker() {}
 
-[return<i32>]
+[return<i32> effects(none)]
 makeMarker() {
   return(1i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -36,12 +36,12 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding whe
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [i32] marker) {
   return(90i32)
 }
@@ -62,12 +62,12 @@ TEST_CASE("vector namespaced unknown expected primitive binding keeps alias diag
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -89,12 +89,12 @@ TEST_CASE("vector namespaced alias rejects compatibility template forwarding whe
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [vector<i32>] marker) {
   return(90i32)
 }
@@ -115,12 +115,12 @@ TEST_CASE("vector namespaced unknown expected vector envelope mismatch keeps com
   const std::string source = R"(
 Marker() {}
 
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [Marker] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [vector<bool>] marker) {
   return(90i32)
 }
@@ -139,12 +139,12 @@ main() {
 
 TEST_CASE("vector namespaced count alias arity fallback keeps compatibility diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -162,12 +162,12 @@ main() {
 
 TEST_CASE("vector namespaced non-bool mismatch fallback keeps alias diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [string] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -186,12 +186,12 @@ main() {
 
 TEST_CASE("vector namespaced bool mismatch fallback keeps builtin count diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [i32] marker) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [string] marker) {
   return(90i32)
 }
@@ -209,12 +209,12 @@ main() {
 
 TEST_CASE("vector namespaced count alias named arguments reject compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -233,12 +233,12 @@ main() {
 
 TEST_CASE("vector namespaced count alias named arguments keep alias diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -256,7 +256,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity alias arity mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(7i32)
 }
@@ -279,7 +279,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity alias type mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values, [i32] marker) {
   return(7i32)
 }
@@ -303,7 +303,7 @@ main() {
 
 TEST_CASE("vector namespaced capacity alias named arguments reject compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(7i32)
 }
@@ -327,7 +327,7 @@ main() {
 
 TEST_CASE("vector namespaced at alias arity mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values) {
   return(7i32)
 }
@@ -350,7 +350,7 @@ main() {
 
 TEST_CASE("vector namespaced at alias type mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values, [string] index) {
   return(7i32)
 }
@@ -373,7 +373,7 @@ main() {
 
 TEST_CASE("vector namespaced at alias named arguments reject compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values) {
   return(7i32)
 }
@@ -397,7 +397,7 @@ main() {
 
 TEST_CASE("vector namespaced at_unsafe alias arity mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values) {
   return(7i32)
 }
@@ -420,7 +420,7 @@ main() {
 
 TEST_CASE("vector namespaced at_unsafe alias type mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values, [string] index) {
   return(7i32)
 }
@@ -443,7 +443,7 @@ main() {
 
 TEST_CASE("vector namespaced at_unsafe alias named arguments reject compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values) {
   return(7i32)
 }
@@ -472,7 +472,7 @@ TEST_CASE("array namespaced templated count alias is rejected") {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -496,7 +496,7 @@ TEST_CASE("array namespaced templated count alias missing marker is rejected") {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -515,7 +515,7 @@ main() {
 
 TEST_CASE("stdlib namespaced templated vector count call reports routed alias template diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
@@ -539,7 +539,7 @@ main() {
 
 TEST_CASE("stdlib namespaced vector count call accepts compatibility alias fallback") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values, [bool] marker) {
   return(90i32)
 }
@@ -557,7 +557,7 @@ main() {
 
 TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
@@ -581,12 +581,12 @@ main() {
 
 TEST_CASE("vector namespaced templated alias call keeps builtin template diagnostics") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -605,12 +605,12 @@ main() {
 
 TEST_CASE("vector method templated call reports canonical argument mismatch past non-templated helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -628,12 +628,12 @@ main() {
 
 TEST_CASE("wrapper temporary templated vector method call rejects compatibility template forwarding") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(7i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values, [bool] marker) {
   return(90i32)
 }
@@ -656,7 +656,7 @@ main() {
 
 TEST_CASE("vector method bare count rejects canonical-only helper path") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(33i32)
 }
@@ -674,7 +674,7 @@ main() {
 
 TEST_CASE("vector method explicit alias namespace is rejected when only canonical helper exists") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(33i32)
 }
@@ -692,12 +692,12 @@ main() {
 
 TEST_CASE("vector method explicit count alias namespace resolves when alias helper exists") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(90i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(33i32)
 }
@@ -715,12 +715,12 @@ main() {
 
 TEST_CASE("vector method explicit count alias namespace keeps auto inference on same-path helper") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /vector/count([vector<i32>] values) {
   return(false)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(33i32)
 }
@@ -739,7 +739,7 @@ main() {
 
 TEST_CASE("vector method explicit count alias namespace auto inference still rejects canonical-only helper path") {
   const std::string source = R"(
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/count<T>([vector<T>] values) {
   return(false)
 }
@@ -794,7 +794,7 @@ main() {
 
 TEST_CASE("vector method explicit capacity alias namespace resolves when alias helper exists") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(90i32)
 }
@@ -817,7 +817,7 @@ main() {
 
 TEST_CASE("vector method explicit capacity alias namespace keeps auto inference on same-path helper") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /vector/capacity([vector<i32>] values) {
   return(false)
 }
@@ -896,12 +896,12 @@ main() {
 
 TEST_CASE("vector method explicit at alias namespace uses alias helper when alias helper exists") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return(plus(index, 90i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 55i32))
 }
@@ -919,12 +919,12 @@ main() {
 
 TEST_CASE("vector method explicit at alias namespace keeps auto inference on same-path helper") {
   const std::string source = R"(
-[return<bool>]
+[return<bool> effects(none)]
 /vector/at([vector<i32>] values, [i32] index) {
   return(false)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/at<T>([vector<T>] values, [i32] index) {
   return(plus(index, 55i32))
 }
@@ -998,12 +998,12 @@ main() {
 
 TEST_CASE("vector method explicit at_unsafe alias namespace resolves same-path helper when alias helper exists") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(plus(index, 91i32))
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
   return(plus(index, 66i32))
 }
@@ -1021,12 +1021,12 @@ main() {
 
 TEST_CASE("vector method explicit at_unsafe alias namespace keeps auto inference on same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
   return(plus(index, 91i32))
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /std/collections/vector/at_unsafe<T>([vector<T>] values, [i32] index) {
   return(false)
 }
@@ -1064,7 +1064,7 @@ main() {
 
 TEST_CASE("vector method at uses alias helper signature when alias helper has string index") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at([vector<i32>] values, [string] index) {
   return(77i32)
 }
@@ -1087,7 +1087,7 @@ main() {
 
 TEST_CASE("vector method at_unsafe uses alias helper signature when alias helper has bool index") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/at_unsafe([vector<i32>] values, [bool] index) {
   return(88i32)
 }

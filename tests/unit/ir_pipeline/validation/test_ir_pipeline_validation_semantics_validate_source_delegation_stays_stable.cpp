@@ -61,7 +61,7 @@ TEST_CASE("semantics validate publishes allowlisted pilot routing artifacts") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 id_i32([i32] value) {
   return(value)
 }
@@ -355,7 +355,7 @@ Particle {
   [i64] right
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 sum([Particle] particle, [i32] extra) {
   return(plus(particle.left, plus(convert<i32>(particle.right), extra)))
 }

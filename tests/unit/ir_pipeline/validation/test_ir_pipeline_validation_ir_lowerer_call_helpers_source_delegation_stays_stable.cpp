@@ -267,7 +267,7 @@ TEST_CASE("ir lowerer call helpers consume pilot routing semantic-product facts"
   const std::string source = R"(
 import /std/collections/*
 
-[return<i32>]
+[return<i32> effects(none)]
 id_i32([i32] value) {
   return(value)
 }

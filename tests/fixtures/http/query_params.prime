@@ -6,7 +6,7 @@ import /std/text/*
 import /std/text/view/*
 
 // The request of case `index`. Cases below 20 read the query, cases from 20 the form body (case 25 the query again).
-[return<string>]
+[return<string> effects(none)]
 case_request([i32] index) {
   if(index == 1i32 || index == 2i32) {
     return("GET /p?name=Ada&lang=en HTTP/1.1\r\n\r\n")
@@ -69,7 +69,7 @@ case_request([i32] index) {
 }
 
 // The parameter name case `index` asks for.
-[return<string>]
+[return<string> effects(none)]
 case_name([i32] index) {
   if(index == 1i32 || index == 4i32) {
     return("name")
@@ -105,7 +105,7 @@ case_name([i32] index) {
 }
 
 // The decoded value case `index` must give.
-[return<string>]
+[return<string> effects(none)]
 case_value([i32] index) {
   if(index == 1i32 || index == 13i32) {
     return("Ada")
@@ -147,18 +147,18 @@ case_value([i32] index) {
 }
 
 // Whether case `index` has the parameter: missing ones and those of a body that is not a form do not.
-[return<bool>]
+[return<bool> effects(none)]
 case_present([i32] index) {
   return(index != 7i32 && index != 15i32 && index != 22i32 && index != 23i32 && index != 24i32)
 }
 
 // Whether case `index` reads the body rather than the query.
-[return<bool>]
+[return<bool> effects(none)]
 case_reads_form([i32] index) {
   return(index >= 20i32 && index != 25i32)
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 is_case([i32] index) {
   return((index >= 1i32 && index <= 17i32) || (index >= 20i32 && index <= 25i32))
 }

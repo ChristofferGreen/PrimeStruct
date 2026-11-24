@@ -303,7 +303,7 @@ main() {
 
 TEST_CASE("C++ emitter keeps bare vector count methods on same-path helper") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /vector/count([vector<i32>] values) {
   return(14i32)
 }

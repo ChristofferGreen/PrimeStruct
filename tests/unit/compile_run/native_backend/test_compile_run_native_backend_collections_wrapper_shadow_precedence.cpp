@@ -11,7 +11,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
 TEST_CASE("native user wrapper temporary at shadow precedence") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -49,7 +49,7 @@ main() {
 
 TEST_CASE("native user wrapper temporary count capacity shadow precedence") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -59,7 +59,7 @@ wrapVector() {
   return(vector<i32>(3i32, 4i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(77i32)
 }
@@ -93,7 +93,7 @@ main() {
 
 TEST_CASE("native user wrapper temporary index shadow precedence") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }
@@ -130,7 +130,7 @@ main() {
 
 TEST_CASE("native user wrapper temporary syntax parity shadow precedence") {
   const std::string source = R"(
-[return<map<i32, i32>>]
+[return<map<i32, i32>> effects(none)]
 wrapMap() {
   return(map<i32, i32>(1i32, 2i32))
 }

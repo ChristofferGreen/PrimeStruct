@@ -32,6 +32,7 @@ main() {
 
 TEST_CASE("vm query-local auto vector helpers run through lowering") {
   const std::string directSource = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -666,6 +667,7 @@ main() {
 
 TEST_CASE("vm runs graph-solved direct local-auto vector helper shadows compatibility") {
   const std::string source = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -1085,7 +1087,7 @@ cloneValues() {
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
@@ -1100,12 +1102,12 @@ cloneValues() {
   return(Particle(29i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
@@ -1148,7 +1150,7 @@ Holder() {}
   return(soaVectorSingle<Particle>(Particle(7i32)))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return(11i32)
 }
@@ -1163,12 +1165,12 @@ Holder() {}
   return(Particle(29i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [int] count) {
   return(count)
 }
@@ -1193,12 +1195,12 @@ main() {
 
 TEST_CASE("runs vm vector-target old-explicit soa mutator shadows") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1217,12 +1219,12 @@ main() {
 
 TEST_CASE("runs vm vector-target method soa mutator shadows") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1243,7 +1245,7 @@ TEST_CASE("runs vm vector-target to_aos helper shadows") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([vector<i32>] values) {
   return(9i32)
 }
@@ -1342,7 +1344,7 @@ Holder() {
   }
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/count([SoaVector<Particle>] values) {
   return(13i32)
 }
@@ -1357,12 +1359,12 @@ Holder() {
   return(Particle(29i32))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(31i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/reserve([SoaVector<Particle>] values, [i32] capacity) {
   return(37i32)
 }

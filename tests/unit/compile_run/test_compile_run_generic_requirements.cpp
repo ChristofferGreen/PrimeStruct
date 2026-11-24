@@ -308,7 +308,7 @@ TEST_CASE("runtime count contract admits callers it cannot prove statically") {
   const std::string source = R"(
 import /std/collections/vector
 
-[return<int> require(count(values) > 0)]
+[return<int> require(count(values) > 0) effects(none)]
 first_value([vector<int>] values) {
   return(at(values, 0))
 }
@@ -329,7 +329,7 @@ TEST_CASE("runtime count contract failure exits with the contract message") {
   const std::string source = R"(
 import /std/collections/vector
 
-[return<int> require(count(values) > 0)]
+[return<int> require(count(values) > 0) effects(none)]
 first_value([vector<int>] values) {
   return(at(values, 0))
 }

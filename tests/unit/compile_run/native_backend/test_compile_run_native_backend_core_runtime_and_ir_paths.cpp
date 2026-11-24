@@ -173,7 +173,7 @@ main() {
 
 TEST_CASE("native backend runs single task spawn wait") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 computeLeft() {
   return(21i32)
 }
@@ -198,12 +198,12 @@ TEST_CASE("native backend returns stdlib tuple from multi task wait") {
   const std::string source = R"(
 import /std/tuple/*
 
-[return<i32>]
+[return<i32> effects(none)]
 computeLeft() {
   return(11i32)
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 computeRight() {
   return(13i32)
 }
@@ -373,7 +373,7 @@ make_status() {
   return(FileError.status(fileReadEof()))
 }
 
-[return<Result<i32, FileError>>]
+[return<Result<i32, FileError>> effects(none)]
 make_value() {
   return(FileError.result<i32>(fileReadEof()))
 }

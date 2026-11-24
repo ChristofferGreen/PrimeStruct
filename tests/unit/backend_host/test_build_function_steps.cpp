@@ -388,7 +388,7 @@ TEST_CASE(
     "the dry run marks a graph with a function step as not self-contained and lists its closure") {
   StepProject project("build_fn_dry_run");
   writeFile(project.dir() / "helpers/text.prime",
-            "[public return<i32>]\nhelper_value() {\n  return(4i32)\n}\n");
+            "[public return<i32> effects(none)]\nhelper_value() {\n  return(4i32)\n}\n");
   writeFile(project.dir() / "tools/gen.prime",
             "import<\"../helpers\">\nimport /std/build_step/*\n\n[return<i32> "
             "effects(heap_alloc)]\ngenerate() {\n"

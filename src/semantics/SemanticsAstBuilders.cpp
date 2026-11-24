@@ -51,6 +51,12 @@ void appendPublicVisibility(Definition &helper) {
   appendPublicTransform(helper.transforms);
 }
 
+void appendNoEffects(Definition &helper) {
+  Transform effects;
+  effects.name = "effects";
+  helper.transforms.push_back(std::move(effects));
+}
+
 void appendPublicVisibility(Expr &binding) {
   appendPublicTransform(binding.transforms);
 }

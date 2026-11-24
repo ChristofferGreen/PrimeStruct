@@ -121,12 +121,12 @@ import /std/collections/*
 unexpectedError([i32] err) {
 }
 
-[return<T>]
+[return<T> effects(none)]
 id<T>([T] value) {
   return(value)
 }
 
-[return<Result<int, i32>>]
+[return<Result<int, i32>> effects(none)]
 lookup() {
   return(Result.ok(4i32))
 }

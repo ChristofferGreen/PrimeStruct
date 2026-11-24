@@ -597,10 +597,11 @@ main() {
 }
 )", 16);
 
-  runVmAndNative("docs_safe_extents_forward_cursor", R"(
+  runVmAndNative("docs_safe_extents_forward_cursor",
+                 R"(
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_forward([vector<i32>] values) {
   [Cursor<i32> mut] it{startVector<i32>(values)}
   [Cursor<i32>] lim{limitVector<i32>(values)}
@@ -619,13 +620,15 @@ main() {
   [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32, 11i32)}
   return(sum_forward(values))
 }
-)", 31);
+)",
+                 31);
 
-  runVmAndNative("docs_safe_extents_reverse_cursor", R"(
+  runVmAndNative("docs_safe_extents_reverse_cursor",
+                 R"(
 import /std/collections/*
 import /std/cursor/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_reverse([vector<i32>] values) {
   [Cursor<i32> mut] it{reverseStartVector<i32>(values)}
   [Cursor<i32>] lim{reverseLimitVector<i32>(values)}
@@ -644,7 +647,8 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32, 3i32, 100i32)}
   return(sum_reverse(values))
 }
-)", 106);
+)",
+                 106);
 
   runVmAndNative("docs_safe_extents_optional_pointer",
                  R"(
@@ -699,7 +703,7 @@ main() {
 import /std/collections/*
 import /std/collections/slice/*
 
-[return<int>]
+[return<int> effects(none)]
 sum_window([Slice<i32, Read>] window) {
   [i32 mut] total{0i32}
   for([i32 mut] i{0i32}, i < window.count(), i++) {

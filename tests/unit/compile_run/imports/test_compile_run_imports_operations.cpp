@@ -43,6 +43,7 @@ main() {
 
 TEST_CASE("query-local auto vector helpers run in C++ emitter") {
   const std::string directSource = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -521,6 +522,7 @@ main() {
 
 TEST_CASE("rejects graph-solved direct local-auto vector helper shadows in C++ emitter compatibility") {
   const std::string source = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -1082,7 +1084,7 @@ cloneValues() {
   return(Particle(29i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
@@ -1145,7 +1147,7 @@ Holder() {}
   return(Particle(29i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(value.x)
 }
@@ -1175,12 +1177,12 @@ main() {
 
 TEST_CASE("vector-target old-explicit soa mutator shadows in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1199,12 +1201,12 @@ main() {
 
 TEST_CASE("vector-target method soa mutator shadows in C++ emitter") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1225,7 +1227,7 @@ TEST_CASE("runs vector-target to_aos helper shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([vector<i32>] values) {
   return(9i32)
 }
@@ -1358,7 +1360,7 @@ Holder() {
   return(Particle(29i32))
 }
 
-[return<i32>]
+[return<i32> effects(none)]
 /soa/push([SoaVector<Particle>] values, [Particle] value) {
   return(31i32)
 }
@@ -1697,7 +1699,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1733,7 +1735,7 @@ Particle() {
 [struct]
 Holder() {}
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 /Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
   return(values)
 }
@@ -1823,7 +1825,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<Reference<SoaVector<Particle>>>]
+[return<Reference<SoaVector<Particle>>> effects(none)]
 pickBorrowed([Reference<SoaVector<Particle>>] values) {
   return(values)
 }

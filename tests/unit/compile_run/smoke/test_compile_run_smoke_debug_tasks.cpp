@@ -10,7 +10,7 @@ TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
 TEST_CASE("primevm debug-dap stops inside a spawned task and lists both threads") {
   const std::string source = R"(
-[return<i32>]
+[return<i32> effects(none)]
 work([i32] n) {
   [i32] doubled{n * 2i32}
   return(doubled)

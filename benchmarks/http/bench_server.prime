@@ -31,7 +31,7 @@ take_form([Reference<Bench>] bench, [Request] request, [Reference<Response>] res
 }
 
 // `rounds` steps of a sequence in which each value needs the one before.
-[return<i64>]
+[return<i64> effects(none)]
 churn([i32] rounds) {
   [i64 mut] value{1i64}
   for([i32 mut] round{0i32}; round < rounds; ++round) {

@@ -468,7 +468,7 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-pr
     std::ofstream file(tempPath);
     REQUIRE(file.good());
     file << R"(
-[return<Result<int, i32>>]
+[return<Result<int, i32>> effects(none)]
 id([i32] value) {
   return(Result.ok(value))
 }
@@ -992,7 +992,7 @@ TEST_CASE("lowering variadic reference-pack diagnostic exposes stable public pay
   {
     std::ofstream file(tempPath);
     REQUIRE(file.good());
-    file << R"([return<i32>]
+    file << R"([return<i32> effects(none)]
 score([args<Reference<i32>>] values) {
   return(count(values))
 }

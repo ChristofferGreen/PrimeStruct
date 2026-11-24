@@ -19,7 +19,7 @@ Report() {
   }
 
   // Adds `bit` to `seen`, once.
-  [mut]
+  [mut effects(none)]
   saw([i32] bit) {
     [i32] above{this.seen / bit}
     if(above - (above / 2i32) * 2i32 == 0i32) {
@@ -29,7 +29,7 @@ Report() {
 }
 
 // The button's number in a log line: -1 for none, then 0, 1 and 2.
-[return<i32>]
+[return<i32> effects(none)]
 button_code([PointerButton] button) {
   if(button == PointerButton.primary) {
     return(0i32)

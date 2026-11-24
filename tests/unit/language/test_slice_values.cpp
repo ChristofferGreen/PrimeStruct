@@ -24,7 +24,8 @@ struct Outcome {
 
 Outcome runBody(const std::string &body) {
   ScriptEngine engine;
-  const std::string source = Prelude + "\n[return<int> effects(heap_alloc)]\nmain() {\n" + body + "\n}\n";
+  const std::string source =
+      Prelude + "\n[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n" + body + "\n}\n";
   const auto script = engine.compileSource("/slices.prime", source);
   Outcome outcome;
   outcome.compiled = script.valid();
@@ -151,11 +152,13 @@ TEST_CASE("a Write slice edits the vector's elements in place") {
   {
     // Overlapping ranges of one owner reach copyFrom as arguments (bindings of both would be a Write conflict).
     const std::string source = Prelude +
-        "\n[return<void>]\ncopyOver([Slice<i32, Write> mut] dst, [Slice<i32, Read>] src) {\n  dst.copyFrom(src)\n}\n\n"
-        "[return<int> effects(heap_alloc)]\nmain() {\n"
-        "  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32)}\n"
-        "  copyOver(v.sliceMut(1i32, 5i32), v.slice(0i32, 4i32))\n"
-        "  return(v.at(0i32) * 10000i32 + v.at(1i32) * 1000i32 + v.at(2i32) * 100i32 + v.at(3i32) * 10i32 + v.at(4i32))\n}\n";
+                               "\n[return<void>]\ncopyOver([Slice<i32, Write> mut] dst, "
+                               "[Slice<i32, Read>] src) {\n  dst.copyFrom(src)\n}\n\n"
+                               "[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n"
+                               "  [vector<i32> mut] v{vector<i32>(1i32, 2i32, 3i32, 4i32, 5i32)}\n"
+                               "  copyOver(v.sliceMut(1i32, 5i32), v.slice(0i32, 4i32))\n"
+                               "  return(v.at(0i32) * 10000i32 + v.at(1i32) * 1000i32 + v.at(2i32) "
+                               "* 100i32 + v.at(3i32) * 10i32 + v.at(4i32))\n}\n";
     ScriptEngine overlapEngine;
     const auto overlapScript = overlapEngine.compileSource("/copy_overlap.prime", source);
     REQUIRE_MESSAGE(overlapScript.valid(), overlapScript.diagnostics());
@@ -232,9 +235,11 @@ TEST_CASE("array<u8> is packed bytes: literal, reads, writes, count, iteration, 
       "  for([i32 mut] i{0i32}, i < n, i++) {\n    data.push(convert<u8>(10i32 + i))\n  }\n  return(data)\n}\n\n"
       "[return<int>]\nsum([array<u8>] values) {\n  [i32 mut] total{0i32}\n"
       "  for([i32 mut] i{0i32}, i < count(values), i++) {\n    total = total + convert<i32>(values[i])\n  }\n  return(total)\n}\n";
-  const std::string source = Prelude + "\n" + helpers + "\n[return<int> effects(heap_alloc)]\nmain() {\n"
+  const std::string source = Prelude + "\n" + helpers +
+                             "\n[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n"
                              "  [array<u8> mut] made{make(2i32)}\n  made[0i32] = 100u8\n"
-                             "  [Slice<u8, Read>] view{made.view()}\n  return(sum(made) + view.count() + convert<i32>(made.at(1i32)))\n}\n";
+                             "  [Slice<u8, Read>] view{made.view()}\n  return(sum(made) + "
+                             "view.count() + convert<i32>(made.at(1i32)))\n}\n";
   ScriptEngine engine;
   const auto script = engine.compileSource("/array_u8.prime", source);
   REQUIRE_MESSAGE(script.valid(), script.diagnostics());
@@ -335,16 +340,20 @@ TEST_CASE("a Write view conflicts with any other live view of the same owner and
 
 TEST_CASE("an owner passed to a mut or move parameter while a view of it is live is rejected") {
   const std::string consumer = "[return<void>]\nfill([vector<i32> mut] target) {\n  target.clear()\n}\n\n";
-  const std::string source = Prelude + "\n" + consumer +
-                             "[return<int> effects(heap_alloc)]\nmain() {\n  [vector<i32> mut] all{vector<i32>(1i32, 2i32)}\n"
-                             "  [Slice<i32, Read>] r{all.view()}\n  fill(all)\n  return(r.count())\n}\n";
+  const std::string source =
+      Prelude + "\n" + consumer +
+      "[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n  [vector<i32> mut] "
+      "all{vector<i32>(1i32, 2i32)}\n"
+      "  [Slice<i32, Read>] r{all.view()}\n  fill(all)\n  return(r.count())\n}\n";
   ScriptEngine engine;
   const auto script = engine.compileSource("/mut_owner.prime", source);
   CHECK_FALSE(script.valid());
   CHECK(script.diagnostics().find("borrowed binding: all (root: all, sink: r)") != std::string::npos);
-  const std::string fine = Prelude + "\n" + consumer +
-                           "[return<int> effects(heap_alloc)]\nmain() {\n  [vector<i32> mut] all{vector<i32>(1i32, 2i32)}\n"
-                           "  [Slice<i32, Read>] r{all.view()}\n  [i32] n{r.count()}\n  fill(all)\n  return(n)\n}\n";
+  const std::string fine =
+      Prelude + "\n" + consumer +
+      "[return<int> effects(heap_alloc, io_out, io_err)]\nmain() {\n  [vector<i32> mut] "
+      "all{vector<i32>(1i32, 2i32)}\n"
+      "  [Slice<i32, Read>] r{all.view()}\n  [i32] n{r.count()}\n  fill(all)\n  return(n)\n}\n";
   const auto accepted = engine.compileSource("/mut_owner_ok.prime", fine);
   REQUIRE_MESSAGE(accepted.valid(), accepted.diagnostics());
   CHECK(accepted.run().exitCode == 2);

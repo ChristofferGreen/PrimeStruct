@@ -278,7 +278,7 @@ inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSo
   source += "Holder() {\n";
   source += "  [Result<Map<string, i32>, ContainerError> mut] status{Result.ok(mapNew<string, i32>())}\n";
   source += "}\n\n";
-  source += "[return<Reference<Holder>>]\n";
+  source += "[return<Reference<Holder>> effects(none)]\n";
   source += "borrowHolder([Reference<Holder>] holder) {\n";
   source += "  return(holder)\n";
   source += "}\n\n";
@@ -341,7 +341,7 @@ inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource(
   source += "Holder() {\n";
   source += "  [uninitialized<Map<string, i32>> mut] storage{uninitialized<Map<string, i32>>()}\n";
   source += "}\n\n";
-  source += "[return<Reference<Holder>>]\n";
+  source += "[return<Reference<Holder>> effects(none)]\n";
   source += "borrowHolder([Reference<Holder>] holder) {\n";
   source += "  return(holder)\n";
   source += "}\n\n";

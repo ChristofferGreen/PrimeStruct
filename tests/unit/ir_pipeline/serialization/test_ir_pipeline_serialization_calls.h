@@ -92,6 +92,7 @@ main() {
 
 TEST_CASE("ir lowers void definition call as statement") {
   const std::string source = R"(
+[effects(none)]
 touch() {
   return()
 }

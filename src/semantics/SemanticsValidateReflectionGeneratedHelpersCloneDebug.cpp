@@ -37,6 +37,7 @@ bool emitReflectionCloneHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  appendNoEffects(helper);
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back(context.def.fullPath);
@@ -74,6 +75,11 @@ bool emitReflectionDebugPrintHelper(ReflectionGeneratedHelperContext &context) {
   helper.sourceColumn = context.def.sourceColumn;
 
   appendPublicVisibility(helper);
+  // It prints, so a caller needs `io_out`.
+  Transform printEffects;
+  printEffects.name = "effects";
+  printEffects.arguments.push_back("io_out");
+  helper.transforms.push_back(std::move(printEffects));
   Transform returnTransform;
   returnTransform.name = "return";
   returnTransform.templateArgs.push_back("void");

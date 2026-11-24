@@ -49,7 +49,7 @@ main() {
 
 TEST_CASE("bare map count call resolves through canonical helper definition") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
@@ -123,7 +123,7 @@ TEST_CASE("bare map count call resolves rooted same-path shadow when it is the o
   // TODO-4809: a rooted /map/count definition is a same-path shadow for
   // bare count(values), the map twin of the rooted /vector/count shadow.
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(19i32)
 }
@@ -146,12 +146,12 @@ TEST_CASE("bare map count call keeps explicit root helper precedence") {
   return(23i32)
 }
 
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values) {
   return(17i32)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /map/count([map<i32, i32>] values) {
   return(19i32)
 }
@@ -312,7 +312,7 @@ Key() {
   [i32] value{0i32}
 }
 
-[return<bool>]
+[return<bool> effects(none)]
 /Key/equal([Key] left, [Key] right) {
   return(equal(left.value, right.value))
 }
@@ -636,7 +636,7 @@ Owned() {
   }
 }
 
-[return<Reference<map<string, Owned>>>]
+[return<Reference<map<string, Owned>>> effects(none)]
 borrowMap([Reference<map<string, Owned>>] values) {
   return(values)
 }
@@ -901,7 +901,7 @@ TEST_CASE("public Map wrapper bracket access validates on value and borrowed cal
   const std::string source = R"(
 import /std/collections/map/*
 
-[return<Reference<Map<string, i32>>>]
+[return<Reference<Map<string, i32>>> effects(none)]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
   return(values)
 }
@@ -944,7 +944,7 @@ TEST_CASE("experimental map bracket access on borrowed calls fails before key di
   const std::string source = R"(
 import /std/collections/map/*
 
-[return<Reference<Map<string, i32>>>]
+[return<Reference<Map<string, i32>>> effects(none)]
 borrowExperimentalMap([Reference<Map<string, i32>>] values) {
   return(values)
 }
@@ -1063,7 +1063,7 @@ Key() {
   return(equal(left.value, right.value))
 }
 
-[return<Reference<map<Key, i32>>>]
+[return<Reference<map<Key, i32>>> effects(none)]
 borrowMap([Reference<map<Key, i32>>] values) {
   return(values)
 }

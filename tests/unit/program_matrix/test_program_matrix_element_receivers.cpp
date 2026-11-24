@@ -185,7 +185,7 @@ Node() {
     return(convert<i32>(this.id.byteAt(0i32)) + this.id.view().count())
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   depCount() {
     return(this.deps.count())
   }
@@ -512,7 +512,7 @@ import /std/collections/*
 [struct]
 Inner() {
   [i32 mut] k{0i32}
-  [mut] bump() { this.k = this.k + 1i32 }
+  [mut effects(none)] bump() { this.k = this.k + 1i32 }
 }
 
 [struct]
@@ -520,19 +520,19 @@ Item() {
   [i32 mut] n{0i32}
   [Inner mut] inner{Inner{}}
   [Vector<i32> mut] tags{Vector<i32>{}}
-  [mut] bump() { this.n = this.n + 1i32 }
+  [mut effects(none)] bump() { this.n = this.n + 1i32 }
 }
 
 [struct]
 Bag() {
   [Vector<Item> mut] items{Vector<Item>{}}
-  [mut] touch() {
+  [mut effects(none)] touch() {
     this.items[0i32].n = 30i32
     this.items[0i32].bump()
   }
 }
 
-[return<void>]
+[return<void> effects(none)]
 poke([Item mut] item) {
   item.n = item.n + 100i32
 }
@@ -869,7 +869,7 @@ import /std/collections/*
 [struct]
 Item() {
   [i32 mut] n{0i32}
-  [mut return<void>]
+  [mut return<void> effects(none)]
   bump() {
     this.n = this.n + 1i32
   }

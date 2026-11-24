@@ -13,12 +13,12 @@ TEST_CASE("rejects native templated stdlib return wrapper temporaries in express
   const std::string source = R"(
 import /std/collections/*
 
-[return<vector<T>>]
+[return<vector<T>> effects(none)]
 wrapVector<T>([T] value) {
   return(/std/collections/vector/vector<T>(value))
 }
 
-[return<auto>]
+[return<auto> effects(none)]
 wrapMap<K, V>([K] key, [V] value) {
   [/std/collections/map<K, V>] values{map<K, V>(key, value)}
   return(values)
@@ -47,6 +47,7 @@ main() {
 
 TEST_CASE("native query-local auto vector helpers run through lowering") {
   const std::string directSource = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -488,7 +489,7 @@ Particle() {
   [i32] y{2i32}
 }
 
-[return<int>]
+[return<int> effects(none)]
 score([Reference<soa<Particle>>] values) {
   return(/std/collections/soa/count_ref<Particle>(values))
 }
@@ -659,6 +660,7 @@ main() {
 
 TEST_CASE("native compiles and runs graph-solved direct local-auto vector helper shadows compatibility") {
   const std::string source = R"(
+[effects(none)]
 /vector/count([vector<i32>] values) {
   return(17i32)
 }
@@ -1012,12 +1014,12 @@ main() {
 
 TEST_CASE("native runs vector-target old-explicit soa mutator shadows") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1040,12 +1042,12 @@ main() {
 
 TEST_CASE("native runs vector-target method soa mutator shadows") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 /soa/push([vector<i32>] values, [i32] value) {
   return(value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /soa/reserve([vector<i32>] values, [i32] count) {
   return(count)
 }
@@ -1070,7 +1072,7 @@ TEST_CASE("native rejects vector-target to_aos helper shadows") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 /to_aos([vector<i32>] values) {
   return(9i32)
 }
@@ -1106,12 +1108,12 @@ Particle() {
   [i32] x{1i32}
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pass([Reference<Particle>] value) {
   return(value)
 }
 
-[return<Reference<Particle>>]
+[return<Reference<Particle>> effects(none)]
 pick([SoaVector<Particle>] values) {
   return(pass(values.ref(0i32)))
 }

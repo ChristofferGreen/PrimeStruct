@@ -398,7 +398,7 @@ TEST_CASE("map constructor with named-arg value") {
   const std::string source = R"(
 import /std/collections/*
 
-[return<int>]
+[return<int> effects(none)]
 make_color([i32] hue, [i32] value) {
   return(plus(hue, value))
 }

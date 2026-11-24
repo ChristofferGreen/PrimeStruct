@@ -504,7 +504,7 @@ Marker {
   [i32] value
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -624,22 +624,22 @@ AliasMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /map/tryAt([map<i32, i32>] values, [i32] key) {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /CanonicalMarker/tag([CanonicalMarker] self) {
   return(self.value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /AliasMarker/tag([AliasMarker] self) {
   return(self.value)
 }
@@ -672,22 +672,22 @@ AliasMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /map/tryAt([map<i32, i32>] values, [i32] key) {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /CanonicalMarker/tag([CanonicalMarker] self) {
   return(self.value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /AliasMarker/tag([AliasMarker] self) {
   return(self.value)
 }
@@ -727,22 +727,22 @@ AliasMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /CanonicalMarker/tag([CanonicalMarker] self) {
   return(self.value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /AliasMarker/tag([AliasMarker] self) {
   return(self.value)
 }
@@ -775,22 +775,22 @@ AliasMarker {
   [i32] value
 }
 
-[return<AliasMarker>]
+[return<AliasMarker> effects(none)]
 /map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(AliasMarker(plus(key, 40i32)))
 }
 
-[public return<CanonicalMarker>]
+[public return<CanonicalMarker> effects(none)]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] key) {
   return(CanonicalMarker(key))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /CanonicalMarker/tag([CanonicalMarker] self) {
   return(self.value)
 }
 
-[return<int>]
+[return<int> effects(none)]
 /AliasMarker/tag([AliasMarker] self) {
   return(self.value)
 }
@@ -875,12 +875,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
   return(Marker(11i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -958,12 +958,12 @@ Marker {
   [i32] value
 }
 
-[public return<Marker>]
+[public return<Marker> effects(none)]
 /std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
   return(Marker(13i32))
 }
 
-[return<int>]
+[return<int> effects(none)]
 /Marker/tag([Marker] self) {
   return(self.value)
 }
@@ -1055,7 +1055,7 @@ main() {
 
 TEST_CASE("C++ emitter runs extra-argument stdlib canonical map count method-call sugar") {
   const std::string source = R"(
-[public return<int>]
+[public return<int> effects(none)]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
   return(91i32)
 }

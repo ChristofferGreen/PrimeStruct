@@ -434,7 +434,7 @@ main() {
 
 TEST_CASE("call with body block") {
   const std::string source = R"(
-[return<int>]
+[return<int> effects(none)]
 sum([i32] a, [i32] b) {
   return(plus(a, b))
 }
