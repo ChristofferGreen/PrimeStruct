@@ -135,7 +135,6 @@ of sync with them.
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
 | TODO-6241 | A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage` | ready | method-call-resolution |
-| TODO-6249 | The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` compile fails | ready | build-robustness |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -321,21 +320,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the method lookup of a `Vector` receiver; no change to which methods are private.
   - repro: `import /std/collections/*  namespace std { namespace collections { namespace vector { [public return<bool>] ownsStorageProbe([Vector<i32>] values) { return(values.owns_storage()) } } } }  [effects(io_out heap_alloc) return<int>] main() { [Vector<i32> mut] items{vector<i32>()}  print_line(/std/collections/vector/ownsStorageProbe(items))  return(0i32) }` with `primec --emit=vm -I stdlib` is `unknown call target: owns_storage`.
 
-
-- [~] TODO-6249: The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` compile fails
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Build robustness (found while gating TODO-5688)
-  - parallel_track: build-robustness
-  - scope: `build-release/generated_cpp_runtime_preamble.h.pch` (CMakeLists.txt, `primec_generated_cpp_pch`) depends only on `GeneratedCppRuntimePreamble.h`. After the installed clang changed (built by `clang-2100.4.1.1`, compiler now `clang-2100.3.34.2`) the stale file stayed, and every program compiled with `--emit=exe` failed with `PCH file ... built from a different branch ... than the compiler`: 134 of 3038 ctest entries (the program matrix math and control shards, `build_command_native`) failed in the gate until the file was deleted by hand. Two fixes, both wanted: (1) the build rule also depends on the compiler (a stamp file holding `clang++ --version` that is rewritten only when the text changes), so a build after a toolchain change regenerates the header; (2) `primec` (src/backend/ExternalTooling.cpp) retries the clang++ step without `-include-pch` when the first attempt reports a PCH mismatch, so a stale header costs time, not a failed build. The optexe PCH (`build-release/optexe-pch/pch-<key>.pch`) must be checked for the same hazard (its key should include the compiler version).
-  - acceptance:
-    - a test (or a documented script run) that swaps in a stale header and shows `--emit=exe` still succeeds, and the stamp makes `cmake --build` regenerate the header when the compiler version text differs
-    - optexe PCH key includes the compiler version or a mismatch falls back the same way
-    - full release gate green
-  - stop_rule: PCH staleness only; no change to which headers are precompiled.
-  - repro: build, then `touch` nothing but replace `generated_cpp_runtime_preamble.h.pch` with one built by another clang (or change `xcode-select`), then `primec --emit=exe` any program: `PCH file ... built from a different branch`.
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai

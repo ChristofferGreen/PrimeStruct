@@ -2638,6 +2638,7 @@ are left unarchived.
 | TODO-6246 | Annotate the effects of the http, web, net, sync, build and remaining stdlib | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6247 | A call requires the callee's whole active effect set | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6248 | Examples, semantics cases and docs align with the callee effect rule | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
+| TODO-6249 | The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` co... | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

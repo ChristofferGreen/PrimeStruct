@@ -24,6 +24,14 @@ bool compileCppExecutable(const ProcessRunner &runner,
                           const std::filesystem::path &outputPath,
                           const std::vector<std::string> &linkArgs = {});
 
+// The -O0 compile with `precompiledHeader` (empty: none). When the compile with the header fails, it is
+// repeated without it, so a header built by another compiler cannot fail a build.
+bool compileCppExecutableWithPrecompiledHeader(const ProcessRunner &runner,
+                                               const std::filesystem::path &cppPath,
+                                               const std::filesystem::path &outputPath,
+                                               const std::filesystem::path &precompiledHeader,
+                                               const std::vector<std::string> &linkArgs = {});
+
 // Compiles generated C++ at host optimization level `optimizationLevel` (0..3)
 // with floating-point contraction disabled, so results match the VM's separate
 // IEEE operations. Used for the optexe emit kind, whose output is meant to be

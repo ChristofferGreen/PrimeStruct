@@ -1062,14 +1062,25 @@ primestructEnableWarnings(generate_stdlib_manifest)
 find_program(PRIMESTRUCT_CLANGXX_FOR_PCH clang++)
 if(PRIMESTRUCT_CLANGXX_FOR_PCH)
   set(PRIMESTRUCT_GENERATED_CPP_PCH "${CMAKE_BINARY_DIR}/generated_cpp_runtime_preamble.h.pch")
+  # A precompiled header is only valid for the compiler that built it. The stamp holds that compiler's version
+  # text and is rewritten only when the text changes, so a build after a toolchain change makes the header again.
+  set(PRIMESTRUCT_GENERATED_CPP_PCH_STAMP "${CMAKE_BINARY_DIR}/generated_cpp_pch_compiler.stamp")
+  add_custom_target(primec_generated_cpp_pch_stamp
+    COMMAND "${CMAKE_COMMAND}" "-DCOMPILER=${PRIMESTRUCT_CLANGXX_FOR_PCH}"
+            "-DSTAMP=${PRIMESTRUCT_GENERATED_CPP_PCH_STAMP}"
+            -P "${CMAKE_SOURCE_DIR}/cmake/WriteCompilerStamp.cmake"
+    BYPRODUCTS "${PRIMESTRUCT_GENERATED_CPP_PCH_STAMP}"
+    COMMENT "Checking the compiler version of the generated-C++ precompiled header")
   add_custom_command(
     OUTPUT "${PRIMESTRUCT_GENERATED_CPP_PCH}"
     COMMAND "${PRIMESTRUCT_CLANGXX_FOR_PCH}" -std=c++${CMAKE_CXX_STANDARD}
             -x c++-header "${CMAKE_SOURCE_DIR}/src/backend/GeneratedCppRuntimePreamble.h"
             -o "${PRIMESTRUCT_GENERATED_CPP_PCH}"
     DEPENDS "${CMAKE_SOURCE_DIR}/src/backend/GeneratedCppRuntimePreamble.h"
+            "${PRIMESTRUCT_GENERATED_CPP_PCH_STAMP}"
     COMMENT "Precompiling generated-C++ runtime preamble header")
   add_custom_target(primec_generated_cpp_pch DEPENDS "${PRIMESTRUCT_GENERATED_CPP_PCH}")
+  add_dependencies(primec_generated_cpp_pch primec_generated_cpp_pch_stamp)
   add_dependencies(primec primec_generated_cpp_pch)
   target_compile_definitions(primec_backend_emitters_lib PRIVATE
     "PRIMEC_GENERATED_CPP_PCH_PATH=\"${PRIMESTRUCT_GENERATED_CPP_PCH}\"")

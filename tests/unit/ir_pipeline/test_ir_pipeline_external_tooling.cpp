@@ -121,4 +121,36 @@ TEST_CASE("external tooling uses injected runner for cpp compile command") {
   CHECK(command[nextIndex + 2] == "/tmp/program");
 }
 
+TEST_CASE("external tooling repeats a refused precompiled header compile without it") {
+  RecordingProcessRunner runner([](const std::vector<std::string> &args) {
+    for (const std::string &arg : args) {
+      if (arg == "-include-pch") {
+        return 1;
+      }
+    }
+    return 0;
+  });
+  CHECK(primec::compileCppExecutableWithPrecompiledHeader(
+      runner, "/tmp/source.cpp", "/tmp/program", "/tmp/stale.pch"));
+  REQUIRE(runner.commands.size() == 2);
+  CHECK(runner.commands[0] == std::vector<std::string>{"clang++",
+                                                       "-std=c++23",
+                                                       "-O0",
+                                                       "-include-pch",
+                                                       "/tmp/stale.pch",
+                                                       "/tmp/source.cpp",
+                                                       "-o",
+                                                       "/tmp/program"});
+  CHECK(runner.commands[1] ==
+        std::vector<std::string>{
+            "clang++", "-std=c++23", "-O0", "/tmp/source.cpp", "-o", "/tmp/program"});
+}
+
+TEST_CASE("external tooling reports a cpp compile failure that is not the precompiled header") {
+  RecordingProcessRunner runner([](const std::vector<std::string> &) { return 1; });
+  CHECK_FALSE(primec::compileCppExecutableWithPrecompiledHeader(
+      runner, "/tmp/source.cpp", "/tmp/program", "/tmp/a.pch"));
+  CHECK(runner.commands.size() == 2);
+}
+
 TEST_SUITE_END();

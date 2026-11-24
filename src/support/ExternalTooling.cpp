@@ -42,27 +42,45 @@ bool compileSpirv(const ProcessRunner &runner,
   return commandSucceeds(runner, args);
 }
 
+bool compileCppExecutableWithPrecompiledHeader(const ProcessRunner &runner,
+                                               const std::filesystem::path &cppPath,
+                                               const std::filesystem::path &outputPath,
+                                               const std::filesystem::path &precompiledHeader,
+                                               const std::vector<std::string> &linkArgs) {
+  const auto compile = [&](bool usePrecompiledHeader) {
+    std::vector<std::string> args = {"clang++", "-std=c++23", "-O0"};
+    if (usePrecompiledHeader) {
+      args.push_back("-include-pch");
+      args.push_back(precompiledHeader.string());
+    }
+    args.push_back(cppPath.string());
+    args.push_back("-o");
+    args.push_back(outputPath.string());
+    args.insert(args.end(), linkArgs.begin(), linkArgs.end());
+    return commandSucceeds(runner, args);
+  };
+  if (precompiledHeader.empty()) {
+    return compile(false);
+  }
+  // A header made by another compiler is refused ("built from a different branch"); the compile is repeated
+  // without it, so a stale header costs time and never a failed build.
+  return compile(true) || compile(false);
+}
+
 bool compileCppExecutable(const ProcessRunner &runner,
                           const std::filesystem::path &cppPath,
                           const std::filesystem::path &outputPath,
                           const std::vector<std::string> &linkArgs) {
-  std::vector<std::string> args = {"clang++", "-std=c++23", "-O0"};
+  std::filesystem::path precompiledHeader;
 #if defined(PRIMEC_GENERATED_CPP_PCH_PATH)
-  // Precompiled header for the fixed stdlib #includes IrToCppEmitter.cpp
-  // always emits ahead of the program-specific generated code - see
-  // src/GeneratedCppRuntimePreamble.h. Falls back to a normal (slower)
-  // compile if the PCH wasn't built (e.g. clang++ missing at configure
-  // time) or has gone stale/missing on disk.
+  // Precompiled header for the fixed stdlib #includes the generated code always starts with (see
+  // src/backend/GeneratedCppRuntimePreamble.h). Left out when it was not built or is missing on disk.
   if (std::filesystem::exists(PRIMEC_GENERATED_CPP_PCH_PATH)) {
-    args.push_back("-include-pch");
-    args.push_back(PRIMEC_GENERATED_CPP_PCH_PATH);
+    precompiledHeader = PRIMEC_GENERATED_CPP_PCH_PATH;
   }
 #endif
-  args.push_back(cppPath.string());
-  args.push_back("-o");
-  args.push_back(outputPath.string());
-  args.insert(args.end(), linkArgs.begin(), linkArgs.end());
-  return commandSucceeds(runner, args);
+  return compileCppExecutableWithPrecompiledHeader(
+      runner, cppPath, outputPath, precompiledHeader, linkArgs);
 }
 
 bool compileCppExecutableOptimizedWithHeaderCache(const ProcessRunner &runner,
