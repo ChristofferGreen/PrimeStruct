@@ -304,9 +304,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6250: `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits
+- [~] TODO-6250: `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits
   - owner: ai
   - status: ready
+  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
   - created_at: 2026-11-24
   - phase: Build robustness (found while adding the startup rows of TODO-6233)
   - parallel_track: benchmark-baseline-platform
