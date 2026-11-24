@@ -528,9 +528,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the report and the leaves it leads to; no change to which definitions are real calls.
   - repro: `primec --dump-stage ir-lowered png.prime | grep '^function'` shows `/main ... instructions=32582` and 14 small functions.
 
-- [ ] TODO-6240: `primec --emit=ir` lowers for the VM target
+- [~] TODO-6240: `primec --emit=ir` lowers for the VM target
   - owner: ai
   - status: ready
+  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: bytecode-vm-target
