@@ -760,8 +760,10 @@ helper over `value` (docs/spec/transforms.md).
     (`keys`, `payloads`) and `SoaColumn` (`count`, `capacity`, `data`, `ownsData`) are `[private]` (see Field
     visibility), so safe code outside the collections module cannot copy or resize a container's storage, and a
     brace constructor such as `Vector<i32>{5i32, 5i32, v.data}` is `private field is not accessible`. A helper of the
-    library that is not `[public]` (`vectorCheckShape`, `vectorReserveInternal`, `vectorAlloc`) cannot be called from
-    outside its namespace, by absolute path either (`<path> is private`, see Exports in `backend-type-support.md`);
+    library that is not `[public]` (`vectorCheckShape`, `vectorReserveInternal`, `vectorAlloc`) and the methods marked
+    `[private]` (`Vector.set_field_count`, `set_field_capacity`, `field_count`, `field_capacity`, `owns_storage`) cannot
+    be called from outside their namespace, by absolute path either (`<path> is private`, see Exports in
+    `backend-type-support.md`);
     the `[unsafe_api]` helpers above are the unsafe API of their module and are `[public unsafe_api]`, callable from
     `[unsafe]` definitions only.
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
@@ -835,6 +837,8 @@ helper over `value` (docs/spec/transforms.md).
   its namespace. Reading it (`b.secret`), writing it, taking `location(b.secret)` and passing an explicit
   brace-constructor argument for it from any other definition is `private field is not accessible: <struct>/<field>`.
   Leaving it out of a brace constructor (`Box{}`) uses its default.
+  `[private]` on a method or a namespace-level definition is the same rule at the call site (`<path> is private`, see
+  Exports in `backend-type-support.md`): a method without the mark is callable wherever its struct is.
 - **Static members:** add `[static]` to hoist storage to namespace scope while reusing the field’s visibility transform.
   Static fields still participate in the struct manifest so documentation and reflection stay aligned, but only one
   storage slot exists per struct definition.

@@ -246,13 +246,13 @@ namespace std {
       }
     }
 
-    [mut effects(heap_alloc)]
+    [private mut effects(heap_alloc)]
     moveToBlock([i32] capacityWanted) {
       this.adoptBlock(__pstext_alloc(convert<u64>(capacityWanted) + 1u64))
     }
 
     // Copies the text into `block` (a fresh text block) and frees the block it held.
-    [mut effects(heap_alloc)]
+    [private mut effects(heap_alloc)]
     adoptBlock([Pointer<u8>] block) {
       if(this.fieldLength > 0i32) {
         __pstext_move(block, this.data, convert<u64>(this.fieldLength))
@@ -267,14 +267,14 @@ namespace std {
 
     // Capacity for `extra` more bytes: doubling, rounded up to the block size. The check is a single statement,
     // so it is inlined into every caller; growTo takes the other cases (growth, a negative or too large count).
-    [mut effects(heap_alloc)]
+    [private mut effects(heap_alloc)]
     growFor([i32] extra) {
       if(extra < 0i32 || extra > this.fieldCapacity - this.fieldLength) {
         this.growTo(extra)
       }
     }
 
-    [mut effects(heap_alloc)]
+    [private mut effects(heap_alloc)]
     growTo([i32] extra) {
       if(extra < 0i32 || extra > 1073741823i32 - this.fieldLength) {
         panic(extra)
@@ -580,7 +580,7 @@ namespace std {
 
     // Opens a gap of `extra` bytes at `position`: the tail moves up and the length grows; the gap holds stale bytes
     // until the caller fills it.
-    [mut effects(heap_alloc)]
+    [private mut effects(heap_alloc)]
     openGap([i32] position, [i32] extra) {
       if(position < 0i32 || position > this.fieldLength || extra < 0i32) {
         panic(position)

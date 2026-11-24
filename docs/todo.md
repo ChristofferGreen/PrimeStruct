@@ -134,8 +134,8 @@ of sync with them.
 | TODO-6238 | A backend-neutral contract test of the native UI ABI | ready | native-ui-contract |
 | TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
-| TODO-6197 | Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std` | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
+| TODO-6241 | A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage` | ready | method-call-resolution |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -190,7 +190,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): TODO-6231; deferred TODO-5688 (the rule for unannotated callees, options in the leaf)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
+- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -305,32 +305,14 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
-  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Namespace-level `/std` definitions without `[public]` are private to their namespace (TODO-6163). Open: methods of `/std` structs without a visibility transform (TODO-6197, decision needed) and slices built over any pointer (TODO-6198).
+  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Namespace-level `/std` definitions without `[public]` are private to their namespace (TODO-6163). Methods of `/std` structs follow the field rule and the internal ones are `[private]`; `[private]` is enforced for every definition and method (TODO-6197, decided 1a and 2b). Open: slices built over any pointer (TODO-6198).
   - acceptance:
     - TODO-6161, TODO-6162 and TODO-6163 are done; each repro (borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
     - full release gate green
   - stop_rule: tracker; the work is in the leaves.
-  - notes: deferred: queued behind the Ready Now cap; the open decision is written into TODO-6197.
+  - notes: deferred: queued behind the Ready Now cap; the remaining leaf is TODO-6198.
 
 
-
-- [~] TODO-6197: Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std`
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-visibility (worktree agent-af7d3cee88144e497), 2026-11-24
-  - created_at: 2026-11-23
-  - phase: Correctness audit 2026-10 (split from TODO-6163)
-  - parallel_track: safety-stdlib
-  - scope: TODO-6163 made a namespace-level `/std` definition without `[public]`, and a method marked `[private]`, private to its namespace (src/semantics/SemanticsPrivateDefinitionAccess.{h,cpp}). Two questions were left out because the decision of TODO-6163 does not answer them. (1) A method of a `/std` struct without a visibility transform. The decision's words (no `[public]` is private) make it private, but almost no method of the library carries `[public]`: a survey of the whole test suite and the examples found 304 distinct methods of `/std` structs called from outside their namespace (58,838 calls): the API of `String`, `StringView`, the slices, `Atomic`, `Channel`, the HTTP and UI types. Fields are public by default and private only when marked (docs/spec/type-system.md, Field visibility), so today a method follows its struct. The invariants this leaves open are methods such as `Vector.set_field_count`, `set_field_capacity`, `field_count` and `owns_storage`, which a program can call (`v.set_field_count(1000i32)` panics only when the value exceeds the capacity). (2) A definition marked `[private]` outside `/std` (`namespace util { [private] helper() { ... } }` called as `/util/helper()` from `main`) is still callable; the field rule applies to every struct, and the decision names `/std` only.
-  - decision: 2026-11-24 (owner): 1a and 2b. The model is the access rule of a C++ class with the default flipped: an unmarked member is public and `[private]` hides a member from code outside its struct (method, field) or namespace (definition); it is checked at the call site everywhere, not only in `/std`, with one meaning for the word on a field, a method and a definition. A method of a `/std` struct follows the field rule (callable unless `[private]`); the library marks its internal methods `[private]`; a program that calls a `[private]` definition across namespaces gets `<path> is private` with a named fix.
-  - count: 2026-11-24, measured before the change (grep of tests, examples, benchmarks, docs and stdlib for `[private ...]` on a definition or method, then every case read): 1 test calls a `[private]` definition across namespaces outside `/std` (tests/unit/semantics/bindings/test_semantics_bindings_pointers.cpp, "outside /std a private definition stays callable within the compilation unit", which asserted the old rule); 0 programs, 0 examples, 0 stdlib files, 0 benchmarks. The other `[private]` definitions (test_semantics_imports.cpp, the include conformance test, the visibility tag tests) are never called across namespaces: they are import cases that fail earlier. The full release gate confirms the count.
-  - options_to_decide: (1a) members follow the field rule: a method is callable where its struct is unless it is marked `[private]`; the internal methods of the library (`Vector.set_field_count`, `set_field_capacity`, `field_count`, `field_capacity`, `owns_storage`, and the like in `MapValue`, `SoaColumn`, `String`) are marked `[private]` and their callers in other library namespaces (ring_buffer.prime, soa_storage) are rerouted or the methods stay open to them through a public unsafe helper. Small sweep, one rule for fields and methods; an author who forgets `[private]` leaves an internal method open. (1b) a method needs `[public]` like a namespace-level definition: about 300 library methods and every method of a struct a test defines under `/std` get `[public]`; closed by default, at the price of a mark on every API method and a spec change for fields to match. Recommendation: 1a. (2a) leave `[private]` outside `/std` as an import-only mark; (2b) enforce an explicit `[private]` everywhere with the same rule (the default of no transform stays callable outside `/std`), so that the word means one thing on a field, a method and a definition; the cost is the programs and tests that call a `[private]` definition across namespaces, not yet counted. Recommendation: 2b.
-  - acceptance:
-    - the decisions are recorded here; the chosen rule is in docs/spec/backend-type-support.md (Exports) and enforced, with a negative example for each; the library, examples and tests compile
-    - `v.set_field_count(1000i32)` from a program is `is private`
-    - full release gate green
-  - stop_rule: call-site visibility of methods and of `[private]` definitions; no new visibility keywords.
-  - repro: `import /std/collections/*  [effects(heap_alloc), return<int>] main() { [Vector<i32> mut] v{vector<i32>(1i32)}  v.set_field_count(0i32)  return(0i32) }` compiles.
 
 - [ ] TODO-6198: Safe code builds a `Slice` of any count over any pointer
   - owner: ai
@@ -344,6 +326,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
+
+- [ ] TODO-6241: A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target: owns_storage`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Frontend and diagnostics (found with TODO-6197)
+  - parallel_track: method-call-resolution
+  - scope: `values.owns_storage()` on a `[Vector<i32>] values` parameter (or `[Vector<T> mut]`, generic or not) of a definition written under `/std/collections/vector` is `unknown call target: owns_storage` with or without `[private]` on the method, while `values.field_count()` on the same parameter resolves, and `items.owns_storage()` from `main` resolves (and is `is private` now). The method exists in the struct body (stdlib/std/collections/vector.prime), so the method lookup for a `Vector` receiver inside the namespace skips it; the resolvers for `Vector` receivers (src/semantics/SemanticsValidatorMethodTargetVectorResolvers.cpp and the lowerer's list of internal Vector methods in src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp) name the count and capacity helpers only. The program matrix probe of the storage flag reads the private field `ownsData` from such a definition instead.
+  - acceptance:
+    - the program below compiles and prints 1 then 0 on the VM, optexe and native, with a semantics case and a program-matrix case
+    - full release gate green
+  - stop_rule: the method lookup of a `Vector` receiver; no change to which methods are private.
+  - repro: `import /std/collections/*  namespace std { namespace collections { namespace vector { [public return<bool>] ownsStorageProbe([Vector<i32>] values) { return(values.owns_storage()) } } } }  [effects(io_out heap_alloc) return<int>] main() { [Vector<i32> mut] items{vector<i32>()}  print_line(/std/collections/vector/ownsStorageProbe(items))  return(0i32) }` with `primec --emit=vm -I stdlib` is `unknown call target: owns_storage`.
 
 - [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai

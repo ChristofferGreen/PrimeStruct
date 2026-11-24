@@ -21,7 +21,10 @@ called on a local that is not `mut` (`24_read_only_parameter_field_written`, `25
 a `[mut]` method called on an element of a collection field of a read-only parameter
 (`26_element_of_read_only_parameter_changed`), and a `Function` field called through a read-only parameter
 (`27_function_called_through_read_only_parameter`), and a helper of the standard library that is not `[public]`
-called by absolute path (`28_private_library_helper_called`).
+called by absolute path (`28_private_library_helper_called`), and a `[private]` method of `Vector`, a `[private]`
+definition of a program and a `[private]` method of a program's struct called from outside their namespace
+(`29_private_vector_method_called`, `30_private_definition_called_across_namespaces`,
+`31_private_method_called_outside_namespace`).
 
 They are not part of the standard "compile all examples" IR sweep.
 The test suite validates them via `--emit-diagnostics` and asserts expected JSON

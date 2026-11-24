@@ -13,17 +13,17 @@ namespace std {
     [private Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [private bool mut] ownsData{true}
 
-    [return<i32>]
+    [private return<i32>]
     field_count() {
       return(this.count)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_capacity() {
       return(this.capacity)
     }
 
-    [mut return<void>]
+    [private mut return<void>]
     set_field_count([i32] value) {
       if(value < 0i32 || value > this.capacity) {
         panic(value)
@@ -31,7 +31,7 @@ namespace std {
       this.count = value
     }
 
-    [mut return<void>]
+    [private mut return<void>]
     set_field_capacity([i32] value) {
       if(value < 0i32 || this.count > value || value > 1073741823i32) {
         panic(value)
@@ -84,12 +84,12 @@ namespace std {
     [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [public i32] stride
 
-    [return<i32>]
+    [private return<i32>]
     field_count() {
       return(this.count)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_capacity() {
       return(this.capacity)
     }

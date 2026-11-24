@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"/shapes/scale is private: only definitions in /shapes may call it; remove [private] from it to call it from other namespaces"
+"line":17,"column":10
+"notes":["stage: semantic"]

@@ -178,10 +178,28 @@ TEST_CASE("vm experimental vector at_unsafe rejects index past capacity even if 
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   return(/std/collections/vector/at_unsafe<i32>(values, 1i32))
 }
 )";
@@ -199,10 +217,28 @@ TEST_CASE("vm experimental vector method at rejects index past capacity even if 
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   return(values.at(1i32))
 }
 )";
@@ -220,10 +256,28 @@ TEST_CASE("vm experimental vector reserve rejects forged count above capacity") 
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   /std/collections/vector/reserve<i32>(values, 3i32)
   return(0i32)
 }
@@ -242,10 +296,28 @@ TEST_CASE("vm experimental vector clear rejects forged count above capacity") {
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   /std/collections/vector/clear<i32>(values)
   return(0i32)
 }
@@ -264,10 +336,28 @@ TEST_CASE("vm experimental vector destroy rejects forged count above capacity") 
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 make_bad() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   return(0i32)
 }
 
@@ -290,10 +380,28 @@ TEST_CASE("vm experimental vector count rejects forged count above capacity") {
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(2i32)
+  /std/collections/vector/forgeCount(values, 2i32)
   return(/std/collections/vector/count<i32>(values))
 }
 )";
@@ -311,10 +419,28 @@ TEST_CASE("vm experimental vector capacity rejects forged negative capacity") {
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_capacity(-1i32)
+  /std/collections/vector/forgeCapacity(values, -1i32)
   return(/std/collections/vector/capacity<i32>(values))
 }
 )";
@@ -332,10 +458,28 @@ TEST_CASE("vm experimental vector capacity rejects forged excessive capacity") {
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_capacity(2147483647i32)
+  /std/collections/vector/forgeCapacity(values, 2147483647i32)
   return(/std/collections/vector/capacity<i32>(values))
 }
 )";
@@ -353,10 +497,28 @@ TEST_CASE("vm experimental vector set_field_count rejects negative count") {
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_count(-1i32)
+  /std/collections/vector/forgeCount(values, -1i32)
   return(0i32)
 }
 )";
@@ -373,10 +535,28 @@ TEST_CASE("vm experimental vector set_field_capacity rejects below-count value")
   const std::string source = R"(
 import /std/collections/vector/*
 
+// The count and capacity setters are private to the vector module; a program that forges them writes its own
+// definition into that namespace.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<void>]
+      forgeCount([Vector<i32> mut] values, [i32] value) {
+        values.set_field_count(value)
+      }
+
+      [public return<void>]
+      forgeCapacity([Vector<i32> mut] values, [i32] value) {
+        values.set_field_capacity(value)
+      }
+    }
+  }
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<i32> mut] values{/std/collections/vector/vector<i32>(4i32)}
-  values.set_field_capacity(0i32)
+  /std/collections/vector/forgeCapacity(values, 0i32)
   return(0i32)
 }
 )";

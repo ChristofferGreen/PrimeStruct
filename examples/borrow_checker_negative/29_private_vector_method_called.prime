@@ -1,0 +1,10 @@
+// `set_field_count` is a method of `Vector` marked `[private]`: it keeps the element count inside the capacity, so
+// a program cannot call it. The public operations (`push`, `pop`, `clear`) change the count.
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32> mut] values{vector<i32>(1i32)}
+  values.set_field_count(1000i32)
+  return(0i32)
+}

@@ -460,6 +460,7 @@ Why this is good:
 - The example makes the public import boundary explicit without extra syntax noise.
 - The call site stays short because only the intended helper is imported.
 - The private helper still documents the boundary the import will not cross.
+- A call to `/demo/hidden_value()` from outside `demo` is `is private`, the rule of a `[private]` field and method.
 
 ### Compile-time Reflection Metadata
 

@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"/std/collections/vector/Vector/set_field_count is private: only definitions in /std/collections/vector may call it"
+"line":8,"column":3
+"notes":["stage: semantic"]

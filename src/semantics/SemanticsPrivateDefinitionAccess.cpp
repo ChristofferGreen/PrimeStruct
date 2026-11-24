@@ -69,15 +69,17 @@ enclosingDefinition(const std::unordered_map<std::string, const Definition *> &d
 
 } // namespace
 
-bool isPrivateStdDefinition(const std::unordered_map<std::string, const Definition *> &defMap,
-                            const Definition &def) {
-  if (def.fullPath.rfind("/std/", 0) != 0 || hasTransform(def, "public")) {
+bool isPrivateDefinition(const std::unordered_map<std::string, const Definition *> &defMap,
+                         const Definition &def) {
+  if (hasTransform(def, "public")) {
     return false;
   }
   if (hasTransform(def, "private")) {
     return true;
   }
-  return enclosingDefinition(defMap, def.fullPath) == nullptr;
+  // Only the library closes its namespaces by default; elsewhere an unmarked definition is callable.
+  return def.fullPath.rfind("/std/", 0) == 0 &&
+         enclosingDefinition(defMap, def.fullPath) == nullptr;
 }
 
 std::string definitionNamespace(const std::unordered_map<std::string, const Definition *> &defMap,
@@ -99,7 +101,7 @@ privateDefinitionCallViolation(const std::unordered_map<std::string, const Defin
       return {};
     }
   }
-  if (!isPrivateStdDefinition(defMap, callee)) {
+  if (!isPrivateDefinition(defMap, callee)) {
     return {};
   }
   const std::string calleeNamespace = definitionNamespace(defMap, callee.fullPath);
@@ -115,8 +117,12 @@ privateDefinitionCallViolation(const std::unordered_map<std::string, const Defin
 
 std::string privateDefinitionDiagnostic(const std::string &definitionPath,
                                         const std::string &definitionNamespace) {
-  return displayPath(definitionPath) + " is private: only definitions in " + definitionNamespace +
-         " may call it";
+  std::string message = displayPath(definitionPath) + " is private: only definitions in " +
+                        definitionNamespace + " may call it";
+  if (definitionPath.rfind("/std/", 0) != 0) {
+    message += "; remove [private] from it to call it from other namespaces";
+  }
+  return message;
 }
 
 } // namespace primec::semantics

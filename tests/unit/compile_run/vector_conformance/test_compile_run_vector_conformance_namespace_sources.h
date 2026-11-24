@@ -341,6 +341,17 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
                                                          const std::string &mode) {
   std::string source;
   source += "import " + importPath + "\n\n";
+  if (mode == "push_growth_overflow") {
+    // The count and capacity setters are private to the vector module: forge them from a definition in it.
+    source += "namespace std {\n  namespace collections {\n    namespace vector {\n";
+    source += "      [public return<void>]\n";
+    source += "      forgeCount([Vector<i32> mut] values, [i32] value) {\n";
+    source += "        values.set_field_count(value)\n      }\n\n";
+    source += "      [public return<void>]\n";
+    source += "      forgeCapacity([Vector<i32> mut] values, [i32] value) {\n";
+    source += "        values.set_field_capacity(value)\n      }\n";
+    source += "    }\n  }\n}\n\n";
+  }
   source += "[effects(heap_alloc), return<int>]\n";
   source += "main() {\n";
   if (mode == "pop_empty") {
@@ -357,8 +368,8 @@ inline std::string makeVectorHelperRuntimeContractSource(const std::string &impo
     source += "  return(/std/collections/vector/at_unsafe<i32>(values, -1i32))\n";
   } else if (mode == "push_growth_overflow") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>()}\n";
-    source += "  values.set_field_count(1073741823i32)\n";
-    source += "  values.set_field_capacity(1073741823i32)\n";
+    source += "  /std/collections/vector/forgeCount(values, 1073741823i32)\n";
+    source += "  /std/collections/vector/forgeCapacity(values, 1073741823i32)\n";
     source += "  /std/collections/vector/push<i32>(values, 3i32)\n";
   } else if (mode == "reserve_negative") {
     source += "  [" + vectorConformanceType(importPath, "i32") + " mut] values{/std/collections/vector/vector<i32>(4i32, 9i32)}\n";

@@ -1,0 +1,26 @@
+// A method marked `[private]` is callable only from its struct's own body and the namespace of the struct, the
+// rule of a `[private]` field. `main` is outside `counter`, so `reset` is rejected; `bump` is public.
+namespace counter {
+  [public struct]
+  Counter() {
+    [i32 mut] hits{0i32}
+
+    [private mut]
+    reset() {
+      this.hits = 0i32
+    }
+
+    [mut]
+    bump() {
+      this.hits = this.hits + 1i32
+    }
+  }
+}
+
+[return<int>]
+main() {
+  [/counter/Counter mut] c{/counter/Counter{}}
+  c.bump()
+  c.reset()
+  return(0i32)
+}

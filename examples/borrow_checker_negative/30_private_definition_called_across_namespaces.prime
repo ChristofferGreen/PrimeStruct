@@ -1,0 +1,18 @@
+// A `[private]` definition is callable only from its own namespace and the namespaces nested in it, in a program
+// as in the library. Calling `/shapes/scale` from `main` is rejected; `[public]` or no mark would allow it.
+namespace shapes {
+  [private return<int>]
+  scale([i32] value) {
+    return(value * 2i32)
+  }
+
+  [return<int>]
+  double_it([i32] value) {
+    return(scale(value))
+  }
+}
+
+[return<int>]
+main() {
+  return(/shapes/scale(4i32))
+}

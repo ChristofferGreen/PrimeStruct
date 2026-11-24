@@ -39,27 +39,27 @@ namespace std {
     [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1)}
     [bool mut] ownsData{true}
 
-    [return<i32>]
+    [private return<i32>]
     field_capacity() {
       return(this.fieldCapacity)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_head() {
       return(this.fieldHead)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_count() {
       return(this.fieldCount)
     }
 
-    [mut]
+    [private mut]
     set_field_head([i32] value) {
       this.fieldHead = value
     }
 
-    [mut]
+    [private mut]
     set_field_count([i32] value) {
       this.fieldCount = value
     }

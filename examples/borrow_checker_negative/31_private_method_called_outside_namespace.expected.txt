@@ -1,0 +1,4 @@
+"code":"PSC1005"
+"message":"/counter/Counter/reset is private: only definitions in /counter may call it; remove [private] from it to call it from other namespaces"
+"line":24,"column":3
+"notes":["stage: semantic"]

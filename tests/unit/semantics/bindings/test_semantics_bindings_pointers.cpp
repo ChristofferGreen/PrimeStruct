@@ -2891,7 +2891,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("outside /std a private definition stays callable within the compilation unit") {
+TEST_CASE("outside /std a private definition is not callable from another namespace") {
   const std::string source = R"(namespace util {
   [return<int>]
   helper() {
@@ -2909,10 +2909,95 @@ main() {
   return(/util/helper() + /util/marked())
 }
 )";
+  checkPrivateDefinitionCall(
+      source,
+      "/util/marked is private: only definitions in /util may call it; remove "
+      "[private] from it to call it from other namespaces",
+      15,
+      27);
+}
+
+TEST_CASE(
+    "outside /std a private definition is callable from its namespace and the ones nested in it") {
+  const std::string source = R"(namespace util {
+  [private return<int>]
+  marked() {
+    return(4i32)
+  }
+
+  [return<int>]
+  helper() {
+    return(marked())
+  }
+
+  namespace inner {
+    [return<int>]
+    nested() {
+      return(/util/marked())
+    }
+  }
+}
+
+[return<int>]
+main() {
+  return(/util/helper() + /util/inner/nested())
+}
+)";
   primec::SemanticDiagnosticInfo diagnosticInfo;
   std::string error;
   CHECK_MESSAGE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo), error);
   CHECK(error.empty());
+}
+
+TEST_CASE("outside /std a private method is not callable from outside its struct's namespace") {
+  const std::string source = R"(namespace shapes {
+  [public struct]
+  Circle() {
+    [i32 mut] radius{2i32}
+
+    [private return<int>]
+    secret() {
+      return(this.radius)
+    }
+
+    [return<int>]
+    area() {
+      return(this.secret() * 3i32)
+    }
+  }
+}
+
+[return<int>]
+main() {
+  [/shapes/Circle] circle{/shapes/Circle{}}
+  return(circle.area() + circle.secret())
+}
+)";
+  checkPrivateDefinitionCall(
+      source, "/shapes/Circle/secret is private: only definitions in /shapes may call it", 21, 26);
+}
+
+TEST_CASE("a private method of Vector is not callable from a program") {
+  for (const char *call : {"values.set_field_count(1000i32)",
+                           "values.set_field_capacity(1000i32)",
+                           "values.field_count()",
+                           "values.field_capacity()",
+                           "values.owns_storage()"}) {
+    INFO(call);
+    const std::string source =
+        std::string("import /std/collections/*\n\n[effects(heap_alloc), return<int>]\nmain() {\n"
+                    "  [Vector<i32> mut] values{vector<i32>(1i32)}\n  ") +
+        call + "\n  return(0i32)\n}\n";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(
+        error.find("is private: only definitions in /std/collections/vector may call it") !=
+            std::string::npos,
+        error);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 6);
+  }
 }
 
 TEST_SUITE_END();

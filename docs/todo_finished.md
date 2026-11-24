@@ -2600,6 +2600,7 @@ are left unarchived.
 | TODO-6194 | The `optexe` precompiled header is refused on every compile and the compile runs twice | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6195 | `print_line(bag.items.count())` of a `Vector` field is `print_line requires an integer/bool or string` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6196 | A struct field's default initializer is not validated as a local's is | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6197 | Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 | TODO-6199 | The tracked stdlib symbol manifests are not what the generator writes | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6200 | A field or an element of a read-only root is changed through a `mut` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6201 | A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

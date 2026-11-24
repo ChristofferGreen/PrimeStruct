@@ -24,22 +24,22 @@ namespace std {
     [private Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1)}
     [private bool mut] ownsData{true}
 
-    [return<bool>]
+    [private return<bool>]
     owns_storage() {
       return(this.ownsData)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_count() {
       return(this.fieldCount)
     }
 
-    [return<i32>]
+    [private return<i32>]
     field_capacity() {
       return(this.fieldCapacity)
     }
 
-    [mut]
+    [private mut]
     set_field_count([i32] value) {
       if(value < 0 || value > this.fieldCapacity) {
         panic(value)
@@ -47,7 +47,7 @@ namespace std {
       this.fieldCount = value
     }
 
-    [mut]
+    [private mut]
     set_field_capacity([i32] value) {
       if(value < 0 || this.fieldCount > value || value > 1073741823) {
         panic(value)

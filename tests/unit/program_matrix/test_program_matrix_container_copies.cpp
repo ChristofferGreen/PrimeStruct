@@ -166,13 +166,25 @@ TEST_CASE("an empty vector literal owns its storage") {
   program.source = R"(
 import /std/collections/*
 
+// The storage flag is private to the vector module: read it from a definition in it.
+namespace std {
+  namespace collections {
+    namespace vector {
+      [public return<bool>]
+      ownsStorageProbe([Vector<i32>] values) {
+        return(values.ownsData)
+      }
+    }
+  }
+}
+
 [effects(io_out heap_alloc) return<int>]
 main() {
   [Vector<i32> mut] items{vector<i32>()}
-  print_line(items.owns_storage())
+  print_line(/std/collections/vector/ownsStorageProbe(items))
   vectorPush<i32>(items, 5i32)
   items.Destroy()
-  print_line(items.owns_storage())
+  print_line(/std/collections/vector/ownsStorageProbe(items))
   print_line(vectorCount<i32>(items))
   return(0i32)
 }
