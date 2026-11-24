@@ -118,7 +118,7 @@ of sync with them.
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
-| TODO-6221 | A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace | deferred | stdlib-manifest-drift |
+| TODO-6221 | A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace | ready | stdlib-manifest-drift |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
@@ -198,9 +198,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 ### Task Blocks
 
-- [ ] TODO-6221: A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace
+- [~] TODO-6221: A stdlib manifest entry for a namespace makes a lazy import pull the whole namespace
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: manifest-ns (worktree-agent-a12fa5df80cd9e813), 2026-11-24
   - created_at: 2026-11-23
   - phase: Modules and libraries (found with TODO-6199)
   - parallel_track: stdlib-manifest-drift
