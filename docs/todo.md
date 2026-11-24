@@ -148,7 +148,7 @@ of sync with them.
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
-| TODO-6222 | A public `[sum]` is printed in the interface and a library function may return one | deferred | lib-shapes |
+| TODO-6222 | A public `[sum]` is printed in the interface and a library function may return one | ready | lib-shapes |
 | TODO-6223 | A public function with a packed `Result<T, E>` or stdlib error struct result is a function of a library | deferred | lib-shapes |
 | TODO-6214 | A public function with a `vector<T>` result is a function of a library | deferred | lib-shapes |
 | TODO-6215 | The collections-root rule is narrowed for library roots | deferred | lib-shapes |
@@ -704,9 +704,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
-- [ ] TODO-6222: A public `[sum]` is printed in the interface and a library function may return one
+- [~] TODO-6222: A public `[sum]` is printed in the interface and a library function may return one
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lib-sum (worktree-agent-a12fa5df80cd9e813), 2026-11-24
   - created_at: 2026-11-24
   - phase: Modules and libraries (step 2 of TODO-6213, option A)
   - parallel_track: lib-shapes
