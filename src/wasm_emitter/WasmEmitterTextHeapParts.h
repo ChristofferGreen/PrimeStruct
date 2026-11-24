@@ -10,7 +10,7 @@ namespace wasm_text {
 // The pieces of the string heap (WasmEmitterTextHeap.cpp describes it): the layout constants and the small emitters
 // both components use, the metadata component (the metadata allocator, size classes, chunk records and the return of
 // chunks: WasmEmitterTextMeta.cpp) and the block component (allocation, free, capacity, length, usable and the
-// statistics: WasmEmitterTextHeap.cpp).
+// statistics: WasmEmitterTextHeap.cpp) and the large blocks and the byte limit (WasmEmitterTextLarge.cpp).
 
 using namespace wasm_heap;
 
@@ -38,6 +38,7 @@ inline constexpr int32_t FaultOverflow = 2;
 inline constexpr int32_t FaultTextFree = 4;
 inline constexpr int32_t FaultTextTwice = 5;
 inline constexpr int32_t FaultTextAddress = 6;
+inline constexpr int32_t FaultTextLimit = 7;
 
 inline uint32_t textFn(const WasmRuntimeContext &runtime, WasmTextHelper helper) {
   return runtime.textFunction[static_cast<size_t>(helper)];
@@ -56,6 +57,19 @@ faultWith(WasmAsm &a, const WasmRuntimeContext &runtime, int32_t kind, uint32_t 
 
 inline void faultOverflow(WasmAsm &a, const WasmRuntimeContext &runtime) {
   a.i32Const(FaultOverflow);
+  a.i64Const(0);
+  a.call(fn(runtime, WasmHeapHelper::Fault));
+}
+
+// A request the limit refuses: 0 for `__pstext_try_alloc`, else the VM's `string memory limit exceeded` fault. Returns
+// from the helper it is emitted in.
+inline void emitLimitFailure(WasmAsm &a, const WasmRuntimeContext &runtime) {
+  a.globalGet(WasmGlobalTextTry);
+  a.ifThen();
+  a.i64Const(0);
+  a.ret();
+  a.end();
+  a.i32Const(FaultTextLimit);
   a.i64Const(0);
   a.call(fn(runtime, WasmHeapHelper::Fault));
 }
@@ -159,6 +173,11 @@ WasmCodeBody buildCapacity(const WasmRuntimeContext &runtime);
 WasmCodeBody buildLength(const WasmRuntimeContext &runtime);
 WasmCodeBody buildUsable(const WasmRuntimeContext &runtime);
 WasmCodeBody buildStat(const WasmRuntimeContext &runtime);
+
+// The large blocks and the limit (WasmEmitterTextLarge.cpp).
+WasmCodeBody buildRoomFor(const WasmRuntimeContext &runtime);
+WasmCodeBody buildAllocLarge(const WasmRuntimeContext &runtime);
+WasmCodeBody buildSetLimit(const WasmRuntimeContext &runtime);
 
 } // namespace wasm_text
 } // namespace primec

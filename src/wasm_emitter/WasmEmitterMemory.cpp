@@ -149,6 +149,7 @@ bool wasmModuleCallsTextHeap(const IrModule &module) {
       case NativeTextHost::Capacity:
       case NativeTextHost::Length:
       case NativeTextHost::Usable:
+      case NativeTextHost::SetLimit:
         return true;
       default:
         break;

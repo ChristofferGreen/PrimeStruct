@@ -353,7 +353,7 @@ bool validateFunction(const IrModule &module,
                                error);
       }
       // A Wasm module answers the string heap statistics and the block allocation functions itself (`__pstext_stat`,
-      // `__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`, `_length` and `_usable`); every other host function is
+      // `__pstext_alloc`, `_try_alloc`, `_free`, `_capacity`, `_length`, `_usable` and `_set_limit`); every other host function is
       // refused.
       const NativeTextHost wasmTextKind =
           isWasmTarget(target) && inst.imm < module.hostImports.size()
@@ -363,7 +363,7 @@ bool validateFunction(const IrModule &module,
           wasmTextKind == NativeTextHost::Stat || wasmTextKind == NativeTextHost::Alloc ||
           wasmTextKind == NativeTextHost::TryAlloc || wasmTextKind == NativeTextHost::Free ||
           wasmTextKind == NativeTextHost::Capacity || wasmTextKind == NativeTextHost::Length ||
-          wasmTextKind == NativeTextHost::Usable;
+          wasmTextKind == NativeTextHost::Usable || wasmTextKind == NativeTextHost::SetLimit;
       if (!nativeHost && !wasmStat && target != IrValidationTarget::Vm &&
           target != IrValidationTarget::Serialized && target != IrValidationTarget::Cpp &&
           target != IrValidationTarget::OptCpp) {

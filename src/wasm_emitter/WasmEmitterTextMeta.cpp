@@ -239,8 +239,8 @@ WasmCodeBody buildBlockSizeFor(const WasmRuntimeContext &) {
   return body;
 }
 
-// find(address i64) -> i32: the chunk record whose region holds the offset of the address (the VM's `chunkContaining`,
-// which looks at the offset alone), or -1.
+// find(address i64) -> i32: the large block whose region starts at the offset of the address or the chunk record whose
+// region holds it (the VM's `large_.find` and `chunkContaining`, which look at the offset alone), or -1.
 WasmCodeBody buildFind(const WasmRuntimeContext &) {
   constexpr uint32_t Address = 0;
   constexpr uint32_t Offset = 1;
@@ -295,6 +295,20 @@ WasmCodeBody buildFind(const WasmRuntimeContext &) {
   a.i32Load(RecBytes);
   a.i32LtU();
   a.i32And();
+  a.ifThen();
+  a.localGet(Index);
+  a.ret();
+  a.end();
+  a.end();
+  // a large block is found by the exact offset of its region
+  a.localGet(Record);
+  a.i32Load(RecKind);
+  a.i32Const(2);
+  a.i32Eq();
+  a.ifThen();
+  a.localGet(Offset);
+  recordOffset(a, Record);
+  a.i32Eq();
   a.ifThen();
   a.localGet(Index);
   a.ret();

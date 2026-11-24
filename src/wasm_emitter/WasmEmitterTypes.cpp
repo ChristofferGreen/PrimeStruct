@@ -620,6 +620,9 @@ bool emitTypedInstruction(const IrInstruction &inst,
     case NativeTextHost::Usable:
       textHelper = WasmTextHelper::Usable;
       break;
+    case NativeTextHost::SetLimit:
+      textHelper = WasmTextHelper::SetLimit;
+      break;
     default:
       isTextCall = false;
       break;
@@ -634,7 +637,7 @@ bool emitTypedInstruction(const IrInstruction &inst,
       appendU32Leb(runtime.textFunction[static_cast<size_t>(textHelper)], out);
       popTypes(localLayout, 1);
       const IrHostValueKind returnKind = runtime.textHostReturns[static_cast<size_t>(inst.imm)];
-      if (textHelper == WasmTextHelper::Free) {
+      if (textHelper == WasmTextHelper::Free || textHelper == WasmTextHelper::SetLimit) {
         if (returnKind != IrHostValueKind::Void) {
           out.push_back(WasmOpI64Const);
           appendS64Leb(0, out);

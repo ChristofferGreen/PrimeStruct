@@ -997,8 +997,9 @@ constexpr int TextLength = 3;
 constexpr int TextUsable = 4;
 constexpr int TextTryAlloc = 5;
 constexpr int TextStat = 6;
+constexpr int TextSetLimit = 7;
 
-// The module with the string heap functions imported as host functions 0 to 6 (`TextAlloc` and the others above).
+// The module with the string heap functions imported as host functions 0 to 7 (`TextAlloc` and the others above).
 primec::IrModule withText(primec::IrModule module) {
   const auto add = [&](const char *name, primec::IrHostValueKind returnKind) {
     primec::IrHostImport import;
@@ -1014,6 +1015,7 @@ primec::IrModule withText(primec::IrModule module) {
   add("__pstext_usable", primec::IrHostValueKind::U64);
   add("__pstext_try_alloc", primec::IrHostValueKind::U64);
   add("__pstext_stat", primec::IrHostValueKind::U64);
+  add("__pstext_set_limit", primec::IrHostValueKind::Void);
   return module;
 }
 
@@ -1034,9 +1036,10 @@ uint64_t textBlockSize(uint64_t size) {
   return base + (size - base + step - 1) / step * step;
 }
 
-// Prints the statistics the string heap answers: chunks, bytes in use, bytes free and allocations.
+// Prints the statistics the string heap answers: chunks, bytes in use, bytes free, large blocks, their bytes and
+// allocations.
 void printTextStats(std::vector<std::string> &code) {
-  for (const int which : {0, 1, 2, 5}) {
+  for (const int which : {0, 1, 2, 3, 4, 5}) {
     code.push_back("PushI64 " + std::to_string(which));
     code.push_back(callText(TextStat));
     code.push_back("PrintU64 1");
@@ -1077,7 +1080,7 @@ void freeText(std::vector<std::string> &code, int variable) {
 // variables, printing the address, capacity, usable bytes and length of every new block and the statistics, so size
 // classes, chunk growth, the lowest chunk with a free block, the retained free chunk and its return, and the zeroing
 // of freed blocks all show in the output.
-primec::IrModule randomTextProgram(uint64_t seed, int steps) {
+primec::IrModule randomTextProgram(uint64_t seed, int steps, bool withLarge = false) {
   uint64_t state = seed * 2685821657736338717ull + 1442695040888963407ull;
   const auto next = [&](uint64_t bound) {
     state ^= state << 13;
@@ -1106,11 +1109,15 @@ primec::IrModule randomTextProgram(uint64_t seed, int steps) {
       } else if (kind >= 97) {
         request = 20001 + next(45535);
       }
+      if (withLarge && next(8) == 0) {
+        request = 65537 + next(150000);
+      }
       allocText(code, variable, request, next(4) == 0 ? TextTryAlloc : TextAlloc);
       size[static_cast<size_t>(variable)] = request;
       printTextBlock(code, variable);
       // a prefix of text: the length is what was written (a block holds `blockSize - 1` bytes of text)
-      const uint64_t written = std::min<uint64_t>(next(6), textBlockSize(request) - 1);
+      const uint64_t written =
+          std::min<uint64_t>(next(6), (request > 65536 ? request : textBlockSize(request)) - 1);
       for (uint64_t i = 0; i < written; ++i) {
         storeByte(code, "LoadLocal " + std::to_string(variable), i, 65 + i);
       }
@@ -1374,6 +1381,194 @@ TEST_CASE("wasm string heap faults carry the VM's message and exit code 3") {
   for (const auto &[name, module] : faults) {
     CAPTURE(name);
     expectMatchesVm(module, "text_fault_" + name);
+  }
+}
+
+TEST_CASE("wasm string heap large blocks have the VM's addresses, capacities and reuse") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Blocks above 64 KiB are byte regions of exactly their size: written at both ends, queried, freed in an order that
+  // leaves free runs, then made again (the byte regions' best fit decides the addresses), next to small blocks.
+  std::vector<std::string> code;
+  const std::vector<uint64_t> sizes = {65537, 70000, 131072, 300000, 65538, 1000000, 100, 65537};
+  int variable = 0;
+  for (const uint64_t size : sizes) {
+    allocText(code, variable, size);
+    printTextBlock(code, variable);
+    const std::string address = "LoadLocal " + std::to_string(variable);
+    storeByte(code, address, 0, 72);
+    storeByte(code, address, size - 2, 105);
+    code.push_back(address);
+    code.push_back(callText(TextLength));
+    code.push_back("PrintI32 1");
+    ++variable;
+  }
+  printTextStats(code);
+  for (const int i : {1, 3, 5, 0}) {
+    freeText(code, i);
+    printTextStats(code);
+  }
+  for (const int i : {1, 3, 5, 0}) {
+    allocText(code, i, sizes[static_cast<size_t>(i)] + 8 * static_cast<uint64_t>(i));
+    printTextBlock(code, i);
+  }
+  printTextStats(code);
+  for (int i = 0; i < variable; ++i) {
+    freeText(code, i);
+  }
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_large");
+}
+
+TEST_CASE("wasm string heap addresses of random sequences with large blocks match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  for (const uint64_t seed : {11ull, 12ull, 13ull, 14ull}) {
+    expectMatchesVm(randomTextProgram(seed, 120, true),
+                    "text_random_large_" + std::to_string(seed));
+  }
+}
+
+// `__pstext_set_limit(bytes)`.
+void setTextLimit(std::vector<std::string> &code, uint64_t bytes) {
+  code.push_back("PushI64 " + std::to_string(bytes));
+  code.push_back(callText(TextSetLimit));
+}
+
+TEST_CASE("wasm string heap limit returns free chunks to make room and refuses the rest") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 64 blocks of the 4096 class take chunks of 1, 1, 2, 4, 8, 16 and 32 blocks (256 KiB); the last chunk is freed and
+  // kept as the class's free chunk. With a limit of 300000 bytes a large block of 100000 bytes first returns that free
+  // chunk, a larger one does not fit (`try_alloc` answers 0, the counters stay), the limit lifted lets it through, and a
+  // limit below what is held refuses small blocks of a new class too.
+  std::vector<std::string> code;
+  for (int i = 0; i < 64; ++i) {
+    allocText(code, i, 4000);
+  }
+  printTextStats(code);
+  for (int i = 32; i < 64; ++i) {
+    freeText(code, i);
+  }
+  printTextStats(code);
+  setTextLimit(code, 300000);
+  allocText(code, 70, 100000, TextTryAlloc);
+  code.push_back("LoadLocal 70");
+  code.push_back("PrintU64 1");
+  printTextStats(code);
+  allocText(code, 71, 100000, TextTryAlloc);
+  code.push_back("LoadLocal 71");
+  code.push_back("PrintU64 1");
+  allocText(code, 72, 70000, TextTryAlloc);
+  code.push_back("LoadLocal 72");
+  code.push_back("PrintU64 1");
+  allocText(code, 73, 50, TextTryAlloc);
+  code.push_back("LoadLocal 73");
+  code.push_back("PrintU64 1");
+  printTextStats(code);
+  freeText(code, 70);
+  allocText(code, 73, 50, TextTryAlloc);
+  code.push_back("LoadLocal 73");
+  code.push_back("PrintU64 1");
+  printTextStats(code);
+  setTextLimit(code, 0);
+  allocText(code, 74, 100000, TextTryAlloc);
+  code.push_back("LoadLocal 74");
+  code.push_back("PrintU64 1");
+  printTextStats(code);
+  setTextLimit(code, 1);
+  allocText(code, 75, 20, TextTryAlloc);
+  code.push_back("LoadLocal 75");
+  code.push_back("PrintU64 1");
+  printTextStats(code);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(withText(mainOf(code)), "text_limit");
+}
+
+TEST_CASE("wasm string heap large block and limit faults carry the VM's message and exit code 3") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const auto program = [&](std::vector<std::string> code) {
+    code.push_back("ReturnVoid");
+    return withText(mainOf(code));
+  };
+  const std::string load = "LoadLocal 0";
+  const std::vector<std::pair<std::string, primec::IrModule>> faults = {
+      {"limit_small_block",
+       program({"PushI64 5000",
+                callText(TextSetLimit),
+                "PushI64 100",
+                callText(TextAlloc),
+                "Pop",
+                "PushI64 5000",
+                callText(TextAlloc),
+                "Pop"})},
+      {"limit_large_block",
+       program({"PushI64 70000",
+                callText(TextSetLimit),
+                "PushI64 100000",
+                callText(TextAlloc),
+                "Pop"})},
+      {"large_free_twice",
+       program({"PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                load,
+                callText(TextFree),
+                load,
+                callText(TextFree)})},
+      {"large_free_inside",
+       program({"PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                load,
+                "PushI64 8",
+                "AddI64",
+                callText(TextFree)})},
+      {"large_capacity_inside",
+       program({"PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                load,
+                "PushI64 8",
+                "AddI64",
+                callText(TextCapacity),
+                "Pop"})},
+      {"large_free_stale_generation",
+       program({"PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                load,
+                callText(TextFree),
+                "PushI64 100000",
+                callText(TextAlloc),
+                "Pop",
+                load,
+                callText(TextFree)})},
+      {"large_length_after_free",
+       program({"PushI64 100000",
+                callText(TextAlloc),
+                "StoreLocal 0",
+                load,
+                callText(TextFree),
+                load,
+                callText(TextLength),
+                "Pop"})},
+  };
+  for (const auto &[name, module] : faults) {
+    CAPTURE(name);
+    expectMatchesVm(module, "text_large_fault_" + name);
   }
 }
 

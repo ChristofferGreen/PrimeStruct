@@ -44,6 +44,7 @@ constexpr int32_t FaultByte = 3;
 constexpr int32_t FaultTextFree = 4;
 constexpr int32_t FaultTextTwice = 5;
 constexpr int32_t FaultTextAddress = 6;
+constexpr int32_t FaultTextLimit = 7;
 
 // The address a slot range starts at: Tag | generation << 48 | slot * 16 (the VM's encoding, arena 0).
 void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
@@ -108,10 +109,16 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
     literalIf(FaultTextFree, runtime.textFreeMessageAddr, runtime.textFreeMessageLength);
     literalIf(FaultTextTwice, runtime.textTwiceMessageAddr, runtime.textTwiceMessageLength);
     literalIf(FaultTextAddress, runtime.textAddressMessageAddr, runtime.textAddressMessageLength);
+    literalIf(FaultTextLimit, runtime.textLimitMessageAddr, runtime.textLimitMessageLength);
   }
+  // the two faults whose message ends the line carry no address
   a.localGet(Kind);
   a.i32Const(FaultOverflow);
   a.i32Ne();
+  a.localGet(Kind);
+  a.i32Const(FaultTextLimit);
+  a.i32Ne();
+  a.i32And();
   a.ifThen();
   a.localGet(Value);
   a.localSet(Digits);
