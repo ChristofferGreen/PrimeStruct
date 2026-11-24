@@ -134,7 +134,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
-| TODO-6178 | The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7 | deferred | wasm-bytes-host |
+| TODO-6178 | The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7 | ready | wasm-bytes-host |
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
@@ -534,7 +534,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6178: The Wasm string heap: the `__pstext_*` allocation functions and statistics 0 to 7
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-22
   - phase: Backend parity (split from TODO-6150)
   - parallel_track: wasm-bytes-host
@@ -542,6 +542,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - a program that builds and drops `String` values prints the same statistics as the VM under node; the string arena programs (`string_arenas_*`) list `wasm-wasi`
     - full release gate green
+  - implementation_notes: 2026-11-24, after the byte regions landed (src/wasm_emitter/WasmEmitterByteHeap.{h,cpp}): the helpers to build on are `WasmByteHelper::Alloc`, `Free`, `Realloc` and `Access` (a region's memory address, or the VM's byte fault) and the owner table per 8-byte granule, so a text block is a byte region and `VmTextHeap`'s chunks and large blocks can be byte regions taken with `Alloc`. The module's byte regions move when they grow, so every helper recomputes the base after any call that may allocate. `VmTextHeapBody.inc` is 1,052 lines (size classes, chunks, free lists, large blocks, arenas, the byte limit, eight statistics): it is bigger than the byte regions, so split it before starting, for example (1) size classes, chunks and free lists with `__pstext_alloc`, `__pstext_try_alloc`, `__pstext_free`, `__pstext_capacity`, `__pstext_length`, `__pstext_usable`, (2) large blocks and the byte limit (`__pstext_set_limit`), (3) arenas and statistics 0 to 7, each with node-against-VM IR tests of block addresses, capacities, reuse and the statistics. Not started.
   - stop_rule: the allocation functions and statistics; the byte operations are TODO-6179 and float text is TODO-6180. Blocked by TODO-6177.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
 - [ ] TODO-6179: The Wasm `__pstext_*` byte operations and entry arguments
