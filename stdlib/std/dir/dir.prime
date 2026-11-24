@@ -26,34 +26,34 @@ namespace dir {
     [public i64 mut] size{0i64}
     [public i64 mut] modifiedSeconds{0i64}
 
-    [return<bool>]
+    [return<bool> effects(none)]
     isFile() {
       return(this.kind == 0i32)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     isDirectory() {
       return(this.kind == 1i32)
     }
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   dirKindFile() {
     return(0i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   dirKindDirectory() {
     return(1i32)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   dirKindOther() {
     return(2i32)
   }
 
   // The number that starts at `at` and ends before the next space, which is skipped: `at` moves past it.
-  [return<i64>]
+  [return<i64> effects(none)]
   dir_listing_number([String] listing, [i32 mut] at) {
     [bool] negative{listing.byteAt(at) == 45u8}
     if(negative) {

@@ -96,52 +96,52 @@ namespace std {
   }
 
   // The width of an operation follows the type of its value; `load` passes a value of the type only to choose.
-  [return<i32>]
+  [return<i32> effects(none)]
   atomicLoad([Pointer<i64>] cell, [i32] width) {
     return(__psatomic_load_i32(cell))
   }
 
-  [return<i64>]
+  [return<i64> effects(none)]
   atomicLoad([Pointer<i64>] cell, [i64] width) {
     return(__psatomic_load_i64(cell))
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   atomicStore([Pointer<i64>] cell, [i32] value) {
     __psatomic_store_i32(cell, value)
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   atomicStore([Pointer<i64>] cell, [i64] value) {
     __psatomic_store_i64(cell, value)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   atomicAdd([Pointer<i64>] cell, [i32] delta) {
     return(__psatomic_add_i32(cell, delta))
   }
 
-  [return<i64>]
+  [return<i64> effects(none)]
   atomicAdd([Pointer<i64>] cell, [i64] delta) {
     return(__psatomic_add_i64(cell, delta))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   atomicExchange([Pointer<i64>] cell, [i32] value) {
     return(__psatomic_exchange_i32(cell, value))
   }
 
-  [return<i64>]
+  [return<i64> effects(none)]
   atomicExchange([Pointer<i64>] cell, [i64] value) {
     return(__psatomic_exchange_i64(cell, value))
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   atomicCompareExchange([Pointer<i64>] cell, [i32] expected, [i32] desired) {
     return(__psatomic_compare_exchange_i32(cell, expected, desired))
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   atomicCompareExchange([Pointer<i64>] cell, [i64] expected, [i64] desired) {
     return(__psatomic_compare_exchange_i64(cell, expected, desired))
   }
@@ -156,7 +156,7 @@ namespace std {
   }
 
   // One more handle shares the cell.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   atomicCellShare([Pointer<i64>] cell) {
     __psatomic_add_i64(/std/intrinsics/memory/at_unsafe(cell, 1i32), 1i64)
   }
@@ -186,7 +186,7 @@ namespace std {
     return(slot)
   }
 
-  [return<Reference<T>>]
+  [return<Reference<T>> effects(none)]
   mutexValueBorrow<T>([Pointer<uninitialized<T>>] slot) {
     return(borrow(*slot))
   }
@@ -206,7 +206,7 @@ namespace std {
   MutexHold() {
     [Pointer<i64>] cell
 
-    [mut]
+    [mut effects(none)]
     Destroy() {
       __psmutex_unlock(this.cell)
     }
@@ -229,7 +229,7 @@ namespace std {
       return(body(mutexValueBorrow<T>(this.value)))
     }
 
-    [mut]
+    [mut effects(none)]
     Copy([Reference<Self>] other) {
       this.cell = other.cell
       this.value = other.value
@@ -239,7 +239,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.cell = other.cell
       this.value = other.value
@@ -276,7 +276,7 @@ namespace std {
   RwReadHold() {
     [Pointer<i64>] cell
 
-    [mut]
+    [mut effects(none)]
     Destroy() {
       __psmutex_lock(this.cell)
       channelSet(this.cell, 3i32, channelGet(this.cell, 3i32) - 1i64)
@@ -292,7 +292,7 @@ namespace std {
   RwWriteHold() {
     [Pointer<i64>] cell
 
-    [mut]
+    [mut effects(none)]
     Destroy() {
       __psmutex_lock(this.cell)
       channelSet(this.cell, 4i32, 0i64)
@@ -302,7 +302,7 @@ namespace std {
   }
 
   // Waits until no writer is inside or waits, then counts one more reader in.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rwlockEnterRead([Pointer<i64>] cell) {
     __psmutex_lock(cell)
     [MutexHold] hold{MutexHold{cell}}
@@ -314,7 +314,7 @@ namespace std {
   }
 
   // Waits until no reader and no writer is inside, then takes the lock. While it waits, new readers wait too.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rwlockEnterWrite([Pointer<i64>] cell) {
     __psmutex_lock(cell)
     [MutexHold] hold{MutexHold{cell}}
@@ -353,7 +353,7 @@ namespace std {
       return(body(mutexValueBorrow<T>(this.value)))
     }
 
-    [mut]
+    [mut effects(none)]
     Copy([Reference<Self>] other) {
       this.cell = other.cell
       this.value = other.value
@@ -363,7 +363,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.cell = other.cell
       this.value = other.value
@@ -397,7 +397,7 @@ namespace std {
   }
 
   // A channel holds at least one item.
-  [return<i32>]
+  [return<i32> effects(none)]
   channelCapacity([i32] capacity) {
     if(capacity < 1i32) {
       return(1i32)
@@ -410,23 +410,23 @@ namespace std {
     return(/std/intrinsics/memory/alloc<uninitialized<T>>(channelCapacity(capacity)))
   }
 
-  [unsafe return<Pointer<i64>>]
+  [unsafe return<Pointer<i64>> effects(none)]
   channelField([Pointer<i64>] cell, [i32] index) {
     return(/std/intrinsics/memory/at_unsafe(cell, index))
   }
 
-  [unsafe return<i64>]
+  [unsafe return<i64> effects(none)]
   channelGet([Pointer<i64>] cell, [i32] index) {
     return(__psatomic_load_i64(/std/intrinsics/memory/at_unsafe(cell, index)))
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   channelSet([Pointer<i64>] cell, [i32] index, [i64] value) {
     __psatomic_store_i64(/std/intrinsics/memory/at_unsafe(cell, index), value)
   }
 
   // The ring index `steps` after `index`, for `steps` up to the capacity.
-  [return<i64>]
+  [return<i64> effects(none)]
   channelWrap([i64] index, [i64] steps, [i64] capacity) {
     [i64] next{index + steps}
     if(next >= capacity) {
@@ -436,7 +436,7 @@ namespace std {
   }
 
   // Puts `value` behind the newest item. The caller holds the lock and has found room.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   channelPut<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] items, [T move] value) {
     [i64] capacity{channelGet(cell, 7i32)}
     [i64] count{channelGet(cell, 5i32)}
@@ -447,7 +447,7 @@ namespace std {
   }
 
   // Takes the oldest item. The caller holds the lock and has found one.
-  [unsafe return<T>]
+  [unsafe return<T> effects(none)]
   channelTake<T>([Pointer<i64>] cell, [Pointer<uninitialized<T>>] items) {
     [i64] head{channelGet(cell, 4i32)}
     [Pointer<uninitialized<T>> mut] slot{/std/intrinsics/memory/at_unsafe(items, convert<i32>(head))}
@@ -525,7 +525,7 @@ namespace std {
       __pscondition_notify(channelField(this.cell, 3i32))
     }
 
-    [mut]
+    [mut effects(none)]
     Copy([Reference<Self>] other) {
       this.capacity = other.capacity
       this.cell = other.cell
@@ -536,7 +536,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.capacity = other.capacity
       this.cell = other.cell
@@ -590,7 +590,7 @@ namespace std {
       return(atomicCompareExchange(this.cell, expected, desired))
     }
 
-    [mut]
+    [mut effects(none)]
     Copy([Reference<Self>] other) {
       this.cell = other.cell
       this.live = other.live
@@ -599,7 +599,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.cell = other.cell
       this.live = other.live

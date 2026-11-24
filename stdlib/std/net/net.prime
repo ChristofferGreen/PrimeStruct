@@ -53,25 +53,25 @@ namespace std {
 namespace net {
 
   // The call did not finish within its timeout.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   timeoutCode() {
     return(-1i32)
   }
 
   // The peer closed or reset the connection.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   closedCode() {
     return(-2i32)
   }
 
   // The socket is not ready; try again.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   againCode() {
     return(-3i32)
   }
 
   // A signal interrupted the call (SIGTERM or SIGINT with /std/os linked): check stopRequested().
-  [public return<i32>]
+  [public return<i32> effects(none)]
   interruptedCode() {
     return(-4i32)
   }

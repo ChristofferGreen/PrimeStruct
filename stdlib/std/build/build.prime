@@ -23,7 +23,7 @@ namespace std {
 namespace build {
 
   // The version field of the export; it changes when the shape of the JSON changes.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   export_version() {
     return(1i32)
   }
@@ -48,7 +48,7 @@ namespace build {
       this.emitKind = kind.toOwned()
     }
 
-    [mut]
+    [mut effects(none)]
     optimize([i32] level) {
       this.optimization = level
     }
@@ -173,12 +173,12 @@ namespace build {
     // The ids of the steps this one waits for (`Build.after`), sorted bytewise and without duplicates.
     [public vector<String> mut] afterIds{vector<String>{}}
 
-    [return<bool>]
+    [return<bool> effects(none)]
     isLink() {
       return(this.kind.equalsText("link"))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     isFunction() {
       return(this.kind.equalsText("function"))
     }
@@ -325,7 +325,7 @@ namespace build {
   }
 
   // True when `text` is a decimal i32: an optional minus sign, then one to ten digits, within the i32 range.
-  [return<bool>]
+  [return<bool> effects(none)]
   is_i32_text([String] text) {
     [i32 mut] start{0i32}
     if(text.count() > 0i32 && text.byteAt(0i32) == 45u8) {
@@ -485,13 +485,13 @@ namespace build {
       this.options.push(decl)
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     nodeCount() {
       return(this.nodes.count())
     }
 
     // True when some node is a function step: only the runner can execute the graph (the export says so).
-    [return<bool>]
+    [return<bool> effects(none)]
     hasFunctionStep() {
       for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
         if(this.nodes[i].isFunction()) {
@@ -544,7 +544,7 @@ namespace build {
     }
 
     // True when some node has the id `id`.
-    [return<bool>]
+    [return<bool> effects(none)]
     hasNode([StringView] id) {
       for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
         [String] candidate{this.nodes[i].id}
@@ -564,7 +564,7 @@ namespace build {
     }
 
     // The index of the first node with the id `id`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     indexOfNode([StringView] id) {
       for([i32 mut] i{0i32}, i < this.nodes.count(), i++) {
         [String] candidate{this.nodes[i].id}
@@ -576,7 +576,7 @@ namespace build {
     }
 
     // True when every step that node `index` waits for and that exists is marked in `done`.
-    [return<bool>]
+    [return<bool> effects(none)]
     waitsOnlyForDone([i32] index, [Reference<vector<i32>>] done) {
       for([i32 mut] i{0i32}, i < this.nodes[index].afterIds.count(), i++) {
         [String] dependency{this.nodes[index].afterIds[i]}

@@ -11,7 +11,7 @@ namespace files {
 
   // Whether `path` may be joined to a root directory: not empty, relative, no NUL or backslash byte, and no ".."
   // segment. Percent escapes are not decoded, so "%2e%2e" is just an ordinary (missing) file name.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   safe_relative_path([StringView] path) {
     if(path.empty()) {
       return(false)
@@ -40,7 +40,7 @@ namespace files {
 
   // The `Content-Type` for the extension of `path`: html, css, js, json, png, jpg, svg and txt are known; anything
   // else is application/octet-stream.
-  [public return<StringView>]
+  [public return<StringView> effects(none)]
   content_type_for([StringView] path) {
     if(path.endsWith(".html") || path.endsWith(".htm")) {
       return("text/html; charset=utf-8")

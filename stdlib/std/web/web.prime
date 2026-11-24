@@ -36,7 +36,7 @@ namespace web {
     [public static i32] keyUpEvent{16i32}
 
     // This control, with its clicks replacing region `target` (`WebApp.region`) instead of loading the page.
-    [public return<Control>]
+    [public return<Control> effects(none)]
     swapping([string] target) {
       [Control mut] control{this}
       control.target = target
@@ -112,7 +112,7 @@ namespace web {
   }
 
   // Whether the bit `bit`, a power of two, is set in `events`. There are no bitwise operators.
-  [return<bool>]
+  [return<bool> effects(none)]
   has_event([i32] events, [i32] bit) {
     [i32] above{events / bit}
     return(above - (above / 2i32) * 2i32 == 1i32)
@@ -120,7 +120,7 @@ namespace web {
 
   // The name of event bit `bit` in a control's routes and in `data-ps-on`: "mouseover", "mousedown", "mouseup",
   // "keydown" or "keyup".
-  [return<string>]
+  [return<string> effects(none)]
   event_name([i32] bit) {
     if(bit == Control.mouseOverEvent) {
       return("mouseover")
@@ -138,7 +138,7 @@ namespace web {
   }
 
   // The bit of the event called `name` in a route, 0 for "click", or -1 for a name no control has.
-  [return<i32>]
+  [return<i32> effects(none)]
   event_bit([StringView] name) {
     if(name.equalsText("click")) {
       return(0i32)
@@ -219,13 +219,13 @@ namespace web {
 
   // The request header that asks for a fragment instead of a page. Its value is the id of the region to answer with,
   // and the answer carries it back, so the script can tell a fragment from a page.
-  [public return<string>]
+  [public return<string> effects(none)]
   fragmentHeader() {
     return("X-PrimeStruct-Fragment")
   }
 
   // The path the app serves the fragment script at.
-  [public return<string>]
+  [public return<string> effects(none)]
   fragmentScriptPath() {
     return("/_web/app.js")
   }
@@ -239,7 +239,7 @@ namespace web {
 
   // Where to send the browser after a control's POST: the path and query of the `Referer` header, the page the form
   // was on, or "/" when there is none. Only the path is kept, so the redirect stays on this server.
-  [public return<StringView>]
+  [public return<StringView> effects(none)]
   backPath([Request] request) {
     [StringView] referer{request.header("Referer")}
     [i32] scheme{referer.indexOfFrom("://", 0i32)}
@@ -414,7 +414,7 @@ namespace web {
     }
 
     // The index of the view that answers `request`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     viewAt([Request] request) {
       [StringView] path{request.path}
       if(path.startsWith("/_on/") || path.startsWith("/_web/")) {
@@ -510,7 +510,7 @@ namespace web {
 
     // The index of the handler of event `bit` (0 for the click) of control `id` in `clicks`, `pointers` or `keys`, or
     // -1 when there is none.
-    [return<i32>]
+    [return<i32> effects(none)]
     handlerIndex([StringView] id, [i32] bit) {
       if(bit == 0i32) {
         return(this.clickIndex(id))
@@ -521,7 +521,7 @@ namespace web {
       return(this.pointerIndex(id, bit))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     clickIndex([StringView] id) {
       for([i32 mut] index{0i32}; index < this.clicks.count(); ++index) {
         [StringView] existing{textOf(this.clicks[index].id)}
@@ -532,7 +532,7 @@ namespace web {
       return(-1i32)
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     pointerIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.pointers.count(); ++index) {
         [StringView] existing{this.pointers[index].id.view()}
@@ -544,7 +544,7 @@ namespace web {
       return(-1i32)
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     keyIndex([StringView] id, [i32] bit) {
       for([i32 mut] index{0i32}; index < this.keys.count(); ++index) {
         [StringView] existing{this.keys[index].id.view()}
@@ -607,7 +607,7 @@ namespace web {
 namespace std {
 namespace http {
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   readsOnly<State>([/std/web/WebApp<State>] app, [Request] request) {
     return(app.viewAt(request) >= 0i32)
   }

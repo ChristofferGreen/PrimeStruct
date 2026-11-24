@@ -63,7 +63,7 @@ namespace server {
   }
 
   namespace ServeError {
-    [public return<string>]
+    [public return<string> effects(none)]
     why([ServeError] err) {
       if(err.code == -101i32 || err.code == -113i32) {
         return("cannot listen: sockets are not permitted here"utf8)
@@ -96,18 +96,18 @@ namespace server {
   }
 
   // How long a rejected connection is drained between rounds of input, and how many rounds it may take.
-  [return<i64>]
+  [return<i64> effects(none)]
   drain_wait_ms() {
     return(50i64)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   drain_rounds() {
     return(8i32)
   }
 
   // Whether a recv result means "nothing yet" rather than data, end of input or a failure.
-  [return<bool>]
+  [return<bool> effects(none)]
   not_ready([i64] got) {
     return(got == convert<i64>(timeoutCode()) || got == convert<i64>(againCode()) || got == convert<i64>(interruptedCode()))
   }
@@ -122,7 +122,7 @@ namespace server {
   }
 
   // Whether `socket` was ready in the last `poll` over `interest`; clears its byte so it is no longer watched.
-  [return<bool>]
+  [return<bool> effects(none)]
   take_ready([vector<u8> mut] interest, [i32] socket) {
     if(socket < 0i32 || socket >= interest.count()) {
       return(false)
@@ -169,7 +169,7 @@ namespace server {
   // Whether the connection stays open after the response to `request`, which is the `served + 1`th on it and sits in
   // the first `total` bytes read. The client must allow it, the cap must not be reached, and no byte may follow the
   // request: a pipelined request is not answered on this connection, so the response says `Connection: close`.
-  [return<bool>]
+  [return<bool> effects(none)]
   keeps_connection([Request] request, [ServerConfig] config, [i32] served, [i32] total) {
     if(!config.keepAlive || !request.allowsReuse()) {
       return(false)
@@ -396,7 +396,7 @@ namespace server {
   }
 
   // The most workers `serveWorkers` starts.
-  [return<i32>]
+  [return<i32> effects(none)]
   max_workers() {
     return(64i32)
   }
@@ -409,12 +409,12 @@ namespace server {
     return(store)
   }
 
-  [return<SlotBuffers>]
+  [return<SlotBuffers> effects(none)]
   slot_buffers([Reference<String>] store, [i32] capacity) {
     return(SlotBuffers{[base] store.data, [capacity] capacity})
   }
 
-  [unsafe return<Pointer<u8>>]
+  [unsafe return<Pointer<u8>> effects(none)]
   slot_bytes([SlotBuffers] buffers, [i32] slot, [i32] offset) {
     [Pointer<u8>] base{buffers.base}
     return(/std/intrinsics/memory/at_unsafe(base, slot * buffers.capacity + offset))
@@ -850,7 +850,7 @@ namespace server {
     }
 
     // Whether `next` answers `request` read-only (`readsOnly`).
-    [return<bool>]
+    [return<bool> effects(none)]
     readsOnlyRequest([Request] request) {
       return(reads_only_of<Next>(this.next, request))
     }
@@ -870,7 +870,7 @@ namespace server {
   }
 
   // `readsOnly` and `callView` of `inner`, whose type a `RequestLog` method spells as its `Next`.
-  [return<bool>]
+  [return<bool> effects(none)]
   reads_only_of<Inner>([Inner] inner, [Request] request) {
     return(readsOnly(inner, request))
   }
@@ -907,7 +907,7 @@ namespace server {
 namespace std {
 namespace http {
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   readsOnly<Next>([/std/http/server/RequestLog<Next>] handler, [Request] request) {
     return(handler.readsOnlyRequest(request))
   }

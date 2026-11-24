@@ -6,7 +6,7 @@ namespace std {
 namespace web {
 
   // The script's source.
-  [public return<string>]
+  [public return<string> effects(none)]
   fragmentScript() {
     return('// The fragment script of /std/web (docs/spec/stdlib-reference.md, /std/web), served at GET /_web/app.js. A form
 // with data-ps-target="id" posts with fetch and the header X-PrimeStruct-Fragment: id. An answer with that header
