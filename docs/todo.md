@@ -468,9 +468,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [ ] TODO-6234: A report of every definition that stays inline, with its blocker and the instructions it adds
+- [~] TODO-6234: A report of every definition that stays inline, with its blocker and the instructions it adds
   - owner: ai
   - status: ready
+  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: bytecode-inline-report
