@@ -113,17 +113,27 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | deferred | effects-transitive |
+| TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | ready | effects-inference |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
-| TODO-5806 | Sessions: a cookie and per-session state | deferred | web-sessions |
+| TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
+| TODO-6235 | `Request.cookie(name)` reads the `Cookie` header | ready | web-cookies |
+| TODO-6236 | `Response.setCookie` and `clearCookie` write `Set-Cookie` | ready | web-set-cookie |
+| TODO-6237 | `/std/os` `randomHex(byteCount)` from the operating system's entropy | ready | os-random |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
+| TODO-6240 | `primec --emit=ir` lowers for the VM target | ready | bytecode-vm-target |
+| TODO-6232 | The instruction source map names each source unit once | ready | bytecode-size |
+| TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | ready | bytecode-bench |
+| TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | ready | bytecode-inline-report |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
+| TODO-6238 | A backend-neutral contract test of the native UI ABI | ready | native-ui-contract |
+| TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6197 | Whether a method of a `/std` struct needs `[public]`, and `[private]` outside `/std` | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -156,17 +166,31 @@ of sync with them.
 ### Ready Now
 
 - TODO-5603 (startup): the real-launch baseline, measured by a person
+- TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
+- TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
+- TODO-6232 (bytecode-size): the instruction source map names each source unit once
+- TODO-6231 (effects-inference): the effects each definition demands, inferred over the call graph
+- TODO-6235 (web-cookies): `Request.cookie(name)`
+- TODO-6236 (web-set-cookie): `Response.setCookie` and `clearCookie`
+- TODO-6237 (os-random): `/std/os` `randomHex(byteCount)`
 
 ### Immediate Next 10
 
 1. TODO-5603
+2. TODO-6233
+3. TODO-6240
+4. TODO-6232
+5. TODO-6231
+6. TODO-6235
+7. TODO-6236
+8. TODO-6237
 
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
-- Native UI (docs/NativeUiPlan.md): TODO-5536, TODO-5533
-- Effects (docs/spec/language-core.md, Effects): TODO-5688
+- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now TODO-6234 (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
+- Effects (docs/spec/language-core.md, Effects): TODO-6231; deferred TODO-5688 (the rule for unannotated callees, options in the leaf)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); deferred TODO-6197 (methods of `/std` structs and `[private]` outside `/std`, decision needed); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
@@ -175,13 +199,13 @@ of sync with them.
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
-- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; deferred TODO-5806
+- Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions: TODO-6235 (`Request.cookie`), TODO-6236 (`setCookie`), TODO-6237 (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
 - Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
 
 ### Execution Queue
 
-Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6019 (a person measures startup), TODO-6198 (a `Slice` built over any pointer); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
+Run `ready` leaves in the order listed under Immediate Next 10: the leaves that fix leaks and lifecycle (TODO-5853) first. Ready outside Ready Now (the cap is eight): TODO-6019 (a person measures startup), TODO-6198 (a `Slice` built over any pointer), TODO-6234 (the inline report), TODO-6238 (the native UI contract test), TODO-6239 (shortcut parsing); the Wasm leaf found by the Wasm matrix config that is still ready: TODO-6141 (the heap; TODO-6124 tracks it). Decided 2026-11-20 by the owner; each block carries its `decision:` line. Lanes are independent except where a leaf names `blocked_on`; `Ready Now` is capped at eight.
 
 Multithreading (docs/MultithreadingPrototype.md, Threads For Real), after the startup lane (TODO-5772 is done); not above them in Ready Now or Immediate Next 10. In this order (TODO-5792 and TODO-5835, VM tasks and their lowering, are done, and so are TODO-5793, byte-region checks without a map search, TODO-5794, `optexe` per-thread heap arenas, TODO-5795, `optexe` threads for `[spawn]`, `Atomic<i32>` and `Atomic<i64>` in `/std/sync`, TODO-5797, `Mutex<T>` with `locked(body)`, TODO-5846, `optexe` faults when every task waits, TODO-5798, bounded `Channel<T>`, TODO-5656, the atomic `SharedString` owner count, TODO-5802, `serveWorkers`, and TODO-5803, the apps on workers, measured, and the `SharedString` count inside the text block, are done): arm64 native is done: TODO-5799 (pthreads; TODO-5942, TODO-5943), TODO-5800 (per-thread heaps) and TODO-5801 (atomics, `Mutex`, `Channel`; TODO-5950, TODO-5951). TODO-5799 is done, and TODO-5893 (an unused `/std/tuple/*` import is reported as an unknown import path) is done too, and TODO-5894 (tuple destructuring and the destructured multi-wait inside a nested block are expanded; TODO-5849, each destructured multi-wait binding has its own result type, is done) is done too, and TODO-5847 (spawned calls with builtin `map<K, V>` or owned sum parameters or results run as tasks, done with TODO-5994, `wait(t).count()` of a stdlib `Vector` result waits twice, is done; TODO-5992, builtin `vector<T>` parameters and results, TODO-5993, the stdlib `Vector` and `Map` structs, TODO-5845, the same for `String`, struct and closure values, and TODO-5895, `copy` and `move` scalars and structs, are done) (TODO-5807, destructured multi-wait, TODO-5790, sendable spawn arguments, and TODO-5791, every `Function` sendable by construction, and TODO-5848, `return(wait(t))` of a `String` task result, are done). TODO-5804 (read-only handlers with `app.view` under `RwLock`, with the compile error for a view that writes its state) is done; deferred: TODO-5806 (sessions); TODO-5805 (keep-alive) is done; TODO-5854 (a `Mutex` or `Atomic` handle keeps a copy of its first value; the unstored `ctor_only` field, on the construction-only field rule of TODO-5853) is done. Found with `Mutex` (TODO-5852, `wait(a, b)` of two `Task<void>`, is done) in the closures lane: TODO-5934 (a `Reference`-returning call read as a value yields its referent, found with TODO-5850), TODO-5850 (a `Reference`-returning call as a closure argument) and TODO-5851 (a `[ref]` closure written in a generic call) are done. Found with `Channel` and ready, in the Result and control flow lane: TODO-5855 (a method call on a `pick` payload of struct type), TODO-5856 (`pick` on a call result frees an owning payload), TODO-5857 (a `vector<T>` payload reads its count in a `pick` arm), TODO-5858 (`some<Vector<i32>>` of a fresh vector frees it), TODO-5859 (a `pick` expression yields a vector), TODO-5860 (moving a payload binding does not poison a later binding of the same name), TODO-5866 (a closure captures a `pick` payload binding), TODO-5877 (a field an arm of a `pick` expression yields is copied), TODO-5879 (a `pick` expression's result owns a value of its own), TODO-5880 (a payload moved out of a sum local leaves the local moved-from, and a payload of a borrowed sum cannot be moved or returned), TODO-5873 (a sum temporary passed as an argument is destroyed after the call), TODO-5874 (assigning to a `mut` sum local destroys the payload it held), TODO-5883 (assigning to a `mut` builtin vector local destroys what it held and copies a place), TODO-5876 (`return(pick(...))` of a vector and assignment from a `pick` expression), TODO-5875 (`count()` on a local declared `Vector<T>` lowers), TODO-5878 (a `[move name]` lambda capture compiles), TODO-5884 (assignment to a `mut` vector parameter and to an inferred vector-of-struct local keeps one owner), TODO-5882 (a vector of sums destroys the payloads of its elements), TODO-5885 (a vector temporary that is only read is destroyed), TODO-5889 (`a = move(b)` of a vector local takes the vector over), TODO-5890 (the arms of an assigned `pick` may open on the next line), TODO-5881 (a call takes a call to the same definition as its argument on the VM), TODO-5888 (an element of a vector temporary read as a struct or a `String`) and TODO-5887 (`remove_at` and `remove_swap` compile on a vector of sums) are done, and found with them: TODO-5886 (`push` on a local declared `Vector<T>` resolves) is done, and TODO-5978 (a `Vector<String>` leaks what `pop` and `clear` remove and faults after `remove_at`; its element reads by `at` and `[]`) is done, and found with it: TODO-5991 (a field read of a struct a call returns leaves the temporary's copy undestroyed) is done; TODO-5891 (a returned vector field or vector element of a local is a copy) and TODO-5892 (a block expression whose value is an owning local hands it over once) are done. Found with `serveWorkers` (TODO-5865, a `Function` local given positionally to a brace constructor, TODO-5864, a lambda in a generic definition naming its type parameters, and TODO-5935, a lambda parameter naming a struct of its namespace, are done): TODO-5862 (`serveWorkers` on the VM over a scripted net, done), and ready: TODO-5866 (a closure captures a `pick` payload binding). Found measuring the apps on workers (TODO-5803, done): TODO-5867 (a string heap that alternates between block sizes keeps its chunks) and TODO-5869 (1 worker as fast as `serve`; the 32 KB form reached 2.41x with 4 workers, not 2.5x) are done; TODO-5940 (a load generator that costs less per connection than the servers it measures, done: compiled, 1.4 us of user CPU per request, and the kernel's loopback setup is the ceiling; TODO-5871 found every server held to about 14,600 new connections a second by the generator and the kernel's loopback setup, which caps the form with 4 workers at 2.41x); TODO-5871 (that measurement), TODO-5872 (a byte of another thread's block is checked on a slow path, so the worker parses from a copy) and TODO-5870 (a VM program that uses tasks runs its string code on the fast kernel) are done; and in the Result and control flow lane TODO-5868 (a definition's `on_error` handler flows into nested blocks and a block-level `on_error` overrides it, so `serve(app)?` compiles in an `if` block of `main`) and TODO-5936 (a diagnostic in `main` of a program that imports `/std/http/server` reported a stdlib position, found with it) are done.
 
@@ -252,11 +276,31 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-06
   - phase: Effects
   - parallel_track: effects-transitive
-  - scope: TODO-5687 checks only the effects a callee declares. A callee without `[effects]` runs with the default set (`io_out`), so the full rule would also require the caller to hold the callee's defaults. Measured with the TODO-5687 prototype (semantics defaults `io_out io_err`), the full rule failed 527 of 2840 semantics cases (narrow rule: 47) and 9 of the 42 examples that compile (narrow rule: 1), mostly inside stdlib lifecycle helpers such as `Vector.Copy`/`Destroy` and `SoaColumn.Destroy`, which declare `heap_alloc` only and call unannotated helpers. Decide whether unannotated helpers should infer their effects from their bodies (or default to none) before turning on the full transitive rule.
+  - depends_on: TODO-6231
+  - scope: TODO-5687 checks only the effects a callee declares. A callee without `[effects]` runs with the default set (`io_out io_err`), so the full rule would also require the caller to hold the callee's defaults. Measured 2026-11-24 (`primec --emit=ir` of every `examples/**/*.prime`, with a local patch that treats an unannotated callee as declaring the default set): 10 of the 43 examples that compile today fail (`collections`, `collections_brackets`, `features_overview`, `soa_ecs`, `http_hello`, `text_editor`, `web_app`, `hello_button`, `hello_window`, `spinning_cube`), every one of them on a helper that is pure (`StringView.count requires io_out effect`, `vectorCheckShape`, `soaColumnDropRange`, `GfxError.why`), so the diagnostic would be wrong as well as noisy. The earlier measurement (TODO-5687): 527 of 2840 semantics cases fail. The rule for unannotated callees changes what every program may write, so the user decides it; TODO-6231 first records what each definition really demands, which every option below needs.
+  - options_to_decide:
+    - A. Infer: an unannotated definition's effects are what its body demands (builtin effects plus the effects of what it calls, a fixpoint over the call graph; recursion is its own fixpoint). A caller must hold the inferred set; an explicit `[effects(...)]` stays a declaration and a ceiling. Cost: one analysis component (TODO-6231 builds it), no stdlib migration (the 10 examples above pass, because the pure helpers infer the empty set), diagnostics name the inferred effect and the helper that demands it. Risk: an unannotated user function that prints now makes a caller with `effects(heap_alloc)` only fail, which is the intended catch.
+    - B. Default to the declared default set and annotate: the strict rule as measured. Cost: annotate the stdlib helpers that are pure (hundreds), but there is no way to write "no effects" on a definition today (`[effects()]` is a parse error, `transform argument list cannot be empty`), so this option also adds a spelling (a language change); update tests (527 cases) and the 10 examples; simplest rule to state, loudest churn.
+    - C. Keep the narrow rule and add a warning (or a `primec --lint-effects` report) for an unannotated callee whose inferred set is not covered by the caller. Cost: no language change; nothing is enforced.
+  - recommendation: A. It is the only option that makes the rule exact without touching the stdlib; C is the fallback if inference proves too slow (measure in TODO-6231).
   - acceptance:
-    - a rule for unannotated callees in docs/spec/language-core.md (Effects), stdlib, examples and tests annotated to match, and the full rule enforced in semantics
+    - the chosen rule stated in docs/spec/language-core.md (Callee effects), enforced in semantics, with positive and negative tests (an unannotated pure helper called from a `[effects(heap_alloc)]` caller passes; an unannotated printing helper does not), the examples and stdlib still compile
     - full release gate green
   - stop_rule: call-site effect checks only; no new effects.
+
+- [ ] TODO-6231: Semantics records the effects each definition demands, and infers them over the call graph
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Effects
+  - parallel_track: effects-inference
+  - scope: Analysis only; no diagnostic changes. The validator checks effects at about fifteen sites (`requires heap_alloc effect`, `File requires ...`, `print_line requires io_out effect`, `dispatch requires gpu_dispatch effect`, the pathspace builtins, atomics, locks, channels, tasks, and `validateCalleeEffects` for declared callee effects: `src/semantics/SemanticsValidatorPassesEffects.cpp`, `SemanticsValidatorStatement.cpp`, `SemanticsValidatorExprScalarPointerMemory.cpp`, `SemanticsValidatorExprResultFile.cpp`, `SemanticsValidatorExprGpuBuffer.cpp`, `SemanticsValidatorExprCollectionLiterals.cpp`, `SemanticsValidatorStatementBuiltins.cpp`). Route them through one `requireEffect(effect)` helper that also records the demand against the definition being validated, record each resolved call edge (caller to callee, at the `validateCalleeEffects` call in `SemanticsValidatorExprCallResolveRules.cpp`), and add a free-function component `src/semantics/EffectInference.{h,cpp}` that turns demands and edges into one inferred effect set per definition (fixpoint, recursion and mutual recursion handled, a definition with an explicit `[effects]` keeps its declared set as the answer and its own demands are only checked against it). Expose the result through a header under `include/primec/testing/` for tests.
+  - acceptance:
+    - unit tests of `EffectInference` alone (a chain, a diamond, direct and mutual recursion, an explicit declaration cutting the chain) and a semantics test that reads the inferred set of `/std/text/view/StringView/count` (empty), `/std/collections/vector/vectorCheckShape`, a `print_line` helper (`io_out`) and a helper that calls `/std/net/listen` (`net_io`)
+    - the time of `primec --emit=ir examples/apps/todo_web/main.prime` measured before and after and written into docs/todo_log.md under TODO-5688 (the cost decides option A against option C)
+    - no existing diagnostic or test output changes; full release gate green
+  - stop_rule: recording and inference only; the call-site rule stays TODO-5688's.
+  - repro: `grep -rn "requires .* effect" src/semantics/*.cpp` lists the sites; the measurement is in TODO-5688's scope.
 
 - [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
@@ -342,16 +386,61 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the absolute-path failure only.
   - repro: `printf` the program `[return<int> effects(io_out, file_read) on_error<FileError, /on_file_err>] open_missing() { [File<Read>] file{File<Read>("/nonexistent_primestruct_dir/missing.txt")?} return(0i32) }` with `on_file_err([FileError] err) { print_line(err.status()) }` and a `main` that prints `open_missing()`, compile it with `--emit=wasm --wasm-profile wasi` and run the matrix runner (`WasmNodeRunner` in tests/unit/program_matrix/program_matrix.h) eight times: most runs exit 139 or 133 after printing `2` and `2`.
 
-- [ ] TODO-5806: Sessions: a cookie and per-session state
+- [ ] TODO-5806: Sessions: a session store and the handler API
   - owner: ai
   - status: deferred
   - created_at: 2026-11-09
   - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
   - parallel_track: web-sessions
-  - scope: Give `WebApp<State>` sessions: a random session id in a cookie (HttpOnly, SameSite), a session store in the app state with expiry, and handlers that receive their session's data. Deferred: needs the cookie parsing and a random source, and the design of how a handler names its session type.
+  - depends_on: TODO-6235, TODO-6236, TODO-6237
+  - scope: Sessions for `WebApp<State>` and `AppRouter<State>`: a random session id in a cookie (HttpOnly, SameSite=Lax), a store of session data with expiry (`/std/os` `monotonicMs`), and handlers that reach their session's data. The three parts that need no design are their own leaves: cookie parsing (TODO-6235), `Set-Cookie` (TODO-6236) and a random source (TODO-6237). What is left is the public API, and it is the owner's to choose: how a handler names its session type, and what a read-only `view` may do (`serveWorkers` runs views under the read lock, so a view cannot create or change a session).
+  - options_to_decide:
+    - A. A `Sessions<Data>` value held in the app's `State` (`state.sessions`): a handler writes `[Reference<Data>] session{state.sessions.open(request, response)}` (creates the session and sets the cookie when the request has none, refreshes the expiry) and `state.sessions.find(request)` for a read that creates nothing. No change to `WebApp`/`AppRouter`, no new type parameter, the session type is the field's, and a `view` can call `find` (read-only) but not `open`. Cost: the handler calls it explicitly. Recommended: it keeps principle 2 (state comes in as the handler's parameter) and adds one stdlib struct.
+    - B. A second type parameter, `WebApp<State, Session>`, and a handler form `(State, Session, Request, Response)`; the framework opens the session before the handler runs. Cost: every handler alias and the `serveWorkers` plumbing get a variant, a view cannot know whether to create a session, every existing app is untouched but the alias set doubles.
+    - C. An untyped per-session string map on the request (`request.session.get("user")`). Cost: smallest API, no type safety, values copied through `String`; a poor fit for the language's typed state.
+  - also_decide: whether the cookie carries `Secure` by default (there is no TLS in `serve`, so a default `Secure` cookie never reaches the server over plain HTTP; recommendation: an option, off by default, documented), session lifetime defaults (recommendation: 30 minutes idle, a `SessionConfig` with `idleMs`), and whether session ids are 16 random bytes in hex (recommendation: 16 bytes, 32 hex digits, compared in constant time).
   - acceptance:
-    - to be set when the leaf is un-deferred
-  - stop_rule: sessions in `WebApp`.
+    - the decision recorded here and the leaf re-sliced (store with expiry and tests on the scripted clock; the handler API; the `todo_web` example gets a per-session counter; docs/spec/stdlib-reference.md and docs/WebAppsPlan.md updated)
+    - full release gate green
+  - stop_rule: sessions in `WebApp`/`AppRouter`; no persistence across restarts, no CSRF tokens.
+
+- [ ] TODO-6235: `Request.cookie(name)` reads the `Cookie` header
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: web-cookies
+  - scope: `Request` (`stdlib/std/http/http.prime`) has `header(name)` and no cookie access. Add `cookie(name) -> StringView` (the value of the first pair named `name` in the `Cookie` header, empty when there is none) and `hasCookie(name) -> bool`, parsing `name=value; name2=value2` per RFC 6265 section 4.2.1: pairs split at `;`, one optional space after it, names compared exactly (case-sensitive), the value kept as sent (surrounding double quotes removed), a pair without `=` skipped, no percent-decoding. A view into the request buffer, like the other `Request` accessors, so nothing allocates. Document in docs/spec/stdlib-reference.md (next to `header`).
+  - acceptance:
+    - a matrix fixture in tests/fixtures/http (suite `primestruct.backend.http`, the `parse_matrix.prime` style, VM and optexe): no header, one pair, several pairs, a quoted value, a pair without `=`, a name that is a prefix of another (`a` against `ab=1`), a repeated name (the first wins), spaces after `;`, an empty value
+    - full release gate green
+  - stop_rule: reading cookies only; `Set-Cookie` is TODO-6236.
+
+- [ ] TODO-6236: `Response.setCookie` and `clearCookie` write `Set-Cookie`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: web-set-cookie
+  - scope: Add to `Response` (`stdlib/std/http/http.prime`) `setCookie(name, value)` and `setCookie(name, value, maxAgeSeconds)` that add `Set-Cookie: name=value; Path=/; HttpOnly; SameSite=Lax` (plus `; Max-Age=N` for the second form) through `header()`, and `clearCookie(name)` that adds the same cookie with an empty value and `Max-Age=0`. Name and value bytes outside the RFC 6265 cookie-octet set (controls, space, `"`, `,`, `;`, `\`, non-ASCII) are refused by dropping the header and returning `false` from the call (the methods return `bool`), so a handler cannot split the header block; `header()` already drops CR and LF. A `Secure` attribute is a later, separate parameter (TODO-5806 decides).
+  - acceptance:
+    - a fixture beside tests/fixtures/http/response_bytes.prime checking the serialized bytes of each form, a refused value (`;` and a space inside), and two cookies in one response (two header lines)
+    - docs/spec/stdlib-reference.md lists the methods and the attributes they always write
+    - full release gate green
+  - stop_rule: writing the header only; no session logic.
+
+- [ ] TODO-6237: `/std/os` `randomHex(byteCount)` from the operating system's entropy
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Web apps (docs/WebAppsPlan.md, Concurrency)
+  - parallel_track: os-random
+  - scope: There is no random source in the stdlib or the shims today (`grep -rn "getentropy\|arc4random\|urandom" src stdlib` finds nothing). Add `[host] ps_os_random_bytes([Pointer<u8>] buffer, [u64] count) -> i32` to `stdlib/std/os/os.prime` and `os_posix.cpp` (`getentropy` in chunks of at most 256 bytes: it exists on macOS and on glibc 2.25 and later; 0 on success, -100 - errno on failure), and `std::os::randomHex(byteCount) -> String` (lower-case hex, an empty `String` when the call fails or `byteCount` is outside 1..64) that fills a heap buffer and formats it. Like the other `/std/os` functions it takes no effect; the VM has no binding (documented in docs/spec/stdlib-reference.md next to `envOr`), so tests bind a scripted host function the way tests/unit/runtime/test_vm_serve_workers.cpp binds `ps_os_monotonic_ms`.
+  - acceptance:
+    - an optexe test linking `os_posix.cpp` that calls `randomHex(16)` twice: 32 hex digits each, different values, and `randomHex(0)`, `randomHex(65)` empty; a VM test with a scripted binding checking the hex formatting of known bytes
+    - docs/spec/stdlib-reference.md (Operating system) documents it and says it is not for keys outside sessions (it is the OS's CSPRNG, so it is fine for session ids)
+    - full release gate green
+  - stop_rule: random bytes and hex only; no PRNG with a seed, no `Random` struct.
 
 - [ ] TODO-5821: The first toolbar of a launch does not hold up the first frame
   - owner: human
@@ -422,12 +511,73 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: bytecode-startup
-  - scope: App startup is dominated by bytecode size: a program using the PNG decoder lowers to 12.7 MB of PSIR (lowering inlines almost every call) and takes ~80 ms to load on the runtime-only VM, against ~1 ms for a small program. Add a startup benchmark (bytecode size and load+run time of `embed_bytecode_runner` for a small, a medium and the PNG program) to the benchmark suite, then cut both: a size-oriented lowering mode for app bundles (real calls instead of inlining beyond a size threshold) and lazy decoding/validation of function bodies on first call.
+  - depends_on: TODO-6232, TODO-6233, TODO-6234, TODO-6240
+  - scope: The leaf's premise was measured again on 2026-11-24 (release build, `primec --emit=ir` of a program that reads a PNG, `/std/image/png/read`): the bytecode is 4,381,773 bytes, not 12.7 MB (real calls landed since), and 3,949,939 of them (90%) are the instruction source map: 33,078 entries that each repeat the source unit path (about 119 bytes an entry); the instructions are 430,014 bytes (32,596 instructions of 13 bytes, 32,582 of them in `/main`, 14 other functions). `primevm png.psir` runs 0.04 s against 0.02 s for a 372 byte program, so loading costs about 20 ms. Two causes, both measured: `primec --emit=ir` lowers for the `Serialized` target, which has no address-ABI real calls for structs and strings (`realCallAllowStructs` is false in `src/ir_lowerer/IrLowererLowerSetupStage.cpp`), although `Script::loadBytecode` validates the module for the VM target; a local experiment that lowered `--emit=ir` for the VM target (not committed) took the PNG program from 4,381,773 to 2,644,063 bytes, `examples/apps/text_editor` from 22,186,715 to 6,445,640, `examples/apps/web_app` from 14,610,447 to 4,749,980, `examples/apps/http_hello` from 12,613,431 to 4,012,423 and `examples/native_ui/hello_button` from 1,671,596 to 1,415,917, and `examples/apps/todo_web`, which `--emit=ir` rejects today (`IR backend does not support recursive calls: run_workers<...>`, a `RwLock` parameter), then saved (8,493,566 bytes). TODO-6240 makes that change; TODO-6232 (source units named once) takes the PNG file to about 0.9 MB after it; TODO-6233 (the benchmark) keeps it there; TODO-6234 (a report of what stays inline and why) names the blockers that keep `/main` at 32 k instructions. Lazy decoding of function bodies is not worth its format change while one function holds 99.9% of the instructions; the part of the original scope that is left is lifting the top inline blockers the report names, and a size threshold for real calls.
+  - options_to_decide:
+    - A. Close this leaf when TODO-6240, TODO-6232 and TODO-6233 have landed, and file one leaf per blocker TODO-6234 names (each a plain value outcome: a smaller module). Cost: none now. Recommended.
+    - B. Also build lazy decoding of function bodies (a table of body offsets in the module, `Script::loadBytecode` validating a body on its first call). Cost: a schema change and a lazy validator that must keep every load-time fault (IR validation rejects hostile bytecode at load today, docs/Embedding.md); it pays only for programs with many functions of which few run, which the PNG program is not.
+    - C. A size-oriented lowering mode for app bundles (real calls beyond an instruction threshold even for shapes that stay inline today). Cost: a lowering flag, a second code path to test, a runtime cost per call; decide after TODO-6234 shows which shapes dominate.
   - acceptance:
-    - the startup benchmark is in `scripts/benchmark.sh` with a baseline; the PNG program's bytecode shrinks at least 4x and loads at least 4x faster, with identical program output
+    - the choice recorded here and the leaf either closed (A) or re-sliced into leaves with a measured acceptance each (B, C)
+  - stop_rule: bytecode size and load time only.
+  - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
+
+- [ ] TODO-6232: The instruction source map names each source unit once
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-size
+  - scope: `serializeIr`/`deserializeIr` in `src/ir/IrSerializer.cpp` write every `instructionSourceMap` entry as `debugId, line, column, provenance` plus the whole `sourceUnit` string; 33,078 entries of the PNG program (`stdlib/std/image/image.prime` reads) take 3,949,939 of its 4,381,773 bytes. Write the distinct source units once (a table of strings) and each entry as a table index; bump `IrSchemaVersion` to 41 and keep reading versions down to `IrSchemaMinimumSupportedVersion` (the reader branches on the version, as it does for v38 and v39); document the change in the schema notes next to `IrSchemaVersion` and in docs/spec/vm-design.md (Bytecode). Also check `deserializeIr` for the per-entry `std::string` copy and share the strings in the in-memory `IrModule` only if the measurement shows the load still spends time there.
+  - acceptance:
+    - `primec --emit=ir` of the PNG program (`/std/image/png/read` of `input.png`, as in tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_wasi_png_decode.cpp) is at most 1.0 MB (4,381,773 bytes before); the program output is identical on the VM from the new bytecode, and a v40 file written by the previous compiler (a checked-in golden under tests/fixtures) still loads and runs
+    - `primevm png.psir` wall time before and after (median of 10) recorded in docs/todo_log.md under TODO-5536
+    - a round-trip test with two source units, an empty one and a long path; full release gate green
+  - stop_rule: the serialized form of the source map only; the in-memory `IrModule` layout stays unless the measurement says otherwise.
+  - repro: `primec --emit=ir png.prime -o png.psir && ls -l png.psir` (4,381,773 bytes on 2026-11-24).
+
+- [ ] TODO-6233: A startup benchmark: bytecode size and load time of a small, a medium and the PNG program
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-bench
+  - scope: Add to `scripts/benchmark.sh` (and its report/baseline JSON, `benchmarks/benchmark_baseline.json`, checked by `scripts/check_benchmark_report.py`) four bytecode programs under `benchmarks/startup/`: a 3-line program, `examples/native_ui/hello_button.prime` (medium), `examples/apps/text_editor/main.prime` (the PrimeScroll-like editor, the large app) and the PNG reader. For each, record the byte size of `primec --emit=ir` output (deterministic; regress at `--size-regression-ratio`) and the median wall time of `primevm <file>.psir` over `--runs` (timing noise handled like the other rows). The `embed_bytecode_runner` of examples/embed is not built in every configuration, so `primevm` on a `.psir` is the load-and-run probe.
+  - acceptance:
+    - `./scripts/benchmark.sh --build-dir build-release` prints and records the eight rows; the baseline file holds them; a size over the ratio fails `check_benchmark_report.py`
+    - the four sizes at the baseline are written in docs/NativeUiPlan.md section 1 (replacing the 2026-10-08 table's 12.7 MB), with the date and machine
     - full release gate green
-  - stop_rule: bytecode size and load time only; split lazy loading out if the size change is large.
-  - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path (the startup audit of TODO-5603 found the 0.79 MB executable's size makes no measurable difference warm). It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
+  - stop_rule: the benchmark and its baseline; no change to lowering or the format.
+  - repro: the sizes today are 372 bytes (small), 1,671,596 (hello_button), 22,186,715 (text_editor) and 4,381,773 bytes (PNG); `primevm` of the small and the PNG one takes 0.02 s and 0.04 s.
+
+- [ ] TODO-6234: A report of every definition that stays inline, with its blocker and the instructions it adds
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-inline-report
+  - scope: `/main` of the PNG program holds 32,582 of the module's 32,596 instructions: nearly every call is expanded in place, although `computeRealCallEligibleDefinitionPaths` (`src/ir_lowerer/IrLowererLowerSetupStage.cpp`) and `realCallBlockerReason` (`src/ir_lowerer/IrLowererRecursionAnalysis.cpp`) already know why a definition is not a real call (a sum parameter, `on_error`, `try`, a `/std/collections/` record, a lifecycle helper, a packed `Result` without `/std/result`, ...). Add `--dump-stage inline-report` (stages are listed in `primec --help`): one line per definition the program reaches, sorted by instructions added, with `real call`, or the blocker text from `realCallBlockerReason` (extend it to return a stable code per reason), the number of call sites and the instructions its expansions add (counted in the lowerer where it expands). Documented in docs/spec/vm-design.md (Real calls) next to the rules it reports.
+  - acceptance:
+    - the report of the PNG program is written into docs/todo_log.md under TODO-5536 with the top five blockers by instructions added, and one TODO leaf is filed per top blocker (scope, acceptance with a measured instruction count, stop_rule)
+    - a test of the report for a program with one real call, one `on_error` definition and one sum parameter; golden-style
+    - full release gate green
+  - stop_rule: the report and the leaves it leads to; no change to which definitions are real calls.
+  - repro: `primec --dump-stage ir-lowered png.prime | grep '^function'` shows `/main ... instructions=32582` and 14 small functions.
+
+- [ ] TODO-6240: `primec --emit=ir` lowers for the VM target
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: bytecode-vm-target
+  - scope: `--emit=ir` (`src/ir/IrBackends.cpp`, `validationTarget` returns `IrValidationTarget::Serialized`) lowers without the address ABI of real calls (`realCallAllowStructs` and `realCallAllowStrings` are false for `Serialized` in `IrLowererLowerSetupStage.cpp`), so every struct, `String` and vector call is expanded in place; yet the only consumers of a `.psir` run it on the VM (`Script::loadBytecode` validates for `IrValidationTarget::Vm`, `primevm`, `--link`, library archives). Lower `--emit=ir` for the VM target, as the embed API's `ScriptEngine` does for `saveBytecode`. Keep `Serialized` for the checks that name it (host calls allowed), and say in docs/Embedding.md and docs/spec/vm-design.md (Bytecode) that a `.psir` is VM bytecode. The experiment of 2026-11-24 (one line changed, not committed): PNG reader 4,381,773 to 2,644,063 bytes, `examples/apps/text_editor` 22,186,715 to 6,445,640, `examples/apps/web_app` 14,610,447 to 4,749,980, `examples/apps/http_hello` 12,613,431 to 4,012,423, `examples/native_ui/hello_button` 1,671,596 to 1,415,917, and `examples/apps/todo_web` compiles (8,493,566 bytes) where `--emit=ir` fails today with `IR backend does not support recursive calls: run_workers<RequestLog<WebApp<TodoList>>, serveWorkers__lambda7> (it stays inline because parameter `app` is a `RwLock<...>`)`: a threaded program cannot be saved as bytecode, which this also fixes.
+  - acceptance:
+    - the sizes above (or smaller) with `scripts/benchmark.sh` rows of TODO-6233 if it has landed, otherwise measured with `ls -l` and written into docs/todo_log.md under TODO-5536
+    - `primec --emit=ir examples/apps/todo_web/main.prime -o x.psir` succeeds, and a test that saves a program with `serveWorkers`-style tasks and loads it with `Script::loadBytecode`
+    - every test that runs a program from `--emit=ir` bytecode, `bundle_macos_app.sh` (checked by its CTest guard without opening a window) and the golden IR dumps pass; programs print the same output from the old and the new bytecode on the VM; a v40 `.psir` still loads
+    - full release gate green
+  - stop_rule: the target `--emit=ir` lowers for; no format change (TODO-6232), no new lowering rules.
+  - repro: `primec --emit=ir examples/apps/todo_web/main.prime -o x.psir` fails today.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai
@@ -435,12 +585,43 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-10-08
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: native-ui-platforms
-  - scope: Implement the version-0 ABI with Win32 common controls and with GTK 4, following the coverage matrix in docs/NativeUiPlan.md section 9; split per platform before starting.
+  - depends_on: TODO-6238, TODO-6239
+  - scope: Implement the version-0 ABI (130 functions, `include/primec/ui/NativeUi.h`) with Win32 common controls and with GTK 4, following the coverage matrix in docs/NativeUiPlan.md section 9. What is known on 2026-11-24: the AppKit backend is 5,369 lines (`src/ui/appkit/NativeUiAppKit.mm`) and the headless one 3,100 (`src/ui/headless/`); a native program reaches a backend by name (the direct native build on macOS loads `libps_ui_appkit.dylib` through `LC_LOAD_DYLIB`, `scripts/build_native_app.sh`); `optexe` programs reach shims by `--link-arg` (the `/std/os` precedent: `os_posix.cpp`); primec has almost no Windows host support (`_WIN32` appears in four files, none in the build of the compiler's backends); nothing on this Mac can compile or run GTK or Win32 code (no GTK headers, no windows may open), so a backend cannot be verified here. The two slices that can be prepared and verified on macOS are TODO-6238 (a backend-neutral contract test) and TODO-6239 (portable shortcut parsing). The rest is platform scope, and it is the owner's.
+  - options_to_decide:
+    - A. Linux first, GTK 4, shipped as an `optexe` program plus a C++ shim file linked with `--link-arg` (`stdlib/std/ui/native/ui_gtk4.cpp`, one `.cpp` file per ABI group), verified by the contract test of TODO-6238 under `xvfb-run` (or `GDK_BACKEND=broadway`) in `.github/workflows/release-gate.yml` on ubuntu. Windows later, after the compiler itself runs on Windows. Cost: a Linux CI image with `libgtk-4-dev`; the first backend is about the size of the headless one plus widgets (estimate 4,000 lines), done in slices per ABI group (window and text view, menus, controls, dialogs, toolbar, tabs, markdown preview). Recommended.
+    - B. Both platforms in parallel, Windows through the VM runner (`primestruct_app_runtime` with bytecode, built by MSVC or clang-cl) and Win32 plus RichEdit. Cost: needs a Windows CI machine and the compiler's runtime library building on MSVC (not verified; `CMakeLists.txt` has MSVC branches at lines 138 and 1154 only); the VM runner is the only route until the native emitters have a PE target.
+    - C. Linux through Qt instead of GTK 4 (one toolkit also covers Windows). Cost: a large dependency with an LGPL or commercial licence and a moc step; the plan (section 9) chose native widgets per platform so the app looks native.
   - acceptance:
-    - the editor scenarios pass on each platform by hand; the coverage matrix is updated to what each backend does
+    - the choice recorded here, then one leaf per platform and per ABI group, each verified by the contract test running on the new backend
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
-  - notes: deferred: after the macOS editor works.
+  - notes: deferred until the owner chooses; a backend leaf needs a machine that can build and run it.
+
+- [ ] TODO-6238: A backend-neutral contract test of the native UI ABI
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-contract
+  - scope: The UI tests of `tests/unit/ui/` drive the headless backend through its own scripting (`primec::ui::headless::`), so none of them can run against another backend. Add `tests/unit/ui/test_native_ui_contract.cpp`: scenarios written only against `include/primec/ui/NativeUi.h` (C calls, no `headless::` include) in a fixture class `ContractBackend` whose only backend-specific parts are `setUp()` and `tearDown()` (headless: `reset()` and the scripted quit; a later backend: its own init). Cover the calls that need no event loop and no visible window: `ps_ui_init` twice (the second returns false), `ps_ui_platform`, handles of a window, text view, menu, checkbox, popup, label (non-zero; `0` for a bad parent), `_set_text`/`_get_text` round trips including UTF-8 and an empty string, `ps_ui_text_view_add_style` byte ranges (rejected off a code point boundary), `ps_ui_text_view_load_file`/`save_file` on a file under the test scratch directory and `ps_ui_last_error` after a missing file, `ps_ui_pref_*` and `ps_ui_recent_*` round trips (with `PRIMESTRUCT_UI_RECENT`), `ps_ui_supports` answers for each feature id, the off-main-thread fault for a call from a second thread, and the `ps_ui_abi_version` of 0. List the scenarios in docs/NativeUiPlan.md section 9 as the contract a backend must pass. Register the suite per the test-registration rules.
+  - acceptance:
+    - the suite passes on the headless backend in the release gate; each scenario names the ABI function it checks; the doctest case count and `tests/TEST_INVENTORY.md` are regenerated
+    - docs/NativeUiPlan.md section 9 gains a "Backend contract" paragraph naming the test, the `ContractBackend` seam and how to run it against another backend
+    - full release gate green
+  - stop_rule: the contract test and its documentation; no backend code changes (a divergence the test finds in the headless backend is filed as a TODO leaf).
+
+- [ ] TODO-6239: Shortcut text is parsed once, for every backend
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md)
+  - parallel_track: native-ui-shortcuts
+  - scope: A shortcut such as `"cmd+shift+s"` is parsed inside the AppKit backend (`parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm`, which maps `cmd` to Command), and the portable rule (docs/NativeUiPlan.md section 4: `cmd` means Command on macOS and Ctrl elsewhere) is documented only. Add `include/primec/ui/NativeUiShortcut.h` with `struct ParsedShortcut { std::string key; bool primary; bool shift; bool alt; bool control; bool valid; }` and `parseShortcut(const char *text)`, where `primary` is what `cmd` names and each backend maps it (Command, Ctrl) and `control` is the literal `ctrl`; the same function reports unknown modifiers and keys as `valid == false`. Move the text parsing out of `parseShortcut` in the AppKit file so it only maps the parsed value to `NSEventModifierFlags`, and let the headless backend validate the shortcuts it records with it (a menu item with a bad shortcut then fails the same way on every backend; check what the AppKit backend does today and keep that behavior).
+  - acceptance:
+    - unit tests of `parseShortcut` for every shortcut the repo's apps and stdlib use (`grep -rn '"cmd+' stdlib examples`), and for `ctrl`, `alt`, `opt`, `shift`, named keys (`return`, `delete`, `left`, `f5`), an empty text and an unknown modifier
+    - the AppKit backend compiles and `PrimeStruct_native_ui_tests` still pass; its shortcut behavior is unchanged (menu bar outline golden unchanged); the Mac-only AppKit smoke tests stay skipped by their guards and are not run
+    - full release gate green
+  - stop_rule: shortcut parsing only.
 
 - [ ] TODO-6059: Native x86_64 float to integer conversion saturates
   - owner: ai
