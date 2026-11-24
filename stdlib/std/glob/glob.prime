@@ -13,26 +13,26 @@ namespace std {
 namespace glob {
 
   // The errno that a bad pattern returns (EINVAL).
-  [public return<i32>]
+  [public return<i32> effects(none)]
   patternErrorCode() {
     return(22i32)
   }
 
   // The errno returned when the walk goes deeper than `max_depth` directories (ELOOP on Linux; a link back to a parent
   // directory would make `**` endless).
-  [public return<i32>]
+  [public return<i32> effects(none)]
   depthErrorCode() {
     return(40i32)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   max_depth() {
     return(64i32)
   }
 
   // True when the name `name` matches the segment `seg`: `*` is any run of bytes (even none), `?` is any one byte, every
   // other byte matches itself. A segment never contains a "/".
-  [return<bool>]
+  [return<bool> effects(none)]
   segment_matches([StringView] name, [StringView] seg) {
     [i32 mut] n{0i32}
     [i32 mut] p{0i32}
@@ -64,14 +64,14 @@ namespace glob {
   }
 
   // True when the name begins with a dot.
-  [return<bool>]
+  [return<bool> effects(none)]
   is_hidden([StringView] name) {
     return(name.count() > 0i32 && name.byteAt(0i32) == 46u8)
   }
 
   // True when the entry name `name` may match the segment `seg`: a name that begins with a dot matches only a segment
   // that begins with a dot.
-  [return<bool>]
+  [return<bool> effects(none)]
   name_matches([StringView] name, [StringView] seg) {
     if(is_hidden(name) && !is_hidden(seg)) {
       return(false)
@@ -80,7 +80,7 @@ namespace glob {
   }
 
   // True when `part` is a legal segment: not empty, not "." or "..", and a "**" only as the whole segment.
-  [return<bool>]
+  [return<bool> effects(none)]
   segment_is_legal([StringView] part) {
     if(part.count() == 0i32 || part.equalsText(".") || part.equalsText("..")) {
       return(false)

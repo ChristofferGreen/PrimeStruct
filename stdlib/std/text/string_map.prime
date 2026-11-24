@@ -27,30 +27,30 @@ namespace std {
     [u64 mut] seed{0u64}
     [i32 mut] garbage{0i32}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(vectorCount<i32>(this.offsets))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(vectorCount<i32>(this.offsets) == 0i32)
     }
 
     // The key bytes of entry `index`, as a view valid until the next insert or erase.
-    [return</std/text/view/StringView>]
+    [return</std/text/view/StringView> effects(none)]
     keyAt([i32] index) {
       return(/std/text/view/StringView{[data] /std/text/textAddress(this.pool.data, vectorAt<i32>(this.offsets, index)),
                                        [fieldLength] vectorAt<i32>(this.lengths, index)})
     }
 
-    [return<V>]
+    [return<V> effects(none)]
     valueAt([i32] index) {
       return(vectorAt<V>(this.values, index))
     }
 
     // Changes the hash seed; only an empty map can, since the stored hashes depend on it.
-    [mut]
+    [mut effects(none)]
     setSeed([u64] newSeed) {
       if(vectorCount<i32>(this.offsets) != 0i32) {
         panic(0i32)
@@ -60,13 +60,13 @@ namespace std {
 
     // ---- the table ----
 
-    [return<i32>]
+    [return<i32> effects(none)]
     homeSlot([u64] hash) {
       [u64] cap{convert<u64>(vectorCount<i32>(this.table))}
       return(convert<i32>(hash - hash / cap * cap))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     nextSlot([i32] slot) {
       if(slot + 1i32 == vectorCount<i32>(this.table)) {
         return(0i32)
@@ -74,14 +74,14 @@ namespace std {
       return(slot + 1i32)
     }
 
-    [mut]
+    [mut effects(none)]
     setTable([i32] slot, [i32] entry) {
       [Slice<i32, Write> mut] cells{vectorSliceMut<i32>(this.table, 0i32, vectorCount<i32>(this.table))}
       cells.set(slot, entry)
     }
 
     // Whether entry `entry` holds exactly the bytes of `key`.
-    [return<bool>]
+    [return<bool> effects(none)]
     entryHolds([i32] entry, [/std/text/view/StringView] key) {
       if(vectorAt<i32>(this.lengths, entry) != key.fieldLength) {
         return(false)
@@ -90,7 +90,7 @@ namespace std {
     }
 
     // The table slot that holds `key` (hash `hash`), or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     findSlot([/std/text/view/StringView] key, [u64] hash) {
       [i32] cap{vectorCount<i32>(this.table)}
       if(cap == 0i32) {
@@ -111,7 +111,7 @@ namespace std {
     }
 
     // The entry index of `key`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     indexOf([/std/text/view/StringView] key) {
       [i32] slot{this.findSlot(key, key.hashSeeded(this.seed))}
       if(slot < 0i32) {
@@ -120,13 +120,13 @@ namespace std {
       return(vectorAt<i32>(this.table, slot))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     contains([/std/text/view/StringView] key) {
       return(this.indexOf(key) >= 0i32)
     }
 
     // The value of `key`; the program stops when there is none.
-    [return<V>]
+    [return<V> effects(none)]
     at([/std/text/view/StringView] key) {
       [i32] index{this.indexOf(key)}
       if(index < 0i32) {
@@ -135,7 +135,7 @@ namespace std {
       return(vectorAt<V>(this.values, index))
     }
 
-    [return<V>]
+    [return<V> effects(none)]
     getOr([/std/text/view/StringView] key, [V] fallback) {
       [i32] index{this.indexOf(key)}
       if(index < 0i32) {
@@ -145,7 +145,7 @@ namespace std {
     }
 
     // Stores the value of `key` in `out` and returns true, or returns false and leaves `out` alone.
-    [return<bool>]
+    [return<bool> effects(none)]
     tryGet([/std/text/view/StringView] key, [V mut] out) {
       [i32] index{this.indexOf(key)}
       if(index < 0i32) {
@@ -156,7 +156,7 @@ namespace std {
     }
 
     // Puts entry `entry` (whose hash is stored) into the first free slot of its probe sequence.
-    [mut]
+    [mut effects(none)]
     placeEntry([i32] entry) {
       [i32 mut] slot{this.homeSlot(vectorAt<u64>(this.hashes, entry))}
       while(vectorAt<i32>(this.table, slot) >= 0i32) {
@@ -178,7 +178,7 @@ namespace std {
     }
 
     // Sets the value of entry `index`.
-    [mut]
+    [mut effects(none)]
     storeValue([i32] index, [V] value) {
       [Slice<V, Write> mut] cells{vectorSliceMut<V>(this.values, 0i32, vectorCount<V>(this.values))}
       cells.set(index, value)
@@ -214,7 +214,7 @@ namespace std {
     }
 
     // Removes the slot `slot` from the table, shifting later entries of the probe run back (no tombstone).
-    [mut]
+    [mut effects(none)]
     removeSlot([i32] start) {
       [i32 mut] hole{start}
       [i32 mut] scan{start}

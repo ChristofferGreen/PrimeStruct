@@ -11,13 +11,13 @@ namespace std {
 namespace path {
 
   // True when the path starts with "/".
-  [public return<bool>]
+  [public return<bool> effects(none)]
   is_absolute([StringView] path) {
     return(path.count() > 0i32 && path.byteAt(0i32) == 47u8)
   }
 
   // `path` without its trailing separators (the empty view for "" and for "///").
-  [return<StringView>]
+  [return<StringView> effects(none)]
   without_trailing_separators([StringView] path) {
     [i32 mut] end{path.count()}
     while(end > 0i32 && path.byteAt(end - 1i32) == 47u8) {
@@ -27,7 +27,7 @@ namespace path {
   }
 
   // The last component as a view: "" for "" and "/", "b" for "a/b" and "a/b/".
-  [return<StringView>]
+  [return<StringView> effects(none)]
   last_component([StringView] path) {
     [StringView] body{without_trailing_separators(path)}
     [i32] slash{body.lastIndexOf("/")}
@@ -36,7 +36,7 @@ namespace path {
 
   // The index of the dot that starts the extension of `name`, or -1: a name that starts with a dot (".bashrc") or ends
   // with one ("a.") has no extension.
-  [return<i32>]
+  [return<i32> effects(none)]
   extension_dot([StringView] name) {
     [i32] dot{name.lastIndexOf(".")}
     if(dot <= 0i32 || dot == name.count() - 1i32) {
@@ -86,7 +86,7 @@ namespace path {
   }
 
   // The component `index` of `spans` (made by resolve from the same `path`).
-  [return<StringView>]
+  [return<StringView> effects(none)]
   component([StringView] path, [vector<i32>] spans, [i32] index) {
     return(path.slice(spans[index * 2i32], spans[index * 2i32 + 1i32]))
   }

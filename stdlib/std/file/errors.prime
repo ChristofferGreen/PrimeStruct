@@ -1,43 +1,43 @@
 namespace std {
   namespace file {
   namespace FileError {
-    [public return<string>]
+    [public return<string> effects(none)]
     why([FileError] err) {
       return(/file_error/why(err))
     }
 
-    [public return<Result<FileError>>]
+    [public return<Result<FileError>> effects(none)]
     status([FileError] err) {
       return(err)
     }
 
-    [public return<FileError>]
+    [public return<FileError> effects(none)]
     eof() {
       return(65536i32)
     }
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     isEof([FileError] err) {
       return(err == eof())
     }
 
-    [public return<bool>]
+    [public return<bool> effects(none)]
     is_eof([FileError] err) {
       return(/std/file/FileError/isEof(err))
     }
 
-    [public return<Result<T, FileError>>]
+    [public return<Result<T, FileError>> effects(none)]
     result<T>([FileError] err) {
       return(convert<i64>(err) * 4294967296i64)
     }
   }
 
-  [public return<FileError>]
+  [public return<FileError> effects(none)]
   fileReadEof() {
     return(/std/file/FileError/eof())
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   fileErrorIsEof([FileError] err) {
     return(/std/file/FileError/isEof(err))
   }

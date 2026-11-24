@@ -11,7 +11,7 @@ import /std/text/unicode_data/*
 namespace std {
   namespace text {
     namespace unicode {
-      [return<i32>]
+      [return<i32> effects(none)]
       hexDigit([u8] c) {
         if(c >= 65u8) {
           return(convert<i32>(c) - 55i32)
@@ -20,7 +20,7 @@ namespace std {
       }
 
       // The 6 digit hex number at `offset` of record `record`.
-      [return<i32>]
+      [return<i32> effects(none)]
       recordNumber([/std/text/view/StringView] table, [i32] record, [i32] offset) {
         [i32] start{record * 25i32 + offset}
         [i32 mut] value{0i32}
@@ -31,7 +31,7 @@ namespace std {
       }
 
       // The record that maps code point `point`, or -1 (binary search over the sorted records).
-      [return<i32>]
+      [return<i32> effects(none)]
       findRecord([/std/text/view/StringView] table, [i32] point) {
         [i32 mut] low{0i32}
         [i32 mut] high{table.count() / 25i32 - 1i32}

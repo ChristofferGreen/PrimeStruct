@@ -23,13 +23,13 @@ Cursor<T>() {
   [public i32] position
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 startArray<T>([array<T>] values) {
   [Cursor<T>] result{Cursor<T>{0i32}}
   return(result)
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 startVector<T>([vector<T>] values) {
   [Cursor<T>] result{Cursor<T>{0i32}}
   return(result)
@@ -37,19 +37,19 @@ startVector<T>([vector<T>] values) {
 
 // One-past-final exclusive traversal boundary, matching the invariant
 // start(values) <= cursor < limit(values). Not the last element.
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 limitArray<T>([array<T>] values) {
   [Cursor<T>] result{Cursor<T>{count(values)}}
   return(result)
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 limitVector<T>([vector<T>] values) {
   [Cursor<T>] result{Cursor<T>{count(values)}}
   return(result)
 }
 
-[public return<T>]
+[public return<T> effects(none)]
 readArray<T>([array<T>] values, [Cursor<T>] cursor) {
   if(cursor.position < 0i32 || cursor.position >= count(values)) {
     panic(cursor.position)
@@ -57,7 +57,7 @@ readArray<T>([array<T>] values, [Cursor<T>] cursor) {
   return(values[cursor.position])
 }
 
-[public return<T>]
+[public return<T> effects(none)]
 readVector<T>([vector<T>] values, [Cursor<T>] cursor) {
   if(cursor.position < 0i32 || cursor.position >= count(values)) {
     panic(cursor.position)
@@ -65,7 +65,7 @@ readVector<T>([vector<T>] values, [Cursor<T>] cursor) {
   return(values[cursor.position])
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 advance<T>([Cursor<T>] cursor) {
   [Cursor<T>] result{Cursor<T>{cursor.position + 1i32}}
   return(result)
@@ -77,43 +77,43 @@ advance<T>([Cursor<T>] cursor) {
 // the same one-before-first sentinel as reverse_limit(values) when empty
 // (count(values) - 1 == -1 in both cases), so an empty collection produces
 // zero loop iterations without a separate empty-check.
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 reverseStartArray<T>([array<T>] values) {
   [Cursor<T>] result{Cursor<T>{count(values) - 1i32}}
   return(result)
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 reverseStartVector<T>([vector<T>] values) {
   [Cursor<T>] result{Cursor<T>{count(values) - 1i32}}
   return(result)
 }
 
 // One-before-first exclusive traversal boundary, never itself readable.
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 reverseLimitArray<T>([array<T>] values) {
   [Cursor<T>] result{Cursor<T>{-1i32}}
   return(result)
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 reverseLimitVector<T>([vector<T>] values) {
   [Cursor<T>] result{Cursor<T>{-1i32}}
   return(result)
 }
 
-[public return<Cursor<T>>]
+[public return<Cursor<T>> effects(none)]
 retreat<T>([Cursor<T>] cursor) {
   [Cursor<T>] result{Cursor<T>{cursor.position - 1i32}}
   return(result)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 cursorEqual<T>([Cursor<T>] left, [Cursor<T>] right) {
   return(left.position == right.position)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 cursorNotEqual<T>([Cursor<T>] left, [Cursor<T>] right) {
   return(left.position != right.position)
 }

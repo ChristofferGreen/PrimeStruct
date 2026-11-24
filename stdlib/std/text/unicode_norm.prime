@@ -10,7 +10,7 @@ import /std/text/unicode_norm_data/*
 namespace std {
   namespace text {
     namespace unicode_norm {
-      [return<i32>]
+      [return<i32> effects(none)]
       hexDigit([u8] c) {
         if(c >= 65u8) {
           return(convert<i32>(c) - 55i32)
@@ -18,7 +18,7 @@ namespace std {
         return(convert<i32>(c) - 48i32)
       }
 
-      [return<i32>]
+      [return<i32> effects(none)]
       hexNumber([/std/text/view/StringView] table, [i32] start, [i32] digits) {
         [i32 mut] value{0i32}
         for([i32 mut] k{0i32}, k < digits, k++) {
@@ -28,7 +28,7 @@ namespace std {
       }
 
       // The record of `table` (records of `width` characters, sorted by the 6 digit number they start with) for `point`, or -1.
-      [return<i32>]
+      [return<i32> effects(none)]
       findRecord([/std/text/view/StringView] table, [i32] width, [i32] point) {
         [i32 mut] low{0i32}
         [i32 mut] high{table.count() / width - 1i32}
@@ -47,7 +47,7 @@ namespace std {
         return(-1i32)
       }
 
-      [return<i32>]
+      [return<i32> effects(none)]
       combiningClass([i32] point) {
         if(point < 768i32) {
           return(0i32)
@@ -62,12 +62,12 @@ namespace std {
 
       // ---- buffers of code points ----
 
-      [public return<i32>]
+      [public return<i32> effects(none)]
       pointCount([String] buffer) {
         return(buffer.count() / 3i32)
       }
 
-      [public return<i32>]
+      [public return<i32> effects(none)]
       pointAt([String] buffer, [i32] index) {
         [i32] base{index * 3i32}
         return(convert<i32>(buffer.byteAt(base)) + convert<i32>(buffer.byteAt(base + 1i32)) * 256i32 + convert<i32>(buffer.byteAt(base + 2i32)) * 65536i32)
@@ -80,7 +80,7 @@ namespace std {
         buffer.pushByte(convert<u8>(point / 65536i32))
       }
 
-      [return<void>]
+      [return<void> effects(none)]
       setPoint([String mut] buffer, [i32] index, [i32] point) {
         [i32] base{index * 3i32}
         textStore(buffer.data, base, convert<u8>(point - point / 256i32 * 256i32))
@@ -156,7 +156,7 @@ namespace std {
       // ---- composition ----
 
       // The composite of `first` and `second`, or -1.
-      [return<i32>]
+      [return<i32> effects(none)]
       composePair([i32] first, [i32] second) {
         if(first >= 4352i32 && first <= 4370i32 && second >= 4449i32 && second <= 4469i32) {
           return(44032i32 + ((first - 4352i32) * 21i32 + (second - 4449i32)) * 28i32)
@@ -245,7 +245,7 @@ namespace std {
 
       // Classes: 0 other, 1 CR, 2 LF, 3 Control, 4 Extend, 5 ZWJ, 6 Regional_Indicator, 7 Prepend, 8 SpacingMark,
       // 9 L, 10 V, 11 T, 12 LV, 13 LVT, 14 Extended_Pictographic.
-      [return<i32>]
+      [return<i32> effects(none)]
       breakClass([i32] point) {
         if(point >= 32i32 && point < 127i32) {
           return(0i32)
@@ -278,7 +278,7 @@ namespace std {
       }
 
       // The byte length of the extended grapheme cluster that starts at `offset` (a code point boundary).
-      [public return<i32>]
+      [public return<i32> effects(none)]
       graphemeLengthAt([/std/text/view/StringView] text, [i32] offset) {
         [i32 mut] position{offset + text.codePointLength(offset)}
         [i32 mut] previous{breakClass(text.codePointAt(offset))}
@@ -346,7 +346,7 @@ namespace std {
         return(position - offset)
       }
 
-      [public return<i32>]
+      [public return<i32> effects(none)]
       graphemeCountOf([/std/text/view/StringView] text) {
         [i32 mut] count{0i32}
         [i32 mut] offset{0i32}
@@ -374,12 +374,12 @@ namespace std {
         return(normalized.view().equals(self))
       }
 
-      [public return<i32>]
+      [public return<i32> effects(none)]
       /std/text/view/StringView/graphemeCount([/std/text/view/StringView] self) {
         return(graphemeCountOf(self))
       }
 
-      [public return<i32>]
+      [public return<i32> effects(none)]
       /std/text/view/StringView/graphemeLength([/std/text/view/StringView] self, [i32] offset) {
         return(graphemeLengthAt(self, offset))
       }

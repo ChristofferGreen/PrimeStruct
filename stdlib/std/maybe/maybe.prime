@@ -6,20 +6,20 @@ namespace std {
     [T] some
   }
 
-  [public return<Maybe<T>>]
+  [public return<Maybe<T>> effects(none)]
   some<T>([T] value) {
     [Maybe<T>] result{[some] value}
     return(result)
   }
 
-  [public return<Maybe<T>>]
+  [public return<Maybe<T>> effects(none)]
   none<T>() {
     [Maybe<T>] result{}
     return(result)
   }
 
   // The value of a `some`, or `fallback` for `none`.
-  [public return<T>]
+  [public return<T> effects(none)]
   /Maybe/unwrapOr<T>([Maybe<T>] self, [T] fallback) {
     return(pick(self) {
       none {
@@ -31,7 +31,7 @@ namespace std {
     })
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /Maybe/isEmpty<T>([Maybe<T>] self) {
     return(pick(self) {
       none {
@@ -43,7 +43,7 @@ namespace std {
     })
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /Maybe/isSome<T>([Maybe<T>] self) {
     return(pick(self) {
       none {
@@ -55,7 +55,7 @@ namespace std {
     })
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /Maybe/is_empty<T>([Maybe<T>] self) {
     return(pick(self) {
       none {
@@ -67,7 +67,7 @@ namespace std {
     })
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /Maybe/is_some<T>([Maybe<T>] self) {
     return(pick(self) {
       none {

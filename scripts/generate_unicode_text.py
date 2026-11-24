@@ -117,7 +117,7 @@ def render() -> str:
         assert len(data) % width == 0
         lines += [
             "      // The %s (%d records)." % (comment, len(data) // width),
-            "      [public return</std/text/view/StringView>]",
+            "      [public return</std/text/view/StringView> effects(none)]",
             "      %s() {" % name,
             '        return(textOf("%s"utf8))' % data,
             "      }",

@@ -113,8 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-5688 | Calls require the callee's whole active effect set | ready | effects-transitive |
-| TODO-6244 | Annotate the effects of the text, math and tuple stdlib | ready | effects-transitive |
-| TODO-6245 | Annotate the effects of the gfx, image, scene and UI stdlib | blocked | effects-transitive |
+| TODO-6245 | Annotate the effects of the gfx, image, scene and UI stdlib | ready | effects-transitive |
 | TODO-6246 | Annotate the effects of the http, web, net, sync, build and remaining stdlib | blocked | effects-transitive |
 | TODO-6247 | A call requires the callee's whole active effect set | blocked | effects-transitive |
 | TODO-6248 | Examples, semantics cases and docs align with the callee effect rule | blocked | effects-transitive |
@@ -190,7 +189,7 @@ of sync with them.
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now TODO-6234 (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
-- Effects (docs/spec/language-core.md, Effects): TODO-5688 (tracker, option B decided 2026-11-24: an unannotated callee declares the default set; `effects(none)` landed, the collections stdlib is annotated), then TODO-6244 to TODO-6246 (the other stdlib annotation sweeps), TODO-6247 (the rule), TODO-6248 (examples, cases, docs), in this order; deferred TODO-6231 (inference, optional)
+- Effects (docs/spec/language-core.md, Effects): TODO-5688 (tracker, option B decided 2026-11-24: an unannotated callee declares the default set; `effects(none)` landed, the collections, text and math stdlib are annotated), then TODO-6245 and TODO-6246 (the other stdlib annotation sweeps), TODO-6247 (the rule), TODO-6248 (examples, cases, docs), in this order; deferred TODO-6231 (inference, optional)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
@@ -285,23 +284,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: call-site effect checks only; no new effects.
   - options_considered: A (infer), B (default set, chosen), C (warning only); see the decision.
 
-- [ ] TODO-6244: Annotate the effects of the text, math and tuple stdlib
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-24
-  - phase: Effects
-  - parallel_track: effects-transitive
-  - depends_on: TODO-6242
-  - scope: stdlib/std/text/**, math/**, maybe, result, tuple, panic, cursor, json, path, glob, os, file/errors: as TODO-6243.
-  - acceptance:
-    - as TODO-6243 for these namespaces; full release gate green
-  - stop_rule: the annotations of these namespaces only.
-  - repro: `http_hello` with the rule on: `StringView.count requires io_out effect`.
-
 - [ ] TODO-6245: Annotate the effects of the gfx, image, scene and UI stdlib
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6244
+  - status: ready
   - created_at: 2026-11-24
   - phase: Effects
   - parallel_track: effects-transitive

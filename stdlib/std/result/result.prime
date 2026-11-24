@@ -12,19 +12,19 @@ namespace std {
     [E] error
   }
 
-  [public return<Result<E>>]
+  [public return<Result<E>> effects(none)]
   ok<E>() {
     [Result<E>] result{ok}
     return(result)
   }
 
-  [public return<Result<T, E>>]
+  [public return<Result<T, E>> effects(none)]
   ok<T, E>([T] value) {
     [Result<T, E>] result{[ok] value}
     return(result)
   }
 
-  [public return<Result<T, E>>]
+  [public return<Result<T, E>> effects(none)]
   error<T, E>([E] err) {
     [Result<T, E>] result{[error] err}
     return(result)

@@ -58,17 +58,17 @@ namespace std {
     [public Pointer<u8> mut] data{__pstext_alloc(0u64)}
     [public i32 mut] fieldLength{0i32}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(this.fieldLength)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(this.fieldLength == 0i32)
     }
 
-    [return<u8>]
+    [return<u8> effects(none)]
     byteAt([i32] index) {
       if(index < 0i32 || index >= this.fieldLength) {
         panic(index)
@@ -76,7 +76,7 @@ namespace std {
       return(textLoad(this.data, index))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     equals([/std/text/view/StringView] other) {
       if(other.fieldLength != this.fieldLength) {
         return(false)
@@ -84,14 +84,14 @@ namespace std {
       return(compareBytes(this.data, other.data, this.fieldLength) == 0i32)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     equalsText([string] text) {
       return(this.equals(textOf(text)))
     }
 
     // True when `index` lies between two code points, or at either end of the text. Text is UTF-8, so a byte of the
     // form 10xxxxxx (128 to 191) continues a code point and is no place to cut.
-    [return<bool>]
+    [return<bool> effects(none)]
     isBoundary([i32] index) {
       if(index < 0i32 || index > this.fieldLength) {
         return(false)
@@ -104,7 +104,7 @@ namespace std {
 
     // The bytes [start, end) as a view of the same text. A cut inside a code point, or a range outside the text,
     // stops the program.
-    [return<StringView>]
+    [return<StringView> effects(none)]
     slice([i32] start, [i32] end) {
       if(start < 0i32 || end < start || end > this.fieldLength) {
         panic(start)
@@ -116,13 +116,13 @@ namespace std {
     }
 
     // Copies the text to `destination` (the caller makes sure `count()` bytes fit; no NUL is added).
-    [return<void>]
+    [return<void> effects(none)]
     copyTo([Pointer<u8>] destination) {
       moveBytes(destination, this.data, this.fieldLength)
     }
 
     // The text as a read view of its bytes.
-    [return<ReadSlice<u8>>]
+    [return<ReadSlice<u8>> effects(none)]
     bytes() {
       return(readSliceMake<u8>(this.data, this.fieldLength))
     }
@@ -131,12 +131,12 @@ namespace std {
 
     // A 64-bit hash of the bytes (SipHash-1-3). `hash()` uses a fixed seed, so it is the same on every run; give
     // `hashSeeded` a secret random seed to make a hash table's order unpredictable to whoever picks the keys.
-    [return<u64>]
+    [return<u64> effects(none)]
     hashSeeded([u64] seed) {
       return(__pstext_hash(this.data, convert<u64>(this.fieldLength), seed))
     }
 
-    [return<u64>]
+    [return<u64> effects(none)]
     hash() {
       return(__pstext_hash(this.data, convert<u64>(this.fieldLength), 0u64))
     }
@@ -144,7 +144,7 @@ namespace std {
     // ---- comparison and search (byte order; UTF-8 sorts by code point) ----
 
     // -1, 0 or 1: the first differing byte decides, a shorter text that is a prefix sorts first.
-    [return<i32>]
+    [return<i32> effects(none)]
     compare([/std/text/view/StringView] other) {
       [i32] common{if(this.fieldLength < other.fieldLength, then() { this.fieldLength }, else() { other.fieldLength })}
       [i32] order{compareBytes(this.data, other.data, common)}
@@ -160,7 +160,7 @@ namespace std {
       return(0i32)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     startsWith([/std/text/view/StringView] prefix) {
       if(prefix.fieldLength > this.fieldLength) {
         return(false)
@@ -168,7 +168,7 @@ namespace std {
       return(compareBytes(this.data, prefix.data, prefix.fieldLength) == 0i32)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     endsWith([/std/text/view/StringView] suffix) {
       if(suffix.fieldLength > this.fieldLength) {
         return(false)
@@ -177,30 +177,30 @@ namespace std {
     }
 
     // The index of the first byte equal to `value`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     indexOfByte([u8] value) {
       return(findByte(this.data, this.fieldLength, value))
     }
 
     // The index of the first place `needle` occurs at or after `from`, or -1. The empty needle occurs at `from`.
     // Linear time (Crochemore-Perrin two-way matching; a single byte uses a byte scan).
-    [return<i32>]
+    [return<i32> effects(none)]
     indexOfFrom([/std/text/view/StringView] needle, [i32] from) {
       return(textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, from))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     indexOf([/std/text/view/StringView] needle) {
       return(textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, 0i32))
     }
 
     // The index of the last place `needle` occurs, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     lastIndexOf([/std/text/view/StringView] needle) {
       return(textLastIndexOf(this.data, this.fieldLength, needle.data, needle.fieldLength))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     contains([/std/text/view/StringView] needle) {
       return(this.indexOf(needle) >= 0i32)
     }
@@ -208,44 +208,44 @@ namespace std {
     // ---- byte-set search (std::string::find_first_of and friends): the index, or -1 ----
 
     // The first byte at or after `from` that is one of the bytes of `set`.
-    [return<i32>]
+    [return<i32> effects(none)]
     findFirstOfFrom([/std/text/view/StringView] set, [i32] from) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, from, true, false))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     findFirstOf([/std/text/view/StringView] set) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, 0i32, true, false))
     }
 
     // The first byte at or after `from` that is none of the bytes of `set`.
-    [return<i32>]
+    [return<i32> effects(none)]
     findFirstNotOfFrom([/std/text/view/StringView] set, [i32] from) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, from, false, false))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     findFirstNotOf([/std/text/view/StringView] set) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, 0i32, false, false))
     }
 
     // The last byte at or before `upTo` (an index; use count() - 1 for the whole text) that is one of the bytes of `set`.
-    [return<i32>]
+    [return<i32> effects(none)]
     findLastOfFrom([/std/text/view/StringView] set, [i32] upTo) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, upTo, true, true))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     findLastOf([/std/text/view/StringView] set) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, this.fieldLength - 1i32, true, true))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     findLastNotOfFrom([/std/text/view/StringView] set, [i32] upTo) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, upTo, false, true))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     findLastNotOf([/std/text/view/StringView] set) {
       return(textFindOfSet(this.data, this.fieldLength, set.data, set.fieldLength, this.fieldLength - 1i32, false, true))
     }
@@ -293,7 +293,7 @@ namespace std {
 
     // ---- the same searches as a Maybe (none when absent) ----
 
-    [return<Maybe<i32>>]
+    [return<Maybe<i32>> effects(none)]
     find([/std/text/view/StringView] needle) {
       [i32] at{textIndexOfFrom(this.data, this.fieldLength, needle.data, needle.fieldLength, 0i32)}
       if(at < 0i32) {
@@ -302,7 +302,7 @@ namespace std {
       return(some<i32>(at))
     }
 
-    [return<Maybe<i32>>]
+    [return<Maybe<i32>> effects(none)]
     rfind([/std/text/view/StringView] needle) {
       [i32] at{textLastIndexOf(this.data, this.fieldLength, needle.data, needle.fieldLength)}
       if(at < 0i32) {
@@ -312,7 +312,7 @@ namespace std {
     }
 
     // The first and last byte, or none for empty text.
-    [return<Maybe<u8>>]
+    [return<Maybe<u8>> effects(none)]
     first() {
       if(this.fieldLength == 0i32) {
         return(none<u8>())
@@ -320,7 +320,7 @@ namespace std {
       return(some<u8>(textLoad(this.data, 0i32)))
     }
 
-    [return<Maybe<u8>>]
+    [return<Maybe<u8>> effects(none)]
     last() {
       if(this.fieldLength == 0i32) {
         return(none<u8>())
@@ -330,7 +330,7 @@ namespace std {
 
     // ---- trimming (ASCII white space: space, tab, line feed, vertical tab, form feed, carriage return) ----
 
-    [return<StringView>]
+    [return<StringView> effects(none)]
     trimStart() {
       [i32 mut] start{0i32}
       while(start < this.fieldLength && isAsciiSpace(textLoad(this.data, start))) {
@@ -339,7 +339,7 @@ namespace std {
       return(StringView{[data] textAddress(this.data, start), [fieldLength] this.fieldLength - start})
     }
 
-    [return<StringView>]
+    [return<StringView> effects(none)]
     trimEnd() {
       [i32 mut] end{this.fieldLength}
       while(end > 0i32 && isAsciiSpace(textLoad(this.data, end - 1i32))) {
@@ -348,7 +348,7 @@ namespace std {
       return(StringView{[data] this.data, [fieldLength] end})
     }
 
-    [return<StringView>]
+    [return<StringView> effects(none)]
     trim() {
       return(this.trimStart().trimEnd())
     }
@@ -356,7 +356,7 @@ namespace std {
     // ---- pieces: views of this text between separators ----
 
     // How many pieces `splitPart` has: one more than the separators (a non-empty separator).
-    [return<i32>]
+    [return<i32> effects(none)]
     splitCount([/std/text/view/StringView] separator) {
       if(separator.fieldLength == 0i32) {
         return(1i32)
@@ -375,7 +375,7 @@ namespace std {
     }
 
     // Piece `n` (from 0): the text between the n-th and the next separator. An empty separator gives the whole text.
-    [return<StringView>]
+    [return<StringView> effects(none)]
     splitPart([/std/text/view/StringView] separator, [i32] n) {
       if(n < 0i32) {
         panic(n)
@@ -400,7 +400,7 @@ namespace std {
 
     // Lines end at a line feed; a carriage return before it is not part of the line, and there is no empty
     // line after a final line feed. The empty text has no lines.
-    [return<i32>]
+    [return<i32> effects(none)]
     lineCount() {
       if(this.fieldLength == 0i32) {
         return(0i32)
@@ -418,7 +418,7 @@ namespace std {
       return(lines)
     }
 
-    [return<StringView>]
+    [return<StringView> effects(none)]
     lineAt([i32] n) {
       if(n < 0i32) {
         panic(n)
@@ -446,19 +446,19 @@ namespace std {
 
     // An optional sign then decimal digits, nothing else, in range: stores the value in `out` and returns true;
     // otherwise returns false and leaves `out` alone. (Maybe-valued forms wait on TODO-5642 and the 64-bit payload.)
-    [return<bool>]
+    [return<bool> effects(none)]
     parseI64Into([i64 mut] out) {
       return(textParseI64(this.data, this.fieldLength, out))
     }
 
     // Digits of `radix` (2 to 36, either case) with an optional sign.
-    [return<bool>]
+    [return<bool> effects(none)]
     parseI64RadixInto([i32] radix, [i64 mut] out) {
       return(textParseI64Radix(this.data, this.fieldLength, radix, out))
     }
 
     // Unsigned digits of `radix` (no sign), up to 2^64 - 1.
-    [return<bool>]
+    [return<bool> effects(none)]
     parseU64RadixInto([i32] radix, [u64 mut] out) {
       [u64 mut] magnitude{0u64}
       [bool mut] negative{false}
@@ -469,12 +469,12 @@ namespace std {
       return(true)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     parseU64Into([u64 mut] out) {
       return(this.parseU64RadixInto(10i32, out))
     }
 
-    [return<u64>]
+    [return<u64> effects(none)]
     parseU64Or([u64] fallback) {
       [u64 mut] value{fallback}
       if(this.parseU64Into(value)) {
@@ -483,7 +483,7 @@ namespace std {
       return(fallback)
     }
 
-    [return<i64>]
+    [return<i64> effects(none)]
     parseI64Or([i64] fallback) {
       [i64 mut] value{fallback}
       if(this.parseI64Into(value)) {
@@ -493,7 +493,7 @@ namespace std {
     }
 
     // Like parseI64Into, for a value that fits an i32.
-    [return<bool>]
+    [return<bool> effects(none)]
     parseI32Into([i32 mut] out) {
       [i64 mut] wide{0i64}
       if(!textParseI64(this.data, this.fieldLength, wide)) {
@@ -509,7 +509,7 @@ namespace std {
     // A plain decimal number: an optional sign, digits with an optional fraction (or a fraction alone), and an optional
     // exponent. No white space, no hexadecimal form, no inf or nan. Stores the value in `out` and returns true; false
     // (leaving `out`) for other text or a value too large for an f64.
-    [return<bool>]
+    [return<bool> effects(none)]
     parseF64Into([f64 mut] out) {
       if(!isDecimalNumber(this.data, this.fieldLength)) {
         return(false)
@@ -521,7 +521,7 @@ namespace std {
       return(true)
     }
 
-    [return<f64>]
+    [return<f64> effects(none)]
     parseF64Or([f64] fallback) {
       [f64 mut] value{fallback}
       if(this.parseF64Into(value)) {
@@ -531,7 +531,7 @@ namespace std {
     }
 
     // The value as a Maybe: none unless the text is exactly an i32.
-    [return<Maybe<i32>>]
+    [return<Maybe<i32>> effects(none)]
     parseI32() {
       [i64 mut] wide{0i64}
       if(!textParseI64(this.data, this.fieldLength, wide)) {
@@ -543,7 +543,7 @@ namespace std {
       return(some<i32>(convert<i32>(wide)))
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     parseI32Or([i32] fallback) {
       [i32 mut] value{fallback}
       if(this.parseI32Into(value)) {
@@ -556,7 +556,7 @@ namespace std {
 
     // The width in bytes of the code point that starts at `offset` (1 to 4), from its lead byte; `offset` must be a
     // boundary inside the text.
-    [return<i32>]
+    [return<i32> effects(none)]
     codePointLength([i32] offset) {
       if(offset < 0i32 || offset >= this.fieldLength || !this.isBoundary(offset)) {
         panic(offset)
@@ -576,7 +576,7 @@ namespace std {
 
     // The code point that starts at `offset` (at most 0x10FFFF, so an i32; there is no u32 type yet). The text is
     // valid UTF-8 (a String or a checked view).
-    [return<i32>]
+    [return<i32> effects(none)]
     codePointAt([i32] offset) {
       [i32] width{this.codePointLength(offset)}
       if(offset + width > this.fieldLength) {
@@ -594,7 +594,7 @@ namespace std {
     }
 
     // How many code points the text holds: the bytes that are not continuation bytes.
-    [return<i32>]
+    [return<i32> effects(none)]
     codePointCount() {
       [i32 mut] total{0i32}
       for([i32 mut] i{0i32}, i < this.fieldLength, i++) {
@@ -627,7 +627,7 @@ namespace std {
       return(out)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     equalsIgnoreAsciiCase([/std/text/view/StringView] other) {
       if(other.fieldLength != this.fieldLength) {
         return(false)
@@ -650,7 +650,7 @@ namespace std {
   }
 
   // The view of a string literal's text.
-  [public return<StringView>]
+  [public return<StringView> effects(none)]
   textOf([string] text) {
     return(StringView{[data] __pstext_literal(text), [fieldLength] text.count()})
   }
@@ -664,20 +664,20 @@ namespace std {
     [public Pointer<u8>] data{__pstext_literal("")}
     [public i32] fieldLength{0i32}
 
-    [return<StringView>]
+    [return<StringView> effects(none)]
     view() {
       return(StringView{[data] this.data, [fieldLength] this.fieldLength})
     }
   }
 
-  [public return<LiteralText>]
+  [public return<LiteralText> effects(none)]
   literalTextOf([string] text) {
     return(LiteralText{[data] __pstext_literal(text), [fieldLength] text.count()})
   }
 
   // The index of the first (or, backwards, the last) byte of the haystack that is in (or, `inSet` false, is not in) the
   // set, starting at `start` and moving toward the end (or toward the start when `backwards`); -1 when there is none.
-  [return<i32>]
+  [return<i32> effects(none)]
   textFindOfSet([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] set, [i32] setCount, [i32] start, [bool] inSet,
                 [bool] backwards) {
     [i32 mut] at{start}
@@ -698,7 +698,7 @@ namespace std {
   }
 
   // [+-]? ( digits+ ( '.' digits* )? | '.' digits+ ) ( [eE] [+-]? digits+ )?  and nothing else.
-  [return<bool>]
+  [return<bool> effects(none)]
   isDecimalNumber([Pointer<u8>] data, [i32] length) {
     [i32 mut] i{0i32}
     if(length > 0i32 && (textLoad(data, 0i32) == 43u8 || textLoad(data, 0i32) == 45u8)) {
@@ -738,7 +738,7 @@ namespace std {
   }
 
   // The index of the first place the needle occurs in the haystack at or after `from`, or -1.
-  [return<i32>]
+  [return<i32> effects(none)]
   textIndexOfFrom([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount, [i32] from) {
     if(from < 0i32 || from > hayCount) {
       return(-1i32)
@@ -750,7 +750,7 @@ namespace std {
     return(from + hit)
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   textLastIndexOf([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount) {
     for([i32 mut] at{hayCount - needleCount}, at >= 0i32, at--) {
       if(compareBytes(textAddress(hay, at), needle, needleCount) == 0i32) {
@@ -763,7 +763,7 @@ namespace std {
   // Digits of `radix` (2 to 36, either case) with an optional sign when `isSigned`, nothing else: the magnitude goes to
   // `magnitudeOut` and the sign to `negativeOut`, false for anything that is not exactly an integer that fits the
   // 64-bit type (signed: -2^63 to 2^63 - 1; unsigned: 0 to 2^64 - 1).
-  [return<bool>]
+  [return<bool> effects(none)]
   textParseInteger([Pointer<u8>] data, [i32] length, [i32] radix, [bool] isSigned, [u64 mut] magnitudeOut,
                    [bool mut] negativeOut) {
     if(length == 0i32 || radix < 2i32 || radix > 36i32) {
@@ -808,12 +808,12 @@ namespace std {
 
   // An optional sign then decimal digits, nothing else, in range: stores the value in `out` and returns true;
   // otherwise returns false and leaves `out` alone.
-  [return<bool>]
+  [return<bool> effects(none)]
   textParseI64([Pointer<u8>] data, [i32] length, [i64 mut] out) {
     return(textParseI64Radix(data, length, 10i32, out))
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   textParseI64Radix([Pointer<u8>] data, [i32] length, [i32] radix, [i64 mut] out) {
     [u64 mut] magnitude{0u64}
     [bool mut] negative{false}
@@ -828,7 +828,7 @@ namespace std {
     return(true)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   isAsciiSpace([u8] value) {
     return(value == 32u8 || (value >= 9u8 && value <= 13u8))
   }
@@ -836,7 +836,7 @@ namespace std {
   // The index in the haystack (`hayCount` bytes at `hay`) of the first occurrence of the needle, or -1; the empty
   // needle occurs at 0. A single byte is a byte scan; longer needles use two-way matching (Crochemore and Perrin,
   // as in glibc's two_way_short_needle): at most about 2 * hayCount byte comparisons, with no allocation.
-  [return<i32>]
+  [return<i32> effects(none)]
   twoWayFind([Pointer<u8>] hay, [i32] hayCount, [Pointer<u8>] needle, [i32] needleCount) {
     if(needleCount == 0i32) {
       return(0i32)
@@ -960,7 +960,7 @@ namespace std {
 
   // The offset of the first byte that starts invalid UTF-8 in the `count` bytes at `data`, or -1 when all of it is
   // valid: no overlong forms, no surrogates, nothing above U+10FFFF, no truncated sequence.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   utf8ErrorOffset([Pointer<u8>] data, [i32] count) {
     [i32 mut] i{0i32}
     while(i < count) {
@@ -1014,7 +1014,7 @@ namespace std {
 
   // A view of the bytes of `bytes`, which must be valid UTF-8: invalid bytes stop the program. Use utf8ErrorOffset
   // first to handle them instead.
-  [public return<StringView>]
+  [public return<StringView> effects(none)]
   textFromBytes([ReadSlice<u8>] bytes) {
     [i32] bad{utf8ErrorOffset(bytes.data, bytes.count())}
     if(bad >= 0i32) {
@@ -1025,7 +1025,7 @@ namespace std {
 
   // Whether a complete valid UTF-8 sequence starts at `at`; `consumed` is the sequence's length when it does, and
   // otherwise the length of the longest valid prefix of a sequence (1 or more), the part one U+FFFD replaces.
-  [return<bool>]
+  [return<bool> effects(none)]
   utf8SequenceAt([Pointer<u8>] data, [i32] count, [i32] at, [i32 mut] consumed) {
     [i32] lead{convert<i32>(textLoad(data, at))}
     [i32 mut] need{0i32}
@@ -1149,7 +1149,7 @@ namespace std {
     return(out)
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   isAlignByte([u8] value) {
     return(value == 60u8 || value == 62u8 || value == 94u8)
   }
@@ -1235,18 +1235,18 @@ namespace std {
   }
 
   // `s.view()` and `s.slice(a, b)` on a String: views of its text (valid until the String changes or is destroyed).
-  [public return</std/text/view/StringView>]
+  [public return</std/text/view/StringView> effects(none)]
   /std/text/String/view([/std/text/String] self) {
     return(/std/text/view/StringView{[data] self.data, [fieldLength] self.fieldLength})
   }
 
-  [public return</std/text/view/StringView>]
+  [public return</std/text/view/StringView> effects(none)]
   /std/text/String/slice([/std/text/String] self, [i32] start, [i32] end) {
     [/std/text/view/StringView] whole{/std/text/view/StringView{[data] self.data, [fieldLength] self.fieldLength}}
     return(whole.slice(start, end))
   }
 
-  [public return<u64>]
+  [public return<u64> effects(none)]
   /std/text/String/hash([/std/text/String] self) {
     [/std/text/view/StringView] whole{/std/text/view/StringView{[data] self.data, [fieldLength] self.fieldLength}}
     return(whole.hash())
@@ -1281,84 +1281,84 @@ namespace std {
     return(out)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opEqual([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order == 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opNotEqual([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order != 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opLessThan([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order < 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opLessEqual([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order <= 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opGreaterThan([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order > 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/String/opGreaterEqual([/std/text/String] self, [/std/text/String] other) {
     [i32] order{self.view().compare(other.view())}
     return(order >= 0i32)
   }
 
-  [public return<u8>]
+  [public return<u8> effects(none)]
   /std/text/String/opAt([/std/text/String] self, [i32] index) {
     return(self.view().byteAt(index))
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order == 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opNotEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order != 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opLessThan([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order < 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opLessEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order <= 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opGreaterThan([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order > 0i32)
   }
 
-  [public return<bool>]
+  [public return<bool> effects(none)]
   /std/text/view/StringView/opGreaterEqual([/std/text/view/StringView] self, [/std/text/view/StringView] other) {
     [i32] order{self.compare(other)}
     return(order >= 0i32)
   }
 
-  [public return<u8>]
+  [public return<u8> effects(none)]
   /std/text/view/StringView/opAt([/std/text/view/StringView] self, [i32] index) {
     return(self.byteAt(index))
   }

@@ -20,24 +20,24 @@ namespace std {
     [private i32 mut] fieldLength{0i32}
     [private bool mut] live{false}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(this.fieldLength)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(this.fieldLength == 0i32)
     }
 
     // The text as a view, valid while some owner is alive.
-    [return</std/text/view/StringView>]
+    [return</std/text/view/StringView> effects(none)]
     view() {
       return(/std/text/view/StringView{[data] this.bytes, [fieldLength] this.fieldLength})
     }
 
     // How many owners share the bytes (0 for an empty SharedString that owns nothing).
-    [return<i32>]
+    [return<i32> effects(none)]
     owners() {
       if(!this.live) {
         return(0i32)
@@ -58,7 +58,7 @@ namespace std {
       sharedOwnersStart(sharedOwnersCell(this.bytes))
     }
 
-    [mut]
+    [mut effects(none)]
     Copy([Reference<Self>] other) {
       this.bytes = other.bytes
       this.fieldLength = other.fieldLength
@@ -68,7 +68,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.bytes = other.bytes
       this.fieldLength = other.fieldLength
@@ -88,31 +88,31 @@ namespace std {
   }
 
   // The count of the block: the aligned 8 bytes before the text.
-  [unsafe return<Pointer<i64>>]
+  [unsafe return<Pointer<i64>> effects(none)]
   sharedOwnersCell([Pointer<u8>] text) {
     [Pointer<u8>] address{textAddress(text, -8i32)}
     return(/std/intrinsics/memory/reinterpret<i64>(address))
   }
 
   // The count of a new SharedString is 1.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   sharedOwnersStart([Pointer<i64>] count) {
     /std/sync/__psatomic_store_i64(count, 1i64)
   }
 
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   sharedOwnersLoad([Pointer<i64>] count) {
     return(convert<i32>(/std/sync/__psatomic_load_i64(count)))
   }
 
   // One more owner.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   sharedOwnersAdd([Pointer<i64>] count) {
     /std/sync/__psatomic_add_i64(count, 1i64)
   }
 
   // An owner is gone; the last one returns true, and then frees the block that holds the count.
-  [unsafe return<bool>]
+  [unsafe return<bool> effects(none)]
   sharedOwnersRelease([Pointer<i64>] count) {
     return(/std/sync/__psatomic_add_i64(count, -1i64) == 1i64)
   }

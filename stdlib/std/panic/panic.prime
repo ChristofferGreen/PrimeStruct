@@ -3,7 +3,7 @@
 // bounds-check trap. The code argument surfaces in the trap diagnostics.
 namespace std {
   namespace panic {
-  [public return<never>]
+  [public return<never> effects(none)]
   panic([i32] code) {
     [array<i32>] empty{array<i32>()}
     /at(empty, code)

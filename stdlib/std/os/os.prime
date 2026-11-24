@@ -46,19 +46,19 @@ namespace std {
 namespace os {
 
   // The value of environment variable `name`, or `fallback` when it is not set.
-  [public return<String>]
+  [public return<String> effects(none)]
   envOr([String] name, [String] fallback) {
     return(ps_os_env_or(name, fallback))
   }
 
   // Milliseconds on a clock that never goes backwards (not wall-clock time); differences measure elapsed time.
-  [public return<i64>]
+  [public return<i64> effects(none)]
   monotonicMs() {
     return(ps_os_monotonic_ms())
   }
 
   // Whether the process has received SIGTERM or SIGINT.
-  [public return<bool>]
+  [public return<bool> effects(none)]
   stopRequested() {
     return(ps_os_stop_requested())
   }
@@ -67,13 +67,13 @@ namespace os {
   // whichever thread the signal was delivered to: a loop that waits in /std/net `poll` watches it while
   // `stopRequested()` is false, and then no signal can arrive unseen between its check and its wait. Do not read
   // from it or close it. A negative code when it cannot be opened.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   stopSignalFd() {
     return(ps_os_stop_signal_fd())
   }
 
   // How many processors are online, at least 1: how many threads can run at once.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   cpuCount() {
     return(ps_os_cpu_count())
   }
@@ -82,14 +82,14 @@ namespace os {
   // the signal in a blocking call: the signal then interrupts that call instead of a worker's. A signal that arrives
   // before the call may still be delivered to the worker; a loop that must not miss it watches `stopSignalFd()`.
   // Returns 0 or a negative code.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   blockStopSignals() {
     return(ps_os_block_stop_signals())
   }
 
   // Writes `line` and a line feed to stderr at once (stderr is not buffered), for logs a supervisor reads as they
   // happen. Returns the bytes written, or -1.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   logLine([String] line) {
     return(ps_os_log_line(line))
   }

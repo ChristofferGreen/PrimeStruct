@@ -80,33 +80,33 @@ namespace std {
   __pstext_format_f64([f64] value, [i32] style, [i32] precision, [Pointer<u8>] destination, [u64] capacity) {
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   textStore([Pointer<u8> mut] block, [i32] index, [u8] value) {
     [Pointer<u8> mut] slot{/std/intrinsics/memory/at_unsafe(block, index)}
     *slot = value
   }
 
-  [unsafe return<u8>]
+  [unsafe return<u8> effects(none)]
   textLoad([Pointer<u8>] block, [i32] index) {
     return(*(/std/intrinsics/memory/at_unsafe(block, index)))
   }
 
   // The bulk operations with i32 counts: a count of 0 or less touches nothing (compare gives 0, find gives -1).
-  [return<void>]
+  [return<void> effects(none)]
   moveBytes([Pointer<u8>] destination, [Pointer<u8>] source, [i32] count) {
     if(count > 0i32) {
       __pstext_move(destination, source, convert<u64>(count))
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   fillBytes([Pointer<u8>] destination, [u8] value, [i32] count) {
     if(count > 0i32) {
       __pstext_fill(destination, convert<u64>(value), convert<u64>(count))
     }
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   compareBytes([Pointer<u8>] a, [Pointer<u8>] b, [i32] count) {
     if(count <= 0i32) {
       return(0i32)
@@ -114,7 +114,7 @@ namespace std {
     return(__pstext_compare(a, b, convert<u64>(count)))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   findByte([Pointer<u8>] address, [i32] count, [u8] value) {
     if(count <= 0i32) {
       return(-1i32)
@@ -123,20 +123,20 @@ namespace std {
   }
 
   // The address `index` bytes into a block.
-  [unsafe return<Pointer<u8>>]
+  [unsafe return<Pointer<u8>> effects(none)]
   textAddress([Pointer<u8>] block, [i32] index) {
     return(/std/intrinsics/memory/at_unsafe(block, index))
   }
 
   // The usable bytes of a block for text (the block less its NUL byte).
-  [return<i32>]
+  [return<i32> effects(none)]
   textBlockCapacity([Pointer<u8>] block) {
     return(convert<i32>(__pstext_capacity(block)) - 1i32)
   }
 
   // Whether `index` lies between two code points of the `count` bytes at `data`, or at either end. Text is UTF-8, so a
   // byte of the form 10xxxxxx (128 to 191) continues a code point and is no place to cut.
-  [return<bool>]
+  [return<bool> effects(none)]
   isCodePointBoundary([Pointer<u8>] data, [i32] count, [i32] index) {
     if(index < 0i32 || index > count) {
       return(false)
@@ -148,7 +148,7 @@ namespace std {
   }
 
   // The code point that starts at `offset` in valid UTF-8 (an i32: code points stop at 0x10FFFF).
-  [return<i32>]
+  [return<i32> effects(none)]
   codePointAtBytes([Pointer<u8>] data, [i32] offset, [i32] count) {
     if(offset < 0i32 || offset >= count || !isCodePointBoundary(data, count, offset)) {
       panic(offset)
@@ -175,22 +175,22 @@ namespace std {
     [public Pointer<u8> mut] data{__pstext_alloc(0u64)}
     [bool mut] ownsData{false}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(this.fieldLength)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(this.fieldLength == 0i32)
     }
 
-    [return<i32>]
+    [return<i32> effects(none)]
     capacity() {
       return(this.fieldCapacity)
     }
 
-    [return<u8>]
+    [return<u8> effects(none)]
     byteAt([i32] index) {
       if(index < 0i32 || index >= this.fieldLength) {
         panic(index)
@@ -198,7 +198,7 @@ namespace std {
       return(textLoad(this.data, index))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     equalsText([string] text) {
       if(text.count() != this.fieldLength) {
         return(false)
@@ -311,7 +311,7 @@ namespace std {
     }
 
     // The byte after the text: always 0 (an empty string with no storage reports 0 too).
-    [return<u8>]
+    [return<u8> effects(none)]
     terminator() {
       if(this.ownsData) {
         return(textLoad(this.data, this.fieldLength))
@@ -319,7 +319,7 @@ namespace std {
       return(0u8)
     }
 
-    [mut]
+    [mut effects(none)]
     clear() {
       this.fieldLength = 0i32
       if(this.ownsData) {
@@ -542,18 +542,18 @@ namespace std {
     }
 
     // The first and last byte (the program stops on an empty String).
-    [return<u8>]
+    [return<u8> effects(none)]
     front() {
       return(this.byteAt(0i32))
     }
 
-    [return<u8>]
+    [return<u8> effects(none)]
     back() {
       return(this.byteAt(this.fieldLength - 1i32))
     }
 
     // Removes the last byte (the program stops on an empty String).
-    [mut]
+    [mut effects(none)]
     popByte() {
       if(this.fieldLength == 0i32) {
         panic(0i32)
@@ -563,7 +563,7 @@ namespace std {
     }
 
     // Removes the last code point and returns it (the program stops on an empty String).
-    [mut, return<i32>]
+    [mut, return<i32> effects(none)]
     pop() {
       if(this.fieldLength == 0i32) {
         panic(0i32)
@@ -644,7 +644,7 @@ namespace std {
     }
 
     // Exchanges the text with another String (no copying).
-    [mut]
+    [mut effects(none)]
     swap([Reference<Self>] other) {
       [i32] oldLength{this.fieldLength}
       [i32] oldCapacity{this.fieldCapacity}
@@ -676,7 +676,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.fieldLength = other.fieldLength
       this.fieldCapacity = other.fieldCapacity
@@ -798,40 +798,40 @@ namespace std {
   }
 
   // Memory statistics of the string heap.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   stringHeapChunks() {
     return(convert<i32>(__pstext_stat(0u64)))
   }
 
-  [public return<u64>]
+  [public return<u64> effects(none)]
   stringHeapBytesInUse() {
     return(__pstext_stat(1u64))
   }
 
-  [public return<u64>]
+  [public return<u64> effects(none)]
   stringHeapBytesFree() {
     return(__pstext_stat(2u64))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   stringHeapLargeBlocks() {
     return(convert<i32>(__pstext_stat(3u64)))
   }
 
-  [public return<u64>]
+  [public return<u64> effects(none)]
   stringHeapLargeBytes() {
     return(__pstext_stat(4u64))
   }
 
   // Live allocations of the slot heap (vector buffers, Function boxes): a copy-and-destroy loop that frees what it
   // makes keeps this flat (VM and optexe).
-  [public return<i32>]
+  [public return<i32> effects(none)]
   heapLiveBlocks() {
     return(convert<i32>(__pstext_stat(8u64)))
   }
 
   // Blocks handed out since the program started (a test of how many allocations an expression makes).
-  [public return<u64>]
+  [public return<u64> effects(none)]
   stringHeapAllocations() {
     return(__pstext_stat(5u64))
   }
@@ -844,29 +844,30 @@ namespace std {
   StringArena() {
     [public i32 mut] marker{0i32}
 
+    [effects(none)]
     Destroy() {
       __pstext_arena_end()
     }
   }
 
-  [public return<StringArena>]
+  [public return<StringArena> effects(none)]
   beginStringArena() {
     __pstext_arena_begin()
     return(StringArena{})
   }
 
   // The arenas that are open, and the bytes of blocks their strings hold.
-  [public return<i32>]
+  [public return<i32> effects(none)]
   stringArenaDepth() {
     return(convert<i32>(__pstext_stat(6u64)))
   }
 
-  [public return<u64>]
+  [public return<u64> effects(none)]
   stringArenaBytes() {
     return(__pstext_stat(7u64))
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   setStringMemoryLimit([u64] bytes) {
     __pstext_set_limit(bytes)
   }

@@ -5,17 +5,17 @@ namespace std {
     [Ts...] values
   }
 
-  [public return<Ts[Index]>]
+  [public return<Ts[Index]> effects(none)]
   get<Index, Ts...>([tuple<Ts...>] values) {
     return(pack_at<Index, values>(values))
   }
 
-  [public return<Reference<Ts[Index]>>]
+  [public return<Reference<Ts[Index]>> effects(none)]
   get_ref<Index, Ts...>([Reference<tuple<Ts...>>] values) {
     return(pack_at<Index, values>(values))
   }
 
-  [public return<tuple<Ts...>>]
+  [public return<tuple<Ts...>> effects(none)]
   make_tuple<Ts...>([Ts...] values) {
     return(/std/tuple/tuple<Ts...>{[spread] values})
   }

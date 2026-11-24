@@ -9,17 +9,17 @@ namespace std {
   }
 
   namespace Quat {
-    [public return<f32>]
+    [public return<f32> effects(none)]
     lengthSquared([Quat] self) {
       return(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     length([Quat] self) {
       return(/std/math/sqrt(self.lengthSquared()))
     }
 
-    [public return<Quat>]
+    [public return<Quat> effects(none)]
     toNormalized([Quat] self) {
       [f32] len{self.length()}
       if(len <= 0.0) {
@@ -34,13 +34,13 @@ namespace std {
       }
     }
 
-    [public return<Quat>]
+    [public return<Quat> effects(none)]
     normalize([Quat] self) {
       return(self.toNormalized())
     }
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_add_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.x + right.x,
@@ -50,7 +50,7 @@ namespace std {
     })
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_sub_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.x - right.x,
@@ -60,7 +60,7 @@ namespace std {
     })
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_scale_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
     return(Quat{
@@ -71,12 +71,12 @@ namespace std {
     })
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_scale_left_internal([auto] scale, [Quat] value) {
     return(quat_scale_internal(value, scale))
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_div_scalar_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
     return(Quat{
@@ -87,7 +87,7 @@ namespace std {
     })
   }
 
-  [return<Quat>]
+  [return<Quat> effects(none)]
   quat_multiply_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
@@ -97,7 +97,7 @@ namespace std {
     })
   }
 
-  [return<Vec3>]
+  [return<Vec3> effects(none)]
   quat_rotate_vec3_internal([Quat] rotation, [Vec3] value) {
     [Mat3] basis{quat_to_mat3(rotation)}
     return(Vec3{
@@ -107,7 +107,7 @@ namespace std {
     })
   }
 
-  [public return<Mat3>]
+  [public return<Mat3> effects(none)]
   quat_to_mat3([Quat] value) {
     [Quat] q{value.toNormalized()}
     [f32] xx{q.x * q.x}
@@ -132,7 +132,7 @@ namespace std {
     })
   }
 
-  [public return<Mat4>]
+  [public return<Mat4> effects(none)]
   quat_to_mat4([Quat] value) {
     [Mat3] basis{quat_to_mat3(value)}
     return(Mat4{
@@ -143,7 +143,7 @@ namespace std {
     })
   }
 
-  [public return<Quat>]
+  [public return<Quat> effects(none)]
   mat3_to_quat([Mat3] value) {
     [f32] trace{value.m00 + value.m11 + value.m22}
     if(trace > 0.0) {

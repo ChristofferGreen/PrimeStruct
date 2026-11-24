@@ -7,42 +7,42 @@ namespace std {
   }
 
   namespace Vec2 {
-    [public return<f32>]
+    [public return<f32> effects(none)]
     lengthSquared([Vec2] self) {
       return(self.x * self.x + self.y * self.y)
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     length([Vec2] self) {
       return(/std/math/sqrt(self.lengthSquared()))
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     dot([Vec2] self, [Vec2] other) {
       return(self.x * other.x + self.y * other.y)
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     add([Vec2] self, [Vec2] other) {
       return(Vec2{self.x + other.x, self.y + other.y})
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     sub([Vec2] self, [Vec2] other) {
       return(Vec2{self.x - other.x, self.y - other.y})
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     mulScalar([Vec2] self, [f32] s) {
       return(Vec2{self.x * s, self.y * s})
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     divScalar([Vec2] self, [f32] s) {
       return(Vec2{self.x / s, self.y / s})
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     mix([Vec2] self, [Vec2] other, [f32] t) {
       [f32] inv{1.0 - t}
       return(Vec2{
@@ -51,7 +51,7 @@ namespace std {
       })
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     toNormalized([Vec2] self) {
       [f32] len{self.length()}
       if(len <= 0.0) {
@@ -61,7 +61,7 @@ namespace std {
       }
     }
 
-    [public return<Vec2>]
+    [public return<Vec2> effects(none)]
     normalize([Vec2] self) {
       return(self.toNormalized())
     }
@@ -75,42 +75,42 @@ namespace std {
   }
 
   namespace Vec3 {
-    [public return<f32>]
+    [public return<f32> effects(none)]
     lengthSquared([Vec3] self) {
       return(self.x * self.x + self.y * self.y + self.z * self.z)
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     length([Vec3] self) {
       return(/std/math/sqrt(self.lengthSquared()))
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     dot([Vec3] self, [Vec3] other) {
       return(self.x * other.x + self.y * other.y + self.z * other.z)
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     add([Vec3] self, [Vec3] other) {
       return(Vec3{self.x + other.x, self.y + other.y, self.z + other.z})
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     sub([Vec3] self, [Vec3] other) {
       return(Vec3{self.x - other.x, self.y - other.y, self.z - other.z})
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     mulScalar([Vec3] self, [f32] s) {
       return(Vec3{self.x * s, self.y * s, self.z * s})
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     divScalar([Vec3] self, [f32] s) {
       return(Vec3{self.x / s, self.y / s, self.z / s})
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     mix([Vec3] self, [Vec3] other, [f32] t) {
       [f32] inv{1.0 - t}
       return(Vec3{
@@ -120,7 +120,7 @@ namespace std {
       })
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     toNormalized([Vec3] self) {
       [f32] len{self.length()}
       if(len <= 0.0) {
@@ -130,12 +130,12 @@ namespace std {
       }
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     normalize([Vec3] self) {
       return(self.toNormalized())
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     cross([Vec3] self, [Vec3] other) {
       return(Vec3{
         self.y * other.z - self.z * other.y,
@@ -144,13 +144,13 @@ namespace std {
       })
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     reflect([Vec3] self, [Vec3] normal) {
       [f32] scale{2.0 * self.dot(normal)}
       return(self.sub(normal.mulScalar(scale)))
     }
 
-    [public return<Vec3>]
+    [public return<Vec3> effects(none)]
     refract([Vec3] self, [Vec3] normal, [f32] ior) {
       [f32 mut] cosi{/std/math/clamp(self.dot(normal), -1.0, 1.0)}
       [f32 mut] etai{1.0}
@@ -185,42 +185,42 @@ namespace std {
   }
 
   namespace Vec4 {
-    [public return<f32>]
+    [public return<f32> effects(none)]
     lengthSquared([Vec4] self) {
       return(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     length([Vec4] self) {
       return(/std/math/sqrt(self.lengthSquared()))
     }
 
-    [public return<f32>]
+    [public return<f32> effects(none)]
     dot([Vec4] self, [Vec4] other) {
       return(self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w)
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     add([Vec4] self, [Vec4] other) {
       return(Vec4{self.x + other.x, self.y + other.y, self.z + other.z, self.w + other.w})
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     sub([Vec4] self, [Vec4] other) {
       return(Vec4{self.x - other.x, self.y - other.y, self.z - other.z, self.w - other.w})
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     mulScalar([Vec4] self, [f32] s) {
       return(Vec4{self.x * s, self.y * s, self.z * s, self.w * s})
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     divScalar([Vec4] self, [f32] s) {
       return(Vec4{self.x / s, self.y / s, self.z / s, self.w / s})
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     mix([Vec4] self, [Vec4] other, [f32] t) {
       [f32] inv{1.0 - t}
       return(Vec4{
@@ -231,7 +231,7 @@ namespace std {
       })
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     toNormalized([Vec4] self) {
       [f32] len{self.length()}
       if(len <= 0.0) {
@@ -241,7 +241,7 @@ namespace std {
       }
     }
 
-    [public return<Vec4>]
+    [public return<Vec4> effects(none)]
     normalize([Vec4] self) {
       return(self.toNormalized())
     }

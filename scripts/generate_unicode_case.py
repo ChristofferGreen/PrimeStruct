@@ -57,7 +57,7 @@ def render() -> str:
     for name, data, comment in (("lowerTable", lower, "lower case"), ("upperTable", upper, "upper case"), ("foldTable", fold, "case folding")):
         lines += [
             "      // The %s mappings (%d records)." % (comment, len(data) // RECORD_WIDTH),
-            "      [public return</std/text/view/StringView>]",
+            "      [public return</std/text/view/StringView> effects(none)]",
             "      %s() {" % name,
             '        return(textOf("%s"utf8))' % data,
             "      }",
