@@ -124,7 +124,7 @@ main() {
   CHECK(runCommand(dumpCmd) == 0);
   const std::string ast = readFile(outPath);
   const size_t countPos =
-      ast.find("[public, return<i32>] /std/collections/soa/SoaVector__");
+      ast.find("[public, return<i32>, effects(none)] /std/collections/soa/SoaVector__");
   CHECK(countPos != std::string::npos);
   CHECK(ast.find("/count()", countPos) != std::string::npos);
   CHECK(ast.find("/std/collections/soa_storage/soaColumnCount", countPos) !=
@@ -132,6 +132,28 @@ main() {
   CHECK(ast.find("this.storage", countPos) != std::string::npos);
   CHECK(ast.find("countValue", countPos) == std::string::npos);
   CHECK(ast.find("/soa/count(this.storage)", countPos) == std::string::npos);
+}
+
+TEST_CASE("dump ast prints effects(none) for a definition without effects") {
+  const std::string source = R"(
+[effects(none), return<int>]
+helper() {
+  return(1i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(helper())
+}
+)";
+  const std::string srcPath = writeTemp("compile_dump_ast_effects_none.prime", source);
+  const std::string outPath = (testScratchPath("") / "primec_dump_ast_effects_none.txt").string();
+  const std::string dumpCmd = "./primec " + quoteShellArg(srcPath) +
+                              " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  CHECK(ast.find("effects(none)") != std::string::npos);
+  CHECK(ast.find("effects(heap_alloc)") != std::string::npos);
 }
 
 TEST_CASE("dump ast-semantic keeps canonical soa get helper path compatibility") {

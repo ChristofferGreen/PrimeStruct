@@ -5,14 +5,14 @@ import /std/panic/*
 namespace std {
   namespace collections {
   namespace soa_storage {
-  [unsafe public return<void>]
+  [unsafe public return<void> effects(none)]
   soaColumnWrite<T>([SoaColumn<T> mut] values, [i32] index, [T move] value) {
     soaColumnCheckIndex<T>(values, index)
     soaColumnDropSlot<T>(values, index)
     soaColumnInitSlot<T>(values, index, value)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns2Write<T0, T1>([SoaColumns2<T0, T1> mut] values,
                            [i32] index,
                            [T0 move] firstValue,
@@ -24,7 +24,7 @@ namespace std {
     soaColumnWrite<T1>(second, index, secondValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns3Write<T0, T1, T2>([SoaColumns3<T0, T1, T2> mut] values,
                                 [i32] index,
                                 [T0 move] firstValue,
@@ -39,7 +39,7 @@ namespace std {
     soaColumnWrite<T2>(third, index, thirdValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns4Write<T0, T1, T2, T3>([SoaColumns4<T0, T1, T2, T3> mut] values,
                                     [i32] index,
                                     [T0 move] firstValue,
@@ -57,7 +57,7 @@ namespace std {
     soaColumnWrite<T3>(fourth, index, fourthValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns5Write<T0, T1, T2, T3, T4>([SoaColumns5<T0, T1, T2, T3, T4> mut] values,
                                         [i32] index,
                                         [T0 move] firstValue,
@@ -78,7 +78,7 @@ namespace std {
     soaColumnWrite<T4>(fifth, index, fifthValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns6Write<T0, T1, T2, T3, T4, T5>([SoaColumns6<T0, T1, T2, T3, T4, T5> mut] values,
                                             [i32] index,
                                             [T0 move] firstValue,
@@ -102,7 +102,7 @@ namespace std {
     soaColumnWrite<T5>(sixth, index, sixthValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns7Write<T0, T1, T2, T3, T4, T5, T6>([SoaColumns7<T0, T1, T2, T3, T4, T5, T6> mut] values,
                                                 [i32] index,
                                                 [T0 move] firstValue,
@@ -129,7 +129,7 @@ namespace std {
     soaColumnWrite<T6>(seventh, index, seventhValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns8Write<T0, T1, T2, T3, T4, T5, T6, T7>([SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7> mut] values,
                                                     [i32] index,
                                                     [T0 move] firstValue,
@@ -159,7 +159,7 @@ namespace std {
     soaColumnWrite<T7>(eighth, index, eighthValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns9Write<T0, T1, T2, T3, T4, T5, T6, T7, T8>([SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8> mut] values,
                                                         [i32] index,
                                                         [T0 move] firstValue,
@@ -192,7 +192,7 @@ namespace std {
     soaColumnWrite<T8>(ninth, index, ninthValue)
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   soaColumns10Write<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> mut] values,
                                                               [i32] index,
                                                               [T0 move] firstValue,

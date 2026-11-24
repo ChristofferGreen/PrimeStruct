@@ -13,17 +13,17 @@ namespace std {
     [private Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [private bool mut] ownsData{true}
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_count() {
       return(this.count)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_capacity() {
       return(this.capacity)
     }
 
-    [private mut return<void>]
+    [private mut return<void> effects(none)]
     set_field_count([i32] value) {
       if(value < 0i32 || value > this.capacity) {
         panic(value)
@@ -31,7 +31,7 @@ namespace std {
       this.count = value
     }
 
-    [private mut return<void>]
+    [private mut return<void> effects(none)]
     set_field_capacity([i32] value) {
       if(value < 0i32 || this.count > value || value > 1073741823i32) {
         panic(value)
@@ -55,7 +55,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.count = other.count
       this.capacity = other.capacity
@@ -84,23 +84,23 @@ namespace std {
     [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1i32)}
     [public i32] stride
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_count() {
       return(this.count)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_capacity() {
       return(this.capacity)
     }
   }
 
-  [public return<never>]
+  [public return<never> effects(none)]
   soaArbitraryWidthPending<T>([i32] fieldCount) {
     panic(fieldCount)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   soaSupportedFieldCount<T>() {
     [i32] fieldCount{meta.field_count<T>()}
     if(fieldCount < 1i32 || fieldCount > 16i32) {
@@ -319,7 +319,7 @@ namespace std {
 
   }
 
-  [public unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>> effects(none)]
   soaColumnSlotUnsafe<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -328,7 +328,7 @@ namespace std {
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
-  [unsafe_api public return<Pointer<uninitialized<Field>>>]
+  [unsafe_api public return<Pointer<uninitialized<Field>>> effects(none)]
   soaColumnFieldSlotUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] index, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     if(index < 0i32 || !(index < values.field_capacity())) {
@@ -348,7 +348,7 @@ namespace std {
     return(bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
   }
 
-  [unsafe_api public return<SoaFieldView<Field>>]
+  [unsafe_api public return<SoaFieldView<Field>> effects(none)]
   soaColumnFieldViewUnsafe<Struct, Field>([SoaColumn<Struct>] values, [i32] fieldIndex) {
     soaColumnCheckShape<Struct>(values)
     [i32] fieldCount{/Struct/SoaSchemaFieldCount()}
@@ -370,14 +370,14 @@ namespace std {
         stride})
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaFieldViewCheckShape<T>([SoaFieldView<T>] values) {
     if(values.field_count() < 0i32 || values.field_capacity() < 0i32 || values.field_count() > values.field_capacity() || values.field_capacity() > 1073741823i32 || values.stride < 1i32) {
       panic(0i32)
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaFieldViewCheckIndex<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckShape<T>(values)
     if(index < 0i32 || !(index < values.field_count()) || !(index < values.field_capacity())) {
@@ -385,7 +385,7 @@ namespace std {
     }
   }
 
-  [public unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>> effects(none)]
   soaFieldViewSlotUnsafe<T>([SoaFieldView<T>] values, [i32] index) {
     soaFieldViewCheckIndex<T>(values, index)
     [i32] byteOffset{index * values.stride}
@@ -396,53 +396,53 @@ namespace std {
     return(bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
   }
 
-  [unsafe public return<T>]
+  [unsafe public return<T> effects(none)]
   soaFieldViewRead<T>([SoaFieldView<T>] values, [i32] index) {
     return(*(soaFieldViewSlotUnsafe<T>(values, index)))
   }
 
-  [unsafe public return<Reference<T>>]
+  [unsafe public return<Reference<T>> effects(none)]
   soaFieldViewRef<T>([SoaFieldView<T>] values, [i32] index) {
     return(borrow(*(soaFieldViewSlotUnsafe<T>(values, index))))
   }
 
   // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
-  [return<T>]
+  [return<T> effects(none)]
   soaColumnCopyValue<T>([T copy] value) {
     return(value)
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   soaColumnInitSlot<T>([SoaColumn<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   soaColumnDropSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     drop(*slot)
   }
 
-  [public unsafe_api return<T>]
+  [public unsafe_api return<T> effects(none)]
   soaColumnTakeSlot<T>([SoaColumn<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{soaColumnSlotUnsafe<T>(values, index)}
     return(take(*slot))
   }
 
-  [public unsafe_api return<Reference<T>>]
+  [public unsafe_api return<Reference<T>> effects(none)]
   soaColumnBorrowSlot<T>([SoaColumn<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{soaColumnSlotUnsafe<T>(values, index)}
     return(borrow(*slot))
   }
 
-  [unsafe public return<Reference<T>>]
+  [unsafe public return<Reference<T>> effects(none)]
   soaColumnRef<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     return(soaColumnBorrowSlot<T>(values, index))
   }
 
-  [public return<SoaColumn<T>>]
+  [public return<SoaColumn<T>> effects(none)]
   soaColumnBorrowedView<T>([SoaColumn<T>] values) {
     soaColumnCheckShape<T>(values)
     return(SoaColumn<T>{
@@ -452,7 +452,7 @@ namespace std {
         false})
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   soaColumnDropRange<T>([SoaColumn<T> mut] values, [i32] limit) {
     soaColumnCheckShape<T>(values)
     if(limit < 0i32 || limit > values.field_capacity()) {
@@ -489,14 +489,14 @@ namespace std {
         true})
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumnCheckShape<T>([SoaColumn<T>] values) {
     if(values.field_count() < 0i32 || values.field_capacity() < 0i32 || values.field_count() > values.field_capacity() || values.field_capacity() > 1073741823i32) {
       panic(0i32)
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumnCheckIndex<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckShape<T>(values)
     if(index < 0i32 || !(index < values.field_count()) || !(index < values.field_capacity())) {
@@ -504,7 +504,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns2CheckShape<T0, T1>([Reference<SoaColumns2<T0, T1>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -515,7 +515,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns3CheckShape<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -528,7 +528,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns4CheckShape<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -543,7 +543,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns5CheckShape<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -560,7 +560,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -579,7 +579,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -600,7 +600,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -629,7 +629,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -660,7 +660,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -693,7 +693,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -728,7 +728,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -765,7 +765,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -804,7 +804,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -845,7 +845,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}
@@ -888,7 +888,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values) {
     [Reference<SoaColumn<T0>>] first{values.first}
     [Reference<SoaColumn<T1>>] second{values.second}

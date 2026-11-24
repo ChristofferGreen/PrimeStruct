@@ -19,20 +19,20 @@ namespace std {
     [private Vector<K> mut] keys{vector<K>()}
     [private Vector<V> mut] payloads{vector<V>()}
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     mapCount() {
       [Vector<K>] keys{this.keys}
       return(vectorCount<K>(keys))
     }
 
-    [public return<bool> Comparable<K>]
+    [public return<bool> Comparable<K> effects(none)]
     mapContains([K] key) {
       [Vector<K>] keys{this.keys}
       [i32] limit{vectorCount<K>(keys)}
       return(findIndex<K, V>(this, key) < limit)
     }
 
-    [public return<Result<V, ContainerError>> Comparable<K>]
+    [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
     mapTryAt([K] key) {
       [i32] index{findIndex<K, V>(this, key)}
       [Vector<V>] payloads{this.payloads}
@@ -44,7 +44,7 @@ namespace std {
       return(/ContainerError/result<V>(/ContainerError/missingKey()))
     }
 
-    [public return<V> Comparable<K>]
+    [public return<V> Comparable<K> effects(none)]
     mapAt([K] key) {
       [i32] index{findIndex<K, V>(this, key)}
       [Vector<V>] payloads{this.payloads}
@@ -56,7 +56,7 @@ namespace std {
       return(vectorAt<V>(payloads, index))
     }
 
-    [public return<V> Comparable<K>]
+    [public return<V> Comparable<K> effects(none)]
     mapAtUnsafe([K] key) {
       [Vector<V>] payloads{this.payloads}
       return(vectorAtUnsafe<V>(
@@ -86,7 +86,7 @@ namespace std {
     }
   }
 
-  [public return<Entry<K, V>>]
+  [public return<Entry<K, V>> effects(none)]
   entry<K, V>([K move] key, [V move] value) {
     return(Entry<K, V>{key, value})
   }
@@ -96,7 +96,7 @@ namespace std {
     return(MapValue<K, V>{})
   }
 
-  [return<bool>]
+  [return<bool> effects(none)]
   keysEqual<K>([K] left, [K] right) {
     return(left.equal(right))
   }
@@ -121,29 +121,29 @@ namespace std {
     return(out)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   mapCount<K, V>([MapValue<K, V>] entries) {
     [Vector<K>] keys{entries.keys}
     return(vectorCount<K>(keys))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   mapCountRef<K, V>([Reference<MapValue<K, V>>] entries) {
     [Vector<K>] keys{entries.keys}
     return(vectorCount<K>(keys))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   count<K, V>([MapValue<K, V>] entries) {
     return(mapCount<K, V>(entries))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   count_ref<K, V>([Reference<MapValue<K, V>>] entries) {
     return(mapCountRef<K, V>(entries))
   }
 
-  [return<i32> Comparable<K>]
+  [return<i32> Comparable<K> effects(none)]
   findIndex<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
     [i32] limit{vectorCount<K>(keys)}
@@ -155,7 +155,7 @@ namespace std {
     return(limit)
   }
 
-  [return<i32> Comparable<K>]
+  [return<i32> Comparable<K> effects(none)]
   findIndexRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
     [i32] limit{vectorCount<K>(keys)}
@@ -167,7 +167,7 @@ namespace std {
     return(limit)
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   overwriteSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Reference<T> mut] slot{vectorBorrowSlot<T>(values, index)}
     *slot = value
@@ -211,31 +211,31 @@ namespace std {
     mapInsertRef<K, V>(entries, key, value)
   }
 
-  [public return<bool> Comparable<K>]
+  [public return<bool> Comparable<K> effects(none)]
   mapContains<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
     [i32] limit{vectorCount<K>(keys)}
     return(findIndex<K, V>(entries, key) < limit)
   }
 
-  [public return<bool> Comparable<K>]
+  [public return<bool> Comparable<K> effects(none)]
   mapContainsRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [Vector<K>] keys{entries.keys}
     [i32] limit{vectorCount<K>(keys)}
     return(findIndexRef<K, V>(entries, key) < limit)
   }
 
-  [public return<bool> Comparable<K>]
+  [public return<bool> Comparable<K> effects(none)]
   contains<K, V>([MapValue<K, V>] entries, [K] key) {
     return(mapContains<K, V>(entries, key))
   }
 
-  [public return<bool> Comparable<K>]
+  [public return<bool> Comparable<K> effects(none)]
   contains_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     return(mapContainsRef<K, V>(entries, key))
   }
 
-  [public return<Result<V, ContainerError>> Comparable<K>]
+  [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
   mapTryAt<K, V>([MapValue<K, V>] entries, [K] key) {
     [i32] index{findIndex<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
@@ -247,7 +247,7 @@ namespace std {
     return(/ContainerError/result<V>(/ContainerError/missingKey()))
   }
 
-  [public return<Result<V, ContainerError>> Comparable<K>]
+  [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
   mapTryAtRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [i32] index{findIndexRef<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
@@ -259,17 +259,17 @@ namespace std {
     return(/ContainerError/result<V>(/ContainerError/missingKey()))
   }
 
-  [public return<Result<V, ContainerError>> Comparable<K>]
+  [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
   tryAt<K, V>([MapValue<K, V>] entries, [K] key) {
     return(mapTryAt<K, V>(entries, key))
   }
 
-  [public return<Result<V, ContainerError>> Comparable<K>]
+  [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
   tryAt_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     return(mapTryAtRef<K, V>(entries, key))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   mapAt<K, V>([MapValue<K, V>] entries, [K] key) {
     [i32] index{findIndex<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
@@ -281,7 +281,7 @@ namespace std {
     return(vectorAt<V>(payloads, index))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   mapAtRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [i32] index{findIndexRef<K, V>(entries, key)}
     [Vector<V>] payloads{entries.payloads}
@@ -293,17 +293,17 @@ namespace std {
     return(vectorAt<V>(payloads, index))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   at<K, V>([MapValue<K, V>] entries, [K] key) {
     return(mapAt<K, V>(entries, key))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   at_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     return(mapAtRef<K, V>(entries, key))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   mapAtUnsafe<K, V>([MapValue<K, V>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
     return(vectorAtUnsafe<V>(
@@ -311,7 +311,7 @@ namespace std {
         findIndex<K, V>(entries, key)))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   mapAtUnsafeRef<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
     return(vectorAtUnsafe<V>(
@@ -319,12 +319,12 @@ namespace std {
         findIndexRef<K, V>(entries, key)))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   at_unsafe<K, V>([MapValue<K, V>] entries, [K] key) {
     return(mapAtUnsafe<K, V>(entries, key))
   }
 
-  [public return<V> Comparable<K>]
+  [public return<V> Comparable<K> effects(none)]
   at_unsafe_ref<K, V>([Reference<MapValue<K, V>>] entries, [K] key) {
     return(mapAtUnsafeRef<K, V>(entries, key))
   }
@@ -337,31 +337,31 @@ namespace std {
   Map<K, V>() {
     [public MapValue<K, V> mut] inner{mapNew<K, V>()}
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     count() {
       [MapValue<K, V>] inner{this.inner}
       return(mapCount<K, V>(inner))
     }
 
-    [public return<bool> Comparable<K>]
+    [public return<bool> Comparable<K> effects(none)]
     contains([K] key) {
       [MapValue<K, V>] inner{this.inner}
       return(mapContains<K, V>(inner, key))
     }
 
-    [public return<Result<V, ContainerError>> Comparable<K>]
+    [public return<Result<V, ContainerError>> Comparable<K> effects(none)]
     tryAt([K] key) {
       [MapValue<K, V>] inner{this.inner}
       return(mapTryAt<K, V>(inner, key))
     }
 
-    [public return<V> Comparable<K>]
+    [public return<V> Comparable<K> effects(none)]
     at([K] key) {
       [MapValue<K, V>] inner{this.inner}
       return(mapAt<K, V>(inner, key))
     }
 
-    [public return<V> Comparable<K>]
+    [public return<V> Comparable<K> effects(none)]
     at_unsafe([K] key) {
       [MapValue<K, V>] inner{this.inner}
       return(mapAtUnsafe<K, V>(inner, key))

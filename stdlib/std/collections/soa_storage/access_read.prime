@@ -5,153 +5,153 @@ import /std/panic/*
 namespace std {
   namespace collections {
   namespace soa_storage {
-  [unsafe public return<T>]
+  [unsafe public return<T> effects(none)]
   soaColumnRead<T>([SoaColumn<T>] values, [i32] index) {
     soaColumnCheckIndex<T>(values, index)
     return(*(soaColumnBorrowSlot<T>(values, index)))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns2ReadFirst<T0, T1>([Reference<SoaColumns2<T0, T1>>] values, [i32] index) {
     soaColumns2CheckShape<T0, T1>(values)
     [Reference<SoaColumn<T0>>] first{values.first}
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns2ReadSecond<T0, T1>([Reference<SoaColumns2<T0, T1>>] values, [i32] index) {
     soaColumns2CheckShape<T0, T1>(values)
     [Reference<SoaColumn<T1>>] second{values.second}
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns3ReadFirst<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
     soaColumns3CheckShape<T0, T1, T2>(values)
     [Reference<SoaColumn<T0>>] first{values.first}
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns3ReadSecond<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
     soaColumns3CheckShape<T0, T1, T2>(values)
     [Reference<SoaColumn<T1>>] second{values.second}
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns3ReadThird<T0, T1, T2>([Reference<SoaColumns3<T0, T1, T2>>] values, [i32] index) {
     soaColumns3CheckShape<T0, T1, T2>(values)
     [Reference<SoaColumn<T2>>] third{values.third}
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns4ReadFirst<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
     soaColumns4CheckShape<T0, T1, T2, T3>(values)
     [Reference<SoaColumn<T0>>] first{values.first}
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns4ReadSecond<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
     soaColumns4CheckShape<T0, T1, T2, T3>(values)
     [Reference<SoaColumn<T1>>] second{values.second}
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns4ReadThird<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
     soaColumns4CheckShape<T0, T1, T2, T3>(values)
     [Reference<SoaColumn<T2>>] third{values.third}
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns4ReadFourth<T0, T1, T2, T3>([Reference<SoaColumns4<T0, T1, T2, T3>>] values, [i32] index) {
     soaColumns4CheckShape<T0, T1, T2, T3>(values)
     [Reference<SoaColumn<T3>>] fourth{values.fourth}
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns5ReadFirst<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
     soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
     [Reference<SoaColumn<T0>>] first{values.first}
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns5ReadSecond<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
     soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
     [Reference<SoaColumn<T1>>] second{values.second}
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns5ReadThird<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
     soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
     [Reference<SoaColumn<T2>>] third{values.third}
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns5ReadFourth<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
     soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
     [Reference<SoaColumn<T3>>] fourth{values.fourth}
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns5ReadFifth<T0, T1, T2, T3, T4>([Reference<SoaColumns5<T0, T1, T2, T3, T4>>] values, [i32] index) {
     soaColumns5CheckShape<T0, T1, T2, T3, T4>(values)
     [Reference<SoaColumn<T4>>] fifth{values.fifth}
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns6ReadFirst<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T0>>] first{values.first}
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns6ReadSecond<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T1>>] second{values.second}
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns6ReadThird<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T2>>] third{values.third}
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns6ReadFourth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T3>>] fourth{values.fourth}
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns6ReadFifth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T4>>] fifth{values.fifth}
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns6ReadSixth<T0, T1, T2, T3, T4, T5>([Reference<SoaColumns6<T0, T1, T2, T3, T4, T5>>] values, [i32] index) {
     soaColumns6CheckShape<T0, T1, T2, T3, T4, T5>(values)
     [Reference<SoaColumn<T5>>] sixth{values.sixth}
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns7ReadFirst<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                     [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -159,7 +159,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns7ReadSecond<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                      [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -167,7 +167,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns7ReadThird<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                     [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -175,7 +175,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns7ReadFourth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                      [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -183,7 +183,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns7ReadFifth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                     [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -191,7 +191,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns7ReadSixth<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                     [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -199,7 +199,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns7ReadSeventh<T0, T1, T2, T3, T4, T5, T6>([Reference<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>] values,
                                                       [i32] index) {
     soaColumns7CheckShape<T0, T1, T2, T3, T4, T5, T6>(values)
@@ -207,7 +207,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns8ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                         [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -215,7 +215,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns8ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                          [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -223,7 +223,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns8ReadThird<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                         [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -231,7 +231,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns8ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                          [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -239,7 +239,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns8ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                         [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -247,7 +247,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns8ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                         [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -255,7 +255,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns8ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                           [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -263,7 +263,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns8ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7>([Reference<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>] values,
                                                          [i32] index) {
     soaColumns8CheckShape<T0, T1, T2, T3, T4, T5, T6, T7>(values)
@@ -271,7 +271,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns9ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                             [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -279,7 +279,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns9ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                              [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -287,7 +287,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns9ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                             [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -295,7 +295,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns9ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                              [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -303,7 +303,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns9ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                             [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -311,7 +311,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns9ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                             [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -319,7 +319,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns9ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                               [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -327,7 +327,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns9ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                              [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -335,7 +335,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns9ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8>([Reference<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>] values,
                                                             [i32] index) {
     soaColumns9CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8>(values)
@@ -343,7 +343,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns10ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -351,7 +351,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns10ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                   [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -359,7 +359,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns10ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -367,7 +367,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns10ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                   [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -375,7 +375,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns10ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -383,7 +383,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns10ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -391,7 +391,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns10ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                    [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -399,7 +399,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns10ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                   [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -407,7 +407,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns10ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -415,7 +415,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns10ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>([Reference<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>] values,
                                                                  [i32] index) {
     soaColumns10CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>(values)
@@ -423,7 +423,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns11ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -431,7 +431,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns11ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                        [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -439,7 +439,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns11ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -447,7 +447,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns11ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                        [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -455,7 +455,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns11ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -463,7 +463,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns11ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -471,7 +471,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns11ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                         [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -479,7 +479,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns11ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                        [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -487,7 +487,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns11ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -495,7 +495,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns11ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                       [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -503,7 +503,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns11ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>([Reference<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>] values,
                                                                          [i32] index) {
     soaColumns11CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(values)
@@ -511,7 +511,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns12ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -519,7 +519,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns12ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                              [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -527,7 +527,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns12ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -535,7 +535,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns12ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                              [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -543,7 +543,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns12ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -551,7 +551,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns12ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -559,7 +559,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns12ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                               [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -567,7 +567,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns12ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                              [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -575,7 +575,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns12ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -583,7 +583,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns12ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                             [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -591,7 +591,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns12ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                                [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -599,7 +599,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T11>]
+  [public return<T11> effects(none)]
   soaColumns12ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>([Reference<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>] values,
                                                                               [i32] index) {
     soaColumns12CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(values)
@@ -607,7 +607,7 @@ namespace std {
     return(soaColumnRead<T11>(twelfth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns13ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -615,7 +615,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns13ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                    [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -623,7 +623,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns13ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -631,7 +631,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns13ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                    [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -639,7 +639,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns13ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -647,7 +647,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns13ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -655,7 +655,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns13ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                     [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -663,7 +663,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns13ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                    [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -671,7 +671,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns13ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -679,7 +679,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns13ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                   [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -687,7 +687,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns13ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                      [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -695,7 +695,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T11>]
+  [public return<T11> effects(none)]
   soaColumns13ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                     [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -703,7 +703,7 @@ namespace std {
     return(soaColumnRead<T11>(twelfth, index))
   }
 
-  [public return<T12>]
+  [public return<T12> effects(none)]
   soaColumns13ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>([Reference<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>] values,
                                                                                        [i32] index) {
     soaColumns13CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(values)
@@ -711,7 +711,7 @@ namespace std {
     return(soaColumnRead<T12>(thirteenth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns14ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -719,7 +719,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns14ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                         [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -727,7 +727,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns14ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -735,7 +735,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns14ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                         [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -743,7 +743,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns14ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -751,7 +751,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns14ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -759,7 +759,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns14ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                          [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -767,7 +767,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns14ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                         [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -775,7 +775,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns14ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -783,7 +783,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns14ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                        [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -791,7 +791,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns14ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                           [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -799,7 +799,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T11>]
+  [public return<T11> effects(none)]
   soaColumns14ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                          [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -807,7 +807,7 @@ namespace std {
     return(soaColumnRead<T11>(twelfth, index))
   }
 
-  [public return<T12>]
+  [public return<T12> effects(none)]
   soaColumns14ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                             [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -815,7 +815,7 @@ namespace std {
     return(soaColumnRead<T12>(thirteenth, index))
   }
 
-  [public return<T13>]
+  [public return<T13> effects(none)]
   soaColumns14ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>([Reference<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>] values,
                                                                                             [i32] index) {
     soaColumns14CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(values)
@@ -823,7 +823,7 @@ namespace std {
     return(soaColumnRead<T13>(fourteenth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns15ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -831,7 +831,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns15ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                              [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -839,7 +839,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns15ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -847,7 +847,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns15ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                              [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -855,7 +855,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns15ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -863,7 +863,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns15ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -871,7 +871,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns15ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                               [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -879,7 +879,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns15ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                              [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -887,7 +887,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns15ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -895,7 +895,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns15ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                             [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -903,7 +903,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns15ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                                 [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -911,7 +911,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T11>]
+  [public return<T11> effects(none)]
   soaColumns15ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                                [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -919,7 +919,7 @@ namespace std {
     return(soaColumnRead<T11>(twelfth, index))
   }
 
-  [public return<T12>]
+  [public return<T12> effects(none)]
   soaColumns15ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                                   [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -927,7 +927,7 @@ namespace std {
     return(soaColumnRead<T12>(thirteenth, index))
   }
 
-  [public return<T13>]
+  [public return<T13> effects(none)]
   soaColumns15ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                                   [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -935,7 +935,7 @@ namespace std {
     return(soaColumnRead<T13>(fourteenth, index))
   }
 
-  [public return<T14>]
+  [public return<T14> effects(none)]
   soaColumns15ReadFifteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>([Reference<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>] values,
                                                                                                  [i32] index) {
     soaColumns15CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(values)
@@ -943,7 +943,7 @@ namespace std {
     return(soaColumnRead<T14>(fifteenth, index))
   }
 
-  [public return<T0>]
+  [public return<T0> effects(none)]
   soaColumns16ReadFirst<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -951,7 +951,7 @@ namespace std {
     return(soaColumnRead<T0>(first, index))
   }
 
-  [public return<T1>]
+  [public return<T1> effects(none)]
   soaColumns16ReadSecond<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -959,7 +959,7 @@ namespace std {
     return(soaColumnRead<T1>(second, index))
   }
 
-  [public return<T2>]
+  [public return<T2> effects(none)]
   soaColumns16ReadThird<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -967,7 +967,7 @@ namespace std {
     return(soaColumnRead<T2>(third, index))
   }
 
-  [public return<T3>]
+  [public return<T3> effects(none)]
   soaColumns16ReadFourth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -975,7 +975,7 @@ namespace std {
     return(soaColumnRead<T3>(fourth, index))
   }
 
-  [public return<T4>]
+  [public return<T4> effects(none)]
   soaColumns16ReadFifth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -983,7 +983,7 @@ namespace std {
     return(soaColumnRead<T4>(fifth, index))
   }
 
-  [public return<T5>]
+  [public return<T5> effects(none)]
   soaColumns16ReadSixth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -991,7 +991,7 @@ namespace std {
     return(soaColumnRead<T5>(sixth, index))
   }
 
-  [public return<T6>]
+  [public return<T6> effects(none)]
   soaColumns16ReadSeventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -999,7 +999,7 @@ namespace std {
     return(soaColumnRead<T6>(seventh, index))
   }
 
-  [public return<T7>]
+  [public return<T7> effects(none)]
   soaColumns16ReadEighth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1007,7 +1007,7 @@ namespace std {
     return(soaColumnRead<T7>(eighth, index))
   }
 
-  [public return<T8>]
+  [public return<T8> effects(none)]
   soaColumns16ReadNinth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1015,7 +1015,7 @@ namespace std {
     return(soaColumnRead<T8>(ninth, index))
   }
 
-  [public return<T9>]
+  [public return<T9> effects(none)]
   soaColumns16ReadTenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1023,7 +1023,7 @@ namespace std {
     return(soaColumnRead<T9>(tenth, index))
   }
 
-  [public return<T10>]
+  [public return<T10> effects(none)]
   soaColumns16ReadEleventh<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1031,7 +1031,7 @@ namespace std {
     return(soaColumnRead<T10>(eleventh, index))
   }
 
-  [public return<T11>]
+  [public return<T11> effects(none)]
   soaColumns16ReadTwelfth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1039,7 +1039,7 @@ namespace std {
     return(soaColumnRead<T11>(twelfth, index))
   }
 
-  [public return<T12>]
+  [public return<T12> effects(none)]
   soaColumns16ReadThirteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1047,7 +1047,7 @@ namespace std {
     return(soaColumnRead<T12>(thirteenth, index))
   }
 
-  [public return<T13>]
+  [public return<T13> effects(none)]
   soaColumns16ReadFourteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1055,7 +1055,7 @@ namespace std {
     return(soaColumnRead<T13>(fourteenth, index))
   }
 
-  [public return<T14>]
+  [public return<T14> effects(none)]
   soaColumns16ReadFifteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)
@@ -1063,7 +1063,7 @@ namespace std {
     return(soaColumnRead<T14>(fifteenth, index))
   }
 
-  [public return<T15>]
+  [public return<T15> effects(none)]
   soaColumns16ReadSixteenth<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>([Reference<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>] values,
                                                                                                   [i32] index) {
     soaColumns16CheckShape<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(values)

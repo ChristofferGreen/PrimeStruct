@@ -22,22 +22,22 @@ namespace std {
   Write() {
   }
 
-  [unsafe return<T>]
+  [unsafe return<T> effects(none)]
   sliceRead<T>([Pointer<T>] base, [i32] index) {
     return(bufferReadUnsafe<T>(base, index))
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   sliceWrite<T>([Pointer<T> mut] base, [i32] index, [T move] value) {
     bufferWriteUnsafe<T>(base, index, value)
   }
 
-  [unsafe return<Pointer<T>>]
+  [unsafe return<Pointer<T>> effects(none)]
   sliceOffset<T>([Pointer<T>] base, [i32] index) {
     return(bufferOffsetUnsafe<T>(base, index))
   }
 
-  [return<i32>]
+  [return<i32> effects(none)]
   clampCount([i32] n, [i32] limit) {
     if(n < 0i32) {
       return(0i32)
@@ -48,19 +48,19 @@ namespace std {
     return(n)
   }
 
-  [public return<ReadSlice<T>>]
+  [public return<ReadSlice<T>> effects(none)]
   readSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(ReadSlice<T>{[data] data, [fieldCount] count})
   }
 
-  [public return<WriteSlice<T>>]
+  [public return<WriteSlice<T>> effects(none)]
   writeSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(WriteSlice<T>{[data] data, [fieldCount] count})
   }
 
   // ---- operations on a raw range (pointer and count), shared by both views ----
 
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangeFind<T>([Pointer<T>] data, [i32] count, [T] value) {
     for([i32 mut] i{0i32}, i < count, i++) {
       if(sliceRead<T>(data, i) == value) {
@@ -70,7 +70,7 @@ namespace std {
     return(-1i32)
   }
 
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangeRfind<T>([Pointer<T>] data, [i32] count, [T] value) {
     for([i32 mut] i{count - 1i32}, i >= 0i32, i--) {
       if(sliceRead<T>(data, i) == value) {
@@ -80,7 +80,7 @@ namespace std {
     return(-1i32)
   }
 
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangeOccurrences<T>([Pointer<T>] data, [i32] count, [T] value) {
     [i32 mut] total{0i32}
     for([i32 mut] i{0i32}, i < count, i++) {
@@ -91,7 +91,7 @@ namespace std {
     return(total)
   }
 
-  [unsafe return<bool>]
+  [unsafe return<bool> effects(none)]
   rangeEquals<T>([Pointer<T>] data, [i32] count, [Pointer<T>] otherData, [i32] otherCount) {
     if(otherCount != count) {
       return(false)
@@ -105,7 +105,7 @@ namespace std {
   }
 
   // Lexicographic order: -1, 0 or 1.
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangeCompare<T>([Pointer<T>] data, [i32] count, [Pointer<T>] otherData, [i32] otherCount) {
     [i32 mut] shared{count}
     if(otherCount < shared) {
@@ -130,7 +130,7 @@ namespace std {
     return(0i32)
   }
 
-  [unsafe return<bool>]
+  [unsafe return<bool> effects(none)]
   rangeStartsWith<T>([Pointer<T>] data, [i32] count, [Pointer<T>] prefixData, [i32] prefixCount) {
     if(prefixCount > count) {
       return(false)
@@ -138,7 +138,7 @@ namespace std {
     return(rangeEquals<T>(data, prefixCount, prefixData, prefixCount))
   }
 
-  [unsafe return<bool>]
+  [unsafe return<bool> effects(none)]
   rangeEndsWith<T>([Pointer<T>] data, [i32] count, [Pointer<T>] suffixData, [i32] suffixCount) {
     if(suffixCount > count) {
       return(false)
@@ -147,7 +147,7 @@ namespace std {
   }
 
   // Index of the first place the needle occurs, or -1.
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangeFindRange<T>([Pointer<T>] data, [i32] count, [Pointer<T>] needleData, [i32] needleCount) {
     if(needleCount > count) {
       return(-1i32)
@@ -163,7 +163,7 @@ namespace std {
 
   // Where piece `n` (from 0) of the range cut at every element equal to `separator` starts, and ends. An
   // out of range piece is empty and at the end.
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangePieceStart<T>([Pointer<T>] data, [i32] count, [T] separator, [i32] n) {
     [i32 mut] pieceStart{0i32}
     [i32 mut] piece{0i32}
@@ -182,7 +182,7 @@ namespace std {
     return(count)
   }
 
-  [unsafe return<i32>]
+  [unsafe return<i32> effects(none)]
   rangePieceEnd<T>([Pointer<T>] data, [i32] count, [T] separator, [i32] n) {
     [i32 mut] piece{0i32}
     for([i32 mut] i{0i32}, i < count, i++) {
@@ -196,14 +196,14 @@ namespace std {
     return(count)
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rangeFill<T>([Pointer<T> mut] data, [i32] count, [T] value) {
     for([i32 mut] i{0i32}, i < count, i++) {
       sliceWrite<T>(data, i, value)
     }
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rangeSwap<T>([Pointer<T> mut] data, [i32] count, [i32] a, [i32] b) {
     if(a < 0i32 || a >= count || b < 0i32 || b >= count) {
       panic(a)
@@ -213,7 +213,7 @@ namespace std {
     sliceWrite<T>(data, b, held)
   }
 
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rangeReverse<T>([Pointer<T> mut] data, [i32] count) {
     [i32 mut] low{0i32}
     [i32 mut] high{count - 1i32}
@@ -225,7 +225,7 @@ namespace std {
   }
 
   // Copies the source range over the destination (the same count), correct for overlapping ranges.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rangeCopy<T>([Pointer<T> mut] data, [i32] count, [Pointer<T>] sourceData, [i32] sourceCount) {
     if(sourceCount != count) {
       panic(sourceCount)
@@ -242,7 +242,7 @@ namespace std {
   }
 
   // Insertion sort: stable, in place, and small; `T` is ordered.
-  [unsafe return<void>]
+  [unsafe return<void> effects(none)]
   rangeSort<T>([Pointer<T> mut] data, [i32] count) {
     for([i32 mut] i{1i32}, i < count, i++) {
       [T] moving{sliceRead<T>(data, i)}
@@ -260,17 +260,17 @@ namespace std {
     [public Pointer<T> mut] data
     [public i32 mut] fieldCount{0i32}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(this.fieldCount)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(this.fieldCount == 0i32)
     }
 
-    [return<T>]
+    [return<T> effects(none)]
     at([i32] index) {
       if(index < 0i32 || index >= this.fieldCount) {
         panic(index)
@@ -279,12 +279,12 @@ namespace std {
     }
 
     // `view[i]` is rewritten to this call (docs/spec/transforms.md, operators on structs).
-    [return<T>]
+    [return<T> effects(none)]
     opAt([i32] index) {
       return(this.at(index))
     }
 
-    [return<Maybe<T>>]
+    [return<Maybe<T>> effects(none)]
     first() {
       if(this.fieldCount == 0i32) {
         return(none<T>())
@@ -292,7 +292,7 @@ namespace std {
       return(some<T>(sliceRead<T>(this.data, 0i32)))
     }
 
-    [return<Maybe<T>>]
+    [return<Maybe<T>> effects(none)]
     last() {
       if(this.fieldCount == 0i32) {
         return(none<T>())
@@ -301,65 +301,65 @@ namespace std {
     }
 
     // Index of the first element equal to `value`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     find([T] value) {
       return(rangeFind<T>(this.data, this.fieldCount, value))
     }
 
     // Index of the last element equal to `value`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     rfind([T] value) {
       return(rangeRfind<T>(this.data, this.fieldCount, value))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     contains([T] value) {
       return(rangeFind<T>(this.data, this.fieldCount, value) >= 0i32)
     }
 
     // How many elements equal `value`.
-    [return<i32>]
+    [return<i32> effects(none)]
     occurrences([T] value) {
       return(rangeOccurrences<T>(this.data, this.fieldCount, value))
     }
 
     // Element-wise equality with another read view.
-    [return<bool>]
+    [return<bool> effects(none)]
     equals([ReadSlice<T>] other) {
       return(rangeEquals<T>(this.data, this.fieldCount, other.data, other.fieldCount))
     }
 
     // Lexicographic order: -1, 0 or 1.
-    [return<i32>]
+    [return<i32> effects(none)]
     compare([ReadSlice<T>] other) {
       return(rangeCompare<T>(this.data, this.fieldCount, other.data, other.fieldCount))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     startsWith([ReadSlice<T>] prefix) {
       return(rangeStartsWith<T>(this.data, this.fieldCount, prefix.data, prefix.fieldCount))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     endsWith([ReadSlice<T>] suffix) {
       return(rangeEndsWith<T>(this.data, this.fieldCount, suffix.data, suffix.fieldCount))
     }
 
     // Index of the first place `needle` occurs, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     findSlice([ReadSlice<T>] needle) {
       return(rangeFindRange<T>(this.data, this.fieldCount, needle.data, needle.fieldCount))
     }
 
     // How many pieces `splitPart` has: one more than the separators.
-    [return<i32>]
+    [return<i32> effects(none)]
     splitCount([T] separator) {
       return(rangeOccurrences<T>(this.data, this.fieldCount, separator) + 1i32)
     }
 
     // ---- narrowing: each returns a view of the same elements ----
 
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     slice([i32] start, [i32] end) {
       if(start < 0i32 || end < start || end > this.fieldCount) {
         panic(start)
@@ -367,41 +367,41 @@ namespace std {
       return(readSliceMake<T>(sliceOffset<T>(this.data, start), end - start))
     }
 
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     takeFirst([i32] n) {
       return(this.slice(0i32, clampCount(n, this.fieldCount)))
     }
 
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     dropFirst([i32] n) {
       return(this.slice(clampCount(n, this.fieldCount), this.fieldCount))
     }
 
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     takeLast([i32] n) {
       return(this.slice(this.fieldCount - clampCount(n, this.fieldCount), this.fieldCount))
     }
 
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     dropLast([i32] n) {
       return(this.slice(0i32, this.fieldCount - clampCount(n, this.fieldCount)))
     }
 
     // The part before `index`.
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     head([i32] index) {
       return(this.slice(0i32, index))
     }
 
     // The part from `index` on.
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     tail([i32] index) {
       return(this.slice(index, this.fieldCount))
     }
 
     // The n-th piece (from 0) of the view cut at every element equal to `separator`; an out of range
     // piece is an empty view at the end.
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     splitPart([T] separator, [i32] n) {
       return(this.slice(rangePieceStart<T>(this.data, this.fieldCount, separator, n),
                         rangePieceEnd<T>(this.data, this.fieldCount, separator, n)))
@@ -413,17 +413,17 @@ namespace std {
     [public Pointer<T> mut] data
     [public i32 mut] fieldCount{0i32}
 
-    [return<i32>]
+    [return<i32> effects(none)]
     count() {
       return(this.fieldCount)
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     empty() {
       return(this.fieldCount == 0i32)
     }
 
-    [return<T>]
+    [return<T> effects(none)]
     at([i32] index) {
       if(index < 0i32 || index >= this.fieldCount) {
         panic(index)
@@ -432,12 +432,12 @@ namespace std {
     }
 
     // `view[i]` is rewritten to this call (docs/spec/transforms.md, operators on structs).
-    [return<T>]
+    [return<T> effects(none)]
     opAt([i32] index) {
       return(this.at(index))
     }
 
-    [return<Maybe<T>>]
+    [return<Maybe<T>> effects(none)]
     first() {
       if(this.fieldCount == 0i32) {
         return(none<T>())
@@ -445,7 +445,7 @@ namespace std {
       return(some<T>(sliceRead<T>(this.data, 0i32)))
     }
 
-    [return<Maybe<T>>]
+    [return<Maybe<T>> effects(none)]
     last() {
       if(this.fieldCount == 0i32) {
         return(none<T>())
@@ -454,65 +454,65 @@ namespace std {
     }
 
     // Index of the first element equal to `value`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     find([T] value) {
       return(rangeFind<T>(this.data, this.fieldCount, value))
     }
 
     // Index of the last element equal to `value`, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     rfind([T] value) {
       return(rangeRfind<T>(this.data, this.fieldCount, value))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     contains([T] value) {
       return(rangeFind<T>(this.data, this.fieldCount, value) >= 0i32)
     }
 
     // How many elements equal `value`.
-    [return<i32>]
+    [return<i32> effects(none)]
     occurrences([T] value) {
       return(rangeOccurrences<T>(this.data, this.fieldCount, value))
     }
 
     // Element-wise equality with another read view.
-    [return<bool>]
+    [return<bool> effects(none)]
     equals([ReadSlice<T>] other) {
       return(rangeEquals<T>(this.data, this.fieldCount, other.data, other.fieldCount))
     }
 
     // Lexicographic order: -1, 0 or 1.
-    [return<i32>]
+    [return<i32> effects(none)]
     compare([ReadSlice<T>] other) {
       return(rangeCompare<T>(this.data, this.fieldCount, other.data, other.fieldCount))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     startsWith([ReadSlice<T>] prefix) {
       return(rangeStartsWith<T>(this.data, this.fieldCount, prefix.data, prefix.fieldCount))
     }
 
-    [return<bool>]
+    [return<bool> effects(none)]
     endsWith([ReadSlice<T>] suffix) {
       return(rangeEndsWith<T>(this.data, this.fieldCount, suffix.data, suffix.fieldCount))
     }
 
     // Index of the first place `needle` occurs, or -1.
-    [return<i32>]
+    [return<i32> effects(none)]
     findSlice([ReadSlice<T>] needle) {
       return(rangeFindRange<T>(this.data, this.fieldCount, needle.data, needle.fieldCount))
     }
 
     // How many pieces `splitPart` has: one more than the separators.
-    [return<i32>]
+    [return<i32> effects(none)]
     splitCount([T] separator) {
       return(rangeOccurrences<T>(this.data, this.fieldCount, separator) + 1i32)
     }
 
     // ---- narrowing: each returns a view of the same elements ----
 
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     slice([i32] start, [i32] end) {
       if(start < 0i32 || end < start || end > this.fieldCount) {
         panic(start)
@@ -520,41 +520,41 @@ namespace std {
       return(writeSliceMake<T>(sliceOffset<T>(this.data, start), end - start))
     }
 
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     takeFirst([i32] n) {
       return(this.slice(0i32, clampCount(n, this.fieldCount)))
     }
 
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     dropFirst([i32] n) {
       return(this.slice(clampCount(n, this.fieldCount), this.fieldCount))
     }
 
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     takeLast([i32] n) {
       return(this.slice(this.fieldCount - clampCount(n, this.fieldCount), this.fieldCount))
     }
 
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     dropLast([i32] n) {
       return(this.slice(0i32, this.fieldCount - clampCount(n, this.fieldCount)))
     }
 
     // The part before `index`.
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     head([i32] index) {
       return(this.slice(0i32, index))
     }
 
     // The part from `index` on.
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     tail([i32] index) {
       return(this.slice(index, this.fieldCount))
     }
 
     // The n-th piece (from 0) of the view cut at every element equal to `separator`; an out of range
     // piece is an empty view at the end.
-    [return<WriteSlice<T>>]
+    [return<WriteSlice<T>> effects(none)]
     splitPart([T] separator, [i32] n) {
       return(this.slice(rangePieceStart<T>(this.data, this.fieldCount, separator, n),
                         rangePieceEnd<T>(this.data, this.fieldCount, separator, n)))
@@ -562,7 +562,7 @@ namespace std {
 
     // ---- writes ----
 
-    [mut]
+    [mut effects(none)]
     set([i32] index, [T] value) {
       if(index < 0i32 || index >= this.fieldCount) {
         panic(index)
@@ -571,39 +571,39 @@ namespace std {
     }
 
     // `view[i] = value` is rewritten to this call.
-    [mut]
+    [mut effects(none)]
     opSet([i32] index, [T] value) {
       this.set(index, value)
     }
 
-    [mut]
+    [mut effects(none)]
     fill([T] value) {
       rangeFill<T>(this.data, this.fieldCount, value)
     }
 
-    [mut]
+    [mut effects(none)]
     swap([i32] a, [i32] b) {
       rangeSwap<T>(this.data, this.fieldCount, a, b)
     }
 
-    [mut]
+    [mut effects(none)]
     reverse() {
       rangeReverse<T>(this.data, this.fieldCount)
     }
 
     // Copies `other` (the same count) over this view's elements, correct for overlapping ranges.
-    [mut]
+    [mut effects(none)]
     copyFrom([ReadSlice<T>] other) {
       rangeCopy<T>(this.data, this.fieldCount, other.data, other.fieldCount)
     }
 
-    [mut]
+    [mut effects(none)]
     sort() {
       rangeSort<T>(this.data, this.fieldCount)
     }
 
     // The same elements as a read view.
-    [return<ReadSlice<T>>]
+    [return<ReadSlice<T>> effects(none)]
     readOnly() {
       return(readSliceMake<T>(this.data, this.fieldCount))
     }
@@ -612,18 +612,18 @@ namespace std {
   // Views of an `array<T>` (inline slots): `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on an
   // array are rewritten to these calls, with the array passed by reference. The element address comes from
   // `location(at_unsafe(values, 0))`; an empty array gives a view that is never read.
-  [public return<ReadSlice<T>>]
+  [public return<ReadSlice<T>> effects(none)]
   arrayView<T>([Reference<array<T>>] values) {
     return(readSliceMake<T>(location(at_unsafe(values, 0i32)), count(values)))
   }
 
-  [public return<ReadSlice<T>>]
+  [public return<ReadSlice<T>> effects(none)]
   arraySlice<T>([Reference<array<T>>] values, [i32] start, [i32] end) {
     [ReadSlice<T>] whole{arrayView<T>(values)}
     return(whole.slice(start, end))
   }
 
-  [public return<WriteSlice<T>>]
+  [public return<WriteSlice<T>> effects(none)]
   arraySliceMut<T>([Reference<array<T>> mut] values, [i32] start, [i32] end) {
     [WriteSlice<T>] whole{writeSliceMake<T>(location(at_unsafe(values, 0i32)), count(values))}
     return(whole.slice(start, end))

@@ -12,20 +12,20 @@ namespace std {
   SoaVector<T>() {
     [public SoaColumn<T> mut] storage{soaColumnNew<T>()}
 
-    [public return<i32>]
+    [public return<i32> effects(none)]
     count() {
       soaVectorValidateType<T>()
       [SoaColumn<T>] storage{this.storage}
       return(soaColumnCount<T>(storage))
     }
 
-    [public return<T>]
+    [public return<T> effects(none)]
     get([i32] index) {
       soaVectorValidateType<T>()
       return(soaVectorGet<T>(this, index))
     }
 
-    [public return<Reference<T>>]
+    [public return<Reference<T>> effects(none)]
     ref([i32] index) {
       soaVectorValidateType<T>()
       return(soaVectorRef<T>(this, index))
@@ -45,7 +45,7 @@ namespace std {
 
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   soaVectorValidateType<T>() {
     [i32] fieldCount{soaSupportedFieldCount<T>()}
   }
@@ -79,49 +79,49 @@ namespace std {
     return(out)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   soaVectorCount<T>([SoaVector<T>] values) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnCount<T>(storage))
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   soaVectorCountRef<T>([Reference<SoaVector<T>>] values) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnCount<T>(storage))
   }
 
-  [public return<T>]
+  [public return<T> effects(none)]
   soaVectorGet<T>([SoaVector<T>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnRead<T>(storage, index))
   }
 
-  [public return<T>]
+  [public return<T> effects(none)]
   soaVectorGetRef<T>([Reference<SoaVector<T>>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnRead<T>(storage, index))
   }
 
-  [public return<Reference<T>>]
+  [public return<Reference<T>> effects(none)]
   soaVectorRef<T>([SoaVector<T>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnRef<T>(storage, index))
   }
 
-  [public return<Reference<T>>]
+  [public return<Reference<T>> effects(none)]
   soaVectorRefRef<T>([Reference<SoaVector<T>>] values, [i32] index) {
     soaVectorValidateType<T>()
     [SoaColumn<T>] storage{values.storage}
     return(soaColumnRef<T>(storage, index))
   }
 
-  [unsafe public return<SoaFieldView<Field>>]
+  [unsafe public return<SoaFieldView<Field>> effects(none)]
   soaVectorFieldView<Struct, Field>([SoaVector<Struct>] values, [i32] fieldIndex) {
     soaVectorValidateType<Struct>()
     [SoaColumn<Struct>] storage{values.storage}
@@ -202,37 +202,37 @@ namespace std {
   return(/std/collections/soa/soaVectorFromAos<T>(values))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/count<T>([SoaVector<T>] values) {
   return(/std/collections/soa/soaVectorCount<T>(values))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/soa/count_ref<T>([Reference<SoaVector<T>>] values) {
   return(/std/collections/soa/soaVectorCountRef<T>(values))
 }
 
-[public return<T>]
+[public return<T> effects(none)]
 /std/collections/soa/get<T>([SoaVector<T>] values, [i32] index) {
   return(/std/collections/soa/soaVectorGet<T>(values, index))
 }
 
-[public return<T>]
+[public return<T> effects(none)]
 /std/collections/soa/get_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
   return(/std/collections/soa/soaVectorGetRef<T>(values, index))
 }
 
-[public return<Reference<T>>]
+[public return<Reference<T>> effects(none)]
 /std/collections/soa/ref<T>([SoaVector<T>] values, [i32] index) {
   return(/std/collections/soa/soaVectorRef<T>(values, index))
 }
 
-[public return<Reference<T>>]
+[public return<Reference<T>> effects(none)]
 /std/collections/soa/ref_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
   return(/std/collections/soa/soaVectorRefRef<T>(values, index))
 }
 
-[public return<SoaFieldView<Field>>]
+[public return<SoaFieldView<Field>> effects(none)]
 /std/collections/soa/field_view<Struct, Field>(
     [SoaVector<Struct>] values, [i32] fieldIndex) {
   return(/std/collections/soa/soaVectorFieldView<Struct, Field>(values, fieldIndex))

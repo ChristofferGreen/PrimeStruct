@@ -148,6 +148,10 @@ void printTransforms(std::ostringstream &out, const std::vector<Transform> &tran
     if (transforms[i].isPackExpansion) {
       out << "...";
     }
+    if (transforms[i].name == "effects" && transforms[i].templateArgs.empty() &&
+        transforms[i].arguments.empty()) {
+      out << "(none)";
+    }
     if (!transforms[i].arguments.empty()) {
       out << "(";
       for (size_t argIndex = 0; argIndex < transforms[i].arguments.size(); ++argIndex) {

@@ -1,36 +1,36 @@
 // Shared equality methods for collection key lookups.
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /i32/equal([i32] self, [i32] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /i64/equal([i64] self, [i64] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /u64/equal([u64] self, [u64] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /f32/equal([f32] self, [f32] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /f64/equal([f64] self, [f64] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /bool/equal([bool] self, [bool] other) {
   return(self == other)
 }
 
-[public return<bool>]
+[public return<bool> effects(none)]
 /string/equal([string] self, [string] other) {
   [i32] limit{count(self)}
   if(limit != count(other)) {

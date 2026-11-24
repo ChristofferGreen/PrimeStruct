@@ -140,6 +140,10 @@ std::string declarationTransformText(const Transform &transform) {
   if (transform.isPackExpansion) {
     out += "...";
   }
+  if (transform.name == "effects" && transform.templateArgs.empty() &&
+      transform.arguments.empty()) {
+    out += "(none)";
+  }
   if (!transform.arguments.empty()) {
     out += "(";
     for (size_t i = 0; i < transform.arguments.size(); ++i) {

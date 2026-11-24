@@ -24,22 +24,22 @@ namespace std {
     [private Pointer<uninitialized<T>>] data{vectorAllocStorage<uninitialized<T>>(1)}
     [private bool mut] ownsData{true}
 
-    [private return<bool>]
+    [private return<bool> effects(none)]
     owns_storage() {
       return(this.ownsData)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_count() {
       return(this.fieldCount)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_capacity() {
       return(this.fieldCapacity)
     }
 
-    [private mut]
+    [private mut effects(none)]
     set_field_count([i32] value) {
       if(value < 0 || value > this.fieldCapacity) {
         panic(value)
@@ -47,7 +47,7 @@ namespace std {
       this.fieldCount = value
     }
 
-    [private mut]
+    [private mut effects(none)]
     set_field_capacity([i32] value) {
       if(value < 0 || this.fieldCount > value || value > 1073741823) {
         panic(value)
@@ -71,7 +71,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.fieldCount = other.fieldCount
       this.fieldCapacity = other.fieldCapacity
@@ -95,7 +95,7 @@ namespace std {
 
   }
 
-  [public unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>> effects(none)]
   vectorSlotUnsafe<T>([Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(index < 0 || index >= values.field_capacity()) {
@@ -105,36 +105,36 @@ namespace std {
   }
 
   // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
-  [return<T>]
+  [return<T> effects(none)]
   vectorCopyValue<T>([T copy] value) {
     return(value)
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   vectorInitSlot<T>([Vector<T> mut] values, [i32] index, [T move] value) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     init(*slot, value)
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   vectorDropSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     drop(*slot)
   }
 
-  [public unsafe_api return<T>]
+  [public unsafe_api return<T> effects(none)]
   vectorTakeSlot<T>([Vector<T> mut] values, [i32] index) {
     [Pointer<uninitialized<T>> mut] slot{vectorSlotUnsafe<T>(values, index)}
     return(take(*slot))
   }
 
-  [public unsafe_api return<Reference<T>>]
+  [public unsafe_api return<Reference<T>> effects(none)]
   vectorBorrowSlot<T>([Vector<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{vectorSlotUnsafe<T>(values, index)}
     return(borrow(*slot))
   }
 
-  [public unsafe_api return<void>]
+  [public unsafe_api return<void> effects(none)]
   vectorDropRange<T>([Vector<T> mut] values, [i32] limit) {
     vectorCheckShape<T>(values)
     if(limit < 0 || limit > values.field_capacity()) {
@@ -167,7 +167,7 @@ namespace std {
         [ownsData] true})
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   vectorCheckShape<T>([Vector<T>] values) {
     if(values.field_count() < 0 || values.field_capacity() < 0 ||
        values.field_count() > values.field_capacity() ||
@@ -176,7 +176,7 @@ namespace std {
     }
   }
 
-  [return<void>]
+  [return<void> effects(none)]
   vectorCheckIndex<T>([Vector<T>] values, [i32] index) {
     vectorCheckShape<T>(values)
     if(index < 0 || index >= values.field_count() || index >= values.field_capacity()) {
@@ -218,26 +218,26 @@ namespace std {
     return(out)
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   vectorCount<T>([Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(values.field_count())
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   vectorCountRef<T>([Reference<Vector<T>>] values) {
     [Vector<T>] materialized{values}
     vectorCheckShape<T>(materialized)
     return(materialized.field_count())
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   vectorCapacity<T>([Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(values.field_capacity())
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   vectorCapacityRef<T>([Reference<Vector<T>>] values) {
     [Vector<T>] materialized{values}
     vectorCheckShape<T>(materialized)
@@ -347,24 +347,24 @@ namespace std {
 
   // The element `index` as a place, bounds checked. A write to an element (`values[i].n = x`, `values[i].bump()`,
   // an element passed to a `mut` parameter) goes through it, so it changes the element and not a copy.
-  [public unsafe_api return<Reference<T>>]
+  [public unsafe_api return<Reference<T>> effects(none)]
   vectorElementRef<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     return(vectorBorrowSlot<T>(values, index))
   }
 
-  [public unsafe return<T>]
+  [public unsafe return<T> effects(none)]
   vectorAt<T>([Vector<T>] values, [i32] index) {
     vectorCheckIndex<T>(values, index)
     return(*(vectorBorrowSlot<T>(values, index)))
   }
 
-  [public unsafe return<T>]
+  [public unsafe return<T> effects(none)]
   vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
     return(*(vectorBorrowSlot<T>(values, index)))
   }
 
-  [public return<T>]
+  [public return<T> effects(none)]
   vectorAtRef<T>([Reference<Vector<T>>] values, [i32] index) {
     [Vector<T>] materialized{values}
     return(vectorAt<T>(materialized, index))
@@ -372,19 +372,19 @@ namespace std {
 
 
   // The first element's address as a `Pointer<T>` (the storage is `Pointer<uninitialized<T>>`).
-  [unsafe return<Pointer<T>>]
+  [unsafe return<Pointer<T>> effects(none)]
   vectorElementsFrom<T>([Vector<T>] values, [i32] start) {
     return(bufferOffsetUnsafe<T>(bufferReinterpret<T, uninitialized<T>>(values.data), start))
   }
 
   // A borrowed view of the elements: no copy. The vector must not change while the view is in use.
-  [public return<Slice<T, Read>>]
+  [public return<Slice<T, Read>> effects(none)]
   vectorView<T>([Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(readSliceMake<T>(vectorElementsFrom<T>(values, 0), values.field_count()))
   }
 
-  [public return<Slice<T, Read>>]
+  [public return<Slice<T, Read>> effects(none)]
   vectorSlice<T>([Vector<T>] values, [i32] start, [i32] end) {
     vectorCheckShape<T>(values)
     if(start < 0 || end < start || end > values.field_count()) {
@@ -393,7 +393,7 @@ namespace std {
     return(readSliceMake<T>(vectorElementsFrom<T>(values, start), end - start))
   }
 
-  [public return<Slice<T, Write>>]
+  [public return<Slice<T, Write>> effects(none)]
   vectorSliceMut<T>([Vector<T> mut] values, [i32] start, [i32] end) {
     vectorCheckShape<T>(values)
     if(start < 0 || end < start || end > values.field_count()) {
@@ -402,7 +402,7 @@ namespace std {
     return(writeSliceMake<T>(vectorElementsFrom<T>(values, start), end - start))
   }
 
-  [public return<T>]
+  [public return<T> effects(none)]
   vectorAtUnsafeRef<T>([Reference<Vector<T>>] values, [i32] index) {
     [Vector<T>] materialized{values}
     return(vectorAtUnsafe<T>(materialized, index))
@@ -416,12 +416,12 @@ namespace std {
 // implementations above and serve as the source of truth for surface member
 // derivation in StdlibSurfaceRegistry (TODO-4635).
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/count<T>([/std/collections/vector/Vector<T>] values) {
   return(/std/collections/vector/vectorCount<T>(values))
 }
 
-[public return<i32>]
+[public return<i32> effects(none)]
 /std/collections/vector/capacity<T>([/std/collections/vector/Vector<T>] values) {
   return(/std/collections/vector/vectorCapacity<T>(values))
 }
@@ -457,27 +457,27 @@ namespace std {
 }
 
 // Reads through the element place, so every `at<T>` brings the `vectorElementRef<T>` an element write needs.
-[public unsafe return<T>]
+[public unsafe return<T> effects(none)]
 /std/collections/vector/at<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
   return(*(/std/collections/vector/vectorElementRef<T>(values, index)))
 }
 
-[public return<T>]
+[public return<T> effects(none)]
 /std/collections/vector/at_unsafe<T>([/std/collections/vector/Vector<T>] values, [i32] index) {
   return(/std/collections/vector/vectorAtUnsafe<T>(values, index))
 }
 
-[public return<Slice<T, Read>>]
+[public return<Slice<T, Read>> effects(none)]
 /std/collections/vector/view<T>([/std/collections/vector/Vector<T>] values) {
   return(/std/collections/vector/vectorView<T>(values))
 }
 
-[public return<Slice<T, Read>>]
+[public return<Slice<T, Read>> effects(none)]
 /std/collections/vector/slice<T>([/std/collections/vector/Vector<T>] values, [i32] start, [i32] end) {
   return(/std/collections/vector/vectorSlice<T>(values, start, end))
 }
 
-[public return<Slice<T, Write>>]
+[public return<Slice<T, Write>> effects(none)]
 /std/collections/vector/sliceMut<T>([/std/collections/vector/Vector<T> mut] values, [i32] start, [i32] end) {
   return(/std/collections/vector/vectorSliceMut<T>(values, start, end))
 }

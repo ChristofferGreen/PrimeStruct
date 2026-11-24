@@ -17,7 +17,7 @@ namespace std {
   // [0, capacity). Callers only ever produce indices in [0, 2*capacity),
   // so a single conditional subtraction is enough (no modulo operator
   // needed).
-  [return<i32>]
+  [return<i32> effects(none)]
   ringBufferWrap([i32] index, [i32] capacity) {
     if(index >= capacity) {
       return(index - capacity)
@@ -26,7 +26,7 @@ namespace std {
   }
 
   // Returns its own copy of `value` (through `T`'s `Copy` helper when it has one).
-  [return<T>]
+  [return<T> effects(none)]
   ringBufferCopyValue<T>([T copy] value) {
     return(value)
   }
@@ -39,27 +39,27 @@ namespace std {
     [public Pointer<uninitialized<T>>] data{bufferAlloc<uninitialized<T>>(1)}
     [bool mut] ownsData{true}
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_capacity() {
       return(this.fieldCapacity)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_head() {
       return(this.fieldHead)
     }
 
-    [private return<i32>]
+    [private return<i32> effects(none)]
     field_count() {
       return(this.fieldCount)
     }
 
-    [private mut]
+    [private mut effects(none)]
     set_field_head([i32] value) {
       this.fieldHead = value
     }
 
-    [private mut]
+    [private mut effects(none)]
     set_field_count([i32] value) {
       this.fieldCount = value
     }
@@ -85,7 +85,7 @@ namespace std {
       }
     }
 
-    [mut]
+    [mut effects(none)]
     Move([Reference<Self>] other) {
       this.fieldCapacity = other.fieldCapacity
       this.fieldHead = other.fieldHead
@@ -126,12 +126,12 @@ namespace std {
         [ownsData] true})
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   count<T>([RingBuffer<T>] values) {
     return(values.field_count())
   }
 
-  [public return<i32>]
+  [public return<i32> effects(none)]
   capacity<T>([RingBuffer<T>] values) {
     return(values.field_capacity())
   }
@@ -153,7 +153,7 @@ namespace std {
     }
   }
 
-  [public unsafe_api return<Pointer<uninitialized<T>>>]
+  [public unsafe_api return<Pointer<uninitialized<T>>> effects(none)]
   slotUnsafe<T>([RingBuffer<T>] values, [i32] index) {
     if(index < 0 || index >= values.field_count()) {
       panic(index)
@@ -162,7 +162,7 @@ namespace std {
     return(bufferOffsetUnsafe<uninitialized<T>>(values.data, physical))
   }
 
-  [public unsafe return<T>]
+  [public unsafe return<T> effects(none)]
   at<T>([RingBuffer<T>] values, [i32] index) {
     [Pointer<uninitialized<T>>] slot{slotUnsafe<T>(values, index)}
     [Reference<T>] ref{borrow(*slot)}

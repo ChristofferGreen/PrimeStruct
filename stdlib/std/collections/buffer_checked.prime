@@ -21,38 +21,38 @@ namespace std {
     /std/intrinsics/memory/free(ptr)
   }
 
-  [public return<Pointer<T>>]
+  [public return<Pointer<T>> effects(none)]
   bufferOffsetChecked<T>([Pointer<T>] ptr, [i32] index, [i32] count) {
     return(/std/intrinsics/memory/at(ptr, index, count))
   }
 
-  [public unsafe_api return<Pointer<T>>]
+  [public unsafe_api return<Pointer<T>> effects(none)]
   bufferReinterpret<T, U>([Pointer<U>] ptr) {
     return(/std/intrinsics/memory/reinterpret<T>(ptr))
   }
 
-  [public unsafe_api return<Pointer<i32>>]
+  [public unsafe_api return<Pointer<i32>> effects(none)]
   bufferReinterpretBytes<T>([Pointer<T>] ptr) {
     return(/std/intrinsics/memory/reinterpret<i32>(ptr))
   }
 
-  [public return<Pointer<i32>>]
+  [public return<Pointer<i32>> effects(none)]
   bufferOffsetBytesChecked([Pointer<i32>] ptr, [i32] byteOffset) {
     return(ptr + byteOffset)
   }
 
-  [public unsafe_api return<Pointer<T>>]
+  [public unsafe_api return<Pointer<T>> effects(none)]
   bufferReinterpretFromBytes<T>([Pointer<i32>] ptr) {
     return(/std/intrinsics/memory/reinterpret<T>(ptr))
   }
 
-  [public return<void>]
+  [public return<void> effects(none)]
   bufferWriteChecked<T>([Pointer<T> mut] ptr, [i32] index, [i32] count, [T move] value) {
     [Pointer<T> mut] slot{/std/intrinsics/memory/at(ptr, index, count)}
     *slot = value
   }
 
-  [public return<T>]
+  [public return<T> effects(none)]
   bufferReadChecked<T>([Pointer<T>] ptr, [i32] index, [i32] count) {
     return(*(/std/intrinsics/memory/at(ptr, index, count)))
   }

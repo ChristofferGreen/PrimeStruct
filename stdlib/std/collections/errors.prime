@@ -1,49 +1,49 @@
-[public return<string>]
+[public return<string> effects(none)]
 /ContainerError/why([/std/collections/ContainerError] err) {
   return(/std/collections/ContainerError/why(err))
 }
 
-[public return<Result</std/collections/ContainerError>>]
+[public return<Result</std/collections/ContainerError>> effects(none)]
 /ContainerError/status([/std/collections/ContainerError] err) {
   return(/std/collections/ContainerError/status(err))
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/missingKey() {
   return(/std/collections/ContainerError/missingKey())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/missing_key() {
   return(/ContainerError/missingKey())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/indexOutOfBounds() {
   return(/std/collections/ContainerError/indexOutOfBounds())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/index_out_of_bounds() {
   return(/ContainerError/indexOutOfBounds())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/empty() {
   return(/std/collections/ContainerError/empty())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/capacityExceeded() {
   return(/std/collections/ContainerError/capacityExceeded())
 }
 
-[public return</std/collections/ContainerError>]
+[public return</std/collections/ContainerError> effects(none)]
 /ContainerError/capacity_exceeded() {
   return(/ContainerError/capacityExceeded())
 }
 
-[public return<Result<T, /std/collections/ContainerError>>]
+[public return<Result<T, /std/collections/ContainerError>> effects(none)]
 /ContainerError/result<T>([/std/collections/ContainerError] err) {
   return(/std/collections/ContainerError/result<T>(err))
 }
@@ -56,7 +56,7 @@ namespace std {
   }
 
   namespace ContainerError {
-    [public return<string>]
+    [public return<string> effects(none)]
     why([ContainerError] err) {
       if(err.code == 1i32) {
         return("container missing key"utf8)
@@ -73,78 +73,78 @@ namespace std {
       return("container error"utf8)
     }
 
-    [public return<Result<ContainerError>>]
+    [public return<Result<ContainerError>> effects(none)]
     status([ContainerError] err) {
       return(err.code)
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     missingKey() {
       return(ContainerError{1i32})
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     missing_key() {
       return(missingKey())
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     indexOutOfBounds() {
       return(ContainerError{2i32})
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     index_out_of_bounds() {
       return(indexOutOfBounds())
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     empty() {
       return(ContainerError{3i32})
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     capacityExceeded() {
       return(ContainerError{4i32})
     }
 
-    [public return<ContainerError>]
+    [public return<ContainerError> effects(none)]
     capacity_exceeded() {
       return(capacityExceeded())
     }
 
-    [public return<Result<T, ContainerError>>]
+    [public return<Result<T, ContainerError>> effects(none)]
     result<T>([ContainerError] err) {
       return(convert<i64>(err.code) * 4294967296i64)
     }
   }
 
-  [public return<ContainerError>]
+  [public return<ContainerError> effects(none)]
   containerMissingKey() {
     return(/std/collections/ContainerError/missingKey())
   }
 
-  [public return<ContainerError>]
+  [public return<ContainerError> effects(none)]
   containerIndexOutOfBounds() {
     return(/std/collections/ContainerError/indexOutOfBounds())
   }
 
-  [public return<ContainerError>]
+  [public return<ContainerError> effects(none)]
   containerEmpty() {
     return(/std/collections/ContainerError/empty())
   }
 
-  [public return<ContainerError>]
+  [public return<ContainerError> effects(none)]
   containerCapacityExceeded() {
     return(/std/collections/ContainerError/capacityExceeded())
   }
 
-  [public return<Result<ContainerError>>]
+  [public return<Result<ContainerError>> effects(none)]
   containerErrorStatus([ContainerError] err) {
     return(/std/collections/ContainerError/status(err))
   }
 
-  [public return<Result<T, ContainerError>>]
+  [public return<Result<T, ContainerError>> effects(none)]
   containerErrorResult<T>([ContainerError] err) {
     return(/std/collections/ContainerError/result<T>(err))
   }
