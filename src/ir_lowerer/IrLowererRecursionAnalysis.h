@@ -124,6 +124,15 @@ bool isRealCallShapeEligible(const Definition &def, const RealCallShapeContext &
 // definition that stays inline.
 std::string realCallBlockerReason(const Definition &def, const RealCallShapeContext &context);
 
+// The same answer with a stable code: `code` is hyphenated and never changes spelling (`sum-parameter`,
+// `on-error-handler`, `argument-pack`, `parameter-type`, ...), `text` is realCallBlockerReason's text. Both are empty
+// when `def` is eligible or the context is the scalar ABI without a blocker.
+struct RealCallBlocker {
+  std::string code;
+  std::string text;
+};
+RealCallBlocker realCallBlocker(const Definition &def, const RealCallShapeContext &context);
+
 // How a spawned call's parameters and result cross to its task on the address ABI targets (IrLowererTaskSpawn.h): a
 // scalar is passed as its value; a struct is copied (or moved) into a heap block by the spawner, since a local
 // address does not cross to another call stack, and the task gets the block's address; a struct result is written to

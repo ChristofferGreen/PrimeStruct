@@ -60,6 +60,48 @@ bool vectorResultReturnsOwnedLocals(const Definition &def) {
   return allReturnsOwned;
 }
 
+const char *addressAbiBlockerCode(AddressAbiBlocker blocker) {
+  switch (blocker) {
+  case AddressAbiBlocker::None:
+    return "";
+  case AddressAbiBlocker::HostDefinition:
+    return "host-definition";
+  case AddressAbiBlocker::StructDefinition:
+    return "struct-definition";
+  case AddressAbiBlocker::SumDefinition:
+    return "sum-definition";
+  case AddressAbiBlocker::ComputeDefinition:
+    return "compute-definition";
+  case AddressAbiBlocker::OnErrorHandler:
+    return "on-error-handler";
+  case AddressAbiBlocker::RequireContract:
+    return "require-contract";
+  case AddressAbiBlocker::CollectionsHelper:
+    return "collections-helper";
+  case AddressAbiBlocker::LifecycleHelper:
+    return "lifecycle-helper";
+  case AddressAbiBlocker::ReceiverStruct:
+    return "receiver-struct";
+  case AddressAbiBlocker::ClosureReferenceCapture:
+    return "closure-reference-capture";
+  case AddressAbiBlocker::Parameter:
+    return "parameter-type";
+  case AddressAbiBlocker::SumParameter:
+    return "sum-parameter";
+  case AddressAbiBlocker::CollectionResult:
+    return "collection-result";
+  case AddressAbiBlocker::VectorResultNotOwned:
+    return "vector-result-not-owned";
+  case AddressAbiBlocker::UnsupportedResult:
+    return "unsupported-result";
+  case AddressAbiBlocker::UsesTry:
+    return "uses-try";
+  case AddressAbiBlocker::GeneratedTailValue:
+    return "generated-tail-value";
+  }
+  return "";
+}
+
 std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definition &def) {
   switch (blocker) {
   case AddressAbiBlocker::None:

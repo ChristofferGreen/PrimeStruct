@@ -61,6 +61,9 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
   if (dumpStage == "ir-optimized" || dumpStage == "ir_optimized") {
     return DumpStage::IrOptimized;
   }
+  if (dumpStage == "inline-report" || dumpStage == "inline_report") {
+    return DumpStage::InlineReport;
+  }
   if (dumpStage == "ast_semantic" || dumpStage == "ast-semantic") {
     return DumpStage::AstSemantic;
   }

@@ -633,6 +633,8 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererPackedErrorTypes.cpp
   src/ir_lowerer/IrLowererCollectionRecordShapes.cpp
   src/ir_lowerer/IrLowererRealCallBlockerText.cpp
+  src/ir_lowerer/IrLowererInlineReport.cpp
+  src/ir_lowerer/IrLowererInlineExpansionCounter.cpp
   src/ir_lowerer/IrLowererStringParameterUse.cpp
   src/ir_lowerer/IrLowererScalarCallBlocker.cpp
   src/ir_lowerer/IrLowererDefinitionPathIndex.cpp
@@ -1226,6 +1228,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/ir_pipeline/optimizer/test_ir_passes.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_random.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optimizer_cli.cpp
+    tests/unit/ir_pipeline/optimizer/test_ir_inline_report_cli.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_optexe_tasks.cpp
     tests/unit/ir_pipeline/optimizer/test_ir_wasm_heap.cpp

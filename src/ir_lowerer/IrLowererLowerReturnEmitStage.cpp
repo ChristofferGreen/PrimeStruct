@@ -565,6 +565,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                                  bool requireValue) -> bool {
     // The first inline call emitted owns the "give me the address" request of a consumer of a `Reference` result.
     const bool addressWanted = ir_lowerer::takeReferenceCallAddressWanted();
+    const ir_lowerer::InlineExpansionScope expansionScope(
+        setupStage.inlineExpansionCounter, callee.fullPath, [&]() {
+          return setupStage.function.instructions.size();
+        });
     if (!ir_lowerer::emitInlineDefinitionCallImpl(setupStage,
                                                   stateOut,
                                                   callResolutionAdapters,

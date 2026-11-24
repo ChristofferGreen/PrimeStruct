@@ -15,6 +15,11 @@ namespace primec {
 // text. Not a serialization format: use IrSerializer for that.
 std::string formatIrModule(const IrModule &module);
 
+// The `--dump-stage inline-report` text: one line per definition a call site reached, most instructions added first,
+// then by path: `added=<n> with_callees=<n> call_sites=<n> <path>: real call` or `...: <code>: <blocker text>`. Empty
+// for a module the lowerer did not write.
+std::string formatInlineReport(const IrModule &module);
+
 // Listing of one function (the same lines formatIrModule prints for it).
 std::string formatIrFunction(const IrModule &module, size_t functionIndex);
 

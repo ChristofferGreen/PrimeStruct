@@ -402,6 +402,24 @@ struct IrHostImport {
   IrHostValueKind returnKind = IrHostValueKind::Void;
 };
 
+// One definition the lowerer reached through a call site: a real call (a function the call site calls) or a body the
+// call sites expand in place, and what the expansions cost.
+struct IrInlineReportEntry {
+  std::string path;
+  // True when the definition is lowered once as a function and called.
+  bool realCall = false;
+  // Why a definition stays inline: a stable hyphenated code (`sum-parameter`, `on-error-handler`, `tiny-leaf`, ...) and
+  // the sentence that explains it. Empty for a real call.
+  std::string blockerCode;
+  std::string blockerText;
+  uint64_t callSites = 0;
+  // Instructions the call sites emit for this definition, not counting the definitions expanded inside it: for a real
+  // call, the argument binding and the call itself.
+  uint64_t instructionsAdded = 0;
+  // The same including the instructions of the definitions expanded inside the expansions.
+  uint64_t instructionsWithCallees = 0;
+};
+
 struct IrModule {
   uint32_t schemaVersion = IrSchemaVersion;
   std::vector<IrFunction> functions;
@@ -415,6 +433,9 @@ struct IrModule {
   // lowered by this compiler is marked; a module loaded from a version before v39 has no marks, so it is false when
   // the module has strings. The IR link moves the strings of a library only when this is true.
   bool stringPushesMarked = true;
+  // What lowering did with each definition a call site reached (`--dump-stage inline-report`). Written by the lowerer,
+  // not serialized, and empty for a module that was loaded or linked.
+  std::vector<IrInlineReportEntry> inlineReport;
 };
 
 } // namespace primec

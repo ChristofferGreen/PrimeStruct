@@ -49,8 +49,9 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
 
 std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics, std::string_view stage = {});
 
-// True for `--dump-stage=ir-lowered` and `--dump-stage=ir-optimized`, which
-// print the lowered IrModule (see formatIrModule) instead of an AST dump. The
+// True for `--dump-stage=ir-lowered`, `ir-optimized` and `inline-report`, which
+// print the lowered IrModule (see formatIrModule) or its inline report (see
+// formatInlineReport) instead of an AST dump. The
 // compile pipeline runs normally for these stages; the CLI front ends call
 // runIrModuleDump afterwards instead of emitting a backend's output.
 bool isIrModuleDumpStage(const Options &options);

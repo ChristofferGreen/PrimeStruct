@@ -692,6 +692,23 @@
   a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame. On
   the scalar targets that run `Trap` (`cpp`/`exe`, x86_64 native) a `never` result counts as void, so `panic` is one
   function there too instead of a copy of its body at every call site.
+  `primec --emit=vm --dump-stage inline-report prog.prime` prints what these rules decided for one program: a
+  header `inline_report_v1 definitions=<n>` and one line per definition a call site reached, most instructions added
+  first (then by path): `added=<n> with_callees=<n> call_sites=<n> <path>: real call`, or `<path>: <code>: <text>` for
+  a definition that is expanded at every call site. `added` is what the call sites emit for the definition itself (the
+  argument binding and the call of a real call, the whole body of an expansion) without the definitions expanded
+  inside it; `with_callees` includes those. The code is stable and hyphenated: `scalar-only-parameter` (the scalar
+  ABI's parameter rule), `sum-parameter`, `owned-sum-parameter`, `argument-pack`, `untyped-parameter`,
+  `vector-parameter`, `templated-reference-parameter`, `string-parameter`, `parameter-type`, then one per body or
+  result shape (`host-definition`, `struct-definition`, `sum-definition`, `compute-definition`, `on-error-handler`,
+  `require-contract`, `collections-helper`, `lifecycle-helper`, `receiver-struct`, `closure-reference-capture`,
+  `collection-result`, `vector-result-not-owned`, `unsupported-result`, `uses-try`, `generated-tail-value`), and three
+  that are not a shape rule: `tiny-leaf` (cheaper inline), `entry-point`, and `not-reserved` (a shape the check takes
+  that the target did not reserve; the scalar ABI has rules of its own that the report does not name). The report
+  follows `--emit`: without it, and in `primevm`, the listing is lowered for the backend-neutral scalar ABI, where
+  every struct, `mut` and collection parameter keeps a definition inline. The text of each code is
+  `realCallBlocker` (`src/ir_lowerer/IrLowererRecursionAnalysis.cpp`); the counts come from the lowerer's call sites
+  (`InlineExpansionCounter`). The report changes no decision.
   Measured for the web examples under `--emit=optcpp` in docs/OptimizingBackendsPlan.md (section 9, Real calls for web
   apps): `examples/apps/todo_web` went from 12.7 MB of C++ to under 1.4 MB.
 - Shared exit paths: a body (the entry or a real call's function) that holds two or more `return` statements (counted

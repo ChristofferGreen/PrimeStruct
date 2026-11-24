@@ -125,7 +125,11 @@ of sync with them.
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
-| TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | ready | bytecode-inline-report |
+| TODO-6251 | A stdlib `Vector` record parameter keeps the collections helpers inline | deferred | bytecode-inline-blockers |
+| TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
+| TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
+| TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | deferred | bytecode-inline-blockers |
+| TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-6238 | A backend-neutral contract test of the native UI ABI | ready | native-ui-contract |
 | TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
@@ -179,7 +183,7 @@ of sync with them.
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
-- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now TODO-6234 (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
+- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
@@ -468,20 +472,86 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [~] TODO-6234: A report of every definition that stays inline, with its blocker and the instructions it adds
+- [ ] TODO-6251: A stdlib `Vector` record parameter keeps the collections helpers inline
   - owner: ai
-  - status: ready
-  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
+  - status: deferred
   - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: bytecode-inline-report
-  - scope: `/main` of the PNG program holds 32,582 of the module's 32,596 instructions: nearly every call is expanded in place, although `computeRealCallEligibleDefinitionPaths` (`src/ir_lowerer/IrLowererLowerSetupStage.cpp`) and `realCallBlockerReason` (`src/ir_lowerer/IrLowererRecursionAnalysis.cpp`) already know why a definition is not a real call (a sum parameter, `on_error`, `try`, a `/std/collections/` record, a lifecycle helper, a packed `Result` without `/std/result`, ...). Add `--dump-stage inline-report` (stages are listed in `primec --help`): one line per definition the program reaches, sorted by instructions added, with `real call`, or the blocker text from `realCallBlockerReason` (extend it to return a stable code per reason), the number of call sites and the instructions its expansions add (counted in the lowerer where it expands). Documented in docs/spec/vm-design.md (Real calls) next to the rules it reports.
+  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - depends_on: TODO-5536
+  - scope: The `/std/collections/vector` helpers of the PNG reader (`count`, `vectorCheckShape`, `vectorElementRef`, `vectorCheckIndex`, `vectorSlotUnsafe`, `vectorBorrowSlot`) take the `Vector` record as a parameter, which the address ABI does not pass (`parameter-type`): six definitions, 63 call sites, 3,000 instructions added. Let a real call take a borrowed (read-only or `Reference`) `Vector` record by its address, as it takes a struct, and keep the helpers that must stay inline for another reason (`field_count`, `field_capacity`) as they are.
   - acceptance:
-    - the report of the PNG program is written into docs/todo_log.md under TODO-5536 with the top five blockers by instructions added, and one TODO leaf is filed per top blocker (scope, acceptance with a measured instruction count, stop_rule)
-    - a test of the report for a program with one real call, one `on_error` definition and one sum parameter; golden-style
+    - the report of the PNG program names those six as `real call`, and the `added` of `parameter-type` lines naming a `Vector` record falls from 3,000 to under 1,000
+    - the module of the PNG program still validates and `primevm` prints the same width, height and pixel count
     - full release gate green
-  - stop_rule: the report and the leaves it leads to; no change to which definitions are real calls.
-  - repro: `primec --dump-stage ir-lowered png.prime | grep '^function'` shows `/main ... instructions=32582` and 14 small functions.
+  - stop_rule: borrowed `Vector` record parameters only; no change to owned (`copy`, `move`) or `mut` collection parameters.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
+  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+
+- [ ] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - depends_on: TODO-5536
+  - scope: The reader helpers `ppmReadByteStatus`, `pngReadU32Be`, `pngReadIhdr`, `pngAppendBytes`, `pngValidateSignature` and `pngReadChunkType` take a `File<Read>` and stay inline (`parameter-type`): six definitions, 38 call sites, 1,758 instructions added. Let a real call pass a `File` handle (one slot, a scalar value at run time) by `Reference` or by value.
+  - acceptance:
+    - the report of the PNG program names those six as `real call`, and the `added` of `parameter-type` lines naming `File` falls from 1,758 to under 500
+    - the file handle is closed once on every exit (a test with an early return), and `primevm` prints the same output for the PNG program
+    - full release gate green
+  - stop_rule: the `File` parameter shape; no change to what a file operation does.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
+  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+
+- [ ] TODO-6253: A `string` parameter used beyond `count()` keeps the PNG file readers inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - depends_on: TODO-5536
+  - scope: `readImpl`, `read`, `openRead` and `open_read` of `/std/image` take a `string` path that the body passes on to a file open, not only to `count()` or `__pstext_literal`, so they stay inline (`string-parameter`): four definitions, 4 call sites, 1,390 instructions added (`readImpl` alone adds 1,336). Allow a `string` parameter whose uses are all arguments that take a module-table string index (a file open, a host call).
+  - acceptance:
+    - the report names `readImpl` as `real call`, and the `added` of `string-parameter` lines falls from 1,390 to under 300
+    - a test that opens a file through a real call with a literal path on the VM and on optexe, and `primevm` prints the same output for the PNG program
+    - full release gate green
+  - stop_rule: the use rule of a `string` parameter; no new string operations.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
+  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+
+- [ ] TODO-6254: `field_count` and `field_capacity` of the collections records are expanded at every call site
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - depends_on: TODO-5536
+  - scope: The two accessors `/std/collections/vector/Vector/field_count` and `field_capacity` are `collections-helper` definitions, expanded inline by rule: 2 definitions, 52 call sites, 676 instructions added (13 per site, as many as a call). Lower a read of one of these fields of a collection record to the field load directly, or let them be real calls, whichever the report shows smaller.
+  - acceptance:
+    - the report of the PNG program shows the sum of `added` of the `collections-helper` lines falling from 676 to under 250 with the program output unchanged
+    - a program-matrix case that reads `count()` and `capacity()` of a `Vector` on every backend the matrix runs
+    - full release gate green
+  - stop_rule: the two field accessors; no change to other `/std/collections/` helpers.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
+  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+
+- [ ] TODO-6255: A stdlib error struct result keeps its constructors inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - depends_on: TODO-5536
+  - scope: `/std/image/ImageError/invalid_operation`, `read_unsupported` and their `/ImageError` aliases, `why` and others (9 definitions, 11 call sites, 189 instructions added) return the stdlib error struct by value or a `string`, which a real call does not return (`unsupported-result`). Let a direct call return a stdlib error struct through the block of the caller, as `--emit=lib` does for a library function.
+  - acceptance:
+    - the report of the PNG program shows the `unsupported-result` lines as `real call` or gone, and their `added` falling from 189 to under 60
+    - a test of a program that returns `ImageError` from a function and prints `why()` on the VM and on optexe
+    - full release gate green
+  - stop_rule: results that are a stdlib error struct; no change to the error structs themselves.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
+  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

@@ -317,11 +317,12 @@ bool runCompilePipeline(const Options &options,
     emitProgramHeapEstimate(output.program, "post-parse-pre-semantics");
   }
 
-  // ir-lowered and ir-optimized dump the lowered IrModule, which needs the full
+  // ir-lowered, ir-optimized and inline-report dump the lowered IrModule, which needs the full
   // pipeline; the CLI prints it after IR preparation.
   if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic &&
       dumpStage != DumpStage::SemanticProduct && dumpStage != DumpStage::TypeGraph &&
-      dumpStage != DumpStage::IrLowered && dumpStage != DumpStage::IrOptimized) {
+      dumpStage != DumpStage::IrLowered && dumpStage != DumpStage::IrOptimized &&
+      dumpStage != DumpStage::InlineReport) {
     if (dumpStage == DumpStage::Ast) {
       AstPrinter printer;
       output.dumpOutput = printer.print(output.program);

@@ -3,11 +3,13 @@
 #include "primec/ir/IrLocalEscape.h"
 #include "primec/ir/IrOpcodeTable.h"
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <sstream>
+#include <vector>
 
 namespace primec {
 namespace {
@@ -260,6 +262,39 @@ std::string formatIrModule(const IrModule &module) {
   out << "functions: " << module.functions.size() << "\n";
   for (size_t i = 0; i < module.functions.size(); ++i) {
     out << formatIrFunction(module, i);
+  }
+  return out.str();
+}
+
+std::string formatInlineReport(const IrModule &module) {
+  std::vector<const IrInlineReportEntry *> entries;
+  entries.reserve(module.inlineReport.size());
+  for (const IrInlineReportEntry &entry : module.inlineReport) {
+    entries.push_back(&entry);
+  }
+  std::sort(entries.begin(),
+            entries.end(),
+            [](const IrInlineReportEntry *a, const IrInlineReportEntry *b) {
+              if (a->instructionsAdded != b->instructionsAdded) {
+                return a->instructionsAdded > b->instructionsAdded;
+              }
+              return a->path < b->path;
+            });
+  std::ostringstream out;
+  out << "inline_report_v1 definitions=" << entries.size() << "\n";
+  for (const IrInlineReportEntry *entry : entries) {
+    out << "added=" << entry->instructionsAdded
+        << " with_callees=" << entry->instructionsWithCallees << " call_sites=" << entry->callSites
+        << " " << entry->path << ": ";
+    if (entry->realCall) {
+      out << "real call";
+    } else {
+      out << entry->blockerCode;
+      if (!entry->blockerText.empty()) {
+        out << ": " << entry->blockerText;
+      }
+    }
+    out << "\n";
   }
   return out.str();
 }

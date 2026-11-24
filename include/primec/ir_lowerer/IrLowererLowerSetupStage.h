@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "primec/ir_lowerer/IrLowererErrorLocator.h"
+#include "primec/ir_lowerer/IrLowererInlineExpansionCounter.h"
 #include "primec/ir_lowerer/IrLowererLowerImportsStructsSetup.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerInferenceSetup.h"
@@ -136,6 +137,8 @@ struct LowerSetupStageState {
   std::vector<TaskSpawnSite> taskSpawnSites;
   // --opt-report lines about lowering decisions (a spawned call that runs inline and why); null when not reported.
   std::vector<std::string> *loweringNotes = nullptr;
+  // What each call site emitted per callee, for `--dump-stage inline-report` (IrModule::inlineReport).
+  InlineExpansionCounter inlineExpansionCounter;
 };
 
 bool runLowerSetupStage(const LowerSetupStageInput &input,

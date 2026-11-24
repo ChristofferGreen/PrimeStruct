@@ -49,6 +49,7 @@ enum class DumpStage {
   Ir,
   IrLowered,
   IrOptimized,
+  InlineReport,
   AstSemantic,
   SemanticProduct,
   TypeGraph,

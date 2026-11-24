@@ -317,7 +317,8 @@ CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
 
 bool isIrModuleDumpStage(const Options &options) {
   return options.dumpStage == "ir-lowered" || options.dumpStage == "ir_lowered" ||
-         options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized";
+         options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized" ||
+         options.dumpStage == "inline-report" || options.dumpStage == "inline_report";
 }
 
 int runIrModuleDump(std::ostream &out,
@@ -330,7 +331,7 @@ int runIrModuleDump(std::ostream &out,
   Options prepareOptions = options;
   const bool optimized = options.dumpStage == "ir-optimized" || options.dumpStage == "ir_optimized";
   if (!optimized) {
-    // The lowered listing is what lowering produced: no optimization phase.
+    // The lowered listing and the inline report are what lowering produced: no optimization phase.
     prepareOptions.optimization = OptimizationOptions{};
   }
   IrModule ir;
@@ -346,7 +347,9 @@ int runIrModuleDump(std::ostream &out,
     diagnostics.backendTag = "ir";
     return emitCliFailure(err, options, describeIrPreparationFailure(failure, diagnostics));
   }
-  out << formatIrModule(ir);
+  const bool inlineReport =
+      options.dumpStage == "inline-report" || options.dumpStage == "inline_report";
+  out << (inlineReport ? formatInlineReport(ir) : formatIrModule(ir));
   return 0;
 }
 

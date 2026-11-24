@@ -33,6 +33,7 @@
 #include "primec/ir_lowerer/IrLowererResultHelpers.h"
 #include "primec/ir_lowerer/IrLowererRuntimeErrorHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupInferenceHelpers.h"
+#include "IrLowererInlineReport.h"
 #include "primec/ir_lowerer/IrLowererSetupLocalsHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupMathHelpers.h"
 #include "primec/ir_lowerer/IrLowererStatementBindingHelpers.h"
@@ -544,6 +545,16 @@ bool IrLowerer::lower(const Program &program,
   if (libraryRoots != nullptr && !ir_lowerer::removeLibraryEntryStub(out, error)) {
     return false;
   }
+
+  out.inlineReport = ir_lowerer::buildInlineReport({
+      .counter = &setupStage.inlineExpansionCounter,
+      .definitionsByPath = &defMap,
+      .structNames = &structNames,
+      .realCallReservationIndex = &setupStage.realCallReservationIndex,
+      .entryDefinition = entryDef,
+      .allowStructs = setupStage.realCallAllowStructs,
+      .allowStrings = setupStage.realCallAllowStrings,
+  });
 
   error.clear();
   loweringSucceeded = true;

@@ -83,7 +83,7 @@ void printEffectsAndIrSection(std::ostream &err) {
            "primevm: merge a serialized IR module into the program (repeatable)");
   flagLine(err, "--dump-stage <stage>", "Dump a compiler stage and exit; one of:");
   flagLine(err, "", "pre_ast, ast, ast-semantic, semantic-product, type-graph, ir,");
-  flagLine(err, "", "ir-lowered, ir-optimized");
+  flagLine(err, "", "ir-lowered, ir-optimized, inline-report");
   flagLine(err, "", "(lowering-facing dumps include semantic-product between");
   flagLine(err, "", "ast-semantic and ir)");
   blankLine(err);

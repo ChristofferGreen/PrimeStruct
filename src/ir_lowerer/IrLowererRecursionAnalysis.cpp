@@ -1081,11 +1081,16 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
 }
 
 std::string realCallBlockerReason(const Definition &def, const RealCallShapeContext &context) {
+  return realCallBlocker(def, context).text;
+}
+
+RealCallBlocker realCallBlocker(const Definition &def, const RealCallShapeContext &context) {
   if (context.definitionsByPath == nullptr || context.structNames == nullptr) {
     return {};
   }
   if (!context.allowStructs) {
-    return scalarOnlyParameterBlocker(def);
+    std::string text = scalarOnlyParameterBlocker(def);
+    return {text.empty() ? std::string() : "scalar-only-parameter", std::move(text)};
   }
   const auto &byPath = *context.definitionsByPath;
   const auto &structNames = *context.structNames;
@@ -1094,46 +1099,51 @@ std::string realCallBlockerReason(const Definition &def, const RealCallShapeCont
     if (isAddressAbiParameter(
             def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
       if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
-        return subject +
-               "is a sum, which a real call does not take: a function with a sum parameter "
-               "stays inline";
+        return {"sum-parameter",
+                subject +
+                    "is a sum, which a real call does not take: a function with a sum parameter "
+                    "stays inline"};
       }
       continue;
     }
     if (isArgsPackBinding(param) || param.args.size() > 1) {
-      return subject + "is an argument pack";
+      return {"argument-pack", subject + "is an argument pack"};
     }
     const Transform *type = taskParameterTypeTransform(param);
     if (type == nullptr) {
-      return subject + "has no type the address ABI passes";
+      return {"untyped-parameter", subject + "has no type the address ABI passes"};
     }
     if (type->name == "vector" && !type->templateArgs.empty()) {
-      return subject + "is a `vector<" + trimTemplateTypeText(type->templateArgs.front()) +
-             ">` of an element the lowerer cannot copy or destroy";
+      return {"vector-parameter",
+              subject + "is a `vector<" + trimTemplateTypeText(type->templateArgs.front()) +
+                  ">` of an element the lowerer cannot copy or destroy"};
     }
     if ((type->name == "Reference" || type->name == "Pointer") && type->templateArgs.size() == 1 &&
         trimTemplateTypeText(type->templateArgs.front()).find('<') != std::string::npos) {
-      return subject + "is a `" + type->name + "<" +
-             trimTemplateTypeText(type->templateArgs.front()) +
-             ">`: the address ABI passes a reference or pointer to a scalar or a struct, not to a "
-             "templated type" +
-             " such as a vector";
+      return {"templated-reference-parameter",
+              subject + "is a `" + type->name + "<" +
+                  trimTemplateTypeText(type->templateArgs.front()) +
+                  ">`: the address ABI passes a reference or pointer to a scalar or a struct, not "
+                  "to a templated type" +
+                  " such as a vector"};
     }
     if (type->name == "string") {
-      return subject + "is a `string` used by more than `count()` or `__pstext_literal`";
+      return {"string-parameter",
+              subject + "is a `string` used by more than `count()` or `__pstext_literal`"};
     }
     if (isSumDefinitionPath(resolveStructTypeName(type->name, def.namespacePrefix, structNames),
                             byPath)) {
-      return subject + "is a sum, whose owned parameters stay inline";
+      return {"owned-sum-parameter", subject + "is a sum, whose owned parameters stay inline"};
     }
-    return subject + "has a type (`" + type->name +
-           "`) the address ABI does not pass: a scalar, a struct outside the collections, or a "
-           "reference or pointer " +
-           "to one";
+    return {"parameter-type",
+            subject + "has a type (`" + type->name +
+                "`) the address ABI does not pass: a scalar, a struct outside the collections, or "
+                "a reference or pointer " +
+                "to one"};
   }
   if (const AddressAbiBlocker blocker = addressAbiShapeBlocker(def, context);
       blocker != AddressAbiBlocker::None) {
-    return describeAddressAbiBlocker(blocker, def);
+    return {addressAbiBlockerCode(blocker), describeAddressAbiBlocker(blocker, def)};
   }
   return {};
 }

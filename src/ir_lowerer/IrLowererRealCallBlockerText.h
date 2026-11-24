@@ -29,6 +29,10 @@ enum class AddressAbiBlocker {
   GeneratedTailValue,
 };
 
+// A stable, hyphenated code for each blocker (`on-error-handler`, `sum-parameter`, ...), for reports and tests; empty
+// for `None`. The codes never change spelling; a new blocker gets a new code.
+const char *addressAbiBlockerCode(AddressAbiBlocker blocker);
+
 // Text that names what `def` does that a real call cannot take, for a diagnostic (`public function /f cannot be
 // compiled into a library: <text>`). Empty for `None`.
 std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definition &def);

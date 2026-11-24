@@ -117,3 +117,32 @@ TEST_CASE("non-finite floats print by name and invalid references are marked") {
         "FileOpenRead #3 <invalid>");
   CHECK(primec::formatIrInstruction(module, {primec::IrOpcode::Call, 9}) == "Call 9");
 }
+
+TEST_CASE("the inline report sorts by instructions added and then by path") {
+  primec::IrModule module;
+  CHECK(primec::formatInlineReport(module) == "inline_report_v1 definitions=0\n");
+  const auto entry = [](const char *path,
+                        bool realCall,
+                        const char *code,
+                        uint64_t callSites,
+                        uint64_t added,
+                        uint64_t withCallees) {
+    primec::IrInlineReportEntry result;
+    result.path = path;
+    result.realCall = realCall;
+    result.blockerCode = code;
+    result.blockerText = realCall ? "" : "text of the rule";
+    result.callSites = callSites;
+    result.instructionsAdded = added;
+    result.instructionsWithCallees = withCallees;
+    return result;
+  };
+  module.inlineReport = {entry("/b", true, "", 3, 10, 10),
+                         entry("/a", true, "", 1, 10, 12),
+                         entry("/c", false, "on-error-handler", 2, 40, 90)};
+  CHECK(primec::formatInlineReport(module) ==
+        "inline_report_v1 definitions=3\n"
+        "added=40 with_callees=90 call_sites=2 /c: on-error-handler: text of the rule\n"
+        "added=10 with_callees=12 call_sites=1 /a: real call\n"
+        "added=10 with_callees=10 call_sites=3 /b: real call\n");
+}

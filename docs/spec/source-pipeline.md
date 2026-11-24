@@ -109,6 +109,10 @@ Pipeline operating rules:
   With `--emit=<kind>` the module is lowered, validated and optimized for that kind's target, so the listing is the IR
   that backend receives (target-only passes such as `if-convert` on native and `loop-rotate` on the VM included, and
   host calls accepted where the target takes them); without `--emit`, and in `primevm`, the listing is backend-neutral.
+- `--dump-stage=inline-report` prints, for the module lowering produced (no optimization), one line per definition a
+  call site reached: whether it is a real call or which rule keeps it inline, its call sites and the instructions its
+  expansions add. It follows `--emit` like the other lowered-module stages and is described with the real-call rules in
+  docs/spec/vm-design.md (Real calls).
 - Release validation failures are tracked in `docs/failing_tests.md`. Every
   release test run must record newly failing doctest cases there before new
   implementation work starts, and the TODO queue must prioritize fixing those
