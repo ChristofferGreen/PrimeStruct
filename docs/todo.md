@@ -322,9 +322,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `import /std/collections/*  namespace std { namespace collections { namespace vector { [public return<bool>] ownsStorageProbe([Vector<i32>] values) { return(values.owns_storage()) } } } }  [effects(io_out heap_alloc) return<int>] main() { [Vector<i32> mut] items{vector<i32>()}  print_line(/std/collections/vector/ownsStorageProbe(items))  return(0i32) }` with `primec --emit=vm -I stdlib` is `unknown call target: owns_storage`.
 
 
-- [ ] TODO-6249: The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` compile fails
+- [~] TODO-6249: The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` compile fails
   - owner: ai
   - status: ready
+  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
   - created_at: 2026-11-24
   - phase: Build robustness (found while gating TODO-5688)
   - parallel_track: build-robustness
