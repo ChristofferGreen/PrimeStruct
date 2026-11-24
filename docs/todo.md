@@ -485,9 +485,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [ ] TODO-6232: The instruction source map names each source unit once
+- [~] TODO-6232: The instruction source map names each source unit once
   - owner: ai
   - status: ready
+  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md)
   - parallel_track: bytecode-size
