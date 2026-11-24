@@ -503,6 +503,37 @@ import /ui/*
   print_line(total + pick(b) { empty { 40i32 } held(n) { n.id } })
   return(total)
 })"},
+    // A vector result is the function's own `mut` vector local, copied into a block of the caller that owns it.
+    {"vector_result",
+     R"(import /std/collections/vector
+
+[namespace] ui {
+  [public effects(heap_alloc) return<vector<i32>>] make_numbers([i32] count) {
+    [vector<i32> mut] out{vector<i32>{}}
+    [i32 mut] next{0i32}
+    while(next < count) {
+      out.push(next * 3i32)
+      next = next + 1i32
+    }
+    return(out)
+  }
+  [public effects(heap_alloc) return<vector<i32>>] make_empty() {
+    [vector<i32> mut] out{vector<i32>{}}
+    return(out)
+  }
+})",
+     R"(@IMPORT@
+import /ui/*
+import /std/collections/vector
+[return<i32> effects(io_out, heap_alloc)] main() {
+  [vector<i32> mut] a{make_numbers(5i32)}
+  [vector<i32>] b{make_empty()}
+  a.push(100i32)
+  print_line(a.count())
+  print_line(b.count())
+  print_line(a[4i32] + a[5i32])
+  return(a.count() + b.count())
+})"},
 };
 
 constexpr size_t CorpusSize = sizeof(Corpus) / sizeof(Corpus[0]);
@@ -648,7 +679,11 @@ TEST_CASE("library corpus on the vm: a sum result") {
 }
 
 TEST_CASE("library corpus on the vm: a sum result with an owned payload") {
-  checkRange(30, CorpusSize, "vm");
+  checkRange(30, 31, "vm");
+}
+
+TEST_CASE("library corpus on the vm: a vector result") {
+  checkRange(31, CorpusSize, "vm");
 }
 
 TEST_CASE("library corpus on optexe: structs and methods") {
@@ -708,7 +743,11 @@ TEST_CASE("library corpus on optexe: a sum result") {
 }
 
 TEST_CASE("library corpus on optexe: a sum result with an owned payload") {
-  checkRange(30, CorpusSize, "optexe");
+  checkRange(30, 31, "optexe");
+}
+
+TEST_CASE("library corpus on optexe: a vector result") {
+  checkRange(31, CorpusSize, "optexe");
 }
 
 TEST_SUITE_END();

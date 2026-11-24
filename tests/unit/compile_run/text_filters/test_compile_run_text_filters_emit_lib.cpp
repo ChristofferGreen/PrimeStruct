@@ -297,8 +297,7 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "{\n"
        "  return(vector<i32>(1i32))\n}\n",
        "public function /make cannot be compiled into a library: its result `vector<i32>` is not "
-       "one a real "
-       "call returns"},
+       "always a `mut` vector local the function built"},
       // A borrowed sum parameter stays inline in every program, so a library root cannot take it either.
       {"sum_parameter",
        "[sum] Pick { [i32] number [bool] flag }\n\n[public return<i32>]\nuse_pick([Pick] value) {\n"

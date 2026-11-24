@@ -103,6 +103,11 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
     return "its result `" + returnTypeText(def) +
            "` is a packed error value, a frame address that a real call does not return: a "
            "function with an error struct result stays inline";
+  case AddressAbiBlocker::VectorResultNotOwned:
+    return "its result `" + returnTypeText(def) +
+           "` is not always a `mut` vector local the function built, which a real call returns by "
+           "copying its record: a function that returns a parameter, a field or another "
+           "expression stays inline";
   case AddressAbiBlocker::UnsupportedResult: {
     const std::string result = returnTypeText(def);
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +

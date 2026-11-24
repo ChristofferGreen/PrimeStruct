@@ -142,7 +142,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300
                                   SHARD_PREFIX "library_corpus"
                                   SOURCE_FILE "*test_compile_run_text_filters_library_corpus.cpp"
-                                  TOTAL_CASES 32
+                                  TOTAL_CASES 34
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.text_filters"
                                   TIMEOUT 300

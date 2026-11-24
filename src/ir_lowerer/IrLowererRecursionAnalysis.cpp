@@ -782,8 +782,14 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
       structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0) {
     return AddressAbiBlocker::CollectionResult;
   }
+  if (context.allowVectorResults && structResultPath.empty() &&
+      builtinVectorReturnType(def, structNames) != nullptr &&
+      !vectorResultReturnsOwnedLocals(def)) {
+    return AddressAbiBlocker::VectorResultNotOwned;
+  }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
       !(context.allowSlotResults && hasSlotResultReturn(def)) && structResultPath.empty() &&
+      !(context.allowVectorResults && builtinVectorReturnType(def, structNames) != nullptr) &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;
   }
@@ -1114,6 +1120,7 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
     if (definitionContext.allowSlotResults) {
       definitionContext.structNames = &libraryStructNames;
       definitionContext.refuseSumParameters = true;
+      definitionContext.allowVectorResults = true;
     }
     if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, definitionContext)) {
       continue;

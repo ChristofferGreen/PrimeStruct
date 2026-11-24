@@ -718,11 +718,14 @@ bool emitInlineDefinitionCallImpl(
             {IrOpcode::LoadLocal, static_cast<uint64_t>(paramIt->second.index)});
       }
       // A struct result is written into a block of this frame, whose address is the last argument; the callee
-      // returns that address, the value an inlined call leaves.
-      bool structResult = false;
+      // returns that address, the value an inlined call leaves. A builtin vector is a 5-slot record the same way.
+      constexpr int32_t VectorRecordSlots = 5;
+      int32_t resultSlots = 0;
       if (const std::string resultStructPath =
-              ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
-          !resultStructPath.empty() && !returnInfo.returnsVoid) {
+              returnInfo.returnsVoid
+                  ? std::string{}
+                  : ir_lowerer::realCallStructReturnPath(callee, structNames, setupStage.defMap);
+          !resultStructPath.empty()) {
         StructSlotLayoutInfo resultLayout;
         if (!resolveStructSlotLayout(resultStructPath, resultLayout) ||
             resultLayout.totalSlots <= 0) {
@@ -731,11 +734,17 @@ bool emitInlineDefinitionCallImpl(
           popInlineStack();
           return false;
         }
+        resultSlots = resultLayout.totalSlots;
+      } else if (!returnInfo.returnsVoid &&
+                 !ir_lowerer::declaredBuiltinVectorReturnElementText(callee).empty()) {
+        resultSlots = VectorRecordSlots;
+      }
+      const bool structResult = resultSlots > 0;
+      if (structResult) {
         const int32_t blockBase = nextLocal;
-        nextLocal += resultLayout.totalSlots;
+        nextLocal += resultSlots;
         function.instructions.push_back(
             {IrOpcode::AddressOfLocal, static_cast<uint64_t>(blockBase)});
-        structResult = true;
       }
       function.instructions.push_back(
           {returnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, *addressAbiCallImm});

@@ -238,14 +238,17 @@ a string is one slot that holds an address or an index, and a `string` or `Point
 consumer target without that ABI is refused) and is not optimized or inlined: several passes are target-specific, so the link runs them on
 the merged module. The module has `entryIndex` -1, its struct layouts, host imports, string table, source map and debug
 slots; a stub entry that lowering needs stands in for `main` and is removed. A root the real-call ABI cannot take (an
-argument pack, a `vector<T>` result, ...) is a diagnostic that names the function and the reason: `public function
+argument pack, a `vector<T>` result that is not an owned local, ...) is a diagnostic that names the function and the reason: `public function
 /packed cannot be compiled into a library: parameter `values` is an argument pack` (exit code 2, no file); so is a
 parameter that is a sum, borrowed or by `Reference` or `Pointer` (`parameter `value` is a sum, which a real call does not
 take: a function with a sum parameter stays inline`); so is a result that is the packed builtin `Result<T, E>` or a stdlib
 error struct (`FileError`, `ImageError`, `ContainerError`, `GfxError`), each with its rule named (`its result `Result<i32, i32>` is a
 packed `Result`, which a real call does not return: ...`; a library cannot return them yet). A public sum result is a function of
-the archive: the callee fills a block of the caller's frame like a struct result and the caller destroys the payload; a result,
-receiver or body rule gets its own text (`its result `vector<i32>` is not one a real call returns: ...`, `its body uses `try``,
+the archive: the callee fills a block of the caller's frame like a struct result and the caller destroys the payload. A public
+function with a `vector<T>` result is one when every `return` hands back a `mut` vector local it built: the callee copies the
+record into a block of the caller, which owns the vector; any other vector result is refused (`its result `vector<i32>` is not
+always a `mut` vector local the function built, ...`). A result,
+receiver or body rule gets its own text (`its body uses `try``,
 `it has an `on_error` handler`, `it is a helper of the canonical collections, ...`). The source map
 names each file relative to the root file's directory, so two checkouts of one source give one archive. Without `-o`,
 the archive is `<root file name>.psa` in the output directory.

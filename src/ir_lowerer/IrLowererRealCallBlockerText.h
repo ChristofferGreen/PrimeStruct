@@ -25,6 +25,7 @@ enum class AddressAbiBlocker {
   CollectionResult,
   PackedResult,
   PackedErrorResult,
+  VectorResultNotOwned,
   UnsupportedResult,
   UsesTry,
   GeneratedTailValue,

@@ -109,6 +109,10 @@ struct RealCallShapeContext {
   // `GfxError`, returned as a frame address) are refused for the same functions, each with its rule named: a real
   // call returns neither of them. A sum result is not refused: it returns in a heap block like a struct.
   bool refusePackedResults = false;
+  // A builtin `vector<T>` result that is always a `mut` vector local the function built: the callee copies the record
+  // into a block of its caller, as a spawned task does. For the functions of a library; any other vector result
+  // keeps the refusal that names the rule.
+  bool allowVectorResults = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),
