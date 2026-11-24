@@ -626,19 +626,18 @@ TEST_CASE("ir validator wasm target accepts float and conversion subset") {
 }
 
 TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
+  std::string error;
+  // Byte regions are lowered by the Wasm targets: the validator accepts the byte opcodes.
   primec::IrModule module;
   module.entryIndex = 0;
   primec::IrFunction fn;
   fn.name = "/main";
-  fn.instructions.push_back({primec::IrOpcode::HeapAllocBytes, 1});
+  fn.instructions.push_back({primec::IrOpcode::PushI64, 1});
+  fn.instructions.push_back({primec::IrOpcode::HeapAllocBytes, 0});
+  fn.instructions.push_back({primec::IrOpcode::Pop, 0});
   fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(fn);
-
-  std::string error;
-  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
-  CHECK_ERROR_CONTAINS(error, "byte memory opcodes are only supported by the vm");
-  // The message names the opcode and the language feature that needs it.
-  CHECK_ERROR_CONTAINS(error, "HeapAllocBytes (byte regions, needed by `String`");
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
 
   // The refusals of atomics, channels and host calls name the opcode too.
   const std::pair<primec::IrOpcode, const char *> namedRefusals[] = {

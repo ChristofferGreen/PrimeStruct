@@ -1,6 +1,7 @@
 #include "WasmEmitterHeap.h"
 
 #include "WasmEmitterAsm.h"
+#include "WasmEmitterByteHeap.h"
 #include "WasmEmitterHeapRegions.h"
 
 namespace primec {
@@ -39,6 +40,7 @@ constexpr int32_t RuntimeErrorExitCode = 3;
 constexpr int32_t FaultFree = 0;
 constexpr int32_t FaultRealloc = 1;
 constexpr int32_t FaultOverflow = 2;
+constexpr int32_t FaultByte = 3;
 
 // The address a slot range starts at: Tag | generation << 48 | slot * 16 (the VM's encoding, arena 0).
 void emitAddress(WasmAsm &a, uint32_t generationLocal, uint32_t baseLocal) {
@@ -96,6 +98,9 @@ WasmCodeBody buildFault(const WasmRuntimeContext &runtime) {
   literalIf(FaultFree, runtime.heapFreeMessageAddr, runtime.heapFreeMessageLength);
   literalIf(FaultRealloc, runtime.heapReallocMessageAddr, runtime.heapReallocMessageLength);
   literalIf(FaultOverflow, runtime.heapOverflowMessageAddr, runtime.heapOverflowMessageLength);
+  if (runtime.hasBytes) {
+    literalIf(FaultByte, runtime.byteMessageAddr, runtime.byteMessageLength);
+  }
   a.localGet(Kind);
   a.i32Const(FaultOverflow);
   a.i32Ne();
@@ -712,6 +717,14 @@ WasmCodeBody buildFree(const WasmRuntimeContext &runtime) {
   a.ifThen();
   a.ret();
   a.end();
+  if (runtime.hasBytes) {
+    emitWasmIsByteAddress(a, Address);
+    a.ifThen();
+    a.localGet(Address);
+    a.call(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::Free)]);
+    a.ret();
+    a.end();
+  }
   a.localGet(Address);
   a.call(fn(runtime, WasmHeapHelper::Find));
   a.localSet(Base);
@@ -758,6 +771,15 @@ WasmCodeBody buildRealloc(const WasmRuntimeContext &runtime) {
   a.i64Const(0);
   a.ret();
   a.end();
+  if (runtime.hasBytes) {
+    emitWasmIsByteAddress(a, Address);
+    a.ifThen();
+    a.localGet(Address);
+    a.localGet(Count);
+    a.call(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::Realloc)]);
+    a.ret();
+    a.end();
+  }
   a.localGet(Address);
   a.call(fn(runtime, WasmHeapHelper::Find));
   a.localSet(Base);
@@ -888,11 +910,11 @@ WasmCodeBody buildWasmHeapHelperBody(WasmHeapHelper helper, const WasmRuntimeCon
   case WasmHeapHelper::FillStates:
     return buildFillStates(runtime);
   case WasmHeapHelper::RemoveRun:
-    return buildRemoveRun(runtime);
+    return buildRemoveRun(runtime, SlotRuns);
   case WasmHeapHelper::InsertRun:
-    return buildInsertRun(runtime);
+    return buildInsertRun(runtime, SlotRuns);
   case WasmHeapHelper::TakeFront:
-    return buildTakeFront(runtime);
+    return buildTakeFront(runtime, SlotRuns, fn(runtime, WasmHeapHelper::RemoveRun));
   case WasmHeapHelper::Release:
     return buildRelease(runtime);
   case WasmHeapHelper::EnsureCapacity:

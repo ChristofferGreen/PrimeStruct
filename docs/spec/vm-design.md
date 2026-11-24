@@ -510,8 +510,11 @@
   the host refuses, is `VM heap allocation overflow`. A module answers `__pstext_stat` itself: statistic 8
   (`heapLiveBlocks()`) is the number of live slot allocations, kept in a mutable global that every allocation and release
   updates; statistics 0 to 7 count blocks of the string heap, which Wasm does not have yet, so they read 0 (as on the VM for
-  a program that allocates no text). Byte regions and the other `__pstext_*` functions (`String`) are not there yet and are
-  refused.
+  a program that allocates no text). Byte regions are ported the same way (`WasmEmitterByteHeap.cpp`): five regions (bytes, an owner
+  entry for every 8-byte granule, the byte count and generation of each region, and a sorted table of free runs) that move to the end
+  of the memory when they outgrow their 16 KiB, up to 512 MiB of bytes, with the VM's byte addresses, best fit reuse and fault texts;
+  the owner table replaces the VM's sorted map of live regions, so an access is two loads and a compare. The `__pstext_*`
+  functions (`String`) are not there yet and are refused.
 - **Host text (PSIR v30):** `IrHostValueKind::Text` is owned text at the host boundary. A `[host]` definition may name
   the stdlib `String` as a parameter or result type. A `String` argument passes its data block: the VM gives the host
   a pointer to the NUL-terminated bytes without a copy (a module-table string literal is accepted in the same

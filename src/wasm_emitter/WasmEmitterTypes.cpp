@@ -646,7 +646,32 @@ bool emitTypedInstruction(const IrInstruction &inst,
     popTypes(localLayout, 1);
     pushType(localLayout, WasmTypeSlot);
     return true;
+  case IrOpcode::HeapAllocBytes:
+    // `HeapAllocBytes` takes the count and makes the byte-region address (WasmEmitterByteHeap.cpp).
+    if (!runtime.hasBytes ||
+        !coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+      if (error.empty()) {
+        error = "wasm emitter byte region opcode without byte regions in function: " + functionName;
+      }
+      return false;
+    }
+    out.push_back(0x10); // call
+    appendU32Leb(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::Alloc)], out);
+    popTypes(localLayout, 1);
+    pushType(localLayout, WasmTypeI64);
+    return true;
   case IrOpcode::LoadU8:
+    if (runtime.hasBytes) {
+      // A byte-region address names a byte; any other address goes to the slot access.
+      if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
+        return false;
+      }
+      out.push_back(0x10); // call
+      appendU32Leb(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::LoadU8)], out);
+      popTypes(localLayout, 1);
+      pushType(localLayout, WasmTypeI64);
+      return true;
+    }
     // The byte of a slot (a pointer to a `u8` local or slot field): the slot's low byte.
     if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
       return false;
@@ -659,6 +684,16 @@ bool emitTypedInstruction(const IrInstruction &inst,
     pushType(localLayout, WasmTypeI64);
     return true;
   case IrOpcode::StoreU8: {
+    if (runtime.hasBytes) {
+      if (!coerceOperands(localLayout, {WasmTypeI64, WasmTypeI64}, out, error, functionName)) {
+        return false;
+      }
+      out.push_back(0x10); // call
+      appendU32Leb(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::StoreU8)], out);
+      popTypes(localLayout, 2);
+      pushType(localLayout, WasmTypeI64);
+      return true;
+    }
     // The byte goes to the slot as the whole slot, and stays on the stack.
     if (!coerceOperands(localLayout, {WasmTypeI64, WasmTypeI64}, out, error, functionName)) {
       return false;

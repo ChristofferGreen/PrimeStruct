@@ -75,6 +75,13 @@ uint32_t layoutHeapRegions(uint32_t start, WasmRuntimeContext &runtime) {
   runtime.heapStates = place(WasmHeapInitialSlots * 2u);
   runtime.heapCounts = place(WasmHeapInitialSlots * 4u);
   runtime.heapRuns = place((WasmHeapInitialSlots / 2u + 1u) * 8u);
+  if (runtime.hasBytes) {
+    runtime.byteBase = place(WasmByteInitialGranules * 8u);
+    runtime.byteOwner = place(WasmByteInitialGranules * 4u);
+    runtime.byteCounts = place(WasmByteInitialGranules * 4u);
+    runtime.byteGens = place(WasmByteInitialGranules * 2u);
+    runtime.byteRuns = place((WasmByteInitialGranules / 2u + 1u) * 8u);
+  }
   return start;
 }
 
@@ -94,8 +101,11 @@ bool buildWasiRuntimeContext(const IrModule &module,
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||
-          inst.op == IrOpcode::HeapRealloc) {
+          inst.op == IrOpcode::HeapRealloc || inst.op == IrOpcode::HeapAllocBytes) {
         runtime.hasHeap = true;
+      }
+      if (inst.op == IrOpcode::HeapAllocBytes) {
+        runtime.hasBytes = true;
       }
     }
   }
@@ -250,6 +260,12 @@ bool buildWasiRuntimeContext(const IrModule &module,
       static const std::string FreeMessage = "VM error: invalid heap free address in IR: ";
       static const std::string ReallocMessage = "VM error: invalid heap realloc address in IR: ";
       static const std::string OverflowMessage = "VM error: VM heap allocation overflow\n";
+      static const std::string ByteMessage = "VM error: invalid byte address in IR: ";
+      static const std::string SlotByteMessage = "VM error: slot access to a byte region in IR: ";
+      if (runtime.hasBytes) {
+        appendMessage(ByteMessage, runtime.byteMessageAddr, runtime.byteMessageLength);
+        appendMessage(SlotByteMessage, runtime.slotByteMessageAddr, runtime.slotByteMessageLength);
+      }
       appendMessage(FreeMessage, runtime.heapFreeMessageAddr, runtime.heapFreeMessageLength);
       appendMessage(
           ReallocMessage, runtime.heapReallocMessageAddr, runtime.heapReallocMessageLength);

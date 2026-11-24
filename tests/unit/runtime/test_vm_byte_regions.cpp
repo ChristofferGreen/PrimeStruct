@@ -228,7 +228,8 @@ TEST_CASE("the byte opcodes survive serialization") {
   CHECK(IrSchemaVersion >= 28u);
 }
 
-TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the byte opcodes for now") {
+TEST_CASE(
+    "only the VM, the optimized C++ emitters, arm64 native and Wasm accept the byte opcodes") {
   // The native emitter has byte memory on macOS/arm64 only.
   constexpr bool nativeHasBytes =
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
@@ -243,14 +244,14 @@ TEST_CASE("only the VM, the optimized C++ emitters and arm64 native accept the b
   CHECK(validateIrModule(module, IrValidationTarget::OptCpp, error));
   CHECK(validateIrModule(module, IrValidationTarget::Cpp, error));  // emitted by the optimized emitter
   CHECK(validateIrModule(module, IrValidationTarget::Native, error) == nativeHasBytes);
-  for (const IrValidationTarget target : {IrValidationTarget::Wasm, IrValidationTarget::Glsl}) {
-    error.clear();
-    CHECK_FALSE(validateIrModule(module, target, error));
-    CHECK(error.find("only supported by the vm") != std::string::npos);
-  }
+  // Wasm lowers byte regions and the u8 access of them (both profiles).
+  CHECK(validateIrModule(module, IrValidationTarget::Wasm, error));
+  CHECK(validateIrModule(module, IrValidationTarget::WasmBrowser, error));
+  error.clear();
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Glsl, error));
+  CHECK(error.find("only supported by the vm") != std::string::npos);
   const IrModule zext = moduleOf({{IrOpcode::PushI32, 4}, {IrOpcode::ZextU8, 0}, {IrOpcode::ReturnI32, 0}});
   CHECK(validateIrModule(zext, IrValidationTarget::Native, error) == nativeHasBytes);
-  // Wasm lowers the u8 wrap and the u8 access of slots; its byte regions (HeapAllocBytes) are refused above.
   CHECK(validateIrModule(zext, IrValidationTarget::Wasm, error));
   CHECK_FALSE(validateIrModule(zext, IrValidationTarget::Glsl, error));
 }

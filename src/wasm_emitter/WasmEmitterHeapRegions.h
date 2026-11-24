@@ -22,12 +22,23 @@ void emitScaled(WasmAsm &a, uint32_t indexLocal, int32_t shift);
 // heap grows, so no helper keeps an address across a call that may grow it.
 void regionAdd(WasmAsm &a, uint32_t baseGlobal);
 
+// A table of free runs: (first unit, length) pairs of two u32, sorted by first unit, between a base address and a
+// count, both mutable globals. The slot heap counts slots, the byte regions granules.
+struct RunTable {
+  uint32_t baseGlobal;
+  uint32_t countGlobal;
+};
+inline constexpr RunTable SlotRuns{WasmGlobalRunsBase, WasmGlobalRunCount};
+inline constexpr RunTable ByteRuns{WasmGlobalByteRunsBase, WasmGlobalByteRunCount};
+
 // removeRun(position i32): drops the free run, shifting the later ones down.
-WasmCodeBody buildRemoveRun(const WasmRuntimeContext &runtime);
+WasmCodeBody buildRemoveRun(const WasmRuntimeContext &runtime, const RunTable &table);
 // insertRun(position i32, base i32, length i32): puts the free run at `position`, shifting the later ones up.
-WasmCodeBody buildInsertRun(const WasmRuntimeContext &runtime);
-// takeFront(position i32, count i32): removes the first `count` slots of the free run (all of it when it is that long).
-WasmCodeBody buildTakeFront(const WasmRuntimeContext &runtime);
+WasmCodeBody buildInsertRun(const WasmRuntimeContext &runtime, const RunTable &table);
+// takeFront(position i32, count i32): removes the first `count` units of the free run (all of it when it is that long);
+// `removeRun` is the function index of the table's removeRun.
+WasmCodeBody
+buildTakeFront(const WasmRuntimeContext &runtime, const RunTable &table, uint32_t removeRun);
 // ensureCapacity(needed i64) -> i32: 1 when the regions have room for `needed` slots (growing them first when they do
 // not), 0 when `needed` is past `WasmHeapMaxSlots` or the host refuses the memory.
 WasmCodeBody buildEnsureCapacity(const WasmRuntimeContext &runtime);

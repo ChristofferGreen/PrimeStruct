@@ -614,4 +614,372 @@ TEST_CASE("the browser profile answers the live allocation count") {
   CHECK(none.out == "0\n");
 }
 
+namespace {
+
+// The address of the byte region that starts at granule `granule` and was the `generation`th one made (the VM's
+// `Tag | ByteRegionBit | generation << 48 | offset`).
+int64_t byteAddress(uint64_t granule, uint64_t generation) {
+  return static_cast<int64_t>(0x8000800000000000ull | (generation << 48) | (granule * 8));
+}
+
+// `byte[address + offset] = value`, leaving nothing on the stack.
+void storeByte(std::vector<std::string> &code,
+               const std::string &address,
+               uint64_t offset,
+               uint64_t value) {
+  code.push_back(address);
+  code.push_back("PushI64 " + std::to_string(offset));
+  code.push_back("AddI64");
+  code.push_back("PushI64 " + std::to_string(value));
+  code.push_back("StoreU8");
+  code.push_back("Pop");
+}
+
+// Prints `byte[address + offset]`.
+void printByte(std::vector<std::string> &code, const std::string &address, uint64_t offset) {
+  code.push_back(address);
+  code.push_back("PushI64 " + std::to_string(offset));
+  code.push_back("AddI64");
+  code.push_back("LoadU8");
+  code.push_back("PrintI64 1");
+}
+
+// A random sequence of byte region allocations, frees and reallocations over eight address variables, printing every
+// address and the first and last byte of every region (zero when it is new), so best fit over footprints, tail
+// extension, merging of free runs, generations and the copy of a realloc all show in the output.
+primec::IrModule randomByteProgram(uint64_t seed, int steps) {
+  uint64_t state = seed * 2685821657736338717ull + 1442695040888963407ull;
+  const auto next = [&](uint64_t bound) {
+    state ^= state << 13;
+    state ^= state >> 7;
+    state ^= state << 17;
+    return state % bound;
+  };
+  constexpr int Variables = 8;
+  std::vector<uint64_t> counts(Variables, 0);
+  std::vector<std::string> code;
+  const auto variableAddress = [](int variable) { return "LoadLocal " + std::to_string(variable); };
+  const auto freeVariable = [&](int variable) {
+    code.push_back(variableAddress(variable));
+    code.push_back("HeapFree");
+    code.push_back("PushI64 0");
+    code.push_back("StoreLocal " + std::to_string(variable));
+    counts[static_cast<size_t>(variable)] = 0;
+  };
+  const auto describe = [&](int variable, uint64_t step) {
+    const uint64_t count = counts[static_cast<size_t>(variable)];
+    code.push_back(variableAddress(variable));
+    code.push_back("PrintU64 1");
+    printByte(code, variableAddress(variable), 0);
+    printByte(code, variableAddress(variable), count - 1);
+    storeByte(code, variableAddress(variable), 0, 1 + step % 250);
+    storeByte(code, variableAddress(variable), count - 1, 2 + step % 250);
+  };
+  for (int step = 0; step < steps; ++step) {
+    const int variable = static_cast<int>(next(Variables));
+    const uint64_t choice = next(10);
+    const uint64_t count = next(5) == 0 ? next(300) : next(40);
+    const bool isLive = counts[static_cast<size_t>(variable)] != 0;
+    if (choice < 5 || (!isLive && choice < 8)) {
+      if (isLive) {
+        freeVariable(variable);
+      }
+      code.push_back("PushI64 " + std::to_string(count));
+      code.push_back("HeapAllocBytes");
+      code.push_back("StoreLocal " + std::to_string(variable));
+      if (count != 0) {
+        counts[static_cast<size_t>(variable)] = count;
+        describe(variable, static_cast<uint64_t>(step));
+      } else {
+        code.push_back(variableAddress(variable));
+        code.push_back("PrintU64 1");
+      }
+    } else if (isLive && choice < 8) {
+      freeVariable(variable);
+    } else if (isLive) {
+      code.push_back(variableAddress(variable));
+      code.push_back("PushI64 " + std::to_string(count));
+      code.push_back("HeapRealloc");
+      code.push_back("StoreLocal " + std::to_string(variable));
+      if (count == 0) {
+        code.push_back(variableAddress(variable));
+        code.push_back("PrintU64 1");
+        counts[static_cast<size_t>(variable)] = 0;
+      } else {
+        counts[static_cast<size_t>(variable)] = count;
+        describe(variable, static_cast<uint64_t>(step));
+      }
+    }
+  }
+  for (int variable = 0; variable < Variables; ++variable) {
+    if (counts[static_cast<size_t>(variable)] != 0) {
+      freeVariable(variable);
+    }
+  }
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  return mainOf(code);
+}
+
+// The address of the `i`th region of a run of equal regions of `granules` granules made one after the other.
+std::string regionAddress(int i, uint64_t granules) {
+  return "PushI64 " + std::to_string(byteAddress(granules * static_cast<uint64_t>(i),
+                                                 static_cast<uint64_t>(i) + 1));
+}
+
+} // namespace
+
+TEST_CASE("wasm byte regions allocate, read, write, free and realloc like the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // Five bytes written and read back, the region freed and a new one of the same size made (the same base, a new
+  // generation, zeroed), a realloc that keeps the leading bytes, and slot and byte allocations interleaved with the u8
+  // access of a slot address still reading the slot.
+  std::vector<std::string> code = {
+      "PushI64 5", "HeapAllocBytes", "StoreLocal 0", "LoadLocal 0", "PrintU64 1"};
+  for (uint64_t i = 0; i < 5; ++i) {
+    storeByte(code, "LoadLocal 0", i, 10 + i);
+  }
+  for (uint64_t i = 0; i < 5; ++i) {
+    printByte(code, "LoadLocal 0", i);
+  }
+  for (const std::string &line : std::vector<std::string>{"LoadLocal 0",
+                                                          "HeapFree",
+                                                          "PushI64 5",
+                                                          "HeapAllocBytes",
+                                                          "StoreLocal 1",
+                                                          "LoadLocal 1",
+                                                          "PrintU64 1"}) {
+    code.push_back(line);
+  }
+  printByte(code, "LoadLocal 1", 0);
+  storeByte(code, "LoadLocal 1", 4, 99);
+  for (const std::string &line : std::vector<std::string>{"LoadLocal 1",
+                                                          "PushI64 20",
+                                                          "HeapRealloc",
+                                                          "StoreLocal 2",
+                                                          "LoadLocal 2",
+                                                          "PrintU64 1"}) {
+    code.push_back(line);
+  }
+  printByte(code, "LoadLocal 2", 4);
+  printByte(code, "LoadLocal 2", 19);
+  for (const std::string &line : std::vector<std::string>{
+           "PushI64 3",   "HeapAlloc",    "StoreLocal 3", "LoadLocal 3",  "PrintU64 1",
+           "LoadLocal 3", "PushI64 4660", "StoreU8",      "PrintI64 1",   "LoadLocal 3",
+           "LoadU8",      "PrintI64 1",   "LoadLocal 3",  "LoadIndirect", "PrintI64 1",
+           "LoadLocal 2", "PushI64 3",    "HeapRealloc",  "StoreLocal 2", "LoadLocal 2",
+           "PrintU64 1"}) {
+    code.push_back(line);
+  }
+  printByte(code, "LoadLocal 2", 2);
+  for (const std::string &line : std::vector<std::string>{"LoadLocal 2",
+                                                          "PushI64 0",
+                                                          "HeapRealloc",
+                                                          "PrintU64 1",
+                                                          "LoadLocal 3",
+                                                          "HeapFree",
+                                                          "PushI32 0",
+                                                          "ReturnI32"}) {
+    code.push_back(line);
+  }
+  expectMatchesVm(mainOf(code), "byte_basic");
+}
+
+TEST_CASE("wasm byte region faults carry the VM's message and exit code 3") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const std::vector<std::string> alloc16 = {"PushI64 16", "HeapAllocBytes", "StoreLocal 0"};
+  const auto withTail = [&](std::vector<std::string> tail) {
+    std::vector<std::string> code = alloc16;
+    code.insert(code.end(), tail.begin(), tail.end());
+    code.push_back("ReturnVoid");
+    return mainOf(code);
+  };
+  const std::vector<std::pair<std::string, primec::IrModule>> faults = {
+      {"use_after_free", withTail({"LoadLocal 0", "HeapFree", "LoadLocal 0", "LoadU8", "Pop"})},
+      {"store_after_free",
+       withTail({"LoadLocal 0", "HeapFree", "LoadLocal 0", "PushI64 1", "StoreU8", "Pop"})},
+      {"past_the_end", withTail({"LoadLocal 0", "PushI64 16", "AddI64", "LoadU8", "Pop"})},
+      {"store_past_the_end",
+       withTail({"LoadLocal 0", "PushI64 16", "AddI64", "PushI64 1", "StoreU8", "Pop"})},
+      {"before_the_start", withTail({"LoadLocal 0", "PushI64 1", "SubI64", "LoadU8", "Pop"})},
+      {"padding_of_the_footprint",
+       mainOf(
+           {"PushI64 5", "HeapAllocBytes", "PushI64 5", "AddI64", "LoadU8", "Pop", "ReturnVoid"})},
+      {"free_inside_a_region", withTail({"LoadLocal 0", "PushI64 8", "AddI64", "HeapFree"})},
+      {"free_unaligned", withTail({"LoadLocal 0", "PushI64 1", "AddI64", "HeapFree"})},
+      {"double_free", withTail({"LoadLocal 0", "HeapFree", "LoadLocal 0", "HeapFree"})},
+      {"realloc_freed",
+       withTail({"LoadLocal 0", "HeapFree", "LoadLocal 0", "PushI64 4", "HeapRealloc", "Pop"})},
+      {"realloc_freed_to_zero",
+       withTail({"LoadLocal 0", "HeapFree", "LoadLocal 0", "PushI64 0", "HeapRealloc", "Pop"})},
+      {"realloc_inside",
+       withTail({"LoadLocal 0", "PushI64 8", "AddI64", "PushI64 4", "HeapRealloc", "Pop"})},
+      {"stale_after_realloc",
+       withTail(
+           {"LoadLocal 0", "PushI64 64", "HeapRealloc", "Pop", "LoadLocal 0", "LoadU8", "Pop"})},
+      {"slot_access_of_a_byte_address", withTail({"LoadLocal 0", "LoadIndirect", "Pop"})},
+      {"slot_store_to_a_byte_address",
+       withTail({"LoadLocal 0", "PushI64 1", "StoreIndirect", "Pop"})},
+      {"huge_region", mainOf({"PushI64 35184372088832", "HeapAllocBytes", "Pop", "ReturnVoid"})},
+      {"slot_u8_fault_with_regions",
+       mainOf({"PushI64 4", "HeapAllocBytes", "Pop", "PushI64 17", "LoadU8", "Pop", "ReturnVoid"})},
+  };
+  for (const auto &[name, module] : faults) {
+    CAPTURE(name);
+    expectMatchesVm(module, "byte_fault_" + name);
+  }
+  // A region the byte storage cannot hold (more than 512 MiB) is the VM's overflow fault on Wasm.
+  const NodeRun beyond = runOnNode(
+      mainOf({"PushI64 600000000", "HeapAllocBytes", "Pop", "ReturnVoid"}), "byte_capacity", false);
+  REQUIRE(beyond.built);
+  CHECK(beyond.exitCode == 3);
+  CHECK(beyond.err == "VM error: VM heap allocation overflow\n");
+}
+
+TEST_CASE("wasm byte addresses of random alloc, free and realloc sequences match the VM") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  for (const uint64_t seed : {1ull, 2ull, 3ull, 4ull, 5ull, 6ull}) {
+    const primec::IrModule module = randomByteProgram(seed, 260);
+    expectMatchesVm(module, "random_bytes_" + std::to_string(seed));
+    // The sequences are long enough to make many regions: some address carries a generation above 20.
+    const Outcome expected = optimizer_test::run(module, {"program"});
+    bool many = false;
+    std::istringstream lines(expected.output);
+    for (std::string line; std::getline(lines, line);) {
+      many = many || (line.size() >= 19 &&
+                      std::stoull(line) >= 0x8000800000000000ull + (uint64_t{1} << 48) * 20);
+    }
+    CHECK(many);
+  }
+}
+
+TEST_CASE("wasm byte regions that move keep every byte and address") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 100 regions of 1000 bytes (100,000 bytes, past the initial 16 KiB: several moves), each marked at its first and last
+  // byte; every other one is freed, new regions reuse the holes, and every marker is read at the end. Region i starts at
+  // granule 125 * i and has generation i + 1.
+  std::vector<std::string> code;
+  constexpr int Regions = 100;
+  for (int i = 0; i < Regions; ++i) {
+    code.push_back("PushI64 1000");
+    code.push_back("HeapAllocBytes");
+    code.push_back("PrintU64 1");
+    storeByte(code, regionAddress(i, 125), 0, 1 + static_cast<uint64_t>(i));
+    storeByte(code, regionAddress(i, 125), 999, 101 + static_cast<uint64_t>(i));
+  }
+  for (int i = 0; i < Regions; i += 2) {
+    code.push_back(regionAddress(i, 125));
+    code.push_back("HeapFree");
+  }
+  for (int i = 0; i < Regions; i += 4) {
+    code.push_back("PushI64 1500");
+    code.push_back("HeapAllocBytes");
+    code.push_back("PrintU64 1");
+  }
+  for (int i = 1; i < Regions; i += 2) {
+    printByte(code, regionAddress(i, 125), 0);
+    printByte(code, regionAddress(i, 125), 999);
+  }
+  // One region of 3 MB, written and read at its last byte, then grown to 5 MB with the byte kept.
+  for (const std::string &line :
+       std::vector<std::string>{"PushI64 3000000", "HeapAllocBytes", "StoreLocal 7"}) {
+    code.push_back(line);
+  }
+  storeByte(code, "LoadLocal 7", 2999999, 77);
+  for (const std::string &line : std::vector<std::string>{"LoadLocal 7",
+                                                          "PushI64 5000000",
+                                                          "HeapRealloc",
+                                                          "StoreLocal 7",
+                                                          "LoadLocal 7",
+                                                          "PrintU64 1"}) {
+    code.push_back(line);
+  }
+  printByte(code, "LoadLocal 7", 2999999);
+  printByte(code, "LoadLocal 7", 4999999);
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(mainOf(code), "byte_regions_move");
+}
+
+TEST_CASE("wasm byte regions keep many free runs") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // 2,500 regions of 8 bytes (past the initial 2,048 granules), every odd one freed (1,250 free runs, past the initial
+  // run table), new regions reuse the holes lowest first, and the even ones still hold their bytes.
+  std::vector<std::string> code;
+  constexpr int Regions = 2500;
+  for (int i = 0; i < Regions; ++i) {
+    code.push_back("PushI64 8");
+    code.push_back("HeapAllocBytes");
+    if (i % 250 == 0) {
+      code.push_back("PrintU64 1");
+    } else {
+      code.push_back("Pop");
+    }
+  }
+  for (int i = 0; i < Regions; i += 2) {
+    storeByte(code, regionAddress(i, 1), 7, static_cast<uint64_t>(i % 251));
+  }
+  for (int i = 1; i < Regions; i += 2) {
+    code.push_back(regionAddress(i, 1));
+    code.push_back("HeapFree");
+  }
+  for (int i = 0; i < 40; ++i) {
+    code.push_back("PushI64 " + std::to_string(i % 3 == 0 ? 16 : 8));
+    code.push_back("HeapAllocBytes");
+    code.push_back("PrintU64 1");
+  }
+  for (int i = 0; i < Regions; i += 100) {
+    printByte(code, regionAddress(i, 1), 7);
+  }
+  code.push_back("PushI32 0");
+  code.push_back("ReturnI32");
+  expectMatchesVm(mainOf(code), "byte_free_runs");
+}
+
+TEST_CASE("the browser profile has byte regions and traps on a bad byte address") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const NodeRun value = runOnNode(mainOf({"PushI64 40000",
+                                          "HeapAllocBytes",
+                                          "StoreLocal 0",
+                                          "LoadLocal 0",
+                                          "PushI64 39999",
+                                          "AddI64",
+                                          "PushI64 42",
+                                          "StoreU8",
+                                          "Pop",
+                                          "LoadLocal 0",
+                                          "PushI64 39999",
+                                          "AddI64",
+                                          "LoadU8",
+                                          "ReturnI64"}),
+                                  "browser_bytes",
+                                  true);
+  REQUIRE_MESSAGE(value.built, value.buildError);
+  CHECK(value.out == "42\n");
+  const NodeRun trap = runOnNode(
+      mainOf({"PushI64 4", "HeapAllocBytes", "PushI64 4", "AddI64", "LoadU8", "ReturnI64"}),
+      "browser_byte_trap",
+      true);
+  REQUIRE_MESSAGE(trap.built, trap.buildError);
+  CHECK(trap.out == "trap\n");
+}
+
 TEST_SUITE_END();

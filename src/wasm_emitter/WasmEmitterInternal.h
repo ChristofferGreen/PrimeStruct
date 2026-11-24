@@ -183,6 +183,47 @@ inline constexpr uint32_t WasmGlobalShadowBase = 10;
 inline constexpr uint32_t WasmGlobalStackLast = 11;
 inline constexpr uint32_t WasmGlobalCountWithHeap = 12;
 
+// The byte regions (WasmEmitterByteHeap.cpp), present when the module has `HeapAllocBytes`: the VM's byte addresses
+// over regions of the linear memory that move as the slot heap's do. The unit is the 8-byte granule: a region occupies
+// `(count + 7) / 8` granules, and the free runs, the high-water mark and the capacity are counted in them. Five regions
+// follow the granule count: the bytes (8 per granule), the owner of every granule (u32: the first granule of the live
+// region that holds it plus one, 0 when none does), the byte count of the live region that starts at a granule (u32)
+// and its generation (u16), and the free runs (8 bytes for each of the at most `granules / 2 + 1` runs).
+enum class WasmByteHelper : uint8_t {
+  RemoveRun,
+  InsertRun,
+  TakeFront,
+  Ensure,
+  Release,
+  FindStart,
+  Access,
+  Alloc,
+  Free,
+  Realloc,
+  LoadU8,
+  StoreU8,
+};
+inline constexpr size_t WasmByteHelperCount = 12;
+inline constexpr uint32_t WasmByteInitialGranules = 1u << 11;
+// The byte storage holds at most `WasmByteMaxGranules * 8` bytes (512 MiB); a region past it is the VM's overflow fault.
+inline constexpr uint32_t WasmByteMaxGranules = 1u << 26;
+inline constexpr uint64_t wasmByteRegionBytes(uint64_t granules) {
+  return granules * 22u + 8u;
+}
+// The mutable `i32` globals after `WasmGlobalCountWithHeap`: the granules handed out so far, the number of free runs,
+// the generation of the last region, the granules the regions have room for, and the base addresses of the five
+// regions.
+inline constexpr uint32_t WasmGlobalByteSize = 12;
+inline constexpr uint32_t WasmGlobalByteRunCount = 13;
+inline constexpr uint32_t WasmGlobalByteGeneration = 14;
+inline constexpr uint32_t WasmGlobalByteCapacity = 15;
+inline constexpr uint32_t WasmGlobalByteBase = 16;
+inline constexpr uint32_t WasmGlobalByteOwnerBase = 17;
+inline constexpr uint32_t WasmGlobalByteCountsBase = 18;
+inline constexpr uint32_t WasmGlobalByteGensBase = 19;
+inline constexpr uint32_t WasmGlobalByteRunsBase = 20;
+inline constexpr uint32_t WasmGlobalCountWithBytes = 21;
+
 struct WasmRuntimeContext {
   bool enabled = false;
   bool hasArgvOps = false;
@@ -233,6 +274,19 @@ struct WasmRuntimeContext {
   uint32_t heapCounts = 0;
   uint32_t heapRuns = 0;
   uint32_t heapFunction[WasmHeapHelperCount] = {};
+  // The module has `HeapAllocBytes` (and so a heap): the byte regions, their helpers and the fault message of a byte
+  // address that names no live byte.
+  bool hasBytes = false;
+  uint32_t byteBase = 0;
+  uint32_t byteOwner = 0;
+  uint32_t byteCounts = 0;
+  uint32_t byteGens = 0;
+  uint32_t byteRuns = 0;
+  uint32_t byteFunction[WasmByteHelperCount] = {};
+  uint32_t byteMessageAddr = 0;
+  uint32_t byteMessageLength = 0;
+  uint32_t slotByteMessageAddr = 0;
+  uint32_t slotByteMessageLength = 0;
   uint32_t heapFreeMessageAddr = 0;
   uint32_t heapFreeMessageLength = 0;
   uint32_t heapReallocMessageAddr = 0;

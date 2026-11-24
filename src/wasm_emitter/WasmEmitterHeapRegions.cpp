@@ -35,21 +35,21 @@ void regionAdd(WasmAsm &a, uint32_t baseGlobal) {
 }
 
 // removeRun(position i32): drops the run, shifting the later ones down.
-WasmCodeBody buildRemoveRun(const WasmRuntimeContext &) {
+WasmCodeBody buildRemoveRun(const WasmRuntimeContext &, const RunTable &table) {
   constexpr uint32_t Position = 0;
   WasmCodeBody body;
   declareLocals(body, 0, 0);
   WasmAsm a(body.instructions);
   // memory.copy(runs + position * 8, runs + (position + 1) * 8, (count - position - 1) * 8)
   emitScaled(a, Position, 3);
-  regionAdd(a, WasmGlobalRunsBase);
+  regionAdd(a, table.baseGlobal);
   a.localGet(Position);
   a.i32Const(1);
   a.i32Add();
   a.i32Const(3);
   a.i32Shl();
-  regionAdd(a, WasmGlobalRunsBase);
-  a.globalGet(WasmGlobalRunCount);
+  regionAdd(a, table.baseGlobal);
+  a.globalGet(table.countGlobal);
   a.localGet(Position);
   a.i32Sub();
   a.i32Const(1);
@@ -57,16 +57,16 @@ WasmCodeBody buildRemoveRun(const WasmRuntimeContext &) {
   a.i32Const(3);
   a.i32Shl();
   a.memoryCopy();
-  a.globalGet(WasmGlobalRunCount);
+  a.globalGet(table.countGlobal);
   a.i32Const(1);
   a.i32Sub();
-  a.globalSet(WasmGlobalRunCount);
+  a.globalSet(table.countGlobal);
   a.end();
   return body;
 }
 
 // insertRun(position i32, base i32, length i32): puts the run at `position`, shifting the later ones up.
-WasmCodeBody buildInsertRun(const WasmRuntimeContext &) {
+WasmCodeBody buildInsertRun(const WasmRuntimeContext &, const RunTable &table) {
   constexpr uint32_t Position = 0;
   constexpr uint32_t Base = 1;
   constexpr uint32_t Length = 2;
@@ -79,34 +79,33 @@ WasmCodeBody buildInsertRun(const WasmRuntimeContext &) {
   a.i32Add();
   a.i32Const(3);
   a.i32Shl();
-  regionAdd(a, WasmGlobalRunsBase);
+  regionAdd(a, table.baseGlobal);
   emitScaled(a, Position, 3);
-  regionAdd(a, WasmGlobalRunsBase);
-  a.globalGet(WasmGlobalRunCount);
+  regionAdd(a, table.baseGlobal);
+  a.globalGet(table.countGlobal);
   a.localGet(Position);
   a.i32Sub();
   a.i32Const(3);
   a.i32Shl();
   a.memoryCopy();
   emitScaled(a, Position, 3);
-  regionAdd(a, WasmGlobalRunsBase);
+  regionAdd(a, table.baseGlobal);
   a.localGet(Base);
   a.i32Store(0);
   emitScaled(a, Position, 3);
-  regionAdd(a, WasmGlobalRunsBase);
+  regionAdd(a, table.baseGlobal);
   a.localGet(Length);
   a.i32Store(4);
-  a.globalGet(WasmGlobalRunCount);
+  a.globalGet(table.countGlobal);
   a.i32Const(1);
   a.i32Add();
-  a.globalSet(WasmGlobalRunCount);
+  a.globalSet(table.countGlobal);
   a.end();
   return body;
 }
 
 // takeFront(position i32, count i32): removes the first `count` slots of the run (all of it when it is that long).
-WasmCodeBody buildTakeFront(const WasmRuntimeContext &runtime) {
-  const uint32_t removeRun = fn(runtime, WasmHeapHelper::RemoveRun);
+WasmCodeBody buildTakeFront(const WasmRuntimeContext &, const RunTable &table, uint32_t removeRun) {
   constexpr uint32_t Position = 0;
   constexpr uint32_t Count = 1;
   constexpr uint32_t Entry = 2;
@@ -115,7 +114,7 @@ WasmCodeBody buildTakeFront(const WasmRuntimeContext &runtime) {
   declareLocals(body, 2, 0);
   WasmAsm a(body.instructions);
   emitScaled(a, Position, 3);
-  regionAdd(a, WasmGlobalRunsBase);
+  regionAdd(a, table.baseGlobal);
   a.localSet(Entry);
   a.localGet(Entry);
   a.i32Load(4);

@@ -111,6 +111,16 @@ public:
     leb(3);
     leb(offset);
   }
+  void i32Load8U(uint32_t offset) {
+    op(0x2d);
+    leb(0);
+    leb(offset);
+  }
+  void i32Store8(uint32_t offset) {
+    op(0x3a);
+    leb(0);
+    leb(offset);
+  }
   void i32Store16(uint32_t offset) {
     op(0x3b);
     leb(1);
@@ -121,6 +131,13 @@ public:
     op(0xfc);
     leb(10);
     op(0x00);
+    op(0x00);
+  }
+
+  // memory.fill (destination, byte value, byte count on the stack).
+  void memoryFill() {
+    op(0xfc);
+    leb(11);
     op(0x00);
   }
 

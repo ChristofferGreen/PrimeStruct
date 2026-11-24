@@ -164,7 +164,7 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(CallHost, Call, None, None, 0, 0, 0)                                                           \
   X(LoadStringByteDynamic, Memory, None, None, 0, 0, 0)                                            \
   X(SextI32, SignExtend, None, None, 1, 1, 1)                                                      \
-  X(HeapAllocBytes, Heap, None, None, 0, 0, 0)                                                     \
+  X(HeapAllocBytes, Heap, None, None, 0, 1, 1)                                                     \
   X(LoadU8, Memory, None, None, 0, 1, 1)                                                           \
   X(StoreU8, Memory, None, None, 0, 1, 1)                                                          \
   X(ZextU8, ZeroExtend, None, None, 0, 1, 1)                                                       \

@@ -1,5 +1,8 @@
 #include "WasmEmitterInternal.h"
 
+#include "WasmEmitterAsm.h"
+#include "WasmEmitterByteHeap.h"
+
 namespace primec {
 
 // Local addresses and indirect loads and stores on the module's linear memory (docs/spec/vm-design.md, Frames & stack).
@@ -138,8 +141,9 @@ bool wasmModuleUsesLocalMemory(const IrModule &module) {
     for (const IrInstruction &inst : function.instructions) {
       if (inst.op == IrOpcode::AddressOfLocal || inst.op == IrOpcode::LoadIndirect ||
           inst.op == IrOpcode::StoreIndirect || inst.op == IrOpcode::LoadU8 ||
-          inst.op == IrOpcode::StoreU8 || inst.op == IrOpcode::HeapAlloc ||
-          inst.op == IrOpcode::HeapFree || inst.op == IrOpcode::HeapRealloc) {
+          inst.op == IrOpcode::StoreU8 || inst.op == IrOpcode::HeapAllocBytes ||
+          inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||
+          inst.op == IrOpcode::HeapRealloc) {
         return true;
       }
     }
@@ -324,6 +328,14 @@ WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime) {
   body.localDecls.push_back(WasmTypeI32);
   std::vector<uint8_t> &out = body.instructions;
 
+  if (runtime.hasBytes) {
+    // A byte-region address is not a slot: the VM's fault, before the alignment check.
+    WasmAsm a(out);
+    emitWasmIsByteAddress(a, 0);
+    a.ifThen();
+    appendAddressFault(runtime.slotByteMessageAddr, runtime.slotByteMessageLength, runtime, out);
+    a.end();
+  }
   out.push_back(WasmOpLocalGet);
   appendU32Leb(0, out);
   appendI64Const((int64_t{1} << SlotAddressStrideShift) - 1, out);

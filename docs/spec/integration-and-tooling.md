@@ -95,12 +95,19 @@ An array index error and `panic` (which is an index of an empty array) are the s
 `u8` arithmetic and conversions run on Wasm: `ZextU8` cuts a slot to its low byte, and `LoadU8` and `StoreU8` of a local or
 slot address read the slot's low byte and write the byte as the whole slot, with the VM's address faults.
 
+Byte regions run on Wasm too (`HeapAllocBytes`, `HeapFree` and `HeapRealloc` of a byte-region address, `LoadU8` and `StoreU8`
+through one): the module has the VM's byte addresses (`Tag | ByteRegionBit | generation << 48 | offset`, one running generation
+counter, a region occupying a multiple of 8 bytes, best fit reuse of freed runs, a freed region zeroed, no growth in place)
+and the VM's faults (`invalid byte address in IR: <address>`, `slot access to a byte region in IR: <address>` for a slot access,
+the heap free and realloc texts). The regions start with 16 KiB and move to the end of the memory when they outgrow it, up to
+512 MiB of bytes (the VM keeps growing to 2^41); a larger region is `VM heap allocation overflow`.
+
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
-wasm target: HeapAllocBytes (byte regions, needed by `String` and byte buffers)`. Today that
-covers byte regions (`String`), the length of a string and the bytes of a run-time `String`, host
+wasm target: LoadStringByteDynamic (reading a byte or the length of a string)`. Today that
+covers the bytes of a run-time `String`, the length of a string and the bytes of a run-time `String`, host
 calls (a module answers only the string heap statistic `__pstext_stat`, which is what `heapLiveBlocks()` reads; any other
-`__pstext_*` function is refused with a note that the string heap is not available on Wasm), byte regions behind a byte-region address, tasks, atomics, mutexes and condition variables; the browser profile also refuses console
+`__pstext_*` function is refused with a note that the string heap is not available on Wasm), tasks, atomics, mutexes and condition variables; the browser profile also refuses console
 and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
 profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position
 past the end is `string index out of bounds` on stderr and exit code 3, as on the VM.

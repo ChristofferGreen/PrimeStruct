@@ -347,3 +347,7 @@ open-work-only scope rule as `docs/todo.md` itself.
 ## TODO-6220
 
 - 2026-11-23 (release build, macOS arm64, node 24.2, `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests`, 537 cases, after TODO-6175 and before this change): 309 programs agree with the VM, 1 differs (`file_io_errno_newline_png`, the node 24 crash of TODO-6187, exit 139), 227 are refused. After `ZextU8`, `LoadU8` and `StoreU8` over slots: 311 agree, 1 differs (the same program, the same crash), 225 are refused: `conv_integer_to_u8` and `conv_float_to_u8` moved from refused to agree and now list `wasm-wasi`. The other refusals are unchanged (byte regions and the string heap: TODO-6177 and the leaves behind it).
+
+## TODO-6177
+
+- 2026-11-24 (release build, macOS arm64, node 24.2, `PRIMESTRUCT_MATRIX_WASM_RUN=1 ./PrimeStruct_program_matrix_tests`, 557 cases, every case on `vm-O2` and as `--wasm-profile wasi` under node). Before the byte regions: 311 programs agree with the VM, 1 differs (`file_io_errno_newline_png`, exit 139, the node 24 crash of TODO-6187), 225 are refused. After: 312 agree, 0 differ, 225 refused; the one program that differed agreed this time (the crash is nondeterministic) and no refused program changed: every refusal left is a `CallHost` of a `__pstext_*` function (TODO-6178, TODO-6179, TODO-6180) or one of the other leaves already listed, so `String` programs need the string heap before the byte regions show in the matrix. The byte regions are checked by the IR tests of test_ir_wasm_heap.cpp against the VM.

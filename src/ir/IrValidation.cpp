@@ -89,13 +89,13 @@ bool isByteOpcode(IrOpcode op) {
          op == IrOpcode::ZextU8;
 }
 
-// Whether `op` is refused by the target as a byte-memory opcode. The Wasm targets lower the u8 wrap and the u8 access of
-// slots; they have no byte regions yet, so `HeapAllocBytes` stays refused there.
+// Whether `op` is refused by the target as a byte-memory opcode. The Wasm targets lower all four (byte regions, the u8
+// access of byte regions and slots, the u8 wrap).
 bool byteOpcodeRefusedFor(IrOpcode op, IrValidationTarget target) {
   if (!isByteOpcode(op)) {
     return false;
   }
-  return !(isWasmTarget(target) && op != IrOpcode::HeapAllocBytes);
+  return !isWasmTarget(target);
 }
 
 // Whether the native emitter of this build emits byte memory: only its arm64 emitter does.
@@ -129,8 +129,6 @@ const char *wasmOpcodeFeature(IrOpcode op) {
   case IrOpcode::LoadStringByteDynamic:
   case IrOpcode::LoadStringLength:
     return "reading a byte or the length of a string";
-  case IrOpcode::HeapAllocBytes:
-    return "byte regions, needed by `String` and byte buffers";
   case IrOpcode::CallHost:
     return "a host function call";
   case IrOpcode::TaskSpawn:

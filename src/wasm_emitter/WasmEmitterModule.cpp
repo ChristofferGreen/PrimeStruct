@@ -1,5 +1,6 @@
 #include "primec/backend/WasmEmitter.h"
 
+#include "WasmEmitterByteHeap.h"
 #include "WasmEmitterHeap.h"
 #include "WasmEmitterInternal.h"
 
@@ -176,6 +177,11 @@ bool WasmEmitter::emitModule(const IrModule &input,
       runtime.heapFunction[helper] = nextHelperFunction++;
     }
   }
+  if (runtime.hasBytes) {
+    for (size_t helper = 0; helper < WasmByteHelperCount; ++helper) {
+      runtime.byteFunction[helper] = nextHelperFunction++;
+    }
+  }
 
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
   std::vector<std::vector<uint8_t>> irLocalTypes;
@@ -254,6 +260,13 @@ bool WasmEmitter::emitModule(const IrModule &input,
       codeBodies.push_back(buildWasmHeapHelperBody(static_cast<WasmHeapHelper>(helper), runtime));
     }
   }
+  if (runtime.hasBytes) {
+    for (size_t helper = 0; helper < WasmByteHelperCount; ++helper) {
+      functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+      types.push_back(wasmByteHelperType(static_cast<WasmByteHelper>(helper)));
+      codeBodies.push_back(buildWasmByteHelperBody(static_cast<WasmByteHelper>(helper), runtime));
+    }
+  }
 
   std::vector<WasmExport> exports;
   if (module.entryIndex >= 0) {
@@ -307,6 +320,20 @@ bool WasmEmitter::emitModule(const IrModule &input,
                           WasmHeapInitialSlots,
                           runtime.shadowBase,
                           1u};
+    if (runtime.hasBytes) {
+      // In the order of WasmGlobalByteSize on: nothing handed out, no free runs, generation 0, the room and the
+      // regions' base addresses.
+      heapGlobalInitials.insert(heapGlobalInitials.end(),
+                                {0u,
+                                 0u,
+                                 0u,
+                                 WasmByteInitialGranules,
+                                 runtime.byteBase,
+                                 runtime.byteOwner,
+                                 runtime.byteCounts,
+                                 runtime.byteGens,
+                                 runtime.byteRuns});
+    }
   }
   if (runtime.hasLocalMemory &&
       (!encodeShadowStackGlobalSection(runtime.shadowSlots, heapGlobalInitials, payload, error) ||
