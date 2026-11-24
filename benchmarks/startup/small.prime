@@ -1,0 +1,5 @@
+[effects(io_out), return<int>]
+main() {
+  print_line(1i32)
+  return(0i32)
+}

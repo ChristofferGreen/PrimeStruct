@@ -27,6 +27,22 @@ the same UI (`tools/launch_bench/reference_editor.mm`, measured in "Against a re
 | Precompiled bytecode on the runtime-only VM (406 KB executable) | 4.5 ms | 80 ms |
 | Compile the source at launch, then run | 68 ms | 3.7 s |
 
+**Bytecode size and load time at the baseline** (`./scripts/benchmark.sh --build-dir build-release`, the `startup` rows;
+2026-11-24, macOS arm64, release build; the bytecode is `primec --emit=ir`, lowered for the VM with schema v41, which
+writes each source unit once; the time is the mean of 5 runs of `primevm file.psir`, which loads, validates and starts
+the program, and the UI programs stop at their first host call because `primevm` binds no UI backend):
+
+| Program | Bytecode | `primevm` load and start |
+| --- | --- | --- |
+| 3-line program (`benchmarks/startup/small.prime`) | 266 bytes | 14 ms |
+| `examples/native_ui/hello_button.prime` (medium) | 203,265 bytes | 14 ms |
+| `examples/apps/text_editor/main.prime` (the large app) | 901,880 bytes | 18 ms |
+| PNG reader (`benchmarks/startup/png.prime`) | 366,115 bytes | 15 ms |
+
+The table of 2026-10-08 above lists 12.7 MB for the PNG decoder; the same program with the VM lowering target and the
+source units written once is a few hundred kilobytes. The sizes are the limits of `benchmarks/benchmark_baseline.json`
+(with the 5 percent size ratio, and room for the length of the checkout path in the small one).
+
 **Measured on the Mac, 2026-10-22** (`scripts/measure_app_startup.sh`, retired since for `scripts/measure_startup.sh`; 10 runs of the editor in the AppKit backend's
 snapshot mode, so wall time to the first laid-out and drawn window including the snapshot itself, and the peak
 resident set; not the 5 ms budget measurement, which is "Against a reference editor and TextEdit" below):

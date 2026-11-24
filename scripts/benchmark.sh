@@ -332,6 +332,22 @@ for name in call_fib float_series; do
   fi
 done
 
+# Startup of bytecode programs: `primec --emit=ir` of a small, a medium, the large editor app and the PNG reader.
+# The size of the file and the time `primevm` takes to load and start it are recorded (benchmarks/startup/).
+STARTUP_SMALL_SRC="$ROOT_DIR/benchmarks/startup/small.prime"
+STARTUP_MEDIUM_SRC="$ROOT_DIR/examples/native_ui/hello_button.prime"
+STARTUP_LARGE_SRC="$ROOT_DIR/examples/apps/text_editor/main.prime"
+STARTUP_PNG_SRC="$ROOT_DIR/benchmarks/startup/png.prime"
+for startup in small medium large png; do
+  case "$startup" in
+    small) startup_src="$STARTUP_SMALL_SRC" ;;
+    medium) startup_src="$STARTUP_MEDIUM_SRC" ;;
+    large) startup_src="$STARTUP_LARGE_SRC" ;;
+    png) startup_src="$STARTUP_PNG_SRC" ;;
+  esac
+  "$PRIMEC_BIN" --emit=ir "$startup_src" -o "$BENCH_DIR/startup_$startup.psir"
+done
+
 (
   cd "$BENCH_DIR"
   "$PYTHON" - "$RUNS" "$RUN_NATIVE" "$COMPILE_RUNS" "$COMPILE_LINES" "$COMPILE_SRC" \
@@ -414,18 +430,21 @@ print("Compile benchmark runs:", compile_runs)
 runtime_results = []
 compile_results = []
 
-def run_entry(benchmark_name: str, label: str, target) -> None:
+def run_entry(benchmark_name: str, label: str, target, ok_codes=(0,)) -> None:
     command = list(target) if isinstance(target, list) else [target]
     artifact = command[1] if isinstance(target, list) else command[0]
     print(f"\n== {label} ==")
-    check = subprocess.run(command, capture_output=True, text=True, check=True)
+    check = subprocess.run(command, capture_output=True, text=True)
+    if check.returncode not in ok_codes:
+        print(f"{command} exited {check.returncode}: {check.stderr.strip()}")
+        sys.exit(1)
     output = check.stdout.strip()
     if output:
         print("output:", output)
     times = []
     for _ in range(runs):
         start = time.perf_counter()
-        subprocess.run(command, stdout=subprocess.DEVNULL, check=True)
+        subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         times.append(time.perf_counter() - start)
     mean = sum(times) / len(times)
     median = sorted(times)[len(times) // 2]
@@ -481,6 +500,15 @@ for bench, entries in benchmarks:
     print(f"\n=== {bench} ===")
     for label, exe in entries:
         run_entry(bench, label, exe)
+
+# `primevm file.psir` loads, validates and starts the bytecode. The UI programs stop at their first host call
+# (`unbound host function: ps_ui_init`, exit code 3) because primevm binds no UI backend, so no window opens.
+print("\n=== startup (bytecode) ===")
+for label, size_name, ok_codes in (("bytecode_small", "small", (0,)),
+                                   ("bytecode_medium", "medium", (3,)),
+                                   ("bytecode_large", "large", (3,)),
+                                   ("bytecode_png", "png", (0,))):
+    run_entry("startup", label, [primevm_bin, f"startup_{size_name}.psir"], ok_codes)
 
 compile_entries = [
     ("c", [

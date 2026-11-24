@@ -36,6 +36,14 @@ speed baseline; `primestruct_cpp` is the old C++ emitter at `-O3` and is not):
 `scripts/benchmark_backends.py` records the same programs at every optimization level
 (vm-step-O0, vm-O0, vm-O2, native-O0, native-O2, optexe-O2, exe) next to the C reference.
 
+## Startup (bytecode size and load time)
+
+`benchmarks/startup/` holds a 3-line program and the PNG reader; `scripts/benchmark.sh` also compiles
+`examples/native_ui/hello_button.prime` (medium) and `examples/apps/text_editor/main.prime` (the large app) with
+`primec --emit=ir`. The `startup` rows record the bytecode size (`artifact_size_bytes`, deterministic apart from the
+length of the checkout path, and checked with `--size-regression-ratio`) and the mean time of `primevm file.psir` over
+`--runs`. The UI programs end at their first host call (exit code 3), which opens no window.
+
 ## JSON Scan (token counting)
 
 This benchmark scans a fixed JSON payload encoded as ASCII bytes and counts

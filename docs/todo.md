@@ -125,7 +125,6 @@ of sync with them.
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
-| TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | ready | bytecode-bench |
 | TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | ready | bytecode-inline-report |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-6238 | A backend-neutral contract test of the native UI ABI | ready | native-ui-contract |
@@ -483,21 +482,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the choice recorded here and the leaf either closed (A) or re-sliced into leaves with a measured acceptance each (B, C)
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
-
-- [~] TODO-6233: A startup benchmark: bytecode size and load time of a small, a medium and the PNG program
-  - owner: ai
-  - status: ready
-  - claimed_by: ai-worker (worktree agent-a5206a72b2a8e4bae), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: bytecode-bench
-  - scope: Add to `scripts/benchmark.sh` (and its report/baseline JSON, `benchmarks/benchmark_baseline.json`, checked by `scripts/check_benchmark_report.py`) four bytecode programs under `benchmarks/startup/`: a 3-line program, `examples/native_ui/hello_button.prime` (medium), `examples/apps/text_editor/main.prime` (the PrimeScroll-like editor, the large app) and the PNG reader. For each, record the byte size of `primec --emit=ir` output (deterministic; regress at `--size-regression-ratio`) and the median wall time of `primevm <file>.psir` over `--runs` (timing noise handled like the other rows). The `embed_bytecode_runner` of examples/embed is not built in every configuration, so `primevm` on a `.psir` is the load-and-run probe.
-  - acceptance:
-    - `./scripts/benchmark.sh --build-dir build-release` prints and records the eight rows; the baseline file holds them; a size over the ratio fails `check_benchmark_report.py`
-    - the four sizes at the baseline are written in docs/NativeUiPlan.md section 1 (replacing the 2026-10-08 table's 12.7 MB), with the date and machine
-    - full release gate green
-  - stop_rule: the benchmark and its baseline; no change to lowering or the format.
-  - repro: the sizes today are 372 bytes (small), 1,671,596 (hello_button), 22,186,715 (text_editor) and 4,381,773 bytes (PNG); `primevm` of the small and the PNG one takes 0.02 s and 0.04 s.
 
 - [ ] TODO-6234: A report of every definition that stays inline, with its blocker and the instructions it adds
   - owner: ai

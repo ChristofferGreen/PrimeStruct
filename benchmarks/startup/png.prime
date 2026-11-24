@@ -1,0 +1,22 @@
+import /std/image/*
+import /std/collections/*
+
+// The PNG reader of the standard library as a bytecode program. `input.png` is not there when the benchmark runs,
+// so the program reads its way to the error and ends with 0: the file size and the load time are what is measured.
+[effects(heap_alloc, io_out, file_write), return<int>]
+main() {
+  [i32 mut] width{0i32}
+  [i32 mut] height{0i32}
+  [vector<i32> mut] pixels{vector<i32>()}
+  [Result<ImageError>] status{/std/image/png/read(width, height, pixels, "input.png"utf8)}
+  if(Result.error(status),
+     then() {
+       print_line(Result.why(status))
+       return(0i32)
+     },
+     else() { })
+  print_line(width)
+  print_line(height)
+  print_line(/std/collections/vector/count<i32>(pixels))
+  return(0i32)
+}

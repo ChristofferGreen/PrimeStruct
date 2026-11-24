@@ -54,6 +54,12 @@ TEST_CASE("benchmark gate fails a slow vm row and passes a fast one") {
         first = false;
       }
     }
+    // The startup rows of the bytecode programs are not optional in the baseline.
+    for (const char *entry :
+         {"bytecode_small", "bytecode_medium", "bytecode_large", "bytecode_png"}) {
+      report += std::string(",{\"benchmark\": \"startup\", \"entry\": \"") + entry +
+                "\", \"mean_seconds\": 0.01, \"artifact_size_bytes\": 1000}";
+    }
     report += "], \"compile_results\": [";
     first = true;
     for (const char *entry : {"primestruct_cpp"}) {
