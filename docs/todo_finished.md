@@ -2636,6 +2636,7 @@ are left unarchived.
 | TODO-6235 | `Request.cookie(name)` reads the `Cookie` header | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6236 | `Response.setCookie` and `clearCookie` write `Set-Cookie` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6237 | `/std/os` `randomHex(byteCount)` from the operating system's entropy | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6238 | A backend-neutral contract test of the native UI ABI | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6240 | `primec --emit=ir` lowers for the VM target | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6241 | A method call on a `Vector` parameter inside a `/std/collections/vector` definition is `unknown call target... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6242 | `effects(none)` declares a definition without effects | [2026-11.md](todo_archive/2026-11.md) | - |

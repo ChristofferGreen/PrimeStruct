@@ -526,6 +526,43 @@ the same call logs.
 
 Planned columns are design intent; only macOS and headless are in the first slices.
 
+**Backend contract.** `tests/unit/ui/test_native_ui_contract.cpp` (suite `primestruct.ui.contract`, CTest entry
+`PrimeStruct_native_ui_contract`) is the set of behaviors every backend must show, written against
+`include/primec/ui/NativeUi.h` only: C calls, no `headless::` scripting, no event loop and no visible window. Its one
+backend-specific part is the class `ContractBackend`: `setUp()` gives a fresh app that has not started (headless:
+`reset()`, and `PRIMESTRUCT_UI_RECENT` set so the recent files list is in memory), `tearDown()` ends the app the scenario
+started (`ps_ui_quit` and `reset()`), and `callFromSecondThread(call)` runs a call on another thread and returns the
+fault message the backend reported (headless: its fault hook; a backend that ends the process with exit code 3 runs the
+call in a child process and returns what it printed). A new backend runs the same suite by giving `ContractBackend` its
+own three functions; the scenarios do not change. Each scenario names the ABI functions it checks in the comment above
+it:
+
+- `ps_ui_abi_version`, `ps_ui_init`, `ps_ui_platform`: version 0; a call before `ps_ui_init` fails like a bad handle; a
+  second `ps_ui_init` is false; the platform is one of `PS_UI_PLATFORM_*`.
+- `ps_ui_supports`, `ps_ui_widget_watch`, `ps_ui_watch_first_frame`: an answer for each feature id, `false` for ids
+  outside the list, and the calls of a feature agree with the answer.
+- `ps_ui_window_create`, `ps_ui_text_view_create`, `ps_ui_menu_create`, `ps_ui_checkbox_create`, `ps_ui_popup_create`,
+  `ps_ui_label_create`, `ps_ui_form_create`, `ps_ui_window_set_content`, `ps_ui_form_add_row`: a non-zero handle for
+  each; `0` for a window that is not positive in size; `false` for a bad parent, a widget of the wrong kind and a
+  control a form already holds; the state of check boxes and pop-ups reads back.
+- `ps_ui_text_view_set_text`, `ps_ui_text_view_get_text`: round trips of UTF-8, newlines and the empty string; a program's
+  own change does not modify the view; a bad handle reads as `""`.
+- `ps_ui_text_view_add_style`, `ps_ui_text_view_clear_styles`: ranges on code point boundaries are accepted, ranges inside
+  a code point, empty, backward and out of the text are refused.
+- `ps_ui_text_view_save_file`, `ps_ui_text_view_load_file`, `ps_ui_last_error`: a file under the test scratch directory
+  round trips; a missing file, a missing folder and a file that is not UTF-8 fail, leave the view as it was and are
+  explained by `ps_ui_last_error` (empty before the first failure).
+- `ps_ui_pref_get_bool`, `ps_ui_pref_set_bool`, `ps_ui_pref_get_int`, `ps_ui_pref_set_int`, `ps_ui_pref_list_clear`,
+  `ps_ui_pref_list_add`, `ps_ui_pref_list_count`, `ps_ui_pref_list_get`: round trips, the fallback for a key never
+  stored, `""` for an index out of range, an empty key refused.
+- `ps_ui_recent_add`, `ps_ui_recent_path`, `ps_ui_recent_clear`: newest first, a repeated path moves to the front, an
+  empty path is refused.
+- any call from a second thread (shown with `ps_ui_window_create` and `ps_ui_init`): the fault
+  `ui call off the main thread: <function>` and the failure value.
+
+The contract has run against the headless backend only; the AppKit backend is checked by its own smoke tests, and
+running the contract against it is the first use of the seam.
+
 ## 10. Later
 
 - **Compiled programs.** Let the C++ emitter (`--emit=exe`/`optexe`) call the ABI directly through `extern "C"`, then

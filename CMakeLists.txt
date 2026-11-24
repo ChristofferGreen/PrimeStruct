@@ -2171,6 +2171,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   add_executable(PrimeStruct_native_ui_tests
     tests/unit/test_main.cpp
     tests/unit/ui/test_native_ui_headless.cpp
+    tests/unit/ui/test_native_ui_contract.cpp
     tests/unit/ui/test_native_ui_bindings.cpp
     tests/unit/ui/test_native_ui_stdlib.cpp
     tests/unit/ui/test_native_ui_editor.cpp
@@ -2245,6 +2246,15 @@ if(PRIMESTRUCT_BUILD_TESTS)
     NAME PrimeStruct_native_ui_headless
     COMMAND ${testCommand})
   set_tests_properties(PrimeStruct_native_ui_headless
+                       PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
+  # The backend contract of the native UI ABI, written against the C calls only (docs/NativeUiPlan.md section 9).
+  primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_native_ui_tests>
+            "--test-suite=primestruct.ui.contract"
+            "--order-by=file")
+  add_test(
+    NAME PrimeStruct_native_ui_contract
+    COMMAND ${testCommand})
+  set_tests_properties(PrimeStruct_native_ui_contract
                        PROPERTIES TIMEOUT 300 LABELS "parallel-safe")
   primestructWatchedCommand(testCommand 1500 $<TARGET_FILE:PrimeStruct_native_ui_tests>
             "--test-suite=primestruct.ui.markdown"

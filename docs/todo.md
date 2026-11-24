@@ -129,7 +129,6 @@ of sync with them.
 | TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | deferred | bytecode-inline-blockers |
 | TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-6238 | A backend-neutral contract test of the native UI ABI | ready | native-ui-contract |
 | TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -177,7 +176,7 @@ of sync with them.
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
-- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report), TODO-6238 (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
+- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
@@ -538,20 +537,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred until the owner chooses; a backend leaf needs a machine that can build and run it.
-
-- [~] TODO-6238: A backend-neutral contract test of the native UI ABI
-  - owner: ai
-  - status: ready
-  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-contract
-  - scope: The UI tests of `tests/unit/ui/` drive the headless backend through its own scripting (`primec::ui::headless::`), so none of them can run against another backend. Add `tests/unit/ui/test_native_ui_contract.cpp`: scenarios written only against `include/primec/ui/NativeUi.h` (C calls, no `headless::` include) in a fixture class `ContractBackend` whose only backend-specific parts are `setUp()` and `tearDown()` (headless: `reset()` and the scripted quit; a later backend: its own init). Cover the calls that need no event loop and no visible window: `ps_ui_init` twice (the second returns false), `ps_ui_platform`, handles of a window, text view, menu, checkbox, popup, label (non-zero; `0` for a bad parent), `_set_text`/`_get_text` round trips including UTF-8 and an empty string, `ps_ui_text_view_add_style` byte ranges (rejected off a code point boundary), `ps_ui_text_view_load_file`/`save_file` on a file under the test scratch directory and `ps_ui_last_error` after a missing file, `ps_ui_pref_*` and `ps_ui_recent_*` round trips (with `PRIMESTRUCT_UI_RECENT`), `ps_ui_supports` answers for each feature id, the off-main-thread fault for a call from a second thread, and the `ps_ui_abi_version` of 0. List the scenarios in docs/NativeUiPlan.md section 9 as the contract a backend must pass. Register the suite per the test-registration rules.
-  - acceptance:
-    - the suite passes on the headless backend in the release gate; each scenario names the ABI function it checks; the doctest case count and `tests/TEST_INVENTORY.md` are regenerated
-    - docs/NativeUiPlan.md section 9 gains a "Backend contract" paragraph naming the test, the `ContractBackend` seam and how to run it against another backend
-    - full release gate green
-  - stop_rule: the contract test and its documentation; no backend code changes (a divergence the test finds in the headless backend is filed as a TODO leaf).
 
 - [ ] TODO-6239: Shortcut text is parsed once, for every backend
   - owner: ai
