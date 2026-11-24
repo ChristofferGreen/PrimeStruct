@@ -123,13 +123,14 @@ of sync with them.
 | TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
+| TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
+| TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | deferred | host-call-refusal-name |
 | TODO-6251 | A stdlib `Vector` record parameter keeps the collections helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
 | TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | deferred | bytecode-inline-blockers |
 | TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-6239 | Shortcut text is parsed once, for every backend | ready | native-ui-shortcuts |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
@@ -176,7 +177,7 @@ of sync with them.
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
 - Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
-- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test), TODO-6239 (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
+- Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test) (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
@@ -439,6 +440,35 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
+- [ ] TODO-6256: A named key of a menu shortcut reaches AppKit as its name, not as a key
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
+  - parallel_track: native-ui-shortcuts
+  - scope: An item added with `"cmd+return"`, `"cmd+left"` or `"f5"` is valid for `primec::ui::parseShortcut`, but `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` gives `NSMenuItem` the key `"return"` / `"left"` / `"f5"` as its `keyEquivalent`, a string of several characters, where AppKit takes one character (`"\r"`, `NSLeftArrowFunctionKey`, `NSF5FunctionKey`). The behavior is unchanged from before the parser was shared, and it was found by reading the code: it is not verified on a Mac, because no window may be opened here. Map each named key of NativeUiShortcut.h to its character in the AppKit backend.
+  - acceptance:
+    - a hand check on a Mac (a person) that a menu item with `"cmd+left"` and one with `"f5"` fires its command from the keys; the mapping is a table in the AppKit file with a comment naming each AppKit constant
+    - the AppKit backend compiles and the headless contract and shortcut suites pass
+  - stop_rule: the key equivalent of named keys in the AppKit backend; no change to the parser or to the headless backend.
+  - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
+  - notes: deferred: small, not on the critical path of an open goal.
+
+- [ ] TODO-6257: The refusal of a host call on wasm and the other targets without host calls does not name the host function
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-24
+  - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
+  - parallel_track: host-call-refusal-name
+  - scope: A program that calls a host function (`/std/os` `randomHex`, `monotonicMs`, ...) on `--emit=wasm` is refused with `invalid IR instruction 245 in /main: host calls are only supported by the vm target, the C++ targets and serialized bytecode: CallHost (a host function call)`: it names the opcode, not the function the program called. `src/ir/IrValidation.cpp` has the import index (`inst.imm`) and `module.hostImports[...].name`; add the name (`... : CallHost of ps_os_random_bytes (a host function call)`) for the targets that refuse host calls, and keep the tests that match the text (`tests/unit/compile_run/smoke/test_compile_run_smoke_core_wasm_profiles.cpp`, `..._wasm_limits.cpp`) matching its start.
+  - acceptance:
+    - the diagnostic names the host function for wasm, wasm-browser and the other refusing targets, with a test of the full text for a `/std/os` program
+    - full release gate green
+  - stop_rule: the text of this one diagnostic.
+  - repro: `primec --emit=wasm tests/fixtures/host_calls/os_random.prime -o x.wasm` prints the diagnostic quoted in the scope.
+  - notes: deferred: small, not on the critical path of an open goal.
+
+
 - [ ] TODO-6251: A stdlib `Vector` record parameter keeps the collections helpers inline
   - owner: ai
   - status: deferred
@@ -537,20 +567,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: split into one leaf per platform before implementation.
   - notes: deferred until the owner chooses; a backend leaf needs a machine that can build and run it.
-
-- [~] TODO-6239: Shortcut text is parsed once, for every backend
-  - owner: ai
-  - status: ready
-  - claimed_by: bench-agent (worktree-agent-a342efbf9be828774), 2026-11-24
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md)
-  - parallel_track: native-ui-shortcuts
-  - scope: A shortcut such as `"cmd+shift+s"` is parsed inside the AppKit backend (`parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm`, which maps `cmd` to Command), and the portable rule (docs/NativeUiPlan.md section 4: `cmd` means Command on macOS and Ctrl elsewhere) is documented only. Add `include/primec/ui/NativeUiShortcut.h` with `struct ParsedShortcut { std::string key; bool primary; bool shift; bool alt; bool control; bool valid; }` and `parseShortcut(const char *text)`, where `primary` is what `cmd` names and each backend maps it (Command, Ctrl) and `control` is the literal `ctrl`; the same function reports unknown modifiers and keys as `valid == false`. Move the text parsing out of `parseShortcut` in the AppKit file so it only maps the parsed value to `NSEventModifierFlags`, and let the headless backend validate the shortcuts it records with it (a menu item with a bad shortcut then fails the same way on every backend; check what the AppKit backend does today and keep that behavior).
-  - acceptance:
-    - unit tests of `parseShortcut` for every shortcut the repo's apps and stdlib use (`grep -rn '"cmd+' stdlib examples`), and for `ctrl`, `alt`, `opt`, `shift`, named keys (`return`, `delete`, `left`, `f5`), an empty text and an unknown modifier
-    - the AppKit backend compiles and `PrimeStruct_native_ui_tests` still pass; its shortcut behavior is unchanged (menu bar outline golden unchanged); the Mac-only AppKit smoke tests stay skipped by their guards and are not run
-    - full release gate green
-  - stop_rule: shortcut parsing only.
 
 - [ ] TODO-6059: Native x86_64 float to integer conversion saturates
   - owner: ai

@@ -336,6 +336,16 @@ so under `--vm-threads` a spawned task faults at the call with `<function> calle
   (typing, selection, scrolling, copy and paste, undo) is handled by the native widget and never reaches the
   program.
 - **Shortcuts** are written portably (`"cmd+s"`, `"cmd+shift+s"`); `cmd` means Command on macOS and Ctrl elsewhere.
+  One parser reads them for every backend: `primec::ui::parseShortcut` (`include/primec/ui/NativeUiShortcut.h`) gives a
+  `ParsedShortcut` with `primary` (what `cmd` names: each backend maps it to Command or Ctrl), `shift`, `alt` (also
+  spelled `opt`), `control` (the literal `ctrl`), a lower-case `key` and `valid`. The key is one printable ASCII
+  character other than `+`, or `return` (`enter`), `tab`, `escape` (`esc`), `space`, `delete`, `backspace`, `left`,
+  `right`, `up`, `down`, `home`, `end`, `pageup`, `pagedown` or `f1` to `f12`; case does not matter; `""` is no shortcut
+  and is valid. An unknown modifier or key, a modifier with no key, an empty part and a key that is not last are not
+  valid. A menu command never fails for its shortcut: `ps_ui_menu_add_item` adds the item, without a shortcut when the
+  text is not valid (the AppKit backend maps only a valid one to a key equivalent and `NSEventModifierFlags`, and the
+  headless backend lists the item without it). The AppKit backend passes a named key to `NSMenuItem` as its name, as it
+  always did; a character for each named key is a follow-up.
 - **Standard items** (`undo`, `redo`, `cut`, `copy`, `paste`, `select_all`, `find`, `quit`, `about`) map to the
   platform's own actions (the AppKit responder chain), so they work in the focused native widget without program code.
 - **As built.** `include/primec/ui/NativeUi.h` is the authority for exact signatures: flags are C `bool`, a text result

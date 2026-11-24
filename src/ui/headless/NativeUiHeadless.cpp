@@ -4,6 +4,7 @@
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiHeadless.h"
 #include "primec/ui/NativeUiRecentFiles.h"
+#include "primec/ui/NativeUiShortcut.h"
 #include "primec/ui/NativeUiStandardItems.h"
 #include "primec/ui/SyntaxHighlight.h"
 
@@ -429,7 +430,9 @@ bool ps_ui_menu_add_item(uint64_t menuHandle, const char *title, const char *sho
   if (m != nullptr) {
     MenuEntry entry;
     entry.title = title ? title : "";
-    entry.shortcut = shortcut ? shortcut : "";
+    // A text that is not a shortcut gives an item without one, as the platform backends do.
+    entry.shortcut =
+        primec::ui::parseShortcut(shortcut).valid && shortcut != nullptr ? shortcut : "";
     entry.id = commandId;
     m->entries.push_back(std::move(entry));
   }

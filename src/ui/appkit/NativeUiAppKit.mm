@@ -40,6 +40,7 @@
 #include "primec/ui/MarkdownEdit.h"
 #include "primec/ui/NativeUi.h"
 #include "primec/ui/NativeUiRecentFiles.h"
+#include "primec/ui/NativeUiShortcut.h"
 #include "primec/ui/NativeUiStandardItems.h"
 #include "primec/ui/PendingScriptCount.h"
 #include "primec/ui/ScriptRunner.h"
@@ -1952,36 +1953,28 @@ PSController *controller() {
   return instance;
 }
 
-// Splits "cmd+shift+s" into a key equivalent and modifier mask; "cmd" is
-// Command on macOS.
+// Maps the portable shortcut text ("cmd+shift+s", parsed once for every backend by primec::ui::parseShortcut) to a key
+// equivalent and modifier mask; "cmd" is Command on macOS. Text that is not a shortcut gives an item without one.
 void parseShortcut(const char *shortcut, NSString *__strong *key, NSEventModifierFlags *mask) {
   *key = @"";
   *mask = 0;
-  std::string text = shortcut != nullptr ? shortcut : "";
-  size_t start = 0;
-  while (start <= text.size()) {
-    size_t plus = text.find('+', start);
-    if (plus == std::string::npos) {
-      plus = text.size();
-    }
-    std::string part = text.substr(start, plus - start);
-    for (char &c : part) {
-      c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
-    }
-    const bool last = plus >= text.size();
-    if (part == "cmd" && !last) {
-      *mask |= NSEventModifierFlagCommand;
-    } else if (part == "shift" && !last) {
-      *mask |= NSEventModifierFlagShift;
-    } else if ((part == "alt" || part == "opt") && !last) {
-      *mask |= NSEventModifierFlagOption;
-    } else if (part == "ctrl" && !last) {
-      *mask |= NSEventModifierFlagControl;
-    } else if (!part.empty()) {
-      *key = toNSString(part.c_str());
-    }
-    start = plus + 1;
+  const primec::ui::ParsedShortcut parsed = primec::ui::parseShortcut(shortcut);
+  if (!parsed.valid) {
+    return;
   }
+  if (parsed.primary) {
+    *mask |= NSEventModifierFlagCommand;
+  }
+  if (parsed.shift) {
+    *mask |= NSEventModifierFlagShift;
+  }
+  if (parsed.alt) {
+    *mask |= NSEventModifierFlagOption;
+  }
+  if (parsed.control) {
+    *mask |= NSEventModifierFlagControl;
+  }
+  *key = toNSString(parsed.key.c_str());
 }
 
 NSMenuItem *addMenuItem(NSMenu *menu, NSString *title, SEL action, id target, NSString *key,
