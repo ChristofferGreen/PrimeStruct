@@ -2,6 +2,7 @@
 
 #include "primec/frontend/SemanticProduct.h"
 #include "primec/runtime/VmKernelBoundary.h"
+#include "primec/support/InternalError.h"
 
 #include <algorithm>
 #include <charconv>
@@ -45,7 +46,7 @@ std::string missingCompileTimeRequirementPredicateFactMessage(
                                                          predicateName,
                                                          sourceText)
       << ')';
-  return out.str();
+  return markInternalCompilerError(out.str());
 }
 
 std::optional<std::string> validateCompileTimeRequirementPredicateFact(
@@ -67,8 +68,9 @@ std::optional<std::string> validateCompileTimeRequirementPredicateFact(
            std::string(field) + " for " + lookup;
   };
   auto missingId = [&](std::string_view field) {
-    return std::string("missing semantic-product requirementPredicateFacts ") +
-           std::string(field) + " id: " + lookup;
+    return markInternalCompilerError(
+        std::string("missing semantic-product requirementPredicateFacts ") + std::string(field) +
+        " id: " + lookup);
   };
   auto staleField = [&](std::string_view field,
                         std::string_view expected,
@@ -190,9 +192,9 @@ std::optional<std::string> validateCompileTimeRequirementPredicateFact(
   }
 
   if (fact.compileTimeEffectIds.size() < fact.compileTimeEffects.size()) {
-    return "missing semantic-product requirementPredicateFacts "
-           "compileTimeEffect id: " +
-           lookup;
+    return markInternalCompilerError("missing semantic-product requirementPredicateFacts "
+                                     "compileTimeEffect id: " +
+                                     lookup);
   }
   for (std::size_t i = 0; i < fact.compileTimeEffects.size(); ++i) {
     if (auto error = validateRequiredTextField("compileTimeEffect",

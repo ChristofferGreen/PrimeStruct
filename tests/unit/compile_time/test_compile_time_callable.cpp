@@ -351,6 +351,7 @@ TEST_CASE("missing facts and preparation budgets fail before execution") {
   CHECK(missing.diagnostic.message.find(
             "missing semantic-product requirementPredicateFacts fact") !=
         std::string::npos);
+  CHECK(missing.diagnostic.message.rfind("internal compiler error (please report it): ", 0) == 0);
 
   primec::SemanticProgram budgetProgram = makeProgramWith(makeRequirementFact(
       "/generic/budget",

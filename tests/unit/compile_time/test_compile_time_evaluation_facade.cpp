@@ -650,6 +650,7 @@ TEST_CASE("compile-time evaluation rejects stale or missing requirementPredicate
         std::string::npos);
   CHECK(missing.message.find("predicate /project/is_small") !=
         std::string::npos);
+  CHECK(missing.message.rfind("internal compiler error (please report it): ", 0) == 0);
 
   primec::SemanticProgram staleCallableProgram = makeBudgetProgram();
   publishFirstFact(staleCallableProgram);
@@ -711,6 +712,7 @@ TEST_CASE("compile-time evaluation rejects stale or missing requirementPredicate
   CHECK(incomplete.message.find(
             "missing semantic-product requirementPredicateFacts predicateName "
             "id") != std::string::npos);
+  CHECK(incomplete.message.rfind("internal compiler error (please report it): ", 0) == 0);
 }
 
 TEST_CASE("compile-time evaluation facade enforces deterministic budgets") {

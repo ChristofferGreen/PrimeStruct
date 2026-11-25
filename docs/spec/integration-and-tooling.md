@@ -578,8 +578,10 @@ arguments that the instance's `Definition` records (`instanceOfTemplate`, `insta
 
 A message that reports a violated compiler invariant, not a mistake in the program (`missing semantic-product ...`: a
 fact the semantic pass should have published), starts with `internal compiler error (please report it): `.
-`ir_lowerer::markInternalLoweringError` adds the prefix once, where `IrLowerer::lower` finishes a failed lowering, so
-the many sites that build the text keep the bare message.
+`primec::markInternalCompilerError` (`primec/support/InternalError.h`) adds the prefix; `ir_lowerer::markInternalLoweringError`
+forwards to it where `IrLowerer::lower` finishes a failed lowering, so the many sites that build the text keep the bare
+message. The compile-time evaluation messages (`CompileTimeEvaluation.cpp`) and the runtime reflection path check of IR
+preparation (`IrPreparation.cpp`) mark theirs where they build it.
 
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include

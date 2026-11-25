@@ -160,6 +160,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
   src/support/DiagnosticNames.cpp
   src/support/Diagnostics.cpp
   src/support/EmitKind.cpp
+  src/support/InternalError.cpp
   src/support/MathNames.cpp
   src/support/OptionsParser.cpp
   src/support/OptionsVmFlags.cpp

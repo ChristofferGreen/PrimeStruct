@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-6264 | A body that returns a `Result` and tries stays inline | deferred | bytecode-inline-blockers |
-| TODO-6266 | Missing semantic-product messages outside `IrLowerer::lower` are not marked internal | deferred | diagnostics-internal-errors |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -342,21 +341,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the `uses-try` line of the inline report for the PNG program stays at 0; full release gate green
   - stop_rule: the `uses-try` rule of the real-call shape for `Result` bodies; no change to the handler.
   - repro: Program matrix case `status-only stdlib Result propagates its error through try` (tests/unit/program_matrix/test_program_matrix_results.cpp): in `addressAbiShapeBlocker` change the `uses-try` condition to `definitionUsesTry(def) && !definitionHasTransform(def, "on_error")`, build, and `primec` plus `primevm` of that program print `0`, `1004` and then `VM error: unaligned indirect address in IR: 20` with exit 3 (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
-
-- [~] TODO-6266: Missing semantic-product messages outside `IrLowerer::lower` are not marked internal
-  - owner: ai
-  - status: deferred
-  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
-  - created_at: 2026-11-25
-  - phase: Diagnostics (left over from TODO-6084)
-  - parallel_track: diagnostics-internal-errors
-  - scope: `ir_lowerer::markInternalLoweringError` prefixes the `missing semantic-product ...` messages of a failed `IrLowerer::lower` with `internal compiler error (please report it): `. The same wording is built outside `lower`: the compile-time evaluation messages (`missing semantic-product requirementPredicateFacts ...`, src/frontend/CompileTimeEvaluation.cpp, reported by the semantic stage) and the runtime reflection path check of IR preparation (src/ir/IrPreparation.cpp), which read as a mistake of the program. Mark them through the same helper where each is reported, with a test per path.
-  - acceptance:
-    - each message with the wording `missing semantic-product` starts with the internal prefix wherever it is reported; one test per path
-    - full release gate green
-  - stop_rule: the text of invariant messages outside `lower`.
-  - repro: `rg "missing semantic-product" src/frontend/CompileTimeEvaluation.cpp src/ir/IrPreparation.cpp` (2026-11-25).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path

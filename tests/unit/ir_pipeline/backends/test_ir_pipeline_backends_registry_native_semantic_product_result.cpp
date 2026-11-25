@@ -225,7 +225,8 @@ TEST_CASE("ir preparation rejects missing semantic-product lowerer preflight run
       program, &semanticProgram, options, primec::IrValidationTarget::WasmBrowser, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(failure.message ==
-        "missing semantic-product lowerer preflight runtime reflection path id");
+        "internal compiler error (please report it): missing semantic-product lowerer preflight "
+        "runtime reflection path id");
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 

@@ -2,6 +2,7 @@
 
 #include "primec/ast/AstMemory.h"
 #include "primec/support/CompileArena.h"
+#include "primec/support/InternalError.h"
 #include "primec/backend/IrBackendProfiles.h"
 #include "primec/ir/IrInliner.h"
 #include "primec/ir/IrLowerer.h"
@@ -41,6 +42,7 @@ bool validateRuntimeReflectionBackendSupport(const SemanticProgram &semanticProg
   std::string_view reflectionPath;
   if (!semanticProgramResolvePublishedLowererRuntimeReflectionPath(
           semanticProgram, reflectionPath, error)) {
+    error = primec::markInternalCompilerError(error);
     return false;
   }
   if (reflectionPath.empty()) {
