@@ -2657,6 +2657,7 @@ are left unarchived.
 | TODO-6255 | A stdlib error struct result keeps its constructors inline | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6258 | Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

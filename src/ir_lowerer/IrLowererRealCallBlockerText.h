@@ -14,7 +14,6 @@ enum class AddressAbiBlocker {
   StructDefinition,
   SumDefinition,
   ComputeDefinition,
-  OnErrorHandler,
   RequireContract,
   CollectionsHelper,
   LifecycleHelper,

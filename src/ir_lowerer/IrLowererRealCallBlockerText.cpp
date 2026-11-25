@@ -72,8 +72,6 @@ const char *addressAbiBlockerCode(AddressAbiBlocker blocker) {
     return "sum-definition";
   case AddressAbiBlocker::ComputeDefinition:
     return "compute-definition";
-  case AddressAbiBlocker::OnErrorHandler:
-    return "on-error-handler";
   case AddressAbiBlocker::RequireContract:
     return "require-contract";
   case AddressAbiBlocker::CollectionsHelper:
@@ -114,8 +112,6 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
     return "it is a `sum` definition";
   case AddressAbiBlocker::ComputeDefinition:
     return "it is a `compute` function, which runs on a GPU";
-  case AddressAbiBlocker::OnErrorHandler:
-    return "it has an `on_error` handler";
   case AddressAbiBlocker::RequireContract:
     return "it has a `require` contract";
   case AddressAbiBlocker::CollectionsHelper:

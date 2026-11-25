@@ -682,9 +682,6 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
   if (definitionHasTransform(def, "compute")) {
     return AddressAbiBlocker::ComputeDefinition;
   }
-  if (definitionHasTransform(def, "on_error")) {
-    return AddressAbiBlocker::OnErrorHandler;
-  }
   if (definitionHasTransform(def, "require")) {
     return AddressAbiBlocker::RequireContract;
   }
@@ -748,7 +745,10 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;
   }
-  if (definitionUsesTry(def)) {
+  // A `?` of a body with an `on_error` handler runs the handler and returns the error code in the callee's own frame;
+  // a body that returns a `Result` and tries stays inline.
+  if (definitionUsesTry(def) &&
+      !(definitionHasTransform(def, "on_error") && hasScalarOrVoidReturn(def))) {
     return AddressAbiBlocker::UsesTry;
   }
   if (def.returnExpr.has_value() &&

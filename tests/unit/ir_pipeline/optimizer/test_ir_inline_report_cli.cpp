@@ -111,21 +111,24 @@ main() {
 
 } // namespace
 
-// The VM has the address ABI: the recursive function and the one with a sum parameter are real calls, the `on_error`
-// definition and the small handler are expanded.
+// The VM has the address ABI: the recursive function and the one with a sum parameter are real calls, the definition
+// with a packed `Result` and the small handler are expanded.
 TEST_CASE(
     "inline-report names real calls and the blocker of each expanded definition on the vm target") {
   const std::string source = writeProgram();
   const ReportResult report = runCommand("./primec --emit=vm --dump-stage inline-report " + source);
   CHECK(report.exitCode == 0);
-  CHECK(report.out == "inline_report_v1 definitions=4\n"
-                      "added=54 with_callees=60 call_sites=1 /check_exists: on-error-handler: it "
-                      "has an `on_error` handler\n"
-                      "added=18 with_callees=18 call_sites=3 /fib: real call\n"
-                      "added=8 with_callees=8 call_sites=2 /area: real call\n"
-                      "added=6 with_callees=6 call_sites=2 /log_file_error: tiny-leaf: its body is "
-                      "small enough that expanding "
-                      "it costs less than calling it\n");
+  CHECK(report.out ==
+        "inline_report_v1 definitions=4\n"
+        "added=54 with_callees=60 call_sites=1 /check_exists: unsupported-result: its "
+        "result `Result<FileError>` is not one a real call returns: a scalar, `void`, "
+        "`never` and a struct are and, for a function of a library, a `string`, a "
+        "`Pointer`, a sum, a packed `Result` and a `vector<T>`; a `Reference` is not\n"
+        "added=18 with_callees=18 call_sites=3 /fib: real call\n"
+        "added=8 with_callees=8 call_sites=2 /area: real call\n"
+        "added=6 with_callees=6 call_sites=2 /log_file_error: tiny-leaf: its body is "
+        "small enough that expanding "
+        "it costs less than calling it\n");
 }
 
 // The target-neutral listing lowers for the scalar ABI, where a sum parameter is not a scalar; primevm prints the

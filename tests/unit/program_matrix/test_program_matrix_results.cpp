@@ -1063,4 +1063,48 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A definition with an `on_error` handler is a real call: its `?` runs the handler in the callee's own frame and
+// returns the error code, as the expanded body does. The handler's output and the returned status are the same as
+// those of an inlined call on every config.
+TEST_CASE("a definition with an on_error handler runs its handler in a real call") {
+  program_matrix::ProgramCase program;
+  program.name = "on_error_handler_real_call";
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /on_file_err>]
+write_probe() {
+  [File<Write>] file{File<Write>("program_matrix_on_error_probe.txt")?}
+  file.write("A")?
+  return(Result.ok())
+}
+
+[return<int> effects(file_read, io_out) on_error<FileError, /on_file_err>]
+read_first([string] path) {
+  [File<Read>] file{File<Read>(path)?}
+  [i32 mut] byte{0i32}
+  file.readByte(byte)?
+  return(byte)
+}
+
+[return<int> effects(file_read, file_write, io_out)]
+main() {
+  write_probe()
+  print_line(read_first("program_matrix_on_error_probe.txt"))
+  print_line(read_first("program_matrix_on_error_missing.txt"))
+  print_line(read_first("program_matrix_on_error_probe.txt"))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  // 65 is 'A'; the missing file runs the handler (it prints the status) and returns the status.
+  program.stdoutText = "65\n2\n2\n65\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

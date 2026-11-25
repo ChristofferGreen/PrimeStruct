@@ -680,9 +680,13 @@
   `copy` and `move` parameters of sums, args-pack, collection,
   `File` and template-typed parameters; the packed `Result` of a program that does not import `/std/result` (its result text is
   not a scalar type);
-  definitions with `on_error`, `require`, `try`/`?` or a generated tail value; `/std/collections/` definitions and
-  methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
-  (docs/spec/value-lifecycle.md, Borrowing). A `string` parameter is a real call only on the VM and the optimizing C++
+  definitions with `require`, `try`/`?` and no `on_error` handler, or a generated tail value; `/std/collections/`
+  definitions and methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
+  (docs/spec/value-lifecycle.md, Borrowing). A definition with an `on_error` handler is a real call: its `?` runs the
+  handler in the callee's own frame, destroys the locals of the body and returns the error code, as the expanded body
+  does, when its result is a scalar or void (a body that returns a `Result` and tries stays inline; the scalar ABI of
+  the other targets keeps every such definition inline). A `string` parameter is a real call only
+  on the VM and the optimizing C++
   emitters, which read a module string by a computed index, and only when the body uses it as `count()` or as the
   argument of `__pstext_literal` (`String.append`): the call passes the string's module-table index and the body reads
   a runtime string, where any other use (indexing expands to a branch per table string) stays inline.
@@ -700,7 +704,7 @@
   inside it; `with_callees` includes those. The code is stable and hyphenated: `scalar-only-parameter` (the scalar
   ABI's parameter rule), `sum-parameter`, `owned-sum-parameter`, `argument-pack`, `untyped-parameter`,
   `vector-parameter`, `templated-reference-parameter`, `string-parameter`, `parameter-type`, then one per body or
-  result shape (`host-definition`, `struct-definition`, `sum-definition`, `compute-definition`, `on-error-handler`,
+  result shape (`host-definition`, `struct-definition`, `sum-definition`, `compute-definition`,
   `require-contract`, `collections-helper`, `lifecycle-helper`, `receiver-struct`, `closure-reference-capture`,
   `collection-result`, `vector-result-not-owned`, `unsupported-result`, `uses-try`, `generated-tail-value`), and three
   that are not a shape rule: `tiny-leaf` (cheaper inline), `entry-point`, and `not-reserved` (a shape the check takes

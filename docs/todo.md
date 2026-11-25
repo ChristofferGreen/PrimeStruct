@@ -124,7 +124,6 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
-| TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | ready | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -311,22 +310,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the receiver text of worker query facts; no change to single-worker validation.
   - repro: the command in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
-
-- [~] TODO-6260: A definition with an `on_error` handler keeps its call sites inline
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
-  - created_at: 2026-11-25
-  - phase: Native UI (docs/NativeUiPlan.md; the next blocker the inline report names for the PNG reader, TODO-5536)
-  - parallel_track: bytecode-inline-blockers
-  - scope: `/std/image/ppmReadByteStatus` (`[effects(file_read), return<int> on_error<FileError, ignoreFileError>]`) takes a `File<Read>` since TODO-6252 and is now refused for `on-error-handler`: 627 instructions added over 19 call sites in the PNG module. `/std/image/png/readImpl` (TODO-6253 made its `string` path acceptable) is refused for the same reason: 1,336 added over one site. Together 1,963 instructions of the PNG module. Let a real call run the handler of its own definition: the `?` of the body jumps to the handler in the callee's frame, as it does in an inlined body.
-  - acceptance:
-    - the report of the PNG program shows `ppmReadByteStatus` and `readImpl` as `real call` and the `on-error-handler` lines falling from 1,963 to under 200 added
-    - a program-matrix case in which a callee with an `on_error` handler fails on the VM and on optexe and the handler's output and the exit code match the inlined run
-    - `primevm` prints the same output for the PNG program; full release gate green
-  - stop_rule: the `on_error` rule of the real-call shape (`OnErrorHandler` in `addressAbiShapeBlocker`); no change to what a handler may do.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: measured with TODO-6252, see docs/todo_log.md under TODO-5536.
 
 - [ ] TODO-6261: A `string` result of a program's own function keeps its call sites inline
   - owner: ai
