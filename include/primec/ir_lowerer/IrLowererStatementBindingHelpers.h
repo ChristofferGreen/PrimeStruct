@@ -230,7 +230,10 @@ ReturnStatementEmitResult tryEmitReturnStatement(
     const ActionFn &emitFileScopeCleanupAll,
     std::string &error,
     // Emits the exit of a `return` that shares its cleanup chain (IrLowererSharedReturnExits.h), or returns false.
-    const SharedReturnExitFn &emitSharedReturn = {});
+    const SharedReturnExitFn &emitSharedReturn = {},
+    // A real call that returns a packed `Result` with a struct value: runs with the value on the stack, right before
+    // the exit, and leaves the value to return (the payload block of the caller, or the error code).
+    const ActionFn &adjustReturnValue = {});
 ReturnStatementEmitResult tryEmitReturnStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

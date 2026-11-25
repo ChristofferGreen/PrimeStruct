@@ -13,6 +13,9 @@ std::string resolveStructTypeName(const std::string &typeName,
                                   const std::string &namespacePrefix,
                                   const std::unordered_set<std::string> &structNames);
 
+// The last path segment of a call's name (resolved in its namespace), without the `__` suffix of a generated instance.
+std::string callLeafNameWithoutSuffix(const Expr &expr);
+
 // Whether a parameter or the result of `def` is a collection record: a builtin `vector<T>`, `map<K, V>` or
 // `array<T>`, or a struct of the canonical collections (`/std/collections/...`), each as written or behind a
 // `Reference` or a `Pointer`. A helper under the collections root that takes or returns one is expanded inline; a helper

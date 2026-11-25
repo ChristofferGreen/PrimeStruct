@@ -1160,4 +1160,52 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A packed `Result` with a struct value crosses a real call: the callee copies the payload block into the block of
+// its caller (the value), or returns the error code (the high half of the slot).
+TEST_CASE(
+    "a packed Result with a struct value crosses a real call with its payload and its error") {
+  program_matrix::ProgramCase program;
+  program.name = "packed_result_struct_payload_real_call";
+  program.source = R"(
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, i32>>]
+pair_or_fail([i32] value) {
+  if(value > 2i32) {
+    return(plus(convert<i64>(value), 4i64))
+  }
+  return(Result.ok(Pair{[left] value, [right] plus(value, 10i32)}))
+}
+
+[effects(io_out)]
+on_failure([i32] err) {
+  print_line(100i32 + err)
+}
+
+[return<i32> effects(io_out) on_error<i32, /on_failure>]
+read_right([i32] value) {
+  return(plus(try(pair_or_fail(value)).right, 1i32))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(read_right(1i32))
+  print_line(read_right(5i32))
+  [Result<Pair, i32>] kept{pair_or_fail(2i32)}
+  [Result<Pair, i32>] failed{pair_or_fail(9i32)}
+  print_line(Result.error(kept))
+  print_line(Result.error(failed))
+  print_line(Result.why(failed))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "12\n109\n9\n0\n1\n\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

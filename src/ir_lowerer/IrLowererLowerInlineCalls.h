@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IrLowererReturnShapes.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererLowerReturnEmitStage.h"
 #include "primec/ir_lowerer/IrLowererOnErrorHelpers.h"

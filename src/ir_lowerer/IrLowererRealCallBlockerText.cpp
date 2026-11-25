@@ -142,9 +142,9 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
     const std::string result = returnTypeText(def);
     if (result.rfind("Result<", 0) == 0) {
       return "its result `" + result +
-             "` is a packed `Result` whose value is not a scalar or a `File`: a real call returns "
-             "one slot (the value or the error code), so a struct, `Buffer`, collection or "
-             "string value stays inline";
+             "` is a packed `Result` whose value is not a scalar, a `File` or a struct: a "
+             "real call returns one slot (the value or the error code) or the block of a struct, "
+             "so a `Buffer`, a collection or a string value stays inline";
     }
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +
            " is not one a real call returns: a scalar, `void`, `never` and a struct are and, for a "

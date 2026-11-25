@@ -122,7 +122,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
-| TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | ready | bytecode-inline-blockers |
+| TODO-6268 | A packed `Result` with a `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -312,21 +312,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
 
-- [~] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
+- [ ] TODO-6268: A packed `Result` with a `Buffer` payload stays inline
   - owner: ai
-  - status: ready
-  - claimed_by: subagent-6251 (worktree-agent-aac85dadcfc013f94), 2026-11-25
+  - status: deferred
   - created_at: 2026-11-25
-  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6262)
+  - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6263)
   - parallel_track: bytecode-inline-blockers
-  - scope: A packed `Result<T, E>` whose value `T` is a struct, a `Buffer<T>` or another type that is not one slot is returned by an inlined call only: `hasPackedResultReturn` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes `Result<E>` and a scalar or `File` value. Letting every `Result` through failed three program-matrix cases: `a Buffer payload Result reads as ok through locals and direct calls` (the VM exits 2 where 0 is expected, `vm.execute` fails in `ir lowerer supports Buffer Result payloads on IR-backed VM paths`) and `field access reads the struct payload of a try and of a question mark` (the VM exits 2 where 9 is expected, native refuses with `invalid IR instruction 9 in /make_pair: a called function returns an address of its own frame`). The callee's packed result is a block of its own frame or a handle the caller reads after the frame ended. Return such a payload through the caller's block, as `--emit=lib` does for a library function, then lift the refusal.
+  - scope: A function returning `Result<Buffer<T>, E>` (a program that does not import `/std/result`) is refused for `unsupported-result`. On the VM the `Buffer` value of `Result.ok(upload(values))` is the array of the producer's frame (count and elements, a size known at run time), so the struct layout of `Buffer` (2 slots, `token` and `elementCount`) is not what the payload block holds: copying those slots into a block of the caller returned garbage from the second call on (`readback()[2]` printed 96 and 16 where 3 was expected; found with TODO-6263, program in the repro). A real call would copy the array by its count into a caller block whose size is run-time, or the producer would build the array in the caller's frame.
+  - decision_needed: how a run-time sized payload crosses a real call. Options: 1. keep it inline (current); 2. the caller passes a block of a fixed capacity and the callee faults above it; 3. return the array through the heap. Recommendation: option 1 until a program shows the cost.
   - acceptance:
-    - the two program-matrix cases above pass with the payload `Result` returned by a real call on every config, with `hasPackedResultReturn` taking any `Result` payload
-    - the inline report of a program with such a function shows `real call`; full release gate green
-  - stop_rule: packed `Result` payloads that are not one slot; no change to the scalar and `File` shape.
-  - repro: In `hasPackedResultReturn`, return `true` for every `Result` (drop the payload check), build `primec` and run `ctest -R "program_matrix_results|ir_pipeline_conversions_numbers"` (release build, macOS arm64, 2026-11-25).
-  - findings: 2026-11-25, with the on_error real-call fix landed: the failure is exactly the validation error `a called function returns an address of its own frame` in `/make_pair`. The packed `Result<Pair, FileError>` of the inline shape is the address of a payload block of the callee's frame (local `Pair` block plus the status), and the caller reads fields through it. A real call needs the caller to pass a block (as `realCallStructReturnLocal` does for a struct result), the callee's `return(Result.ok(...))` to build the payload in that block and the call site to bind the result local to the block, in at least these paths (read, not tried): the return statement with a packed Result (IrLowererLowerStatementsBindingsContinued.h), `try`/`?` on such a result (IrLowererLowerEmitExprTryHelpersBody.h) and the result-info of a call (IrLowererResultFileLocal.h). That is several lowering paths, so the leaf stays deferred; the report now says what keeps it inline (`unsupported-result`: a packed `Result` whose value is not a scalar or a `File`).
-  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
+    - the decision is recorded here and in docs/spec/vm-design.md
+    - full release gate green
+  - stop_rule: `Buffer` payloads of a packed `Result`; no change to struct payloads.
+  - repro: `import /std/gfx/*` and a function returning `Result<Buffer<i32>, GfxError>` built with `Result.ok(/std/gfx/Buffer/upload(values))`; allow `Buffer` in `packedResultStructValuePath` (src/ir_lowerer/IrLowererReturnShapes.cpp) and call it twice into two locals, then `try` both and read `readback()[2]` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: needs the user's decision (see decision_needed).
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

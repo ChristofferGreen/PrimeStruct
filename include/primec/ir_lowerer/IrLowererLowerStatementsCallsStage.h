@@ -86,6 +86,9 @@ struct LowerStatementsCallsStageInput {
   // The address ABI: gives the `copy` and `move` parameters of a real-call body (`locals`) their drop flags in the
   // body's scope, just pushed, as an inlined call does at its call site; the body destroys them unless it moves them on.
   std::function<bool(const Definition &, LocalMap &, std::string &)> registerOwnedParameters;
+  // The slots of the payload block of a `Result<V, E>` with a struct value that a real call of the definition returns
+  // through a block of its caller (realCallPackedResultSlots), or 0; null: none.
+  std::function<int32_t(const Definition &)> realCallPackedResultSlots;
   // A runtime error in a real-call body ends the program with `Trap 3` (targets that run `Trap`: the VM, the optimizing
   // C++ emitters and native) instead of returning 3 to the caller.
   bool runtimeErrorsTrap = false;

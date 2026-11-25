@@ -189,7 +189,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       const bool returnsStruct =
           input.realCallAddressAbi && input.structNames != nullptr &&
           (!realCallStructReturnPath(def, *input.structNames, *input.defMap, true).empty() ||
-           !declaredBuiltinVectorReturnElementText(def).empty());
+           !declaredBuiltinVectorReturnElementText(def).empty() ||
+           (input.realCallPackedResultSlots && input.realCallPackedResultSlots(def) > 0));
 
       input.resetDefinitionLoweringState();
       *input.function = IrFunction{};

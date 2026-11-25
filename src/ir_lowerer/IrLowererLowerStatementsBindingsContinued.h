@@ -342,26 +342,11 @@
           }
         }
         if (shouldMaterializePackedTryScalar) {
-          ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
-          if (ir_lowerer::resolvePackedResultStructPayloadInfo(
-                  info.structTypeName,
-                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
-                    return resolveStructSlotLayout(structPath, layoutOut);
-                  },
-                  payloadInfo) &&
-              payloadInfo.isPackedSingleSlot) {
-            const int32_t packedBaseLocal = nextLocal;
-            nextLocal += payloadInfo.slotCount;
-            const int32_t packedPtrLocal = allocTempLocal();
-            function.instructions.push_back(
-                {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(payloadInfo.slotCount - 1))});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedBaseLocal)});
-            function.instructions.push_back(
-                {IrOpcode::StoreLocal, static_cast<uint64_t>(packedBaseLocal + payloadInfo.fieldOffset)});
-            function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(packedBaseLocal)});
-            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedPtrLocal)});
-            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(packedPtrLocal)});
-          }
+          ir_lowerer::materializePackedSingleSlotPayload(function.instructions,
+                                                         info.structTypeName,
+                                                         resolveStructSlotLayout,
+                                                         nextLocal,
+                                                         allocTempLocal);
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {
@@ -919,6 +904,12 @@
           sawReturn,
           error);
     };
+    const int32_t packedResultBlockSlots =
+        declaredReturnDef != nullptr && realCallStructReturnLocal >= 0 && !returnsStdlibResultSum &&
+                !returnInlineContext.has_value()
+            ? ir_lowerer::realCallPackedResultSlots(
+                  *declaredReturnDef, structNames, resolveStructSlotLayout)
+            : 0;
     // An integer value that is not sum storage is a packed Result.
     const auto returnValueIsPackedResult = [&](const Expr &valueExpr) {
       return ir_lowerer::isPackedResultReturnValue(
@@ -1031,7 +1022,7 @@
         emittedReturnStmt = &rewrittenReturnStmt;
         emittedReturnLocals = &rewrittenReturnLocals;
       } else if (realCallStructReturnLocal >= 0 && !returnInlineContext.has_value() &&
-                 !shouldStabilizeAggregateReturn) {
+                 !shouldStabilizeAggregateReturn && packedResultBlockSlots == 0) {
         error = "a real call that returns a struct needs a struct value to return: " + function.name;
         return false;
       }
@@ -1159,7 +1150,12 @@
         },
         [&]() { emitFileScopeCleanupAll(); },
         error,
-        stateOut.emitSharedReturn);
+        stateOut.emitSharedReturn,
+        ir_lowerer::makePackedResultBlockReturnAdjust(packedResultBlockSlots,
+                                                      function.instructions,
+                                                      allocTempLocal,
+                                                      realCallStructReturnLocal,
+                                                      emitStructCopyFromPtrs));
     if (returnResult == ir_lowerer::ReturnStatementEmitResult::Error) {
       return false;
     }

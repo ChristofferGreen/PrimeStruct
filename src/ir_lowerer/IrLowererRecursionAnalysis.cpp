@@ -2,6 +2,7 @@
 #include "IrLowererCollectionRecordShapes.h"
 #include "IrLowererPackedErrorTypes.h"
 #include "IrLowererRealCallBlockerText.h"
+#include "IrLowererReturnShapes.h"
 #include "IrLowererStringParameterUse.h"
 #include "IrLowererScalarCallBlocker.h"
 
@@ -774,7 +775,7 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
       !(context.allowSlotResults && hasSlotResultReturn(def)) && !hasPackedResultReturn(def) &&
-      structResultPath.empty() &&
+      packedResultStructValuePath(def, structNames).empty() && structResultPath.empty() &&
       !(context.allowVectorResults && builtinVectorReturnType(def, structNames) != nullptr) &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;

@@ -13,6 +13,20 @@
 
 namespace primec::ir_lowerer {
 
+std::string callLeafNameWithoutSuffix(const Expr &expr) {
+  std::string path = expr.name;
+  if (path.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+    path = expr.namespacePrefix == "/" ? "/" + path : expr.namespacePrefix + "/" + path;
+  }
+  const size_t leafStart = path.find_last_of('/');
+  std::string leaf = leafStart == std::string::npos ? path : path.substr(leafStart + 1);
+  const size_t generatedSuffix = leaf.find("__");
+  if (generatedSuffix != std::string::npos) {
+    leaf.erase(generatedSuffix);
+  }
+  return leaf;
+}
+
 std::string resolveStructTypeName(const std::string &typeName,
                                   const std::string &namespacePrefix,
                                   const std::unordered_set<std::string> &structNames) {

@@ -174,9 +174,9 @@ main() {
   CHECK(run.out == "0\n1004\n1\n");
 }
 
-// A packed `Result` returns in one slot: a struct value does not fit and keeps the definition inline, with a text that
-// names the value.
-TEST_CASE("inline-report names a packed Result with a struct value as an unsupported result") {
+// A packed `Result` with a struct value returns the payload block through the caller's block, so the definition is a
+// real call; a collection value does not fit and keeps it inline, with a text that names the value.
+TEST_CASE("inline-report shows a packed Result with a struct value as a real call") {
   const char *text = R"(
 import /std/file/*
 
@@ -205,8 +205,38 @@ main() {
   const ReportResult report =
       runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
   CHECK(report.exitCode == 0);
-  CHECK(report.out.find("/make_pair: unsupported-result: its result `Result<Pair, FileError>` is a "
-                        "packed `Result` whose value is not a scalar or a `File`") !=
+  CHECK(report.out.find("/make_pair: real call\n") != std::string::npos);
+  CHECK(report.out.find("unsupported-result") == std::string::npos);
+  const ReportResult run = runCommand("./primevm " + path.string());
+  CHECK(run.exitCode == 0);
+  CHECK(run.out == "0\n0\n");
+}
+
+TEST_CASE("inline-report names a packed Result with a string value as an unsupported result") {
+  const char *text = R"(
+import /std/file/*
+
+[return<Result<string, FileError>>]
+make_text([i32] left) {
+  return(Result.ok("text"utf8))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.error(make_text(1i32)))
+  print_line(Result.error(make_text(3i32)))
+  return(0i32)
+}
+)";
+  const std::filesystem::path path =
+      primec::testing::testScratchPath("inline_report_cli/text.prime");
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path) << text;
+  const ReportResult report =
+      runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
+  CHECK(report.exitCode == 0);
+  CHECK(report.out.find("/make_text: unsupported-result: its result `Result<string, FileError>` is a "
+                        "packed `Result` whose value is not a scalar, a `File` or a struct") !=
         std::string::npos);
 }
 

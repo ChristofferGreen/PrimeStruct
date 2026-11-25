@@ -5,6 +5,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "primec/ast/Ast.h"
@@ -24,6 +25,48 @@ bool isPackedResultReturnValue(
     const std::function<bool(const Definition &)> &returnsStdlibResultSum,
     const std::function<std::string(const Expr &, const LocalMap &)> &inferStructPath,
     const std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> &inferKind);
+
+// The struct a definition's `Result<V, E>` return carries as its value (outside the collections), or empty. Such a
+// result is the address of the payload block, or the error code in the high half.
+std::string packedResultStructValuePath(const Definition &def,
+                                        const std::unordered_set<std::string> &structNames);
+// A real call returns a packed `Result` with a struct value: with the value on the stack, leaves the value to return
+// in its place. The readers call a value an error when its low 32 bits are zero (the code is in the high half), and
+// otherwise the address of a payload block, which is copied into the caller's block (`callerBlockLocal` holds its
+// address) and replaced by the block's address. `valueLocal` is a temporary.
+void emitPackedResultBlockReturnValue(
+    std::vector<IrInstruction> &instructions,
+    int32_t valueLocal,
+    int32_t callerBlockLocal,
+    int32_t slots,
+    const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs);
+
+// The adjustment of emitPackedResultBlockReturnValue for a `return` of a real call whose result takes `slots` payload
+// slots; empty when `slots` is 0.
+ActionFn makePackedResultBlockReturnAdjust(
+    int32_t slots,
+    std::vector<IrInstruction> &instructions,
+    const Int32ProviderFn &allocTempLocal,
+    int32_t callerBlockLocal,
+    const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs);
+
+// A packed `Result` whose struct value is one scalar field: with the field's value on the stack, builds the struct's
+// block in `nextLocal` onward and leaves its address on the stack. Nothing happens for another payload.
+void materializePackedSingleSlotPayload(
+    std::vector<IrInstruction> &instructions,
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    int32_t &nextLocal,
+    const Int32ProviderFn &allocTempLocal);
+
+// The slots of the payload block a real call of `def` writes into the block of its caller when it returns a
+// `Result<V, E>` whose value `V` is a struct of several slots (a struct of one packed slot is the scalar itself and
+// needs no block), or 0. The call site and the callee both read it, so they agree on the extra parameter.
+int32_t
+realCallPackedResultSlots(const Definition &def,
+                          const std::unordered_set<std::string> &structNames,
+                          const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+                              &resolveStructSlotLayout);
 
 // Whether `expr` is `wait(t)` of a task handle whose result is a builtin vector: the vector the task built, which the
 // waiter owns, so a binding takes it over and a read of it as a temporary destroys it.

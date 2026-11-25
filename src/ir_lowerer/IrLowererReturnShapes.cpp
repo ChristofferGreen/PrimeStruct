@@ -1,9 +1,152 @@
 #include "IrLowererReturnShapes.h"
 
+#include "IrLowererCollectionRecordShapes.h"
+#include "IrLowererRecursionAnalysis.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"
+#include "primec/ir_lowerer/IrLowererResultHelpers.h"
+#include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
+#include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "primec/support/CollectionHelperNames.h"
 
 namespace primec::ir_lowerer {
+
+std::string packedResultStructValuePath(const Definition &def,
+                                        const std::unordered_set<std::string> &structNames) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    std::vector<std::string> args;
+    if (!splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argText) ||
+        trimTemplateTypeText(base) != "Result" || !splitTopLevelTemplateArgs(argText, args) ||
+        args.size() != 2) {
+      return {};
+    }
+    const std::string value = trimTemplateTypeText(args.front());
+    std::string path;
+    std::string valueBase;
+    std::string valueArgText;
+    std::vector<std::string> valueArgs;
+    if (splitTemplateTypeName(value, valueBase, valueArgText)) {
+      // A generic struct (`Buffer<i32>`): the specialization is the struct whose path ends with the leaf of the
+      // generic and the suffix of its type arguments.
+      const std::string leaf =
+          "/" + trimTemplateTypeText(valueBase.substr(valueBase.find_last_of('/') + 1));
+      if (leaf == "/Buffer") {
+        // A `Buffer` is an array of the producer's frame (count and elements), not a block of a fixed size.
+        return {};
+      }
+      if (!splitTopLevelTemplateArgs(valueArgText, valueArgs)) {
+        return {};
+      }
+      const std::string suffix = mangleTemplateTypeArgsSuffix(valueArgs);
+      for (const std::string &candidate : structNames) {
+        if (candidate.size() > suffix.size() + leaf.size() &&
+            candidate.compare(candidate.size() - suffix.size(), suffix.size(), suffix) == 0 &&
+            candidate.compare(candidate.size() - suffix.size() - leaf.size(), leaf.size(), leaf) ==
+                0 &&
+            (path.empty() || candidate < path)) {
+          path = candidate;
+        }
+      }
+    } else if (!isSupportedScalarTypeName(value)) {
+      path = resolveStructTypeName(value, def.namespacePrefix, structNames);
+    }
+    return path.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 ? std::string{} : path;
+  }
+  return {};
+}
+
+void materializePackedSingleSlotPayload(
+    std::vector<IrInstruction> &instructions,
+    const std::string &structType,
+    const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
+    int32_t &nextLocal,
+    const Int32ProviderFn &allocTempLocal) {
+  PackedResultStructPayloadInfo payloadInfo;
+  if (!resolvePackedResultStructPayloadInfo(structType, resolveStructSlotLayout, payloadInfo) ||
+      !payloadInfo.isPackedSingleSlot) {
+    return;
+  }
+  const int32_t baseLocal = nextLocal;
+  nextLocal += payloadInfo.slotCount;
+  const int32_t ptrLocal = allocTempLocal();
+  instructions.push_back(
+      {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(payloadInfo.slotCount - 1))});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+  instructions.push_back(
+      {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + payloadInfo.fieldOffset)});
+  instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+}
+
+void emitPackedResultBlockReturnValue(
+    std::vector<IrInstruction> &instructions,
+    int32_t valueLocal,
+    int32_t callerBlockLocal,
+    int32_t slots,
+    const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs) {
+  constexpr uint64_t HalfShift = 4294967296ull;
+  instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+  instructions.push_back({IrOpcode::PushI64, HalfShift});
+  instructions.push_back({IrOpcode::DivI64, 0});
+  instructions.push_back({IrOpcode::PushI64, HalfShift});
+  instructions.push_back({IrOpcode::MulI64, 0});
+  instructions.push_back({IrOpcode::SubI64, 0});
+  const size_t jumpError = instructions.size();
+  instructions.push_back({IrOpcode::JumpIfZero, 0});
+  (void)copyFromPtrs(callerBlockLocal, valueLocal, slots);
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(callerBlockLocal)});
+  const size_t jumpEnd = instructions.size();
+  instructions.push_back({IrOpcode::Jump, 0});
+  instructions[jumpError].imm = static_cast<int32_t>(instructions.size());
+  // The error is rebuilt from its code: the frame-address validation follows adds and subtracts only.
+  instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+  instructions.push_back({IrOpcode::PushI64, HalfShift});
+  instructions.push_back({IrOpcode::DivI64, 0});
+  instructions.push_back({IrOpcode::PushI64, HalfShift});
+  instructions.push_back({IrOpcode::MulI64, 0});
+  instructions[jumpEnd].imm = static_cast<int32_t>(instructions.size());
+}
+
+ActionFn makePackedResultBlockReturnAdjust(
+    int32_t slots,
+    std::vector<IrInstruction> &instructions,
+    const Int32ProviderFn &allocTempLocal,
+    int32_t callerBlockLocal,
+    const std::function<bool(int32_t, int32_t, int32_t)> &copyFromPtrs) {
+  if (slots <= 0) {
+    return {};
+  }
+  return [&instructions, &allocTempLocal, &copyFromPtrs, slots, callerBlockLocal]() {
+    emitPackedResultBlockReturnValue(
+        instructions, allocTempLocal(), callerBlockLocal, slots, copyFromPtrs);
+  };
+}
+
+int32_t
+realCallPackedResultSlots(const Definition &def,
+                          const std::unordered_set<std::string> &structNames,
+                          const std::function<bool(const std::string &, StructSlotLayoutInfo &)>
+                              &resolveStructSlotLayout) {
+  const std::string payloadPath = packedResultStructValuePath(def, structNames);
+  if (payloadPath.empty()) {
+    return 0;
+  }
+  PackedResultStructPayloadInfo payloadInfo;
+  if (!resolvePackedResultStructPayloadInfo(payloadPath, resolveStructSlotLayout, payloadInfo) ||
+      payloadInfo.isPackedSingleSlot) {
+    return 0;
+  }
+  return payloadInfo.slotCount;
+}
 
 bool isPackedResultReturnValue(
     const Expr &valueExpr,

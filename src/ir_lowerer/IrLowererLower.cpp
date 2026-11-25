@@ -1,3 +1,4 @@
+#include "IrLowererReturnShapes.h"
 #include "primec/ir/IrLowerer.h"
 #include "IrLowererEntryResultExit.h"
 #include "primec/frontend/Lexer.h"
@@ -510,6 +511,16 @@ bool IrLowerer::lower(const Program &program,
                                       setupStage.dropEntries,
                                       fileScopeStack,
                                       ownError);
+                                },
+                            .realCallPackedResultSlots =
+                                [&](const Definition &def) {
+                                  return ir_lowerer::realCallPackedResultSlots(
+                                      def,
+                                      structNames,
+                                      [&](const std::string &structPath,
+                                          ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+                                        return resolveStructSlotLayout(structPath, layoutOut);
+                                      });
                                 },
                             .runtimeErrorsTrap = setupStage.runtimeErrorsTrap,
                             .refuseRuntimeErrorsInCalls =

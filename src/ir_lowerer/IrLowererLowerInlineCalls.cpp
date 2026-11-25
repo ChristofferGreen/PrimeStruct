@@ -646,19 +646,7 @@ bool emitInlineDefinitionCallImpl(
           return leaf == "SoaColumn" || leaf == "SoaFieldView";
         };
     const auto callLeafName = [](const Expr &expr) {
-      std::string path = expr.name;
-      if (path.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
-        path = expr.namespacePrefix == "/" ? "/" + path
-                                           : expr.namespacePrefix + "/" + path;
-      }
-      const size_t leafStart = path.find_last_of('/');
-      std::string leaf =
-          leafStart == std::string::npos ? path : path.substr(leafStart + 1);
-      const size_t generatedSuffix = leaf.find("__");
-      if (generatedSuffix != std::string::npos) {
-        leaf.erase(generatedSuffix);
-      }
-      return leaf;
+      return ir_lowerer::callLeafNameWithoutSuffix(expr);
     };
     const auto stdCollectionsRoot = []() {
       return std::string("/std/collections");
@@ -738,6 +726,10 @@ bool emitInlineDefinitionCallImpl(
       } else if (!returnInfo.returnsVoid &&
                  !ir_lowerer::declaredBuiltinVectorReturnElementText(callee).empty()) {
         resultSlots = VectorRecordSlots;
+      }
+      if (resultSlots == 0 && !returnInfo.returnsVoid) {
+        resultSlots =
+            ir_lowerer::realCallPackedResultSlots(callee, structNames, resolveStructSlotLayout);
       }
       const bool structResult = resultSlots > 0;
       if (structResult) {

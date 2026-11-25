@@ -435,7 +435,8 @@ tryEmitReturnStatement(const Expr &stmt,
                            &inferArrayElementKind,
                        const std::function<void()> &emitFileScopeCleanupAll,
                        std::string &error,
-                       const SharedReturnExitFn &emitSharedReturn) {
+                       const SharedReturnExitFn &emitSharedReturn,
+                       const ActionFn &adjustReturnValue) {
   if (!isReturnCall(stmt)) {
     return ReturnStatementEmitResult::NotMatched;
   }
@@ -688,6 +689,9 @@ tryEmitReturnStatement(const Expr &stmt,
     } else if (returnKind == LocalInfo::ValueKind::Float64) {
       returnOp = IrOpcode::ReturnF64;
     }
+  }
+  if (adjustReturnValue) {
+    adjustReturnValue();
   }
   if (!emitSharedReturn || !emitSharedReturn(returnOp, -1)) {
     if (emitFileScopeCleanupAll) {
