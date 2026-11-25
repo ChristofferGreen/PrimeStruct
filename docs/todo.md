@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-6264 | A body that returns a `Result` and tries stays inline | deferred | bytecode-inline-blockers |
-| TODO-6265 | The inline report of the scalar target names an `on_error` definition `not-reserved` | deferred | diagnostics-inline-report |
 | TODO-6266 | Missing semantic-product messages outside `IrLowerer::lower` are not marked internal | deferred | diagnostics-internal-errors |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -343,21 +342,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the `uses-try` line of the inline report for the PNG program stays at 0; full release gate green
   - stop_rule: the `uses-try` rule of the real-call shape for `Result` bodies; no change to the handler.
   - repro: Program matrix case `status-only stdlib Result propagates its error through try` (tests/unit/program_matrix/test_program_matrix_results.cpp): in `addressAbiShapeBlocker` change the `uses-try` condition to `definitionUsesTry(def) && !definitionHasTransform(def, "on_error")`, build, and `primec` plus `primevm` of that program print `0`, `1004` and then `VM error: unaligned indirect address in IR: 20` with exit 3 (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
-
-- [~] TODO-6265: The inline report of the scalar target names an `on_error` definition `not-reserved`
-  - owner: ai
-  - status: deferred
-  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
-  - created_at: 2026-11-25
-  - phase: Diagnostics (found with TODO-6260)
-  - parallel_track: diagnostics-inline-report
-  - scope: `primec --dump-stage inline-report` without `--emit` lowers for the scalar ABI, whose eligibility check (`isRealCallShapeEligible`, the part that is not the address ABI) refuses a definition with `on_error`, a `sum`, a `compute` or a `host` shape without a code of its own; `realCallBlocker` then returns nothing and the report prints `not-reserved: its shape is a real call's, but the target did not reserve it`, which is false for these definitions. Give each of those shapes its code and text in the scalar branch of `realCallBlocker` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp), as the address ABI has them.
-  - acceptance:
-    - the report of a program with an `on_error` definition on the scalar target names it `on-error-handler`-style (a code of its own, listed in docs/spec/vm-design.md), with a test in tests/unit/ir_pipeline/optimizer/test_ir_inline_report_cli.cpp
-    - full release gate green
-  - stop_rule: the code and text of the scalar target's refusals in the report; no change to what is reserved.
-  - repro: `primec --dump-stage inline-report` of the program of `inline-report on the scalar target names the parameter that keeps a definition inline` prints `/check_exists: not-reserved: its shape is a real call's, but the target did not reserve it` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
 - [ ] TODO-6266: Missing semantic-product messages outside `IrLowerer::lower` are not marked internal

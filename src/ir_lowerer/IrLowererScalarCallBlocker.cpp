@@ -1,6 +1,8 @@
 #include "IrLowererScalarCallBlocker.h"
 
+#include "IrLowererRealCallBlockerText.h"
 #include "IrLowererRecursionAnalysis.h"
+#include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
@@ -30,6 +32,25 @@ std::string scalarOnlyParameterBlocker(const Definition &def) {
     }
     return subject + "is a `" + typeText +
            "`, which a call on this target does not take (only scalar values)";
+  }
+  return {};
+}
+
+RealCallBlocker scalarDefinitionShapeBlocker(const Definition &def) {
+  static constexpr std::pair<const char *, AddressAbiBlocker> Shapes[] = {
+      {"host", AddressAbiBlocker::HostDefinition},
+      {"struct", AddressAbiBlocker::StructDefinition},
+      {"sum", AddressAbiBlocker::SumDefinition},
+      {"compute", AddressAbiBlocker::ComputeDefinition},
+  };
+  for (const auto &[transformName, blocker] : Shapes) {
+    if (definitionHasTransform(def, transformName)) {
+      return {addressAbiBlockerCode(blocker), describeAddressAbiBlocker(blocker, def)};
+    }
+  }
+  if (definitionHasTransform(def, "on_error")) {
+    return {"on-error-handler",
+            "it has an `on_error` handler, which a call on this target does not take"};
   }
   return {};
 }

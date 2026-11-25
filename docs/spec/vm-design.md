@@ -709,10 +709,10 @@
   ABI's parameter rule), `sum-parameter`, `owned-sum-parameter`, `argument-pack`, `untyped-parameter`,
   `vector-parameter`, `templated-reference-parameter`, `string-parameter`, `parameter-type`, then one per body or
   result shape (`host-definition`, `struct-definition`, `sum-definition`, `compute-definition`,
-  `require-contract`, `collections-helper`, `lifecycle-helper`, `receiver-struct`, `closure-reference-capture`,
+  `on-error-handler` (the scalar ABI), `require-contract`, `collections-helper`, `lifecycle-helper`, `receiver-struct`, `closure-reference-capture`,
   `collection-result`, `vector-result-not-owned`, `unsupported-result`, `uses-try`, `generated-tail-value`), and three
   that are not a shape rule: `tiny-leaf` (cheaper inline), `entry-point`, and `not-reserved` (a shape the check takes
-  that the target did not reserve; the scalar ABI has rules of its own that the report does not name). The report
+  that the target did not reserve; the scalar ABI has rules of its own that the report names only for its parameters, `host`, `struct`, `sum`, `compute` and `on_error` shapes). The report
   follows `--emit`: without it, and in `primevm`, the listing is lowered for the backend-neutral scalar ABI, where
   every struct, `mut` and collection parameter keeps a definition inline. The text of each code is
   `realCallBlocker` (`src/ir_lowerer/IrLowererRecursionAnalysis.cpp`); the counts come from the lowerer's call sites

@@ -1129,6 +1129,9 @@ RealCallBlocker realCallBlocker(const Definition &def, const RealCallShapeContex
     return {};
   }
   if (!context.allowStructs) {
+    if (RealCallBlocker shape = scalarDefinitionShapeBlocker(def); !shape.code.empty()) {
+      return shape;
+    }
     std::string text = scalarOnlyParameterBlocker(def);
     return {text.empty() ? std::string() : "scalar-only-parameter", std::move(text)};
   }
