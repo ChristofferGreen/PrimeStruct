@@ -467,13 +467,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
   - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
 
-- [ ] TODO-6255: A stdlib error struct result keeps its constructors inline
+- [~] TODO-6255: A stdlib error struct result keeps its constructors inline
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
-  - depends_on: TODO-5536
   - scope: `/std/image/ImageError/invalid_operation`, `read_unsupported` and their `/ImageError` aliases, `why` and others (9 definitions, 11 call sites, 189 instructions added) return the stdlib error struct by value or a `string`, which a real call does not return (`unsupported-result`). Let a direct call return a stdlib error struct through the block of the caller, as `--emit=lib` does for a library function.
   - acceptance:
     - the report of the PNG program shows the `unsupported-result` lines as `real call` or gone, and their `added` falling from 189 to under 60
