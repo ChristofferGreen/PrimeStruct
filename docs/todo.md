@@ -468,13 +468,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
   - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
 
-- [ ] TODO-6253: A `string` parameter used beyond `count()` keeps the PNG file readers inline
+- [~] TODO-6253: A `string` parameter used beyond `count()` keeps the PNG file readers inline
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
-  - depends_on: TODO-5536
   - scope: `readImpl`, `read`, `openRead` and `open_read` of `/std/image` take a `string` path that the body passes on to a file open, not only to `count()` or `__pstext_literal`, so they stay inline (`string-parameter`): four definitions, 4 call sites, 1,390 instructions added (`readImpl` alone adds 1,336). Allow a `string` parameter whose uses are all arguments that take a module-table string index (a file open, a host call).
   - acceptance:
     - the report names `readImpl` as `real call`, and the `added` of `string-parameter` lines falls from 1,390 to under 300
