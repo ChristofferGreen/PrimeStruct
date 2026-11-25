@@ -113,7 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | deferred | effects-inference |
-| TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | ready | semantic-workers-stale-facts |
+| TODO-6258 | Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors | deferred | semantic-workers-stale-facts |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -181,7 +181,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
-- Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
+- Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6258 (extra `block` call facts with more than one validation worker), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
@@ -299,19 +299,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [~] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
+- [ ] TODO-6258: Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors
   - owner: ai
-  - status: ready
-  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (semantic validation workers; found with the stdlib `Vector` element places)
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Frontend and diagnostics (semantic validation workers; found with TODO-6203)
   - parallel_track: semantic-workers-stale-facts
-  - scope: With more than one definition-validation worker a program that imports the text or collections library does not compile: `primec --emit=vm -I stdlib t.prime --benchmark-semantic-definition-validation-workers 4` of `import /std/text/*  import /std/text/view/*  [effects(heap_alloc, io_out), return<int>] main() { [String mut] text{String{}}  text.pushByte(convert<u8>(48i32))  print_line(text.view().count())  return(0i32) }` is `VM lowering error: stale semantic-product array extent fact: /std/text/view/joinWith -> count parts`, and a program with a `Vector<Item>` is `stale semantic-product array extent fact: vector<Item> -> count values`. Without the option both compile and run. The array extent facts the workers publish are not the ones the lowerer checks after the merge (src/semantics/SemanticsValidatorSnapshotsPublicationFacts.cpp, `rebindMergedWorkerPublicationFactSemanticNodeIds`).
+  - scope: The semantic product of a program that imports `/std/text/*` and `/std/text/view/*` differs between 1 and 2 workers by four facts: `direct_call_targets` and `query_facts` for `call_name="block" resolved_path="/std/maybe/block" provenance_handle=0 source="0:0"` in the scopes `/std/maybe/none__t938e9516a78205be` and `/std/maybe/none__tead9077f04525e0f` exist only with workers. Compare `primec --emit=vm -I stdlib t.prime --dump-stage semantic-product` with and without `--benchmark-semantic-definition-validation-workers 2` (sort the lines, drop the `[n]` indexes).
   - acceptance:
-    - both programs compile and run with 2 and 4 workers and give the output of one worker, with a test that compares the semantic product of 1 and 4 workers for a program that imports the text library
+    - the products of 1, 2 and 4 workers are line-for-line equal for that program, with a test that compares the whole product, not only the array extent facts (`tests/unit/semantics/test_semantics_definition_partitioner.cpp`)
     - full release gate green
   - stop_rule: the facts of the worker merge; no change to single-worker validation.
-  - repro: the first program in scope.
+  - repro: the command in scope, with the program of TODO-6203.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path

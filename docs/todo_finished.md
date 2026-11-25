@@ -2606,6 +2606,7 @@ are left unarchived.
 | TODO-6200 | A field or an element of a read-only root is changed through a `mut` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6201 | A field of an element read through a `Reference<Vector<T>>` is `field access requires struct receiver` | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6202 | Assigning a whole element of a stdlib `Vector` is an internal lowering error | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
+| TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6204 | A call in a struct field's default initializer is not validated | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6206 | The argument of `push` is not checked against the element type of the vector | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |

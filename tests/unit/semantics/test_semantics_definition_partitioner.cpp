@@ -1329,6 +1329,67 @@ main() {
   CHECK(singleWorker.returnFactCount > 0);
 }
 
+TEST_CASE("array extent facts of a program that imports the text library are equivalent across "
+          "worker counts 1,2,4") {
+  // The count of a stdlib array parameter (`count parts` in the text view's `joinWith`) targets the counted name, not
+  // the count expression; the worker merge used to rebind it to the expression and the lowerer refused the product.
+  const std::string source = R"(import /std/text/*
+import /std/text/view/*
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [String mut] text{String{}}
+  text.pushByte(convert<u8>(48i32))
+  print_line(text.view().count())
+  return(0i32)
+}
+)";
+  const std::filesystem::path sourcePath = makeTempSemanticSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    REQUIRE(file);
+    file << source;
+  }
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  std::array<std::string, 3> formattedByWorkerCount;
+  constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
+  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
+    CAPTURE(workerCounts[i]);
+    primec::Options options;
+    options.inputPath = sourcePath.string();
+    options.entryPath = "/main";
+    options.emitKind = "vm";
+    options.defaultEffects = defaults;
+    options.entryDefaultEffects = defaults;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCounts[i];
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    REQUIRE(primec::runCompilePipeline(options, output, errorStage, error, nullptr));
+    CHECK(error.empty());
+    REQUIRE(output.hasSemanticProgram);
+    // Only the array extent facts: the other fact kinds of the two worker counts differ by node-independent
+    // entries (see docs/todo.md, TODO-6258).
+    std::istringstream lines(primec::formatSemanticProgram(output.semanticProgram));
+    std::vector<std::string> extentLines;
+    for (std::string line; std::getline(lines, line);) {
+      if (line.find("array_extent_facts[") != std::string::npos) {
+        extentLines.push_back(line.substr(line.find(']') + 1));
+      }
+    }
+    std::sort(extentLines.begin(), extentLines.end());
+    CHECK(extentLines.size() > 0);
+    for (const std::string &line : extentLines) {
+      formattedByWorkerCount[i] += line + "\n";
+    }
+  }
+  std::error_code removeError;
+  std::filesystem::remove(sourcePath, removeError);
+  CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
+  CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
+}
+
 // The text stack of doctest's failed-assertion contexts (`tlssPush`) is thread-local state that outlives every
 // TEST_CASE, while the test binary resets the compile arena at the end of each one. When it was allocated from the
 // arena, the second of two cases that each logged a context freed the first one's reset memory and the binary

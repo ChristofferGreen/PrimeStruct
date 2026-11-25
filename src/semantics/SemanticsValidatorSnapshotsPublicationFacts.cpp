@@ -138,6 +138,35 @@ void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
       stableOrderOffset, stableOrderCount, out.onErrorFacts);
 }
 
+namespace {
+
+// The target of an array extent fact is the node of the binding it is about: the fact's own node for a binding site,
+// the counted name for a count expression. The merge rebinds the fact's own node id by key, so the target takes the
+// fresh fact's target the same way (the n-th merged fact of a key takes the n-th fresh one).
+void rebindArrayExtentTargetNodeIds(std::vector<ArrayExtentFactSnapshotEntry> &entries,
+                                    const std::vector<std::string> &freshKeys,
+                                    const std::vector<uint64_t> &freshTargetNodeIds) {
+  std::unordered_map<std::string, std::vector<uint64_t>> targetsByKey;
+  targetsByKey.reserve(freshKeys.size());
+  for (std::size_t index = 0; index < freshKeys.size(); ++index) {
+    targetsByKey[freshKeys[index]].push_back(freshTargetNodeIds[index]);
+  }
+  std::unordered_map<std::string, std::size_t> nextByKey;
+  for (auto &entry : entries) {
+    const std::string key = ArrayExtentFactTraits::key(entry);
+    const auto targetIt = targetsByKey.find(key);
+    if (targetIt == targetsByKey.end()) {
+      continue;
+    }
+    std::size_t &next = nextByKey[key];
+    if (next < targetIt->second.size()) {
+      entry.targetSemanticNodeId = targetIt->second[next++];
+    }
+  }
+}
+
+} // namespace
+
 void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
   if (!mergedWorkerPublicationFactsValid_ ||
       mergedWorkerPublicationFactSemanticNodeIdsCurrent_) {
@@ -187,11 +216,18 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
   mergePublicationFactKind<SumVariantMetadataFactTraits>(merged.sumVariantMetadata,
                                                          std::move(freshSumVariantMetadata));
   mergePublicationFactKind<BindingFactTraits>(merged.bindingFacts, std::move(freshBindingFacts));
+  std::vector<std::string> arrayExtentKeys;
+  std::vector<uint64_t> arrayExtentTargetNodeIds;
+  arrayExtentKeys.reserve(freshArrayExtentFacts.size());
+  arrayExtentTargetNodeIds.reserve(freshArrayExtentFacts.size());
+  for (const auto &entry : freshArrayExtentFacts) {
+    arrayExtentKeys.push_back(ArrayExtentFactTraits::key(entry));
+    arrayExtentTargetNodeIds.push_back(entry.targetSemanticNodeId);
+  }
   mergePublicationFactKind<ArrayExtentFactTraits>(merged.arrayExtentFacts,
                                                   std::move(freshArrayExtentFacts));
-  for (auto &entry : merged.arrayExtentFacts) {
-    entry.targetSemanticNodeId = entry.semanticNodeId;
-  }
+  rebindArrayExtentTargetNodeIds(
+      merged.arrayExtentFacts, arrayExtentKeys, arrayExtentTargetNodeIds);
   mergePublicationFactKind<ReturnFactTraits>(merged.returnFacts, std::move(freshReturnFacts));
   mergePublicationFactKind<LocalAutoFactTraits>(merged.localAutoFacts,
                                                 std::move(freshLocalAutoFacts));
