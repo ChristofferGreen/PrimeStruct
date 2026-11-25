@@ -122,7 +122,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
-| TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
+| TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | ready | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -312,9 +312,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
 
-- [ ] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
+- [~] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: subagent-6251 (worktree-agent-aac85dadcfc013f94), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6262)
   - parallel_track: bytecode-inline-blockers
