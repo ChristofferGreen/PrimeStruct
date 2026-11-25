@@ -12450,7 +12450,7 @@ Total: 11575 test cases across 677 files.
 - worker-local definition validation context keeps semantic product equivalent across worker counts 1,2,4
 - worker-local definition validation context keeps diagnostics equivalent across worker counts 1,2,4
 - semantic product index families are equivalent across worker counts 1,2,4
-- array extent facts of a program that imports the text library are equivalent across 
+- the semantic product of a program that imports the text library is equivalent across 
 - the doctest context text stack is not arena memory, first case
 - the doctest context text stack is not arena memory, second case
 

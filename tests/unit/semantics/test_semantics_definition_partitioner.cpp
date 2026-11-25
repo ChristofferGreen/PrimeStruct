@@ -1329,10 +1329,12 @@ main() {
   CHECK(singleWorker.returnFactCount > 0);
 }
 
-TEST_CASE("array extent facts of a program that imports the text library are equivalent across "
+TEST_CASE("the semantic product of a program that imports the text library is equivalent across "
           "worker counts 1,2,4") {
   // The count of a stdlib array parameter (`count parts` in the text view's `joinWith`) targets the counted name, not
   // the count expression; the worker merge used to rebind it to the expression and the lowerer refused the product.
+  // A worker collects its call facts before the omitted initializers are rewritten, so the `block` initializer of
+  // each generated `/std/maybe/none` instance left a call fact and a query fact the final tree does not have.
   const std::string source = R"(import /std/text/*
 import /std/text/view/*
 
@@ -1369,14 +1371,23 @@ main() {
     REQUIRE(primec::runCompilePipeline(options, output, errorStage, error, nullptr));
     CHECK(error.empty());
     REQUIRE(output.hasSemanticProgram);
-    // Only the array extent facts: the other fact kinds of the two worker counts differ by node-independent
-    // entries (see docs/todo.md, TODO-6258).
+    // The whole product, line for line. The `[index]` of a record is its position in a table ordered by node id,
+    // so it is dropped and the lines are sorted.
     std::istringstream lines(primec::formatSemanticProgram(output.semanticProgram));
     std::vector<std::string> extentLines;
     for (std::string line; std::getline(lines, line);) {
-      if (line.find("array_extent_facts[") != std::string::npos) {
-        extentLines.push_back(line.substr(line.find(']') + 1));
+      std::size_t nameEnd = line.find_first_not_of(' ');
+      while (nameEnd != std::string::npos && nameEnd < line.size() &&
+             (line[nameEnd] == '_' || (line[nameEnd] >= 'a' && line[nameEnd] <= 'z'))) {
+        ++nameEnd;
       }
+      const std::size_t indexEnd =
+          nameEnd == std::string::npos ? std::string::npos : line.find(']', nameEnd);
+      if (indexEnd != std::string::npos && nameEnd < line.size() && line[nameEnd] == '[' &&
+          line.find_first_not_of("0123456789", nameEnd + 1) == indexEnd) {
+        line.erase(nameEnd, indexEnd + 1 - nameEnd);
+      }
+      extentLines.push_back(line);
     }
     std::sort(extentLines.begin(), extentLines.end());
     CHECK(extentLines.size() > 0);

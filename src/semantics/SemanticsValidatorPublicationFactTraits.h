@@ -13,6 +13,8 @@
 //                              merge only rebinds semantic node ids)
 //   mergeOrder(entry)          the order the merged set is re-sorted in after an append or prune
 //   HasIdentityKey = true      merge first prunes entries a fresh entry replaces
+//   PrunesAbsent               (only where declared) merge first prunes every entry no fresh entry has,
+//                              replaced or removed by the rewrites that run after the workers
 //   identityKey(entry)         the key that finds the entry a fresh one replaces
 
 #include "SemanticsValidatorSnapshotHelpers.h"
@@ -42,7 +44,9 @@ void mergePublicationFactKind(std::vector<typename Traits::Entry> &merged,
                               std::vector<typename Traits::Entry> fresh) {
   if constexpr (Traits::MergeAppends) {
     bool pruned = false;
-    if constexpr (Traits::HasIdentityKey) {
+    if constexpr (requires { Traits::PrunesAbsent; }) {
+      pruned = pruneEntriesAbsentFromFresh(merged, fresh, &Traits::key);
+    } else if constexpr (Traits::HasIdentityKey) {
       pruned = pruneReplacedEntriesBySnapshotKey(merged, fresh, &Traits::identityKey, &Traits::key);
     }
     if (appendMissingEntriesBySnapshotKey(merged, fresh, &Traits::key) || pruned) {
@@ -56,6 +60,7 @@ struct DirectCallTargetFactTraits {
   using Entry = CollectedDirectCallTargetEntry;
   static constexpr bool MergeAppends = true;
   static constexpr bool HasIdentityKey = true;
+  static constexpr bool PrunesAbsent = true;
   static std::string key(const Entry &entry) {
     return snapshotKey(
         entry.scopePath, entry.callName, entry.sourceLine, entry.sourceColumn, entry.resolvedPath);
@@ -109,6 +114,7 @@ struct BridgePathChoiceFactTraits {
   using Entry = CollectedBridgePathChoiceEntry;
   static constexpr bool MergeAppends = true;
   static constexpr bool HasIdentityKey = false;
+  static constexpr bool PrunesAbsent = true;
   static std::string key(const Entry &entry) {
     return snapshotKey(entry.scopePath,
                        entry.collectionFamily,
@@ -179,6 +185,7 @@ struct BindingFactTraits {
   using Entry = BindingFactSnapshotEntry;
   static constexpr bool MergeAppends = true;
   static constexpr bool HasIdentityKey = false;
+  static constexpr bool PrunesAbsent = true;
   static std::string key(const Entry &entry) {
     return snapshotKey(entry.scopePath,
                        entry.siteKind,
@@ -260,6 +267,7 @@ struct QueryFactTraits {
   using Entry = QueryFactSnapshotEntry;
   static constexpr bool MergeAppends = true;
   static constexpr bool HasIdentityKey = true;
+  static constexpr bool PrunesAbsent = true;
   static std::string key(const Entry &entry) {
     return snapshotKey(
         entry.scopePath, entry.callName, entry.sourceLine, entry.sourceColumn, entry.resolvedPath);

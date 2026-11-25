@@ -2653,6 +2653,7 @@ are left unarchived.
 | TODO-6250 | `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6257 | The refusal of a host call on wasm and the other targets without host calls does not name the host function | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6258 | Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

@@ -153,6 +153,28 @@ bool pruneReplacedEntriesBySnapshotKey(std::vector<Entry> &entries,
   return entries.size() != oldSize;
 }
 
+// Drops the entries whose key no fresh entry has. A worker collects its facts before the pass that rewrites the
+// omitted initializers, so a call the rewrite removed (an empty `block` initializer of a sum default) leaves a fact
+// in the merged set that the final AST no longer supports.
+template <typename Entry, typename SnapshotKeyForEntry>
+bool pruneEntriesAbsentFromFresh(std::vector<Entry> &entries,
+                                 const std::vector<Entry> &freshEntries,
+                                 SnapshotKeyForEntry snapshotKeyForEntry) {
+  std::unordered_set<std::string> freshSnapshotKeys;
+  freshSnapshotKeys.reserve(freshEntries.size());
+  for (const auto &entry : freshEntries) {
+    freshSnapshotKeys.insert(snapshotKeyForEntry(entry));
+  }
+  const auto oldSize = entries.size();
+  entries.erase(std::remove_if(entries.begin(),
+                               entries.end(),
+                               [&](const Entry &entry) {
+                                 return freshSnapshotKeys.count(snapshotKeyForEntry(entry)) == 0;
+                               }),
+                entries.end());
+  return entries.size() != oldSize;
+}
+
 inline std::string snapshotKey(std::string_view first,
                         std::string_view second,
                         int sourceLine,
