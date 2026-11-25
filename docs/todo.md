@@ -761,6 +761,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - or: each stays a clear diagnostic that names the type and the way out, documented in docs/spec/value-lifecycle.md
   - stop_rule: `alloc`/`init`/`drop` of those slots only.
 
+- [~] TODO-6267: `stale semantic-product` lowering messages are not marked internal
+  - owner: ai
+  - status: ready
+  - claimed_by: lowering-worker (worktree agent-a4e5c8a51ee306cfd), 2026-11-25
+  - created_at: 2026-11-25
+  - phase: Diagnostics (left over from TODO-6266)
+  - parallel_track: diagnostics-internal-errors
+  - scope: `primec::markInternalCompilerError` prefixes only messages that contain `missing semantic-product`. The lowerer builds about 25 messages of the same kind that say `stale semantic-product ...` (src/ir_lowerer/IrLowererCallResolution.cpp, IrLowererBindingTypeHelpers.cpp, IrLowererResultHelpers.cpp, IrLowererLowerSumHelpers.cpp and others), and the frontend has more (src/frontend/SemanticProduct.cpp, CompileTimeEvaluation.cpp). They read as a mistake of the program, like the missing ones did. Mark them through the same helper, and update the test assertions that match the old text.
+  - acceptance:
+    - each message with the wording `stale semantic-product` starts with the internal prefix wherever it is reported; a test names one lowering path
+    - full release gate green
+  - stop_rule: the marker and the assertions; the text of the messages after the prefix does not change.
+  - repro: `rg "stale semantic-product" src` (2026-11-25); a lowering of a program with a stale fact prints the bare message.
+
 - [ ] TODO-5987: The lowerer's include-only fragments become components
   - owner: ai
   - status: ready
