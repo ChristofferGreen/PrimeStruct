@@ -427,9 +427,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [ ] TODO-6256: A named key of a menu shortcut reaches AppKit as its name, not as a key
+- [~] TODO-6256: A named key of a menu shortcut reaches AppKit as its name, not as a key
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lowering-worker (worktree agent-a4e5c8a51ee306cfd), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
   - parallel_track: native-ui-shortcuts
