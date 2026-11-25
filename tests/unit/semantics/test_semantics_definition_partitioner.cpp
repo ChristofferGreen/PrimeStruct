@@ -73,10 +73,67 @@ std::string readRepoText(std::filesystem::path relativePath) {
     buffer << file.rdbuf();
     return buffer.str();
   }
-  const std::string message =
-      "failed to read repo file: " + relativePath.string();
+  const std::string message = "failed to read repo file: " + relativePath.string();
   FAIL(message);
   return {};
+}
+
+// The whole semantic product of `source` is the same for each of the worker counts, line for line. The `[index]` of a
+// record is its position in a table ordered by node id, so it is dropped and the lines are sorted.
+void checkWholeProductAcrossWorkerCounts(const std::string &source,
+                                         const std::vector<uint32_t> &workerCounts) {
+  const std::filesystem::path sourcePath = makeTempSemanticSourcePath();
+  {
+    std::ofstream file(sourcePath);
+    REQUIRE(file);
+    file << source;
+  }
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  std::vector<std::string> formattedByWorkerCount(workerCounts.size());
+  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
+    CAPTURE(workerCounts[i]);
+    primec::Options options;
+    options.inputPath = sourcePath.string();
+    options.entryPath = "/main";
+    options.emitKind = "vm";
+    options.defaultEffects = defaults;
+    options.entryDefaultEffects = defaults;
+    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCounts[i];
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+    std::string error;
+    REQUIRE(primec::runCompilePipeline(options, output, errorStage, error, nullptr));
+    CHECK(error.empty());
+    REQUIRE(output.hasSemanticProgram);
+    std::istringstream lines(primec::formatSemanticProgram(output.semanticProgram));
+    std::vector<std::string> productLines;
+    for (std::string line; std::getline(lines, line);) {
+      std::size_t nameEnd = line.find_first_not_of(' ');
+      while (nameEnd != std::string::npos && nameEnd < line.size() &&
+             (line[nameEnd] == '_' || (line[nameEnd] >= 'a' && line[nameEnd] <= 'z'))) {
+        ++nameEnd;
+      }
+      const std::size_t indexEnd =
+          nameEnd == std::string::npos ? std::string::npos : line.find(']', nameEnd);
+      if (indexEnd != std::string::npos && nameEnd < line.size() && line[nameEnd] == '[' &&
+          line.find_first_not_of("0123456789", nameEnd + 1) == indexEnd) {
+        line.erase(nameEnd, indexEnd + 1 - nameEnd);
+      }
+      productLines.push_back(line);
+    }
+    std::sort(productLines.begin(), productLines.end());
+    CHECK(productLines.size() > 0);
+    for (const std::string &line : productLines) {
+      formattedByWorkerCount[i] += line + "\n";
+    }
+  }
+  std::error_code removeError;
+  std::filesystem::remove(sourcePath, removeError);
+  for (std::size_t i = 1; i < formattedByWorkerCount.size(); ++i) {
+    CAPTURE(workerCounts[i]);
+    CHECK(formattedByWorkerCount[i] == formattedByWorkerCount[0]);
+  }
 }
 
 bool validateWithWorkerCount(primec::Semantics &semantics,
@@ -1346,59 +1403,22 @@ main() {
   return(0i32)
 }
 )";
-  const std::filesystem::path sourcePath = makeTempSemanticSourcePath();
-  {
-    std::ofstream file(sourcePath);
-    REQUIRE(file);
-    file << source;
-  }
-  const std::vector<std::string> defaults = {"io_out", "io_err"};
-  std::array<std::string, 3> formattedByWorkerCount;
-  constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
-  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
-    CAPTURE(workerCounts[i]);
-    primec::Options options;
-    options.inputPath = sourcePath.string();
-    options.entryPath = "/main";
-    options.emitKind = "vm";
-    options.defaultEffects = defaults;
-    options.entryDefaultEffects = defaults;
-    options.benchmarkSemanticDefinitionValidationWorkerCount = workerCounts[i];
-    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
-    primec::CompilePipelineOutput output;
-    primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
-    std::string error;
-    REQUIRE(primec::runCompilePipeline(options, output, errorStage, error, nullptr));
-    CHECK(error.empty());
-    REQUIRE(output.hasSemanticProgram);
-    // The whole product, line for line. The `[index]` of a record is its position in a table ordered by node id,
-    // so it is dropped and the lines are sorted.
-    std::istringstream lines(primec::formatSemanticProgram(output.semanticProgram));
-    std::vector<std::string> extentLines;
-    for (std::string line; std::getline(lines, line);) {
-      std::size_t nameEnd = line.find_first_not_of(' ');
-      while (nameEnd != std::string::npos && nameEnd < line.size() &&
-             (line[nameEnd] == '_' || (line[nameEnd] >= 'a' && line[nameEnd] <= 'z'))) {
-        ++nameEnd;
-      }
-      const std::size_t indexEnd =
-          nameEnd == std::string::npos ? std::string::npos : line.find(']', nameEnd);
-      if (indexEnd != std::string::npos && nameEnd < line.size() && line[nameEnd] == '[' &&
-          line.find_first_not_of("0123456789", nameEnd + 1) == indexEnd) {
-        line.erase(nameEnd, indexEnd + 1 - nameEnd);
-      }
-      extentLines.push_back(line);
-    }
-    std::sort(extentLines.begin(), extentLines.end());
-    CHECK(extentLines.size() > 0);
-    for (const std::string &line : extentLines) {
-      formattedByWorkerCount[i] += line + "\n";
-    }
-  }
-  std::error_code removeError;
-  std::filesystem::remove(sourcePath, removeError);
-  CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
-  CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
+  checkWholeProductAcrossWorkerCounts(source, {1u, 2u, 4u});
+}
+
+// The field queries of `Router.call` (`this.routes[index].pattern`) name a receiver the rewrites after the workers
+// change: a worker collects the fact while the receiver is still `at`, and the final tree has `vectorElementRef`.
+// The merge keyed the fact by position and path only, so the worker's receiver text (`/std/http/Route`) survived
+// where the single worker publishes `Reference<Route>`.
+TEST_CASE("the semantic product of the http hello app is equivalent across worker counts 1,2") {
+  checkWholeProductAcrossWorkerCounts(readRepoText("examples/apps/http_hello/main.prime"),
+                                      {1u, 2u});
+}
+
+// The app takes a second compile per worker count, so the count of 4 is a case of its own.
+TEST_CASE("the semantic product of the http hello app is equivalent across worker counts 1,4") {
+  checkWholeProductAcrossWorkerCounts(readRepoText("examples/apps/http_hello/main.prime"),
+                                      {1u, 4u});
 }
 
 // The text stack of doctest's failed-assertion contexts (`tlssPush`) is thread-local state that outlives every

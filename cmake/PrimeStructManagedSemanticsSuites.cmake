@@ -39,6 +39,7 @@ list(APPEND PrimeStructManagedSemanticsSuites
   primestruct.semantics.move
   primestruct.semantics.intra_body_call_diagnostics
   primestruct.semantics.on_error_handler_shape
+  primestruct.semantics.definition_partitioner
   primestruct.semantics.collection_path_predicates
   primestruct.semantics.type_text
   primestruct.semantics.math_names
@@ -400,6 +401,17 @@ addPrimeStructManagedDoctestSuite(
   TIMEOUT 30
   LABEL "parallel-safe"
   TOTAL_CASES 3
+)
+
+# Sharded: the cases that compile a whole app for two worker counts take seconds each, and the suite as one entry
+# did not fit its timeout on a loaded machine.
+addPrimeStructManagedDoctestSuite(
+  "primestruct.semantics.definition_partitioner"
+  TARGET PrimeStruct_semantics_tests
+  TIMEOUT 30
+  LABEL "parallel-safe"
+  TOTAL_CASES 24
+  CASES_PER_SHARD 3
 )
 
 addPrimeStructManagedDoctestSuite(

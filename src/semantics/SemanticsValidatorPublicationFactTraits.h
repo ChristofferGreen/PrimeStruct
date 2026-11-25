@@ -268,9 +268,17 @@ struct QueryFactTraits {
   static constexpr bool MergeAppends = true;
   static constexpr bool HasIdentityKey = true;
   static constexpr bool PrunesAbsent = true;
+  // The key holds the receiver and result types: a worker collects a field query before the rewrites that run
+  // after the workers change its receiver (`at` into `vectorElementRef`), so an entry whose receiver text differs
+  // from the fresh one is a stale entry, not the same fact.
   static std::string key(const Entry &entry) {
-    return snapshotKey(
-        entry.scopePath, entry.callName, entry.sourceLine, entry.sourceColumn, entry.resolvedPath);
+    return snapshotKey(entry.scopePath,
+                       entry.callName,
+                       entry.sourceLine,
+                       entry.sourceColumn,
+                       entry.resolvedPath,
+                       snapshotBindingTypeText(entry.receiverBinding),
+                       entry.typeText + "\x1e" + snapshotBindingTypeText(entry.binding));
   }
   static std::string identityKey(const Entry &entry) {
     return snapshotKey(entry.scopePath, entry.callName, entry.sourceLine, entry.sourceColumn);
