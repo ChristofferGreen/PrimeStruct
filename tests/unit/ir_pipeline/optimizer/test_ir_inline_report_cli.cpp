@@ -174,6 +174,42 @@ main() {
   CHECK(run.out == "0\n1004\n1\n");
 }
 
+// A packed `Result` returns in one slot: a struct value does not fit and keeps the definition inline, with a text that
+// names the value.
+TEST_CASE("inline-report names a packed Result with a struct value as an unsupported result") {
+  const char *text = R"(
+import /std/file/*
+
+[struct]
+Pair() {
+  [i32] left{0i32}
+  [i32] right{0i32}
+}
+
+[return<Result<Pair, FileError>>]
+make_pair([i32] left, [i32] right) {
+  return(Result.ok(Pair{[left] left, [right] right}))
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.error(make_pair(1i32, 2i32)))
+  print_line(Result.error(make_pair(3i32, 4i32)))
+  return(0i32)
+}
+)";
+  const std::filesystem::path path =
+      primec::testing::testScratchPath("inline_report_cli/pair.prime");
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path) << text;
+  const ReportResult report =
+      runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
+  CHECK(report.exitCode == 0);
+  CHECK(report.out.find("/make_pair: unsupported-result: its result `Result<Pair, FileError>` is a "
+                        "packed `Result` whose value is not a scalar or a `File`") !=
+        std::string::npos);
+}
+
 // The target-neutral listing lowers for the scalar ABI, where a sum parameter is not a scalar; primevm prints the
 // same text as primec without `--emit`.
 TEST_CASE("inline-report on the scalar target names the parameter that keeps a definition inline") {

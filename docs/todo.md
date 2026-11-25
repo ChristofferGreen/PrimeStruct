@@ -314,10 +314,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
 
-- [~] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
+- [ ] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
   - owner: ai
   - status: deferred
-  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6262)
   - parallel_track: bytecode-inline-blockers
@@ -327,6 +326,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the inline report of a program with such a function shows `real call`; full release gate green
   - stop_rule: packed `Result` payloads that are not one slot; no change to the scalar and `File` shape.
   - repro: In `hasPackedResultReturn`, return `true` for every `Result` (drop the payload check), build `primec` and run `ctest -R "program_matrix_results|ir_pipeline_conversions_numbers"` (release build, macOS arm64, 2026-11-25).
+  - findings: 2026-11-25, with the on_error real-call fix landed: the failure is exactly the validation error `a called function returns an address of its own frame` in `/make_pair`. The packed `Result<Pair, FileError>` of the inline shape is the address of a payload block of the callee's frame (local `Pair` block plus the status), and the caller reads fields through it. A real call needs the caller to pass a block (as `realCallStructReturnLocal` does for a struct result), the callee's `return(Result.ok(...))` to build the payload in that block and the call site to bind the result local to the block, in at least these paths (read, not tried): the return statement with a packed Result (IrLowererLowerStatementsBindingsContinued.h), `try`/`?` on such a result (IrLowererLowerEmitExprTryHelpersBody.h) and the result-info of a call (IrLowererResultFileLocal.h). That is several lowering paths, so the leaf stays deferred; the report now says what keeps it inline (`unsupported-result`: a packed `Result` whose value is not a scalar or a `File`).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path

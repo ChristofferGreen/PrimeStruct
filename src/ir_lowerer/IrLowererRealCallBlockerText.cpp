@@ -140,6 +140,12 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
            "expression stays inline";
   case AddressAbiBlocker::UnsupportedResult: {
     const std::string result = returnTypeText(def);
+    if (result.rfind("Result<", 0) == 0) {
+      return "its result `" + result +
+             "` is a packed `Result` whose value is not a scalar or a `File`: a real call returns "
+             "one slot (the value or the error code), so a struct, `Buffer`, collection or "
+             "string value stays inline";
+    }
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +
            " is not one a real call returns: a scalar, `void`, `never` and a struct are and, for a "
            "function of a library, a `string`, a `Pointer`, a sum, a packed `Result` and a "
