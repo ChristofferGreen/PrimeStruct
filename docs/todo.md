@@ -124,7 +124,7 @@ of sync with them.
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
-| TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | deferred | bytecode-inline-blockers |
+| TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | ready | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -316,9 +316,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
 
-- [ ] TODO-6262: A packed `Result` returned by a real call of a program's own function is wrong in the caller
+- [~] TODO-6262: A packed `Result` returned by a real call of a program's own function is wrong in the caller
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6255)
   - parallel_track: bytecode-inline-blockers
