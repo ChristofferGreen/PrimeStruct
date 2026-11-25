@@ -393,7 +393,12 @@ bool validateFunction(const IrModule &module,
                                     inst.imm < module.hostImports.size()
                                         ? module.hostImports[static_cast<size_t>(inst.imm)].name
                                         : std::string()) +
-                (wasmText ? "; the string heap (`String`) is not available on wasm" : "") +
+                (wasmText ? "; this string heap function (hashing, float text, whole-file reads "
+                            "and writes, directory "
+                            "listing) is not available on wasm: run the program on the vm, the "
+                            "native backend or "
+                            "`optexe`"
+                          : "") +
                 (wasmText && target == IrValidationTarget::WasmBrowser &&
                          (wasmTextKind == NativeTextHost::Literal ||
                           wasmTextKind == NativeTextHost::Argument)

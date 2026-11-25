@@ -122,6 +122,7 @@ main() {
 TEST_CASE("the memory limit counts what an arena holds and applies again when it ends") {
   program_matrix::ProgramCase program;
   program.name = "string_arenas_limit";
+  program.extraConfigs = {"wasm-wasi"};
   program.source = R"(
 import /std/text/*
 import /std/text/view/*

@@ -54,7 +54,7 @@ TEST_CASE("ir validator wasm targets answer only the string heap statistic and a
     CHECK(error.empty());
     CHECK_FALSE(primec::validateIrModule(moduleCalling("std/text/__pstext_hash"), target, error));
     CHECK_ERROR_CONTAINS(error, "host calls are only supported by the vm target");
-    CHECK_ERROR_CONTAINS(error, "the string heap (`String`) is not available on wasm");
+    CHECK_ERROR_CONTAINS(error, "this string heap function");
     CHECK_FALSE(primec::validateIrModule(moduleCalling("host_add"), target, error));
     CHECK_ERROR_CONTAINS(error, "host calls are only supported by the vm target");
     CHECK(error.find("string heap") == std::string::npos);

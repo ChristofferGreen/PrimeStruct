@@ -105,9 +105,14 @@ the heap free and realloc texts). The regions start with 16 KiB and move to the 
 An IR instruction the Wasm target does not lower is refused before emission, and the error names the opcode and the
 feature that needs it, for example `Wasm IR validation error: invalid IR instruction 2 in /main: unsupported opcode for
 wasm target: LoadStringByteDynamic (reading a byte or the length of a string)`. Today that
-covers the bytes of a run-time `String`, the length of a string and the bytes of a run-time `String`, host
-calls (a module answers only the string heap statistic `__pstext_stat`, which is what `heapLiveBlocks()` reads; any other
-`__pstext_*` function is refused with a note that the string heap is not available on Wasm), tasks, atomics, mutexes and condition variables; the browser profile also refuses console
+covers host calls (a module answers the string heap functions that `String` needs itself: `__pstext_alloc`, `_try_alloc`,
+`_free`, `_capacity`, `_length`, `_usable`, `_move`, `_fill`, `_compare`, `_find`, `_stat`, `_set_limit`, `_arena_begin`
+and `_arena_end`, and on the WASI profile `_literal` and `_argument`; any other `__pstext_*` function (hashing, float
+text, whole-file reads and writes, directory listing) is refused with a note that names Wasm and the way out, the vm,
+the native backend or `optexe`, and a host function of the program has no Wasm import to name it), the graphics stdlib
+(`import /std/gfx/*` is `graphics stdlib runtime substrate unavailable for wasm-wasi target: /std/gfx/*`), tasks, atomics,
+mutexes and condition variables. `u8` values, `convert<u8>` and the byte opcodes run on Wasm (the byte regions of the
+string heap and `ZextU8`). The browser profile also refuses console
 and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
 profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position
 past the end is `string index out of bounds` on stderr and exit code 3, as on the VM.
