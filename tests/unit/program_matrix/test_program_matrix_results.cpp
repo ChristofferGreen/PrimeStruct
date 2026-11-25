@@ -985,4 +985,47 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A `string` parameter whose only use is the path of a file open is the string-table index of the argument; the call
+// is a real call and the open takes the index from the stack.
+TEST_CASE("a file opens through a real call with a string path parameter") {
+  program_matrix::ProgramCase program;
+  program.name = "file_open_string_parameter";
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /on_file_err>]
+write_probe() {
+  [File<Write>] file{File<Write>("program_matrix_string_parameter_probe.txt")?}
+  file.write("AB")?
+  return(Result.ok())
+}
+
+[return<i32> effects(file_read)]
+first_byte([string] path) {
+  [Result<File<Read>, FileError>] opened{File<Read>(path)}
+  if(Result.why(opened) != "") {
+    return(0i32 - 1i32)
+  }
+  return(7i32)
+}
+
+[return<int> effects(file_read, file_write, io_out)]
+main() {
+  write_probe()
+  print_line(first_byte("program_matrix_string_parameter_probe.txt"))
+  print_line(first_byte("program_matrix_string_parameter_missing.txt"))
+  print_line(first_byte("program_matrix_string_parameter_probe.txt"))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "7\n-1\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

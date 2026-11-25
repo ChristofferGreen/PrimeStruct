@@ -563,7 +563,7 @@ bool isAddressAbiParameter(
     }
     if (transform.name == "string" && transform.templateArgs.empty()) {
       return allowStringParams && !paramHasMutTransform(param) &&
-             stringParameterUsedOnlyAsCountOrLiteral(def, param.name);
+             stringParameterUsedOnlyAsIndexReads(def, param.name);
     }
     if (normalizeCollectionBindingTypeName(transform.name) == "File" &&
         transform.templateArgs.size() == 1) {

@@ -6,16 +6,41 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-// Whether every use of the `string` parameter `name` in `def` is `count()` of it or its passing to
-// `__pstext_literal`: the two reads of a runtime string that cost one instruction. Any other use (indexing, a
-// comparison, a print, forwarding it) keeps the definition inline, where the string is a table index the lowering
-// knows statically.
-bool stringParameterUseIsCountOrLiteral(const Expr &expr,
-                                        const std::string &name,
-                                        const Expr *parent) {
+// A call that opens the file at its one path argument: `File<Mode>(path)`, or the `/File/open...` helpers of the
+// file library that forward to it.
+bool isFileOpenWithPath(const Expr &call) {
+  if (call.kind != Expr::Kind::Call || call.isMethodCall || call.args.size() != 1) {
+    return false;
+  }
+  if (call.templateArgs.size() == 1 && (call.name == "File" || call.name == "/std/file/File")) {
+    return true;
+  }
+  static constexpr std::string_view OpenHelpers[] = {"/File/openRead",
+                                                     "/File/openWrite",
+                                                     "/File/openAppend",
+                                                     "/File/open_read",
+                                                     "/File/open_write",
+                                                     "/File/open_append"};
+  for (const std::string_view helper : OpenHelpers) {
+    if (call.name == helper) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Whether every use of the `string` parameter `name` in `expr` reads its runtime index: see
+// stringParameterUsedOnlyAsIndexReads.
+bool stringParameterUseIsIndexRead(const Expr &expr, const std::string &name, const Expr *parent) {
   if (expr.kind == Expr::Kind::Name && expr.name == name) {
-    if (parent == nullptr || parent->kind != Expr::Kind::Call || parent->args.size() != 1 ||
+    if (parent == nullptr || parent->kind != Expr::Kind::Call || parent->args.empty() ||
         &parent->args.front() != &expr) {
+      return false;
+    }
+    if (isFileOpenWithPath(*parent)) {
+      return true;
+    }
+    if (parent->args.size() != 1) {
       return false;
     }
     const size_t slash = parent->name.rfind('/');
@@ -25,12 +50,12 @@ bool stringParameterUseIsCountOrLiteral(const Expr &expr,
     return leaf == "count" || leaf == "__pstext_literal";
   }
   for (const Expr &arg : expr.args) {
-    if (!stringParameterUseIsCountOrLiteral(arg, name, &expr)) {
+    if (!stringParameterUseIsIndexRead(arg, name, &expr)) {
       return false;
     }
   }
   for (const Expr &bodyArg : expr.bodyArguments) {
-    if (!stringParameterUseIsCountOrLiteral(bodyArg, name, &expr)) {
+    if (!stringParameterUseIsIndexRead(bodyArg, name, &expr)) {
       return false;
     }
   }
@@ -39,14 +64,14 @@ bool stringParameterUseIsCountOrLiteral(const Expr &expr,
 
 } // namespace
 
-bool stringParameterUsedOnlyAsCountOrLiteral(const Definition &def, const std::string &name) {
+bool stringParameterUsedOnlyAsIndexReads(const Definition &def, const std::string &name) {
   for (const Expr &stmt : def.statements) {
-    if (!stringParameterUseIsCountOrLiteral(stmt, name, nullptr)) {
+    if (!stringParameterUseIsIndexRead(stmt, name, nullptr)) {
       return false;
     }
   }
   return !def.returnExpr.has_value() ||
-         stringParameterUseIsCountOrLiteral(*def.returnExpr, name, nullptr);
+         stringParameterUseIsIndexRead(*def.returnExpr, name, nullptr);
 }
 
 } // namespace primec::ir_lowerer
