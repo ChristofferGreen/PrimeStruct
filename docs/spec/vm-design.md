@@ -678,14 +678,17 @@
   unless the body moves it on (a spawned call passes it owned the same way).
   Shapes that stay inline for a direct call (a spawned call takes owned sums and builtin maps, above):
   `copy` and `move` parameters of sums, args-pack, collection,
-  `File` and template-typed parameters; the packed `Result` of a program that does not import `/std/result` (its result text is
-  not a scalar type);
+  `File` and template-typed parameters;
   definitions with `require`, `try`/`?` and no `on_error` handler, or a generated tail value; `/std/collections/`
   definitions and methods of their records; lifecycle helpers; and the `call` of a closure with a `[ref]` capture
   (docs/spec/value-lifecycle.md, Borrowing). A definition with an `on_error` handler is a real call: its `?` runs the
   handler in the callee's own frame, destroys the locals of the body and returns the error code, as the expanded body
   does, when its result is a scalar or void (a body that returns a `Result` and tries stays inline; the scalar ABI of
-  the other targets keeps every such definition inline). A `string` parameter is a real call only
+  the other targets keeps every such definition inline). A packed `Result<E>` or `Result<T, E>` result with a
+  scalar or `File` value (a program that does not import `/std/result`) is one slot, the value or the error code in
+  the high half: the body's `return` packs it as an expanded body does and the caller reads its status, `why()` and
+  `?` as it reads an inlined result. A value that is a struct, a collection or a `Buffer`, and a body that returns a
+  `Result` and tries, stay inline. A `string` parameter is a real call only
   on the VM and the optimizing C++
   emitters, which read a module string by a computed index, and only when the body uses it as `count()` or as the
   argument of `__pstext_literal` (`String.append`): the call passes the string's module-table index and the body reads

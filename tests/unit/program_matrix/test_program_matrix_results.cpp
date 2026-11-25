@@ -1107,4 +1107,57 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A packed `Result` (a program that does not import /std/result) is one slot: a function returns it through a real
+// call and the caller reads its status and message and tries it, as it does for an inlined call. A `return` of the
+// body packs the value or the error code as the declared result says.
+TEST_CASE("a packed Result crosses a real call and the caller reads its status, message and try") {
+  program_matrix::ProgramCase program;
+  program.name = "packed_result_real_call";
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+report([FileError] err) {
+  print_line(err.status())
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /report>]
+write_probe() {
+  [File<Write>] file{File<Write>("program_matrix_packed_result_probe.txt")?}
+  file.write("Q")?
+  return(Result.ok())
+}
+
+[return<Result<File<Read>, FileError>> effects(file_read)]
+open_probe([string] path) {
+  return(File<Read>(path))
+}
+
+[return<i32> effects(file_read, io_out) on_error<FileError, /report>]
+first_byte([string] path) {
+  [File<Read>] file{open_probe(path)?}
+  [i32 mut] byte{0i32}
+  file.readByte(byte)?
+  return(byte)
+}
+
+[return<int> effects(file_read, file_write, io_out)]
+main() {
+  write_probe()
+  [Result<File<Read>, FileError>] present{open_probe("program_matrix_packed_result_probe.txt")}
+  [Result<File<Read>, FileError>] missing{open_probe("program_matrix_packed_result_missing.txt")}
+  print_line(Result.error(present))
+  print_line(Result.error(missing))
+  print_line(Result.why(missing))
+  print_line(first_byte("program_matrix_packed_result_probe.txt"))
+  print_line(first_byte("program_matrix_packed_result_missing.txt"))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  // 81 is 'Q'; the missing file's handler prints the status (2) and the function returns it.
+  program.stdoutText = "0\n1\nENOENT\n81\n2\n2\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

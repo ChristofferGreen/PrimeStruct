@@ -112,7 +112,7 @@ main() {
 } // namespace
 
 // The VM has the address ABI: the recursive function and the one with a sum parameter are real calls, the definition
-// with a packed `Result` and the small handler are expanded.
+// that tries and returns a `Result` and the small handler are expanded.
 TEST_CASE(
     "inline-report names real calls and the blocker of each expanded definition on the vm target") {
   const std::string source = writeProgram();
@@ -120,10 +120,8 @@ TEST_CASE(
   CHECK(report.exitCode == 0);
   CHECK(report.out ==
         "inline_report_v1 definitions=4\n"
-        "added=54 with_callees=60 call_sites=1 /check_exists: unsupported-result: its "
-        "result `Result<FileError>` is not one a real call returns: a scalar, `void`, "
-        "`never` and a struct are and, for a function of a library, a `string`, a "
-        "`Pointer`, a sum, a packed `Result` and a `vector<T>`; a `Reference` is not\n"
+        "added=54 with_callees=60 call_sites=1 /check_exists: uses-try: its body uses "
+        "`try`\n"
         "added=18 with_callees=18 call_sites=3 /fib: real call\n"
         "added=8 with_callees=8 call_sites=2 /area: real call\n"
         "added=6 with_callees=6 call_sites=2 /log_file_error: tiny-leaf: its body is "

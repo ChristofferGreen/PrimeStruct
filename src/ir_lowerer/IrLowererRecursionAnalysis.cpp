@@ -628,6 +628,39 @@ bool hasSlotResultReturn(const Definition &def) {
   return false;
 }
 
+// A `Result<E>`, or a `Result<T, E>` whose value is a scalar or a `File`, is one packed slot (the value, or the error
+// code in the high half), which the callee returns and the caller reads as it reads the result of an inlined call. A
+// value that is a struct, a collection or a string stays inline: it does not fit the slot.
+bool hasPackedResultReturn(const Definition &def) {
+  for (const Transform &transform : def.transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(
+            trimTemplateTypeText(transform.templateArgs.front()), base, argText) ||
+        trimTemplateTypeText(base) != "Result") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.empty() || args.size() > 2) {
+      return false;
+    }
+    if (args.size() == 1) {
+      return true;
+    }
+    const std::string value = trimTemplateTypeText(args.front());
+    std::string valueBase;
+    std::string valueArgs;
+    if (splitTemplateTypeName(value, valueBase, valueArgs)) {
+      return trimTemplateTypeText(valueBase) == "File";
+    }
+    return isSupportedScalarTypeName(value);
+  }
+  return false;
+}
+
 // The `return<vector<T>>` transform of `def` when it names a builtin vector the lowerer can copy, else null.
 const Transform *builtinVectorReturnType(const Definition &def,
                                          const std::unordered_set<std::string> &structNames) {
@@ -740,7 +773,8 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     return AddressAbiBlocker::VectorResultNotOwned;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
-      !(context.allowSlotResults && hasSlotResultReturn(def)) && structResultPath.empty() &&
+      !(context.allowSlotResults && hasSlotResultReturn(def)) && !hasPackedResultReturn(def) &&
+      structResultPath.empty() &&
       !(context.allowVectorResults && builtinVectorReturnType(def, structNames) != nullptr) &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;

@@ -124,7 +124,6 @@ of sync with them.
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
-| TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | ready | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -315,21 +314,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `string` result rule of the real-call shape; no new string operations.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
-
-- [~] TODO-6262: A packed `Result` returned by a real call of a program's own function is wrong in the caller
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
-  - created_at: 2026-11-25
-  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6255)
-  - parallel_track: bytecode-inline-blockers
-  - scope: A direct call whose result is a packed `Result<T, E>` (`Result<ImageError>`, `Result<File<Read>, FileError>`) is inline (`unsupported-result`, 63 instructions added in the PNG module) because only a root or an import of a library may return one. Making every call take it (`allowSlotResults` for all definitions in `addressAbiShapeBlocker`) fails 14 CTest entries; `ir lowerer materializes variadic Result packs with indexed why and try access` (tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_results.cpp) returns 15 where it expects 24, so the callee's packed result or the caller's reading of it is wrong when the caller is not a library consumer. Find the difference between the two paths (the library path is exercised by `--emit=lib`), fix it, then lift the refusal for a packed `Result`.
-  - acceptance:
-    - a program-matrix case in which a direct function returns a `Result<i32, FileError>`-shaped value through a real call and the caller reads its status, `why()` and `try` prints what the inlined run prints, on every config the matrix runs
-    - the `unsupported-result` lines of the PNG report naming a `Result` fall from 63 to 0 and the full release gate is green
-  - stop_rule: packed `Result` results of the real-call shape; no change to `string` or `Pointer` results.
-  - repro: in `src/ir_lowerer/IrLowererRecursionAnalysis.cpp` replace `!(context.allowSlotResults && hasSlotResultReturn(def))` by `!hasSlotResultReturn(def)` in `addressAbiShapeBlocker`, build, and run `PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.conversions --source-file=*test_ir_pipeline_conversions_variadic_results.cpp` (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: measured with TODO-6255, see docs/todo_log.md under TODO-5536.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

@@ -428,6 +428,9 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         }
         bodyScopePushed = true;
       };
+      // The body of a function that returns a packed `Result` returns it as an inlined body does: a `return` packs
+      // the value or the error code as the callee's result shape says.
+      const ResultReturnInfo bodyResultInfo{true, returnInfo.resultHasValue};
       const bool bodyEmitted = runLowerStatementsEntryExecutionStep(
           {
               .entryDef = &def,
@@ -436,8 +439,8 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
               .onErrorByDef = input.onErrorByDef,
               .currentOnError = input.currentOnError,
               .currentReturnResult = input.currentReturnResult,
-              .entryHasResultInfo = false,
-              .entryResultInfo = nullptr,
+              .entryHasResultInfo = returnInfo.isResult,
+              .entryResultInfo = returnInfo.isResult ? &bodyResultInfo : nullptr,
               .emitEntryStatement = emitBodyStatement,
               .pushFileScope = pushBodyScope,
               .emitCurrentFileScopeCleanup = input.emitCurrentFileScopeCleanup,
