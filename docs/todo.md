@@ -427,16 +427,15 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: bytecode size and load time only.
   - notes: deferred out of the startup lane on 2026-11-09: PrimeScroll ships the direct native build, which has no bytecode, so this is not on its launch path. It matters for bytecode bundles (`primestruct_app_runtime` with `app.psir`).
 
-- [~] TODO-6256: A named key of a menu shortcut reaches AppKit as its name, not as a key
+- [ ] TODO-6256: A named key of a menu shortcut reaches AppKit as its name, not as a key
   - owner: ai
-  - status: ready
-  - claimed_by: lowering-worker (worktree agent-a4e5c8a51ee306cfd), 2026-11-25
+  - status: deferred
   - created_at: 2026-11-24
   - phase: Native UI and host calls (found while landing TODO-6239 and TODO-6237)
   - parallel_track: native-ui-shortcuts
   - scope: An item added with `"cmd+return"`, `"cmd+left"` or `"f5"` is valid for `primec::ui::parseShortcut`, but `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` gives `NSMenuItem` the key `"return"` / `"left"` / `"f5"` as its `keyEquivalent`, a string of several characters, where AppKit takes one character (`"\r"`, `NSLeftArrowFunctionKey`, `NSF5FunctionKey`). The behavior is unchanged from before the parser was shared, and it was found by reading the code: it is not verified on a Mac, because no window may be opened here. Map each named key of NativeUiShortcut.h to its character in the AppKit backend.
   - acceptance:
-    - a hand check on a Mac (a person) that a menu item with `"cmd+left"` and one with `"f5"` fires its command from the keys; the mapping is a table in the AppKit file with a comment naming each AppKit constant
+    - (the table landed 2026-11-25: `namedKeyEquivalent` in src/ui/appkit/NativeUiAppKit.mm maps each named key to its AppKit character, and the AppKit backend compiles; what is left is the hand check) a hand check on a Mac (a person) that a menu item with `"cmd+left"` and one with `"f5"` fires its command from the keys; the mapping is a table in the AppKit file with a comment naming each AppKit constant
     - the AppKit backend compiles and the headless contract and shortcut suites pass
   - stop_rule: the key equivalent of named keys in the AppKit backend; no change to the parser or to the headless backend.
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).

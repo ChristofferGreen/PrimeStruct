@@ -1953,6 +1953,50 @@ PSController *controller() {
   return instance;
 }
 
+// The key equivalent AppKit takes for a named key of primec::ui::ParsedShortcut::key: one character, never the name.
+// A key of one printable character is its own equivalent and is not looked up here. Returns nil for a name that is not
+// a named key.
+NSString *namedKeyEquivalent(const std::string &name) {
+  struct NamedKey {
+    const char *name;
+    unichar character;
+  };
+  static const NamedKey table[] = {
+      {"return", '\r'},
+      {"tab", '\t'},
+      {"escape", 0x1B},
+      {"space", ' '},
+      {"backspace", NSBackspaceCharacter}, // the Delete key of a Mac keyboard, which deletes backwards
+      {"delete", NSDeleteFunctionKey},     // the forward delete key
+      {"left", NSLeftArrowFunctionKey},
+      {"right", NSRightArrowFunctionKey},
+      {"up", NSUpArrowFunctionKey},
+      {"down", NSDownArrowFunctionKey},
+      {"home", NSHomeFunctionKey},
+      {"end", NSEndFunctionKey},
+      {"pageup", NSPageUpFunctionKey},
+      {"pagedown", NSPageDownFunctionKey},
+      {"f1", NSF1FunctionKey},
+      {"f2", NSF2FunctionKey},
+      {"f3", NSF3FunctionKey},
+      {"f4", NSF4FunctionKey},
+      {"f5", NSF5FunctionKey},
+      {"f6", NSF6FunctionKey},
+      {"f7", NSF7FunctionKey},
+      {"f8", NSF8FunctionKey},
+      {"f9", NSF9FunctionKey},
+      {"f10", NSF10FunctionKey},
+      {"f11", NSF11FunctionKey},
+      {"f12", NSF12FunctionKey},
+  };
+  for (const NamedKey &entry : table) {
+    if (name == entry.name) {
+      return [NSString stringWithCharacters:&entry.character length:1];
+    }
+  }
+  return nil;
+}
+
 // Maps the portable shortcut text ("cmd+shift+s", parsed once for every backend by primec::ui::parseShortcut) to a key
 // equivalent and modifier mask; "cmd" is Command on macOS. Text that is not a shortcut gives an item without one.
 void parseShortcut(const char *shortcut, NSString *__strong *key, NSEventModifierFlags *mask) {
@@ -1974,7 +2018,12 @@ void parseShortcut(const char *shortcut, NSString *__strong *key, NSEventModifie
   if (parsed.control) {
     *mask |= NSEventModifierFlagControl;
   }
-  *key = toNSString(parsed.key.c_str());
+  if (parsed.key.size() == 1) {
+    *key = toNSString(parsed.key.c_str());
+    return;
+  }
+  NSString *named = namedKeyEquivalent(parsed.key);
+  *key = named != nil ? named : @"";
 }
 
 NSMenuItem *addMenuItem(NSMenu *menu, NSString *title, SEL action, id target, NSString *key,
