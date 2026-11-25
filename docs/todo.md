@@ -453,6 +453,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrowed `Vector` record parameters only; no change to owned (`copy`, `move`) or `mut` collection parameters.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
   - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
+  - decision_needed: 2026-11-25 experiment (see docs/todo_log.md, TODO-5536): the collections stay inline by two rules, not one, and lifting both does not reach the acceptance. Options:
+    1. Lift both rules for a borrowed `Vector` record (`isAddressAbiParameter` takes the collections struct, and `CollectionsHelper` in `addressAbiShapeBlocker` no longer refuses a helper that takes the record). Measured: the PNG module goes from 366,129 to 345,909 bytes (-5.5%), `count` becomes a `real call` but still adds 1,989 instructions (51 per site, 39 sites, not root-caused), and `vectorSlotUnsafe` and `vectorElementRef` stay inline for `unsupported-result` (`Pointer<uninitialized<i32>>`, `Reference<i32>`), which needs a result ABI for a pointer or reference to an element. The acceptance (3,000 to under 1,000) is not met; a gate with this change has not been run.
+    2. Keep the record inline and shrink the expansion: lower `count`, `capacity` and the shape check to a field load plus one compare (this leaf's `field_count`/`field_capacity` part is TODO-6254). No ABI change, smaller than option 1 only if the per-site expansion drops below the 51 of a real call.
+    3. Drop the goal for `Vector` records: the lowerer keeps the element metadata of a collection in the locals of the frame that binds it (the comment on `isAddressAbiStruct`), so a callee frame has none; the 5.5% is not worth a second metadata path.
+    Recommendation: option 2 first (TODO-6254), then decide on option 1 only with the call-site cost explained. This is the user's call because it changes where element metadata lives.
 
 - [ ] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
   - owner: ai
