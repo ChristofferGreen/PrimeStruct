@@ -123,10 +123,9 @@ of sync with them.
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6251 | A stdlib `Vector` record parameter keeps the collections helpers inline | deferred | bytecode-inline-blockers |
+| TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
 | TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
-| TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | deferred | bytecode-inline-blockers |
 | TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
@@ -438,26 +437,21 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
   - notes: deferred: small, not on the critical path of an open goal.
 
-- [ ] TODO-6251: A stdlib `Vector` record parameter keeps the collections helpers inline
+- [ ] TODO-6251: A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call
   - owner: ai
   - status: deferred
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
-  - depends_on: TODO-5536
-  - scope: The `/std/collections/vector` helpers of the PNG reader (`count`, `vectorCheckShape`, `vectorElementRef`, `vectorCheckIndex`, `vectorSlotUnsafe`, `vectorBorrowSlot`) take the `Vector` record as a parameter, which the address ABI does not pass (`parameter-type`): six definitions, 63 call sites, 3,000 instructions added. Let a real call take a borrowed (read-only or `Reference`) `Vector` record by its address, as it takes a struct, and keep the helpers that must stay inline for another reason (`field_count`, `field_capacity`) as they are.
+  - scope: Decided 2026-11-25 (the user chose option 2): keep the `Vector` record inline, no ABI change. The accessors landed (the two field reads are 4 instructions a site, down from 13). What is left is the by-value binding of a read-only `[Vector<T>] values` parameter, which an inlined call copies field by field: 45 of the 58 instructions at each of the 39 `count` sites (2,262 instructions in the PNG module; the same copy sits in `vectorCheckShape`, `vectorElementRef`, `vectorCheckIndex`, `vectorSlotUnsafe` and `vectorBorrowSlot`: 3,000 instructions with `count`). Bind a parameter that is not `mut`, `move` or `copy` to the address of an argument that is a local struct or a `Reference`, as the field accessors already read the receiver in place, instead of copying the record into a temporary. A callee that can run code that writes the argument (a `Reference` or `Pointer` parameter, a call through a closure) keeps the copy.
   - acceptance:
-    - the report of the PNG program names those six as `real call`, and the `added` of `parameter-type` lines naming a `Vector` record falls from 3,000 to under 1,000
-    - the module of the PNG program still validates and `primevm` prints the same width, height and pixel count
+    - the `added` of the `parameter-type` lines naming a `Vector` record falls from 3,000 to under 1,000 in `--dump-stage inline-report benchmarks/startup/png.prime`, and the PNG module is smaller
+    - a program-matrix case in which the caller's vector changes through another path while a callee holds it borrowed prints what the copy printed (the case decides whether the alias is sound; if it differs, the leaf stops and says so)
+    - the module of the PNG program still validates and `primevm` prints the same output
     - full release gate green
-  - stop_rule: borrowed `Vector` record parameters only; no change to owned (`copy`, `move`) or `mut` collection parameters.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
-  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
-  - decision_needed: 2026-11-25 experiment (see docs/todo_log.md, TODO-5536): the collections stay inline by two rules, not one, and lifting both does not reach the acceptance. Options:
-    1. Lift both rules for a borrowed `Vector` record (`isAddressAbiParameter` takes the collections struct, and `CollectionsHelper` in `addressAbiShapeBlocker` no longer refuses a helper that takes the record). Measured: the PNG module goes from 366,129 to 345,909 bytes (-5.5%), `count` becomes a `real call` but still adds 1,989 instructions (51 per site, 39 sites, not root-caused), and `vectorSlotUnsafe` and `vectorElementRef` stay inline for `unsupported-result` (`Pointer<uninitialized<i32>>`, `Reference<i32>`), which needs a result ABI for a pointer or reference to an element. The acceptance (3,000 to under 1,000) is not met; a gate with this change has not been run.
-    2. Keep the record inline and shrink the expansion: lower `count`, `capacity` and the shape check to a field load plus one compare (this leaf's `field_count`/`field_capacity` part is TODO-6254). No ABI change, smaller than option 1 only if the per-site expansion drops below the 51 of a real call.
-    3. Drop the goal for `Vector` records: the lowerer keeps the element metadata of a collection in the locals of the frame that binds it (the comment on `isAddressAbiStruct`), so a callee frame has none; the 5.5% is not worth a second metadata path.
-    Recommendation: option 2 first (TODO-6254), then decide on option 1 only with the call-site cost explained. This is the user's call because it changes where element metadata lives.
+  - stop_rule: borrowed collection-record parameters of an inlined call; no change to owned (`copy`, `move`) or `mut` parameters and no change to the address ABI of real calls.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
+  - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
 
 - [ ] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
   - owner: ai
@@ -488,22 +482,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a test that opens a file through a real call with a literal path on the VM and on optexe, and `primevm` prints the same output for the PNG program
     - full release gate green
   - stop_rule: the use rule of a `string` parameter; no new string operations.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
-  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
-
-- [~] TODO-6254: `field_count` and `field_capacity` of the collections records are expanded at every call site
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
-  - parallel_track: bytecode-inline-blockers
-  - scope: The two accessors `/std/collections/vector/Vector/field_count` and `field_capacity` are `collections-helper` definitions, expanded inline by rule: 2 definitions, 52 call sites, 676 instructions added (13 per site, as many as a call). Lower a read of one of these fields of a collection record to the field load directly, or let them be real calls, whichever the report shows smaller.
-  - acceptance:
-    - the report of the PNG program shows the sum of `added` of the `collections-helper` lines falling from 676 to under 250 with the program output unchanged
-    - a program-matrix case that reads `count()` and `capacity()` of a `Vector` on every backend the matrix runs
-    - full release gate green
-  - stop_rule: the two field accessors; no change to other `/std/collections/` helpers.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
   - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
 

@@ -1,6 +1,6 @@
 #include "IrLowererLowerInlineCalls.h"
 #include "primec/ir_lowerer/IrLowererStringPushMarks.h"
-
+#include "IrLowererCollectionRecordShapes.h"
 #include "IrLowererCountAccessClassifiers.h"
 #include "IrLowererLowerSumHelpers.h"
 #include "primec/ir_lowerer/IrLowererFlowHelpers.h"

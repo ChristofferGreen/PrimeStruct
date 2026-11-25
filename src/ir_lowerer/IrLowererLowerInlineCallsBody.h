@@ -187,6 +187,40 @@
         return true;
       }
     }
+    if (callExpr.args.size() == 1 && callExpr.args.front().kind == Expr::Kind::Name) {
+      // `field_count` and `field_capacity` of a `Vector` read one field of the receiver record, which a local
+      // of this frame holds by address: load that field instead of expanding the accessor body.
+      const std::string_view accessorField = vectorFieldAccessorField(callee);
+      const auto receiverIt = callerLocals.find(callExpr.args.front().name);
+      StructSlotLayoutInfo accessorLayout;
+      const size_t ownerEnd = callee.fullPath.find_last_of('/');
+      if (!accessorField.empty() && receiverIt != callerLocals.end() &&
+          (receiverIt->second.kind == LocalInfo::Kind::Reference ||
+           (receiverIt->second.kind == LocalInfo::Kind::Value &&
+            !receiverIt->second.structTypeName.empty())) &&
+          resolveStructSlotLayout(callee.fullPath.substr(0, ownerEnd), accessorLayout)) {
+        int32_t fieldSlot = -1;
+        for (const StructSlotFieldInfo &field : accessorLayout.fields) {
+          if (field.name == accessorField) {
+            fieldSlot = field.slotOffset;
+          }
+        }
+        if (fieldSlot >= 0) {
+          function.instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(receiverIt->second.index)});
+          if (fieldSlot != 0) {
+            function.instructions.push_back(
+                {IrOpcode::PushI64, static_cast<uint64_t>(fieldSlot) * IrSlotBytes});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          if (!requireValue) {
+            function.instructions.push_back({IrOpcode::Pop, 0});
+          }
+          return true;
+        }
+      }
+    }
     if (callExpr.args.size() == 1 &&
         (isInternalSoaMetadataInlineHelper(callee.fullPath, "field_count") ||
          isInternalSoaMetadataInlineHelper(callee.fullPath, "field_capacity") ||

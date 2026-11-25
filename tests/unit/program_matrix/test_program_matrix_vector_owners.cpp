@@ -1746,4 +1746,40 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// `count()` and `capacity()` of a vector read one field of its record, in the frame that owns the vector and in a
+// callee that takes it by value: every config prints the same sizes.
+TEST_CASE("count and capacity of a vector agree in the owner and in a callee") {
+  program_matrix::ProgramCase program;
+  program.name = "vector_count_capacity_fields";
+  program.source = R"(
+import /std/collections/*
+
+[effects(io_out), return<int>]
+report_sizes([vector<i32>] values) {
+  print_line(values.count())
+  print_line(values.capacity())
+  return(values.count() + values.capacity())
+}
+
+[effects(heap_alloc, io_out), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>{}}
+  print_line(values.count())
+  values.push(1i32)
+  values.push(2i32)
+  values.push(3i32)
+  print_line(values.count())
+  print_line(values.capacity())
+  print_line(report_sizes(values))
+  values.pop()
+  print_line(values.count())
+  print_line(values.capacity())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n3\n4\n3\n4\n7\n2\n4\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

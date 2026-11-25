@@ -3,6 +3,7 @@
 #include "primec/ast/Ast.h"
 
 #include <string>
+#include <string_view>
 #include <unordered_set>
 
 namespace primec::ir_lowerer {
@@ -18,5 +19,10 @@ std::string resolveStructTypeName(const std::string &typeName,
 // of that root with scalar parameters and result may be a function of a library.
 bool takesOrReturnsCollectionRecord(const Definition &def,
                                     const std::unordered_set<std::string> &structNames);
+
+// The field a stdlib `Vector` accessor reads: `fieldCount` for its `field_count` and `fieldCapacity` for its
+// `field_capacity` (each of a generated instance as well), empty for any other definition. A call of such an
+// accessor lowers to one load of that field of the receiver.
+std::string_view vectorFieldAccessorField(const Definition &callee);
 
 } // namespace primec::ir_lowerer

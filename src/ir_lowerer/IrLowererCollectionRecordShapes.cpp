@@ -3,6 +3,7 @@
 #include "IrLowererPackedErrorTypes.h"
 #include "IrLowererRecursionAnalysis.h"
 
+#include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -92,6 +93,36 @@ bool takesOrReturnsCollectionRecord(const Definition &def,
     return isCollectionRecordType(text, {}, def.namespacePrefix, structNames);
   }
   return false;
+}
+
+std::string_view vectorFieldAccessorField(const Definition &callee) {
+  if (!callee.parameters.empty()) {
+    return {};
+  }
+  const std::string_view path = callee.fullPath;
+  const size_t leafStart = path.find_last_of('/');
+  if (leafStart == std::string_view::npos || leafStart == 0) {
+    return {};
+  }
+  const std::string_view leaf = path.substr(leafStart + 1);
+  std::string_view field;
+  if (leaf == "field_count") {
+    field = "fieldCount";
+  } else if (leaf == "field_capacity") {
+    field = "fieldCapacity";
+  } else {
+    return {};
+  }
+  std::string_view parent = path.substr(0, leafStart);
+  const size_t generated = parent.find("__");
+  if (generated != std::string_view::npos) {
+    parent = parent.substr(0, generated);
+  }
+  // A local, not a function-level static: a static string would be destroyed after the compile arena that
+  // allocated it was reset.
+  const std::string vectorType = collection_paths::memberPath(collection_paths::kVectorFolder,
+                                                              collection_paths::kVectorTypeName);
+  return parent == vectorType ? field : std::string_view{};
 }
 
 } // namespace primec::ir_lowerer
