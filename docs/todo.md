@@ -124,7 +124,7 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
-| TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | deferred | bytecode-inline-blockers |
+| TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | ready | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -312,9 +312,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the command in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
-- [ ] TODO-6260: A definition with an `on_error` handler keeps its call sites inline
+- [~] TODO-6260: A definition with an `on_error` handler keeps its call sites inline
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; the next blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
