@@ -140,7 +140,7 @@ of sync with them.
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
-| TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | deferred | diagnostics-internal-errors |
+| TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | ready | diagnostics-internal-errors |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
@@ -631,9 +631,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - a diagnostics test where the root and the sink differ names each correctly
   - stop_rule: message of that diagnostic only.
 
-- [ ] TODO-6084: Internal lowering errors (`missing semantic-product ...`) say so
+- [~] TODO-6084: Internal lowering errors (`missing semantic-product ...`) say so
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
   - deferred_reason: owner picks the wording
   - created_at: 2026-11-19
   - phase: Correctness audit 2026-10 (split from TODO-5520)
