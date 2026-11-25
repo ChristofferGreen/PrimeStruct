@@ -329,9 +329,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: In `hasPackedResultReturn`, return `true` for every `Result` (drop the payload check), build `primec` and run `ctest -R "program_matrix_results|ir_pipeline_conversions_numbers"` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
-- [ ] TODO-6264: A body that returns a `Result` and tries stays inline
+- [~] TODO-6264: A body that returns a `Result` and tries stays inline
   - owner: ai
   - status: deferred
+  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6260)
   - parallel_track: bytecode-inline-blockers
