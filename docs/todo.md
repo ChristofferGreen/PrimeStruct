@@ -113,7 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | deferred | effects-inference |
-| TODO-6259 | Two definition-validation workers publish a different `receiver_binding_type_text` for the field queries of `/std/http/Router/call` | deferred | semantic-workers-stale-facts |
+| TODO-6259 | Two definition-validation workers publish a different `receiver_binding_type_text` for the field queries of `/std/http/Router/call` | ready | semantic-workers-stale-facts |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -297,9 +297,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6259: Two definition-validation workers publish a different `receiver_binding_type_text` for the field queries of `/std/http/Router/call`
+- [~] TODO-6259: Two definition-validation workers publish a different `receiver_binding_type_text` for the field queries of `/std/http/Router/call`
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
   - created_at: 2026-11-25
   - phase: Frontend and diagnostics (semantic validation workers; found with TODO-6258)
   - parallel_track: semantic-workers-stale-facts
