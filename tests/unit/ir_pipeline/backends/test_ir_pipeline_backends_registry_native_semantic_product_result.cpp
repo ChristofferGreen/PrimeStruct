@@ -247,8 +247,8 @@ TEST_CASE("ir preparation rejects stale semantic-product lowerer preflight runti
   CHECK_FALSE(primec::prepareIrModule(
       program, &semanticProgram, options, primec::IrValidationTarget::WasmBrowser, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(failure.message ==
-        "stale semantic-product lowerer preflight runtime reflection path id");
+  CHECK(failure.message == "internal compiler error (please report it): stale semantic-product "
+                           "lowerer preflight runtime reflection path id");
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
@@ -547,8 +547,8 @@ TEST_CASE("semantic-product contract rejects stale local-auto binding types") {
   CHECK_FALSE(primec::prepareIrModule(
       program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(failure.message ==
-        "stale semantic-product local-auto binding type metadata: /main -> local selected");
+  CHECK(failure.message == "internal compiler error (please report it): stale semantic-product "
+                           "local-auto binding type metadata: /main -> local selected");
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
@@ -1105,8 +1105,8 @@ main() {
                                       staleIr,
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(staleFailure.message ==
-        "stale semantic-product pick target binding type: /main -> choice");
+  CHECK(staleFailure.message == "internal compiler error (please report it): stale "
+                                "semantic-product pick target binding type: /main -> choice");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 
   primec::Program missingMetadataProgram = program;
@@ -1160,7 +1160,8 @@ main() {
                                       staleVariantFailure));
   CHECK(staleVariantFailure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(staleVariantFailure.message ==
-        "stale semantic-product sum variant metadata for sum slot layout: /Choice -> right");
+        "internal compiler error (please report it): stale semantic-product sum variant metadata "
+        "for sum slot layout: /Choice -> right");
   CHECK(staleVariantFailure.diagnosticInfo.message == staleVariantFailure.message);
 
   primec::Program missingVariantProgram = program;
@@ -1268,7 +1269,8 @@ main() {
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(staleFailure.message ==
-        "stale semantic-product sum variant metadata for sum slot layout: /Choice -> right");
+        "internal compiler error (please report it): stale semantic-product sum variant metadata "
+        "for sum slot layout: /Choice -> right");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
@@ -1343,7 +1345,8 @@ main() {
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(staleFailure.message ==
-        "stale semantic-product sum variant metadata for sum slot layout: /Choice -> right");
+        "internal compiler error (please report it): stale semantic-product sum variant metadata "
+        "for sum slot layout: /Choice -> right");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 

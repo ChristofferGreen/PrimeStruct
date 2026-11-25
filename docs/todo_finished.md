@@ -2665,6 +2665,7 @@ are left unarchived.
 | TODO-6264 | A body that returns a `Result` and tries stays inline | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6265 | The inline report of the scalar target names an `on_error` definition `not-reserved` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6266 | Missing semantic-product messages outside `IrLowerer::lower` are not marked internal | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6267 | `stale semantic-product` lowering messages are not marked internal | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

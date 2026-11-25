@@ -111,8 +111,8 @@ main() {
                                       staleIr,
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(staleFailure.message ==
-        "stale semantic-product pick target query type: /main -> makeChoice");
+  CHECK(staleFailure.message == "internal compiler error (please report it): stale "
+                                "semantic-product pick target query type: /main -> makeChoice");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 
   primec::Program incompleteProgram = program;
@@ -246,8 +246,8 @@ main() {
                                       staleIr,
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(staleFailure.message ==
-        "stale semantic-product pick target query type: /main -> makeChoice");
+  CHECK(staleFailure.message == "internal compiler error (please report it): stale "
+                                "semantic-product pick target query type: /main -> makeChoice");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 
   primec::Program incompleteProgram = program;

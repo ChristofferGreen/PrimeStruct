@@ -446,7 +446,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product try context return kind") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product try context return kind: try");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product try context "
+                 "return kind: try");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -567,7 +568,9 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product try on_error fact: try");
+  CHECK(
+      error ==
+      "internal compiler error (please report it): stale semantic-product try on_error fact: try");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.tryFacts.back().onErrorHandlerPath = "/handler";
@@ -577,7 +580,9 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product try on_error fact: try");
+  CHECK(
+      error ==
+      "internal compiler error (please report it): stale semantic-product try on_error fact: try");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -861,7 +866,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product on_error fact: /main");
+  CHECK(error ==
+        "internal compiler error (please report it): stale semantic-product on_error fact: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -975,7 +981,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") 
   semanticProgram.onErrorFacts.back().returnResultValueTypeId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product on_error result metadata: /main");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product on_error "
+                 "result metadata: /main");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.onErrorFacts.back().returnResultValueType = "i32";
@@ -985,7 +992,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") 
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product on_error result metadata: /main");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product on_error "
+                 "result metadata: /main");
   CHECK(diagnosticInfo.message == error);
 }
 

@@ -1137,7 +1137,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "stale semantic-product query fact: plus");
+  CHECK(error ==
+        "internal compiler error (please report it): stale semantic-product query fact: plus");
   CHECK(diagnosticInfo.message == error);
 }
 

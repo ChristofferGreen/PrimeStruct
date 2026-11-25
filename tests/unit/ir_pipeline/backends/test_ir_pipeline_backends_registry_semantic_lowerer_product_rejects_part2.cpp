@@ -856,7 +856,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "stale semantic-product binding type metadata: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product binding type "
+                 "metadata: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.bindingFacts.back().bindingTypeTextId =
@@ -867,8 +868,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product binding reference root metadata: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product binding "
+                 "reference root metadata: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.bindingFacts.back().referenceRoot = "";
@@ -907,8 +908,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product local-auto binding type metadata: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product local-auto "
+                 "binding type metadata: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().bindingTypeTextId =
@@ -945,8 +946,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product local-auto direct-call fact: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product local-auto "
+                 "direct-call fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
@@ -965,8 +966,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product local-auto method-call fact: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product local-auto "
+                 "method-call fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
@@ -990,8 +991,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product local-auto direct-call return-kind fact: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product local-auto "
+                 "direct-call return-kind fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
@@ -1007,8 +1008,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "stale semantic-product local-auto method-call return-kind fact: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): stale semantic-product local-auto "
+                 "method-call return-kind fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 }
 
