@@ -397,9 +397,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: stale arena text on the arm64 native backend only.
 
-- [ ] TODO-6118: Native arena regions larger than the standard one are never unmapped
+- [~] TODO-6118: Native arena regions larger than the standard one are never unmapped
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: lowering-worker (worktree agent-a4e5c8a51ee306cfd), 2026-11-25
   - created_at: 2026-11-20
   - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
   - parallel_track: native-arena-large-regions
