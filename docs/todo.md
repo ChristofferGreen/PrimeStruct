@@ -124,9 +124,9 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
-| TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | deferred | bytecode-inline-blockers |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | deferred | bytecode-inline-blockers |
 | TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
+| TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -312,6 +312,21 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the command in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
+- [ ] TODO-6260: A definition with an `on_error` handler keeps its call sites inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Native UI (docs/NativeUiPlan.md; the next blocker the inline report names for the PNG reader, TODO-5536)
+  - parallel_track: bytecode-inline-blockers
+  - scope: `/std/image/ppmReadByteStatus` (`[effects(file_read), return<int> on_error<FileError, ignoreFileError>]`) takes a `File<Read>` since TODO-6252 and is now refused for `on-error-handler`: 627 instructions added over 19 call sites in the PNG module (`write_probe`-style helpers with an `on_error` handler are inline for the same reason). Let a real call run the handler of its own definition: the `?` of the body jumps to the handler in the callee's frame, as it does in an inlined body.
+  - acceptance:
+    - the report of the PNG program shows `ppmReadByteStatus` as `real call` and the `on-error-handler` lines falling from 627 to under 100 added
+    - a program-matrix case in which a callee with an `on_error` handler fails on the VM and on optexe and the handler's output and the exit code match the inlined run
+    - `primevm` prints the same output for the PNG program; full release gate green
+  - stop_rule: the `on_error` rule of the real-call shape (`OnErrorHandler` in `addressAbiShapeBlocker`); no change to what a handler may do.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: measured with TODO-6252, see docs/todo_log.md under TODO-5536.
+
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai
   - status: deferred
@@ -452,22 +467,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrowed collection-record parameters of an inlined call; no change to owned (`copy`, `move`) or `mut` parameters and no change to the address ABI of real calls.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
   - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
-
-- [~] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
-  - parallel_track: bytecode-inline-blockers
-  - scope: The reader helpers `ppmReadByteStatus`, `pngReadU32Be`, `pngReadIhdr`, `pngAppendBytes`, `pngValidateSignature` and `pngReadChunkType` take a `File<Read>` and stay inline (`parameter-type`): six definitions, 38 call sites, 1,758 instructions added. Let a real call pass a `File` handle (one slot, a scalar value at run time) by `Reference` or by value.
-  - acceptance:
-    - the report of the PNG program names those six as `real call`, and the `added` of `parameter-type` lines naming `File` falls from 1,758 to under 500
-    - the file handle is closed once on every exit (a test with an early return), and `primevm` prints the same output for the PNG program
-    - full release gate green
-  - stop_rule: the `File` parameter shape; no change to what a file operation does.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
-  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
 
 - [ ] TODO-6253: A `string` parameter used beyond `count()` keeps the PNG file readers inline
   - owner: ai

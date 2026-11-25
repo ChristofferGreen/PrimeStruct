@@ -935,4 +935,54 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A `File` parameter is one slot, the handle. The callee reads through it and returns early on the end of the file;
+// only the scope that opened the file closes it, so the caller's own `close` still succeeds after the calls.
+TEST_CASE(
+    "a borrowed file handle passes to a callee that returns early and the caller closes it once") {
+  program_matrix::ProgramCase program;
+  program.name = "file_parameter_early_return";
+  program.source = R"(
+import /std/file/*
+
+[effects(io_out)]
+on_file_err([FileError] err) {
+  print_line(err.status())
+}
+
+[return<Result<FileError>> effects(file_write, io_out) on_error<FileError, /on_file_err>]
+write_probe() {
+  [File<Write>] file{File<Write>("program_matrix_file_parameter_probe.txt")?}
+  file.write("AB")?
+  return(Result.ok())
+}
+
+[return<i32> effects(file_read)]
+read_or_fail([File<Read>] file, [i32 mut] value) {
+  [Result<FileError>] status{file.readByte(value)}
+  if(Result.why(status) != "") {
+    return(1i32)
+  }
+  return(0i32)
+}
+
+[return<int> effects(file_read, file_write, io_out) on_error<FileError, /on_file_err>]
+main() {
+  write_probe()
+  [File<Read>] file{File<Read>("program_matrix_file_parameter_probe.txt")?}
+  [i32 mut] byte{0i32}
+  print_line(read_or_fail(file, byte))
+  print_line(byte)
+  print_line(read_or_fail(file, byte))
+  print_line(byte)
+  print_line(read_or_fail(file, byte))
+  file.close()?
+  print_line(7i32)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "0\n65\n0\n66\n1\n7\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

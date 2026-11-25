@@ -6,6 +6,7 @@
 #include "IrLowererScalarCallBlocker.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
+#include "primec/ir_lowerer/IrLowererBindingTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/ir_lowerer/IrLowererSetupTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
@@ -563,6 +564,12 @@ bool isAddressAbiParameter(
     if (transform.name == "string" && transform.templateArgs.empty()) {
       return allowStringParams && !paramHasMutTransform(param) &&
              stringParameterUsedOnlyAsCountOrLiteral(def, param.name);
+    }
+    if (normalizeCollectionBindingTypeName(transform.name) == "File" &&
+        transform.templateArgs.size() == 1) {
+      // A borrowed file handle is one slot, a scalar at run time; the body reads and writes through it and the
+      // scope that opened the file closes it.
+      return true;
     }
     std::string target = transform.name;
     if (transform.name == "Pointer" || transform.name == "Reference") {
