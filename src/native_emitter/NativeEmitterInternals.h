@@ -367,6 +367,14 @@ class Arm64Emitter {
   void setArenas(bool arenas) {
     arenas_ = arenas;
   }
+  // A threaded module that has a `SharedString`: its arenas only count (NativeEmitterInternalsArm64Arena.h).
+  void setSharedText(bool sharedText) {
+    sharedText_ = sharedText;
+  }
+  bool arenaCountOnly() const {
+    return threaded_ && sharedText_;
+  }
+  void emitArenaStateAddress();
   void emitArenaBegin();
   void emitArenaEnd();
   void emitArenaRuntime();
@@ -869,6 +877,7 @@ class Arm64Emitter {
   std::vector<TaskSpawnCall> taskSpawnCalls_;
   std::vector<size_t> taskWaitCalls_;
   bool threaded_ = false;
+  bool sharedText_ = false;
   bool textStats_ = false;
   bool arenas_ = false;
   // The BL sites of the arena routines (begin, end and a text block's allocation), patched by emitArenaRuntime.

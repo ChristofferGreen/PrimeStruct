@@ -291,4 +291,61 @@ TEST_CASE("native arenas return a region larger than the standard one to the sys
 #endif
 }
 
+TEST_CASE("a module with tasks gives the main task and a task thread arenas of their own") {
+  program_matrix::ProgramCase program;
+  program.name = "string_arenas_threads";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+import /std/sync/*
+
+[return<i32> effects(heap_alloc)]
+churn([i32] count) {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32}, i < count, i++) {
+    [String] s{stringFromI32(i)}
+    total = total + s.count()
+  }
+  return(total)
+}
+
+[return<i32> effects(heap_alloc)]
+arena_task([i32] count) {
+  [StringArena] arena{beginStringArena()}
+  [i32] total{churn(count)}
+  if(stringArenaBytes() > 0u64 && stringArenaDepth() == 1i32) {
+    return(total)
+  }
+  return(0i32)
+}
+
+[return<void> effects(heap_alloc)]
+idle_task() {
+  [String] s{stringFromI32(7i32)}
+}
+
+[return<int> effects(heap_alloc, io_out, task)]
+main() {
+  [Task<i32>] first{[spawn] arena_task(600i32)}
+  print_line(wait(first))
+  [u64] inUse{stringHeapBytesInUse()}
+  [Task<void>] idle{[spawn] idle_task()}
+  if(true) {
+    [StringArena] arena{beginStringArena()}
+    print_line(churn(500i32))
+    print_line(stringArenaDepth())
+    print_line(stringArenaBytes() > 0u64)
+  }
+  wait(idle)
+  print_line(stringArenaDepth())
+  print_line(stringArenaBytes())
+  print_line(stringHeapBytesInUse() == inUse)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1690\n1390\n1\n1\n0\n0\n1\n";
+  runStringProgram(program);
+}
+
 TEST_SUITE_END();

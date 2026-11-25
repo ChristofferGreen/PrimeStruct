@@ -274,8 +274,11 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   reuses, so text used after its arena ended meets the heap's message for a free block ("invalid heap free address: the
   block is already free", exit code 3) while its region is unused, and the text of the next arena once it is reused. A
   region larger than the standard one is unmapped when its arena ends (a loop of arenas with large text runs in
-  bounded memory), so text of such a block used afterwards is a fault of the system (SIGSEGV), not a silent read. A module with tasks keeps its text blocks in the pool, and its
-  `beginStringArena` and end only count (as the VM's shared heaps do).
+  bounded memory), so text of such a block used afterwards is a fault of the system (SIGSEGV), not a silent read. A module with tasks gives every thread arenas of its own (the innermost arena and the free
+  regions are in the thread's allocator state, as each VM task thread has a text heap of its own; a thread's free
+  regions stay with its state for the next thread that takes it). A block freed on another thread than the one whose
+  arena holds it is ignored, as the arena's end gives it back. A threaded module that also has a `SharedString` keeps
+  its text blocks in the pool, and its `beginStringArena` and end only count (as the VM's shared heaps do).
 - `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
   program); `+` and the comparisons are the operators described under the text view below.
 - Not yet: `+=` (the language has no token), the `Result`-returning `tryReserve` and per-thread heaps. A `String` is never borrowed implicitly where a view is expected: write `s.view()`, so every borrow is visible.

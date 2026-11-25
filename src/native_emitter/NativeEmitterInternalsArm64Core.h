@@ -71,9 +71,9 @@ inline void Arm64Emitter::emitTextAlloc(bool faultOnLimit) {
   emitAddRegImm(1, 12, static_cast<uint16_t>(IrSlotBytes - 1));
   emit(0xD344FC21u); // LSR x1, x1, #4: the slots that hold the block size
   emitMovImm64(2, HeapHeaderMagicBytes);
-  if (arenas_ && !threaded_) {
+  if (arenas_ && !arenaCountOnly()) {
     // While a string arena is open the block comes from its region (a null innermost arena means none is open).
-    emitHeapStateAddress();
+    emitArenaStateAddress();
     emit(encodeLdrRegBase(3, 9, static_cast<uint16_t>(arm64_text::ArenaCurrentOffset)));
     const size_t jumpPool = currentWordIndex();
     emit(encodeCbz(3, 0));

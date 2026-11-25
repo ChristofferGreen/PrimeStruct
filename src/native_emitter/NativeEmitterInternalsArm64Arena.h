@@ -15,14 +15,30 @@
 // so a loop of arenas with large text runs in bounded memory; text of such a block used after its arena ended is a
 // fault of the system (SIGSEGV), not a silent read.
 //
-// A threaded module's arenas only count (the VM's `disableArenas` does the same for a heap the threads share): the
-// state is the program's, not a thread's, so its text blocks stay in the pool.
+// A threaded module gives every thread arenas of its own, as the VM gives every task thread a text heap of its own:
+// the innermost arena and the list of free regions live in the allocator state of the running thread (the same
+// offsets in every state, found through the lookup the pool uses), and the counters stay the program's, changed with
+// atomic adds. A thread's free regions stay with its state when the thread ends, so the next thread that takes the
+// state reuses them. A block of an arena has its own header magic, so a thread that frees one (a `String` that went to
+// another thread) ignores it, as the owner's arena end gives it back. A threaded module that also has a
+// `SharedString` (its owner count is shared between threads and the last owner may be on another thread than the
+// arena that holds the text) keeps its arenas counting only (`arenaCountOnly`): its text blocks stay in the pool.
 //
 // The three routines are emitted once after the functions and called with BL from the template code. They use x0-x11
 // and x16 and leave everything else alone; the allocation reads x12 (the text size) as the caller keeps it.
 
-inline void Arm64Emitter::emitArenaBegin() {
+// x9 = the arena state of the running thread: the data segment's state, or in a threaded module the thread's own
+// (clobbers x11 as well, every other register survives).
+inline void Arm64Emitter::emitArenaStateAddress() {
   if (threaded_) {
+    emitHeapResolveState();
+  } else {
+    emitHeapStateAddress();
+  }
+}
+
+inline void Arm64Emitter::emitArenaBegin() {
+  if (arenaCountOnly()) {
     if (textStats_) {
       emitHeapStateAddress();
       emitAddRegImm(2, 9, static_cast<uint16_t>(arm64_text::ArenaDepthOffset));
@@ -36,7 +52,7 @@ inline void Arm64Emitter::emitArenaBegin() {
 }
 
 inline void Arm64Emitter::emitArenaEnd() {
-  if (threaded_) {
+  if (arenaCountOnly()) {
     if (textStats_) {
       emitHeapStateAddress();
       emitAddRegImm(2, 9, static_cast<uint16_t>(arm64_text::ArenaDepthOffset));
@@ -54,6 +70,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
   if (arenaCalls_.empty()) {
     return;
   }
+  const size_t firstStateCall = heapCurStateCalls_.size();
   const auto here = [&]() { return currentWordIndex(); };
   const auto branch = [&](CondCode cond) {
     const size_t at = here();
@@ -104,9 +121,27 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovImm64(16, SysMmap);
     emit(encodeSvc());
   };
-  // `counter` (a state offset) changes by the value of `delta`: plain loads and stores, as the arenas are never
-  // entered by two threads.
-  const auto addToCounter = [&](uint64_t counter, uint8_t delta, uint8_t scratch, bool subtract) {
+  // `counter` (a state offset of the program's counters) changes by the value of `delta`: plain loads and stores in a
+  // module without threads; in a threaded module an atomic add on the data segment's counter (x9 is the thread's own
+  // state there), through `address` and `discard`.
+  const auto addToCounter = [&](uint64_t counter,
+                                uint8_t delta,
+                                uint8_t scratch,
+                                bool subtract,
+                                uint8_t address,
+                                uint8_t discard) {
+    if (threaded_) {
+      emitHeapStateAddress(address);
+      emitAddRegImm(address, address, static_cast<uint16_t>(counter));
+      if (subtract) {
+        emitMovImm64(discard, 0);
+        emitSubReg(discard, discard, delta);
+        emit(arm64_atomics::ldaddal(discard, discard, address));
+      } else {
+        emit(arm64_atomics::ldaddal(delta, discard, address));
+      }
+      return;
+    }
     load(scratch, 9, counter);
     if (subtract) {
       emitSubReg(scratch, scratch, delta);
@@ -124,7 +159,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
   // ---- begin: a region (a free one, or a new mapping) that becomes the innermost arena's record ----
   if (usesRoutine[static_cast<size_t>(ArenaRoutine::Begin)]) {
     entries[static_cast<size_t>(ArenaRoutine::Begin)] = here();
-    emitHeapStateAddress();
+    emitArenaStateAddress();
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     const size_t noFreeRegion = cbz(0);
     load(1, 0, NextOffset);
@@ -138,7 +173,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovImm64(1, 0);
     bindJump(gotRegion);
     // x0 = the region, x1 = whether it was used before.
-    emitHeapStateAddress();
+    emitArenaStateAddress();
     load(2, 9, arm64_text::ArenaCurrentOffset);
     store(2, 0, ParentOffset);
     emitMovImm64(3, 0);
@@ -155,7 +190,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
     store(0, 9, arm64_text::ArenaCurrentOffset);
     if (textStats_) {
       emitMovImm64(1, 1);
-      addToCounter(arm64_text::ArenaDepthOffset, 1, 2, false);
+      addToCounter(arm64_text::ArenaDepthOffset, 1, 2, false, 2, 3);
     }
     emit(encodeRet());
     bind(mapFailed, CondCode::Hs);
@@ -165,7 +200,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
   // ---- end: every block of the innermost arena becomes free, its standard regions go on the free list, larger ones are unmapped ----
   if (usesRoutine[static_cast<size_t>(ArenaRoutine::End)]) {
     entries[static_cast<size_t>(ArenaRoutine::End)] = here();
-    emitHeapStateAddress();
+    emitArenaStateAddress();
     load(1, 9, arm64_text::ArenaCurrentOffset);
     const size_t isOpen = cbnz(1);
     emitFaultMessage("string arena ended without one being open\n");
@@ -229,12 +264,12 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovReg(2, 7);
     emit(arm64_heap::cbnz(2, static_cast<int32_t>(regionLoop) - static_cast<int32_t>(here())));
     if (textStats_) {
-      addToCounter(arm64_text::HeldOffset, 4, 0, true);
-      addToCounter(arm64_text::ArenaBytesOffset, 4, 0, true);
-      addToCounter(arm64_text::LargeBlocksOffset, 5, 0, true);
-      addToCounter(arm64_text::LargeBytesOffset, 6, 0, true);
+      addToCounter(arm64_text::HeldOffset, 4, 0, true, 7, 8);
+      addToCounter(arm64_text::ArenaBytesOffset, 4, 0, true, 7, 8);
+      addToCounter(arm64_text::LargeBlocksOffset, 5, 0, true, 7, 8);
+      addToCounter(arm64_text::LargeBytesOffset, 6, 0, true, 7, 8);
       emitMovImm64(1, 1);
-      addToCounter(arm64_text::ArenaDepthOffset, 1, 0, true);
+      addToCounter(arm64_text::ArenaDepthOffset, 1, 0, true, 7, 8);
     }
     emit(encodeRet());
   }
@@ -242,10 +277,10 @@ inline void Arm64Emitter::emitArenaRuntime() {
   // ---- alloc: x1 text slots (at least 1) -> x0 = the block's address, or 0; x12 = the text size ----
   if (usesRoutine[static_cast<size_t>(ArenaRoutine::Alloc)]) {
     entries[static_cast<size_t>(ArenaRoutine::Alloc)] = here();
-    emitMovReg(11, 1);
-    emitHeapStateAddress();
+    emitArenaStateAddress();
+    emitMovReg(8, 1); // the slots, kept in x8 across the system call
     load(4, 9, arm64_text::ArenaCurrentOffset);
-    emit(arm64_heap::lslImm(3, 11, 4));
+    emit(arm64_heap::lslImm(3, 8, 4));
     emitAddRegImm(3, 3, static_cast<uint16_t>(IrSlotBytes)); // the block's bytes, header included
     load(5, 4, BumpOffset);
     load(6, 4, EndOffset);
@@ -254,10 +289,10 @@ inline void Arm64Emitter::emitArenaRuntime() {
     const size_t fits = branch(CondCode::Ls);
     // The newest region is full: a free standard region, or a new mapping (as large as the block needs).
     emitAddRegImm(10, 3, static_cast<uint16_t>(HeaderBytes));
-    emitMovImm64(8, RegionBytes);
-    emitCompareReg(10, 8);
+    emitMovImm64(6, RegionBytes);
+    emitCompareReg(10, 6);
     const size_t oversize = branch(CondCode::Hi);
-    emitMovReg(10, 8);
+    emitMovReg(10, 6);
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     const size_t noFreeRegion = cbz(0);
     load(1, 0, NextOffset);
@@ -271,9 +306,9 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovImm64(1, 0);
     bindJump(gotRegion);
     // x0 = the region, x10 = its size, x1 = whether it was used before: the arena moves on to it.
-    emitHeapStateAddress();
+    emitArenaStateAddress();
     load(4, 9, arm64_text::ArenaCurrentOffset);
-    emit(arm64_heap::lslImm(3, 11, 4));
+    emit(arm64_heap::lslImm(3, 8, 4));
     emitAddRegImm(3, 3, static_cast<uint16_t>(IrSlotBytes));
     load(5, 4, NewestOffset);
     load(6, 4, BumpOffset);
@@ -298,15 +333,15 @@ inline void Arm64Emitter::emitArenaRuntime() {
     load(6, 4, NewestOffset);
     load(6, 6, DirtyOffset);
     const size_t clean = cbz(6);
-    emitMovReg(8, 0);
-    emitMovReg(6, 11);
+    emitMovReg(7, 0);
+    emitMovReg(6, 8);
     const size_t zeroLoop = here();
-    emit(arm64_heap::stpZeroPostIndex16(8));
+    emit(arm64_heap::stpZeroPostIndex16(7));
     emitSubRegImm(6, 6, 1);
     emit(arm64_heap::cbnz(6, static_cast<int32_t>(zeroLoop) - static_cast<int32_t>(here())));
     bindCbz(clean, 6);
     if (textStats_) {
-      addToCounter(arm64_text::ArenaBytesOffset, 12, 1, false);
+      addToCounter(arm64_text::ArenaBytesOffset, 12, 1, false, 1, 3);
     }
     emit(encodeRet());
     bind(mapFailed, CondCode::Hs);
@@ -314,6 +349,10 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emit(encodeRet());
   }
 
+  for (size_t call = firstStateCall; call < heapCurStateCalls_.size(); ++call) {
+    const size_t site = heapCurStateCalls_[call];
+    patchWord(site, encodeBl(static_cast<int32_t>(heapCurState_) - static_cast<int32_t>(site)));
+  }
   for (const auto &[site, routine] : arenaCalls_) {
     patchWord(site,
               encodeBl(static_cast<int32_t>(entries[static_cast<size_t>(routine)]) -

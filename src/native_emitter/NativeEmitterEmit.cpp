@@ -214,6 +214,13 @@ bool buildNativeImage(const IrModule &module,
       }
     }
   }
+  // A `SharedString` (a function of /std/text/shared) keeps the arenas of a threaded module counting only.
+  for (const IrFunction &fn : module.functions) {
+    if (fn.name.rfind("/std/text/shared/", 0) == 0) {
+      emitter.setSharedText(true);
+      break;
+    }
+  }
   // A module that reads the string heap's statistics or sets its limit makes the text blocks count themselves.
   for (const IrHostImport &import : module.hostImports) {
     const NativeTextHost kind = nativeTextHost(import.name);

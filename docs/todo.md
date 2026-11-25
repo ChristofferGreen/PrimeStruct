@@ -118,7 +118,6 @@ of sync with them.
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
-| TODO-6119 | A native module with tasks keeps arena text in the pool | ready | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
@@ -167,7 +166,7 @@ of sync with them.
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6119
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test) (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
@@ -394,22 +393,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decided option, with a native matrix case that uses text after its arena ended and the expected fault
     - full release gate green
   - stop_rule: stale arena text on the arm64 native backend only.
-
-- [~] TODO-6119: A native module with tasks keeps arena text in the pool
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-25
-  - created_at: 2026-11-20
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
-  - parallel_track: native-arena-threads
-  - scope: The native arena state is the program's (one innermost arena and one list of free regions in the data segment), so a module with `TaskSpawn` cannot let a thread bump from it: its `beginStringArena` and end only change the depth that `stringArenaDepth()` reads, and its text blocks come from the pool and are freed one by one. The VM gives each task thread a text heap of its own with its own arenas (it only disables them for a heap that threads share). Repro: spawn a task, open a `StringArena` on the main task, make 500 strings: `stringArenaBytes()` stays 0 on native and is not 0 on the VM.
-  - implementation_notes: the fix is a per-thread arena stack in the thread's allocator state (NativeEmitterInternalsArm64ThreadHeap.h), found through the same lookup the pool uses.
-  - options (recorded 2026-11-25 by lowering-worker, not started: it is a multi-part emitter change that needs its own gate-sized slice): (a) move `ArenaDepthOffset`, `ArenaBytesOffset`, `ArenaCurrentOffset` and `ArenaFreeRegionsOffset` (NativeEmitterInternalsArm64Encodings.h) into the per-thread allocator state, make `emitHeapStateAddress()` in the arena routines (NativeEmitterInternalsArm64Arena.h) resolve the calling thread's state through the pool's lookup, drop the `threaded_` early returns of `emitArenaBegin`/`emitArenaEnd`, and give a thread's open regions and free list back when the thread ends (munmap, as the arena end now does for large regions); the arena routines use x9 as the state pointer, so the lookup has to leave x9 and x0-x11 as they are; (b) leave arenas counting-only for threaded modules and document the difference from the VM (strings-and-views.md) as the decision. (a) matches the VM; (b) is free. A text block made on one thread and freed on another (a `SharedString`, a task result) must not point into a region of an arena that ended on the first thread: the VM guards this with the `disableArenas` rule for shared heaps, and (a) needs the same guard or the arena-sent check of docs/spec/stdlib-reference.md (`A String made while a StringArena is open cannot be sent`).
-  - findings: 2026-11-25, read with TODO-6263, not started: option (a) is sound in outline but not one slice. The arena routines (NativeEmitterInternalsArm64Arena.h, 322 lines) take x9 from `emitHeapStateAddress()` (an adrp/add of the data segment, NativeEmitterInternalsArm64Heap.h), so every use of the four state offsets must instead resolve the calling thread's state through the pool's lookup without touching x0-x11, which is a change to every arena routine and to the thread-start and thread-end code (ThreadHeap.h). The guard is the open design question and needs a decision before code: a text block carries no owner today, so a `free` on another thread cannot tell a pool block from a block inside a region of the first thread's arena (which `emitArenaEnd` unmaps), and a block that outlives its arena on its own thread is already the documented SIGSEGV. Options for the guard: 1. a one-bit owner tag in the text block header set when the block comes from an arena, checked by the free path (a free of a tagged block is a no-op, a read after the arena ended stays the documented fault), which costs a header bit and a branch in `free` for every program; 2. arenas stay counting-only as soon as the module has a `SharedString` or a task result of type `String` (the VM's `disableArenas` rule), decided at compile time, which is free but makes the arena of the threaded module depend on the program's other types; 3. option (b) of the options above. Recommendation: option 2 with (a) for the modules that pass it, since the matrix cases only need the arena of a task thread that shares no text.
-  - acceptance:
-    - the arena matrix cases run on a program that also spawns a task, with the same output on the VM, optexe and native
-    - full release gate green
-  - stop_rule: arenas of threaded native modules only.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
