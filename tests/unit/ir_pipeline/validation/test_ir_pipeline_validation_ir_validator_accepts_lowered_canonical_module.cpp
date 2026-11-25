@@ -99,7 +99,8 @@ main() {
   // lowering now rejects the call earlier, at the generic
   // missing-semantic-id gate, before ever reaching the
   // reflection-query-elimination check this test's name describes.
-  CHECK(error == "missing semantic-product direct-call semantic id: /main -> /meta/type_name");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product direct-call "
+                 "semantic id: /main -> /meta/type_name");
 }
 
 TEST_CASE("ir lowerer reflection queries leave no runtime call state") {

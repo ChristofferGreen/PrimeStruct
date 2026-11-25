@@ -501,8 +501,8 @@ TEST_CASE("semantic-product contract rejects missing local-auto facts across ent
     CHECK_FALSE(primec::prepareIrModule(
         mutatedProgram, &mutatedSemanticProduct, options, validationTarget, ir, failure));
     CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
-    CHECK(failure.message ==
-          "missing semantic-product local-auto fact: /main -> local selected");
+    CHECK(failure.message == "internal compiler error (please report it): missing semantic-product "
+                             "local-auto fact: /main -> local selected");
     CHECK(failure.diagnosticInfo.message == failure.message);
   }
 }
@@ -655,8 +655,8 @@ TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects s
                                       staleIr,
                                       staleFailure));
   CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(staleFailure.message ==
-        "missing semantic-product direct-call target: /main -> helper");
+  CHECK(staleFailure.message == "internal compiler error (please report it): missing "
+                                "semantic-product direct-call target: /main -> helper");
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
@@ -1130,7 +1130,8 @@ main() {
                                       missingMetadataFailure));
   CHECK(missingMetadataFailure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(missingMetadataFailure.message ==
-        "missing semantic-product sum metadata for pick target: /main -> choice");
+        "internal compiler error (please report it): missing semantic-product sum metadata for "
+        "pick target: /main -> choice");
   CHECK(missingMetadataFailure.diagnosticInfo.message == missingMetadataFailure.message);
 
   auto rewriteChoiceRightVariantTag =
@@ -1200,7 +1201,8 @@ main() {
                                       missingVariantFailure));
   CHECK(missingVariantFailure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(missingVariantFailure.message ==
-        "missing semantic-product sum variant metadata for sum slot layout: /Choice -> right");
+        "internal compiler error (please report it): missing semantic-product sum variant metadata "
+        "for sum slot layout: /Choice -> right");
   CHECK(missingVariantFailure.diagnosticInfo.message == missingVariantFailure.message);
 }
 

@@ -212,7 +212,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product try operand resolved path id: try");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product try operand "
+                 "resolved path id: try");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -555,7 +556,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product try on_error handler path id: try");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product try "
+                 "on_error handler path id: try");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.tryFacts.back().onErrorHandlerPathId =
@@ -676,7 +678,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error handler path id"
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product on_error handler path id: /main");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product on_error "
+                 "handler path id: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -756,7 +759,9 @@ TEST_CASE("ir lowerer rejects missing semantic-product on_error facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product on_error fact: /main");
+  CHECK(
+      error ==
+      "internal compiler error (please report it): missing semantic-product on_error fact: /main");
   CHECK(diagnosticInfo.message == error);
 }
 

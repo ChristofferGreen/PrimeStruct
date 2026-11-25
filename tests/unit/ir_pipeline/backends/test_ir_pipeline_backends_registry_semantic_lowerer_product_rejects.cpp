@@ -531,7 +531,8 @@ TEST_CASE("ir lowerer production entry rejects missing semantic-product direct-c
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product direct-call "
+                 "target: /main -> callee");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -939,7 +940,8 @@ TEST_CASE("ir lowerer production entry rejects missing semantic-product method-c
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product method-call target: /main -> count");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product method-call "
+                 "target: /main -> count");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -983,7 +985,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product bridge-path choice: /main -> count");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product bridge-path "
+                 "choice: /main -> count");
   CHECK(diagnosticInfo.message == error);
 }
 

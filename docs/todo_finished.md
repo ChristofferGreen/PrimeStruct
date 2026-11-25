@@ -2506,6 +2506,7 @@ are left unarchived.
 | TODO-6079 | One demangle helper; lowering messages show the user's spelling of generic names | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6080 | A diagnostic column and snippet are those of the source the user wrote, not the text-filtered form | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6083 | The arity and shape of an `on_error` handler are checked in semantics | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6084 | Internal lowering errors (`missing semantic-product ...`) say so | [2026-11.md](todo_archive/2026-11.md) | 2026-11-25 |
 | TODO-6086 | Native coverage kept after the Apple shard cleanup | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6087 | A block-form call of a user function does not break a later call of the same function | [2026-11.md](todo_archive/2026-11.md) | 2026-11-19 |
 | TODO-6088 | A bare statement call of a user function named `vector` or `map` runs the user function | [2026-11.md](todo_archive/2026-11.md) | - |

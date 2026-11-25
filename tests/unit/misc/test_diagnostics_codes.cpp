@@ -188,4 +188,19 @@ TEST_CASE("a lowering error spells the template instances of the program as writ
         "cannot push to /std/collections/vector/Vector__t77");
 }
 
+TEST_CASE("a missing semantic-product fact is reported as an internal compiler error") {
+  const std::string marked = primec::ir_lowerer::markInternalLoweringError(
+      "missing semantic-product callable summary: /main");
+  CHECK(marked == "internal compiler error (please report it): missing semantic-product callable "
+                  "summary: /main");
+  // marking twice changes nothing
+  CHECK(primec::ir_lowerer::markInternalLoweringError(marked) == marked);
+}
+
+TEST_CASE("a message about the program is not marked as an internal compiler error") {
+  CHECK(primec::ir_lowerer::markInternalLoweringError("unknown call target: /missing") ==
+        "unknown call target: /missing");
+  CHECK(primec::ir_lowerer::markInternalLoweringError("") == "");
+}
+
 TEST_SUITE_END();

@@ -264,7 +264,8 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
   CHECK_FALSE(primec::prepareIrModule(
       program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
-  CHECK(failure.message == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(failure.message == "internal compiler error (please report it): missing semantic-product "
+                           "local-auto fact: /main -> local selected");
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
@@ -284,7 +285,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product callable "
+                 "summary: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -402,7 +404,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product entry parameter facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product entry parameter fact: /main");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product entry "
+                 "parameter fact: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -443,7 +446,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product return facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product return fact: /main");
+  CHECK(error ==
+        "internal compiler error (please report it): missing semantic-product return fact: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -499,7 +503,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable result metadata"
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable result metadata: /main");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product callable "
+                 "result metadata: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -593,7 +598,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id"
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary path id");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product callable "
+                 "summary path id");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -639,7 +645,8 @@ TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id"
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary path id");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product callable "
+                 "summary path id");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -694,7 +701,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product return binding types") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product return binding type: /main");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product return "
+                 "binding type: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -798,7 +806,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product return definition path id
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product return definition path id");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product return "
+                 "definition path id");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -1038,7 +1047,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") 
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product query resolved path id: lookup");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product query "
+                 "resolved path id: lookup");
   CHECK(diagnosticInfo.message == error);
 }
 

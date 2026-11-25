@@ -160,7 +160,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "fact: /main -> parameter value");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -200,7 +201,8 @@ TEST_CASE("ir lowerer rejects semantic-product binding facts missing resolved pa
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product binding resolved path id: /main -> parameter value");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "resolved path id: /main -> parameter value");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -253,7 +255,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product collection specialization
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product collection specialization: /main -> local values");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product collection "
+                 "specialization: /main -> local values");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -306,7 +309,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product array extent facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product array extent fact: /main -> local values");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product array "
+                 "extent fact: /main -> local values");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -533,7 +537,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product binding fact: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -562,7 +567,9 @@ TEST_CASE("ir lowerer rejects missing semantic-product type metadata for struct 
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product type metadata: /Point");
+  CHECK(
+      error ==
+      "internal compiler error (please report it): missing semantic-product type metadata: /Point");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -611,7 +618,8 @@ TEST_CASE("ir lowerer rejects missing semantic-product struct field metadata") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product struct field metadata: /Point/x");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product struct "
+                 "field metadata: /Point/x");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -648,7 +656,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product struct provenance") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product struct provenance: /Ghost");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product struct "
+                 "provenance: /Ghost");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -777,7 +786,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   std::string error;
   primec::DiagnosticSinkReport diagnosticInfo;
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "fact: /main -> parameter value");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
@@ -793,7 +803,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "fact: /main -> parameter value");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
@@ -836,7 +847,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product binding type id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "type id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.bindingFacts.back().bindingTypeTextId =
@@ -866,7 +878,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product binding resolved path id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product binding "
+                 "resolved path id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.bindingFacts.back().resolvedPathId =
@@ -885,7 +898,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product local-auto binding type id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product local-auto "
+                 "binding type id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().bindingTypeTextId =
@@ -904,7 +918,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product local-auto initializer path id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product local-auto "
+                 "initializer path id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerResolvedPathId = primec::InvalidSymbolId;
@@ -921,8 +936,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "missing semantic-product local-auto direct-call path id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product local-auto "
+                 "direct-call path id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
@@ -941,8 +956,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "missing semantic-product local-auto method-call path id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product local-auto "
+                 "method-call path id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
@@ -965,8 +980,8 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error ==
-        "missing semantic-product local-auto direct-call return-kind id: /main -> local selected");
+  CHECK(error == "internal compiler error (please report it): missing semantic-product local-auto "
+                 "direct-call return-kind id: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.localAutoFacts.back().initializerDirectCallReturnKind = "i64";

@@ -576,6 +576,11 @@ A generated name does not reach a message: a definition the compiler made for a 
 (`Result<i32, Oops>`, `Vector<i32>`). `primec/support/DiagnosticNames.h` does the rewrite from the template and the
 arguments that the instance's `Definition` records (`instanceOfTemplate`, `instanceTemplateArgs`).
 
+A message that reports a violated compiler invariant, not a mistake in the program (`missing semantic-product ...`: a
+fact the semantic pass should have published), starts with `internal compiler error (please report it): `.
+`ir_lowerer::markInternalLoweringError` adds the prefix once, where `IrLowerer::lower` finishes a failed lowering, so
+the many sites that build the text keep the bare message.
+
 ### Diagnostics & Tooling Roadmap
 - **Phase 0 (now):** standardize diagnostic records (`severity`, `code`, `message`, `notes`, source span), include
   canonical call paths, and ensure CLI output is deterministic. Establish a stable JSON diagnostic export

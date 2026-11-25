@@ -142,7 +142,8 @@ bool IrLowerer::lower(const Program &program,
         if (const std::optional<DiagnosticSpan> span = errorLocator.spanOf(error)) {
           diagnosticSink.capturePrimarySpanIfUnset(*span);
         }
-        error = ir_lowerer::userFacingLoweringError(error, program);
+        error = ir_lowerer::markInternalLoweringError(
+            ir_lowerer::userFacingLoweringError(error, program));
         diagnosticSink.setSummary(error);
       }
     }
