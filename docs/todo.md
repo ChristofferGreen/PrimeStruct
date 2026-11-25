@@ -314,9 +314,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
 
-- [ ] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
+- [~] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
   - owner: ai
   - status: deferred
+  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6262)
   - parallel_track: bytecode-inline-blockers
