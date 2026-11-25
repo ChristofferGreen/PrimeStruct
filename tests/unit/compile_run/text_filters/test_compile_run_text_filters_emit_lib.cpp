@@ -287,8 +287,8 @@ TEST_CASE("emit-lib names the result shape a refused public function has") {
        "[public return<Reference<i32>>]\nview([Reference<i32>] value) {\n  return(value)\n}\n",
        "public function /view cannot be compiled into a library: its result `Reference<i32>` is "
        "not "
-       "one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer`, a struct "
-       "and, for a function of a library, a sum, a packed `Result` and a `vector<T>` are; a "
+       "one a real call returns: a scalar, `void`, `never` and a struct are and, for a function "
+       "of a library, a `string`, a `Pointer`, a sum, a packed `Result` and a `vector<T>`; a "
        "`Reference` is not"},
       {"vector",
        "import /std/collections/vector\n\n[public effects(heap_alloc) return<vector<i32>>]\nmake() "

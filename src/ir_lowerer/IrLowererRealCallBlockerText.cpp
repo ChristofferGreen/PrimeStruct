@@ -145,9 +145,9 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
   case AddressAbiBlocker::UnsupportedResult: {
     const std::string result = returnTypeText(def);
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +
-           " is not one a real call returns: a scalar, `void`, `never`, a `string`, a `Pointer`, a "
-           "struct and, for a function of a library, a sum, a packed `Result` and a `vector<T>` "
-           "are; a `Reference` is not";
+           " is not one a real call returns: a scalar, `void`, `never` and a struct are and, for a "
+           "function of a library, a `string`, a `Pointer`, a sum, a packed `Result` and a "
+           "`vector<T>`; a `Reference` is not";
   }
   case AddressAbiBlocker::UsesTry:
     return "its body uses `try`";

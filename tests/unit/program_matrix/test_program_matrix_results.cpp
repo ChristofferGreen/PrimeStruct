@@ -985,6 +985,41 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A function that returns a stdlib error struct, and `why()` of it that returns a string, are real calls: the struct
+// comes back through a block of the caller and the string as its table index.
+TEST_CASE("a stdlib error struct and its message cross a real call") {
+  program_matrix::ProgramCase program;
+  program.name = "error_struct_result_real_call";
+  program.source = R"(
+import /std/image/*
+
+[return<ImageError> effects(none)]
+pick_error([i32] which) {
+  if(which == 0i32) {
+    return(ImageError.read_unsupported())
+  }
+  if(which == 1i32) {
+    return(ImageError.write_unsupported())
+  }
+  return(ImageError.invalid_operation())
+}
+
+[return<int> effects(io_out)]
+main() {
+  [ImageError] first{pick_error(0i32)}
+  print_line(first.why())
+  print_line(pick_error(1i32).why())
+  print_line(pick_error(2i32).why())
+  print_line(Result.why(pick_error(2i32).status()))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "image_read_unsupported\nimage_write_unsupported\nimage_invalid_"
+                       "operation\nimage_invalid_operation\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 // A `string` parameter whose only use is the path of a file open is the string-table index of the argument; the call
 // is a real call and the open takes the index from the stack.
 TEST_CASE("a file opens through a real call with a string path parameter") {

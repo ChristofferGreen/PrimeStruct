@@ -97,10 +97,11 @@ struct RealCallShapeContext {
   // value is made, copied or destroyed; one reached again from inside its own expansion (a `Function` whose closure
   // holds a `Function`) is lowered as a function instead, since an expansion into itself never ends.
   bool allowLifecycleHelpers = false;
-  // A `string`, `Pointer<T>` or builtin packed `Result<T, E>` result, one slot returned as a scalar is, and a stdlib
-  // error struct (`ContainerError`, `ImageError`, `GfxError`) returned in a block of the caller like any struct: only for
-  // the functions of a library (a root it writes and a function it declares to a consumer). A program's own call
-  // whose result is a string stays inline, since a string a call returns cannot be indexed on every target.
+  // A `string`, `Pointer<T>` or builtin packed `Result<T, E>` result, one slot returned as a scalar is: only for the
+  // functions of a library (a root it writes and a function it declares to a consumer). A program's own call whose
+  // result is a string stays inline, since a string a call returns cannot be indexed on every target, and one whose
+  // result is a packed `Result` stays inline too. A stdlib error struct (`ContainerError`, `ImageError`, `GfxError`)
+  // is returned in a block of the caller like any struct, and every call takes it.
   bool allowSlotResults = false;
   // A sum parameter (borrowed, `mut` or by `Reference` or `Pointer`) is refused, as the eligibility pass refuses it
   // since it leaves sums out of its struct names: a library root and a function a library declares must agree with

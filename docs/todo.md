@@ -124,8 +124,9 @@ of sync with them.
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
-| TODO-6255 | A stdlib error struct result keeps its constructors inline | deferred | bytecode-inline-blockers |
 | TODO-6260 | A definition with an `on_error` handler keeps its call sites inline | deferred | bytecode-inline-blockers |
+| TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
+| TODO-6262 | A packed `Result` returned by a real call of a program's own function is wrong in the caller | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -326,6 +327,40 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: measured with TODO-6252, see docs/todo_log.md under TODO-5536.
 
+- [ ] TODO-6261: A `string` result of a program's own function keeps its call sites inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6255, the blocker the inline report names for `/std/image/ImageError/why`)
+  - parallel_track: bytecode-inline-blockers
+  - scope: A function whose result is a `string` (the message of an error struct, `why()`) is refused for `unsupported-result` unless it is a root or an import of a library: 33 instructions added in the PNG module, and the same in every program that reads an error message. The body lowering and the call site already return a string as one slot, a table index; what the rule protects is that a string a call returns is a runtime index, and indexing one (`why()[0]`) is `LoadStringByteDynamic`, VM-only, so a program that compiled on optexe or native because the call was inlined (a static string) would stop compiling there. This needs a language decision, which is the user's.
+  - decision_needed: how a string result may be used after a real call. Options:
+    1. Allow `string` results of real calls everywhere and let a use that needs a static string (indexing; `count()` is fine) on a target without the dynamic op be an error that names the call ("cannot index the string result of /name: the call is not inlined"). Smallest change; a program that indexed an inlined result breaks on optexe and native.
+    2. Allow it when every call site of the function uses the result only as an argument that takes a runtime index (`print_line`, `count()`, a file open, another real call), judged per function from its call sites; otherwise keep it inline. No program breaks; the rule reads the call sites, as the string parameter rule reads the uses.
+    3. Keep the rule and add the dynamic string-byte op to optexe and native (the `String` of those targets is a leaf of the string lane), then lift the refusal.
+    Recommendation: option 2. It saves the 33 instructions without a new failure and without a new op; option 3 is the right long-term fix and makes option 2's check unnecessary.
+  - acceptance:
+    - the decision is recorded here and in docs/spec/value-lifecycle.md or docs/spec/vm-design.md as the rule that holds
+    - the report of the PNG program shows `ImageError/why` as `real call`, or the decision names why it stays inline
+    - full release gate green
+  - stop_rule: the `string` result rule of the real-call shape; no new string operations.
+  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: needs the user's decision (see decision_needed).
+
+- [ ] TODO-6262: A packed `Result` returned by a real call of a program's own function is wrong in the caller
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6255)
+  - parallel_track: bytecode-inline-blockers
+  - scope: A direct call whose result is a packed `Result<T, E>` (`Result<ImageError>`, `Result<File<Read>, FileError>`) is inline (`unsupported-result`, 63 instructions added in the PNG module) because only a root or an import of a library may return one. Making every call take it (`allowSlotResults` for all definitions in `addressAbiShapeBlocker`) fails 14 CTest entries; `ir lowerer materializes variadic Result packs with indexed why and try access` (tests/unit/ir_pipeline/conversions/test_ir_pipeline_conversions_variadic_results.cpp) returns 15 where it expects 24, so the callee's packed result or the caller's reading of it is wrong when the caller is not a library consumer. Find the difference between the two paths (the library path is exercised by `--emit=lib`), fix it, then lift the refusal for a packed `Result`.
+  - acceptance:
+    - a program-matrix case in which a direct function returns a `Result<i32, FileError>`-shaped value through a real call and the caller reads its status, `why()` and `try` prints what the inlined run prints, on every config the matrix runs
+    - the `unsupported-result` lines of the PNG report naming a `Result` fall from 63 to 0 and the full release gate is green
+  - stop_rule: packed `Result` results of the real-call shape; no change to `string` or `Pointer` results.
+  - repro: in `src/ir_lowerer/IrLowererRecursionAnalysis.cpp` replace `!(context.allowSlotResults && hasSlotResultReturn(def))` by `!hasSlotResultReturn(def)` in `addressAbiShapeBlocker`, build, and run `PrimeStruct_backend_ir_tests --test-suite=primestruct.ir.pipeline.conversions --source-file=*test_ir_pipeline_conversions_variadic_results.cpp` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: measured with TODO-6255, see docs/todo_log.md under TODO-5536.
+
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai
   - status: deferred
@@ -466,23 +501,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: borrowed collection-record parameters of an inlined call; no change to owned (`copy`, `move`) or `mut` parameters and no change to the address ABI of real calls.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
   - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
-
-- [~] TODO-6255: A stdlib error struct result keeps its constructors inline
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
-  - parallel_track: bytecode-inline-blockers
-  - scope: `/std/image/ImageError/invalid_operation`, `read_unsupported` and their `/ImageError` aliases, `why` and others (9 definitions, 11 call sites, 189 instructions added) return the stdlib error struct by value or a `string`, which a real call does not return (`unsupported-result`). Let a direct call return a stdlib error struct through the block of the caller, as `--emit=lib` does for a library function.
-  - acceptance:
-    - the report of the PNG program shows the `unsupported-result` lines as `real call` or gone, and their `added` falling from 189 to under 60
-    - a test of a program that returns `ImageError` from a function and prints `why()` on the VM and on optexe
-    - full release gate green
-  - stop_rule: results that are a stdlib error struct; no change to the error structs themselves.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
-  - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
-
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

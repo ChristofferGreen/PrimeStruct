@@ -731,8 +731,7 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     }
   }
   // A `never` result (panic) is a void call: the callee ends the program with a trap.
-  const std::string structResultPath =
-      realCallStructReturnPath(def, structNames, byPath, context.allowSlotResults);
+  const std::string structResultPath = realCallStructReturnPath(def, structNames, byPath, true);
   if (!context.allowCollections &&
       structResultPath.rfind(collection_helpers::kCanonicalCollectionsRoot, 0) == 0 &&
       !isPackedErrorStructTypeName(structResultPath)) {
