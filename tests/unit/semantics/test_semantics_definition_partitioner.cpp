@@ -1329,4 +1329,32 @@ main() {
   CHECK(singleWorker.returnFactCount > 0);
 }
 
+// The text stack of doctest's failed-assertion contexts (`tlssPush`) is thread-local state that outlives every
+// TEST_CASE, while the test binary resets the compile arena at the end of each one. When it was allocated from the
+// arena, the second of two cases that each logged a context freed the first one's reset memory and the binary
+// crashed (the cases below run in order; the audit build with the arena poisoned reports the read).
+TEST_CASE("the doctest context text stack is not arena memory, first case") {
+  std::ostream *stream = doctest::detail::tlssPush();
+  *stream << "first";
+  CHECK(doctest::detail::tlssPop() == "first");
+}
+
+TEST_CASE("the doctest context text stack is not arena memory, second case") {
+  // Overwrite the arena the previous case used, so a stale buffer of that case would not look intact.
+  std::vector<std::string> scribbles;
+  for (int index = 0; index < 400; ++index) {
+    scribbles.emplace_back(4000, static_cast<char>(0xFF));
+  }
+  std::vector<std::string> texts;
+  for (int depth = 0; depth < 40; ++depth) {
+    std::ostream *stream = doctest::detail::tlssPush();
+    *stream << std::string(300, 'x') << depth;
+    texts.push_back(std::to_string(depth));
+  }
+  for (int depth = 39; depth >= 0; --depth) {
+    const doctest::String text = doctest::detail::tlssPop();
+    CHECK(std::string(text.c_str()) == std::string(300, 'x') + texts[static_cast<size_t>(depth)]);
+  }
+}
+
 TEST_SUITE_END();

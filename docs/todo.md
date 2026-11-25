@@ -114,7 +114,6 @@ of sync with them.
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | deferred | effects-inference |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
-| TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | ready | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -182,7 +181,7 @@ of sync with them.
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
-- Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6205 (the semantics test binary crashes after an effect diagnostic of a field initializer), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
+- Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6084, TODO-6085, TODO-6203 (stale facts with more than one validation worker), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
@@ -313,21 +312,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the facts of the worker merge; no change to single-worker validation.
   - repro: the first program in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
-
-- [~] TODO-6205: The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
-  - created_at: 2026-11-23
-  - phase: Frontend and diagnostics (test harness; found with the brace constructors of field initializers)
-  - parallel_track: semantics-test-arena
-  - scope: While the brace constructor of a field's default initializer was validated under the struct's own effects, `[vector<Item> mut] items{vector<Item>{}}` in a struct was `/std/collections/vector/vector requires heap_alloc effect in /Bag`, and `PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots` ended with `test case CRASHED: SIGSEGV` in the test case after the first one that reported it (two consecutive cases that each validate the same failing program; either case alone does not crash, and a failed CHECK alone does not either). The validation now runs under `everyEffectName()`, so the diagnostic no longer occurs and the crash was not root-caused: something an effect diagnostic of a call inside a struct body leaves behind is read after the test binary resets its compile arena at the end of the TEST_CASE. Repro: in `checkBindingForm` (src/semantics/SemanticsValidatorBindingFormRules.cpp) replace `everyEffectName()` by `currentValidationState_.context.activeEffects` and run the suite.
-  - acceptance:
-    - the cause is found with a backtrace (scripts/collect_backtrace.sh) and fixed, or shown to need the reverted line only; a test that validates two failing programs of that shape in consecutive cases
-    - full release gate green
-  - stop_rule: the crash of the test binary; `primec` itself reports the diagnostic and exits 2.
-  - repro: the edit in scope, then `build-release/PrimeStruct_semantics_tests --test-suite=primestruct.semantics.read_only_roots`.
-  - notes: deferred: not reachable on master, needs the edit above.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

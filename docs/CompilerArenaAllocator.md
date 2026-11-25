@@ -1186,3 +1186,12 @@ performs no migration.
   arena memory. Letting a host opt into a per-compile arena scope safely would additionally
   need `Script`/bytecode outputs to be allocated outside the arena (SystemHeapScope at the API
   boundary); not done, since nothing needs it today.
+
+### 2026-11-25: doctest's thread-local text stack
+
+The semantics test binary ended in SIGSEGV or SIGABRT (a free of a pointer that was not allocated) in the case after
+a failed assertion that logged an `INFO` context. The audit build (`PRIMESTRUCT_ARENA_POISON_AUDIT`) named the read:
+`doctest::detail::g_oss`, the thread-local text stack behind `tlssPush`, grew its position vector in the arena in one
+case and freed it in the next, after the reset. `third_party/doctest.h` now gives both the vector and the stream
+buffer of `g_oss` the system-heap allocator; two consecutive cases in
+`tests/unit/semantics/test_semantics_definition_partitioner.cpp` cover it.

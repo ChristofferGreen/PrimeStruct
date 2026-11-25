@@ -3389,10 +3389,13 @@ namespace detail {
     }
     // --- END PrimeStruct local patch (TODO-5235) ---
 
-    DOCTEST_THREAD_LOCAL class
-    {
-        std::vector<std::streampos> stack;
-        std::stringstream           ss;
+    // PrimeStruct local patch: this thread-local text stack outlives every TEST_CASE, so neither its position
+    // stack nor the buffer of its stream may come from the compile arena a TEST_CASE resets (a failed assertion
+    // with an INFO context grew the stack in one case and freed the reset memory in the next).
+    DOCTEST_THREAD_LOCAL class {
+      std::vector<std::streampos, PrimeStructSystemHeapAllocator<std::streampos>> stack;
+      std::basic_stringstream<char, std::char_traits<char>, PrimeStructSystemHeapAllocator<char>>
+          ss;
 
     public:
         std::ostream* push() {
