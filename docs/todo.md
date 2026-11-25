@@ -491,13 +491,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-24; `/main` is 4,097 instructions in a module of 59 functions).
   - notes: deferred: TODO-5536 decides whether the bytecode size is worth the lowering work; the counts are in docs/todo_log.md under TODO-5536.
 
-- [ ] TODO-6254: `field_count` and `field_capacity` of the collections records are expanded at every call site
+- [~] TODO-6254: `field_count` and `field_capacity` of the collections records are expanded at every call site
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
-  - depends_on: TODO-5536
   - scope: The two accessors `/std/collections/vector/Vector/field_count` and `field_capacity` are `collections-helper` definitions, expanded inline by rule: 2 definitions, 52 call sites, 676 instructions added (13 per site, as many as a call). Lower a read of one of these fields of a collection record to the field load directly, or let them be real calls, whichever the report shows smaller.
   - acceptance:
     - the report of the PNG program shows the sum of `added` of the `collections-helper` lines falling from 676 to under 250 with the program output unchanged
