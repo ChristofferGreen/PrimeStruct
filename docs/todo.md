@@ -525,9 +525,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `PrintArgv` fault only; `PrintArgvUnsafe` keeps its unchecked read.
   - repro: build the module above, run it with `expectMatchesVm(mainOf({"PushI32 5", "PrintArgv 1", "ReturnVoid"}), "print_argv_past", "", false, {"a"})`; it reports `unexpected RuntimeError: unreachable` against `VM error: invalid argv index in IR`.
 
-- [ ] TODO-6270: Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI)
+- [~] TODO-6270: Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI)
   - owner: ai
   - status: ready
+  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-26
   - created_at: 2026-11-26
   - phase: Backend parity (slice of TODO-6124)
   - parallel_track: wasm-opcode-gaps
