@@ -130,7 +130,7 @@ of sync with them.
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
-| TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
+| TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | ready | wasm-bytes-host |
 | TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | ready | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -526,9 +526,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
+- [~] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-25
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6090)
   - parallel_track: wasm-bytes-host
