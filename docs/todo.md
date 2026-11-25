@@ -113,7 +113,7 @@ of sync with them.
 | --- | --- | --- | --- |
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | deferred | effects-inference |
-| TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
+| TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | ready | semantic-workers-stale-facts |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -299,9 +299,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
+- [~] TODO-6203: `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact`
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (semantic validation workers; found with the stdlib `Vector` element places)
   - parallel_track: semantic-workers-stale-facts
