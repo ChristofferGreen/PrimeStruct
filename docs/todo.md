@@ -124,6 +124,10 @@ of sync with them.
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
+| TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
+| TODO-6264 | A body that returns a `Result` and tries stays inline | deferred | bytecode-inline-blockers |
+| TODO-6265 | The inline report of the scalar target names an `on_error` definition `not-reserved` | deferred | diagnostics-inline-report |
+| TODO-6266 | Missing semantic-product messages outside `IrLowerer::lower` are not marked internal | deferred | diagnostics-internal-errors |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -312,6 +316,62 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `string` result rule of the real-call shape; no new string operations.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
   - notes: deferred: needs the user's decision (see decision_needed).
+
+- [ ] TODO-6263: A packed `Result` with a struct or `Buffer` payload stays inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6262)
+  - parallel_track: bytecode-inline-blockers
+  - scope: A packed `Result<T, E>` whose value `T` is a struct, a `Buffer<T>` or another type that is not one slot is returned by an inlined call only: `hasPackedResultReturn` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp) takes `Result<E>` and a scalar or `File` value. Letting every `Result` through failed three program-matrix cases: `a Buffer payload Result reads as ok through locals and direct calls` (the VM exits 2 where 0 is expected, `vm.execute` fails in `ir lowerer supports Buffer Result payloads on IR-backed VM paths`) and `field access reads the struct payload of a try and of a question mark` (the VM exits 2 where 9 is expected, native refuses with `invalid IR instruction 9 in /make_pair: a called function returns an address of its own frame`). The callee's packed result is a block of its own frame or a handle the caller reads after the frame ended. Return such a payload through the caller's block, as `--emit=lib` does for a library function, then lift the refusal.
+  - acceptance:
+    - the two program-matrix cases above pass with the payload `Result` returned by a real call on every config, with `hasPackedResultReturn` taking any `Result` payload
+    - the inline report of a program with such a function shows `real call`; full release gate green
+  - stop_rule: packed `Result` payloads that are not one slot; no change to the scalar and `File` shape.
+  - repro: In `hasPackedResultReturn`, return `true` for every `Result` (drop the payload check), build `primec` and run `ctest -R "program_matrix_results|ir_pipeline_conversions_numbers"` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
+
+- [ ] TODO-6264: A body that returns a `Result` and tries stays inline
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6260)
+  - parallel_track: bytecode-inline-blockers
+  - scope: `addressAbiShapeBlocker` refuses a definition that uses `try` (`uses-try`) unless it has an `on_error` handler and a scalar or void result (TODO-6260). A definition that returns a `Result` and tries with a handler, as `both` below, was made a real call by lifting the refusal for every `on_error` definition: the VM then exits 3 with `VM error: unaligned indirect address in IR: 20` and native segfaults, so the packed or stdlib `Result` the body returns on the error path is not the shape the caller reads. Find the difference between the real-call return of `?` (`emitOnErrorReturn`, src/ir_lowerer/IrLowererLowerEmitExprTryHelpersBody.h) and the expanded one, fix it, and lift `uses-try` for a body that returns a `Result`.
+  - acceptance:
+    - the program in repro prints `0`, `1004`, `1`, `1004`, `4` with `both` a real call on the VM, native and optexe
+    - the `uses-try` line of the inline report for the PNG program stays at 0; full release gate green
+  - stop_rule: the `uses-try` rule of the real-call shape for `Result` bodies; no change to the handler.
+  - repro: Program matrix case `status-only stdlib Result propagates its error through try` (tests/unit/program_matrix/test_program_matrix_results.cpp): in `addressAbiShapeBlocker` change the `uses-try` condition to `definitionUsesTry(def) && !definitionHasTransform(def, "on_error")`, build, and `primec` plus `primevm` of that program print `0`, `1004` and then `VM error: unaligned indirect address in IR: 20` with exit 3 (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
+
+- [ ] TODO-6265: The inline report of the scalar target names an `on_error` definition `not-reserved`
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Diagnostics (found with TODO-6260)
+  - parallel_track: diagnostics-inline-report
+  - scope: `primec --dump-stage inline-report` without `--emit` lowers for the scalar ABI, whose eligibility check (`isRealCallShapeEligible`, the part that is not the address ABI) refuses a definition with `on_error`, a `sum`, a `compute` or a `host` shape without a code of its own; `realCallBlocker` then returns nothing and the report prints `not-reserved: its shape is a real call's, but the target did not reserve it`, which is false for these definitions. Give each of those shapes its code and text in the scalar branch of `realCallBlocker` (src/ir_lowerer/IrLowererRecursionAnalysis.cpp), as the address ABI has them.
+  - acceptance:
+    - the report of a program with an `on_error` definition on the scalar target names it `on-error-handler`-style (a code of its own, listed in docs/spec/vm-design.md), with a test in tests/unit/ir_pipeline/optimizer/test_ir_inline_report_cli.cpp
+    - full release gate green
+  - stop_rule: the code and text of the scalar target's refusals in the report; no change to what is reserved.
+  - repro: `primec --dump-stage inline-report` of the program of `inline-report on the scalar target names the parameter that keeps a definition inline` prints `/check_exists: not-reserved: its shape is a real call's, but the target did not reserve it` (release build, macOS arm64, 2026-11-25).
+  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
+
+- [ ] TODO-6266: Missing semantic-product messages outside `IrLowerer::lower` are not marked internal
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-25
+  - phase: Diagnostics (left over from TODO-6084)
+  - parallel_track: diagnostics-internal-errors
+  - scope: `ir_lowerer::markInternalLoweringError` prefixes the `missing semantic-product ...` messages of a failed `IrLowerer::lower` with `internal compiler error (please report it): `. The same wording is built outside `lower`: the compile-time evaluation messages (`missing semantic-product requirementPredicateFacts ...`, src/frontend/CompileTimeEvaluation.cpp, reported by the semantic stage) and the runtime reflection path check of IR preparation (src/ir/IrPreparation.cpp), which read as a mistake of the program. Mark them through the same helper where each is reported, with a test per path.
+  - acceptance:
+    - each message with the wording `missing semantic-product` starts with the internal prefix wherever it is reported; one test per path
+    - full release gate green
+  - stop_rule: the text of invariant messages outside `lower`.
+  - repro: `rg "missing semantic-product" src/frontend/CompileTimeEvaluation.cpp src/ir/IrPreparation.cpp` (2026-11-25).
+  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai
