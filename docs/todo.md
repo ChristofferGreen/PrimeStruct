@@ -121,7 +121,7 @@ of sync with them.
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
+| TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | ready | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -441,9 +441,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
   - notes: deferred: small, not on the critical path of an open goal.
 
-- [ ] TODO-6251: A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call
+- [~] TODO-6251: A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: subagent-6251 (worktree-agent-aac85dadcfc013f94), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
