@@ -779,10 +779,9 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
     return AddressAbiBlocker::UnsupportedResult;
   }
-  // A `?` of a body with an `on_error` handler runs the handler and returns the error code in the callee's own frame;
-  // a body that returns a `Result` and tries stays inline.
-  if (definitionUsesTry(def) &&
-      !(definitionHasTransform(def, "on_error") && hasScalarOrVoidReturn(def))) {
+  // A `?` of a body with an `on_error` handler runs the handler and returns the error in the callee's own result
+  // (a scalar code, a packed `Result` or the caller's block of a stdlib `Result`); a body without a handler stays inline.
+  if (definitionUsesTry(def) && !definitionHasTransform(def, "on_error")) {
     return AddressAbiBlocker::UsesTry;
   }
   if (def.returnExpr.has_value() &&

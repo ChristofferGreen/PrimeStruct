@@ -125,7 +125,6 @@ of sync with them.
 | TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | deferred | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
-| TODO-6264 | A body that returns a `Result` and tries stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
@@ -327,21 +326,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the inline report of a program with such a function shows `real call`; full release gate green
   - stop_rule: packed `Result` payloads that are not one slot; no change to the scalar and `File` shape.
   - repro: In `hasPackedResultReturn`, return `true` for every `Result` (drop the payload check), build `primec` and run `ctest -R "program_matrix_results|ir_pipeline_conversions_numbers"` (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
-
-- [~] TODO-6264: A body that returns a `Result` and tries stays inline
-  - owner: ai
-  - status: deferred
-  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
-  - created_at: 2026-11-25
-  - phase: Native UI (docs/NativeUiPlan.md; found with TODO-6260)
-  - parallel_track: bytecode-inline-blockers
-  - scope: `addressAbiShapeBlocker` refuses a definition that uses `try` (`uses-try`) unless it has an `on_error` handler and a scalar or void result (TODO-6260). A definition that returns a `Result` and tries with a handler, as `both` below, was made a real call by lifting the refusal for every `on_error` definition: the VM then exits 3 with `VM error: unaligned indirect address in IR: 20` and native segfaults, so the packed or stdlib `Result` the body returns on the error path is not the shape the caller reads. Find the difference between the real-call return of `?` (`emitOnErrorReturn`, src/ir_lowerer/IrLowererLowerEmitExprTryHelpersBody.h) and the expanded one, fix it, and lift `uses-try` for a body that returns a `Result`.
-  - acceptance:
-    - the program in repro prints `0`, `1004`, `1`, `1004`, `4` with `both` a real call on the VM, native and optexe
-    - the `uses-try` line of the inline report for the PNG program stays at 0; full release gate green
-  - stop_rule: the `uses-try` rule of the real-call shape for `Result` bodies; no change to the handler.
-  - repro: Program matrix case `status-only stdlib Result propagates its error through try` (tests/unit/program_matrix/test_program_matrix_results.cpp): in `addressAbiShapeBlocker` change the `uses-try` condition to `definitionUsesTry(def) && !definitionHasTransform(def, "on_error")`, build, and `primec` plus `primevm` of that program print `0`, `1004` and then `VM error: unaligned indirect address in IR: 20` with exit 3 (release build, macOS arm64, 2026-11-25).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path

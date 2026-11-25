@@ -780,6 +780,19 @@
                 context.returnJumps.push_back(jumpIndex);
                 return true;
               }
+              // A real call returns the error in the block of its caller, as a `return` of a struct does.
+              const int32_t callerBlockLocal =
+                  setupLocalsOrchestration.entryReturnConfig.realCallStructReturnLocal;
+              if (callerBlockLocal >= 0) {
+                if (!emitStructCopyFromPtrs(callerBlockLocal, ptrLocal, totalSlots)) {
+                  return false;
+                }
+                emitFileScopeCleanupAll();
+                function.instructions.push_back(
+                    {IrOpcode::LoadLocal, static_cast<uint64_t>(callerBlockLocal)});
+                function.instructions.push_back({IrOpcode::ReturnI64, 0});
+                return true;
+              }
               emitFileScopeCleanupAll();
               function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
               function.instructions.push_back({IrOpcode::ReturnI64, 0});

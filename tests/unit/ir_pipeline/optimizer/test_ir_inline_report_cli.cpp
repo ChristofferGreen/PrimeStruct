@@ -112,21 +112,66 @@ main() {
 } // namespace
 
 // The VM has the address ABI: the recursive function and the one with a sum parameter are real calls, the definition
-// that tries and returns a `Result` and the small handler are expanded.
+// that tries with an `on_error` handler is one too, and the small handler is expanded.
 TEST_CASE(
     "inline-report names real calls and the blocker of each expanded definition on the vm target") {
   const std::string source = writeProgram();
   const ReportResult report = runCommand("./primec --emit=vm --dump-stage inline-report " + source);
   CHECK(report.exitCode == 0);
-  CHECK(report.out ==
-        "inline_report_v1 definitions=4\n"
-        "added=54 with_callees=60 call_sites=1 /check_exists: uses-try: its body uses "
-        "`try`\n"
-        "added=18 with_callees=18 call_sites=3 /fib: real call\n"
-        "added=8 with_callees=8 call_sites=2 /area: real call\n"
-        "added=6 with_callees=6 call_sites=2 /log_file_error: tiny-leaf: its body is "
-        "small enough that expanding "
-        "it costs less than calling it\n");
+  CHECK(report.out == "inline_report_v1 definitions=4\n"
+                      "added=18 with_callees=18 call_sites=3 /fib: real call\n"
+                      "added=8 with_callees=8 call_sites=2 /area: real call\n"
+                      "added=6 with_callees=6 call_sites=2 /log_file_error: tiny-leaf: its body is "
+                      "small enough that expanding "
+                      "it costs less than calling it\n"
+                      "added=2 with_callees=2 call_sites=1 /check_exists: real call\n");
+}
+
+// A body that returns a stdlib `Result`, tries and has an `on_error` handler writes its error into the caller's block.
+TEST_CASE("inline-report shows a stdlib Result body that tries as a real call on the vm target") {
+  const char *text = R"(
+import /std/result/*
+
+[return<Result<i32>>]
+check([i32] x) {
+  if(x > 3i32) {
+    [Result<i32>] bad{[error] x}
+    return(bad)
+  }
+  return(/std/result/ok<i32>())
+}
+
+[effects(io_out)]
+on_err([i32] err) {
+  print_line(1000i32 + err)
+}
+
+[return<Result<i32>> effects(io_out) on_error<i32, /on_err>]
+both([i32] x) {
+  try(check(x))
+  try(check(x + 1i32))
+  return(/std/result/ok<i32>())
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(Result.error(both(1i32)))
+  print_line(Result.error(both(3i32)))
+  return(0i32)
+}
+)";
+  const std::filesystem::path path =
+      primec::testing::testScratchPath("inline_report_cli/both.prime");
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path) << text;
+  const ReportResult report =
+      runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
+  CHECK(report.exitCode == 0);
+  CHECK(report.out.find("/both: real call\n") != std::string::npos);
+  CHECK(report.out.find("uses-try") == std::string::npos);
+  const ReportResult run = runCommand("./primevm " + path.string());
+  CHECK(run.exitCode == 0);
+  CHECK(run.out == "0\n1004\n1\n");
 }
 
 // The target-neutral listing lowers for the scalar ABI, where a sum parameter is not a scalar; primevm prints the
