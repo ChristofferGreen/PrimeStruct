@@ -134,7 +134,7 @@ of sync with them.
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
-| TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | deferred | wasm-bytes-host |
+| TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | ready | wasm-bytes-host |
 | TODO-6230 | Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
@@ -556,9 +556,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [ ] TODO-6181: A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text
+- [~] TODO-6181: A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
   - created_at: 2026-11-22
   - phase: Backend parity (found with TODO-6150)
   - parallel_track: wasm-bytes-host
