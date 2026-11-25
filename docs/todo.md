@@ -118,7 +118,7 @@ of sync with them.
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
-| TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
+| TODO-6119 | A native module with tasks keeps arena text in the pool | ready | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
@@ -395,9 +395,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: stale arena text on the arm64 native backend only.
 
-- [ ] TODO-6119: A native module with tasks keeps arena text in the pool
+- [~] TODO-6119: A native module with tasks keeps arena text in the pool
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-25
   - created_at: 2026-11-20
   - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
   - parallel_track: native-arena-threads
