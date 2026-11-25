@@ -22,8 +22,10 @@ constexpr uint8_t WasmOpDrop = 0x1a;
 constexpr uint8_t WasmOpLocalGet = 0x20;
 constexpr uint8_t WasmOpLocalSet = 0x21;
 constexpr uint8_t WasmOpLocalTee = 0x22;
+constexpr uint8_t WasmOpGlobalSet = 0x24;
 constexpr uint8_t WasmOpI32Load = 0x28;
 constexpr uint8_t WasmOpI32Load8U = 0x2d;
+constexpr uint8_t WasmOpI32Store = 0x36;
 constexpr uint8_t WasmOpI32Store8 = 0x3a;
 constexpr uint8_t WasmOpI32Const = 0x41;
 constexpr uint8_t WasmOpI64Const = 0x42;
@@ -36,6 +38,8 @@ constexpr uint8_t WasmOpI32Sub = 0x6b;
 constexpr uint8_t WasmOpI32Mul = 0x6c;
 constexpr uint8_t WasmOpI32And = 0x71;
 constexpr uint8_t WasmOpI32Or = 0x72;
+constexpr uint8_t WasmOpI32Shl = 0x74;
+constexpr uint8_t WasmOpI32ShrU = 0x76;
 constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
 constexpr uint8_t WasmOpI64Shl = 0x86;
 constexpr uint8_t WasmOpI64ShrU = 0x88;
@@ -202,24 +206,87 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Eqz);
       out.push_back(WasmOpIf);
       out.push_back(WasmBlockTypeVoid);
-      // more arguments than the static buffers hold: a trap, not a write past them
-      emitI32LoadAtAddress(runtime.argcAddr, out);
-      out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsCapacityBytes / 4), out);
+      // The table (4 bytes an argument) and the text of all the arguments go to pages of their own: taken from the
+      // memory when the pages kept by an earlier call are too small, so any number of arguments fits.
+      const auto neededBytes = [&]() {
+        emitI32LoadAtAddress(runtime.argcAddr, out);
+        out.push_back(WasmOpI32Const);
+        appendS32Leb(2, out);
+        out.push_back(WasmOpI32Shl);
+        emitI32LoadAtAddress(runtime.argvBufSizeAddr, out);
+        out.push_back(WasmOpI32Add);
+      };
+      neededBytes();
+      emitI32LoadAtAddress(runtime.argvRegionAddr + 4, out);
       out.push_back(WasmOpI32GtU);
-      emitI32LoadAtAddress(runtime.argvBufSizeAddr, out);
+      out.push_back(WasmOpIf);
+      out.push_back(WasmBlockTypeVoid);
+      neededBytes();
       out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvBufferCapacityBytes), out);
-      out.push_back(WasmOpI32GtU);
-      out.push_back(WasmOpI32Or);
+      appendS32Leb(65535, out);
+      out.push_back(WasmOpI32Add);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(16, out);
+      out.push_back(WasmOpI32ShrU);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(0x40); // memory.grow
+      out.push_back(0x00);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(-1, out);
+      out.push_back(WasmOpI32Eq);
       out.push_back(WasmOpIf);
       out.push_back(WasmBlockTypeVoid);
       out.push_back(WasmOpUnreachable);
       out.push_back(WasmOpEnd);
+      if (runtime.hasHeap) {
+        // the shadow stack is no longer the last region of the memory
+        out.push_back(WasmOpI32Const);
+        appendS32Leb(0, out);
+        out.push_back(WasmOpGlobalSet);
+        appendU32Leb(WasmGlobalStackLast, out);
+      }
       out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      appendS32Leb(static_cast<int32_t>(runtime.argvRegionAddr), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
       out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvBufferBase), out);
+      appendS32Leb(16, out);
+      out.push_back(WasmOpI32Shl);
+      out.push_back(WasmOpI32Store);
+      appendI32MemArg(0, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(static_cast<int32_t>(runtime.argvRegionAddr + 4), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvLenLocal, out);
+      out.push_back(WasmOpI32Const);
+      appendS32Leb(16, out);
+      out.push_back(WasmOpI32Shl);
+      out.push_back(WasmOpI32Store);
+      appendI32MemArg(0, out);
+      out.push_back(WasmOpEnd);
+      emitI32LoadAtAddress(runtime.argvRegionAddr, out);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
+      // the text follows the table
+      const auto bufferBase = [&]() {
+        out.push_back(WasmOpLocalGet);
+        appendU32Leb(localLayout.argvBaseLocal, out);
+        emitI32LoadAtAddress(runtime.argcAddr, out);
+        out.push_back(WasmOpI32Const);
+        appendS32Leb(2, out);
+        out.push_back(WasmOpI32Shl);
+        out.push_back(WasmOpI32Add);
+      };
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
+      bufferBase();
       out.push_back(WasmOpCall);
       appendU32Leb(runtime.argsGetImportIndex, out);
       out.push_back(WasmOpI32Eqz);
@@ -241,8 +308,8 @@ bool emitIoInstruction(const IrInstruction &inst,
         out.push_back(WasmOpUnreachable);
       }
       out.push_back(WasmOpElse);
-      out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.argvIndexLocal, out);
       out.push_back(WasmOpI32Const);
@@ -264,8 +331,7 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpI32Eq);
       out.push_back(WasmOpIf);
       out.push_back(WasmBlockTypeVoid);
-      out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvBufferBase), out);
+      bufferBase();
       emitI32LoadAtAddress(runtime.argvBufSizeAddr, out);
       out.push_back(WasmOpI32Add);
       out.push_back(WasmOpLocalGet);
@@ -274,8 +340,8 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpLocalSet);
       appendU32Leb(localLayout.argvLenLocal, out);
       out.push_back(WasmOpElse);
-      out.push_back(WasmOpI32Const);
-      appendS32Leb(static_cast<int32_t>(runtime.argvPtrsBase), out);
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(localLayout.argvBaseLocal, out);
       out.push_back(WasmOpLocalGet);
       appendU32Leb(localLayout.argvIndexLocal, out);
       out.push_back(WasmOpI32Const);

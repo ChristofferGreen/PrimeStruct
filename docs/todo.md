@@ -131,8 +131,8 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
+| TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | ready | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
-| TODO-6230 | Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers | ready | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -172,7 +172,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6230 (Wasm `PrintArgv` argument buffers), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6124 (Wasm pointers, structs, arrays; tracker of TODO-6138, TODO-6139, TODO-6140 and TODO-6141); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6127 (Wasm u8, host calls), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -526,20 +526,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [~] TODO-6230: Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Backend parity (found with TODO-6227)
-  - parallel_track: wasm-bytes-host
-  - scope: `PrintArgv` reads the arguments with `args_get` into the static table of 1024 pointers and the buffer of 16 KiB (`argvPtrsBase`, `argvBufferBase`, src/wasm_emitter/WasmEmitterIo.cpp), which the VM does not have. A program with more arguments or more argument text now traps (a check before `args_get`; it used to write past the buffers and corrupt the memory that follows). `__pstext_argument` has no such limit: it takes the sizes from `args_sizes_get` and two blocks of the string heap's metadata area (TODO-6227), which a module without the string heap does not have. Give `PrintArgv` the same: take the blocks from the memory (`memory.grow` with the shadow stack no longer the last region, as `metaAlloc` does) or print the argument in pieces.
-  - acceptance:
-    - an IR module that calls `PrintArgv` with 2000 arguments and one with 100 arguments of 300 bytes print what the VM prints under node on the WASI profile
-    - full release gate green
-  - stop_rule: the static argument buffers of `PrintArgv` and `PrintArgvUnsafe`.
-  - repro: an IR module `PushI32 1; PrintArgv 1; PushI32 0; ReturnI32` run under node with 2000 arguments traps (exit code 99 of the test runner) where the VM prints the second argument.
-
 - [ ] TODO-6127: Wasm refuses u8 and byte memory opcodes and host calls
   - owner: ai
   - status: deferred
@@ -551,6 +537,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - `convert<u8>` and u8 values compile for Wasm (a mask or `i32.load8_u`/`store8`), the two conversion programs list `wasm-wasi` in `extraConfigs`
     - or: each refusal stays a clear diagnostic that names Wasm and the way out, documented in docs/spec/integration-and-tooling.md
   - stop_rule: u8 and byte opcodes, and the documentation of the two host refusals.
+
+- [ ] TODO-6269: Wasm `PrintArgv` past the arguments traps without the VM's fault text
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-25
+  - phase: Backend parity (found with TODO-6230)
+  - parallel_track: wasm-bytes-host
+  - scope: `PrintArgv` with an index past the arguments (or negative) is a plain `unreachable` trap in the Wasm module (src/wasm_emitter/WasmEmitterIo.cpp, the `safePrint` branch), where the VM ends the program with `invalid argv index in IR` (exit code 3, `VM error: ...` on stderr) and the other Wasm faults (heap, string literal, division) write the VM's text through `fd_write` and `proc_exit(3)`.
+  - acceptance:
+    - an IR module `PushI32 5; PrintArgv 1; ReturnVoid` with one argument prints the VM's fault text on stderr and exits 3 under node on the WASI profile, as `expectMatchesVm` in tests/unit/ir_pipeline/optimizer/test_ir_wasm_heap.cpp checks
+    - full release gate green
+  - stop_rule: the `PrintArgv` fault only; `PrintArgvUnsafe` keeps its unchecked read.
+  - repro: build the module above, run it with `expectMatchesVm(mainOf({"PushI32 5", "PrintArgv 1", "ReturnVoid"}), "print_argv_past", "", false, {"a"})`; it reports `unexpected RuntimeError: unreachable` against `VM error: invalid argv index in IR`.
 
 - [ ] TODO-6128: Wasm refuses tasks, atomics, channels and the lock effect
   - owner: ai

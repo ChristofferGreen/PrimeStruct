@@ -5747,7 +5747,7 @@ Total: 11594 test cases across 677 files.
 - wasm string literals and entry arguments match the VM
 - wasm reads more arguments than the old static table held like the VM
 - wasm reads arguments whose text is larger than the old static buffer like the VM
-- wasm PrintArgv prints arguments that fit the static buffers and traps on more
+- wasm PrintArgv prints any number of arguments like the VM
 - wasm string literal of an invalid index is the VM's fault
 - the browser profile names why it refuses string literals and entry arguments
 - the browser profile has a string heap and traps on a bad block address

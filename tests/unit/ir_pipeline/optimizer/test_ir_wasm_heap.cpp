@@ -2131,24 +2131,23 @@ TEST_CASE("wasm reads arguments whose text is larger than the old static buffer 
                   manyArguments(100, 300));
 }
 
-TEST_CASE("wasm PrintArgv prints arguments that fit the static buffers and traps on more") {
+TEST_CASE("wasm PrintArgv prints any number of arguments like the VM") {
   if (!nodeAvailable()) {
     MESSAGE("SKIP: node is unavailable");
     return;
   }
   primec::IrModule module = mainOf({"PushI32 1", "PrintArgv 1", "PushI32 0", "ReturnI32"});
-  // 1000 arguments and 100 of 100 bytes fit the table (1024 pointers) and the buffer (16 KiB) like on the VM
   expectMatchesVm(module, "print_argv_fits", "", true, manyArguments(1000, 0));
   expectMatchesVm(module, "print_argv_fits_text", "", true, manyArguments(100, 100));
-  // more than they hold is a trap, not a write past the static buffers
-  const NodeRun tooMany = runOnNode(module, "print_argv_many", false, "", manyArguments(2000, 0));
-  REQUIRE_MESSAGE(tooMany.built, tooMany.buildError);
-  CHECK(tooMany.exitCode == 99);
-  CHECK(tooMany.out.empty());
-  const NodeRun tooLong = runOnNode(module, "print_argv_long", false, "", manyArguments(100, 300));
-  REQUIRE_MESSAGE(tooLong.built, tooLong.buildError);
-  CHECK(tooLong.exitCode == 99);
-  CHECK(tooLong.out.empty());
+  // 2000 arguments are more than the 1024 pointers the static table held, 100 arguments of 300 bytes more than its
+  // 16 KiB of text; two calls in a row use the pages the first took
+  primec::IrModule twice = mainOf(
+      {"PushI32 1999", "PrintArgv 1", "PushI32 2", "PrintArgvUnsafe 1", "PushI32 0", "ReturnI32"});
+  expectMatchesVm(twice, "print_argv_many", "", true, manyArguments(2000, 0));
+  expectMatchesVm(module, "print_argv_one_of_many", "", true, manyArguments(2000, 0));
+  primec::IrModule longText =
+      mainOf({"PushI32 99", "PrintArgv 1", "PushI32 50", "PrintArgv 1", "PushI32 0", "ReturnI32"});
+  expectMatchesVm(longText, "print_argv_long", "", true, manyArguments(100, 300));
 }
 
 TEST_CASE("wasm string literal of an invalid index is the VM's fault") {

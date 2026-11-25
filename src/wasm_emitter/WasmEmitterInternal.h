@@ -118,6 +118,7 @@ struct WasmLocalLayout {
   uint32_t argvPtrLocal = 0;
   uint32_t argvLenLocal = 0;
   uint32_t argvNextPtrLocal = 0;
+  uint32_t argvBaseLocal = 0;
   bool hasFileHelpers = false;
   uint32_t fileHandleLocal = 0;
   uint32_t fileValueLocal = 0;
@@ -440,10 +441,9 @@ struct WasmRuntimeContext {
   // The table that maps a WASI errno to the POSIX number the VM reports (wasiErrnoTable).
   uint32_t errnoTableAddr = 0;
   uint32_t iovAddr = 0;
-  uint32_t argvPtrsBase = 0;
-  uint32_t argvBufferBase = 0;
-  uint32_t argvPtrsCapacityBytes = 0;
-  uint32_t argvBufferCapacityBytes = 0;
+  // Two words: the base and the byte capacity of the pages `PrintArgv` took for the argument table and text (0 until
+  // the first call), kept so a program that prints arguments in a loop takes pages once.
+  uint32_t argvRegionAddr = 0;
   uint32_t newlineAddr = 0;
   uint32_t byteScratchAddr = 0;
   uint32_t numericScratchAddr = 0;

@@ -66,7 +66,8 @@ WasmLocalLayout computeLocalLayout(const IrFunction &function,
     layout.argvPtrLocal = static_cast<uint32_t>(totalCount + 2);
     layout.argvLenLocal = static_cast<uint32_t>(totalCount + 3);
     layout.argvNextPtrLocal = static_cast<uint32_t>(totalCount + 4);
-    totalCount += 5;
+    layout.argvBaseLocal = static_cast<uint32_t>(totalCount + 5);
+    totalCount += 6;
   }
   if (layout.hasFileHelpers) {
     layout.fileHandleLocal = static_cast<uint32_t>(totalCount);

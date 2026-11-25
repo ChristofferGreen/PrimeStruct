@@ -2636,6 +2636,7 @@ are left unarchived.
 | TODO-6227 | Wasm `__pstext_literal` and `__pstext_argument` limits: an invalid string index, many arguments, the browse... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6228 | A real call that returns a sum built from a unit variant copies slots past the callee's frame | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6229 | Wasm `PrintArgv` prints the NUL terminator of the argument | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6230 | Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6232 | The instruction source map names each source unit once | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6233 | A startup benchmark: bytecode size and load time of a small, a medium and the PNG program | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6234 | A report of every definition that stays inline, with its blocker and the instructions it adds | [2026-11.md](todo_archive/2026-11.md) | - |

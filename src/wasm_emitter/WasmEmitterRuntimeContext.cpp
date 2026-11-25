@@ -250,11 +250,8 @@ bool buildWasiRuntimeContext(const IrModule &module,
   runtime.nwrittenAddr = 8;
   runtime.openedFdAddr = 12;
   runtime.iovAddr = 16;
-  runtime.argvPtrsBase = 64;
-  runtime.argvPtrsCapacityBytes = 4096;
-  runtime.argvBufferBase = runtime.argvPtrsBase + runtime.argvPtrsCapacityBytes;
-  runtime.argvBufferCapacityBytes = 16384;
-  runtime.newlineAddr = runtime.argvBufferBase + runtime.argvBufferCapacityBytes;
+  runtime.argvRegionAddr = 24;
+  runtime.newlineAddr = 64;
   runtime.byteScratchAddr = runtime.newlineAddr + 1;
   runtime.numericScratchAddr = runtime.byteScratchAddr + 1;
   runtime.numericScratchBytes = WasmNumericScratchBytes;
