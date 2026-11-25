@@ -114,7 +114,7 @@ of sync with them.
 | TODO-5752 | x86_64 native and the Linux JIT take the address ABI of real calls | deferred | native-real-calls |
 | TODO-6231 | Semantics records the effects each definition demands, and infers them over the call graph | deferred | effects-inference |
 | TODO-6203 | `--benchmark-semantic-definition-validation-workers` ends in `stale semantic-product array extent fact` | deferred | semantic-workers-stale-facts |
-| TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | deferred | semantics-test-arena |
+| TODO-6205 | The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer | ready | semantics-test-arena |
 | TODO-6187 | Node 24 crashes on a failed WASI `path_open` of an absolute path | deferred | wasm-bytes-host |
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
@@ -314,9 +314,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: the first program in scope.
   - notes: deferred: the option is a benchmark switch and the default is one worker.
 
-- [ ] TODO-6205: The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer
+- [~] TODO-6205: The semantics test binary crashes in the case after an effect diagnostic of a struct field initializer
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a039f66030cb36294 (worktree-agent-a039f66030cb36294), 2026-11-25
   - created_at: 2026-11-23
   - phase: Frontend and diagnostics (test harness; found with the brace constructors of field initializers)
   - parallel_track: semantics-test-arena
