@@ -121,7 +121,6 @@ of sync with them.
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | ready | bytecode-inline-blockers |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6263 | A packed `Result` with a struct or `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
@@ -440,23 +439,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the key equivalent of named keys in the AppKit backend; no change to the parser or to the headless backend.
   - repro: `primec/ui/NativeUiShortcut.h` accepts the key; read `parseShortcut` in `src/ui/appkit/NativeUiAppKit.mm` (a hand check on a Mac, not run here).
   - notes: deferred: small, not on the critical path of an open goal.
-
-- [~] TODO-6251: A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call
-  - owner: ai
-  - status: ready
-  - claimed_by: subagent-6251 (worktree-agent-aac85dadcfc013f94), 2026-11-25
-  - created_at: 2026-11-24
-  - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
-  - parallel_track: bytecode-inline-blockers
-  - scope: Decided 2026-11-25 (the user chose option 2): keep the `Vector` record inline, no ABI change. The accessors landed (the two field reads are 4 instructions a site, down from 13). What is left is the by-value binding of a read-only `[Vector<T>] values` parameter, which an inlined call copies field by field: 45 of the 58 instructions at each of the 39 `count` sites (2,262 instructions in the PNG module; the same copy sits in `vectorCheckShape`, `vectorElementRef`, `vectorCheckIndex`, `vectorSlotUnsafe` and `vectorBorrowSlot`: 3,000 instructions with `count`). Bind a parameter that is not `mut`, `move` or `copy` to the address of an argument that is a local struct or a `Reference`, as the field accessors already read the receiver in place, instead of copying the record into a temporary. A callee that can run code that writes the argument (a `Reference` or `Pointer` parameter, a call through a closure) keeps the copy.
-  - acceptance:
-    - the `added` of the `parameter-type` lines naming a `Vector` record falls from 3,000 to under 1,000 in `--dump-stage inline-report benchmarks/startup/png.prime`, and the PNG module is smaller
-    - a program-matrix case in which the caller's vector changes through another path while a callee holds it borrowed prints what the copy printed (the case decides whether the alias is sound; if it differs, the leaf stops and says so)
-    - the module of the PNG program still validates and `primevm` prints the same output
-    - full release gate green
-  - stop_rule: borrowed collection-record parameters of an inlined call; no change to owned (`copy`, `move`) or `mut` parameters and no change to the address ABI of real calls.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
-  - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
 
 - [ ] TODO-5533: Windows and Linux native UI backends
   - owner: ai

@@ -2654,6 +2654,7 @@ are left unarchived.
 | TODO-6248 | Examples, semantics cases and docs align with the callee effect rule | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 | TODO-6249 | The generated-C++ precompiled header is not rebuilt when the C++ compiler changes, so every `--emit=exe` co... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6250 | `benchmark.sh --baseline-json` fails on macOS arm64: the native rows have the Linux x86_64 size limits | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6251 | A borrowed stdlib `Vector` record parameter is copied slot by slot at every inlined call | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6252 | A `File` parameter keeps the PNG reader helpers inline | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6253 | A `string` parameter used beyond `count()` keeps the PNG file readers inline | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6254 | `field_count` and `field_capacity` of the collections records are expanded at every call site | [2026-11.md](todo_archive/2026-11.md) | - |

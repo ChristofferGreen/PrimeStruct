@@ -50,6 +50,37 @@ bool definitionReturnsReference(const Definition &callee, std::string &referentT
 
 namespace {
 
+// Whether no parameter of the callee besides `borrowedIndex` can be used to write the borrowed argument: each is a
+// plain scalar or another borrowed collection record. A `mut`, `Reference` or `Pointer` parameter, a closure or an
+// argument pack could reach the argument's storage, so a callee that has one keeps its copy.
+bool otherParametersCannotWriteBorrowedArgument(
+    const std::vector<Expr> &callParams,
+    size_t borrowedIndex,
+    const InferInlineParameterLocalInfoFn &inferCallParameterLocalInfo) {
+  for (size_t i = 0; i < callParams.size(); ++i) {
+    if (i == borrowedIndex) {
+      continue;
+    }
+    LocalInfo other;
+    std::string ignoredError;
+    if (!inferCallParameterLocalInfo(callParams[i], other, ignoredError)) {
+      return false;
+    }
+    const bool scalar = other.structTypeName.empty() &&
+                        other.valueKind != LocalInfo::ValueKind::Unknown &&
+                        other.valueKind != LocalInfo::ValueKind::String;
+    const bool borrowedRecord =
+        !other.structTypeName.empty() && isCollectionVectorRecordPath(other.structTypeName);
+    if (other.kind != LocalInfo::Kind::Value || other.isMutable || other.isArgsPack ||
+        other.isFileHandle || other.isFileError || other.isResult || !(scalar || borrowedRecord) ||
+        parameterHasTransform(callParams[i], "mut") ||
+        parameterHasTransform(callParams[i], "move")) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
   auto matchesPath = [&](std::string_view path) {
     return calleePath == path ||
@@ -654,6 +685,36 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
            paramInfo.keyValueValueKind == argIt->second.keyValueValueKind)) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argIt->second.index));
         calleeLocals.emplace(param.name, paramInfo);
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+        continue;
+      }
+    }
+
+    // A borrowed stdlib collection record (a parameter that is not `mut`, `copy` or `move`) named by a local or a
+    // `Reference` is the callee's parameter as is: the callee reads the argument's storage in place, as its field
+    // accessors do, instead of a copy of every slot, when nothing in the callee can write that storage.
+    if (paramInfo.kind == LocalInfo::Kind::Value && !paramInfo.isMutable && !isCopyParam &&
+        !paramInfo.isFileHandle && !parameterHasTransform(param, "move") &&
+        !paramInfo.structTypeName.empty() &&
+        isCollectionVectorRecordPath(paramInfo.structTypeName) && orderedArg != nullptr &&
+        orderedArg->kind == Expr::Kind::Name) {
+      auto argIt = callerLocals.find(orderedArg->name);
+      const std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
+      if (argIt != callerLocals.end() &&
+          (argIt->second.kind == LocalInfo::Kind::Value ||
+           argIt->second.kind == LocalInfo::Kind::Reference ||
+           argIt->second.kind == LocalInfo::Kind::Vector) &&
+          !argIt->second.isSoaVector && !argStruct.empty() &&
+          isCollectionVectorRecordPath(argStruct) &&
+          isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct) &&
+          otherParametersCannotWriteBorrowedArgument(callParams, i, inferCallParameterLocalInfo)) {
+        LocalInfo borrowedParamInfo = paramInfo;
+        borrowedParamInfo.structTypeName =
+            canonicalStructTypeName(paramInfo.structTypeName, argStruct);
+        if (!emitExpr(*orderedArg, callerLocals)) {
+          return false;
+        }
+        calleeLocals.emplace(param.name, borrowedParamInfo);
         emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
         continue;
       }

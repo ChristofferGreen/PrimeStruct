@@ -546,4 +546,58 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A stdlib `Vector` that a callee holds as a plain (borrowed) parameter is read where it lives. A callee that is
+// also handed a `Pointer` can write that storage, so it keeps reading a copy taken at the call: `via_reference`
+// reads 33 (not 34) because the borrowed `count()` before and after the push sees the copy's 2 and 3.
+TEST_CASE("a borrowed Vector parameter reads the caller's storage unless the callee can write it") {
+  program_matrix::ProgramCase program;
+  program.name = "borrowed_vector_parameter_writer";
+  program.source = R"(
+import /std/collections/*
+
+[return<int> effects(heap_alloc)]
+grow_while_borrowed([Vector<i32>] values, [Pointer<Vector<i32>> mut] writer) {
+  [i32] before{values.count()}
+  dereference(writer).push(7i32)
+  [i32] after{values.count()}
+  return(before * 10i32 + after)
+}
+
+[return<int> effects(heap_alloc)]
+forward([Vector<i32>] values, [Pointer<Vector<i32>> mut] writer) {
+  return(grow_while_borrowed(values, writer))
+}
+
+[return<int> effects(heap_alloc)]
+via_reference([Reference<Vector<i32>> mut] values, [Pointer<Vector<i32>> mut] writer) {
+  return(grow_while_borrowed(values, writer))
+}
+
+[return<int> effects(heap_alloc)]
+via_reference_count([Reference<Vector<i32>> mut] values) {
+  return(forward_count(values))
+}
+
+[return<int> effects(heap_alloc)]
+forward_count([Vector<i32>] values) {
+  return(values.count() * 10i32 + values.at(0i32))
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [Vector<i32> mut] v{Vector<i32>{}}
+  v.push(1i32)
+  print_line(grow_while_borrowed(v, location(v)))
+  print_line(forward(v, location(v)))
+  print_line(via_reference(location(v), location(v)))
+  print_line(v.count())
+  print_line(via_reference_count(location(v)))
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "12\n23\n33\n4\n41\n";
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();
