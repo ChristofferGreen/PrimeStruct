@@ -169,6 +169,9 @@ bool WasmEmitter::emitModule(const IrModule &input,
     }
   }
 
+  if (runtime.hasStatFault) {
+    runtime.statFaultFunction = nextHelperFunction++;
+  }
   if (runtime.hasLocalMemory) {
     runtime.slotAddressFunction = nextHelperFunction++;
     runtime.growShadowStackFunction = nextHelperFunction++;
@@ -243,6 +246,14 @@ bool WasmEmitter::emitModule(const IrModule &input,
     functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
     types.push_back(std::move(helperType));
     codeBodies.push_back(buildWasmDivisionHelperBody(static_cast<WasmDivisionOp>(op), runtime));
+  }
+
+  if (runtime.hasStatFault) {
+    WasmFunctionType helperType;
+    helperType.params = {WasmTypeI64};
+    functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+    types.push_back(std::move(helperType));
+    codeBodies.push_back(buildWasmStatFaultHelperBody(runtime));
   }
 
   if (runtime.hasLocalMemory) {

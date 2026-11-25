@@ -347,6 +347,23 @@ void emitWasmIndirectStore(uint32_t valueLocal,
   appendU32Leb(valueLocal, out);
 }
 
+// (i64 which) -> (): the VM's unknown-statistic fault. The locals after the parameter are those `appendAddressFault`
+// uses: fd; value, rem; ptr, len, neg.
+WasmCodeBody buildWasmStatFaultHelperBody(const WasmRuntimeContext &runtime) {
+  WasmCodeBody body;
+  appendU32Leb(3, body.localDecls);
+  appendU32Leb(1, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  appendU32Leb(2, body.localDecls);
+  body.localDecls.push_back(WasmTypeI64);
+  appendU32Leb(3, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  std::vector<uint8_t> &out = body.instructions;
+  appendAddressFault(runtime.statMessageAddr, runtime.statMessageLength, runtime, out);
+  out.push_back(WasmOpEnd);
+  return body;
+}
+
 // (i64 address) -> i32 memory address of the slot. The VM's faults, in its order: an address that is not a multiple
 // of the 16-byte stride is unaligned; address 0, an address beyond the live slots and a heap address (bit 63) name no
 // local slot.
@@ -736,6 +753,13 @@ void emitWasmStringHeapStat(uint32_t whichLocal,
   out.push_back(WasmOpI64GeU);
   out.push_back(WasmOpIf);
   out.push_back(WasmBlockTypeVoid);
+  if (runtime.hasStatFault) {
+    // The VM's fault for a number it does not know; the helper ends the program.
+    out.push_back(WasmOpLocalGet);
+    appendU32Leb(whichLocal, out);
+    out.push_back(0x10); // call
+    appendU32Leb(runtime.statFaultFunction, out);
+  }
   out.push_back(WasmOpUnreachable);
   out.push_back(WasmOpEnd);
   if (runtime.hasText) {

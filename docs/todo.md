@@ -134,7 +134,6 @@ of sync with them.
 | TODO-6124 | Wasm lowers pointers, `Reference`, struct values, arrays and closures | blocked | wasm-opcode-gaps |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | deferred | wasm-bytes-host |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
-| TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | ready | wasm-bytes-host |
 | TODO-6230 | Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
@@ -556,19 +555,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [~] TODO-6181: A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-inline2 (worktree agent-aff296b639a56d30e), 2026-11-25
-  - created_at: 2026-11-22
-  - phase: Backend parity (found with TODO-6150)
-  - parallel_track: wasm-bytes-host
-  - scope: the VM answers `__pstext_stat(9u64)` (any number above 8) with the runtime error `VM error: unknown string heap statistic: 9` and exit code 3; a Wasm module answers it with `unreachable` (`emitWasmStringHeapStat`, src/wasm_emitter/WasmEmitterMemory.cpp), so the WASI profile exits with a trap, not code 3 and the message. The stdlib only passes the constants 0 to 8, so no program reaches it today; a module built by hand or by a later stdlib change would. Print the VM's message and `proc_exit(3)` on the WASI profile (the heap's `fault` helper, src/wasm_emitter/WasmEmitterHeap.cpp, has the shape; it needs a data segment for the text and a decimal printer even when the module has no heap) and keep the trap on the browser profile.
-  - acceptance:
-    - an IR module that calls `__pstext_stat` with 9 ends with the VM's stderr text and exit code 3 under node on the WASI profile and with a trap on the browser profile
-    - full release gate green
-  - stop_rule: the unknown-statistic fault only.
-  - repro: an IR module `PushI64 9; CallHost 0; ReturnI64` with host import `std/text/__pstext_stat(u64) -> u64` runs on the VM as `VM error: unknown string heap statistic: 9` and exits 3; under `--emit=wasm --wasm-profile wasi` it traps.
 - [ ] TODO-6230: Wasm `PrintArgv` and `PrintArgvUnsafe` read the arguments into fixed buffers
   - owner: ai
   - status: deferred

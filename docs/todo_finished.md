@@ -2589,6 +2589,7 @@ are left unarchived.
 | TODO-6177 | Wasm byte regions and the byte opcodes (`HeapAllocBytes`, `LoadU8`, `StoreU8`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-24 |
 | TODO-6178 | The Wasm string heap, part 1: size classes, chunks and free lists with `__pstext_alloc`, `__pstext_try_allo... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6179 | The Wasm `__pstext_*` byte operations and entry arguments | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6181 | A Wasm `__pstext_stat` of an unknown number traps instead of the VM's fault text | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6182 | A failed file open reads as an open file on Wasm, and closing it crashes node | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |
 | TODO-6183 | A `mut` field is written and a `[mut]` method is called through a read-only struct parameter or local | [2026-11.md](todo_archive/2026-11.md) | 2026-11-23 |
 | TODO-6184 | A `Reference` value passed to an overloaded generic helper does not match a value or `Reference<T>` parameter | [2026-11.md](todo_archive/2026-11.md) | 2026-11-22 |

@@ -614,6 +614,36 @@ TEST_CASE("wasm answers the live allocation count like the VM") {
   }
 }
 
+TEST_CASE("a wasm string heap statistic of an unknown number is the VM's fault") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  // A module that only asks, one that has a heap, and the number itself in the message.
+  expectMatchesVm(withStat(mainOf({"PushI64 9", "CallHost 0", "ReturnI64"})), "stat_unknown_9");
+  expectMatchesVm(withStat(mainOf({"PushI64 100000000000", "CallHost 0", "ReturnI64"})),
+                  "stat_unknown_large");
+  expectMatchesVm(
+      withStat(mainOf({"PushI64 3", "HeapAlloc", "Pop", "PushI64 12", "CallHost 0", "ReturnI64"})),
+      "stat_unknown_with_heap");
+  // The known numbers still answer before the fault.
+  expectMatchesVm(
+      withStat(mainOf(
+          {"PushI64 8", "CallHost 0", "PrintU64 1", "PushI64 9", "CallHost 0", "ReturnI64"})),
+      "stat_unknown_after_known");
+}
+
+TEST_CASE("the browser profile traps on a string heap statistic of an unknown number") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  const NodeRun trap = runOnNode(
+      withStat(mainOf({"PushI64 9", "CallHost 0", "ReturnI64"})), "browser_stat_unknown", true);
+  REQUIRE_MESSAGE(trap.built, trap.buildError);
+  CHECK(trap.out == "trap\n");
+}
+
 TEST_CASE("the browser profile answers the live allocation count") {
   if (!nodeAvailable()) {
     MESSAGE("SKIP: node is unavailable");
@@ -1451,6 +1481,15 @@ TEST_CASE("wasm string heap faults carry the VM's message and exit code 3") {
     CAPTURE(name);
     expectMatchesVm(module, "text_fault_" + name);
   }
+}
+
+TEST_CASE("the string heap of a wasm module reports an unknown statistic as the VM does") {
+  if (!nodeAvailable()) {
+    MESSAGE("SKIP: node is unavailable");
+    return;
+  }
+  expectMatchesVm(withText(mainOf({"PushI64 9", callText(TextStat), "ReturnI64"})),
+                  "text_stat_unknown_9");
 }
 
 TEST_CASE("wasm string heap large blocks have the VM's addresses, capacities and reuse") {

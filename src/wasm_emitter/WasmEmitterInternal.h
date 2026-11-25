@@ -324,6 +324,13 @@ struct WasmRuntimeContext {
   // zero divisor is the VM's runtime fault (`VM error: division by zero in IR` on stderr, `proc_exit(3)`) and not a
   // wasm trap. `hasDivisionFault` is set when the module divides; the helpers exist per used operation.
   bool hasDivisionFault = false;
+  // WASI profile only: a string heap statistic the VM does not know (a number above 8) is the VM's fault
+  // (`VM error: unknown string heap statistic: <n>` on stderr, `proc_exit(3)`), written by a helper function of the
+  // module (`statFault`, type (i64) -> ()) that `__pstext_stat` calls; the browser profile traps.
+  bool hasStatFault = false;
+  uint32_t statFaultFunction = 0;
+  uint32_t statMessageAddr = 0;
+  uint32_t statMessageLength = 0;
   bool hasDivisionHelper[WasmDivisionOpCount] = {false, false, false};
   uint32_t divisionHelperFunction[WasmDivisionOpCount] = {0, 0, 0};
   uint32_t divisionMessageAddr = 0;
@@ -804,6 +811,9 @@ void emitWasmIndirectStore(uint32_t valueLocal,
                            std::vector<uint8_t> &out);
 // The code of the helper `slotAddress` (type (i64) -> i32).
 WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime);
+// The code of the helper `statFault` (type (i64) -> ()): the VM's unknown-statistic message with the number it was
+// asked for, then `proc_exit(3)`.
+WasmCodeBody buildWasmStatFaultHelperBody(const WasmRuntimeContext &runtime);
 // The code of the helper `growShadowStack` (type (i32) -> ()): the argument is the number of live slots a frame needs;
 // the memory grows to hold them, or the program ends with the VM's `VM call stack overflow` fault.
 WasmCodeBody buildWasmShadowGrowHelperBody(const WasmRuntimeContext &runtime);
