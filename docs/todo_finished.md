@@ -2673,6 +2673,7 @@ are left unarchived.
 | TODO-6265 | The inline report of the scalar target names an `on_error` definition `not-reserved` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6266 | Missing semantic-product messages outside `IrLowerer::lower` are not marked internal | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6267 | `stale semantic-product` lowering messages are not marked internal | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6270 | Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI) | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

@@ -695,7 +695,9 @@
   a runtime string, where any other use (indexing expands to a branch per table string) stays inline.
   `String.append` costs the same as inlined: its length check and `growFor`'s capacity check are inlined into the callers
   and the C++ emitters call the bulk move (`__pstext_move`) directly instead of through the by-name host dispatch.
-  The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
+  Wasm (both profiles) takes the address ABI too, since its frames have addresses (`AddressOfLocal`, `LoadIndirect`
+  and `StoreIndirect` on the shadow stack), so a recursive definition with a `vector`, struct or `Reference` parameter is a
+  real call there. The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
   a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame. On
   the scalar targets that run `Trap` (`cpp`/`exe`, x86_64 native) a `never` result counts as void, so `panic` is one
   function there too instead of a copy of its body at every call site.

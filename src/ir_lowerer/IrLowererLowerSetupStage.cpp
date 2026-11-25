@@ -69,6 +69,8 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.realCallAllowStructs =
       input.validationTarget == IrValidationTarget::Vm ||
       input.validationTarget == IrValidationTarget::OptCpp ||
+      input.validationTarget == IrValidationTarget::Wasm ||
+      input.validationTarget == IrValidationTarget::WasmBrowser ||
       (NativeHasFrameAddresses && input.validationTarget == IrValidationTarget::Native);
   stateOut.realCallAllowStrings = input.validationTarget == IrValidationTarget::Vm ||
                                   input.validationTarget == IrValidationTarget::OptCpp;
@@ -177,7 +179,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
         const Definition &definition = *stateOut.defMap.at(path);
         if (!stateOut.realCallAllowStructs) {
           errorOut = "linking a library needs a target with the address ABI (the vm, optexe, "
-                     "optcpp and arm64 "
+                     "optcpp, wasm and arm64 "
                      "native): " +
                      path + " is imported from library " + importedLibraryName(definition);
           return false;

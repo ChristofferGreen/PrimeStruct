@@ -130,7 +130,6 @@ of sync with them.
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | ready | wasm-bytes-host |
-| TODO-6270 | Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI) | ready | wasm-opcode-gaps |
 | TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | ready | wasm-opcode-gaps |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -172,7 +171,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6270 (Wasm address ABI of real calls), TODO-6271 (Wasm control-flow pattern of two file programs), TODO-6269 (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6271 (Wasm control-flow pattern of two file programs), TODO-6269 (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -524,20 +523,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `PrintArgv` fault only; `PrintArgvUnsafe` keeps its unchecked read.
   - repro: build the module above, run it with `expectMatchesVm(mainOf({"PushI32 5", "PrintArgv 1", "ReturnVoid"}), "print_argv_past", "", false, {"a"})`; it reports `unexpected RuntimeError: unreachable` against `VM error: invalid argv index in IR`.
-
-- [~] TODO-6270: Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI)
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-ac4219caf8d6904ca), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Backend parity (slice of TODO-6124)
-  - parallel_track: wasm-opcode-gaps
-  - scope: Measured 2026-11-26 with `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1` (release build, 448 cases counted before the run was cut): 375 programs compile for Wasm; the pointer, `Reference`, struct, array and closure opcodes no longer refuse any program. Eight recursive matrix programs are still refused with `Wasm lowering error: wasm backend does not support recursive calls: <path> (it stays inline because parameter ... is a ... which a call on this target does not take (only scalar values))`: `function_wraps_function_copy`, `function_wraps_function_destroy_loop`, `recursion_mut_vector_parameter`, `recursion_reference_to_vector_parameter`, `recursion_struct_elements`, `recursion_mut_vector_replace`, `recursion_copy_vector_parameter` and `recursion_move_vector_parameter`. `realCallAllowStructs` (src/ir_lowerer/IrLowererLowerSetupStage.cpp) is true for the VM, optimized C++ and arm64 native only, so on Wasm a definition with a struct, `Reference`, `vector` or `Function` parameter always stays inline and a recursive one cannot be lowered. The Wasm target has frame addresses since TODO-6138 (`AddressOfLocal`, `LoadIndirect`, `StoreIndirect` on the shadow stack), so the address ABI is the next step.
-  - acceptance:
-    - the eight programs above list `wasm-wasi` in `extraConfigs` and agree with the VM under node (or each remaining one has its own leaf with the reason)
-    - full release gate green
-  - stop_rule: the address ABI of real calls on Wasm; closures called through `Function` values, tasks and strings as real-call parameters stay separate.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep "recursive calls"` from the release build directory.
 
 - [ ] TODO-6271: Wasm refuses two file programs with `unsupported control-flow pattern`
   - owner: ai

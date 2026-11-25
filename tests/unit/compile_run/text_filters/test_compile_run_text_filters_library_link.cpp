@@ -167,9 +167,9 @@ TEST_CASE("library link: a target without the address ABI is refused") {
           "app.prime",
           "import</ui>\nimport /ui/*\n\n[return<i32>]\nmain() {\n  return(add(1i32, 2i32))\n}\n");
   const Run run = shell(dir,
-                        "./primec --emit=wasm --library " + quoteShellArg(ui) + " " +
+                        "./primec --emit=cpp --library " + quoteShellArg(ui) + " " +
                             quoteShellArg((dir / "app.prime").string()) + " -o " +
-                            quoteShellArg((dir / "app.wasm").string()));
+                            quoteShellArg((dir / "app.cpp").string()));
   CHECK(run.exitCode != 0);
   CHECK(run.err.find("linking a library needs a target with the address ABI") != std::string::npos);
   CHECK(run.err.find("/ui/add is imported from library ui") != std::string::npos);
