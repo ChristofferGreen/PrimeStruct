@@ -453,13 +453,13 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25; `count` 2,262 added over 39 sites).
   - notes: deferred: measured 2026-11-25, see docs/todo_log.md under TODO-5536. The real-call experiment (option 1: the PNG module 366,129 to 345,909 bytes, `count` still 51 per site, `vectorSlotUnsafe` and `vectorElementRef` blocked by `unsupported-result`) is not pursued.
 
-- [ ] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
+- [~] TODO-6252: A `File` parameter keeps the PNG reader helpers inline
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
   - created_at: 2026-11-24
   - phase: Native UI (docs/NativeUiPlan.md; a blocker the inline report names for the PNG reader, TODO-5536)
   - parallel_track: bytecode-inline-blockers
-  - depends_on: TODO-5536
   - scope: The reader helpers `ppmReadByteStatus`, `pngReadU32Be`, `pngReadIhdr`, `pngAppendBytes`, `pngValidateSignature` and `pngReadChunkType` take a `File<Read>` and stay inline (`parameter-type`): six definitions, 38 call sites, 1,758 instructions added. Let a real call pass a `File` handle (one slot, a scalar value at run time) by `Reference` or by value.
   - acceptance:
     - the report of the PNG program names those six as `real call`, and the `added` of `parameter-type` lines naming `File` falls from 1,758 to under 500
