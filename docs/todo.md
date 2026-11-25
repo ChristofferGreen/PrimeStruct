@@ -298,9 +298,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
   - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
-- [ ] TODO-6258: Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors
+- [~] TODO-6258: Two definition-validation workers publish extra `block` call facts for the `/std/maybe` constructors
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: worker-inline (worktree agent-aefaa24c55a2ebdac), 2026-11-25
   - created_at: 2026-11-25
   - phase: Frontend and diagnostics (semantic validation workers; found with TODO-6203)
   - parallel_track: semantic-workers-stale-facts
