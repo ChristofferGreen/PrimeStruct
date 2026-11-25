@@ -345,9 +345,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: Program matrix case `status-only stdlib Result propagates its error through try` (tests/unit/program_matrix/test_program_matrix_results.cpp): in `addressAbiShapeBlocker` change the `uses-try` condition to `definitionUsesTry(def) && !definitionHasTransform(def, "on_error")`, build, and `primec` plus `primevm` of that program print `0`, `1004` and then `VM error: unaligned indirect address in IR: 20` with exit 3 (release build, macOS arm64, 2026-11-25).
   - notes: deferred: found while landing TODO-6260 to TODO-6262 and TODO-6084; not on the queue.
 
-- [ ] TODO-6265: The inline report of the scalar target names an `on_error` definition `not-reserved`
+- [~] TODO-6265: The inline report of the scalar target names an `on_error` definition `not-reserved`
   - owner: ai
   - status: deferred
+  - claimed_by: inline-worker (worktree agent-ab73407690174e399), 2026-11-25
   - created_at: 2026-11-25
   - phase: Diagnostics (found with TODO-6260)
   - parallel_track: diagnostics-inline-report
