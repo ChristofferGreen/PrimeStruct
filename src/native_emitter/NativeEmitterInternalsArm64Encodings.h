@@ -91,7 +91,7 @@ namespace arm64_arena {
 // A string arena is a chain of regions mapped from the system. Every region starts with this header; the first one
 // (the arena's record) also holds the arena's state. The blocks follow the header, each with the pool's block header
 // (a magic word, then its size) and 16-byte aligned. A region of the standard size goes on a free list when its arena
-// ends and is reused by the next one; a larger region (a block that does not fit a standard one) stays mapped.
+// ends and is reused by the next one; a larger region (a block that does not fit a standard one) is unmapped.
 constexpr uint64_t RegionBytes = 256 * 1024;
 constexpr uint64_t HeaderBytes = 64;
 constexpr uint64_t NextOffset = 0;    // the older region of the arena (0 for the first)

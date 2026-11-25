@@ -9,9 +9,11 @@
 //
 // A block of an arena has its own header magic (HeapHeaderMagicArena): freeing it does nothing. Ending the arena
 // writes the free magic into every block it made, so text used after its arena ended meets the heap's own message for
-// a block that is already free (exit code 3) instead of reading what a later arena wrote there. The regions stay
-// mapped: a region of the standard size goes on the free list for the next arena (a use after that sees the new
-// arena's text, as the VM's recycled chunks do), a larger region, made for one block that did not fit, is kept.
+// a block that is already free (exit code 3) instead of reading what a later arena wrote there. A region of the standard
+// size stays mapped and goes on the free list for the next arena (a use after that sees the new
+// arena's text, as the VM's recycled chunks do). A larger region, made for one block that did not fit, is unmapped,
+// so a loop of arenas with large text runs in bounded memory; text of such a block used after its arena ended is a
+// fault of the system (SIGSEGV), not a silent read.
 //
 // A threaded module's arenas only count (the VM's `disableArenas` does the same for a heap the threads share): the
 // state is the program's, not a thread's, so its text blocks stay in the pool.
@@ -160,7 +162,7 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitFaultMessage("string arena could not be made: out of memory\n");
   }
 
-  // ---- end: every block of the innermost arena becomes free, its standard regions go on the free list ----
+  // ---- end: every block of the innermost arena becomes free, its standard regions go on the free list, larger ones are unmapped ----
   if (usesRoutine[static_cast<size_t>(ArenaRoutine::End)]) {
     entries[static_cast<size_t>(ArenaRoutine::End)] = here();
     emitHeapStateAddress();
@@ -211,11 +213,19 @@ inline void Arm64Emitter::emitArenaRuntime() {
     load(3, 2, BytesOffset);
     emitMovImm64(0, RegionBytes);
     emitCompareReg(3, 0);
-    const size_t keepRegion = branch(CondCode::Ne);
+    const size_t unmapRegion = branch(CondCode::Ne);
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     store(0, 2, NextOffset);
     store(2, 9, arm64_text::ArenaFreeRegionsOffset);
-    bind(keepRegion, CondCode::Ne);
+    const size_t regionDone = jump();
+    // A larger region (made for one block that did not fit a standard one) goes back to the system: munmap(region,
+    // bytes). The syscall changes x0 and x1 only; x7 still holds the older region.
+    bind(unmapRegion, CondCode::Ne);
+    emitMovReg(1, 3);
+    emitMovReg(0, 2);
+    emitMovImm64(16, SysMunmap);
+    emit(encodeSvc());
+    bindJump(regionDone);
     emitMovReg(2, 7);
     emit(arm64_heap::cbnz(2, static_cast<int32_t>(regionLoop) - static_cast<int32_t>(here())));
     if (textStats_) {

@@ -232,4 +232,63 @@ main() {
   runStringProgram(program);
 }
 
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+namespace {
+
+// The peak resident set size, in bytes, that `/usr/bin/time -l` reports for a native program that opens an arena
+// `rounds` times and makes one text larger than a standard arena region in each.
+long long peakResidentBytesOfLargeTextArenas(const std::string &name, int rounds) {
+  const std::filesystem::path dir =
+      primec::testing::testScratchPath("program_matrix/" + name + "/x").parent_path();
+  std::filesystem::create_directories(dir);
+  const std::filesystem::path source = dir / "program.prime";
+  {
+    std::ofstream file(source);
+    file << R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [i32 mut] total{0i32}
+  for([i32 mut] round{0i32}, round < )"
+         << rounds << R"(i32, round++) {
+    [StringArena] arena{beginStringArena()}
+    [String] big{stringFilled(300000i32, 66u8)}
+    total = total + big.count()
+  }
+  print_line(total)
+  return(0i32)
+}
+)";
+  }
+  const std::filesystem::path binary = dir / "program.bin";
+  const program_matrix::Outcome compile = program_matrix::runCaptured(
+      "./primec --emit=native -O2 " + program_matrix::quote(source.string()) + " -o " +
+          program_matrix::quote(binary.string()) + " --entry /main",
+      dir / "compile");
+  REQUIRE(compile.exitCode == 0);
+  const program_matrix::Outcome run = program_matrix::runCaptured(
+      "/usr/bin/time -l " + program_matrix::quote(binary.string()), dir / "run");
+  CHECK(run.exitCode == 0);
+  const std::string marker = "maximum resident set size";
+  const size_t at = run.err.find(marker);
+  REQUIRE(at != std::string::npos);
+  // The figure comes first on its line: "  12345678  maximum resident set size".
+  const size_t lineStart = run.err.rfind('\n', at);
+  return std::atoll(run.err.c_str() + (lineStart == std::string::npos ? 0 : lineStart + 1));
+}
+
+} // namespace
+#endif
+
+TEST_CASE("native arenas return a region larger than the standard one to the system") {
+#if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
+  const long long few = peakResidentBytesOfLargeTextArenas("string_arenas_large_few", 20);
+  const long long many = peakResidentBytesOfLargeTextArenas("string_arenas_large_many", 1200);
+  // 1200 rounds of 300 KB would hold 360 MB when no region is unmapped; the bound is a fixed 64 MB over 20 rounds.
+  CHECK(many < few + 64ll * 1024 * 1024);
+#endif
+}
+
 TEST_SUITE_END();

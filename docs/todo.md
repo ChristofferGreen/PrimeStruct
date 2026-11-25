@@ -118,7 +118,6 @@ of sync with them.
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
-| TODO-6118 | Native arena regions larger than the standard one are never unmapped | deferred | native-arena-large-regions |
 | TODO-6119 | A native module with tasks keeps arena text in the pool | deferred | native-arena-threads |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
@@ -169,7 +168,7 @@ of sync with them.
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6118, TODO-6119
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117; deferred TODO-6119
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test) (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
@@ -396,20 +395,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the decided option, with a native matrix case that uses text after its arena ended and the expected fault
     - full release gate green
   - stop_rule: stale arena text on the arm64 native backend only.
-
-- [~] TODO-6118: Native arena regions larger than the standard one are never unmapped
-  - owner: ai
-  - status: ready
-  - claimed_by: lowering-worker (worktree agent-a4e5c8a51ee306cfd), 2026-11-25
-  - created_at: 2026-11-20
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
-  - parallel_track: native-arena-large-regions
-  - scope: A native arena maps a region of 256 KiB; a block that does not fit one gets a region of its own size, and TODO-5956 keeps every region mapped when its arena ends (a standard region goes on a free list the next arena reuses, a larger one is just left). A loop that opens an arena and makes one large text leaks that mapping each round: 3000 rounds of `stringFilled(300000i32, 66u8)` in a `StringArena` reach a peak resident size of 935 MB on native (`/usr/bin/time -l`), where the VM's peak stays flat.
-  - implementation_notes: options for the owner: (a) `munmap` the larger regions at the end (a stale use of such text is then a SIGSEGV, exit 139, not silent), or (b) keep a free list of larger regions by size and reuse the first that fits, or (c) map blocks above a limit by the pool's own large path inside the arena and unmap them at the end. (a) is the smallest; the decision of TODO-5956 ("unmaps nothing that a later use could trip over silently") does not say which of these it allows.
-  - acceptance:
-    - the 3000-round program above runs in bounded memory on native (a test that compares the peak resident size of the first 100 and the last 100 rounds, or a counter, not a timing), and its output is the VM's
-    - full release gate green
-  - stop_rule: arena regions larger than the standard one only.
 
 - [ ] TODO-6119: A native module with tasks keeps arena text in the pool
   - owner: ai

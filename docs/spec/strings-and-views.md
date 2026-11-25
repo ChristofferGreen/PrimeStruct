@@ -273,7 +273,8 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   ending it writes the free magic into every block it made and puts its standard regions on a list the next arena
   reuses, so text used after its arena ended meets the heap's message for a free block ("invalid heap free address: the
   block is already free", exit code 3) while its region is unused, and the text of the next arena once it is reused. A
-  region larger than the standard one stays mapped. A module with tasks keeps its text blocks in the pool, and its
+  region larger than the standard one is unmapped when its arena ends (a loop of arenas with large text runs in
+  bounded memory), so text of such a block used afterwards is a fault of the system (SIGSEGV), not a silent read. A module with tasks keeps its text blocks in the pool, and its
   `beginStringArena` and end only count (as the VM's shared heaps do).
 - `pushCodePoint(point)` appends the UTF-8 encoding of a code point (a surrogate or a value past U+10FFFF stops the
   program); `+` and the comparisons are the operators described under the text view below.
