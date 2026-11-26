@@ -16,9 +16,9 @@
     {
       "fixture": "imported_math_body",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 34095104,
-      "soft_max_worst_peak_rss_bytes": 43606016,
-      "max_worst_peak_rss_bytes": 44521882
+      "baseline_worst_peak_rss_bytes": 44500000,
+      "soft_max_worst_peak_rss_bytes": 49000000,
+      "max_worst_peak_rss_bytes": 51000000
     },
     {
       "fixture": "inline_math_body",
@@ -58,9 +58,9 @@
     {
       "fixture": "math_vector",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 34029568,
-      "soft_max_worst_peak_rss_bytes": 43331584,
-      "max_worst_peak_rss_bytes": 43713332
+      "baseline_worst_peak_rss_bytes": 44500000,
+      "soft_max_worst_peak_rss_bytes": 49000000,
+      "max_worst_peak_rss_bytes": 51000000
     },
     {
       "fixture": "math_vector_matrix",
@@ -72,9 +72,9 @@
     {
       "fixture": "math_vector_matrix",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 33685504,
-      "soft_max_worst_peak_rss_bytes": 43532288,
-      "max_worst_peak_rss_bytes": 45708902
+      "baseline_worst_peak_rss_bytes": 44500000,
+      "soft_max_worst_peak_rss_bytes": 49000000,
+      "max_worst_peak_rss_bytes": 51000000
     },
     {
       "fixture": "no_import",

@@ -90,8 +90,8 @@ namespace std {
   }
 
   [public return<Mat2> effects(none)]
-  mat2_scale_internal([Mat2] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat2_scale_internal([Mat2] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat2{
       value.m00 * scalar,
       value.m01 * scalar,
@@ -101,13 +101,13 @@ namespace std {
   }
 
   [public return<Mat2> effects(none)]
-  mat2_scale_left_internal([auto] scale, [Mat2] value) {
+  mat2_scale_left_internal([f32] scale, [Mat2] value) {
     return(mat2_scale_internal(value, scale))
   }
 
   [public return<Mat2> effects(none)]
-  mat2_div_scalar_internal([Mat2] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat2_div_scalar_internal([Mat2] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat2{
       value.m00 / scalar,
       value.m01 / scalar,
@@ -157,8 +157,8 @@ namespace std {
   }
 
   [public return<Mat3> effects(none)]
-  mat3_scale_internal([Mat3] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat3_scale_internal([Mat3] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat3{
       value.m00 * scalar,
       value.m01 * scalar,
@@ -173,13 +173,13 @@ namespace std {
   }
 
   [public return<Mat3> effects(none)]
-  mat3_scale_left_internal([auto] scale, [Mat3] value) {
+  mat3_scale_left_internal([f32] scale, [Mat3] value) {
     return(mat3_scale_internal(value, scale))
   }
 
   [public return<Mat3> effects(none)]
-  mat3_div_scalar_internal([Mat3] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat3_div_scalar_internal([Mat3] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat3{
       value.m00 / scalar,
       value.m01 / scalar,
@@ -253,8 +253,8 @@ namespace std {
   }
 
   [public return<Mat4> effects(none)]
-  mat4_scale_internal([Mat4] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat4_scale_internal([Mat4] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat4{
       value.m00 * scalar,
       value.m01 * scalar,
@@ -276,13 +276,13 @@ namespace std {
   }
 
   [public return<Mat4> effects(none)]
-  mat4_scale_left_internal([auto] scale, [Mat4] value) {
+  mat4_scale_left_internal([f32] scale, [Mat4] value) {
     return(mat4_scale_internal(value, scale))
   }
 
   [public return<Mat4> effects(none)]
-  mat4_div_scalar_internal([Mat4] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  mat4_div_scalar_internal([Mat4] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Mat4{
       value.m00 / scalar,
       value.m01 / scalar,

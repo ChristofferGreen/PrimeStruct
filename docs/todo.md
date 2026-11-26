@@ -651,21 +651,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [~] TODO-6289: The operators of a matrix or quaternion with a scalar (`multiply(m, 2.0f32)`, `divide(m, 2.0f32)`) are not lowered on the VM
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (found by TODO-6287)
-  - parallel_track: lib-shapes
-  - scope: in a whole program, `import /std/math/*`, `[Mat2] m{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}`, `[Mat2] s{multiply(m, 2.0f32)}` stops with `VM lowering error: vm backend only supports arithmetic/comparison/... calls in expressions (call=/multiply, name=/std/math/mat2_scale_internal, args=2, method=false)`; the same for `divide`, for `multiply(2i32, m)`, for Mat3, Mat4 and Quat. The helpers `mat2_scale_internal`, `_scale_left_`, `_div_scalar_` take `[auto] scale`, so they are templates, and the lowerer rewrite (src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp) names the template path, not an instance, so no function exists to call. The tests `runs vm matrix arithmetic helpers with tolerance` and the quaternion one hide this: they run through `runVmCommandOrExpectUnsupported`, which accepts exactly this error as a pass. Fix: the semantics pass instantiates the helper for the scalar type (or the helpers take `f32` and the rewrite converts the operand), and the two tests stop tolerating the error.
-  - acceptance:
-    - `Mat2`, `Mat3`, `Mat4` and `Quat` times, left times and divided by a scalar give the right value on the VM and optexe, in a whole program and in a program that links the matrix and quaternion libraries (library link test next to the TODO-6287 ones)
-    - the two vm math tests run without `runVmCommandOrExpectUnsupported`
-    - full release gate green
-  - stop_rule: the operator rewrite and the scalar helpers of matrix.prime and quaternion.prime.
-  - repro: the program above with `primec --emit=vm app.prime --entry /main`.
-
 - [ ] TODO-6288: Library code outside the slice and container primitives is not `[unsafe]`
   - owner: ai
   - status: ready
@@ -709,6 +694,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: tests that accept an error as a pass; no compiler changes beyond what a converted test needs filed as its own leaf.
   - repro: `grep -rn runVmCommandOrExpectUnsupported tests`.
+
+- [ ] TODO-6293: Each non-template stdlib math definition costs about a megabyte of semantic-product memory
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Compiler memory (found by the scalar operator helpers)
+  - parallel_track: semantic-memory
+  - scope: making the 12 scalar helpers of matrix.prime and quaternion.prime non-template (`[auto] scale` became `[f32] scale`) raised the `semantic-product` phase of `primec --dump-stage=semantic-product` on a program that imports only `/std/math/Vec2` from 37-39 MB to 44-47 MB (`python3 scripts/semantic_memory_benchmark.py --primec build-release/primec --repo-root . --fixtures math_vector --phases semantic-product`); removing the helpers gives 34 MB. About a megabyte per definition is far more than the facts of a dozen small bodies need, and a program that does not use a matrix pays it. The budget for `imported_math_body`, `math_vector` and `math_vector_matrix` was raised to 51 MB (benchmarks/semantic_memory_budget_policy.json) to land the operator fix. Find what the product keeps per definition (or why unused library definitions are validated at all when the program imports one type) and reduce it.
+  - acceptance:
+    - the `math_vector` and `imported_math_body` semantic-product peaks are back under 40 MB and the policy budget is lowered again
+    - full release gate green
+  - stop_rule: the semantic-product memory of unused imported definitions; no change to language behaviour.
+  - repro: the benchmark command above with and without the helpers.
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai

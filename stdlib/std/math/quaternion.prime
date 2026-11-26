@@ -62,8 +62,8 @@ namespace std {
   }
 
   [public return<Quat> effects(none)]
-  quat_scale_internal([Quat] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  quat_scale_internal([Quat] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Quat{
       value.x * scalar,
       value.y * scalar,
@@ -73,13 +73,13 @@ namespace std {
   }
 
   [public return<Quat> effects(none)]
-  quat_scale_left_internal([auto] scale, [Quat] value) {
+  quat_scale_left_internal([f32] scale, [Quat] value) {
     return(quat_scale_internal(value, scale))
   }
 
   [public return<Quat> effects(none)]
-  quat_div_scalar_internal([Quat] value, [auto] scale) {
-    [f32] scalar{convert<f32>(scale)}
+  quat_div_scalar_internal([Quat] value, [f32] scale) {
+    [f32] scalar{scale}
     return(Quat{
       value.x / scalar,
       value.y / scalar,

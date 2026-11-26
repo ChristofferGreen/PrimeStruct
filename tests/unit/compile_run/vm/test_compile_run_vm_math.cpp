@@ -2,20 +2,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.math");
 
-static bool runVmCommandOrExpectUnsupported(const std::string &runCmd,
-                                            const std::string &errPath,
-                                            int expectedExitCode) {
-  const int code = runCommand(runCmd + " 2> " + quoteShellArg(errPath));
-  if (code == expectedExitCode) {
-    return true;
-  }
-  CHECK(code == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
-            "assign/increment/decrement calls in expressions") != std::string::npos);
-  return false;
-}
-
 TEST_CASE("rejects vm software numeric types") {
   const std::string source = R"(
 [return<decimal>]
@@ -201,12 +187,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_math_matrix_arithmetic_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_math_matrix_arithmetic_helpers.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  if (!runVmCommandOrExpectUnsupported(runCmd, errPath, 1)) {
-    return;
-  }
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm quaternion arithmetic helpers with tolerance") {
@@ -235,12 +217,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_math_quaternion_arithmetic_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_math_quaternion_arithmetic_helpers.err").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  if (!runVmCommandOrExpectUnsupported(runCmd, errPath, 1)) {
-    return;
-  }
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("rejects vm support-matrix plus mismatch diagnostic") {

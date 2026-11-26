@@ -728,8 +728,8 @@ Total: 11617 test cases across 677 files.
 
 ### test_compile_run_emitters_matrix_quaternion_support.cpp
 
-- rejects C++ matrix arithmetic helpers with unsupported divide lowering
-- rejects C++ quaternion arithmetic helpers with unsupported divide lowering
+- runs C++ matrix arithmetic helpers with scalar operators
+- runs C++ quaternion arithmetic helpers with scalar operators
 - C++ emitter keeps support-matrix plus mismatch diagnostics
 - C++ emitter keeps support-matrix implicit conversion diagnostics
 - runs string-keyed map constructor access helpers on vm
@@ -2296,8 +2296,8 @@ Total: 11617 test cases across 677 files.
 - native support-matrix math nominal helpers
 - native quaternion reference multiply and rotation
 - native matrix composition order references with tolerance
-- rejects native matrix scalar divide helper call
-- rejects native quaternion scalar multiply helper call
+- runs native matrix scalar helper calls
+- runs native quaternion scalar helper calls
 - rejects native support-matrix plus mismatch diagnostic
 - rejects native support-matrix implicit conversion diagnostic
 

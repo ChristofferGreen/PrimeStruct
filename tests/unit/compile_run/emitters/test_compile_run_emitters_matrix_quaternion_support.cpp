@@ -5,7 +5,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("rejects C++ matrix arithmetic helpers with unsupported divide lowering") {
+TEST_CASE("runs C++ matrix arithmetic helpers with scalar operators") {
   const std::string source = R"(
 import /std/math/*
 
@@ -68,18 +68,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_matrix_arithmetic_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_matrix_arithmetic_helpers.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_matrix_arithmetic_helpers_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("exe backend only supports") != std::string::npos);
-  CHECK(err.find("call=/") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects C++ quaternion arithmetic helpers with unsupported divide lowering") {
+TEST_CASE("runs C++ quaternion arithmetic helpers with scalar operators") {
   const std::string source = R"(
 import /std/math/*
 
@@ -119,15 +117,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_quaternion_arithmetic_helpers.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_quaternion_arithmetic_helpers.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_quaternion_arithmetic_helpers_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  const std::string err = readFile(errPath);
-  CHECK(err.find("exe backend only supports") != std::string::npos);
-  CHECK(err.find("call=/") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("C++ emitter keeps support-matrix plus mismatch diagnostics") {

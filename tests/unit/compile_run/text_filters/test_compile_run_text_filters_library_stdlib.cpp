@@ -390,6 +390,14 @@ main() {
   [Mat4] d{plus(c, c)}
   print_line(convert<i32>(b.m22))
   print_line(convert<i32>(d.m33))
+  [Mat2] scaled{multiply(m, 2.0f32)}
+  [Mat2] scaledLeft{multiply(2i32, m)}
+  [Mat3] divided{divide(a, 2.0f32)}
+  [Mat4] scaled4{multiply(d, 3i32)}
+  print_line(convert<i32>(scaled.m11))
+  print_line(convert<i32>(scaledLeft.m10))
+  print_line(convert<i32>(divided.m22 * 2.0f32))
+  print_line(convert<i32>(scaled4.m33))
   return(0)
 }
 )";
@@ -412,6 +420,12 @@ main() {
   print_line(convert<i32>(product.w))
   print_line(convert<i32>(sum.y))
   print_line(convert<i32>(difference.z))
+  [Quat] scaled{multiply(q, 2.0f32)}
+  [Quat] scaledLeft{multiply(2i32, q)}
+  [Quat] divided{divide(q, 2.0f32)}
+  print_line(convert<i32>(scaled.w))
+  print_line(convert<i32>(scaledLeft.x))
+  print_line(convert<i32>(divided.w * 2.0f32))
   return(0)
 }
 )";

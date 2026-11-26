@@ -6,6 +6,7 @@
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace primec::ir_lowerer {
@@ -94,6 +95,28 @@ void rewriteHelperCall(const Expr &expr, const std::string &helperPath, Expr &re
   rewrittenExpr.isFieldAccess = false;
 }
 
+// The scalar helpers take an f32; any other numeric operand is converted at the call.
+void rewriteScalarHelperCall(const Expr &expr,
+                             const std::string &helperPath,
+                             size_t scalarIndex,
+                             LocalInfo::ValueKind scalarKind,
+                             Expr &rewrittenExpr) {
+  rewriteHelperCall(expr, helperPath, rewrittenExpr);
+  if (scalarKind == LocalInfo::ValueKind::Float32) {
+    return;
+  }
+  Expr convertExpr;
+  convertExpr.kind = Expr::Kind::Call;
+  convertExpr.name = "convert";
+  convertExpr.templateArgs = {"f32"};
+  convertExpr.args.push_back(expr.args[scalarIndex]);
+  convertExpr.argNames.push_back(std::nullopt);
+  rewrittenExpr.args[scalarIndex] = std::move(convertExpr);
+  if (rewrittenExpr.argNames.size() > scalarIndex) {
+    rewrittenExpr.argNames[scalarIndex] = std::nullopt;
+  }
+}
+
 bool rewriteMathArithmeticCall(const Expr &expr,
                                const LocalMap &localsIn,
                                const ExprLocalsValueKindFn &inferExprKind,
@@ -129,27 +152,32 @@ bool rewriteMathArithmeticCall(const Expr &expr,
     return true;
   }
   if (builtin == "multiply" && !leftMatrixBase.empty() && isNumericScalarKind(rightKind)) {
-    rewriteHelperCall(expr, leftMatrixBase + "_scale_internal", rewrittenExpr);
+    rewriteScalarHelperCall(expr, leftMatrixBase + "_scale_internal", 1, rightKind, rewrittenExpr);
     return true;
   }
   if (builtin == "multiply" && !leftQuaternionBase.empty() && isNumericScalarKind(rightKind)) {
-    rewriteHelperCall(expr, leftQuaternionBase + "_scale_internal", rewrittenExpr);
+    rewriteScalarHelperCall(
+        expr, leftQuaternionBase + "_scale_internal", 1, rightKind, rewrittenExpr);
     return true;
   }
   if (builtin == "multiply" && isNumericScalarKind(leftKind) && !rightMatrixBase.empty()) {
-    rewriteHelperCall(expr, rightMatrixBase + "_scale_left_internal", rewrittenExpr);
+    rewriteScalarHelperCall(
+        expr, rightMatrixBase + "_scale_left_internal", 0, leftKind, rewrittenExpr);
     return true;
   }
   if (builtin == "multiply" && isNumericScalarKind(leftKind) && !rightQuaternionBase.empty()) {
-    rewriteHelperCall(expr, rightQuaternionBase + "_scale_left_internal", rewrittenExpr);
+    rewriteScalarHelperCall(
+        expr, rightQuaternionBase + "_scale_left_internal", 0, leftKind, rewrittenExpr);
     return true;
   }
   if (builtin == "divide" && !leftMatrixBase.empty() && isNumericScalarKind(rightKind)) {
-    rewriteHelperCall(expr, leftMatrixBase + "_div_scalar_internal", rewrittenExpr);
+    rewriteScalarHelperCall(
+        expr, leftMatrixBase + "_div_scalar_internal", 1, rightKind, rewrittenExpr);
     return true;
   }
   if (builtin == "divide" && !leftQuaternionBase.empty() && isNumericScalarKind(rightKind)) {
-    rewriteHelperCall(expr, leftQuaternionBase + "_div_scalar_internal", rewrittenExpr);
+    rewriteScalarHelperCall(
+        expr, leftQuaternionBase + "_div_scalar_internal", 1, rightKind, rewrittenExpr);
     return true;
   }
   if (leftType == "/std/math/Mat2" && rightType == "/std/math/Vec2") {
