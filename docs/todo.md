@@ -123,7 +123,7 @@ of sync with them.
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6268 | A packed `Result` with a `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | deferred | safety-stdlib |
+| TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | ready | safety-stdlib |
 | TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
@@ -260,9 +260,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: recording and inference only; the call-site rule stays TODO-5688's.
   - repro: `grep -rn "requires .* effect" src/semantics/*.cpp` lists the sites; the measurement is in TODO-5688's scope.
 
-- [ ] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
+- [~] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
   - created_at: 2026-10-06
   - phase: Correctness audit 2026-10
   - parallel_track: safety-stdlib
@@ -275,9 +276,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 
 
-- [ ] TODO-6198: Safe code builds a `Slice` of any count over any pointer
+- [~] TODO-6198: Safe code builds a `Slice` of any count over any pointer
   - owner: ai
   - status: ready
+  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
   - created_at: 2026-11-23
   - phase: Correctness audit 2026-10 (found with TODO-6163)
   - parallel_track: safety-slices
