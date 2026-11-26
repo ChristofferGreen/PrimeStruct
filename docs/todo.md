@@ -140,6 +140,16 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
+| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
+| TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | ready | lib-shapes |
+| TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
+| TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
+| TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | blocked | lib-shapes |
+| TODO-6311 | The VM fast kernel runs `CallIndirect` | blocked | lib-shapes-backends |
+| TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | blocked | lib-shapes-backends |
+| TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | blocked | lib-shapes-backends |
+| TODO-6314 | The simple C++ emitters emit `CallIndirect` | blocked | lib-shapes-backends |
+| TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -151,6 +161,7 @@ of sync with them.
 - TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
+- TODO-6307 (lib-shapes): IR opcodes FunctionAddress and CallIndirect (first layer of TODO-6283; then TODO-6308, TODO-6309, TODO-6310, TODO-6283)
 
 ### Immediate Next 10
 
@@ -158,6 +169,7 @@ of sync with them.
 2. TODO-6233
 3. TODO-6240
 4. TODO-6232
+5. TODO-6307
 
 ### Priority Lanes
 
@@ -637,20 +649,159 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
   - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
 
-- [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
+- [ ] TODO-6283: A `Function` holds a function address and an environment, and a call is an indirect call
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6310
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found by TODO-6282; split into TODO-6307..6310 and this leaf)
+  - parallel_track: lib-shapes
+  - depends_on: TODO-6307, TODO-6308, TODO-6309, TODO-6310
+  - decision (owner, 2026-11-26): option (C), the real fix now. A `Function` holds a function address (index) and an environment, and a call is an indirect call, so a library box dispatches closures of the program that links it; the tag table goes. One leaf per layer: TODO-6307 (IR opcodes and the expansion for targets without them), TODO-6308 (VM), TODO-6309 (`optexe`), TODO-6310 (lowering of the two definition markers), then this leaf (the language layer). Back ends that do not get the opcode in this run are TODO-6311 to TODO-6315.
+  - scope: today the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp), so a consumer that passes its own lambda where a library takes the `Function` stops with `unknown call target: /__fn_box`. New layout: `__FunctionN<R, A...>` is `[u64 mut] invoke` (the address of the closure's call routine, `index + 1`, so 0 is no function) and `[Pointer<i32> mut] env` (a heap block that starts with a header of two addresses, `clone` and `release`, followed by the closure). `call` is `invoke_proto(this.invoke, this.env, a0, ...)`, `Copy` clones the block through the header's `clone` address, `Destroy` releases it through `release` (nothing for `invoke` 0). Both are the same text in every program, so the box needs no per-program completion and a library's box dispatches the closures of the program that links it. For each closure type the pass converts to a `Function` it generates three routines (`invoke`, `clone`, `release`) and a getter of each routine's address (`[function_address(<path>)]`, TODO-6310); the call proto is a body-less `[indirect_call]` definition of the instance's signature (TODO-6310). The tag, `isLibraryOwned`, the dispatch generation, the box's closure structs in the interface (`functionBoxClosures`) and the diagnostic for converting a closure to a library's box are deleted.
+  - acceptance:
+    - the repro runs: a consumer closure passed to a library function (`router.add(3i32, [](...) {...})`) works on the VM and `optexe` with a library link test (the library's own box and the consumer's closures both dispatched)
+    - a `Function` value copies (clones the closure state), destroys once, nests (a closure holding a `Function` of its own type) and passes between modules, on the VM, `optexe`, native and wasm (the last two through the expansion of TODO-6307); the whole program matrix of closures passes unchanged
+    - docs/spec/value-lifecycle.md (Function values, Lowering), docs/spec/vm-design.md (the opcodes), docs/spec/integration-and-tooling.md (a library takes `Function` values from its consumers) and docs/spec/type-system.md describe the layout; the old tag text is gone
+    - full release gate green
+  - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
+  - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
+
+- [ ] TODO-6307: IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them
   - owner: ai
   - status: ready
   - created_at: 2026-11-26
-  - phase: Modules and libraries (found by TODO-6282)
+  - phase: Modules and libraries (first layer of TODO-6283)
   - parallel_track: lib-shapes
-  - decision (owner, 2026-11-26): option (C), the real fix now. A `Function` holds a function address (index) and an environment, and a call is an indirect call, so a library box dispatches closures of the program that links it; the tag table goes. Split into one leaf per back end if it is larger than one commit.
-  - blocked_on: owner decision, how a library's `Function` box dispatches closures of the program that links it
-  - scope: the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp). A library that holds such a field owns that dispatch: its interface carries the box with the completed `Copy` and `Destroy` and an imported `call`, so a consumer reads, copies and calls the handlers the library built. A consumer that passes its own lambda where the library takes the `Function` (`router.add(3i32, []([Request] request, [Reference<Request>] response) {...})` against `/web/Router/add`) stops with `unknown call target: /__fn_box`, so a library of `/std/http/server` style handlers cannot take handlers from the program. Options: (A) refuse it with a diagnostic that names the box and the library (cheap, keeps the limit); (B) the consumer owns a second box of the same type under its own name and the library takes a pointer to a call routine: needs a callback ABI; (C) one dispatch by function address (a `Function` holds a function index and an environment, the call is an indirect call): changes the box layout and every back end, removes the tag table, and is the real fix; (D) the link regenerates the box with the closures of every module: the archive then carries code per consumer, against the separate-compilation point.
+  - scope: PSIR v42 appends three opcodes. `FunctionAddress imm` (operand class Function, so the IR link renumbers it and pruning reaches the function) pushes `imm + 1`, a non-zero address. `CallIndirect imm` and `CallIndirectVoid imm` (`imm` = the callee's parameter count) take the address as the deepest of `imm + 1` stack slots, remove it and call that function with the rest as `Call` does (pushing its result, or nothing for the void form); an address that is 0, past the table or of a function with another parameter count faults. They are in the opcode, operand, category and stack-effect tables (src/ir), the serializer, printer, validator (the VM, serialized bytecode and `optcpp`/`optexe` targets accept them; the others take the module through the expansion below), the CFG, the inliner (a function holding one is not a leaf) and `pruneIrModuleToReachableFunctions`. `expandIndirectCalls(IrModule&)` (src/ir/IrIndirectCallExpansion.cpp, next to the FMA expansion) rewrites each pair for a target without them: `FunctionAddress` becomes `PushI64 imm + 1`, and `CallIndirect` becomes stores of the arguments and the address to locals of their own and a compare chain of direct `Call`s over the functions whose address is taken and whose parameter count matches (the last one the fallback, none a `Trap`), jump targets renumbered. `prepareIrModule` runs it after the library link for every target except serialized bytecode; the VM and the optimized C++ emitters take it until TODO-6308 and TODO-6309. Each back end that gets the opcodes natively (TODO-6308, TODO-6309, TODO-6311 to TODO-6314) leaves that list, and TODO-6315 deletes the expansion with the last one.
   - acceptance:
-    - the owner picks the option; with A the diagnostic names the type and the library and has a test, with B to D a consumer closure passed to a library function runs on the VM and optexe with a library link test
+    - a module with the opcodes round-trips through the serializer, links (a library's address taken in the consumer's code resolves), validates for serialized bytecode, and its expansion computes the result the opcodes define on the VM (a test with a hand-built module: two functions of equal arity, an address chosen at run time)
+    - `scripts/check_ir_opcode_table.py`, the stack-effect and the opcode tests cover the three opcodes; docs/spec/vm-design.md names them and the expansion
     - full release gate green
-  - stop_rule: no code before the decision; the interface of a box is TODO-6282.
-  - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
+  - stop_rule: the IR layer and the expansion; the VM and `optexe` execute the opcodes in their own leaves (until then they take the expansion).
+  - repro: a hand-built module whose entry calls `CallIndirect` with the address `FunctionAddress 1`: unknown opcode today.
+
+- [ ] TODO-6308: The VM executes `FunctionAddress` and `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6307
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (second layer of TODO-6283)
+  - parallel_track: lib-shapes
+  - depends_on: TODO-6307
+  - scope: the step kernel (src/runtime/VmControlFlowOpcodeShared.cpp, VmExecutionKernel.cpp), the debug session and the task paths run the three opcodes with the faults TODO-6307 names; the fast kernel (and the preparation that checks a module for it) leaves a module that holds one on the step kernel until TODO-6311. The VM leaves the list of targets that take the expansion.
+  - acceptance:
+    - the TODO-6307 module runs on the VM without the expansion, and each fault (null address, address past the table, arity mismatch) has a test with its message
+    - a call through an address inside a task and under the debugger works
+    - full release gate green
+  - stop_rule: the VM kernels; no change to the fast kernel's opcode set.
+  - repro: the TODO-6307 test module with `validateIrModule(..., Vm)` and no expansion.
+
+- [ ] TODO-6309: `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6307
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (third layer of TODO-6283)
+  - parallel_track: lib-shapes
+  - depends_on: TODO-6307
+  - scope: src/backend/IrToOptCppEmitter.cpp emits `CallIndirect` as a call of a generated switch over the functions of the matching parameter count (`ps_call_indirect_N(rt, address, a0, ...)`), a fault with the VM's message for the three bad addresses, and `FunctionAddress` as the constant; threads and tasks are unchanged. The optimized C++ targets leave the expansion list.
+  - acceptance:
+    - the TODO-6307 module compiled with `--emit=exe` of the optimized emitter gives the VM's result, and the faults give the VM's messages
+    - full release gate green
+  - stop_rule: the optimized C++ emitter; the simple C++ emitters are TODO-6314.
+  - repro: the TODO-6307 module through the optimized C++ emitter.
+
+- [ ] TODO-6310: Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6307
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (fourth layer of TODO-6283)
+  - parallel_track: lib-shapes
+  - depends_on: TODO-6307
+  - scope: two compiler-internal definition markers, accepted without a body like `imported`. `[indirect_call return<R>] proto([u64] address, [P0] p0, ...) {}`: a call of it binds the parameters as for any real call (the address ABI, so structs, references and a struct result work) and the lowerer emits `CallIndirect` (`CallIndirectVoid`) with the parameter count of the real call, the address being the first parameter; the definition itself has no function in the module. `[function_address(<path>) return<u64>] getter() {}`: a call of it reserves `<path>` as a real call (it must have the shape of one) and emits `FunctionAddress` of its index. A target without real calls of that shape refuses the call with a message that names the definition. The semantics validator and the library interface accept the markers. Surfaces: src/ir_lowerer (IrLowererLowerInlineCalls.cpp, IrLowererLowerStatementsCallsStage.cpp: the placeholder fixup and the reachability pruning take `FunctionAddress` as a reference to a function).
+  - acceptance:
+    - a program written with the two markers by hand (a getter of two functions with the same signature, a proto, a choice at run time) runs on the VM, `optexe`, native and wasm, with a scalar, a struct and a `Reference` parameter and a struct result
+    - the marker on a definition with a body, a getter of a missing path and a getter of a definition that cannot be a real call have diagnostics with tests
+    - full release gate green
+  - stop_rule: lowering of the markers; the `Function` value is TODO-6283.
+  - repro: a program with `[function_address(/a) return<u64>] a_address() {}` and `[indirect_call return<i32>] call_it([u64] address, [i32] x) {}`: unknown transform today.
+
+- [ ] TODO-6311: The VM fast kernel runs `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6308
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (back ends of TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - depends_on: TODO-6308
+  - scope: src/runtime/VmFastKernel.cpp and VmFastKernelPrepare.cpp prepare a module that holds the opcodes (a dispatch label per opcode, the call through the table of prepared functions, the faults of TODO-6308), so a program with `Function` values runs on the fast kernel instead of the step kernel. Measure a web request loop before and after.
+  - acceptance:
+    - the programs that fall back to the step kernel today because of the opcodes run on the fast kernel with the same output and faults; the measurement is in docs/todo_log.md
+    - full release gate green
+  - stop_rule: the fast kernel.
+  - repro: a closure-calling loop on the VM runs on the step kernel (the fast kernel's preparation refuses the module).
+
+- [ ] TODO-6312: arm64 and x86_64 native and the JIT emit `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6308
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (back ends of TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - depends_on: TODO-6308
+  - scope: the native emitters (src/native_emitter) keep a table of function entry addresses and emit the indirect call (`blr` on arm64, `call` through a register on x86_64) with the argument registers or stack of a `Call`; the JIT (src/native_emitter/NativeJit.cpp) the same. The native target leaves the expansion list of TODO-6307.
+  - acceptance:
+    - the closure programs of the program matrix run on native without the expansion on the machines that can run them; the x86_64 half is built and run where an x86_64 machine exists, else deferred with a note
+    - full release gate green
+  - stop_rule: native code generation of the opcodes.
+  - repro: `--emit=native` of a program with `Function` values: its IR holds a compare chain instead of `CallIndirect`.
+
+- [ ] TODO-6313: Wasm emits `call_indirect` for `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6308
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (back ends of TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - depends_on: TODO-6308
+  - scope: src/wasm_emitter emits a function table (an `elem` section of the functions whose address is taken) and `call_indirect` with the type of the callee's signature, in both profiles. The wasm targets leave the expansion list.
+  - acceptance:
+    - the wasm closure programs of the program matrix pass without the expansion, and a call through a null address traps
+    - full release gate green
+  - stop_rule: the Wasm emitter.
+  - repro: `--emit=wasm` of a program with `Function` values: its code holds a compare chain.
+
+- [ ] TODO-6314: The simple C++ emitters emit `CallIndirect`
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6309
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (back ends of TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - depends_on: TODO-6309
+  - scope: src/backend/IrToCppEmitter*.cpp (the `cpp` and `exe` targets) emit the opcodes as the optimized emitter does after TODO-6309 (a switch over the functions of a parameter count). The Cpp target leaves the expansion list.
+  - acceptance:
+    - the closure programs of the program matrix pass on `cpp` and `exe` without the expansion
+    - full release gate green
+  - stop_rule: the simple C++ emitters.
+  - repro: `--emit=cpp` of a program with `Function` values.
+
+- [ ] TODO-6315: The expansion of indirect calls is deleted
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6312
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (end of TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - depends_on: TODO-6312, TODO-6313, TODO-6314
+  - scope: `expandIndirectCalls` (src/ir/IrIndirectCallExpansion.cpp) and its call in `prepareIrModule` go once every target runs the opcodes (TODO-6312, TODO-6313 and TODO-6314 must all be closed first); GLSL, which has no calls through addresses, refuses a module that has them with a message that names the opcode.
+  - acceptance:
+    - no source file mentions the expansion; GLSL names the opcode in its refusal and has a test
+    - full release gate green
+  - stop_rule: deleting the compatibility expansion.
+  - repro: `grep expandIndirectCalls src` finds the pass today.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
