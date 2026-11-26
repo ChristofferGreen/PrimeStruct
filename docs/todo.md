@@ -140,7 +140,7 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
-| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | ready | lib-shapes |
+| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | in_progress | lib-shapes |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
@@ -643,9 +643,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
   - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
 
-- [ ] TODO-6283: A `Function` holds a function address and an environment, and a call is an indirect call
+- [~] TODO-6283: A `Function` holds a function address and an environment, and a call is an indirect call
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-27
   - created_at: 2026-11-26
   - phase: Modules and libraries (found by TODO-6282; split into TODO-6307..6310 and this leaf)
   - parallel_track: lib-shapes
