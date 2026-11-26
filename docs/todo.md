@@ -130,7 +130,6 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
-| TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -230,21 +229,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: transform positions for this one diagnostic; no change to other messages.
   - notes: 2026-11-23, looked at and left: the span of the type needs the position of the template argument (a `Transform` carries the position of its name only; `Transform::templateArgs` has none) and the return-kind diagnostic is built in two local lambdas of src/semantics/SemanticsValidatorBuildReturnKinds.cpp (`failReturnKindDiagnostic` through `failDefinitionDiagnostic`, and `addReturnKindDiagnostic` for `--collect-diagnostics`) that choose the span by hand, `failDefinitionDiagnostic` clearing the context a caller sets first. Giving them another span means editing the semantics diagnostic builder (src/semantics/SemanticsValidatorDiagnostics.cpp and those lambdas), which TODO-5977 (one diagnostics builder) owns. Do it after that leaf: record the position of the first template argument in the parser (`ParserListsTransforms.cpp`, `Transform` in include/primec/ast/Ast.h, a full rebuild), add the offset of the unknown name inside the argument text, and pass the span to the builder.
-
-- [~] TODO-6133: The binding initializer accepts an f64 value for an `f32` binding, assignment does not
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
-  - created_at: 2026-11-20
-  - phase: Correctness audit 2026-11 (found with TODO-6129)
-  - parallel_track: binding-float-compat
-  - decision (owner, 2026-11-26): widening only. An `f64` value does not initialize an `f32` binding, as assignment already refuses it; only lossless widening is implicit, and narrowing needs `convert<f32>(...)`. Apply the same rule to the other scalar pairs the helper accepts, and update docs/spec/type-system.md.
-  - scope: `[f32] z{2.5f64}` compiles (`isFloatBindingCompatible` in SemanticsValidatorBindingInitializerRules.cpp lets `f32` and `f64` initialize each other), while `[f32 mut] w{1.0f32}` followed by `w = 2.5f64` is `assign value type mismatch: expected f32, got f64` (TODO-6129, docs/spec/type-system.md: assignment takes the exact type). The same helper accepts `i32`, `bool` and the other scalars for the software `integer`, `decimal` and `complex` bindings. The spec has no implicit float narrowing, and clarity says a binding and an assignment agree. Not decided whether `f32` from `f64` stays an allowed initializer (C++ narrows in `float z = 2.5;` but not in `float z{2.5}`): the owner decides.
-  - implementation_notes: options: (a) reject `f64` into `f32` in the binding like the assignment, and fix the stdlib and tests that rely on it; (b) allow the widening `f32` into `f64` only, in both places; (c) keep both float widths interchangeable in both places and document it as the one implicit conversion (then the assignment check changes). Count the programs that rely on it before choosing; do not pick without that count.
-  - acceptance:
-    - the chosen rule stated in docs/spec/type-system.md for bindings and assignment alike, with positive and negative semantics tests for both
-    - full release gate green
-  - stop_rule: float widths of binding initializers and assignment; no change to `integer`/`decimal`/`complex`.
 
 - [ ] TODO-6231: Semantics records the effects each definition demands, and infers them over the call graph
   - owner: ai

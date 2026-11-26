@@ -2551,6 +2551,7 @@ are left unarchived.
 | TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6130 | An unknown type inside a templated return type is not named | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6132 | Gate entries that pass alone but fail in the gate (watchdog silence or hard cap) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
+| TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6134 | Wasm `INT_MIN / -1` traps where the VM wraps | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6135 | Wasm refuses a short-circuit `\|\|` whose first operand jumps into the then-part (`copysign`) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6136 | The Wasm validation error names the opcode and the language feature that needs it | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |

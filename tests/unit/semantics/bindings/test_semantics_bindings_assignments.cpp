@@ -631,4 +631,44 @@ main() {
   CHECK_MESSAGE(validateProgram(source, "/main", error), error);
 }
 
+TEST_CASE("a binding initializer takes the exact float type or the lossless widening") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [f32] exact{2.5f32}
+  [f64] wide{exact}
+  [f64] literal{2.5f64}
+  [f32] converted{convert<f32>(literal)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
+TEST_CASE("a binding initializer does not narrow a float, like assignment") {
+  SUBCASE("f64 literal to f32") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<int>]
+main() {
+  [f32] z{2.5f64}
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("binding initializer type mismatch") == 0);
+    CHECK(found.line == 4);
+  }
+  SUBCASE("f64 binding to f32") {
+    const AssignDiagnostic found = firstAssignDiagnostic(R"(
+[return<int>]
+main() {
+  [f64] wide{2.5f64}
+  [f32] z{wide}
+  return(0i32)
+}
+)");
+    CHECK(found.message.find("binding initializer type mismatch") == 0);
+  }
+}
+
 TEST_SUITE_END();

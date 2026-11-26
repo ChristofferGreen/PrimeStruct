@@ -209,11 +209,10 @@ PhaseStatus SemanticsValidator::validateBindingInitializer(BindingContext &ctx) 
       return false;
     }
   };
+  // Only the lossless widening `f32` into `f64` is implicit; `f64` into `f32` narrows and needs
+  // `convert<f32>(...)`, as assignment already requires.
   auto isFloatBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
-    if (expectedKind != ReturnKind::Float32 && expectedKind != ReturnKind::Float64) {
-      return false;
-    }
-    return actualKind == ReturnKind::Float32 || actualKind == ReturnKind::Float64;
+    return expectedKind == ReturnKind::Float64 && actualKind == ReturnKind::Float32;
   };
   auto isStringExpr = [&](const Expr &candidate,
                           const std::vector<ParameterInfo> &paramsIn,

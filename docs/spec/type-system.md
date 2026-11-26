@@ -599,6 +599,10 @@ main() {
 ### Expression Rules
 - **Literals:** fixed type determined by suffix (`1i32`, `2u64`, `3u8`, `1.0f32`, `"hi"utf8`, `true`).
 - **Bindings:** declared type in the transform list, or `auto` if omitted.
+  A binding initializer takes its declared type exactly, or the one lossless widening `f32` into `f64`
+  (`[f64] z{1.5f32}`). Narrowing is never implicit: `[f32] z{2.5f64}` is `binding initializer type mismatch`;
+  write `[f32] z{convert<f32>(2.5f64)}` (or the exact literal, `2.5f32`). The software `integer`, `decimal` and
+  `complex` bindings keep accepting the narrower scalars, which they hold without loss.
 - **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter
   type.
 - **Constructors:** value construction uses brace forms (`Type{...}` and context-typed `{...}`), never call syntax.
