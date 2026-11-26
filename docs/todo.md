@@ -651,9 +651,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6289: The operators of a matrix or quaternion with a scalar (`multiply(m, 2.0f32)`, `divide(m, 2.0f32)`) are not lowered on the VM
+- [~] TODO-6289: The operators of a matrix or quaternion with a scalar (`multiply(m, 2.0f32)`, `divide(m, 2.0f32)`) are not lowered on the VM
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found by TODO-6287)
   - parallel_track: lib-shapes
