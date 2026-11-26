@@ -181,7 +181,10 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(ConditionWait, Sync, None, None, 0, 0, 0)                                                      \
   X(ConditionNotify, Sync, None, None, 0, 0, 0)                                                    \
   X(FmaF32, Other, None, F32, 1, 1, 1)                                                             \
-  X(FmaF64, Other, None, F64, 1, 1, 1)
+  X(FmaF64, Other, None, F64, 1, 1, 1)                                                             \
+  X(FunctionAddress, Other, None, U64, 0, 0, 0)                                                    \
+  X(CallIndirect, Call, None, None, 0, 0, 0)                                                       \
+  X(CallIndirectVoid, Call, None, None, 0, 0, 0)
 
 struct IrOpcodeInfo {
   IrOpcode op;

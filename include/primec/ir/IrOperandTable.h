@@ -20,13 +20,14 @@ enum class IrOperandClass : uint8_t {
   // also carry the string index of a string literal (see IrLinker.h for how the linker finds those)
   Local,      // a local slot of the function
   Jump,       // an instruction index of the same function
-  Function,   // an index into IrModule::functions (Call, CallVoid, TaskSpawn)
+  Function,   // an index into IrModule::functions (Call, CallVoid, TaskSpawn, FunctionAddress)
   HostImport, // an index into IrModule::hostImports (CallHost)
   String,     // an index into IrModule::stringTable
   PrintString, // a string index in the bits from PrintStringIndexShift up, print flags below (PrintString)
   PrintFlags, // the print flags (PrintFlagMask)
   Width,      // an atomic width, 32 or 64
   ExitCode,   // the exit code of Trap
+  ParameterCount, // the parameter count of the callee of CallIndirect and CallIndirectVoid; never rewritten
 };
 
 // One row per IrOpcode enumerator, in enum order: X(Name, operandClass). scripts/check_ir_opcode_table.py (ctest)
@@ -165,7 +166,10 @@ enum class IrOperandClass : uint8_t {
   X(ConditionWait, None)                                                                           \
   X(ConditionNotify, None)                                                                         \
   X(FmaF32, None)                                                                                  \
-  X(FmaF64, None)
+  X(FmaF64, None)                                                                                  \
+  X(FunctionAddress, Function)                                                                     \
+  X(CallIndirect, ParameterCount)                                                                  \
+  X(CallIndirectVoid, ParameterCount)
 
 struct IrOperandInfo {
   IrOpcode op;

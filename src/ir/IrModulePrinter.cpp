@@ -133,8 +133,13 @@ std::string formatIrInstruction(const IrModule &module, const IrInstruction &ins
   case IrOpcode::AtomicCompareExchange:
     text += " i" + std::to_string(imm);
     break;
+  case IrOpcode::CallIndirect:
+  case IrOpcode::CallIndirectVoid:
+    text += " params " + std::to_string(imm);
+    break;
   case IrOpcode::Call:
   case IrOpcode::CallVoid:
+  case IrOpcode::FunctionAddress:
   case IrOpcode::TaskSpawn:
     text += " " + std::to_string(imm);
     if (imm < module.functions.size()) {

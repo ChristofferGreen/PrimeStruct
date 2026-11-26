@@ -56,6 +56,7 @@ bool computeIrStackEffect(const IrInstruction &instruction,
   case IrOpcode::FileOpenRead:
   case IrOpcode::FileOpenWrite:
   case IrOpcode::FileOpenAppend:
+  case IrOpcode::FunctionAddress:
     return set(0, 1);
   // Consume one value.
   case IrOpcode::StoreLocal:
@@ -180,6 +181,11 @@ bool computeIrStackEffect(const IrInstruction &instruction,
     }
     return set(parameterCount, instruction.op == IrOpcode::Call ? 1u : 0u);
   }
+  case IrOpcode::CallIndirect:
+  case IrOpcode::CallIndirectVoid:
+    // The address and the callee's parameters, which imm counts.
+    return set(static_cast<uint32_t>(instruction.imm) + 1,
+               instruction.op == IrOpcode::CallIndirect ? 1u : 0u);
   case IrOpcode::TaskSpawn: {
     // The task's arguments move to its own stack; the spawner gets the handle.
     uint32_t parameterCount = 0;

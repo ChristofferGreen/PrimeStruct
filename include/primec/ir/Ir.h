@@ -7,7 +7,7 @@
 namespace primec {
 
 constexpr uint32_t IrSchemaMagic = 0x50534952u; // "PSIR"
-constexpr uint32_t IrSchemaVersion = 41u;
+constexpr uint32_t IrSchemaVersion = 42u;
 // v34 only appends TaskSpawn and TaskWait, v35 only the Atomic* opcodes, v36 only MutexLock and MutexUnlock and v37
 // only ConditionWait and ConditionNotify, so a v33 to v36 module loads unchanged (it cannot hold the opcodes added
 // after it). v38 appends a section after the host imports (the functions that are imports of a library) and
@@ -28,6 +28,8 @@ constexpr uint32_t IrSchemaVersion = 41u;
 // An empty map is the same four bytes as before. Nothing else changes, and the in-memory IrModule is the same.
 // Migration: a loader reads the per-entry unit strings of v33 to v40 and the table of v41; a writer always writes v41,
 // so a loaded older module is rewritten with the table and runs unchanged.
+// v42 only appends FunctionAddress, CallIndirect and CallIndirectVoid, so a v33 to v41 module loads unchanged (it cannot
+// hold them) and a writer always writes v42. The format of a module is otherwise the same as v41.
 // The opcode bytes of a marked PushI32 and PushI64 in a serialized module (v39); no opcode may take these values, and
 // lowering uses them for the same pushes until it resolves them into IrInstruction::isStringLiteral.
 constexpr uint8_t IrStringPushI32Code = 0xFEu;
@@ -223,6 +225,17 @@ enum class IrOpcode : uint8_t {
   // bits of std::fma; a backend with a fused instruction uses it.
   FmaF32,
   FmaF64,
+  // Function addresses (docs/spec/vm-design.md, Function addresses; added in PSIR v42). Pushes the address of function
+  // imm, which is imm + 1, so that 0 is no function. imm is an index into IrModule::functions: the IR link renumbers
+  // it and a function that is only named by one stays in the module. A closure routine a `Function` value holds is
+  // reached through its address.
+  FunctionAddress,
+  // Calls the function an address names. imm is the callee's parameter count p; the stack holds the address and, above
+  // it, the p parameters, in the order a Call leaves them. The opcode removes the address, calls the function with the
+  // parameters and, for CallIndirect, pushes its result; CallIndirectVoid pushes nothing. An address that is 0, names
+  // no function, or names one that takes another number of parameters than p is a runtime fault.
+  CallIndirect,
+  CallIndirectVoid,
 };
 
 enum class IrStructFieldCategory : uint8_t {

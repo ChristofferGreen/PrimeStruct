@@ -487,6 +487,12 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
         info.op == IrOpcode::ConditionWait) {
       continue;
     }
+    // The function address opcodes are not run by the VM yet: their effects are checked in
+    // tests/unit/runtime/test_ir_indirect_calls.cpp, against the expansion that runs on the VM.
+    if (info.op == IrOpcode::FunctionAddress || info.op == IrOpcode::CallIndirect ||
+        info.op == IrOpcode::CallIndirectVoid) {
+      continue;
+    }
     CHECK_MESSAGE(covered.count(static_cast<uint8_t>(info.op)) == 1,
                   "add a VM cross-check case for ",
                   info.name);

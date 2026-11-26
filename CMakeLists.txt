@@ -522,6 +522,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir/IrBackendProfiles.cpp
   src/ir/IrInliner.cpp
   src/ir/IrFmaExpansion.cpp
+  src/ir/IrIndirectCallExpansion.cpp
   src/ir/IrOptimizer.cpp
   src/ir/optimizer/IrPassCfgSimplify.cpp
   src/ir/optimizer/IrPassLoopRotate.cpp
@@ -1585,6 +1586,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/runtime/test_ir_link_strings.cpp
     tests/unit/runtime/test_ir_link_instantiations.cpp
     tests/unit/runtime/test_ir_link_cli.cpp
+    tests/unit/runtime/test_ir_indirect_calls.cpp
     tests/unit/runtime/test_library_archive.cpp
     tests/unit/runtime/test_executable_build_id.cpp
   )
@@ -1608,7 +1610,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # The IR link (TODO-5922) of hand-built serialized modules: functions, layouts, host imports, strings; and the
   # primevm --link command line with the schema version 38.
   primestructWatchedCommand(testCommand 300 $<TARGET_FILE:PrimeStruct_vm_byte_tests>
-            "--test-suite=primestruct.runtime.ir_link,primestruct.runtime.ir_link_strings"
+            "--test-suite=primestruct.runtime.ir_link,primestruct.runtime.ir_link_strings,primestruct.runtime.ir_indirect_calls"
             "--order-by=file")
   add_test(
     NAME PrimeStruct_ir_link

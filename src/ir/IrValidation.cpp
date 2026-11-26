@@ -332,6 +332,17 @@ bool validateFunction(const IrModule &module,
                              "and serialized bytecode",
                              error);
     }
+    if ((inst.op == IrOpcode::FunctionAddress || inst.op == IrOpcode::CallIndirect ||
+         inst.op == IrOpcode::CallIndirectVoid) &&
+        target != IrValidationTarget::Any && target != IrValidationTarget::Serialized) {
+      return failInstruction(
+          functionIndex,
+          function.name,
+          instructionIndex,
+          "function address opcodes are only supported by serialized bytecode (a target runs the "
+          "module through expandIndirectCalls)",
+          error);
+    }
     if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&
         target != IrValidationTarget::Vm && target != IrValidationTarget::Serialized &&
         target != IrValidationTarget::OptCpp &&
@@ -464,6 +475,22 @@ bool validateFunction(const IrModule &module,
         if (module.functions[static_cast<size_t>(inst.imm)].parameterCount > MaxCallParameterCount) {
           return failInstruction(
               functionIndex, function.name, instructionIndex, "call target parameter count exceeds supported limit", error);
+        }
+        break;
+      case IrOpcode::FunctionAddress:
+        if (inst.imm >= module.functions.size()) {
+          return failInstruction(
+              functionIndex, function.name, instructionIndex, "invalid function address target", error);
+        }
+        break;
+      case IrOpcode::CallIndirect:
+      case IrOpcode::CallIndirectVoid:
+        if (inst.imm > MaxCallParameterCount) {
+          return failInstruction(functionIndex,
+                                 function.name,
+                                 instructionIndex,
+                                 "indirect call parameter count exceeds supported limit",
+                                 error);
         }
         break;
       case IrOpcode::AtomicLoad:
@@ -998,7 +1025,7 @@ bool validateIrModule(const IrModule &module,
   for (const IrFunction &function : module.functions) {
     for (const IrInstruction &inst : function.instructions) {
       if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
-           inst.op == IrOpcode::TaskSpawn) &&
+           inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::FunctionAddress) &&
           inst.imm < module.functions.size()) {
         called[static_cast<size_t>(inst.imm)] = true;
       }

@@ -321,6 +321,7 @@ bool relocateInstruction(IrInstruction &inst,
   case IrOperandClass::PrintFlags:
   case IrOperandClass::Width:
   case IrOperandClass::ExitCode:
+  case IrOperandClass::ParameterCount:
     return true;
   case IrOperandClass::Unclassified:
     break;

@@ -4,6 +4,7 @@
 #include "primec/support/CompileArena.h"
 #include "primec/support/InternalError.h"
 #include "primec/backend/IrBackendProfiles.h"
+#include "primec/ir/IrIndirectCallExpansion.h"
 #include "primec/ir/IrInliner.h"
 #include "primec/ir/IrLowerer.h"
 #include "primec/ir/IrValidation.h"
@@ -197,6 +198,11 @@ bool prepareIrModule(Program &program,
     failure.message = std::move(error);
     diagnosticSink.setSummary(failure.message);
     return false;
+  }
+
+  // A target that does not run the function address opcodes takes the linked module through their expansion.
+  if (validationTarget != IrValidationTarget::Serialized && validationTarget != IrValidationTarget::Any) {
+    expandIndirectCalls(ir);
   }
 
   if (!validateIrModule(ir, validationTarget, error)) {

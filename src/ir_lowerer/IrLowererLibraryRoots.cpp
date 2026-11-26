@@ -1,5 +1,7 @@
 #include "IrLowererLibraryRoots.h"
 
+#include "primec/ir/IrOperandTable.h"
+
 #include <cstddef>
 
 namespace primec::ir_lowerer {
@@ -8,7 +10,7 @@ namespace {
 
 // The opcodes whose operand is an index into IrModule::functions (primec/ir/IrOperandTable.h).
 bool carriesFunctionIndex(IrOpcode op) {
-  return op == IrOpcode::Call || op == IrOpcode::CallVoid || op == IrOpcode::TaskSpawn;
+  return irOperandClass(op) == IrOperandClass::Function;
 }
 
 } // namespace

@@ -2709,6 +2709,7 @@ are left unarchived.
 | TODO-6302 | Lazy import guesses which operator helpers a program needs from its text | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6303 | A program that uses a math operator is compiled twice | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6304 | Benchmark-mode validation workers drop the operator helper demand | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
+| TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

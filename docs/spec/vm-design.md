@@ -37,10 +37,11 @@
   later expansions are calls too, and every other lifecycle helper stays inline.
 - **GLSL note:** GLSL/SPIR-V emission routes through canonical IR (`glsl-ir`/`spirv-ir`) and `IrValidationTarget::Glsl`;
   these modes emit backend output directly without requiring PSIR serialization.
-- **PSIR versioning:** current portable IR is PSIR v40 (v24 to v40 are listed in `include/primec/ir/Ir.h`'s opcode
-  comments and the finished TODO log). v40 appends `FmaF32` and `FmaF64` (see Fused multiply-add). Migration: the
-  module layout is unchanged, so a v33 to v39 module still loads (it cannot hold the opcodes) and a writer always
-  writes v40; the loader refuses an opcode newer than the module's version. v39 marks string literal pushes, as the
+- **PSIR versioning:** current portable IR is PSIR v42 (v24 to v42 are listed in `include/primec/ir/Ir.h`'s opcode
+  comments and the finished TODO log). v42 appends `FunctionAddress`, `CallIndirect` and `CallIndirectVoid` (see
+  Function addresses). v40 appends `FmaF32` and `FmaF64` (see Fused multiply-add). Migration: the
+  module layout is unchanged, so a v33 to v41 module still loads (it cannot hold the opcodes) and a writer always
+  writes v42; the loader refuses an opcode newer than the module's version. v39 marks string literal pushes, as the
   string literal paragraph below describes. v38 (TODO-5922, the IR link) appends one section after the host imports: a
   count and, for each function that is an import (`IrFunction::isImport`: a name and a parameter count, no
   instructions, the name of the library that defines it), its index and library name; and an entry index of
@@ -239,6 +240,20 @@
   tasks count themselves as live and signal when they end). IR validation accepts the opcodes for the VM, serialized
   IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `mutex operations are not supported by
   the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `lock` is `1 << 14`.
+- **Function addresses (PSIR v42):** `FunctionAddress f` pushes the address of function `f`, which is `f + 1`, so that
+  0 names no function; its immediate is an index into `IrModule::functions`, so the IR link renumbers it and a function
+  that only an address names stays in the module (the link and the reachability walks use the operand class
+  `Function`). `CallIndirect p` and `CallIndirectVoid p` take the address as the deepest of `p + 1` stack slots with
+  the callee's `p` parameters above it (the order a `Call` leaves them), remove the address and call the function it
+  names; `CallIndirect` pushes the result and `CallIndirectVoid` nothing. An address that is 0, past the table or of a
+  function with another parameter count than `p` is a runtime fault. A `Function` value holds such an address and its
+  environment (docs/spec/value-lifecycle.md, Function values). IR validation accepts the opcodes for serialized
+  bytecode (and `Any`). Every other target takes the linked module through `expandIndirectCalls`
+  (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
+  `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
+  function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
+  address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
+  opcodes itself (docs/todo.md, TODO-6308 for the VM, TODO-6309 for `optexe`, TODO-6311 to TODO-6314 for the rest).
 - **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
   once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result
   can differ from `MulF32` then `AddF32` (and the `F64` forms), which round twice (immediate 0, no fault). The `fma`

@@ -141,7 +141,6 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | in_progress | lib-shapes |
 | TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
 | TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | blocked | lib-shapes |
@@ -161,7 +160,6 @@ of sync with them.
 - TODO-6233 (bytecode-bench): a startup benchmark for bytecode size and load time
 - TODO-6240 (bytecode-vm-target): `primec --emit=ir` lowers for the VM target
 - TODO-6232 (bytecode-size): the instruction source map names each source unit once
-- TODO-6307 (lib-shapes): IR opcodes FunctionAddress and CallIndirect (first layer of TODO-6283; then TODO-6308, TODO-6309, TODO-6310, TODO-6283)
 
 ### Immediate Next 10
 
@@ -169,7 +167,6 @@ of sync with them.
 2. TODO-6233
 3. TODO-6240
 4. TODO-6232
-5. TODO-6307
 
 ### Priority Lanes
 
@@ -666,21 +663,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
-
-- [~] TODO-6307: IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them
-  - owner: ai
-  - status: in_progress
-  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (first layer of TODO-6283)
-  - parallel_track: lib-shapes
-  - scope: PSIR v42 appends three opcodes. `FunctionAddress imm` (operand class Function, so the IR link renumbers it and pruning reaches the function) pushes `imm + 1`, a non-zero address. `CallIndirect imm` and `CallIndirectVoid imm` (`imm` = the callee's parameter count) take the address as the deepest of `imm + 1` stack slots, remove it and call that function with the rest as `Call` does (pushing its result, or nothing for the void form); an address that is 0, past the table or of a function with another parameter count faults. They are in the opcode, operand, category and stack-effect tables (src/ir), the serializer, printer, validator (the VM, serialized bytecode and `optcpp`/`optexe` targets accept them; the others take the module through the expansion below), the CFG, the inliner (a function holding one is not a leaf) and `pruneIrModuleToReachableFunctions`. `expandIndirectCalls(IrModule&)` (src/ir/IrIndirectCallExpansion.cpp, next to the FMA expansion) rewrites each pair for a target without them: `FunctionAddress` becomes `PushI64 imm + 1`, and `CallIndirect` becomes stores of the arguments and the address to locals of their own and a compare chain of direct `Call`s over the functions whose address is taken and whose parameter count matches (the last one the fallback, none a `Trap`), jump targets renumbered. `prepareIrModule` runs it after the library link for every target except serialized bytecode; the VM and the optimized C++ emitters take it until TODO-6308 and TODO-6309. Each back end that gets the opcodes natively (TODO-6308, TODO-6309, TODO-6311 to TODO-6314) leaves that list, and TODO-6315 deletes the expansion with the last one.
-  - acceptance:
-    - a module with the opcodes round-trips through the serializer, links (a library's address taken in the consumer's code resolves), validates for serialized bytecode, and its expansion computes the result the opcodes define on the VM (a test with a hand-built module: two functions of equal arity, an address chosen at run time)
-    - `scripts/check_ir_opcode_table.py`, the stack-effect and the opcode tests cover the three opcodes; docs/spec/vm-design.md names them and the expansion
-    - full release gate green
-  - stop_rule: the IR layer and the expansion; the VM and `optexe` execute the opcodes in their own leaves (until then they take the expansion).
-  - repro: a hand-built module whose entry calls `CallIndirect` with the address `FunctionAddress 1`: unknown opcode today.
 
 - [ ] TODO-6308: The VM executes `FunctionAddress` and `CallIndirect`
   - owner: ai
