@@ -623,9 +623,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 
-- [ ] TODO-6281: A public function with a `ReadSlice<u8>` parameter is refused as a library function
+- [~] TODO-6281: A public function with a `ReadSlice<u8>` parameter is refused as a library function
   - owner: ai
   - status: ready
+  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found with TODO-6279)
   - parallel_track: lib-shapes
