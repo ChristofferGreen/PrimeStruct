@@ -1,5 +1,7 @@
 #include "test_compile_run_helpers.h"
 
+#include "primec/pipeline/CompilePipeline.h"
+
 // TODO-5228 (docs/LibrarySymbolManifestLazyImports.md): opt-in iterative
 // lazy stdlib import expansion. --experimental-lazy-stdlib-imports defaults
 // off, so every other compile_run test is unaffected; these tests exercise
@@ -385,6 +387,134 @@ main() {
                                  "--benchmark-semantic-definition-validation-workers ") +
                      workers + " " + srcPath + " --entry /main") == expected);
   }
+}
+
+namespace {
+
+struct PipelineCounts {
+  bool ok = false;
+  uint32_t rounds = 0;
+  uint32_t restarts = 0;
+  std::size_t definitions = 0;
+  std::string error;
+};
+
+// Compiles `source` through the lazy stdlib import and reports how often it was validated and re-imported.
+PipelineCounts lazyPipelineCounts(const std::string &name,
+                                  const std::string &source,
+                                  const std::vector<std::string> &libraries = {}) {
+  primec::Options options;
+  options.inputPath = writeTemp(name, source);
+  options.entryPath = "/main";
+  options.experimentalLazyStdlibImports = true;
+  options.libraryPaths = libraries;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  PipelineCounts counts;
+  counts.ok = primec::runCompilePipeline(options, output, errorStage, counts.error);
+  counts.rounds = output.pipelineRounds;
+  counts.restarts = output.pipelineRestarts;
+  counts.definitions = output.program.definitions.size();
+  return counts;
+}
+
+} // namespace
+
+TEST_CASE("a program with a vector operator is validated in one round") {
+  const PipelineCounts plusSite = lazyPipelineCounts("lazy_rounds_vec_plus.prime", R"(
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] a{Vec2{[x] 1.0f32, [y] 2.0f32}}
+  [Vec2] s{a + a}
+  [Vec2] t{a*2.0f32}
+  return(convert<i32>(s.x + t.y))
+}
+)");
+  CHECK_MESSAGE(plusSite.ok, plusSite.error);
+  CHECK(plusSite.rounds == 1);
+  CHECK(plusSite.restarts == 1);
+
+  const PipelineCounts noOperator = lazyPipelineCounts("lazy_rounds_vec_length.prime", R"(
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] a{Vec2{[x] 3.0f32, [y] 4.0f32}}
+  return(convert<i32>(a.length()))
+}
+)");
+  CHECK_MESSAGE(noOperator.ok, noOperator.error);
+  CHECK(noOperator.rounds == 1);
+  CHECK(noOperator.restarts == 0);
+  CHECK(noOperator.definitions <= 6);
+}
+
+TEST_CASE("an operator site the scan cannot type is found by the validator in a second round") {
+  const std::string source = R"(
+import /std/math/Vec2
+
+[return<Vec2>]
+make_vector() {
+  return(Vec2{[x] 1.0f32, [y] 2.0f32})
+}
+
+[return<int>]
+main() {
+  [auto] s{make_vector() + make_vector()}
+  return(convert<i32>(s.y))
+}
+)";
+  const PipelineCounts counts = lazyPipelineCounts("lazy_rounds_untyped_site.prime", source);
+  CHECK_MESSAGE(counts.ok, counts.error);
+  CHECK(counts.rounds == 2);
+  const std::string srcPath = writeTemp("lazy_rounds_untyped_site_run.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 4);
+}
+
+TEST_CASE("a program that links the vector library is validated in one round with no re-import") {
+  const std::string depsPath = (testScratchPath("") / "lazy_rounds_vector_deps.txt").string();
+  CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports --emit-deps " + depsPath + " " +
+                   writeTemp("lazy_rounds_vector_probe.prime", R"(import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] v{Vec2{}}
+  return(convert<i32>(linearToSrgbChannel(0.5f32)))
+}
+)") + " --entry /main") == 0);
+  std::string vectorFile;
+  {
+    std::istringstream deps(readFile(depsPath));
+    std::string line;
+    const std::string tail = "/stdlib/std/math/vector.prime";
+    while (std::getline(deps, line)) {
+      if (line.size() >= tail.size() &&
+          line.compare(line.size() - tail.size(), tail.size(), tail) == 0) {
+        vectorFile = line;
+      }
+    }
+  }
+  REQUIRE(!vectorFile.empty());
+  const std::string archive = (testScratchPath("") / "lazy_rounds_vector.psa").string();
+  CHECK(runCommand("./primec --emit=lib " + vectorFile + " -o " + archive) == 0);
+  const PipelineCounts counts = lazyPipelineCounts("lazy_rounds_vector_library.prime",
+                                                   R"(import</std/math>
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] a{Vec2{[x] 1.0f32, [y] 2.0f32}}
+  [Vec2] s{a + a}
+  return(convert<i32>(s.x))
+}
+)",
+                                                   {archive});
+  CHECK_MESSAGE(counts.ok, counts.error);
+  CHECK(counts.rounds == 1);
+  CHECK(counts.restarts == 0);
 }
 
 TEST_CASE("an operator inside a module the program imports takes its helper and runs") {

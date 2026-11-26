@@ -24,6 +24,7 @@
 #include "primec/support/TextFilterPipeline.h"
 #include "primec/support/TransformRules.h"
 #include "../semantics/TypeResolutionGraph.h"
+#include "OperatorHelperPrediction.h"
 
 #include <algorithm>
 #include <array>
@@ -186,11 +187,32 @@ CompilePipelineResult runCompilePipelineResult(
       std::move(output), errorStage, error, diagnosticInfo);
 }
 
+// Adds the helpers of `wanted` the program does not define, and that are not forced yet, to `forcedLazyPaths`.
+static bool takeMissingOperatorHelpers(const Program &program,
+                                       const std::vector<std::string> &wanted,
+                                       std::vector<std::string> &forcedLazyPaths) {
+  std::unordered_set<std::string> defined;
+  for (const Definition &definition : program.definitions) {
+    defined.insert(definition.fullPath);
+  }
+  bool takesMore = false;
+  for (const std::string &path : wanted) {
+    if (defined.count(path) == 0 &&
+        std::find(forcedLazyPaths.begin(), forcedLazyPaths.end(), path) == forcedLazyPaths.end()) {
+      forcedLazyPaths.push_back(path);
+      takesMore = true;
+    }
+  }
+  return takesMore;
+}
+
 // One compilation of the program. `forcedLazyPaths` are lazily imported stdlib definitions it takes whatever
-// the text says (see runCompilePipeline).
+// the text says (see runCompilePipeline). When the parsed program has operator sites on a math type whose helpers
+// are not defined, the round adds them to `forcedLazyPaths`, sets `restart` and returns before validation.
 static bool runCompilePipelineRound(const Options &options,
                                     const CompilePipelineRunConfig &runConfig,
-                                    const std::vector<std::string> &forcedLazyPaths,
+                                    std::vector<std::string> &forcedLazyPaths,
+                                    bool &restart,
                                     CompilePipelineOutput &output,
                                     CompilePipelineErrorStage &errorStage,
                                     std::string &error,
@@ -354,6 +376,15 @@ static bool runCompilePipelineRound(const Options &options,
     }
     output.dumpOutput = semantics::formatTypeResolutionGraph(graph);
     output.hasDumpOutput = true;
+    return true;
+  }
+
+  // The helpers of the operator sites the parse shows are taken before validation, so a program with an operator on
+  // a math type is validated once; a site the scan cannot type is found by the validator (see runCompilePipeline).
+  if (lazyStdlibImportsEnabled(options) &&
+      takeMissingOperatorHelpers(
+          output.program, predictOperatorRewriteDemand(output.program), forcedLazyPaths)) {
+    restart = true;
     return true;
   }
 
@@ -597,10 +628,11 @@ static bool runCompilePipelineRound(const Options &options,
 }
 
 // The lazy stdlib import names the definitions a program needs from its text, which cannot see an operator on a
-// vector, matrix or quaternion: the lowerer rewrites it to a `/std/math` helper no text spells. The validator
-// names those helpers from the typed operator sites (Program::operatorRewriteDemand); when one is not defined, the
-// program is compiled again with it taken. A helper has no operator sites of its own on math types, so a program
-// needs one extra round, or none when it has no operator on a math type.
+// vector, matrix or quaternion: the lowerer rewrites it to a `/std/math` helper no text spells. The helpers come in
+// two steps. After the parse, the operator sites the scan of OperatorHelperPrediction.h can type name their helpers,
+// and the program is imported and parsed again with them taken, before any validation. After validation, the
+// validator's exact demand (Program::operatorRewriteDemand) names the helpers of a site the scan could not type,
+// and the program is compiled once more with those taken. A library that defines a helper counts as defining it.
 bool runCompilePipeline(const Options &options,
                         const CompilePipelineRunConfig &runConfig,
                         CompilePipelineOutput &output,
@@ -608,28 +640,29 @@ bool runCompilePipeline(const Options &options,
                         std::string &error,
                         CompilePipelineDiagnosticInfo *diagnosticInfo) {
   std::vector<std::string> forcedLazyPaths;
+  uint32_t rounds = 0;
+  uint32_t restarts = 0;
   while (true) {
-    if (!runCompilePipelineRound(
-            options, runConfig, forcedLazyPaths, output, errorStage, error, diagnosticInfo)) {
+    bool restart = false;
+    if (!runCompilePipelineRound(options,
+                                 runConfig,
+                                 forcedLazyPaths,
+                                 restart,
+                                 output,
+                                 errorStage,
+                                 error,
+                                 diagnosticInfo)) {
       return false;
     }
-    if (!lazyStdlibImportsEnabled(options) || output.program.operatorRewriteDemand.empty()) {
-      return true;
+    if (restart) {
+      ++restarts;
+      continue;
     }
-    std::unordered_set<std::string> defined;
-    for (const Definition &definition : output.program.definitions) {
-      defined.insert(definition.fullPath);
-    }
-    bool takesMore = false;
-    for (const std::string &path : output.program.operatorRewriteDemand) {
-      if (defined.count(path) == 0 &&
-          std::find(forcedLazyPaths.begin(), forcedLazyPaths.end(), path) ==
-              forcedLazyPaths.end()) {
-        forcedLazyPaths.push_back(path);
-        takesMore = true;
-      }
-    }
-    if (!takesMore) {
+    output.pipelineRounds = ++rounds;
+    output.pipelineRestarts = restarts;
+    if (!lazyStdlibImportsEnabled(options) || output.program.operatorRewriteDemand.empty() ||
+        !takeMissingOperatorHelpers(
+            output.program, output.program.operatorRewriteDemand, forcedLazyPaths)) {
       return true;
     }
   }

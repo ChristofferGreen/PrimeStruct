@@ -504,9 +504,14 @@ the definitions it reaches instead of the whole module (the semantic-product pea
 `math_vector` fell from about 35 MB to about 10 MB). The closure scan also treats a
 operator helper (`mat4_mul_vec4_internal`) of a typed operator site as needed: the
 operator rewrite names the helper after the text scan, so the validator records the
-helpers its operator sites on math types lower to (`Program::operatorRewriteDemand`)
-and the pipeline compiles the program once more with the undefined ones taken. It
-also scans the text of modules spliced whole for lazy symbols.
+helpers its operator sites on math types lower to (`Program::operatorRewriteDemand`).
+A scan of the parsed program (`src/pipeline/OperatorHelperPrediction.cpp`) names the
+helpers of the sites it can type (a parameter, a typed binding, a brace constructor,
+a nested operator) and the program is imported and parsed again with them taken,
+before validation, so an ordinary operator program is validated once. A site the
+scan cannot type (an operand that is the result of a call) is found by the validator
+and costs one more full round. A helper a linked library defines counts as defined.
+The text scan also covers modules spliced whole for lazy symbols.
 
 `--dump-stage ast` on an unused `import /std/image/*` shows **784 total
 definitions** get parsed into the AST (image.prime's own definitions plus

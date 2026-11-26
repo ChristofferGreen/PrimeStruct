@@ -80,6 +80,10 @@ struct CompilePipelineOutput {
   bool hasDumpOutput = false;
   CompilePipelineFailure failure;
   bool hasFailure = false;
+  // How many times the program went through import, parse and validation (see runCompilePipeline), and how many
+  // times it was imported and parsed again before a validation to take operator helpers.
+  uint32_t pipelineRounds = 0;
+  uint32_t pipelineRestarts = 0;
 };
 
 struct CompilePipelineSuccessResult {

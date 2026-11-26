@@ -506,6 +506,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/pipeline/CompilePipeline.cpp
   src/pipeline/CompilePipelineSource.cpp
   src/pipeline/CompilePipelineStdlib.cpp
+  src/pipeline/OperatorHelperPrediction.cpp
   src/pipeline/EmitDeps.cpp
   src/pipeline/LibraryUses.cpp
   src/pipeline/DeclarationText.cpp
