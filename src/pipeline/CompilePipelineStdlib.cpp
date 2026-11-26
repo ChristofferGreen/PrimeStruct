@@ -191,7 +191,7 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
 
   std::unordered_set<std::string> seenFiles;
   std::unordered_set<std::string> processedKeys;
-  // Files the import resolver spliced from `import<...>` entries, by canonical path.
+  // The root file and the files the import resolver spliced from `import<...>` entries, by canonical path.
   const auto pathKey = [](const std::filesystem::path &path) {
     std::error_code keyEc;
     const std::filesystem::path canonical = std::filesystem::weakly_canonical(path, keyEc);
@@ -200,7 +200,9 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
   std::unordered_set<std::string> resolverSplicedFiles;
   if (expandedSource != nullptr) {
     for (const SourceUnit &unit : expandedSource->units) {
-      if (unit.kind == SourceUnitKind::Import) {
+      // The root file counts too: a stdlib file named as the root is in the source once, and the module scan of an
+      // import it makes of its own directory must not read it a second time.
+      if (unit.kind == SourceUnitKind::Import || unit.kind == SourceUnitKind::Primary) {
         resolverSplicedFiles.insert(pathKey(unit.displayPath));
       }
     }

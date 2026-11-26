@@ -7,26 +7,6 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
-## TODO-6284
-
-- 2026-11-26 (survey, release build of master after TODO-6282, `primec --emit=lib <file>` and, for each refusal, `primec --emit=vm --entry /main` of a program that starts with `import<"<path of the file>">`; the files TODO-6032 listed as not self-contained, plus http):
-
-  | Stdlib file as a root | `--emit=lib` says | Same with `--emit=vm --entry` | Class | Leaf |
-  | --- | --- | --- | --- | --- |
-  | build/build.prime | `argument type mismatch for /std/build/Compiler/emit parameter kind: expected /std/text/view/StringView` (`settings.emit("lib")`) | same | compiler bug: a literal does not convert to `StringView` in the file read as a root | fixed |
-  | build_runner/build_runner.prime | `unknown call target: /build` | same | intended: the runner calls the `build` function of the program that links it | none |
-  | collections/map.prime | `unknown import path: /std/collections/equality/*` | same | compiler/stdlib bug: `equality` is not an importable path | fixed |
-  | gfx/gfx.prime | `public function /std/gfx/Device/create_mesh cannot be compiled into a library: parameter `vertices` has a type (`array`) the address ABI does not pass` | builds and runs | intended shape rule (an `array` parameter is not a scalar, a struct or a reference to one); same family as TODO-6173 | none |
-  | image/image.prime | `unknown return type: ImageError on /ImageError/read_unsupported` | same | compiler/stdlib bug: root-level helpers name a struct the importer brings | TODO-6284 |
-  | math/matrix.prime | `unknown return type: Vec2 on /std/math/mat2_mul_vec2_internal` | same | compiler/stdlib bug: the file needs vector.prime of its directory | TODO-6284 |
-  | math/quaternion.prime | `unknown return type: Vec3 on /std/math/quat_rotate_vec3_internal` | same | as matrix | TODO-6284 |
-  | text/view.prime | `unsupported binding type: StringView` (`[StringView] part` in `/std/text/String/opPlusMany`) | same | compiler bug, fixed; now the args-pack shape rule | fixed |
-  | ui/native/native.prime | `unsupported binding type: Command` (`runScriptCommand`) | same | compiler/stdlib bug: `Command` is a type of /std/ui/events | TODO-6284 |
-  | web/web.prime | `unknown call target: fragmentScript` | same | compiler/stdlib bug: `fragment_script.prime` is a sibling | TODO-6284 |
-  | http/http.prime | `public function /std/http/parseRequestBytes cannot be compiled into a library: parameter `bytes` has a type (`ReadSlice<u8>`) ...` | builds and runs | intended shape rule, documented (docs/spec/integration-and-tooling.md, Stdlib libraries); TODO-6281 holds the decision on borrowed collection parameters | none |
-
-  With `import /std/math/*` added to a copy of matrix.prime the build says `duplicate definition: /std/math/Mat2`: the stdlib pass reads the file again as a module file, which is the first thing TODO-6284 changes. Every module family import (`import /std/math/*`, `/std/build/*`, `/std/text/view/*`, `/std/ui/native/*`, `/std/web/*`, `/std/image/*`, `/std/collections/map/*`) compiles an empty `main`; the refusals come from naming the file as the root.
-
 ## TODO-5931
 
 - 2026-11-20 (TODO-5931, release build, macOS arm64, `primec --emit=vm`, loaded machine, alternating runs, min of 20, instructions retired via `/usr/bin/time -l`; twice, identical instruction counts):

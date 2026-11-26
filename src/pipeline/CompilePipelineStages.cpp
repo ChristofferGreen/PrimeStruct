@@ -148,6 +148,13 @@ bool runCompilePipelineImportStage(const Options &options,
       if (!sourceFile.has_value()) {
         continue;
       }
+      // A module whose file is the root is in the source whole: reading it lazily too would define it twice.
+      {
+        std::error_code rootEc;
+        if (std::filesystem::equivalent(*sourceFile, options.inputPath, rootEc)) {
+          continue;
+        }
+      }
       // A module a linked library stands for is not read, lazily or whole.
       if (std::any_of(
               ownedModules.begin(), ownedModules.end(), [&](const OwnedStdlibModule &owned) {

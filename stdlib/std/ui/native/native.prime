@@ -5,6 +5,8 @@
 // `String` (import /std/text/*); fixed labels (titles, shortcuts) stay `string` literals.
 
 import /std/text/*
+import /std/ui/events/*
+import /std/ui/native/*
 
 [host return<i32>]
 ps_ui_abi_version() {

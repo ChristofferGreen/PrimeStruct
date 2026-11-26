@@ -1,3 +1,4 @@
+import /std/image/*
 import /std/math/*
 import /std/file/*
 import /std/collections/vector

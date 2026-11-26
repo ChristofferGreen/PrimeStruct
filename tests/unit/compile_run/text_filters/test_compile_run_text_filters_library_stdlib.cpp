@@ -296,4 +296,36 @@ TEST_CASE("the build and text view modules are not refused for a missing name as
   CHECK(view.err.find("unsupported binding type") == std::string::npos);
 }
 
+TEST_CASE("stdlib files that need the other files of their module are roots of libraries") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_module_roots");
+  const std::string color = stdlibFile(dir, "/std/math/*", "math/color.prime");
+  const std::string stdDir = color.substr(0, color.size() - std::string("math/color.prime").size());
+
+  // The files whose module has other files build.
+  for (const char *file : {"math/matrix.prime", "math/quaternion.prime"}) {
+    const std::string name = std::filesystem::path(file).stem().string();
+    const primec::LibraryArchiveContent content =
+        readArchive(buildLibrary(dir, stdDir + file, name));
+    REQUIRE(content.manifest.stdlibModules.size() == 1);
+    CHECK(content.manifest.stdlibModules.front().file == std::string("std/") + file);
+  }
+
+  // The files whose public functions take a `string` are refused by the shape rule, not for a name they cannot see.
+  const std::pair<const char *, const char *> refused[] = {
+      {"image/image.prime", "parameter `path` is a `string`"},
+      {"web/web.prime", "parameter `target` is a `string`"},
+      {"ui/native/native.prime", "parameter `message` is a `string`"},
+  };
+  for (const auto &[file, rule] : refused) {
+    const Run run = shell(dir,
+                          "./primec --emit=lib " + quoteShellArg(stdDir + file) + " -o " +
+                              quoteShellArg((dir / "refused.psa").string()));
+    CHECK(run.exitCode != 0);
+    CHECK_MESSAGE(run.err.find("cannot be compiled into a library") != std::string::npos, run.err);
+    CHECK_MESSAGE(run.err.find(rule) != std::string::npos, run.err);
+    CHECK(run.err.find("unknown ") == std::string::npos);
+    CHECK(run.err.find("unsupported binding type") == std::string::npos);
+  }
+}
+
 TEST_SUITE_END();

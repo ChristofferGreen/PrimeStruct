@@ -648,20 +648,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [~] TODO-6284: A stdlib file named as a library root does not see the other files of its module
+- [ ] TODO-6287: A program that links the `/std/math/matrix` or quaternion library cannot use the operators on Mat and Quat
   - owner: ai
   - status: ready
-  - claimed_by: worker-lib-shapes (worktree-agent-abe55d3f222fd4a30), 2026-11-26
   - created_at: 2026-11-26
-  - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
+  - phase: Modules and libraries (found by TODO-6284)
   - parallel_track: lib-shapes
-  - scope: `primec --emit=lib stdlib/std/math/matrix.prime` says `unknown return type: Vec2 on /std/math/mat2_mul_vec2_internal`; quaternion says the same for `Vec3`; `stdlib/std/web/web.prime` says `unknown call target: fragmentScript` (fragment_script.prime is a sibling); `stdlib/std/ui/native/native.prime` says `unsupported binding type: Command` (a type of /std/ui/events); `stdlib/std/image/image.prime` says `unknown return type: ImageError on /ImageError/read_unsupported` (its root-level helpers name a struct the importer's `import /std/image/*` brings). The same text comes out of `--emit=vm --entry` for a program that starts with `import<"stdlib/std/math/matrix.prime">`, so this is not a library rule: a file named by its path is read as one user file, while `import /std/math/*` reads the whole directory (and these files work that way). Adding `import /std/math/*` to matrix.prime gives `duplicate definition: /std/math/Mat2`, because the stdlib pass then reads matrix.prime a second time as a module file. Fix: the stdlib pass marks the root file (when it lies under the stdlib directory) as seen before it reads a module, and the files above gain the import of their own module (and of `/std/ui/events/*`, `/std/web/fragment_script`), so each is a self-contained root; a library of one of them then owns the roots of that file only (the rule of the stdlib libraries in docs/spec/integration-and-tooling.md).
+  - scope: `primec --emit=lib stdlib/std/math/matrix.prime -o matrix.psa` and the vector library build (TODO-6284), but `multiply(m, m)` of two `Mat2` in a program that links both stops with `VM lowering error: vm backend only supports arithmetic/comparison/... calls in expressions (call=/multiply, name=/std/math/mat2_mul_mat2_internal ...)`. The lowerer rewrites an operator on a matrix or quaternion to a call of a private helper (`mat2_mul_mat2_internal`, `quat_multiply_internal` and the `_add_`, `_sub_`, `_scale_`, `_scale_left_`, `_div_scalar_` and `_mul_vec` ones; src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp), and a private helper is not in the interface of the library. With the helpers made `public` the link goes through but the value is wrong: `[Mat2] p{multiply(m, m)}` then `p.m00` gives 0 where the whole program gives 7 (the direct call `/std/math/mat2_mul_mat2_internal(m, m)` gives 7), so the rewritten call is lowered as something other than the call of the imported function. Decide whether the rewrite goes through the interface (the helpers are public and the lowerer calls them as an imported function) or the semantic product names the helper call.
   - acceptance:
-    - `--emit=lib` of matrix, quaternion, image, web and ui/native builds (or names a shape rule, not a missing name), and a library of matrix links with the vector library and gives the whole-program result on the VM
-    - the unchanged programs that import the modules as source give the same results
+    - a library of matrix links with the vector library and gives the whole-program result for `Mat2 * Mat2`, `Mat2 * Vec2`, `Mat2 + Mat2` and a scalar scale, and the same for `Quat`, on the VM, with a library link test
+    - never a silently different value: a helper the interface lacks is a diagnostic
     - full release gate green
-  - stop_rule: the stdlib pass (src/pipeline/CompilePipelineStdlib.cpp) reading a root that is itself a stdlib file, and the imports of those files; no change to the library ABI.
-  - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o m.psa`.
+  - stop_rule: the operator rewrite of the lowerer and the interface of the two stdlib files; no change to the library ABI.
+  - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o matrix.psa`, `primec --emit=lib stdlib/std/math/vector.prime -o vector.psa`, then `primec --emit=vm --library matrix.psa --library vector.psa app.prime --entry /main` with `import</std/math>`, `import /std/math/*` and `[Mat2] p{multiply(m, m)}`.
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai

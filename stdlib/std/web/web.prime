@@ -11,6 +11,7 @@ import /std/panic/*
 import /std/text/*
 import /std/text/view/*
 import /std/ui/events/*
+import /std/web/fragment_script/*
 
 namespace std {
 namespace web {
