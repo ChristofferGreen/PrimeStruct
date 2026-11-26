@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6282: A library of a struct with a `Function` field has an interface that does not define the box
+- [~] TODO-6282: A library of a struct with a `Function` field has an interface that does not define the box
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-function-box (worktree-agent-ad5c379c25c3958fa), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found with TODO-6279)
   - parallel_track: lib-shapes
