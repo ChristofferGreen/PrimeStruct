@@ -339,6 +339,11 @@ struct WasmRuntimeContext {
   // WASI profile only: `LoadStringByte` checks the position against the length of the string and ends the program with
   // the VM's message (`string index out of bounds in IR`) and `proc_exit(3)` when it is not below it.
   bool hasStringByteFault = false;
+  // WASI profile only: `PrintArgv` with an index past the arguments ends the program with the VM's
+  // `invalid argv index in IR` and `proc_exit(3)` (`PrintArgvUnsafe` keeps its unchecked read).
+  bool hasArgvFault = false;
+  uint32_t argvMessageAddr = 0;
+  uint32_t argvMessageLength = 0;
   // WASI profile only: `LoadStringLength` reads the length of the string at a computed index from `stringLengthTable`
   // (one `u32` per string of the module table); an index past the table is the VM's `invalid string index in IR`.
   bool hasStringLength = false;

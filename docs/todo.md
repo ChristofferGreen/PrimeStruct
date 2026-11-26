@@ -129,7 +129,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
-| TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | ready | wasm-bytes-host |
 | TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | ready | wasm-opcode-gaps |
 | TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | deferred | ir-inline-strings |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
@@ -172,7 +171,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6271 (Wasm control-flow pattern of two file programs), TODO-6269 (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
+- Backend parity: TODO-6271 (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -512,20 +511,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [~] TODO-6269: Wasm `PrintArgv` past the arguments traps without the VM's fault text
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-a3e01a58a3e56909d), 2026-11-26
-  - created_at: 2026-11-25
-  - phase: Backend parity (found with TODO-6230)
-  - parallel_track: wasm-bytes-host
-  - scope: `PrintArgv` with an index past the arguments (or negative) is a plain `unreachable` trap in the Wasm module (src/wasm_emitter/WasmEmitterIo.cpp, the `safePrint` branch), where the VM ends the program with `invalid argv index in IR` (exit code 3, `VM error: ...` on stderr) and the other Wasm faults (heap, string literal, division) write the VM's text through `fd_write` and `proc_exit(3)`.
-  - acceptance:
-    - an IR module `PushI32 5; PrintArgv 1; ReturnVoid` with one argument prints the VM's fault text on stderr and exits 3 under node on the WASI profile, as `expectMatchesVm` in tests/unit/ir_pipeline/optimizer/test_ir_wasm_heap.cpp checks
-    - full release gate green
-  - stop_rule: the `PrintArgv` fault only; `PrintArgvUnsafe` keeps its unchecked read.
-  - repro: build the module above, run it with `expectMatchesVm(mainOf({"PushI32 5", "PrintArgv 1", "ReturnVoid"}), "print_argv_past", "", false, {"a"})`; it reports `unexpected RuntimeError: unreachable` against `VM error: invalid argv index in IR`.
-
 - [ ] TODO-6271: Wasm refuses two file programs with `unsupported control-flow pattern`
   - owner: ai
   - status: ready

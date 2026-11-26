@@ -2261,4 +2261,16 @@ TEST_CASE("wasm reads the length of a table string by a computed index like the 
                   "string_length_empty_table");
 }
 
+TEST_CASE("a wasm PrintArgv past the arguments is the VM's fault") {
+  if (!nodeAvailable()) {
+    return;
+  }
+  expectMatchesVm(
+      mainOf({"PushI32 1", "PrintArgv 1", "ReturnVoid"}), "print_argv_in_range", "", false, {"a"});
+  expectMatchesVm(
+      mainOf({"PushI32 5", "PrintArgv 1", "ReturnVoid"}), "print_argv_past", "", false, {"a"});
+  expectMatchesVm(
+      mainOf({"PushI32 -1", "PrintArgv 1", "ReturnVoid"}), "print_argv_negative", "", false, {"a"});
+}
+
 TEST_SUITE_END();

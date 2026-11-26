@@ -305,7 +305,11 @@ bool emitIoInstruction(const IrInstruction &inst,
       out.push_back(WasmOpIf);
       out.push_back(WasmBlockTypeVoid);
       if (safePrint) {
-        out.push_back(WasmOpUnreachable);
+        if (runtime.hasArgvFault) {
+          emitWasmRuntimeFault(runtime, runtime.argvMessageAddr, runtime.argvMessageLength, out);
+        } else {
+          out.push_back(WasmOpUnreachable);
+        }
       }
       out.push_back(WasmOpElse);
       out.push_back(WasmOpLocalGet);
