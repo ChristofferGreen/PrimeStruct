@@ -2465,7 +2465,7 @@ Total: 11618 test cases across 677 files.
 - glsl emitter surfaces quaternion shape diagnostics
 - glsl emitter lowers matrix nominal values field access and matrix operators
 - glsl emitter accepts vector nominal values and matrix vector multiply
-- glsl emitter lowers documented vector arithmetic operators
+- glsl emitter rejects documented vector arithmetic operators
 - glsl emitter handles math constants
 - glsl emitter writes integer pow helper
 - glsl emitter handles block expressions in arguments
@@ -2685,8 +2685,8 @@ Total: 11618 test cases across 677 files.
 
 ### test_compile_run_smoke_core_gfx_end_to_end.cpp
 
-- gfx compatibility shim end-to-end coverage runs across backends
-- canonical gfx end-to-end conformance runs across backends
+- gfx compatibility shim end-to-end coverage refuses its struct array literal
+- canonical gfx end-to-end conformance refuses its struct array literal
 - gfx imports reject unsupported backend targets with deterministic diagnostics
 - gfx compatibility shim static fields import across backends
 
@@ -2694,12 +2694,12 @@ Total: 11618 test cases across 677 files.
 
 - experimental gfx window constructor entry point runs across backends
 - experimental gfx device constructor entry point runs across backends
-- experimental gfx resource wrapper slice runs across backends
-- canonical gfx resource wrapper slice runs across backends
+- experimental gfx resource wrapper slice refuses its struct array literal
+- canonical gfx resource wrapper slice refuses its struct array literal
 - experimental gfx render pass wrapper slice runs across backends
 - canonical gfx render pass wrapper slice runs across backends
-- experimental gfx resource wrapper errors stay deterministic across backends
-- canonical gfx resource wrapper errors stay deterministic across backends
+- experimental gfx resource wrapper errors refuse their struct array literal
+- canonical gfx resource wrapper errors refuse their struct array literal
 - experimental gfx pipeline entry point runs across backends
 - canonical gfx pipeline entry point runs across backends
 

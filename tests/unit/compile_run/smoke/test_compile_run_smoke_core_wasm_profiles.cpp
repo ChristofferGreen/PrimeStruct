@@ -39,9 +39,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_png_invalid.prime", source);
   const std::string wasmPath = (tempRoot / "png_invalid.wasm").string();
   const std::string compileErrPath = (tempRoot / "png_invalid_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "png_invalid_stdout.txt").string();

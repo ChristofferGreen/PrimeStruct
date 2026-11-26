@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("gfx compatibility shim end-to-end coverage runs across backends") {
+TEST_CASE("gfx compatibility shim end-to-end coverage refuses its struct array literal") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -130,23 +130,15 @@ main() {
   // array-literal limitation on the VertexColored array literal, same as
   // the canonical end-to-end test below. Re-pinned to that verified
   // behavior.
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_end_to_end_conformance",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_experimental_end_to_end_conformance",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 10);
-  CHECK(runCommand(runVmCmd) == 10);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 10);
+                                                nativePath);
 }
 
-TEST_CASE("canonical gfx end-to-end conformance runs across backends") {
+TEST_CASE("canonical gfx end-to-end conformance refuses its struct array literal") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -266,20 +258,12 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_canonical_end_to_end_conformance",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_canonical_end_to_end_conformance",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 10);
-  CHECK(runCommand(runVmCmd) == 10);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 10);
+                                                nativePath);
 }
 
 TEST_CASE("gfx imports reject unsupported backend targets with deterministic diagnostics") {

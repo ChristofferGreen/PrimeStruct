@@ -170,9 +170,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_ppm_read.prime", source);
   const std::string wasmPath = (tempRoot / "ppm_read.wasm").string();
   const std::string compileErrPath = (tempRoot / "ppm_read_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "ppm_read_stdout.txt").string();
@@ -242,9 +241,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_ppm_p6.prime", source);
   const std::string wasmPath = (tempRoot / "ppm_p6.wasm").string();
   const std::string compileErrPath = (tempRoot / "ppm_p6_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "ppm_p6_stdout.txt").string();
@@ -303,9 +301,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_ppm_p6_truncated.prime", source);
   const std::string wasmPath = (tempRoot / "ppm_p6_truncated.wasm").string();
   const std::string compileErrPath = (tempRoot / "ppm_p6_truncated_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "ppm_p6_truncated_stdout.txt").string();

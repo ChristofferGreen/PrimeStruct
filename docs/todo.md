@@ -130,7 +130,6 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6288 | Library code outside the slice and container primitives is not `[unsafe]` | ready | stdlib-safe-slices |
-| TODO-6292 | No test passes by accepting the unsupported-call error it should catch | ready | test-honesty |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -666,21 +665,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
   - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
 
-- [~] TODO-6292: No test passes by accepting the unsupported-call error it should catch
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Test quality (found with TODO-6287)
-  - parallel_track: test-honesty
-  - scope: `runVmCommandOrExpectUnsupported` (tests/) treats a "vm backend only supports ... calls" lowering error as a pass, so `runs vm matrix arithmetic helpers with tolerance` and the quaternion test passed while the scalar operators were broken (TODO-6289). Audit every caller: a case where the target is meant to work asserts success; a case where a refusal is the intended behaviour asserts the exact refusal and names why; delete the helper if no honest use is left.
-  - acceptance:
-    - every caller is converted or justified in a comment next to it; a count before and after in the commit body
-    - cases that start failing are filed as leaves (TODO-6289 covers the matrix/quaternion scalar operators)
-    - full release gate green
-  - stop_rule: tests that accept an error as a pass; no compiler changes beyond what a converted test needs filed as its own leaf.
-  - repro: `grep -rn runVmCommandOrExpectUnsupported tests`.
-
 - [ ] TODO-6293: Each non-template stdlib math definition costs about a megabyte of semantic-product memory
   - owner: ai
   - status: ready
@@ -693,6 +677,32 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the semantic-product memory of unused imported definitions; no change to language behaviour.
   - repro: the benchmark command above with and without the helpers.
+
+- [ ] TODO-6294: An array literal of structs is refused by every backend, so six gfx conformance programs never ran
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Test quality (found by the audit of TODO-6292)
+  - parallel_track: test-honesty
+  - scope: the gfx tests `gfx compatibility shim end-to-end coverage`, `canonical gfx end-to-end conformance`, `experimental` and `canonical gfx resource wrapper slice` and `resource wrapper errors` (tests/unit/compile_run/smoke/test_compile_run_smoke_core_gfx_end_to_end.cpp and ..._gfx_entrypoints.cpp) build a `[VertexColored]` array literal; `--emit=exe`, `--emit=vm` and `--emit=native` all stop with `... backend only supports numeric/bool/string array literals`, so the programs were never run on a backend (the tests returned early on that refusal and passed). They now pin the three refusals (`expectStructArrayLiteralRefusedAcrossBackends`). Lower an array literal of structs (or change the programs to a supported construct) so they run, and restore their run checks: exit codes 10 and 10 (end-to-end), 6 and 6 (resource wrapper slices), 2 and 2 (wrapper errors) on exe, vm and native.
+  - acceptance:
+    - the six programs compile and run on exe, vm and native with those exit codes, and the refusal helper is deleted
+    - full release gate green
+  - stop_rule: array literals of structs in the three lowerers, or the six programs; no other gfx change.
+  - repro: `grep -n expectStructArrayLiteralRefusedAcrossBackends tests/unit/compile_run/smoke/*.cpp`.
+
+- [ ] TODO-6295: `plus`, `minus`, `multiply` and `divide` of vectors are rejected, though the docs and a GLSL test describe them
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Test quality (found by the audit of TODO-6292)
+  - parallel_track: test-honesty
+  - scope: `[Vec2] sum{plus(a, b)}` for two `Vec2` stops with `Semantic error: arithmetic operators require numeric operands` on every target (`primec --emit=vm`, `--emit=glsl`); the same for `multiply(2i32, v)`, `multiply(v, 0.5f32)` and `divide(v, 2.0f32)` and for Vec3 and Vec4. docs/spec/backend-type-support.md says GLSL lowers "component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide", and the test `glsl emitter rejects documented vector arithmetic operators` (tests/unit/compile_run/test_compile_run_glsl.cpp) was `glsl emitter lowers documented vector arithmetic operators`: it passed only because it accepted this error as "unsupported", and it expected GLSL text such as `const vec2 sum2 = (base2 + delta2);` that the IR shader path does not emit. Decide with the owner: support the vector operators (the matrix and quaternion ones are rewritten to helpers; give Vec the same) or remove them from the docs; then make the test run for real (compile success and a shader check on the IR path).
+  - acceptance:
+    - a decision recorded here, then either the operators work on the VM, optexe and GLSL with tests or the docs and the test say they do not exist
+    - full release gate green
+  - stop_rule: the vector operator surface and its docs; no change to matrix or quaternion operators.
+  - repro: `primec --emit=vm` on the program of that test.
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai

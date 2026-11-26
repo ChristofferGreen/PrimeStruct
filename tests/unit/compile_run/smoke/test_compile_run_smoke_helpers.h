@@ -95,82 +95,35 @@ inline void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
   CHECK(readFile(outPath) == expectedStdout);
 }
 
-inline constexpr std::string_view IrResultOkUnsupportedMessage =
-    "IR backends only support Result.ok with supported payload values";
 inline constexpr std::string_view NativeArrayLiteralUnsupportedMessage =
     "native backend only supports numeric/bool/string array literals";
 inline constexpr std::string_view VmArrayLiteralUnsupportedMessage =
     "vm backend only supports numeric/bool/string array literals";
 
-inline bool compileAcrossBackendsOrExpectUnsupported(const std::string &nameStem,
-                                                     const std::string &compileExeCmd,
-                                                     const std::string &exePath,
-                                                     const std::string &runVmCmd,
-                                                     const std::string &compileNativeCmd,
-                                                     const std::string &nativePath,
-                                                     const std::string &nativeMessage,
-                                                     const std::string &vmMessage) {
+// The gfx conformance programs build a `[VertexColored]` array literal, and no backend lowers an array literal of
+// structs: each one refuses it with its own message. The three refusals are the pinned behavior until that
+// lowers (docs/todo.md, the array-literal leaf); a program that starts to compile fails here.
+inline void expectStructArrayLiteralRefusedAcrossBackends(const std::string &nameStem,
+                                                          const std::string &compileExeCmd,
+                                                          const std::string &exePath,
+                                                          const std::string &runVmCmd,
+                                                          const std::string &compileNativeCmd,
+                                                          const std::string &nativePath) {
   const std::filesystem::path tempRoot = testScratchPath("");
   const std::string exeErrPath = (tempRoot / (nameStem + "_exe_err.txt")).string();
   const std::string vmErrPath = (tempRoot / (nameStem + "_vm_err.txt")).string();
   const std::string nativeErrPath = (tempRoot / (nameStem + "_native_err.txt")).string();
 
-  const int exeCode = runCommand(compileExeCmd + " 2> " + quoteShellArg(exeErrPath));
-  if (exeCode == 0) {
-    return true;
-  }
-
-  CHECK(exeCode == 2);
+  // `--emit=exe` goes through the C++ emitter, so its lowering error names the exe backend.
+  CHECK(runCommand(compileExeCmd + " 2> " + quoteShellArg(exeErrPath)) == 2);
   CHECK_FALSE(std::filesystem::exists(exePath));
-  // `--emit=exe` goes through the C++ emitter, so its lowering errors name the exe backend.
-  std::string exeMessage = nativeMessage;
-  if (const size_t nativeName = exeMessage.find("native backend");
-      nativeName != std::string::npos) {
-    exeMessage.replace(nativeName, std::string("native backend").size(), "exe backend");
-  }
-  CHECK(readFile(exeErrPath).find(exeMessage) != std::string::npos);
+  CHECK(readFile(exeErrPath).find("exe backend only supports numeric/bool/string array literals") !=
+        std::string::npos);
 
-  const int vmCode = runCommand(runVmCmd + " 2> " + quoteShellArg(vmErrPath));
-  CHECK(vmCode == 2);
-  CHECK(readFile(vmErrPath).find(vmMessage) != std::string::npos);
+  CHECK(runCommand(runVmCmd + " 2> " + quoteShellArg(vmErrPath)) == 2);
+  CHECK(readFile(vmErrPath).find(VmArrayLiteralUnsupportedMessage) != std::string::npos);
 
-  const int nativeCode = runCommand(compileNativeCmd + " 2> " + quoteShellArg(nativeErrPath));
-  CHECK(nativeCode == 2);
+  CHECK(runCommand(compileNativeCmd + " 2> " + quoteShellArg(nativeErrPath)) == 2);
   CHECK_FALSE(std::filesystem::exists(nativePath));
-  CHECK(readFile(nativeErrPath).find(nativeMessage) != std::string::npos);
-  return false;
-}
-
-inline bool compileWasmWasiOrExpectUnsupported(const std::string &srcPath,
-                                               const std::string &wasmPath,
-                                               const std::string &errPath) {
-  const int code = compileWasmWasiProgram(srcPath, wasmPath, errPath);
-  if (code == 0) {
-    return true;
-  }
-  CHECK(code == 2);
-  CHECK_FALSE(std::filesystem::exists(wasmPath));
-  const std::string error = readFile(errPath);
-  CHECK((error.find("Wasm IR validation error") != std::string::npos ||
-         error.find("unsupported opcode for wasm target") != std::string::npos ||
-         error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-             std::string::npos));
-  return false;
-}
-
-inline bool runWasmCompileCommandOrExpectUnsupported(const std::string &wasmCmd,
-                                                     const std::string &wasmPath,
-                                                     const std::string &errPath) {
-  const int code = runCommand(wasmCmd);
-  if (code == 0) {
-    return true;
-  }
-  CHECK(code == 2);
-  CHECK_FALSE(std::filesystem::exists(wasmPath));
-  const std::string error = readFile(errPath);
-  CHECK((error.find("Wasm IR validation error") != std::string::npos ||
-         error.find("unsupported opcode for wasm target") != std::string::npos ||
-         error.find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-             std::string::npos));
-  return false;
+  CHECK(readFile(nativeErrPath).find(NativeArrayLiteralUnsupportedMessage) != std::string::npos);
 }

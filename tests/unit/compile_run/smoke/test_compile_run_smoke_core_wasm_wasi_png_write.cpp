@@ -30,9 +30,7 @@ main() {
   const std::string compileErrPath = (tempRoot / "ppm_write_success_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(runCommand(wasmCmd) == 0, readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   if (hasWasmtime()) {
@@ -111,9 +109,7 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_write_success_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(runCommand(wasmCmd) == 0, readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   if (hasWasmtime()) {
@@ -163,9 +159,7 @@ main() {
   const std::string compileErrPath = (tempRoot / "png_write_invalid_result_compile_err.txt").string();
   const std::string wasmCmd = "./primec --emit=wasm --wasm-profile wasi " + quoteShellArg(srcPath) + " -o " +
                               quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(compileErrPath);
-  if (!runWasmCompileCommandOrExpectUnsupported(wasmCmd, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(runCommand(wasmCmd) == 0, readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   if (hasWasmtime()) {
@@ -233,9 +227,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_png_read.prime", source);
   const std::string wasmPath = (tempRoot / "png_read.wasm").string();
   const std::string compileErrPath = (tempRoot / "png_read_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "png_read_stdout.txt").string();

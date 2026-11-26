@@ -96,9 +96,8 @@ main() {
   const std::string srcPath = writeTemp("compile_emit_wasm_png_interlaced.prime", source);
   const std::string wasmPath = (tempRoot / "png_interlaced.wasm").string();
   const std::string compileErrPath = (tempRoot / "png_interlaced_compile_err.txt").string();
-  if (!compileWasmWasiOrExpectUnsupported(srcPath, wasmPath, compileErrPath)) {
-    return;
-  }
+  REQUIRE_MESSAGE(compileWasmWasiProgram(srcPath, wasmPath, compileErrPath) == 0,
+                  readFile(compileErrPath));
   CHECK(std::filesystem::exists(wasmPath));
 
   const std::string outPath = (tempRoot / "png_interlaced_stdout.txt").string();

@@ -2,22 +2,6 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.glsl");
 
-static bool compileGlslOrExpectNominalMathUnsupported(const std::string &compileCmd,
-                                                      const std::string &errPath) {
-  const int code = runCommand(compileCmd + " 2> " + quoteShellArg(errPath));
-  if (code == 0) {
-    return true;
-  }
-  CHECK(code == 2);
-  const std::string error = readFile(errPath);
-  CHECK((error.find("GLSL backend only supports "
-                    "arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/"
-                    "assign/increment/decrement calls in expressions") != std::string::npos ||
-         error.find("local index exceeds glsl local-slot limit") != std::string::npos ||
-         error.find("arithmetic operators require numeric operands") != std::string::npos));
-  return false;
-}
-
 TEST_CASE("glsl emitter writes minimal shader") {
   const std::string source = R"(
 [return<void>]
@@ -928,37 +912,14 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_support_quaternion_nominal_values.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_support_quaternion_nominal_values.glsl").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_support_quaternion_nominal_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main";
-  if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
-    return;
-  }
+  REQUIRE(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  // The program fits the GLSL local-slot limit, so the IR shader path (a stack machine) emits it.
-  if (output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos) {
-    CHECK(output.find("#version 450") != std::string::npos);
-    return;
-  }
-  CHECK(output.find("const vec4 raw = vec4(1.0, 2.0, 3.0, 4.0);") != std::string::npos);
-  CHECK(output.find("const vec4 other = vec4(0.5, 1.5, 0.25, 2.0);") != std::string::npos);
-  CHECK(output.find("_ps_quat_norm_") != std::string::npos);
-  CHECK(output.find("dot(_ps_quat_") != std::string::npos);
-  CHECK(output.find("const vec4 sum = (raw + other);") != std::string::npos);
-  CHECK(output.find("const vec4 diff = (raw - other);") != std::string::npos);
-  CHECK(output.find("const vec4 scaled = (float(2) * raw);") != std::string::npos);
-  CHECK(output.find("const vec4 divided = (other / 2.0);") != std::string::npos);
-  CHECK(output.find("const vec4 product = vec4(") != std::string::npos);
-  CHECK(output.find("(raw).w * (other).x") != std::string::npos);
-  CHECK(output.find("(raw).w * (other).w") != std::string::npos);
-  CHECK(output.find("const vec3 rotated = (") != std::string::npos);
-  CHECK(output.find("* vec3(1.0, 0.0, 0.0)") != std::string::npos);
-  CHECK(output.find("(normalized).x") != std::string::npos);
-  CHECK(output.find("(sum).w") != std::string::npos);
-  CHECK(output.find("(product).x") != std::string::npos);
-  CHECK(output.find("(rotated).y") != std::string::npos);
+  // The shader is the IR path (a stack machine): these programs fit the GLSL local-slot limit.
+  CHECK(output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
+  CHECK(output.find("#version 450") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter lowers quaternion conversion helpers") {
@@ -981,33 +942,14 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_support_quaternion_helpers.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_support_quaternion_helpers.glsl").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_support_quaternion_helpers.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " + quoteShellArg(outPath) +
                                  " --entry /main";
-  if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
-    return;
-  }
+  REQUIRE(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  // Since inlined struct returns are lowered once, this program fits the GLSL local-slot limit and the IR shader
-  // path (a stack machine) emits it.
-  if (output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos) {
-    CHECK(output.find("#version 450") != std::string::npos);
-    return;
-  }
-  CHECK(output.find("const vec4 raw = vec4(0.0, 0.0, 0.70710677, 0.70710677);") != std::string::npos);
-  CHECK(output.find("const mat3 basis3 = mat3(") != std::string::npos);
-  CHECK(output.find("const mat4 basis4 = mat4(") != std::string::npos);
-  CHECK(output.find("_ps_mat3_trace_") != std::string::npos);
-  CHECK(output.find("_ps_mat3_to_quat_raw_") != std::string::npos);
-  CHECK(output.find("const vec4 restored = _ps_mat3_to_quat_") != std::string::npos);
-  CHECK(output.find("const vec4 zero = _ps_quat_norm_") != std::string::npos);
-  CHECK(output.find("const float sample = ") != std::string::npos);
-  CHECK(output.find("(basis3)[1][0]") != std::string::npos);
-  CHECK(output.find("(basis4)[3][3]") != std::string::npos);
-  CHECK(output.find("(restored).w") != std::string::npos);
-  CHECK(output.find("(zero).x") != std::string::npos);
+  // The shader is the IR path (a stack machine): these programs fit the GLSL local-slot limit.
+  CHECK(output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
+  CHECK(output.find("#version 450") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter surfaces quaternion shape diagnostics") {
@@ -1067,31 +1009,13 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_nominal_values.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_support_matrix_nominal_values.glsl").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_support_matrix_nominal_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
-    return;
-  }
+  REQUIRE(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
-  // The program fits the GLSL local-slot limit, so the IR shader path (a stack machine) emits it.
-  if (output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos) {
-    CHECK(output.find("#version 450") != std::string::npos);
-    return;
-  }
-  CHECK(output.find("const mat2 m2 = mat2(1.0, 3.0, 2.0, 4.0);") != std::string::npos);
-  CHECK(output.find("const mat2 sum2 = (m2 + mat2(5.0, 7.0, 6.0, 8.0));") != std::string::npos);
-  CHECK(output.find("const mat2 scaled2 = (sum2 * float(2));") != std::string::npos);
-  CHECK(output.find("const mat2 div2 = (scaled2 / 2.0);") != std::string::npos);
-  CHECK(output.find("const mat2 prod2 = (m2 * sum2);") != std::string::npos);
-  CHECK(output.find("const float sample2 = ") != std::string::npos);
-  CHECK(output.find("(div2)[1][0]") != std::string::npos);
-  CHECK(output.find("(prod2)[0][1]") != std::string::npos);
-  CHECK(output.find("const mat3 m3 = mat3(1.0, 4.0, 7.0, 2.0, 5.0, 8.0, 3.0, 6.0, 9.0);") != std::string::npos);
-  CHECK(output.find("const float sample3 = (m3)[1][2];") != std::string::npos);
-  CHECK(output.find("const mat4 m4 = mat4(1.0, 5.0, 9.0, 13.0, 2.0, 6.0, 10.0, 14.0, 3.0, 7.0, 11.0, 15.0, 4.0, 8.0, 12.0, 16.0);") != std::string::npos);
-  CHECK(output.find("const float sample4 = (m4)[2][3];") != std::string::npos);
+  // The shader is the IR path (a stack machine): these programs fit the GLSL local-slot limit.
+  CHECK(output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
+  CHECK(output.find("#version 450") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter accepts vector nominal values and matrix vector multiply") {
@@ -1127,13 +1051,9 @@ main() {
   const std::string srcPath = writeTemp("compile_glsl_support_matrix_vector_values.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_glsl_support_matrix_vector_values.glsl").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_support_matrix_vector_values.err").string();
 
   const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
-    return;
-  }
+  REQUIRE(runCommand(compileCmd) == 0);
   const std::string output = readFile(outPath);
   if (output.find("const vec2 v2 = vec2(1.0, 2.0);") != std::string::npos) {
     CHECK(output.find("const vec3 v3 = vec3(3.0, 4.0, 5.0);") != std::string::npos);
@@ -1153,7 +1073,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("glsl emitter lowers documented vector arithmetic operators") {
+TEST_CASE("glsl emitter rejects documented vector arithmetic operators") {
   const std::string source = R"(
 import /std/math/*
 
@@ -1180,33 +1100,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_vector_arithmetic.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_glsl_support_vector_arithmetic.glsl").string();
   const std::string errPath =
       (testScratchPath("") / "primec_glsl_support_vector_arithmetic.err").string();
 
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath + " -o " + outPath + " --entry /main";
-  if (!compileGlslOrExpectNominalMathUnsupported(compileCmd, errPath)) {
-    return;
-  }
-  const std::string output = readFile(outPath);
-  CHECK(output.find("const vec2 sum2 = (base2 + delta2);") != std::string::npos);
-  CHECK(output.find("const vec2 diff2 = (base2 - delta2);") != std::string::npos);
-  CHECK(output.find("const vec2 scaledLeft2 = (float(2) * base2);") != std::string::npos);
-  CHECK(output.find("const vec2 scaledRight2 = (delta2 * 0.5);") != std::string::npos);
-  CHECK(output.find("const vec2 div2 = (scaledLeft2 / 2.0);") != std::string::npos);
-  CHECK(output.find("const vec3 scaled3 = (base3 * float(3));") != std::string::npos);
-  CHECK(output.find("const vec3 div3 = (scaled3 / 3.0);") != std::string::npos);
-  CHECK(output.find("const vec4 sum4 = (base4 + delta4);") != std::string::npos);
-  CHECK(output.find("const vec4 diff4 = (base4 - delta4);") != std::string::npos);
-  CHECK(output.find("const float sample = ") != std::string::npos);
-  CHECK(output.find("(sum2).x") != std::string::npos);
-  CHECK(output.find("(diff2).y") != std::string::npos);
-  CHECK(output.find("(scaledRight2).x") != std::string::npos);
-  CHECK(output.find("(div2).y") != std::string::npos);
-  CHECK(output.find("(div3).z") != std::string::npos);
-  CHECK(output.find("(sum4).w") != std::string::npos);
-  CHECK(output.find("(diff4).z") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=glsl " + srcPath +
+                                 " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
+  // Plus, minus, multiply and divide of two vectors, or of a vector and a scalar, are rejected by the semantic
+  // pass before any backend sees them; the GLSL text this program was meant to produce is not pinned by any test.
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("arithmetic operators require numeric operands") !=
+        std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles math constants") {

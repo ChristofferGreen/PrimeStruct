@@ -50,16 +50,7 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_window_constructor",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath,
-                                                std::string(IrResultOkUnsupportedMessage),
-                                                std::string(IrResultOkUnsupportedMessage))) {
-    return;
-  }
+  CHECK(runCommand(compileCmd) == 0);
   const int exeExit = runCommand(exePath);
   const int vmExit = runCommand(runVmCmd);
   CHECK((exeExit == 4 || exeExit == 1));
@@ -111,26 +102,14 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  const std::string experimentalConfigMismatch =
-      "struct parameter type mismatch: expected SubstrateDeviceConfig, got "
-      "/std/gfx/experimental/SubstrateDeviceConfig";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_device_constructor",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath,
-                                                experimentalConfigMismatch,
-                                                experimentalConfigMismatch)) {
-    return;
-  }
+  CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("experimental gfx resource wrapper slice runs across backends") {
+TEST_CASE("experimental gfx resource wrapper slice refuses its struct array literal") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -211,23 +190,15 @@ main() {
   // VM/native array-literal limitation on the VertexColored array literal,
   // same as the canonical resource wrapper test below. Re-pinned to that
   // verified behavior.
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_resource_wrappers",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_experimental_resource_wrappers",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 6);
-  CHECK(runCommand(runVmCmd) == 6);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 6);
+                                                nativePath);
 }
 
-TEST_CASE("canonical gfx resource wrapper slice runs across backends") {
+TEST_CASE("canonical gfx resource wrapper slice refuses its struct array literal") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -303,20 +274,12 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_canonical_resource_wrappers",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_canonical_resource_wrappers",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 6);
-  CHECK(runCommand(runVmCmd) == 6);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 6);
+                                                nativePath);
 }
 
 TEST_CASE("experimental gfx render pass wrapper slice runs across backends") {
@@ -378,16 +341,7 @@ main() {
   // verified behavior.
   const std::string doesNotKnowThisNative = "native backend does not know identifier: this";
   const std::string doesNotKnowThisVm = "vm backend does not know identifier: this";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_resource_wrapper_errors",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath,
-                                                doesNotKnowThisNative,
-                                                doesNotKnowThisVm)) {
-    return;
-  }
+  CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
@@ -453,23 +407,14 @@ main() {
   // `this` there. Re-pinned to that verified behavior.
   const std::string doesNotKnowThisNative = "native backend does not know identifier: this";
   const std::string doesNotKnowThisVm = "vm backend does not know identifier: this";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_canonical_render_pass_wrappers",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath,
-                                                doesNotKnowThisNative,
-                                                doesNotKnowThisVm)) {
-    return;
-  }
+  CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 2);
   CHECK(runCommand(runVmCmd) == 2);
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("experimental gfx resource wrapper errors stay deterministic across backends") {
+TEST_CASE("experimental gfx resource wrapper errors refuse their struct array literal") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -507,23 +452,15 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_experimental_resource_wrapper_errors",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_experimental_resource_wrapper_errors",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 2);
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+                                                nativePath);
 }
 
-TEST_CASE("canonical gfx resource wrapper errors stay deterministic across backends") {
+TEST_CASE("canonical gfx resource wrapper errors refuse their struct array literal") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -561,20 +498,12 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  if (!compileAcrossBackendsOrExpectUnsupported("primec_gfx_canonical_resource_wrapper_errors",
+  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_canonical_resource_wrapper_errors",
                                                 compileCmd,
                                                 exePath,
                                                 runVmCmd,
                                                 compileNativeCmd,
-                                                nativePath,
-                                                std::string(NativeArrayLiteralUnsupportedMessage),
-                                                std::string(VmArrayLiteralUnsupportedMessage))) {
-    return;
-  }
-  CHECK(runCommand(exePath) == 2);
-  CHECK(runCommand(runVmCmd) == 2);
-  CHECK(runCommand(compileNativeCmd) == 0);
-  CHECK(runCommand(nativePath) == 2);
+                                                nativePath);
 }
 
 TEST_CASE("experimental gfx pipeline entry point runs across backends") {
