@@ -975,4 +975,83 @@ main() {
   }
 }
 
+// The function address markers (primec/semantics/FunctionAddressDefinitions.h) are signatures with no body.
+TEST_CASE("function address markers are checked as declarations") {
+  const std::string target = R"(
+[return<i32>]
+add_one([i32] x) { return(plus(x, 1i32)) }
+)";
+  const auto check = [&](const std::string &declarations, const std::string &message) {
+    const std::string source = target + declarations + R"(
+[return<int>]
+main() { return(0i32) }
+)";
+    std::string error;
+    if (message.empty()) {
+      CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+    } else {
+      CHECK_FALSE(validateProgram(source, "/main", error));
+      CHECK(error.find(message) != std::string::npos);
+    }
+  };
+  SUBCASE("both markers on well formed declarations") {
+    check(R"(
+[function_address("/add_one"utf8) return<u64>]
+add_one_address() {}
+[indirect_call return<i32>]
+call_one([u64] address, [i32] x) {}
+)",
+          "");
+  }
+  SUBCASE("an address of a missing definition") {
+    check(R"(
+[function_address("/missing"utf8) return<u64>]
+missing_address() {}
+)",
+          "function_address names no definition (/missing): /missing_address");
+  }
+  SUBCASE("an address that returns another type") {
+    check(R"(
+[function_address("/add_one"utf8) return<i32>]
+add_one_address() {}
+)",
+          "function_address declaration returns u64: /add_one_address");
+  }
+  SUBCASE("an address with a parameter") {
+    check(R"(
+[function_address("/add_one"utf8) return<u64>]
+add_one_address([i32] x) {}
+)",
+          "function_address declaration takes no parameters: /add_one_address");
+  }
+  SUBCASE("an address with a body") {
+    check(R"(
+[function_address("/add_one"utf8) return<u64>]
+add_one_address() { return(0u64) }
+)",
+          "function_address declaration must have an empty body: /add_one_address");
+  }
+  SUBCASE("an indirect call with a body") {
+    check(R"(
+[indirect_call return<i32>]
+call_one([u64] address, [i32] x) { return(x) }
+)",
+          "indirect_call declaration must have an empty body: /call_one");
+  }
+  SUBCASE("an indirect call without the address first") {
+    check(R"(
+[indirect_call return<i32>]
+call_one([i32] x) {}
+)",
+          "indirect_call takes the function address as its first parameter, a u64: /call_one");
+  }
+  SUBCASE("an indirect call without a return type") {
+    check(R"(
+[indirect_call]
+call_one([u64] address) {}
+)",
+          "indirect_call declaration requires an explicit return type: /call_one");
+  }
+}
+
 TEST_SUITE_END();

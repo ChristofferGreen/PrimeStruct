@@ -140,8 +140,7 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
-| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | in_progress | lib-shapes |
+| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | ready | lib-shapes |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
@@ -646,14 +645,12 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6283: A `Function` holds a function address and an environment, and a call is an indirect call
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6310
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (found by TODO-6282; split into TODO-6307..6310 and this leaf)
   - parallel_track: lib-shapes
-  - depends_on: TODO-6307, TODO-6308, TODO-6309, TODO-6310
   - decision (owner, 2026-11-26): option (C), the real fix now. A `Function` holds a function address (index) and an environment, and a call is an indirect call, so a library box dispatches closures of the program that links it; the tag table goes. One leaf per layer: TODO-6307 (IR opcodes and the expansion for targets without them), TODO-6308 (VM), TODO-6309 (`optexe`), TODO-6310 (lowering of the two definition markers), then this leaf (the language layer). Back ends that do not get the opcode in this run are TODO-6311 to TODO-6315.
-  - scope: today the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp), so a consumer that passes its own lambda where a library takes the `Function` stops with `unknown call target: /__fn_box`. New layout: `__FunctionN<R, A...>` is `[u64 mut] invoke` (the address of the closure's call routine, `index + 1`, so 0 is no function) and `[Pointer<i32> mut] env` (a heap block that starts with a header of two addresses, `clone` and `release`, followed by the closure). `call` is `invoke_proto(this.invoke, this.env, a0, ...)`, `Copy` clones the block through the header's `clone` address, `Destroy` releases it through `release` (nothing for `invoke` 0). Both are the same text in every program, so the box needs no per-program completion and a library's box dispatches the closures of the program that links it. For each closure type the pass converts to a `Function` it generates three routines (`invoke`, `clone`, `release`) and a getter of each routine's address (`[function_address(<path>)]`, TODO-6310); the call proto is a body-less `[indirect_call]` definition of the instance's signature (TODO-6310). The tag, `isLibraryOwned`, the dispatch generation, the box's closure structs in the interface (`functionBoxClosures`) and the diagnostic for converting a closure to a library's box are deleted.
+  - scope: today the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp), so a consumer that passes its own lambda where a library takes the `Function` stops with `unknown call target: /__fn_box`. New layout: `__FunctionN<R, A...>` is `[u64 mut] invoke`, `[u64 mut] clone`, `[u64 mut] release` (the addresses, `index + 1`, of three routines of the closure type: enter its `call`, copy it into a new block, destroy it and free the block; 0 is no function) and `[Pointer<i32> mut] env` (the heap block of the closure, as `/__fn_box` makes it). `call` is a call through a `[indirect_call]` declaration of the instance's signature (`invoke`, `env`, the arguments), `Copy` clones the block through `clone` and `Destroy` releases it through `release` (nothing when `release` is 0). `Copy` and `Destroy` are the same text in every program, so the box needs no per-program completion and a library's box dispatches the closures of the program that links it. For each closure type the pass converts to a `Function` it writes the three routines and a `[function_address]` getter of each (TODO-6310), and the conversion stores the getters' addresses. A closure converted to a library's box must not need more effects than the library's `call` declares. The tag, the dispatch generation, the box's closure structs in the interface (`functionBoxClosures`) and the diagnostic for converting a closure to a library's box are deleted.
   - acceptance:
     - the repro runs: a consumer closure passed to a library function (`router.add(3i32, [](...) {...})`) works on the VM and `optexe` with a library link test (the library's own box and the consumer's closures both dispatched)
     - a `Function` value copies (clones the closure state), destroys once, nests (a closure holding a `Function` of its own type) and passes between modules, on the VM, `optexe`, native and wasm (the last two through the expansion of TODO-6307); the whole program matrix of closures passes unchanged
@@ -661,21 +658,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
-
-- [~] TODO-6310: Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes
-  - owner: ai
-  - status: in_progress
-  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (fourth layer of TODO-6283)
-  - parallel_track: lib-shapes
-  - scope: two compiler-internal definition markers, accepted without a body like `imported`. `[indirect_call return<R>] proto([u64] address, [P0] p0, ...) {}`: a call of it binds the parameters as for any real call (the address ABI, so structs, references and a struct result work) and the lowerer emits `CallIndirect` (`CallIndirectVoid`) with the parameter count of the real call, the address being the first parameter; the definition itself has no function in the module. `[function_address(<path>) return<u64>] getter() {}`: a call of it reserves `<path>` as a real call (it must have the shape of one) and emits `FunctionAddress` of its index. A target without real calls of that shape refuses the call with a message that names the definition. The semantics validator and the library interface accept the markers. Surfaces: src/ir_lowerer (IrLowererLowerInlineCalls.cpp, IrLowererLowerStatementsCallsStage.cpp: the placeholder fixup and the reachability pruning take `FunctionAddress` as a reference to a function).
-  - acceptance:
-    - a program written with the two markers by hand (a getter of two functions with the same signature, a proto, a choice at run time) runs on the VM, `optexe`, native and wasm, with a scalar, a struct and a `Reference` parameter and a struct result
-    - the marker on a definition with a body, a getter of a missing path and a getter of a definition that cannot be a real call have diagnostics with tests
-    - full release gate green
-  - stop_rule: lowering of the markers; the `Function` value is TODO-6283.
-  - repro: a program with `[function_address(/a) return<u64>] a_address() {}` and `[indirect_call return<i32>] call_it([u64] address, [i32] x) {}`: both are refused for a missing return today and could not be lowered if they were accepted.
 
 - [ ] TODO-6311: The VM fast kernel runs `CallIndirect`
   - owner: ai

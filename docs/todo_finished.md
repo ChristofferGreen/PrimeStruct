@@ -2712,6 +2712,7 @@ are left unarchived.
 | TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

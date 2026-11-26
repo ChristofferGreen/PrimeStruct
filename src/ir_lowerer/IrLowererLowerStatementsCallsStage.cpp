@@ -1,5 +1,7 @@
 #include "primec/ir_lowerer/IrLowererLowerStatementsCallsStage.h"
 
+#include "primec/ir/IrOperandTable.h"
+#include "primec/semantics/FunctionAddressDefinitions.h"
 #include "primec/semantics/ImportedDefinitions.h"
 #include "primec/ir_lowerer/IrLowererCallHelpers.h"
 #include "primec/support/CollectionHelperNames.h"
@@ -404,6 +406,17 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
         input.outModule->functions.push_back(std::move(declaration));
         continue;
       }
+      if (isIndirectCallDefinition(def)) {
+        // A call through an address: the call sites pass the parameters as for any real call, and the fixup below
+        // turns each into CallIndirect, so the declaration only keeps the parameter count until then. Nothing calls
+        // it afterwards and the unreached-function pass drops it.
+        IrFunction declaration;
+        declaration.name = def.fullPath;
+        declaration.metadata = input.function->metadata;
+        declaration.parameterCount = input.function->parameterCount;
+        input.outModule->functions.push_back(std::move(declaration));
+        continue;
+      }
 
       auto emitBodyStatement = [&](const Expr &stmt) -> bool {
         return runLowerStatementsEntryStatementStep(
@@ -479,11 +492,21 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
     // recursion) - to its target's final index in input.outModule->functions.
     for (IrFunction &fn : input.outModule->functions) {
       for (IrInstruction &inst : fn.instructions) {
-        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
-             inst.op == IrOpcode::TaskSpawn) &&
-            (inst.imm >> 32) == 1ull) {
+        if (irOperandClass(inst.op) == IrOperandClass::Function && (inst.imm >> 32) == 1ull) {
           const uint64_t reservationIndex = inst.imm & 0xFFFFFFFFull;
           inst.imm = baseFunctionIndex + reservationIndex;
+          // A call of an indirect call definition is CallIndirect: the address is the first of the parameters, so
+          // the callee's own are one fewer.
+          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid) &&
+              reservationIndex < input.realCallEligibleOrder->size()) {
+            const auto protoIt = input.defMap->find((*input.realCallEligibleOrder)[reservationIndex]);
+            if (protoIt != input.defMap->end() && protoIt->second != nullptr &&
+                isIndirectCallDefinition(*protoIt->second)) {
+              const uint32_t parameterCount = input.outModule->functions[inst.imm].parameterCount;
+              inst.op = inst.op == IrOpcode::Call ? IrOpcode::CallIndirect : IrOpcode::CallIndirectVoid;
+              inst.imm = parameterCount > 0 ? parameterCount - 1 : 0;
+            }
+          }
         }
       }
     }
@@ -511,8 +534,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       const size_t caller = pending.back();
       pending.pop_back();
       for (const IrInstruction &inst : functions[caller].instructions) {
-        if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
-             inst.op == IrOpcode::TaskSpawn) &&
+        if (irOperandClass(inst.op) == IrOperandClass::Function &&
             inst.imm < functions.size() && !reached[static_cast<size_t>(inst.imm)]) {
           reached[static_cast<size_t>(inst.imm)] = true;
           pending.push_back(static_cast<size_t>(inst.imm));
@@ -531,9 +553,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       }
       for (IrFunction &fn : kept) {
         for (IrInstruction &inst : fn.instructions) {
-          if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
-               inst.op == IrOpcode::TaskSpawn) &&
-              inst.imm < newIndex.size()) {
+          if (irOperandClass(inst.op) == IrOperandClass::Function && inst.imm < newIndex.size()) {
             inst.imm = newIndex[static_cast<size_t>(inst.imm)];
           }
         }

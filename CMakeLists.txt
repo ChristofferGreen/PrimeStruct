@@ -446,6 +446,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorPassesEffects.cpp
   src/semantics/SemanticsValidatorPassesDiagnostics.cpp
   src/semantics/SemanticsValidatorPassesDefinitions.cpp
+  src/semantics/SemanticsFunctionAddressDeclarations.cpp
   src/semantics/SemanticsValidatorPassesEffectFree.cpp
   src/semantics/SemanticsValidatorPassesExecutions.cpp
   src/semantics/SemanticsValidatorPassesOmittedInitializers.cpp
@@ -643,6 +644,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererScalarCallBlocker.cpp
   src/ir_lowerer/IrLowererDefinitionPathIndex.cpp
   src/ir_lowerer/IrLowererTaskSpawn.cpp
+  src/ir_lowerer/IrLowererFunctionAddress.cpp
   src/ir_lowerer/IrLowererReturnShapes.cpp
   src/ir_lowerer/IrLowererRequirementContractHelpers.cpp
   src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp
@@ -1255,6 +1257,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     tests/unit/program_matrix/test_program_matrix_rwlocks.cpp
     tests/unit/program_matrix/test_program_matrix_channels.cpp
     tests/unit/program_matrix/test_program_matrix_closures.cpp
+    tests/unit/program_matrix/test_program_matrix_indirect_calls.cpp
     tests/unit/program_matrix/test_program_matrix_container_copies.cpp
     tests/unit/program_matrix/test_program_matrix_control.cpp
     tests/unit/program_matrix/test_program_matrix_conversions.cpp
@@ -4456,6 +4459,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct.program_matrix.element_assign
     primestruct.program_matrix.element_copies
     primestruct.program_matrix.element_receivers
+    primestruct.program_matrix.indirect_calls
     primestruct.program_matrix.frontend_accept
     primestruct.program_matrix.lifecycle
     primestruct.program_matrix.math
@@ -4491,7 +4495,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
   # after the suite is its case count, which ctest PrimeStruct_test_registration checks.
   set(PrimeStructProgramMatrixCaseCounts
     atomics=5 channels=11 closures=13 closures_callables=11 closures_references=8 closures_fields=18 closures_routers=11 container_copies=22
-    control=38 conversions=8 early_returns=10 error_handlers=8 element_assign=6 element_copies=17 element_receivers=18 frontend_accept=11 lifecycle=27 math=4 runtime_faults=5 mutexes=11 uninitialized_slots=5 rwlocks=5 optimizer=16 pack_owners=5 parameter_modes=10 pick_returns=8 pick_value_arms=6 pick_subjects=21 pick_values=24 recursion=6 results=27 shared_programs=17
+    control=38 conversions=8 early_returns=10 error_handlers=8 element_assign=6 element_copies=17 element_receivers=18 indirect_calls=6 frontend_accept=11 lifecycle=27 math=4 runtime_faults=5 mutexes=11 uninitialized_slots=5 rwlocks=5 optimizer=16 pack_owners=5 parameter_modes=10 pick_returns=8 pick_value_arms=6 pick_subjects=21 pick_values=24 recursion=6 results=27 shared_programs=17
     shared_strings=5 string_arenas=12 struct_methods=13 sum_owners=12 tasks=34 text_views=7 user_at_sources=7 user_shadows=6 variadic_packs=5 vector_owners=52 vm_threads=4 vm_sync_replay=2)
   foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
     string(REPLACE "." "_" suiteId "${suite}")

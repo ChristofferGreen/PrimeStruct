@@ -14,6 +14,7 @@
 #include "primec/ir_lowerer/IrLowererStructTypeHelpers.h"
 #include "primec/ir_lowerer/IrLowererSharedTypes.h"
 #include "primec/ir_lowerer/IrLowererTemplateTypeParseHelpers.h"
+#include "primec/semantics/FunctionAddressDefinitions.h"
 #include "primec/semantics/ImportedDefinitions.h"
 #include "primec/support/CollectionHelperNames.h"
 
@@ -1060,7 +1061,13 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
     const auto defIt = byPath.find(path);
     // A root of a library is a function of the archive whatever its call sites, and a function a library defines
     // (an imported declaration) is always a call: it has no body to inline.
-    const bool isImported = defIt != byPath.end() && isImportedDefinition(*defIt->second);
+    // The address of a function is an opcode, not a call: a function address definition is never a function itself.
+    if (defIt != byPath.end() && isFunctionAddressDefinition(*defIt->second)) {
+      continue;
+    }
+    // A call through an address has no body to inline either; it is the opcode CallIndirect for the callee's call.
+    const bool isImported = defIt != byPath.end() && (isImportedDefinition(*defIt->second) ||
+                                                      isIndirectCallDefinition(*defIt->second));
     if (!isRecursive && !isImported && roots.find(path) == roots.end()) {
       const auto countIt = callSiteCounts.find(path);
       const size_t siteCount = countIt != callSiteCounts.end() ? countIt->second : 0;

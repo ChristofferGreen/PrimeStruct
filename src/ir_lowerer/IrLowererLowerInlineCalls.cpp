@@ -1,4 +1,5 @@
 #include "IrLowererLowerInlineCalls.h"
+#include "IrLowererFunctionAddress.h"
 #include "primec/ir_lowerer/IrLowererStringPushMarks.h"
 #include "IrLowererCollectionRecordShapes.h"
 #include "IrLowererCountAccessClassifiers.h"
@@ -128,6 +129,9 @@ bool emitInlineDefinitionCallImpl(
     // calling convention already used by every existing Call/CallVoid site.
     // Host definitions ([host] f(...) {}) lower to CallHost: arguments on the
     // stack, import index in imm. The import table lives on the module.
+    if (isFunctionAddressDefinition(callee)) {
+      return lowerFunctionAddressCall(callee, setupStage, function.instructions, requireValue, error);
+    }
     if (isHostDefinition(callee) && isAtomicIntrinsicHostPath(callee.fullPath)) {
       // An atomic operation of /std/sync: the cell address and the values on the stack, then one Atomic* opcode
       // whose imm is the width (docs/spec/vm-design.md, Atomics).
@@ -495,16 +499,9 @@ bool emitInlineDefinitionCallImpl(
     if (setupStage.realCallAllowStructs && realCallReservationIndex.count(callee.fullPath) == 0 &&
         &callee != setupStage.entryDef &&
         (lifecycleReentry || !ir_lowerer::isTinyInlineLeaf(callee) ||
-         isImportedDefinition(callee)) &&
+         isImportedDefinition(callee) || isIndirectCallDefinition(callee)) &&
         ir_lowerer::isRealCallShapeEligible(
-            callee,
-            ir_lowerer::RealCallShapeContext{&setupStage.defMap,
-                                             &structNames,
-                                             setupStage.realCallAllowStructs,
-                                             false,
-                                             setupStage.realCallAllowStrings,
-                                             false,
-                                             lifecycleReentry})) {
+            callee, ir_lowerer::callSiteRealCallContext(setupStage, callee, lifecycleReentry))) {
       // The first call of a definition with a real-call shape reserves it; its body is lowered once, after the entry.
       realCallReservationIndex.emplace(
           callee.fullPath, static_cast<uint64_t>(setupStage.realCallEligibleOrder.size()));
@@ -512,8 +509,11 @@ bool emitInlineDefinitionCallImpl(
     }
     // A function a library defines has no body to inline: a call that is not a real call would run nothing and
     // yield a zero value.
-    if (isImportedDefinition(callee) && realCallReservationIndex.count(callee.fullPath) == 0) {
-      error = "imported function " + callee.fullPath + " cannot be called on this target";
+    // (An indirect call is the opcode CallIndirect, which takes the parameters of a real call.)
+    if ((isImportedDefinition(callee) || isIndirectCallDefinition(callee)) &&
+        realCallReservationIndex.count(callee.fullPath) == 0) {
+      error = std::string(isImportedDefinition(callee) ? "imported function " : "indirect call ") + callee.fullPath +
+              " cannot be called on this target";
       return false;
     }
     // The address ABI (the VM and the optimizing C++ emitters): the call site binds the parameters exactly as an

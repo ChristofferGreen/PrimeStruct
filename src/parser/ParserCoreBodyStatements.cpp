@@ -98,6 +98,10 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
       // A declaration in a library interface (`--library`): the body is empty, the code is in the archive.
       allowNoReturn = true;
     }
+    if (transform.name == "indirect_call" || transform.name == "function_address") {
+      // The function address markers (primec/semantics/FunctionAddressDefinitions.h) have no body.
+      allowNoReturn = true;
+    }
     if (transform.name == "return" && transform.templateArgs.size() == 1 &&
         (transform.templateArgs.front() == "void" ||
          transform.templateArgs.front() == "never")) {

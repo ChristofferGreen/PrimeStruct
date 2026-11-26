@@ -1,6 +1,8 @@
 #include "SemanticsValidator.h"
 
 #include "SemanticsWorkerSymbolMerge.h"
+#include "SemanticsFunctionAddressDeclarations.h"
+#include "primec/semantics/FunctionAddressDefinitions.h"
 #include "primec/semantics/HostDefinitions.h"
 #include "primec/semantics/ImportedDefinitions.h"
 #include "primec/semantics/SemanticsDefinitionPartitioner.h"
@@ -338,6 +340,12 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         }
       }
       return true;
+    }
+    if (isIndirectCallDefinition(def) || isFunctionAddressDefinition(def)) {
+      // The function address markers are signatures only: the lowerer turns a call of one into an opcode.
+      const std::string problem = functionAddressDeclarationProblem(
+          def, defParams, [&](const std::string &path) { return paramsByDef_.count(path) != 0; });
+      return problem.empty() || failPassesDefinitionsDiagnostic(nullptr, problem + ": " + def.fullPath);
     }
     if (structNames_.count(def.fullPath) == 0) {
       std::vector<const Definition *> localGeneratedStructs;

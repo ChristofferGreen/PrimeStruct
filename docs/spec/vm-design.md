@@ -260,6 +260,21 @@
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
   address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
   opcodes itself (docs/todo.md: TODO-6311 to TODO-6314).
+- **Function address markers:** two compiler-internal definition markers give the opcodes a place in the source
+  (`primec/semantics/FunctionAddressDefinitions.h`). Both have an empty body and an explicit return type.
+  `[function_address("/path") return<u64>] address_of_def() {}` takes no parameters; a call of it is the address of the
+  definition it names: the lowerer reserves that definition as a real-call function and emits `FunctionAddress`. A path
+  that names no definition is refused by the validator (`function_address names no definition (/missing)`), and one that
+  names the entry or a definition whose parameters or result no real call takes by the lowerer
+  (`function_address of /say_address names /say, which cannot be a real call on this target`).
+  `[indirect_call return<R>] call_it([u64] address, [P0] p0, ...) {}` takes the address as its first parameter and the
+  callee's parameters after it; a call of it binds them as for any real call (the address ABI: structs, `mut` places and
+  references pass as addresses and a struct result comes back through the caller's block, so every function an address
+  can name has the parameters after the address and the result of the declaration) and the lowerer emits `CallIndirect`
+  (`CallIndirectVoid` for a `void` result) with the callee's parameter count; the definition has no function in the
+  module. A one-slot `Pointer<T>` result is allowed. Targets without the call ABI of structs (x86_64 native and the
+  simple C++ emitters) take scalar parameters only. The `Function` value of docs/spec/value-lifecycle.md is built on
+  these two.
 - **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
   once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result
   can differ from `MulF32` then `AddF32` (and the `F64` forms), which round twice (immediate 0, no fault). The `fma`
