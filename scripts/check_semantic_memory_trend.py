@@ -21,6 +21,15 @@ def is_semantic_memory_report(path: Path) -> bool:
   return payload.get("schema") == REPORT_SCHEMA
 
 
+def history_matches_policy(path: Path, policy_digest: str) -> bool:
+  """A history report counts only when it was measured against the current policy."""
+  try:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  except Exception:
+    return False
+  return payload.get("policy_sha256") == policy_digest
+
+
 def file_sha256(path: Path) -> str:
   hasher = hashlib.sha256()
   with path.open("rb") as handle:
@@ -77,6 +86,7 @@ def main() -> int:
   else:
     checker_path = (Path(__file__).resolve().parent / "check_semantic_memory_budget.py").resolve()
   current_report_digest = file_sha256(current_report_path)
+  policy_digest = file_sha256(policy_path)
 
   history_paths: list[Path] = []
   seen: set[Path] = set()
@@ -99,6 +109,8 @@ def main() -> int:
         if path == current_report_path or path in seen or not path.is_file():
           continue
         if not is_semantic_memory_report(path):
+          continue
+        if not history_matches_policy(path, policy_digest):
           continue
         if file_sha256(path) == current_report_digest:
           continue

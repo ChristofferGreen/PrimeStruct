@@ -2,6 +2,20 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.benchmark_harness");
 
+namespace {
+// A history report counts only when it carries the hash of the policy it is checked against.
+void stampPolicyHash(const std::string &policyPath,
+                     const std::vector<std::filesystem::path> &files) {
+  const std::filesystem::path script = std::filesystem::current_path().parent_path() / "tests" /
+                                       "scripts" / "stamp_semantic_memory_policy_hash.py";
+  std::string command =
+      "python3 " + quoteShellArg(script.string()) + " " + quoteShellArg(policyPath);
+  for (const auto &file : files) {
+    command += " " + quoteShellArg(file.string());
+  }
+  REQUIRE(runCommand(command) == 0);
+}
+} // namespace
 
 TEST_CASE("semantic memory budget checker fails when report tuple lacks policy entry") {
   if (!hasPython3()) {
@@ -409,6 +423,8 @@ TEST_CASE("semantic memory trend checker writes trend summary report") {
     REQUIRE(history.good());
   }
 
+  stampPolicyHash(policyPath, {historyDir / "semantic_memory_report_20260103.json"});
+
   const std::string budgetReportPath = writeTemp("semantic_memory_trend_budget_summary.json", "");
   const std::string trendReportPath = writeTemp("semantic_memory_trend_summary.json", "");
   const std::string stdoutPath = writeTemp("semantic_memory_trend_summary.out", "");
@@ -505,6 +521,10 @@ TEST_CASE("semantic memory trend checker fails for sustained regressions from hi
                      "}\n";
     REQUIRE(recentHistory.good());
   }
+
+  stampPolicyHash(policyPath,
+                  {historyDir / "semantic_memory_report_20260101.json",
+                   historyDir / "semantic_memory_report_20260102.json"});
 
   const std::string stdoutPath = writeTemp("semantic_memory_trend_fail.out", "");
   const std::string stderrPath = writeTemp("semantic_memory_trend_fail.err", "");
@@ -607,6 +627,12 @@ TEST_CASE("semantic memory trend checker ignores duplicate current report in his
                         "}\n";
     REQUIRE(duplicateHistory.good());
   }
+
+  stampPolicyHash(policyPath,
+                  {historyDir / "semantic_memory_report_20260101.json",
+                   historyDir / "semantic_memory_report_20260102.json",
+                   historyDir / "semantic_memory_report_20260103.json",
+                   reportPath});
 
   const std::string stdoutPath = writeTemp("semantic_memory_trend_dedup.out", "");
   const std::string stderrPath = writeTemp("semantic_memory_trend_dedup.err", "");

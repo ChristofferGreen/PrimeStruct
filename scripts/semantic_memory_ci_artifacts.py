@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -223,7 +224,9 @@ def main() -> int:
     if benchmark_exit_code == 0 and history_is_clean and benchmark_report.is_file():
         history_dir.mkdir(parents=True, exist_ok=True)
         history_file = history_dir / f"semantic_memory_report_{run_id}.json"
-        history_file.write_bytes(benchmark_report.read_bytes())
+        history_payload = json.loads(benchmark_report.read_text(encoding="utf-8"))
+        history_payload["policy_sha256"] = hashlib.sha256(policy.read_bytes()).hexdigest()
+        history_file.write_text(json.dumps(history_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         copied_history_report = str(history_file)
 
     failed = False
