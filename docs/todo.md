@@ -231,9 +231,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: transform positions for this one diagnostic; no change to other messages.
   - notes: 2026-11-23, looked at and left: the span of the type needs the position of the template argument (a `Transform` carries the position of its name only; `Transform::templateArgs` has none) and the return-kind diagnostic is built in two local lambdas of src/semantics/SemanticsValidatorBuildReturnKinds.cpp (`failReturnKindDiagnostic` through `failDefinitionDiagnostic`, and `addReturnKindDiagnostic` for `--collect-diagnostics`) that choose the span by hand, `failDefinitionDiagnostic` clearing the context a caller sets first. Giving them another span means editing the semantics diagnostic builder (src/semantics/SemanticsValidatorDiagnostics.cpp and those lambdas), which TODO-5977 (one diagnostics builder) owns. Do it after that leaf: record the position of the first template argument in the parser (`ParserListsTransforms.cpp`, `Transform` in include/primec/ast/Ast.h, a full rebuild), add the offset of the unknown name inside the argument text, and pass the span to the builder.
 
-- [ ] TODO-6133: The binding initializer accepts an f64 value for an `f32` binding, assignment does not
+- [~] TODO-6133: The binding initializer accepts an f64 value for an `f32` binding, assignment does not
   - owner: ai
   - status: ready
+  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-11 (found with TODO-6129)
   - parallel_track: binding-float-compat
