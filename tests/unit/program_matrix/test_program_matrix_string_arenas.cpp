@@ -349,4 +349,56 @@ main() {
   runStringProgram(program);
 }
 
+TEST_CASE("a module with a SharedString and tasks keeps text of arenas usable on every thread") {
+  program_matrix::ProgramCase program;
+  program.name = "string_arenas_threads_shared";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+import /std/text/shared/*
+import /std/sync/*
+
+[return<i32> effects(heap_alloc)]
+churn([i32] count) {
+  [i32 mut] total{0i32}
+  for([i32 mut] i{0i32}, i < count, i++) {
+    [String] s{stringFromI32(i)}
+    total = total + s.count()
+  }
+  return(total)
+}
+
+[return<i32> effects(heap_alloc)]
+shared_length([SharedString] text) {
+  [SharedString] copy{text}
+  return(copy.count())
+}
+
+[return<i32> effects(heap_alloc)]
+arena_task([SharedString] text, [i32] count) {
+  [StringArena] arena{beginStringArena()}
+  return(churn(count) + shared_length(text))
+}
+
+[return<int> effects(heap_alloc, io_out, task)]
+main() {
+  [String] owner{stringFrom("hello")}
+  [SharedString] kept{sharedFrom(owner.view())}
+  [Task<i32>] first{[spawn] arena_task(kept, 600i32)}
+  [Task<i32>] second{[spawn] arena_task(kept, 300i32)}
+  print_line(wait(first))
+  print_line(wait(second))
+  if(true) {
+    [StringArena] arena{beginStringArena()}
+    print_line(churn(500i32) + shared_length(kept))
+  }
+  print_line(kept.owners())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "1695\n795\n1395\n3\n";
+  runStringProgram(program);
+}
+
 TEST_SUITE_END();

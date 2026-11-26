@@ -131,7 +131,6 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | ready | wasm-bytes-host |
 | TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | ready | wasm-opcode-gaps |
-| TODO-6272 | The threaded native arena guard finds a `SharedString` only by function names | ready | native-arena-threads |
 | TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | deferred | ir-inline-strings |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -538,20 +537,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the two control-flow shapes; no change to the VM or native lowering.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep "control-flow pattern"` from the release build directory.
-
-- [~] TODO-6272: The threaded native arena guard finds a `SharedString` only by function names
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-a3e01a58a3e56909d), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Native PrimeScroll (soundness check of the threaded arenas)
-  - parallel_track: native-arena-threads
-  - scope: A threaded native module keeps its arenas counting only when one of its IR functions is named `/std/text/shared/...` (src/native_emitter/NativeEmitterEmit.cpp). The module has such a function only while `sharedFrom` and `SharedString/fill` stay real calls (the lowerer's size rule: 89 and 7 instructions in the inline report); a change of the rule, or the IR inliner (`--ir-inline`, TODO-6273) expanding them, leaves a SharedString in the module without any such name and the arenas bump text that another thread may free. The owner count is always changed through an `AtomicAdd` (Copy and Destroy are lifecycle helpers, which callers always expand), so the guard also looks for that opcode. Atomics of a program with no SharedString make it conservative: those arenas only count.
-  - acceptance:
-    - a threaded module with an `AtomicAdd` and no `/std/text/shared/` function keeps its arenas counting only; the matrix covers a SharedString made and used on a task that holds an open arena
-    - full release gate green
-  - stop_rule: the arm64 native guard only.
-  - notes: checked 2026-11-26: today a program that uses a SharedString only through inlined helpers still has `sharedFrom` and `fill` as real calls, so the guard fires; the check is about the rule changing, not a miss found.
 
 - [ ] TODO-6273: `--ir-inline` makes invalid IR of a program with a `String`
   - owner: ai

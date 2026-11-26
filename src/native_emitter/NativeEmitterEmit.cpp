@@ -214,9 +214,16 @@ bool buildNativeImage(const IrModule &module,
       }
     }
   }
-  // A `SharedString` (a function of /std/text/shared) keeps the arenas of a threaded module counting only.
+  // A `SharedString` keeps the arenas of a threaded module counting only. It is found by a function of
+  // /std/text/shared and by an `AtomicAdd` (every owner count changes through one, and a caller always expands the
+  // `Copy` and `Destroy` helpers), so expanding the other functions cannot hide it; a module with atomics of its own
+  // is treated the same way.
   for (const IrFunction &fn : module.functions) {
-    if (fn.name.rfind("/std/text/shared/", 0) == 0) {
+    bool shared = fn.name.rfind("/std/text/shared/", 0) == 0;
+    for (const IrInstruction &inst : fn.instructions) {
+      shared = shared || inst.op == IrOpcode::AtomicAdd;
+    }
+    if (shared) {
       emitter.setSharedText(true);
       break;
     }
