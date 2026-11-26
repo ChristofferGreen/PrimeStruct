@@ -310,9 +310,10 @@
   - A struct field of type `uninitialized<vector<T>>` is the same five-slot record: `init(h.items, v)` stores it,
     `borrow(h.items)` reads it and `drop(h.items)` frees it. `[vector<T> mut] out{take(h.items)}` is an owning vector
     (the field's owner flag is cleared, so the struct never frees the buffer `out` owns); `out` may grow it.
-  - A `String` slot works the same way. `alloc<uninitialized<map<K, V>>>` is a lowering error (`does not support alloc
-    target type`) on every backend, and `init` of a `soa<T>` into a `Pointer<uninitialized<soa<T>>>` is the semantic
-    error `init value type mismatch`; neither slot exists yet.
+  - A `String` slot works the same way. A slot of a `map<K, V>` or a `soa<T>` does not exist: `alloc<uninitialized<map<K,
+    V>>>` and `alloc<uninitialized<soa<T>>>` are lowering errors on every backend that name the type and the way out
+    (`does not support alloc target type: map<i32, i32> (a slot of a map or soa value does not exist yet; keep the
+    value in a local binding or a struct field, or use a slot of a struct, vector or String)`).
   - After `init`, the storage is definitely initialized.
 - **Destruction:** `drop(storage)` destroys the in-place value and marks the storage uninitialized.
   - `storage` must be definitely initialized; otherwise a diagnostic is emitted.

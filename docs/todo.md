@@ -128,6 +128,7 @@ of sync with them.
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
+| TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -142,7 +143,6 @@ of sync with them.
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
-| TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | ready | lifecycle-collection-slots |
 
 ### Ready Now
 
@@ -173,7 +173,7 @@ of sync with them.
 - Optimizing backends (docs/OptimizingBackendsPlan.md): flags ; IR dump ; benchmarks ; test matrix; VM speed ; passes ; real calls TODO-5752
 - Multithreading (docs/MultithreadingPrototype.md, Threads For Real; docs/WebAppsPlan.md, Concurrency; after the startup lane): TODO-5872; sessions:  (`Request.cookie`) (`setCookie`) (`randomHex`); deferred TODO-5806 (the session store and handler API, options in the leaf)
 - Code reuse (docs/CodeReusePlan.md; two at a time under rule 18): TODO-5973; deferred TODO-5976, TODO-5977
-- Lifecycle bugs found with TODO-6098 (outside Ready Now): deferred TODO-6103 (`map` and `soa` slots)
+- Lifecycle slots (outside Ready Now): deferred TODO-6274 (`map` and `soa` slots)
 
 ### Execution Queue
 
@@ -478,6 +478,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
+- [ ] TODO-6274: A slot of a `map<K, V>` or a `soa<T>` lowers
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-26
+  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage; follows the diagnostic slice of the earlier slot leaf)
+  - parallel_track: lifecycle-collection-slots
+  - scope: `alloc<uninitialized<map<i32, i32>>>` and `alloc<uninitialized<soa<Particle>>>` are lowering errors on every backend that name the type and the way out (docs/spec/value-lifecycle.md). Deferred until a program needs a `Mutex<map<..>>` or a `soa` in a slot: the lowering would give each its record slot count (as `vector<T>` has its five-slot record) and `init`, `borrow`, `take` and `drop` would move and free the whole value, on the VM, optexe and native.
+  - acceptance:
+    - `init(*slot, m)` of a `map<K, V>` and of a `soa<T>` into `Pointer<uninitialized<..>>` stores the whole value, `borrow` reads it, `drop` frees it, with the heap back at its start on the VM and optexe
+    - full release gate green
+  - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
+  - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
+
 - [ ] TODO-6128: Wasm refuses tasks, atomics, channels and the lock effect
   - owner: ai
   - status: deferred
@@ -630,19 +643,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written after the survey: the lambdas that only set a message and a span use one builder, and diagnostic text of the semantics tests is unchanged
   - stop_rule: survey first; do not refactor before the table exists.
   - notes: deferred: needs the survey. Do not run alongside TODO-5960.
-
-- [~] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
-  - created_at: 2026-11-20
-  - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
-  - parallel_track: lifecycle-collection-slots
-  - scope: Found with TODO-6098, checked with the right spellings (`soa</Particle>`, `map<i32, i32>`, `String`). A `String` slot works (`init(*slot, s)`, `borrow`, `drop`: the count reads back and the heap returns to its start on the VM and optexe). `alloc<uninitialized<map<i32, i32>>>` is a clear lowering error on every backend: `does not support alloc target type: map<i32, i32>` (VM, optexe, native). `init(*slot, ps)` of a `soa</Particle>` into `Pointer<uninitialized<soa</Particle>>>` is the semantic error `init value type mismatch`. So `Mutex<map<..>>` and a `soa` in a slot do not exist yet; this leaf is deferred until a program needs one.
-  - acceptance:
-    - a slot of a `map<K, V>` and of a `soa<T>` lowers, `init` stores the whole value, `drop` frees it
-    - or: each stays a clear diagnostic that names the type and the way out, documented in docs/spec/value-lifecycle.md
-  - stop_rule: `alloc`/`init`/`drop` of those slots only.
 
 - [ ] TODO-5987: The lowerer's include-only fragments become components
   - owner: ai

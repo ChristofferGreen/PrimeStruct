@@ -933,7 +933,7 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         resolvedStructType = builtinVectorRecordPathOfPointee(targetTypeName);
       }
       if (resolvedStructType.empty()) {
-        error = "native backend does not support alloc target type: " + targetTypeName;
+        error = unsupportedAllocTargetMessage(targetTypeName);
         return false;
       }
       if (!resolveStructSlotCount(resolvedStructType, slotCountMultiplier)) {

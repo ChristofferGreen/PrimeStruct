@@ -105,6 +105,16 @@ std::string unwrapTopLevelUninitializedTypeText(const std::string &typeText) {
   return trimTemplateTypeText(typeText);
 }
 
+std::string unsupportedAllocTargetMessage(const std::string &targetTypeName) {
+  std::string message = "native backend does not support alloc target type: " + targetTypeName;
+  if (targetTypeName.rfind("map<", 0) == 0 || targetTypeName.rfind("soa<", 0) == 0) {
+    message += " (a slot of a map or soa value does not exist yet; keep the value in a local "
+               "binding or a struct field, "
+               "or use a slot of a struct, vector or String)";
+  }
+  return message;
+}
+
 bool isArgsPackBinding(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
     if (transform.name == "effects" || transform.name == "capabilities") {
