@@ -649,6 +649,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
+- [ ] TODO-6302: Lazy import guesses which operator helpers a program needs from its text
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found with the lazy operator helper scan)
+  - parallel_track: semantic-memory
+  - scope: the lazy stdlib closure scan (src/pipeline/CompilePipelineStdlib.cpp) takes a `vecN_`/`matN_`/`quat_` `*_internal` operator helper only when the program's seed text spells the type and calls `plus`/`minus`/`multiply`/`divide` or a spaced infix operator; operators inside extracted stdlib text are not counted, because text filtering turns scalar arithmetic into the same calls. A stdlib definition outside `/std/math` that applies an operator to a `Vec`, `Mat` or `Quat` would then miss its helper (an unknown-call error after the rewrite), and an unspaced infix form (`a+b`) is not seen. Nothing in the stdlib does that today, so this is a latent hole. Fix it at the source: let the operator rewrite (src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp) or semantics name the helpers it needs from types, so the lazy import takes exactly those, and drop the text heuristic; add a test with the infix form and one with an operator used only inside a non-math stdlib or library definition.
+  - acceptance:
+    - the helpers a program needs come from typed operator sites, not from text; the Vec2 `length()` program still publishes at most 6 definitions; `a+b` and `a + b` on vectors run on the VM and optexe through lazy import
+    - full release gate green
+  - stop_rule: how lazy import learns which operator helpers are needed; no change to the operators.
+  - repro: a program with `[Vec2] s{a+b}` (no spaces) run with `primec --emit=vm`, and the same with `--whole-file-stdlib-imports`.
+
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
   - status: deferred
