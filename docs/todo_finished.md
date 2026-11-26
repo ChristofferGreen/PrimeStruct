@@ -2704,6 +2704,7 @@ are left unarchived.
 | TODO-6300 | The semantic-memory trend check fails once in a build directory whose history predates a budget change | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6301 | Lazy import takes a type's operator helpers even when no operator of that type is used | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6302 | Lazy import guesses which operator helpers a program needs from its text | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
+| TODO-6304 | Benchmark-mode validation workers drop the operator helper demand | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 
 <!-- INDEX-END -->
 

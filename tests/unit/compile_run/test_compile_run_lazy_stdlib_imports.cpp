@@ -364,6 +364,29 @@ main() {
   checkLazyMatchesWholeFile(writeTemp("lazy_math_unspaced_infix.prime", source), "unspaced_infix");
 }
 
+TEST_CASE("operator helpers are taken when definitions validate on several workers") {
+  const std::string source = R"(
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] a{Vec2{[x] 1.0f32, [y] 2.0f32}}
+  [Vec2] b{Vec2{[x] 3.0f32, [y] 4.0f32}}
+  [Vec2] sum{a+b}
+  [Vec2] scaled{a*2.0f32}
+  return(convert<i32>(sum.x+scaled.y))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_operator_workers.prime", source);
+  const int expected = runCommand("./primec --emit=vm " + srcPath + " --entry /main");
+  CHECK(expected == 8);
+  for (const char *workers : {"2", "4", "8"}) {
+    CHECK(runCommand(std::string("./primec --emit=vm "
+                                 "--benchmark-semantic-definition-validation-workers ") +
+                     workers + " " + srcPath + " --entry /main") == expected);
+  }
+}
+
 TEST_CASE("an operator inside a module the program imports takes its helper and runs") {
   const std::string moduleSource = R"(
 import /std/math/Vec2

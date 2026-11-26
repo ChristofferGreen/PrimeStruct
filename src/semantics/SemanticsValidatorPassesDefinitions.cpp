@@ -770,6 +770,7 @@ bool SemanticsValidator::validateDefinitions() {
     result.ok = worker.runDefinitionValidationWorkerChunk(stableOrderOffset, stableOrderCount);
     result.counters = worker.validationCounters();
     result.vectorElementPlaceSites = worker.vectorElementPlaceSites();
+    result.operatorRewriteDemand = worker.operatorRewriteDemand();
     if (result.ok) {
       worker.collectDefinitionPublicationFactsForStableRange(
           stableOrderOffset, stableOrderCount, result.publicationFacts);
@@ -818,6 +819,9 @@ bool SemanticsValidator::validateDefinitions() {
             });
   for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
     vectorElementPlaceSites_.merge(result.vectorElementPlaceSites);
+    // A sorted set, so the merged demand does not depend on which worker finished first.
+    operatorRewriteDemand_.insert(result.operatorRewriteDemand.begin(),
+                                  result.operatorRewriteDemand.end());
   }
   if (benchmarkSemanticPhaseCountersEnabled_) {
     for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {

@@ -6,6 +6,7 @@
 #include "primec/frontend/SymbolInterner.h"
 
 #include <cstdint>
+#include <set>
 #include <string>
 
 namespace primec::semantics {
@@ -24,6 +25,7 @@ struct SemanticDefinitionWorkerResultBundle {
   SemanticPublicationSurface publicationFacts;
   WorkerSymbolInternerSnapshot publicationStringSnapshot;
   VectorElementPlaceSites vectorElementPlaceSites;
+  std::set<std::string> operatorRewriteDemand;
 };
 
 } // namespace primec::semantics
