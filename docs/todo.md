@@ -661,9 +661,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the semantic-product memory of unused imported definitions; no change to language behaviour.
   - repro: the benchmark command above with and without the helpers.
 
-- [ ] TODO-6294: An array literal of structs is refused by every backend, so six gfx conformance programs never ran
+- [~] TODO-6294: An array literal of structs is refused by every backend, so six gfx conformance programs never ran
   - owner: ai
   - status: ready
+  - claimed_by: gfx-array (worktree-agent-aa3d7d67dd84774e0), 2026-11-26
   - created_at: 2026-11-26
   - phase: Test quality (found by the audit of TODO-6292)
   - parallel_track: test-honesty
