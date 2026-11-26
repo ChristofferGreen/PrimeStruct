@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6284: A stdlib file named as a library root does not see the other files of its module
+- [~] TODO-6284: A stdlib file named as a library root does not see the other files of its module
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-shapes (worktree-agent-abe55d3f222fd4a30), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
   - parallel_track: lib-shapes
