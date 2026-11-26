@@ -79,8 +79,11 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
 
       const bool isVectorLike = (builtin == "vector" || isSoaVector);
       LocalInfo::ValueKind elemKind = expr.templateArgs.empty() ? LocalInfo::ValueKind::Unknown : valueKindFromTypeName(expr.templateArgs.front());
-      const bool isSoaStructLiteral =
-          isSoaVector && !expr.args.empty() && elemKind == LocalInfo::ValueKind::Unknown;
+      // An array literal of structs stores each element's slots inline after the count.
+      const bool isArrayStructLiteral =
+          builtin == "array" && !expr.args.empty() && elemKind == LocalInfo::ValueKind::Unknown;
+      const bool isSoaStructLiteral = (isSoaVector || isArrayStructLiteral) && !expr.args.empty() &&
+                                      elemKind == LocalInfo::ValueKind::Unknown;
       std::string soaStructPath;
       int32_t soaStructSlotCount = 0;
       if (isSoaStructLiteral) {
@@ -92,7 +95,7 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       const bool isEmptyOpaqueCollectionLiteral =
           builtin == "vector" && elemKind == LocalInfo::ValueKind::Unknown &&
           expr.args.empty();
-      if (!isSoaVector && elemKind == LocalInfo::ValueKind::Unknown &&
+      if (!isSoaVector && !isArrayStructLiteral && elemKind == LocalInfo::ValueKind::Unknown &&
           !isEmptyOpaqueCollectionLiteral) {
         error = "native backend only supports numeric/bool/string " + builtin + " literals";
         return false;
@@ -106,7 +109,8 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
       const int32_t storageCapacity =
-          isVectorLike ? std::max(literalCount, kVectorLocalDynamicCapacityLimit) : literalCount;
+          isVectorLike ? std::max(literalCount, kVectorLocalDynamicCapacityLimit)
+                       : (isArrayStructLiteral ? literalCount * soaStructSlotCount : literalCount);
       const int32_t baseLocal = nextLocal;
       int32_t dataBaseLocal = baseLocal + 1;
       VectorRecordFieldSlots vectorSlots;
@@ -180,7 +184,12 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
             return false;
           }
           const int32_t destPtrLocal = allocTempLocal();
-          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
+          if (isArrayStructLiteral) {
+            instructions.push_back(
+                {IrOpcode::AddressOfLocal, static_cast<uint64_t>(dataBaseLocal)});
+          } else {
+            instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(dataBaseLocal)});
+          }
           const uint64_t offsetBytes =
               static_cast<uint64_t>(i) * static_cast<uint64_t>(soaStructSlotCount) * IrSlotBytes;
           if (offsetBytes != 0) {

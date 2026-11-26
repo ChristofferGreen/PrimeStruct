@@ -95,35 +95,16 @@ inline void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
   CHECK(readFile(outPath) == expectedStdout);
 }
 
-inline constexpr std::string_view NativeArrayLiteralUnsupportedMessage =
-    "native backend only supports numeric/bool/string array literals";
-inline constexpr std::string_view VmArrayLiteralUnsupportedMessage =
-    "vm backend only supports numeric/bool/string array literals";
-
-// The gfx conformance programs build a `[VertexColored]` array literal, and no backend lowers an array literal of
-// structs: each one refuses it with its own message. The three refusals are the pinned behavior until that
-// lowers (docs/todo.md, the array-literal leaf); a program that starts to compile fails here.
-inline void expectStructArrayLiteralRefusedAcrossBackends(const std::string &nameStem,
-                                                          const std::string &compileExeCmd,
-                                                          const std::string &exePath,
-                                                          const std::string &runVmCmd,
-                                                          const std::string &compileNativeCmd,
-                                                          const std::string &nativePath) {
-  const std::filesystem::path tempRoot = testScratchPath("");
-  const std::string exeErrPath = (tempRoot / (nameStem + "_exe_err.txt")).string();
-  const std::string vmErrPath = (tempRoot / (nameStem + "_vm_err.txt")).string();
-  const std::string nativeErrPath = (tempRoot / (nameStem + "_native_err.txt")).string();
-
-  // `--emit=exe` goes through the C++ emitter, so its lowering error names the exe backend.
-  CHECK(runCommand(compileExeCmd + " 2> " + quoteShellArg(exeErrPath)) == 2);
-  CHECK_FALSE(std::filesystem::exists(exePath));
-  CHECK(readFile(exeErrPath).find("exe backend only supports numeric/bool/string array literals") !=
-        std::string::npos);
-
-  CHECK(runCommand(runVmCmd + " 2> " + quoteShellArg(vmErrPath)) == 2);
-  CHECK(readFile(vmErrPath).find(VmArrayLiteralUnsupportedMessage) != std::string::npos);
-
-  CHECK(runCommand(compileNativeCmd + " 2> " + quoteShellArg(nativeErrPath)) == 2);
-  CHECK_FALSE(std::filesystem::exists(nativePath));
-  CHECK(readFile(nativeErrPath).find(NativeArrayLiteralUnsupportedMessage) != std::string::npos);
+// Compiles one program with exe, vm and native and checks that all three run it to `expectedExit`.
+inline void expectRunsAcrossBackends(const std::string &compileExeCmd,
+                                     const std::string &exePath,
+                                     const std::string &runVmCmd,
+                                     const std::string &compileNativeCmd,
+                                     const std::string &nativePath,
+                                     int expectedExit) {
+  CHECK(runCommand(compileExeCmd) == 0);
+  CHECK(runCommand(exePath) == expectedExit);
+  CHECK(runCommand(runVmCmd) == expectedExit);
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == expectedExit);
 }

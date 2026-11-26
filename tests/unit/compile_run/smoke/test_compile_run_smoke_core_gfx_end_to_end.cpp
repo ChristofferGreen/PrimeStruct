@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("gfx compatibility shim end-to-end coverage refuses its struct array literal") {
+TEST_CASE("gfx compatibility shim end-to-end coverage runs across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -124,21 +124,10 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  // TODO-4763 follow-up: the namespace-resolution fix means this no longer
-  // hits the old SubstrateDeviceConfig mismatch; it now compiles the
-  // struct/type surface fine and instead hits the pre-existing VM/native
-  // array-literal limitation on the VertexColored array literal, same as
-  // the canonical end-to-end test below. Re-pinned to that verified
-  // behavior.
-  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_experimental_end_to_end_conformance",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath);
+  expectRunsAcrossBackends(compileCmd, exePath, runVmCmd, compileNativeCmd, nativePath, 10);
 }
 
-TEST_CASE("canonical gfx end-to-end conformance refuses its struct array literal") {
+TEST_CASE("canonical gfx end-to-end conformance runs across backends") {
   const std::string source = R"(
 import /std/gfx/*
 
@@ -258,12 +247,7 @@ main() {
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
-  expectStructArrayLiteralRefusedAcrossBackends("primec_gfx_canonical_end_to_end_conformance",
-                                                compileCmd,
-                                                exePath,
-                                                runVmCmd,
-                                                compileNativeCmd,
-                                                nativePath);
+  expectRunsAcrossBackends(compileCmd, exePath, runVmCmd, compileNativeCmd, nativePath, 10);
 }
 
 TEST_CASE("gfx imports reject unsupported backend targets with deterministic diagnostics") {
@@ -360,10 +344,58 @@ main() {
   const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runVmCmd) == 4);
 
-  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
   CHECK(runCommand(compileNativeCmd) == 0);
   CHECK(runCommand(nativePath) == 4);
 }
 
+namespace {
+
+const char *const StructArrayLiteralSource = R"(
+[struct]
+Point() {
+  [f32] x{0.0f32}
+  [i32] id{0i32}
+}
+
+[return<int>]
+main() {
+  [array<Point>] points{
+    array<Point>(Point{[x] 1.0f32, [id] 3i32}, Point{[x] 2.0f32, [id] 4i32}, Point{[x] 3.0f32, [id] 5i32})
+  }
+  return(count(points))
+}
+)";
+
+} // namespace
+
+TEST_CASE("an array literal of structs counts its elements across backends") {
+  const std::string srcPath =
+      writeTemp("compile_struct_array_literal_count.prime", StructArrayLiteralSource);
+  const std::string exePath =
+      (testScratchPath("") / "primec_struct_array_literal_count_exe").string();
+  const std::string nativePath =
+      (testScratchPath("") / "primec_struct_array_literal_count_native").string();
+  expectRunsAcrossBackends("./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main",
+                           exePath,
+                           "./primec --emit=vm " + srcPath + " --entry /main",
+                           "./primec --emit=native " + srcPath + " -o " + nativePath +
+                               " --entry /main",
+                           nativePath,
+                           3);
+}
+
+TEST_CASE("indexing an array literal of structs is still refused on the vm") {
+  std::string source = StructArrayLiteralSource;
+  source.replace(source.find("return(count(points))"), 21, "return(points[1i32].id)");
+  const std::string srcPath = writeTemp("compile_struct_array_literal_index.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_struct_array_literal_index_err.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main 2> " +
+                   quoteShellArg(errPath)) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays") !=
+        std::string::npos);
+}
 
 TEST_SUITE_END();

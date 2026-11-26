@@ -661,19 +661,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the semantic-product memory of unused imported definitions; no change to language behaviour.
   - repro: the benchmark command above with and without the helpers.
 
-- [~] TODO-6294: An array literal of structs is refused by every backend, so six gfx conformance programs never ran
+- [ ] TODO-6296: Indexing an array literal of structs is refused by the VM, exe and native
   - owner: ai
   - status: ready
-  - claimed_by: gfx-array (worktree-agent-aa3d7d67dd84774e0), 2026-11-26
   - created_at: 2026-11-26
-  - phase: Test quality (found by the audit of TODO-6292)
-  - parallel_track: test-honesty
-  - scope: the gfx tests `gfx compatibility shim end-to-end coverage`, `canonical gfx end-to-end conformance`, `experimental` and `canonical gfx resource wrapper slice` and `resource wrapper errors` (tests/unit/compile_run/smoke/test_compile_run_smoke_core_gfx_end_to_end.cpp and ..._gfx_entrypoints.cpp) build a `[VertexColored]` array literal; `--emit=exe`, `--emit=vm` and `--emit=native` all stop with `... backend only supports numeric/bool/string array literals`, so the programs were never run on a backend (the tests returned early on that refusal and passed). They now pin the three refusals (`expectStructArrayLiteralRefusedAcrossBackends`). Lower an array literal of structs (or change the programs to a supported construct) so they run, and restore their run checks: exit codes 10 and 10 (end-to-end), 6 and 6 (resource wrapper slices), 2 and 2 (wrapper errors) on exe, vm and native.
+  - phase: Collections (found by TODO-6294)
+  - parallel_track: struct-arrays
+  - scope: an array literal of structs now lowers (the elements sit inline after the count, `count()` works), but `[array<Point>] points{array<Point>(...)}` followed by `points[1i32].id` or `[Point] p{points[2i32]}` stops with `vm backend only supports at() on numeric/bool/string arrays or vectors, plus args<...> packs`. Teach `at`/`[]` of an array local whose element is a struct to address element `i` at `1 + i * slotCount` slots from the array base and to copy or read the field from there, bounds-checked like the numeric case, on the VM, native and exe.
   - acceptance:
-    - the six programs compile and run on exe, vm and native with those exit codes, and the refusal helper is deleted
-    - full release gate green
-  - stop_rule: array literals of structs in the three lowerers, or the six programs; no other gfx change.
-  - repro: `grep -n expectStructArrayLiteralRefusedAcrossBackends tests/unit/compile_run/smoke/*.cpp`.
+    - `points[i].id` and `[Point] p{points[i]}` run on exe, vm and native with an out-of-range index reported as for numeric arrays
+    - the test `indexing an array literal of structs is still refused on the vm` becomes a positive test; full release gate green
+  - stop_rule: reading elements of a struct array local; assignment into elements and arrays of structs from other sources stay separate.
+  - repro: `primec --emit=vm` on the program of the test `indexing an array literal of structs is still refused on the vm` (tests/unit/compile_run/smoke/test_compile_run_smoke_core_gfx_end_to_end.cpp).
 
 - [ ] TODO-6295: `plus`, `minus`, `multiply` and `divide` of vectors are rejected, though the docs and a GLSL test describe them
   - owner: ai

@@ -29,7 +29,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
                                   SHARD_PREFIX "core_paths_newly_exposed_2026_07_16"
                                   SOURCE_FILE "*test_compile_run_smoke_core_*.cpp"
                                   RANGE_FIRST 63
-                                  RANGE_LAST 130
+                                  RANGE_LAST 132
                                   CASES_PER_SHARD 3)
 
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.smoke"
