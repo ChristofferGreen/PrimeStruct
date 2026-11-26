@@ -1,6 +1,8 @@
 #include "SemanticsValidator.h"
 #include "SemanticsValidatorExprNumericInternal.h"
 
+#include "primec/support/OperatorRewriteTargets.h"
+
 namespace primec::semantics {
 
 using detail::MatrixQuaternionDivideInfo;
@@ -341,6 +343,18 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     return scalarMayLead && !inferVectorTypePath(right, params, locals).empty() &&
            isNumericExpr(params, locals, left);
   };
+  // A valid operator site on a math type lowers to a helper of `/std/math`; name it so the lazy import takes it.
+  auto recordOperatorSite = [&](const std::string &builtin) {
+    auto operandType = [&](const Expr &arg) {
+      std::string typePath = inferMatrixQuaternionTypePath(arg, params, locals);
+      return typePath.empty() ? inferVectorTypePath(arg, params, locals) : typePath;
+    };
+    std::string helperPath = primec::operatorRewriteTargetPath(
+        builtin, operandType(expr.args[0]), operandType(expr.args[1]));
+    if (!helperPath.empty()) {
+      operatorRewriteDemand_.insert(std::move(helperPath));
+    }
+  };
   auto validateArgs = [&]() -> bool {
     for (const auto &arg : expr.args) {
       if (!validateExpr(params, locals, arg)) {
@@ -414,6 +428,7 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
         }
       }
       if (useMatrixQuaternionShapeRules) {
+        recordOperatorSite(builtinName);
         return validateArgs();
       }
       if (builtinName == "multiply") {
@@ -423,9 +438,11 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
             return failNumericDiagnostic(
                 "multiply requires scalar scaling, matrix-vector, matrix-matrix, quaternion-quaternion, or quaternion-Vec3 operands");
           }
+          recordOperatorSite(builtinName);
           return validateArgs();
         }
         if (isVectorScalarOperation(expr.args[0], expr.args[1], true)) {
+          recordOperatorSite(builtinName);
           return validateArgs();
         }
         if (!inferVectorTypePath(expr.args[0], params, locals).empty() ||
@@ -440,9 +457,11 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
             return failNumericDiagnostic(
                 "divide requires matrix/quaternion composite-by-scalar operands");
           }
+          recordOperatorSite(builtinName);
           return validateArgs();
         }
         if (isVectorScalarOperation(expr.args[0], expr.args[1], false)) {
+          recordOperatorSite(builtinName);
           return validateArgs();
         }
         if (!inferVectorTypePath(expr.args[0], params, locals).empty() ||

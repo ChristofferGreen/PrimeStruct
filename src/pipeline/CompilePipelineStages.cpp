@@ -85,7 +85,8 @@ bool validateGraphicsBackendSupport(const Program &program,
 bool runCompilePipelineImportStage(const Options &options,
                                    CompilePipelineImportStageState &out,
                                    std::string &error,
-                                   DiagnosticSink &diagnosticSink) {
+                                   DiagnosticSink &diagnosticSink,
+                                   const std::vector<std::string> &forcedLazyPaths) {
   ImportResolver importResolver;
   // `--library`: an `import</root>` of a root a library owns reads the interface of its archive.
   std::vector<LoadedLibrary> libraries;
@@ -280,7 +281,8 @@ bool runCompilePipelineImportStage(const Options &options,
   // source content a whole-file splice would have produced.
   std::vector<LazyStdlibExtractedSymbol> extracted;
   if (!lazyModules.empty()) {
-    if (!computeLazyStdlibModuleClosureSource(lazyModules, out.source, extracted, error)) {
+    if (!computeLazyStdlibModuleClosureSource(
+            lazyModules, out.source, extracted, error, {}, forcedLazyPaths)) {
       diagnosticSink.setSummary(error);
       return false;
     }

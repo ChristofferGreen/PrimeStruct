@@ -235,6 +235,9 @@ struct Program {
   // Public template definitions that monomorphization dropped for lack of an instantiation. An import of a module
   // that holds only templates is valid with nothing instantiated, so the import check reads these paths.
   std::vector<std::string> templateDefinitionPaths;
+  // The `/std/math` operator helpers (`/std/math/vec2_add_internal`) the typed operator sites of the program lower
+  // to, sorted and without repeats; the validator fills it. The lazy stdlib import takes the ones not yet defined.
+  std::vector<std::string> operatorRewriteDemand;
 };
 
 } // namespace primec

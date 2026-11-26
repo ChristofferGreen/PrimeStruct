@@ -328,6 +328,65 @@ main() {
   CHECK(runCommand(exePath) == expected);
 }
 
+// The VM and optexe run a program through lazy import and through whole-file import with one result.
+static void checkLazyMatchesWholeFile(const std::string &srcPath, const std::string &name) {
+  const int expected =
+      runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath + " --entry /main");
+  CHECK(expected > 0);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == expected);
+  for (const char *kind : {"exe", "optexe"}) {
+    for (const char *imports : {"", " --whole-file-stdlib-imports"}) {
+      const std::string exePath =
+          (testScratchPath("") / (std::string("primec_lazy_") + name + "_" + kind)).string();
+      CHECK(runCommand(std::string("./primec --emit=") + kind + imports + " " + srcPath + " -o " +
+                       exePath + " --entry /main") == 0);
+      CHECK(runCommand(exePath) == expected);
+    }
+  }
+}
+
+TEST_CASE("operators written without spaces on vectors take their helpers and run") {
+  const std::string source = R"(
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] a{Vec2{[x] 1.0f32, [y] 2.0f32}}
+  [Vec2] b{Vec2{[x] 3.0f32, [y] 4.0f32}}
+  [Vec2] sum{a+b}
+  [Vec2] difference{b-a}
+  [Vec2] scaled{a*2.0f32}
+  [Vec2] scaledLeft{2.0f32*b}
+  [Vec2] halved{b/2.0f32}
+  return(convert<i32>(sum.x+difference.y+scaled.y+scaledLeft.x+halved.y))
+}
+)";
+  checkLazyMatchesWholeFile(writeTemp("lazy_math_unspaced_infix.prime", source), "unspaced_infix");
+}
+
+TEST_CASE("an operator inside a module the program imports takes its helper and runs") {
+  const std::string moduleSource = R"(
+import /std/math/Vec2
+
+[public return<Vec2>]
+sum_pair([Vec2] a, [Vec2] b) {
+  return(a+b)
+}
+)";
+  const std::string modulePath = writeTemp("lazy_math_operator_module.prime", moduleSource);
+  const std::string source = "import<\"" + modulePath + R"(">
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] s{sum_pair(Vec2{[x] 1.0f32, [y] 2.0f32}, Vec2{[x] 3.0f32, [y] 4.0f32})}
+  return(convert<i32>(s.x))
+}
+)";
+  checkLazyMatchesWholeFile(writeTemp("lazy_math_operator_in_module.prime", source),
+                            "operator_module");
+}
+
 TEST_CASE("a method on an image error returned by a function runs without naming the type") {
   const std::string source = R"(
 import /std/image/*

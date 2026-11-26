@@ -80,6 +80,10 @@ public:
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
+  // The `/std/math` operator helpers the validated operator sites lower to (Program::operatorRewriteDemand).
+  const std::set<std::string> &operatorRewriteDemand() const {
+    return operatorRewriteDemand_;
+  }
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
@@ -659,6 +663,7 @@ private:
   // caller outside the compile pipeline) means no such prefixes are known
   // and the check behaves exactly as before.
   const std::unordered_set<std::string> *lazyStdlibModuleKeys_ = nullptr;
+  std::set<std::string> operatorRewriteDemand_;
   std::string entryArgsName_;
   bool allowEntryArgStringUse_ = false;
   const Expr *currentExprContext_ = nullptr;

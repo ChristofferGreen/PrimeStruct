@@ -658,66 +658,6 @@ std::string constructorSugarStructLeafName(const std::string &factoryLeaf) {
   return structName;
 }
 
-// An operator on a vector, matrix or quaternion (`multiply(m, v)`, `plus(a, b)`)
-// is rewritten after the text scan to a call of a helper named
-// `<type, lower case>_<operation>_internal` (`mat4_mul_vec4_internal`), whose
-// name appears nowhere in the source. Given such a helper leaf, returns the
-// type a call site spells (`Mat4`), or empty for any other leaf.
-std::string operatorHelperTypeLeafName(const std::string &helperLeaf) {
-  constexpr std::string_view suffix = "_internal";
-  const size_t typeEnd = helperLeaf.find('_');
-  if (typeEnd == std::string::npos || typeEnd == 0 || helperLeaf.size() <= suffix.size() ||
-      helperLeaf.compare(helperLeaf.size() - suffix.size(), suffix.size(), suffix) != 0) {
-    return {};
-  }
-  std::string typeName = helperLeaf.substr(0, typeEnd);
-  typeName.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(typeName.front())));
-  return typeName;
-}
-
-// The operator a helper implements, as a bit of `operatorsSpelledIn`: the
-// text between the type and `_internal` is `add`, `sub`, `div_scalar` or one
-// of the multiplying forms (`scale`, `scale_left`, `mul_vec4`, `multiply`,
-// `rotate_vec3`).
-unsigned operatorHelperOperatorBit(const std::string &helperLeaf) {
-  const size_t typeEnd = helperLeaf.find('_');
-  const std::string operation = helperLeaf.substr(typeEnd + 1);
-  if (operation.rfind("add", 0) == 0) {
-    return 1u;
-  }
-  if (operation.rfind("sub", 0) == 0) {
-    return 2u;
-  }
-  if (operation.rfind("div", 0) == 0) {
-    return 8u;
-  }
-  return 4u;
-}
-
-bool containsSpacedInfix(const std::string &text, char op) {
-  const std::string spaced = std::string(" ") + op + " ";
-  return text.find(spaced) != std::string::npos;
-}
-
-// The operators (`plus`, `minus`, `multiply`, `divide` or their spaced infix
-// forms) a text can call, as a bit set.
-unsigned operatorsSpelledIn(const std::string &text) {
-  unsigned bits = 0;
-  if (containsWholeWord(text, "plus") || containsSpacedInfix(text, '+')) {
-    bits |= 1u;
-  }
-  if (containsWholeWord(text, "minus") || containsSpacedInfix(text, '-')) {
-    bits |= 2u;
-  }
-  if (containsWholeWord(text, "multiply") || containsSpacedInfix(text, '*')) {
-    bits |= 4u;
-  }
-  if (containsWholeWord(text, "divide") || containsSpacedInfix(text, '/')) {
-    bits |= 8u;
-  }
-  return bits;
-}
-
 std::string manifestEntryLeafName(const std::string &fullPath) {
   const size_t lastSlash = fullPath.find_last_of('/');
   return lastSlash == std::string::npos ? fullPath : fullPath.substr(lastSlash + 1);
@@ -733,7 +673,8 @@ bool computeLazyStdlibModuleClosureSource(
     const std::string &seedText,
     std::vector<LazyStdlibExtractedSymbol> &extracted,
     std::string &error,
-    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted) {
+    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted,
+    const std::vector<std::string> &forcedPaths) {
   std::deque<std::string> pendingTexts;
   pendingTexts.push_back(seedText);
 
@@ -790,12 +731,6 @@ bool computeLazyStdlibModuleClosureSource(
   };
 
   std::vector<std::pair<LazyStdlibModule *, const StdlibSymbolManifestEntry *>> waitingMethods;
-  // An operator helper is taken when its type is spelled somewhere and the seed text (the program's own)
-  // calls its operator; the receiver may be inferred, so the type need not be spelled beside the call.
-  // Stdlib text is not asked for operators: it spells the operators of its scalars the same way, and no
-  // stdlib file outside the math module uses a vector, matrix or quaternion operator.
-  const unsigned programOperators = operatorsSpelledIn(seedText);
-  std::unordered_set<std::string> spelledHelperTypes;
   while (true) {
     while (!pendingTexts.empty()) {
       const std::string text = std::move(pendingTexts.front());
@@ -815,16 +750,11 @@ bool computeLazyStdlibModuleClosureSource(
             const std::string sugarStructLeaf = constructorSugarStructLeafName(leaf);
             matched = !sugarStructLeaf.empty() && containsWholeWord(text, sugarStructLeaf);
           }
+          // An operator helper (`/std/math/vec2_add_internal`) is named by no text: the validator names the ones
+          // the typed operator sites need, and the caller passes them in.
           if (!matched) {
-            const std::string helperTypeLeaf = operatorHelperTypeLeafName(leaf);
-            if (!helperTypeLeaf.empty()) {
-              const bool typeInText = containsWholeWord(text, helperTypeLeaf);
-              if (typeInText) {
-                spelledHelperTypes.insert(helperTypeLeaf);
-              }
-              matched = (programOperators & operatorHelperOperatorBit(leaf)) != 0 &&
-                        spelledHelperTypes.count(helperTypeLeaf) > 0;
-            }
+            matched =
+                std::find(forcedPaths.begin(), forcedPaths.end(), entry.path) != forcedPaths.end();
           }
           if (!matched) {
             continue;

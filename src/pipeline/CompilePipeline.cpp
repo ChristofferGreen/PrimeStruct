@@ -186,12 +186,15 @@ CompilePipelineResult runCompilePipelineResult(
       std::move(output), errorStage, error, diagnosticInfo);
 }
 
-bool runCompilePipeline(const Options &options,
-                        const CompilePipelineRunConfig &runConfig,
-                        CompilePipelineOutput &output,
-                        CompilePipelineErrorStage &errorStage,
-                        std::string &error,
-                        CompilePipelineDiagnosticInfo *diagnosticInfo) {
+// One compilation of the program. `forcedLazyPaths` are lazily imported stdlib definitions it takes whatever
+// the text says (see runCompilePipeline).
+static bool runCompilePipelineRound(const Options &options,
+                                    const CompilePipelineRunConfig &runConfig,
+                                    const std::vector<std::string> &forcedLazyPaths,
+                                    CompilePipelineOutput &output,
+                                    CompilePipelineErrorStage &errorStage,
+                                    std::string &error,
+                                    CompilePipelineDiagnosticInfo *diagnosticInfo) {
   // One compilation, one context.
   CompileContext compileContext;
   const CompileContext::Scope compileContextScope(compileContext);
@@ -227,10 +230,8 @@ bool runCompilePipeline(const Options &options,
   }
 
   CompilePipelineImportStageState importStage;
-  if (!runCompilePipelineImportStage(options,
-                                     importStage,
-                                     error,
-                                     diagnosticSink)) {
+  if (!runCompilePipelineImportStage(
+          options, importStage, error, diagnosticSink, forcedLazyPaths)) {
     return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
   }
   output.expandedSource = importStage.expandedSource;
@@ -593,6 +594,45 @@ bool runCompilePipeline(const Options &options,
   }
 
   return true;
+}
+
+// The lazy stdlib import names the definitions a program needs from its text, which cannot see an operator on a
+// vector, matrix or quaternion: the lowerer rewrites it to a `/std/math` helper no text spells. The validator
+// names those helpers from the typed operator sites (Program::operatorRewriteDemand); when one is not defined, the
+// program is compiled again with it taken. A helper has no operator sites of its own on math types, so a program
+// needs one extra round, or none when it has no operator on a math type.
+bool runCompilePipeline(const Options &options,
+                        const CompilePipelineRunConfig &runConfig,
+                        CompilePipelineOutput &output,
+                        CompilePipelineErrorStage &errorStage,
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  std::vector<std::string> forcedLazyPaths;
+  while (true) {
+    if (!runCompilePipelineRound(
+            options, runConfig, forcedLazyPaths, output, errorStage, error, diagnosticInfo)) {
+      return false;
+    }
+    if (!lazyStdlibImportsEnabled(options) || output.program.operatorRewriteDemand.empty()) {
+      return true;
+    }
+    std::unordered_set<std::string> defined;
+    for (const Definition &definition : output.program.definitions) {
+      defined.insert(definition.fullPath);
+    }
+    bool takesMore = false;
+    for (const std::string &path : output.program.operatorRewriteDemand) {
+      if (defined.count(path) == 0 &&
+          std::find(forcedLazyPaths.begin(), forcedLazyPaths.end(), path) ==
+              forcedLazyPaths.end()) {
+        forcedLazyPaths.push_back(path);
+        takesMore = true;
+      }
+    }
+    if (!takesMore) {
+      return true;
+    }
+  }
 }
 
 } // namespace primec

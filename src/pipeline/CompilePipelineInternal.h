@@ -275,7 +275,9 @@ bool computeLazyStdlibModuleClosureSource(
     const std::string &seedText,
     std::vector<LazyStdlibExtractedSymbol> &extracted,
     std::string &error,
-    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted = {});
+    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted = {},
+    // Manifest paths taken whatever the text says (the operator helpers the validator found a program needs).
+    const std::vector<std::string> &forcedPaths = {});
 
 bool isGraphicsImportPath(const std::string &importPath);
 
@@ -318,7 +320,8 @@ struct CompilePipelineParsedProgramStageState {
 bool runCompilePipelineImportStage(const Options &options,
                                    CompilePipelineImportStageState &out,
                                    std::string &error,
-                                   DiagnosticSink &diagnosticSink);
+                                   DiagnosticSink &diagnosticSink,
+                                   const std::vector<std::string> &forcedLazyPaths = {});
 
 bool runCompilePipelineTransformStage(
     const Options &options,

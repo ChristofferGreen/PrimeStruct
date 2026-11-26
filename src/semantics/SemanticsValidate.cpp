@@ -317,6 +317,8 @@ bool runSemanticValidationManifestValidatorPass(
     return false;
   }
 
+  state.program.operatorRewriteDemand.assign(state.validator->operatorRewriteDemand().begin(),
+                                             state.validator->operatorRewriteDemand().end());
   state.validationCounters = state.validator->validationCounters();
   eraseCompileTimeTypeBindings(state.program);
   if (!semantics::validateSliceLoans(state.program, state.error)) {
