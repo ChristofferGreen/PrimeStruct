@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6293: Each non-template stdlib math definition costs about a megabyte of semantic-product memory
+- [~] TODO-6293: Each non-template stdlib math definition costs about a megabyte of semantic-product memory
   - owner: ai
   - status: ready
+  - claimed_by: sem-memory (worktree-agent-aa3d7d67dd84774e0), 2026-11-26
   - created_at: 2026-11-26
   - phase: Compiler memory (found by the scalar operator helpers)
   - parallel_track: semantic-memory
