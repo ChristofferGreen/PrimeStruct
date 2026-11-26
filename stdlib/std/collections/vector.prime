@@ -378,13 +378,13 @@ namespace std {
   }
 
   // A borrowed view of the elements: no copy. The vector must not change while the view is in use.
-  [public return<Slice<T, Read>> effects(none)]
+  [public unsafe return<Slice<T, Read>> effects(none)]
   vectorView<T>([Vector<T>] values) {
     vectorCheckShape<T>(values)
     return(readSliceMake<T>(vectorElementsFrom<T>(values, 0), values.field_count()))
   }
 
-  [public return<Slice<T, Read>> effects(none)]
+  [public unsafe return<Slice<T, Read>> effects(none)]
   vectorSlice<T>([Vector<T>] values, [i32] start, [i32] end) {
     vectorCheckShape<T>(values)
     if(start < 0 || end < start || end > values.field_count()) {
@@ -393,7 +393,7 @@ namespace std {
     return(readSliceMake<T>(vectorElementsFrom<T>(values, start), end - start))
   }
 
-  [public return<Slice<T, Write>> effects(none)]
+  [public unsafe return<Slice<T, Write>> effects(none)]
   vectorSliceMut<T>([Vector<T> mut] values, [i32] start, [i32] end) {
     vectorCheckShape<T>(values)
     if(start < 0 || end < start || end > values.field_count()) {

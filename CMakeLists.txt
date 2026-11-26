@@ -4079,11 +4079,11 @@ if(PRIMESTRUCT_BUILD_TESTS)
                                    FIRST ${firstCase} LAST ${lastCase})
       endforeach()
     elseif(suite STREQUAL "primestruct.compile.run.vm.slice_capability")
-      # 12 cases, 31 s in a loaded gate (30 s timeout): shards of three.
-      foreach(firstCase RANGE 1 12 3)
+      # 13 cases, 31 s in a loaded gate (30 s timeout): shards of three.
+      foreach(firstCase RANGE 1 13 3)
         math(EXPR lastCase "${firstCase} + 2")
-        if(lastCase GREATER 12)
-          set(lastCase 12)
+        if(lastCase GREATER 13)
+          set(lastCase 13)
         endif()
         addPrimeStructDoctestSuite("${suite}" TIMEOUT 30
                                    SHARD_NAME "capability_parameterized_slices_${firstCase}_${lastCase}"

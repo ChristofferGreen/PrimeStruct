@@ -628,7 +628,7 @@ primec --emit=optexe server.prime -o server --link-arg stdlib/std/net/native/net
   --link-arg stdlib/std/os/os_posix.cpp
 ```
 
-A socket is an `i32` descriptor. Byte buffers are a `vector<u8>` slice's `.data` followed by its `u64` length
+A socket is an `i32` descriptor. Byte buffers are a `vector<u8>` slice's `dataUnsafe()` followed by its `u64` length
 (docs/spec/host-and-core-library.md, Byte buffers). Every call that can block takes `timeoutMs` (negative waits
 forever), and every call returns a neutral negative code on failure instead of an errno, so the same checks work on
 Linux and macOS:
@@ -674,17 +674,17 @@ report `unbound host function: net_listen ...`; native, wasm and GLSL reject hos
 import /std/collections/*
 import /std/net/*
 
-[return<int> effects(heap_alloc, net_io)]
+[unsafe return<int> effects(heap_alloc, net_io)]
 main() {
   [i32] listener{listenLoopback(0i32, 4i32)}
   [i32] client{connectLoopback(localPort(listener), 1000i32)}
   [i32] server{accept(listener, 1000i32)}
   [vector<u8> mut] message{vector<u8>(104u8, 105u8)}
   [mut] outgoing{message.sliceMut(0i32, 2i32)}
-  send(client, outgoing.data, 2u64, 1000i32)
+  send(client, outgoing.dataUnsafe(), 2u64, 1000i32)
   [vector<u8> mut] inbox{vector<u8>(0u8, 0u8, 0u8, 0u8)}
   [mut] window{inbox.sliceMut(0i32, 4i32)}
-  [i64] count{recv(server, window.data, 4u64, 1000i32)}
+  [i64] count{recv(server, window.dataUnsafe(), 4u64, 1000i32)}
   close(client)
   close(server)
   close(listener)

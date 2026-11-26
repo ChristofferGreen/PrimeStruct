@@ -122,7 +122,7 @@ namespace std {
     }
 
     // The text as a read view of its bytes.
-    [return<ReadSlice<u8>> effects(none)]
+    [unsafe return<ReadSlice<u8>> effects(none)]
     bytes() {
       return(readSliceMake<u8>(this.data, this.fieldLength))
     }
@@ -1014,13 +1014,13 @@ namespace std {
 
   // A view of the bytes of `bytes`, which must be valid UTF-8: invalid bytes stop the program. Use utf8ErrorOffset
   // first to handle them instead.
-  [public return<StringView> effects(none)]
+  [public unsafe return<StringView> effects(none)]
   textFromBytes([ReadSlice<u8>] bytes) {
-    [i32] bad{utf8ErrorOffset(bytes.data, bytes.count())}
+    [i32] bad{utf8ErrorOffset(bytes.dataUnsafe(), bytes.count())}
     if(bad >= 0i32) {
       panic(bad)
     }
-    return(StringView{[data] bytes.data, [fieldLength] bytes.count()})
+    return(StringView{[data] bytes.dataUnsafe(), [fieldLength] bytes.count()})
   }
 
   // Whether a complete valid UTF-8 sequence starts at `at`; `consumed` is the sequence's length when it does, and
@@ -1076,15 +1076,15 @@ namespace std {
   }
 
   // A String from bytes that may be invalid UTF-8: each maximal invalid part becomes one U+FFFD.
-  [public return<String> effects(heap_alloc)]
+  [public unsafe return<String> effects(heap_alloc)]
   stringFromUtf8Lossy([ReadSlice<u8>] bytes) {
     [String mut] out{stringWithCapacity(bytes.count())}
     [i32 mut] at{0i32}
     while(at < bytes.count()) {
       [i32 mut] consumed{1i32}
-      if(utf8SequenceAt(bytes.data, bytes.count(), at, consumed)) {
+      if(utf8SequenceAt(bytes.dataUnsafe(), bytes.count(), at, consumed)) {
         for([i32 mut] k{0i32}, k < consumed, k++) {
-          out.pushByte(textLoad(bytes.data, at + k))
+          out.pushByte(textLoad(bytes.dataUnsafe(), at + k))
         }
       } else {
         out.pushByte(239u8)

@@ -123,8 +123,6 @@ of sync with them.
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
 | TODO-6268 | A packed `Result` with a `Buffer` payload stays inline | deferred | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
-| TODO-5511 | Safe code cannot reach container storage or unsafe stdlib helpers | ready | safety-stdlib |
-| TODO-6198 | Safe code builds a `Slice` of any count over any pointer | ready | safety-slices |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
@@ -168,7 +166,6 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
-- Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
 - Backend parity:  (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -259,36 +256,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - no existing diagnostic or test output changes; full release gate green
   - stop_rule: recording and inference only; the call-site rule stays TODO-5688's.
   - repro: `grep -rn "requires .* effect" src/semantics/*.cpp` lists the sites; the measurement is in TODO-5688's scope.
-
-- [~] TODO-5511: Safe code cannot reach container storage or unsafe stdlib helpers
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
-  - created_at: 2026-10-06
-  - phase: Correctness audit 2026-10
-  - parallel_track: safety-stdlib
-  - scope: Tracker. Done (2026-11-21): the `Vector` and ring buffer slot helpers are `[unsafe_api]` (TODO-6156) and the SoA slot helpers (TODO-6160). Field privacy is enforced (TODO-6161) and the `Vector`, `Map` and `SoaColumn` fields are private (TODO-6162). Namespace-level `/std` definitions without `[public]` are private to their namespace (TODO-6163). Methods of `/std` structs follow the field rule and the internal ones are `[private]`; `[private]` is enforced for every definition and method (TODO-6197, decided 1a and 2b). Open: slices built over any pointer (TODO-6198).
-  - acceptance:
-    - TODO-6161, TODO-6162 and TODO-6163 are done; each repro (borrowSlot then reserve, takeSlot then clear, `w.data = v.data`, writing fieldCount, brace-constructing a Vector around `v.data`) is rejected outside `[unsafe]`; stdlib and corpus still compile
-    - full release gate green
-  - stop_rule: tracker; the work is in the leaves.
-  - notes: deferred: queued behind the Ready Now cap; the remaining leaf is TODO-6198.
-
-
-
-- [~] TODO-6198: Safe code builds a `Slice` of any count over any pointer
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
-  - created_at: 2026-11-23
-  - phase: Correctness audit 2026-10 (found with TODO-6163)
-  - parallel_track: safety-slices
-  - scope: `ReadSlice<T>` and `WriteSlice<T>` (stdlib/std/collections/slice.prime, written by scripts/generate_slice_stdlib.py) declare `[public Pointer<T> mut] data` and `[public i32 mut] fieldCount`, and `readSliceMake` / `writeSliceMake` are public, so a program outside `[unsafe]` builds a slice of 1000 elements over one local. On the VM the read is `VM error: invalid indirect address in IR: 8016` (exit 3); on native it reads memory past the local and prints 0 (exit 0). The fields of `Vector`, `MapValue` and `SoaColumn` are private for this reason (docs/spec/type-system.md, Memory safety). Make the two fields `[private]` and the two constructors `[public unsafe_api]`, and mark the library callers that build a slice from storage they own (`vectorView`, `vectorSlice`, `vectorSliceMut`, `StringView.bytes`, the HTTP server's `work_slot`, the slice methods) `[unsafe]`.
-  - acceptance:
-    - the program below is `private field is not accessible: /std/collections/slice/ReadSlice/data`, and `readSliceMake` from a definition that is not `[unsafe]` is `requires an unsafe definition`, each with a test with line and column; the library, examples and tests compile
-    - full release gate green
-  - stop_rule: the construction of the two slice structs; no change to what a slice can do once built.
-  - repro: `import /std/collections/slice/*  [effects(io_out) return<int>] main() { [i32 mut] x{7i32}  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}  print_line(s.count())  print_line(s.at(500i32))  return(0i32) }` with `primec --emit=native -I stdlib` prints 1000 and 0.
 
 - [ ] TODO-6261: A `string` result of a program's own function keeps its call sites inline
   - owner: ai

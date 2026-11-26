@@ -133,11 +133,11 @@ namespace server {
   }
 
   // Waits on the sockets marked in `interest`; a timeout or a signal leaves nothing ready.
-  [effects(net_io)]
+  [unsafe effects(net_io)]
   wait_ready([vector<u8> mut] interest, [i64] timeoutMs) {
     [i32] length{interest.count()}
     [mut] window{interest.sliceMut(0i32, length)}
-    poll(window.data, convert<u64>(length), convert<i32>(timeoutMs))
+    poll(window.dataUnsafe(), convert<u64>(length), convert<i32>(timeoutMs))
   }
 
   // Closes the socket in `slot` and frees the slot.
@@ -194,7 +194,7 @@ namespace server {
   // Reads what has arrived on a ready reading slot. A complete request is handed to the handler and answered, and the
   // connection then waits for its next request or closes (`keeps_connection`); a rejected one, or one that does not fit in `maxRequestBytes` (413), is answered and drained; a closed or
   // failed connection is dropped without an answer.
-  [effects(net_io, heap_alloc)]
+  [unsafe effects(net_io, heap_alloc)]
   read_slot<Handler>([Handler mut] handler,
                      [Connections mut] table,
                      [vector<u8> mut] buffers,
@@ -206,7 +206,7 @@ namespace server {
     [i32] connection{table.sockets[slot]}
     [i32] received{table.counts[slot]}
     [mut] window{buffers.sliceMut(base + received, base + capacity)}
-    [i64] got{recv(connection, window.data, convert<u64>(capacity - received), 0i32)}
+    [i64] got{recv(connection, window.dataUnsafe(), convert<u64>(capacity - received), 0i32)}
     if(not_ready(got)) {
       return()
     }
@@ -247,12 +247,12 @@ namespace server {
   }
 
   // Discards what has arrived on a ready draining slot; closes it at end of input or after `drain_rounds()` rounds.
-  [effects(net_io)]
+  [unsafe effects(net_io)]
   drain_slot([Connections mut] table, [vector<u8> mut] buffers, [i32] slot, [ServerConfig] config) {
     [i32] capacity{config.maxRequestBytes}
     [i32] base{slot * capacity}
     [mut] window{buffers.sliceMut(base, base + capacity)}
-    [i64] got{recv(table.sockets[slot], window.data, convert<u64>(capacity), 0i32)}
+    [i64] got{recv(table.sockets[slot], window.dataUnsafe(), convert<u64>(capacity), 0i32)}
     if(not_ready(got)) {
       return()
     }
@@ -423,7 +423,7 @@ namespace server {
   // A worker's turn with a readable connection: reads what has arrived and, once the request is complete, calls the
   // handler inside the app's mutex and answers. Only the handler call holds the mutex; reading, parsing, serializing
   // and sending run beside the other workers.
-  [effects(net_io, heap_alloc, lock, atomic) return<SlotDone>]
+  [unsafe effects(net_io, heap_alloc, lock, atomic) return<SlotDone>]
   work_slot<Handler>([RwLock<Handler>] app,
             [SlotJob] job,
             [Atomic<i32>] stopping,

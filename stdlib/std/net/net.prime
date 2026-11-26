@@ -100,7 +100,7 @@ namespace net {
     return(net_accept(listener, timeoutMs))
   }
 
-  // Reads up to `length` bytes into `buffer` (a `vector<u8>` slice's `.data`). Returns the count read, 0 when the
+  // Reads up to `length` bytes into `buffer` (a `vector<u8>` slice's `dataUnsafe()`). Returns the count read, 0 when the
   // peer has closed the connection, or a negative code.
   [public return<i64> effects(net_io)]
   recv([i32] socket, [Pointer<u8>] buffer, [u64] length, [i32] timeoutMs) {
@@ -116,7 +116,7 @@ namespace net {
 
   // Waits at most `timeoutMs` until one of the sockets marked in `interest` is readable: a listener has a connection
   // waiting, or a connection has data, has been closed by its peer or has failed. `interest` (a `vector<u8>` slice's
-  // `.data`) holds `length` bytes, one per descriptor: a nonzero byte at index fd watches fd. On return each watched
+  // `dataUnsafe()`) holds `length` bytes, one per descriptor: a nonzero byte at index fd watches fd. On return each watched
   // byte is 2 when that socket is ready and 1 when it is not. Returns how many are ready, or a negative code:
   // timeoutCode() when none became ready in time, interruptedCode() when a signal arrived.
   [public return<i32> effects(net_io)]

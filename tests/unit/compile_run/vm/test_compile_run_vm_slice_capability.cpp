@@ -140,6 +140,33 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
+TEST_CASE("a Write slice compares and copies from a Read slice") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/slice/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [vector<i32> mut] values{vector<i32>(4i32, 7i32, 9i32)}
+  [vector<i32> mut] other{vector<i32>(1i32, 2i32, 3i32)}
+  [Slice<i32, Write> mut] target{/std/collections/vector/sliceMut<i32>(values, 0i32, 3i32)}
+  [Slice<i32, Read>] source{/std/collections/vector/slice<i32>(other, 0i32, 3i32)}
+  [i32 mut] total{values.at(2i32)}
+  if(target.equals(source)) {
+    total = total + 100i32
+  }
+  target.copyFrom(source)
+  if(target.equals(source)) {
+    total = total + 10i32
+  }
+  return(total + values.at(2i32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_slice_capability_write_from_read.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 22);
+}
+
 TEST_CASE("rejects unknown capability name on a slice parameter") {
   const std::string source = R"(
 import /std/collections/*

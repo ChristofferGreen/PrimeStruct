@@ -765,7 +765,11 @@ helper over `value` (docs/spec/transforms.md).
     be called from outside their namespace, by absolute path either (`<path> is private`, see Exports in
     `backend-type-support.md`);
     the `[unsafe_api]` helpers above are the unsafe API of their module and are `[public unsafe_api]`, callable from
-    `[unsafe]` definitions only.
+    `[unsafe]` definitions only. The pointer and count of `ReadSlice` and `WriteSlice` are `[private]` the same way, and
+    `readSliceMake` and `writeSliceMake` are `[public unsafe_api]`: safe code cannot claim a count over a pointer
+    (`ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}` is `private field is not accessible`, and a call of
+    the constructors is `requires an unsafe definition`); it takes slices from `vector`, `array`, `String` and
+    `StringView` views, which are `[unsafe]` definitions safe code may call.
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a

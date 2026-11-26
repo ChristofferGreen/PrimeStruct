@@ -68,11 +68,11 @@ import /std/collections/*
 host_fill([Pointer<u8>] buffer, [u64] length) {
 }
 
-[return<int> effects(heap_alloc)]
+[unsafe return<int> effects(heap_alloc)]
 main() {
   [vector<u8> mut] bytes{vector<u8>(0u8, 0u8, 0u8, 0u8)}
   [mut] window{bytes.sliceMut(0i32, 4i32)}
-  host_fill(window.data, 4u64)
+  host_fill(window.dataUnsafe(), 4u64)
   return(convert<i32>(bytes[3i32]))
 }
 ```

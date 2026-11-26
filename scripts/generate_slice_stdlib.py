@@ -63,12 +63,12 @@ namespace std {
     return(n)
   }
 
-  [public return<ReadSlice<T>> effects(none)]
+  [public unsafe_api return<ReadSlice<T>> effects(none)]
   readSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(ReadSlice<T>{[data] data, [fieldCount] count})
   }
 
-  [public return<WriteSlice<T>> effects(none)]
+  [public unsafe_api return<WriteSlice<T>> effects(none)]
   writeSliceMake<T>([Pointer<T>] data, [i32] count) {
     return(WriteSlice<T>{[data] data, [fieldCount] count})
   }
@@ -272,7 +272,14 @@ namespace std {
 '''
 
 # The read operations, written once. {V} is the view struct, {MAKE} builds a view of the same kind.
-READ_METHODS = '''    [return<i32> effects(none)]
+READ_METHODS = '''    // The address of the first element, for a host call or an unchecked read: reaching past `count()` from it is
+    // the caller's responsibility.
+    [public unsafe_api return<Pointer<T>> effects(none)]
+    dataUnsafe() {
+      return(this.data)
+    }
+
+    [return<i32> effects(none)]
     count() {
       return(this.fieldCount)
     }
@@ -371,7 +378,7 @@ READ_METHODS = '''    [return<i32> effects(none)]
 
     // ---- narrowing: each returns a view of the same elements ----
 
-    [return<{V}<T>> effects(none)]
+    [unsafe return<{V}<T>> effects(none)]
     slice([i32] start, [i32] end) {
       if(start < 0i32 || end < start || end > this.fieldCount) {
         panic(start)
@@ -464,7 +471,7 @@ WRITE_METHODS = '''
     }
 
     // The same elements as a read view.
-    [return<ReadSlice<T>> effects(none)]
+    [unsafe return<ReadSlice<T>> effects(none)]
     readOnly() {
       return(readSliceMake<T>(this.data, this.fieldCount))
     }
@@ -473,8 +480,8 @@ WRITE_METHODS = '''
 STRUCT = '''
   [public struct]
   {V}<T>() {
-    [public Pointer<T> mut] data
-    [public i32 mut] fieldCount{0i32}
+    [private Pointer<T> mut] data
+    [private i32 mut] fieldCount{0i32}
 
 '''
 
@@ -488,18 +495,18 @@ ARRAY_VIEWS = '''
   // Views of an `array<T>` (inline slots): `values.view()`, `values.slice(start, end)` and `values.sliceMut(start, end)` on an
   // array are rewritten to these calls, with the array passed by reference. The element address comes from
   // `location(at_unsafe(values, 0))`; an empty array gives a view that is never read.
-  [public return<ReadSlice<T>> effects(none)]
+  [public unsafe return<ReadSlice<T>> effects(none)]
   arrayView<T>([Reference<array<T>>] values) {
     return(readSliceMake<T>(location(at_unsafe(values, 0i32)), count(values)))
   }
 
-  [public return<ReadSlice<T>> effects(none)]
+  [public unsafe return<ReadSlice<T>> effects(none)]
   arraySlice<T>([Reference<array<T>>] values, [i32] start, [i32] end) {
     [ReadSlice<T>] whole{arrayView<T>(values)}
     return(whole.slice(start, end))
   }
 
-  [public return<WriteSlice<T>> effects(none)]
+  [public unsafe return<WriteSlice<T>> effects(none)]
   arraySliceMut<T>([Reference<array<T>> mut] values, [i32] start, [i32] end) {
     [WriteSlice<T>] whole{writeSliceMake<T>(location(at_unsafe(values, 0i32)), count(values))}
     return(whole.slice(start, end))

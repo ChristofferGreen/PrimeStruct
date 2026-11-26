@@ -4,7 +4,7 @@
 import /std/collections/*
 import /std/net/*
 
-[return<int> effects(heap_alloc, net_io)]
+[unsafe return<int> effects(heap_alloc, net_io)]
 main() {
   [i32] listener{listenLoopback(0i32, 4i32)}
   // EPERM (1) or EACCES (13): a sandbox that forbids sockets.
@@ -32,21 +32,21 @@ main() {
   }
   [vector<u8> mut] message{vector<u8>(104u8, 101u8, 108u8, 108u8, 111u8)}
   [mut] outgoing{message.sliceMut(0i32, 5i32)}
-  if(send(client, outgoing.data, 5u64, 5000i32) != 5i64) {
+  if(send(client, outgoing.dataUnsafe(), 5u64, 5000i32) != 5i64) {
     return(6i32)
   }
   [vector<u8> mut] received{vector<u8>(0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8)}
   [mut] inbox{received.sliceMut(0i32, 8i32)}
-  if(recv(server, inbox.data, 8u64, 5000i32) != 5i64) {
+  if(recv(server, inbox.dataUnsafe(), 8u64, 5000i32) != 5i64) {
     return(7i32)
   }
   [mut] reply{received.sliceMut(0i32, 5i32)}
-  if(send(server, reply.data, 5u64, 5000i32) != 5i64) {
+  if(send(server, reply.dataUnsafe(), 5u64, 5000i32) != 5i64) {
     return(8i32)
   }
   [vector<u8> mut] echoed{vector<u8>(0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8, 0u8)}
   [mut] answer{echoed.sliceMut(0i32, 8i32)}
-  if(recv(client, answer.data, 8u64, 5000i32) != 5i64) {
+  if(recv(client, answer.dataUnsafe(), 8u64, 5000i32) != 5i64) {
     return(9i32)
   }
   [i32 mut] index{0i32}
@@ -60,14 +60,14 @@ main() {
   if(close(client) != 0i32) {
     return(11i32)
   }
-  if(recv(server, answer.data, 8u64, 5000i32) != 0i64) {
+  if(recv(server, answer.dataUnsafe(), 8u64, 5000i32) != 0i64) {
     return(12i32)
   }
   if(close(server) != 0i32 || close(listener) != 0i32) {
     return(13i32)
   }
   // A closed socket reports an error, not a crash.
-  if(send(server, outgoing.data, 5u64, 100i32) >= 0i64) {
+  if(send(server, outgoing.dataUnsafe(), 5u64, 100i32) >= 0i64) {
     return(14i32)
   }
   return(0i32)

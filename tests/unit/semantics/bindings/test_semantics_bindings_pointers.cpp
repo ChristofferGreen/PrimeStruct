@@ -2654,6 +2654,85 @@ main() {
   CHECK(diagnosticInfo.primarySpan.column == 24);
 }
 
+TEST_CASE("a slice built by braces over any pointer names a private field") {
+  // `ReadSlice` and `WriteSlice` keep the pointer and the count private, so safe code cannot claim a count.
+  const std::string source = R"(import /std/collections/slice/*
+
+[effects(io_out), return<int>]
+main() {
+  [i32 mut] x{7i32}
+  [ReadSlice<i32>] s{ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}}
+  return(s.count())
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(
+      error.find("private field is not accessible: /std/collections/slice/ReadSlice/data") !=
+          std::string::npos,
+      error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 6);
+  CHECK(diagnosticInfo.primarySpan.column == 22);
+}
+
+TEST_CASE("a slice constructor needs an unsafe definition") {
+  for (const std::string kind : {"read", "write"}) {
+    INFO(kind);
+    const std::string source =
+        "import /std/collections/slice/*\n\n[effects(io_out), return<int>]\nmain() {\n"
+        "  [i32 mut] x{7i32}\n"
+        "  [" +
+        std::string(kind == "read" ? "ReadSlice" : "WriteSlice") + "<i32>] s{" + kind +
+        "SliceMake<i32>(location(x), 1000i32)}\n  return(s.count())\n}\n";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find("requires an unsafe definition") != std::string::npos, error);
+    REQUIRE(diagnosticInfo.hasPrimarySpan);
+    CHECK(diagnosticInfo.primarySpan.line == 6);
+  }
+}
+
+TEST_CASE("a slice pointer needs an unsafe definition") {
+  const std::string source = R"(import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<u8> mut] bytes{vector<u8>(1u8, 2u8)}
+  [mut] window{bytes.sliceMut(0i32, 2i32)}
+  [Pointer<u8>] raw{window.dataUnsafe()}
+  return(0i32)
+}
+)";
+  primec::SemanticDiagnosticInfo diagnosticInfo;
+  std::string error;
+  CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+  CHECK_MESSAGE(error.find("requires an unsafe definition") != std::string::npos, error);
+  REQUIRE(diagnosticInfo.hasPrimarySpan);
+  CHECK(diagnosticInfo.primarySpan.line == 7);
+}
+
+TEST_CASE("an unsafe definition builds a slice over a pointer") {
+  const std::string source = R"(import /std/collections/slice/*
+
+[unsafe, effects(none), return<int>]
+count_of([Pointer<i32>] base) {
+  [ReadSlice<i32>] s{readSliceMake<i32>(base, 3i32)}
+  return(s.count())
+}
+
+[effects(io_out), return<int>]
+main() {
+  [i32 mut] x{7i32}
+  return(count_of(location(x)))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+}
+
 TEST_CASE("a string is pushed into a vector of strings only") {
   const std::string accepted = R"(import /std/collections/*
 
