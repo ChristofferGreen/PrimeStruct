@@ -649,9 +649,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6303: A program that uses a math operator is compiled twice
+- [~] TODO-6303: A program that uses a math operator is compiled twice
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: sonnet-agent (worktree agent-a0aa5cdab41cebab5), 2026-11-26
   - created_at: 2026-11-26
   - phase: Compiler performance (found with the typed operator helper demand)
   - parallel_track: semantic-memory
