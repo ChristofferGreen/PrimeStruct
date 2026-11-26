@@ -303,6 +303,20 @@ TEST_CASE("the map module builds as a stdlib library") {
   CHECK(content.manifest.stdlibModules.front().file == "std/collections/map.prime");
 }
 
+TEST_CASE("the http module builds as a stdlib library with a ReadSlice parameter") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_http");
+  const std::string path =
+      buildLibrary(dir, stdlibFile(dir, "/std/http/*", "http/http.prime"), "http");
+  const primec::LibraryArchiveContent content = readArchive(path);
+  REQUIRE(content.manifest.stdlibModules.size() == 1);
+  CHECK(content.manifest.stdlibModules.front().file == "std/http/http.prime");
+  bool sawParser = false;
+  for (const primec::IrFunction &function : content.code.functions) {
+    sawParser = sawParser || function.name == "/std/http/parseRequestBytes";
+  }
+  CHECK(sawParser);
+}
+
 TEST_CASE("a string literal converts to a StringView for a local of a struct of the namespace") {
   const std::filesystem::path dir = testScratchPath("library_stdlib_local_literal");
   writeIn(

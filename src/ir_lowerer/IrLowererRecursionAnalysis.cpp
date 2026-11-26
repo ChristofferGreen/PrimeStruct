@@ -2,6 +2,7 @@
 #include "IrLowererCollectionRecordShapes.h"
 #include "IrLowererPackedErrorTypes.h"
 #include "IrLowererRealCallBlockerText.h"
+#include "IrLowererRealCallParameterTypes.h"
 #include "IrLowererReturnShapes.h"
 #include "IrLowererStringParameterUse.h"
 #include "IrLowererScalarCallBlocker.h"
@@ -458,50 +459,6 @@ bool isSumDefinitionPath(
          definitionHasTransform(*defIt->second, "sum");
 }
 
-// A builtin `vector<T>` type (not the stdlib struct of the capitalized spelling) whose element the lowerer knows how to copy and
-// destroy.
-bool isBuiltinVectorType(const Transform &transform,
-                         const std::string &namespacePrefix,
-                         const std::unordered_set<std::string> &structNames) {
-  if (transform.name != "vector" || transform.templateArgs.size() != 1 ||
-      !transform.arguments.empty()) {
-    return false;
-  }
-  std::string elementPath;
-  return resolveBuiltinVectorElementStructPath(
-      transform.templateArgs.front(),
-      namespacePrefix,
-      [&](const std::string &typeName, const std::string &prefix, std::string &pathOut) {
-        pathOut = resolveStructTypeName(typeName, prefix, structNames);
-        if (pathOut.empty() && typeName == "String" && structNames.count("/std/text/String") > 0) {
-          pathOut =
-              "/std/text/String"; // the stdlib text, declared `[String]` after `import /std/text/*`
-        }
-        return !pathOut.empty();
-      },
-      elementPath);
-}
-
-// `Reference<vector<T>>` of a builtin vector the lowerer can copy and destroy elements of: the argument is the
-// vector's record address, as for a `mut` vector parameter.
-bool isReferenceToBuiltinVector(const Transform &transform,
-                                const std::string &namespacePrefix,
-                                const std::unordered_set<std::string> &structNames) {
-  if (transform.name != "Reference" || transform.templateArgs.size() != 1 ||
-      !transform.arguments.empty()) {
-    return false;
-  }
-  std::string base;
-  std::string argText;
-  if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argText)) {
-    return false;
-  }
-  Transform inner;
-  inner.name = trimTemplateTypeText(base);
-  inner.templateArgs.push_back(trimTemplateTypeText(argText));
-  return isBuiltinVectorType(inner, namespacePrefix, structNames);
-}
-
 // A parameter type the address ABI passes as one slot: a scalar, a struct (its address), or a Pointer or Reference to
 // a scalar or such a struct (the address). A `copy` or `move` parameter of a scalar or of a struct that is not a sum
 // is taken too: the call site binds it (copying or moving the argument) in its own frame and passes the value or the
@@ -512,7 +469,8 @@ bool isAddressAbiParameter(
     const std::unordered_set<std::string> &structNames,
     const std::unordered_map<std::string, const Definition *> &definitionsByPath,
     bool allowStringParams,
-    bool allowCollections) {
+    bool allowCollections,
+    bool allowSliceParams) {
   // A default (`[i32] limit{3i32}`) is fine: the call site binds the parameter, default included, as an inlined call
   // would, and the callee gets its value.
   if (isArgsPackBinding(param) || param.args.size() > 1) {
@@ -536,6 +494,9 @@ bool isAddressAbiParameter(
     }
     if (!ownedParam && isReferenceToBuiltinVector(transform, def.namespacePrefix, structNames)) {
       return true;
+    }
+    if (allowSliceParams && !ownedParam && isBorrowedSliceType(transform, structNames)) {
+      return true; // the caller's record of a data address and a count, borrowed
     }
     if (transform.name == "map" && transform.templateArgs.size() == 2 &&
         transform.arguments.empty()) {
@@ -753,8 +714,13 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     }
   }
   for (const Expr &param : def.parameters) {
-    if (!isAddressAbiParameter(
-            def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
+    if (!isAddressAbiParameter(def,
+                               param,
+                               structNames,
+                               byPath,
+                               context.allowStringParams,
+                               context.allowCollections,
+                               context.allowSliceParams)) {
       return AddressAbiBlocker::Parameter;
     }
     if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
@@ -1111,6 +1077,7 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
       definitionContext.refuseSumParameters = true;
       definitionContext.allowVectorResults = true;
       definitionContext.narrowCollectionsRoot = true;
+      definitionContext.allowSliceParams = true;
     }
     if (defIt == byPath.end() || !isRealCallShapeEligible(*defIt->second, definitionContext)) {
       continue;
@@ -1139,8 +1106,13 @@ RealCallBlocker realCallBlocker(const Definition &def, const RealCallShapeContex
   const auto &structNames = *context.structNames;
   for (const Expr &param : def.parameters) {
     const std::string subject = "parameter `" + param.name + "` ";
-    if (isAddressAbiParameter(
-            def, param, structNames, byPath, context.allowStringParams, context.allowCollections)) {
+    if (isAddressAbiParameter(def,
+                              param,
+                              structNames,
+                              byPath,
+                              context.allowStringParams,
+                              context.allowCollections,
+                              context.allowSliceParams)) {
       if (context.refuseSumParameters && isSumParameter(def, param, structNames, byPath)) {
         return {"sum-parameter",
                 subject +

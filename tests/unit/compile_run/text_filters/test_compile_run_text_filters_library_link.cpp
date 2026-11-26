@@ -68,6 +68,52 @@ main() {
 }
 )";
 
+const std::string SliceSource = R"(
+import /std/collections/*
+import /std/collections/slice/*
+
+[namespace summary("Borrowed slices.")]
+sl {
+  [public return<i32> effects(none)]
+  total([ReadSlice<u8>] bytes) {
+    [i32 mut] sum{0i32}
+    [i32 mut] i{0i32}
+    while(i < bytes.count()) {
+      sum = sum + convert<i32>(bytes.at(i))
+      i = i + 1i32
+    }
+    return(sum)
+  }
+
+  [public return<i32> effects(none)]
+  fill([WriteSlice<u8> mut] out, [u8] value) {
+    [i32 mut] i{0i32}
+    while(i < out.count()) {
+      out.set(i, value)
+      i = i + 1i32
+    }
+    return(out.count())
+  }
+}
+)";
+
+const std::string SliceApp = R"(import</sl>
+import /sl/*
+import /std/collections/*
+import /std/collections/slice/*
+
+[return<i32> effects(heap_alloc, io_out)]
+main() {
+  [vector<u8> mut] v{vector<u8>(1u8, 2u8, 3u8, 4u8)}
+  [ReadSlice<u8>] w{/std/collections/vector/view<u8>(v)}
+  print_line(total(w))
+  [WriteSlice<u8> mut] out{/std/collections/vector/sliceMut<u8>(v, 1i32, 3i32)}
+  print_line(fill(out, 9u8))
+  print_line(total(/std/collections/vector/view<u8>(v)))
+  return(0i32)
+}
+)";
+
 void writeIn(const std::filesystem::path &dir, const std::string &name, const std::string &text) {
   std::filesystem::create_directories((dir / name).parent_path());
   std::ofstream file(dir / name, std::ios::binary);
@@ -617,6 +663,26 @@ main() {
   const Run run = runApp(dir, "vm", "");
   CHECK_MESSAGE(run.err.empty(), run.err);
   CHECK(run.exitCode == 5);
+}
+
+TEST_CASE("library link: a ReadSlice and a WriteSlice parameter cross the library on the vm") {
+  const std::filesystem::path dir = testScratchPath("library_link_slices_vm");
+  const std::string sl = buildLibrary(dir, "sl", SliceSource);
+  writeIn(dir, "app.prime", SliceApp);
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(sl));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 0);
+  CHECK(linked.out == "10\n2\n23\n");
+}
+
+TEST_CASE("library link: a ReadSlice and a WriteSlice parameter cross the library on optexe") {
+  const std::filesystem::path dir = testScratchPath("library_link_slices_optexe");
+  const std::string sl = buildLibrary(dir, "sl", SliceSource);
+  writeIn(dir, "app.prime", SliceApp);
+  const Run linked = runApp(dir, "optexe", "--library " + quoteShellArg(sl));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 0);
+  CHECK(linked.out == "10\n2\n23\n");
 }
 
 TEST_SUITE_END();

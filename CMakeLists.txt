@@ -635,6 +635,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererPackedErrorTypes.cpp
   src/ir_lowerer/IrLowererCollectionRecordShapes.cpp
   src/ir_lowerer/IrLowererRealCallBlockerText.cpp
+  src/ir_lowerer/IrLowererRealCallParameterTypes.cpp
   src/ir_lowerer/IrLowererInlineReport.cpp
   src/ir_lowerer/IrLowererInlineExpansionCounter.cpp
   src/ir_lowerer/IrLowererStringParameterUse.cpp

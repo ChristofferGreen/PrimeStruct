@@ -2686,6 +2686,7 @@ are left unarchived.
 | TODO-6278 | A program that links the `/std/http/server` library fails to parse its interface | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6279 | A stdlib file whose struct holds a collection of structs is refused as a library root | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6280 | A `Function` alias that names a struct of its namespace is not resolved in other namespaces | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6281 | A public function with a `ReadSlice<u8>` parameter is refused as a library function | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6282 | A library of a struct with a `Function` field has an interface that does not define the box | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6284 | A stdlib file named as a library root does not see the other files of its module | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6285 | `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*` | [2026-11.md](todo_archive/2026-11.md) | - |

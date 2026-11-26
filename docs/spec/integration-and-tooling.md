@@ -338,10 +338,18 @@ A struct of a library that holds a `Function` field carries the field's box in t
 final; a program's own closure cannot be converted to it (TODO-6283), so a library takes `Function` values only from its
 own code.
 
-Not every stdlib file is a library root: a public function whose parameter or result is a collection record (a
-`ReadSlice<u8>`, a `vector<T>`, a `Result`) is refused by the shape rule of the address ABI, so `primec --emit=lib
-stdlib/std/http/http.prime` names `parseRequestBytes` and its `ReadSlice<u8>` parameter. The way out is a root file of
-scalar and struct functions (or one that wraps the parser behind them); a program that only needs the file's code
+**Slices.** A borrowed slice crosses the library boundary as a data address and an element count. A `ReadSlice<T>`
+or `WriteSlice<T>` parameter of a public library function (or of a function a library declares) is passed as the
+address of the caller's slice record, whose two slots are the data address of the first element and the element count;
+the callee reads and, for a `WriteSlice<T>`, writes the elements through it and copies nothing, so the slice stays the
+caller's and a `mut` or by-value parameter alike borrows. The record has the same two slots for every element type. The call site
+passes a slice it holds or one a call returns (`total(v.view())`); a slice stays a borrow, so the library must not keep
+it past the call. `/std/http` is a library root on this rule: `parseRequestBytes` takes a `ReadSlice<u8>` receive
+buffer.
+
+Not every stdlib file is a library root: a public function whose parameter or result is another collection record (a
+`vector<T>`, a `Result`, an `array`) is refused by the shape rule of the address ABI. The way out is a root file of
+scalar, struct and slice functions (or one that wraps the code behind them); a program that only needs the file's code
 imports it as source, `import /std/http/*`.
 `stdlib/std/gfx/gfx.prime` is refused the same way (`Device/create_mesh` takes an `array`), and
 `stdlib/std/build_runner/build_runner.prime` is not a root of its own: it calls the `build` function of the program

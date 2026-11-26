@@ -114,6 +114,9 @@ struct RealCallShapeContext {
   // The helpers under `/std/collections/` are expanded inline, which the root rule keeps. For the functions of a
   // library the rule narrows: one that takes or returns a collection record is refused, a scalar helper is not.
   bool narrowCollectionsRoot = false;
+  // A `ReadSlice<T>` or `WriteSlice<T>` parameter of a scalar element: the data address and element count of a
+  // borrowed view, passed as the address of the caller's record. For the functions of a library.
+  bool allowSliceParams = false;
 };
 
 // Whether `def` can be lowered once as a function and called (the parameter, receiver and result shapes above),

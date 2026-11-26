@@ -623,21 +623,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 
-- [~] TODO-6281: A public function with a `ReadSlice<u8>` parameter is refused as a library function
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (found with TODO-6279)
-  - parallel_track: lib-shapes
-  - decision (owner, 2026-11-26): borrowed slices cross the library ABI as a pointer and a count. A `ReadSlice<T>`/`WriteSlice<T>` parameter of a public library function is passed as its data address and element count, so `/std/http` can be a library root.
-  - blocked_on: owner decision, which parameter shapes the library ABI takes
-  - scope: with the type check of TODO-6279 passed, `primec --emit=lib stdlib/std/http/http.prime` says `public function /std/http/parseRequestBytes cannot be compiled into a library: parameter `bytes` has a type (`ReadSlice<u8>`) the address ABI does not pass: a scalar, a struct outside the collections, or a reference or pointer to one`. This is the designed shape rule (a collection record is not passed), so `/std/http` is a library root only after a decision on borrowed collection parameters (see TODO-6173 for the sum case); until then the way out is a root file of scalar and struct functions, or building the library from a file that wraps the parser.
-  - acceptance:
-    - the owner picks the shapes; the leaf is then split into one leaf per shape
-  - stop_rule: no code before the decision.
-  - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
-
 - [ ] TODO-6305: An operator site the prediction cannot type validates the program twice
   - owner: ai
   - status: deferred
