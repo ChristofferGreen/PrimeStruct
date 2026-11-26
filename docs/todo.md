@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6297: A program that imports one `/std/math` type validates and publishes the whole math module
+- [~] TODO-6297: A program that imports one `/std/math` type validates and publishes the whole math module
   - owner: ai
   - status: ready
+  - claimed_by: worker-structarr (worktree-agent-aa12da6cac787ea77), 2026-11-26
   - created_at: 2026-11-26
   - phase: Compiler memory (found by TODO-6293)
   - parallel_track: semantic-memory
