@@ -667,9 +667,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
   - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
 
-- [ ] TODO-6291: Operator helpers of matrix and quaternion are private again and still reach a library
+- [~] TODO-6291: Operator helpers of matrix and quaternion are private again and still reach a library
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (follow-up of TODO-6287)
   - parallel_track: lib-shapes
