@@ -327,6 +327,12 @@ file (lazily or whole; `--emit-deps` does not list it) and splices the file's st
 `StringView` parameters; `import</std/path>` before it is allowed and does the same splice first. The modules of the
 family that have no library (matrix, quaternion) come from the stdlib source as before.
 
+Not every stdlib file is a library root: a public function whose parameter or result is a collection record (a
+`ReadSlice<u8>`, a `vector<T>`, a `Result`) is refused by the shape rule of the address ABI, so `primec --emit=lib
+stdlib/std/http/http.prime` names `parseRequestBytes` and its `ReadSlice<u8>` parameter. The way out is a root file of
+scalar and struct functions (or one that wraps the parser behind them); a program that only needs the file's code
+imports it as source, `import /std/http/*`.
+
 **The marker.** `[imported(<library>)]` declares a function the library defines. The declaration has an empty body and
 an explicit return type, is not generic, and names exactly one library; each rule is a semantic diagnostic
 (`imported declaration must have an empty body: /f`, `imported declaration requires an explicit return type: /f`,

@@ -2683,6 +2683,8 @@ are left unarchived.
 | TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6275 | Measure the back-end compile of a program that links a library | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6278 | A program that links the `/std/http/server` library fails to parse its interface | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6279 | A stdlib file whose struct holds a collection of structs is refused as a library root | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6280 | A `Function` alias that names a struct of its namespace is not resolved in other namespaces | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

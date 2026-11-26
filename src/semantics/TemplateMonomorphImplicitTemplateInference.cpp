@@ -1025,6 +1025,11 @@ bool inferImplicitTemplateArgs(const Definition &def,
           if (!error.empty()) {
             return false;
           }
+          if (resolvedArg.concrete &&
+              isUnqualifiedStructArgument(
+                  resolvedArg.text, argTemplateArgs[templateIndex], mapping, allowedParams)) {
+            resolvedArg.text = qualifyStructArgument(resolvedArg.text, namespacePrefix, ctx);
+          }
           if (!resolvedArg.concrete) {
             error = "implicit template arguments must be concrete on " + def.fullPath;
             return false;
@@ -1056,6 +1061,10 @@ bool inferImplicitTemplateArgs(const Definition &def,
       ResolvedType resolvedArg = resolveTypeString(argType, mapping, allowedParams, namespacePrefix, ctx, error);
       if (!error.empty()) {
         return false;
+      }
+      if (resolvedArg.concrete &&
+          isUnqualifiedStructArgument(resolvedArg.text, argType, mapping, allowedParams)) {
+        resolvedArg.text = qualifyStructArgument(resolvedArg.text, namespacePrefix, ctx);
       }
       if (!resolvedArg.concrete) {
         if (isStdlibCollectionHelper && allInferredParamNamesKnown(inferredParamNames)) {

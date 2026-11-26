@@ -75,6 +75,15 @@ ResolvedType resolveTypeStringImpl(std::string input,
                                    std::string &error,
                                    std::unordered_set<std::string> &substitutionStack);
 
+// The path of a struct a template argument names without its namespace, when only its own namespace sees it.
+bool isUnqualifiedStructArgument(const std::string &text,
+                                 const std::string &arg,
+                                 const SubstMap &mapping,
+                                 const std::unordered_set<std::string> &allowedParams);
+std::string qualifyStructArgument(const std::string &text,
+                                  const std::string &namespacePrefix,
+                                  const Context &ctx);
+
 ResolvedType resolveTypeString(std::string input,
                                const SubstMap &mapping,
                                const std::unordered_set<std::string> &allowedParams,

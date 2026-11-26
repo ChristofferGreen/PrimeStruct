@@ -134,9 +134,13 @@ private:
   std::string &error;
   std::map<std::string, TypeAlias> aliases;
   std::map<std::string, std::string> expandedTargets;
+  std::set<std::string> definitionPaths;
   std::vector<std::string> resolving;
 
   bool collect() {
+    for (const Definition &def : program.definitions) {
+      definitionPaths.insert(def.fullPath);
+    }
     for (Definition &def : program.definitions) {
       size_t aliasIndex = def.transforms.size();
       bool isPublic = false;
@@ -263,12 +267,75 @@ private:
     }
     resolving.push_back(alias.path);
     const std::set<std::string> shadow(alias.params.begin(), alias.params.end());
-    const bool ok = expandText(alias.target, alias.scope, shadow, out);
+    bool ok = expandText(alias.target, alias.scope, shadow, out);
     resolving.pop_back();
     if (ok) {
+      out = qualifyDefinitionNames(out, alias.scope, shadow);
       expandedTargets.emplace(alias.path, out);
     }
     return ok;
+  }
+
+  // Whether the root namespace sees `token` as a definition: a root definition, or one a root import brings in. Such a
+  // name keeps its spelling, as a `Function` written with it elsewhere in the program does, since a type argument is
+  // keyed by its text.
+  bool visibleFromRoot(const std::string &token) const {
+    if (definitionPaths.count("/" + token) > 0) {
+      return true;
+    }
+    for (const std::string &importPath : program.imports) {
+      if (importPath.size() > 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+        if (definitionPaths.count(importPath.substr(0, importPath.size() - 2) + "/" + token) > 0) {
+          return true;
+        }
+      } else if (leafOf(importPath) == token && definitionPaths.count(importPath) > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // The names in an alias target that a definition at or below `scope` declares, spelled with their full paths. The
+  // target is spliced into definitions of other namespaces (a struct field of the alias type that a collection
+  // instantiates), where a name written relative to the alias's own namespace would no longer resolve.
+  std::string qualifyDefinitionNames(const std::string &text,
+                                     const std::string &scopeIn,
+                                     const std::set<std::string> &shadow) const {
+    std::string out;
+    size_t i = 0;
+    while (i < text.size()) {
+      if (!isNameStart(text[i]) || (i > 0 && isNameChar(text[i - 1]))) {
+        out.push_back(text[i]);
+        ++i;
+        continue;
+      }
+      size_t end = i;
+      while (end < text.size() && isNameChar(text[end])) {
+        ++end;
+      }
+      const std::string token = text.substr(i, end - i);
+      i = end;
+      if (token.front() == '/' || shadow.count(token) > 0) {
+        out += token;
+        continue;
+      }
+      if (visibleFromRoot(token)) {
+        out += token;
+        continue;
+      }
+      std::string scope = stripScope(scopeIn);
+      std::string found;
+      while (!scope.empty()) {
+        if (definitionPaths.count(scope + "/" + token) > 0) {
+          found = scope + "/" + token;
+          break;
+        }
+        const size_t slash = scope.rfind('/');
+        scope.resize(slash == std::string::npos ? 0 : slash);
+      }
+      out += found.empty() ? token : found;
+    }
+    return out;
   }
 
   // Replaces each name in `text` that is a type alias by its target, applying the alias's parameters to the

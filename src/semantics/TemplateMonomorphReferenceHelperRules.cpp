@@ -585,6 +585,11 @@ PhaseStatus rewriteSamePathHelperTemplate(ExprReferenceContext &rc) {
       }
     }
     if (allConcrete) {
+      for (std::string &templateArg : expr.templateArgs) {
+        if (isUnqualifiedStructArgument(templateArg, templateArg, mapping, allowedParams)) {
+          templateArg = qualifyStructArgument(templateArg, namespacePrefix, ctx);
+        }
+      }
       std::string specializedPath;
       if (!instantiateTemplate(
               resolvedPath,

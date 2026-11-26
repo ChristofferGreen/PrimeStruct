@@ -409,4 +409,117 @@ TEST_CASE("library link: a generic function holding a lambda is a function of th
   CHECK(linked.exitCode == 9);
 }
 
+TEST_CASE("library link: a method that reads a collection of the namespace's structs is a function "
+          "of the archive") {
+  // The element type of a `vector` read in a method of a struct is a struct of the struct's namespace; the collection's
+  // instances live in other namespaces, so the argument is written with its path.
+  const std::filesystem::path dir = testScratchPath("library_link_router");
+  const std::string source = R"(
+import /std/collections/*
+
+[namespace summary("Routing.")]
+std {
+  [namespace]
+  web {
+    [public struct]
+    Route() {
+      [public i32] id{0i32}
+    }
+
+    [public struct]
+    Router() {
+      [public vector<Route> mut] routes{vector<Route>()}
+
+      [mut effects(heap_alloc)]
+      add([i32] id) {
+        this.routes.push(Route{[id] id})
+      }
+
+      [effects(heap_alloc), return<i32>]
+      first() {
+        return(this.routes[0i32].id)
+      }
+    }
+
+    [public effects(heap_alloc), return<i32>]
+    run([i32] value) {
+      [Router mut] router{Router{}}
+      router.add(value)
+      return(router.first())
+    }
+  }
+}
+)";
+  const std::string app =
+      "[effects(heap_alloc) return<i32>]\nmain() {\n  return(/std/web/run(10i32))\n}\n";
+  writeIn(dir, "web.prime", source);
+  writeIn(dir, "app.prime", "import<\"web.prime\">\n" + app);
+  const Run whole = runApp(dir, "vm", "");
+  REQUIRE_MESSAGE(whole.exitCode == 10, whole.err);
+
+  const std::string lib = buildLibrary(dir, "web", source);
+  writeIn(dir, "app.prime", "import</std/web>\n" + app);
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(lib));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 10);
+}
+
+TEST_CASE("library link: a Function alias that names a struct of its namespace builds without a "
+          "root import") {
+  // The alias is spliced into a struct that a collection instantiates in another namespace.
+  const std::filesystem::path dir = testScratchPath("library_link_function_alias");
+  writeIn(dir, "app.prime", R"(
+import /std/collections/*
+
+namespace web {
+  [public struct]
+  Request() {
+    [public i32 mut] code{0i32}
+  }
+
+  [public alias<Function<void, Request, Reference<Request>>> effects(none)]
+  Handler() {}
+
+  [public struct]
+  Route() {
+    [public i32] id{0i32}
+    [public Handler mut] handler
+  }
+
+  [public struct]
+  Router() {
+    [public vector<Route> mut] routes{vector<Route>()}
+
+    [mut effects(heap_alloc)]
+    add([i32] id, [Handler move] handler) {
+      this.routes.push(Route{[id] id, [handler] handler})
+    }
+
+    [mut effects(heap_alloc), return<i32>]
+    handle([i32] value) {
+      [Request mut] request{Request{[code] value}}
+      [Request mut] response{Request{}}
+      this.routes[0i32].handler(request, response)
+      return(response.code + this.routes[0i32].id)
+    }
+  }
+
+  [public effects(heap_alloc), return<i32>]
+  run() {
+    [Router mut] router{Router{}}
+    router.add(3i32, []([Request] request, [Reference<Request>] response) { response.code = request.code + 1i32 })
+    return(router.handle(10i32))
+  }
+}
+
+[effects(heap_alloc) return<i32>]
+main() {
+  return(/web/run())
+}
+)");
+  const Run whole = runApp(dir, "vm", "");
+  CHECK_MESSAGE(whole.err.empty(), whole.err);
+  CHECK(whole.exitCode == 14);
+}
+
 TEST_SUITE_END();
