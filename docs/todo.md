@@ -649,20 +649,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [~] TODO-6287: A program that links the `/std/math/matrix` or quaternion library cannot use the operators on Mat and Quat
+- [ ] TODO-6289: The operators of a matrix or quaternion with a scalar (`multiply(m, 2.0f32)`, `divide(m, 2.0f32)`) are not lowered on the VM
   - owner: ai
   - status: ready
-  - claimed_by: worker-lib-shapes (worktree-agent-a48d3434bab9719e0), 2026-11-26
   - created_at: 2026-11-26
-  - phase: Modules and libraries (found by TODO-6284)
+  - phase: Modules and libraries (found by TODO-6287)
   - parallel_track: lib-shapes
-  - scope: `primec --emit=lib stdlib/std/math/matrix.prime -o matrix.psa` and the vector library build (TODO-6284), but `multiply(m, m)` of two `Mat2` in a program that links both stops with `VM lowering error: vm backend only supports arithmetic/comparison/... calls in expressions (call=/multiply, name=/std/math/mat2_mul_mat2_internal ...)`. The lowerer rewrites an operator on a matrix or quaternion to a call of a private helper (`mat2_mul_mat2_internal`, `quat_multiply_internal` and the `_add_`, `_sub_`, `_scale_`, `_scale_left_`, `_div_scalar_` and `_mul_vec` ones; src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp), and a private helper is not in the interface of the library. With the helpers made `public` the link goes through but the value is wrong: `[Mat2] p{multiply(m, m)}` then `p.m00` gives 0 where the whole program gives 7 (the direct call `/std/math/mat2_mul_mat2_internal(m, m)` gives 7), so the rewritten call is lowered as something other than the call of the imported function. Decide whether the rewrite goes through the interface (the helpers are public and the lowerer calls them as an imported function) or the semantic product names the helper call.
+  - scope: in a whole program, `import /std/math/*`, `[Mat2] m{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}`, `[Mat2] s{multiply(m, 2.0f32)}` stops with `VM lowering error: vm backend only supports arithmetic/comparison/... calls in expressions (call=/multiply, name=/std/math/mat2_scale_internal, args=2, method=false)`; the same for `divide`, for `multiply(2i32, m)`, for Mat3, Mat4 and Quat. The helpers `mat2_scale_internal`, `_scale_left_`, `_div_scalar_` take `[auto] scale`, so they are templates, and the lowerer rewrite (src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp) names the template path, not an instance, so no function exists to call. The tests `runs vm matrix arithmetic helpers with tolerance` and the quaternion one hide this: they run through `runVmCommandOrExpectUnsupported`, which accepts exactly this error as a pass. Fix: the semantics pass instantiates the helper for the scalar type (or the helpers take `f32` and the rewrite converts the operand), and the two tests stop tolerating the error.
   - acceptance:
-    - a library of matrix links with the vector library and gives the whole-program result for `Mat2 * Mat2`, `Mat2 * Vec2`, `Mat2 + Mat2` and a scalar scale, and the same for `Quat`, on the VM, with a library link test
-    - never a silently different value: a helper the interface lacks is a diagnostic
+    - `Mat2`, `Mat3`, `Mat4` and `Quat` times, left times and divided by a scalar give the right value on the VM and optexe, in a whole program and in a program that links the matrix and quaternion libraries (library link test next to the TODO-6287 ones)
+    - the two vm math tests run without `runVmCommandOrExpectUnsupported`
     - full release gate green
-  - stop_rule: the operator rewrite of the lowerer and the interface of the two stdlib files; no change to the library ABI.
-  - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o matrix.psa`, `primec --emit=lib stdlib/std/math/vector.prime -o vector.psa`, then `primec --emit=vm --library matrix.psa --library vector.psa app.prime --entry /main` with `import</std/math>`, `import /std/math/*` and `[Mat2] p{multiply(m, m)}`.
+  - stop_rule: the operator rewrite and the scalar helpers of matrix.prime and quaternion.prime.
+  - repro: the program above with `primec --emit=vm app.prime --entry /main`.
 
 - [ ] TODO-6288: Library code outside the slice and container primitives is not `[unsafe]`
   - owner: ai

@@ -41,7 +41,7 @@ namespace std {
     }
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_add_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.x + right.x,
@@ -51,7 +51,7 @@ namespace std {
     })
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_sub_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.x - right.x,
@@ -61,7 +61,7 @@ namespace std {
     })
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_scale_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
     return(Quat{
@@ -72,12 +72,12 @@ namespace std {
     })
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_scale_left_internal([auto] scale, [Quat] value) {
     return(quat_scale_internal(value, scale))
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_div_scalar_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
     return(Quat{
@@ -88,7 +88,7 @@ namespace std {
     })
   }
 
-  [return<Quat> effects(none)]
+  [public return<Quat> effects(none)]
   quat_multiply_internal([Quat] left, [Quat] right) {
     return(Quat{
       left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
@@ -98,7 +98,7 @@ namespace std {
     })
   }
 
-  [return<Vec3> effects(none)]
+  [public return<Vec3> effects(none)]
   quat_rotate_vec3_internal([Quat] rotation, [Vec3] value) {
     [Mat3] basis{quat_to_mat3(rotation)}
     return(Vec3{

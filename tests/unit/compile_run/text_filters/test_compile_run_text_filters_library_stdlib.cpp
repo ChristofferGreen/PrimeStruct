@@ -127,6 +127,45 @@ primec::LibraryArchiveContent readArchive(const std::string &path) {
   return content;
 }
 
+// The operators on a matrix or a quaternion run helpers of their library: a program that links it gives the
+// whole-program values on the VM and in an optexe executable.
+void checkOperatorsLinkLikeTheWholeBuild(const char *testName,
+                                         const std::string &app,
+                                         const std::vector<std::string> &files) {
+  for (const std::string emit : {"vm", "optexe"}) {
+    INFO(emit);
+    const std::filesystem::path dir = testScratchPath(std::string(testName) + "_" + emit);
+    const auto run = [&](const std::string &extra) {
+      const std::string source = quoteShellArg((dir / "app.prime").string());
+      if (emit == "vm") {
+        return shell(dir, "./primec --emit=vm " + extra + " " + source + " --entry /main");
+      }
+      const std::string exe = (dir / "app_exe").string();
+      const Run built = shell(dir,
+                              "./primec --emit=optexe " + extra + " " + source + " -o " +
+                                  quoteShellArg(exe) + " --entry /main");
+      return built.exitCode != 0 ? built : shell(dir, quoteShellArg(exe));
+    };
+    std::string libraries;
+    const std::string probe = stdlibFile(dir, "/std/math/*", "math/vector.prime");
+    const std::string stdDir =
+        probe.substr(0, probe.size() - std::string("math/vector.prime").size());
+    for (const std::string &file : files) {
+      const std::string name = std::filesystem::path(file).stem().string();
+      libraries += " --library " + quoteShellArg(buildLibrary(dir, stdDir + file, name));
+    }
+    writeIn(dir, "app.prime", withImport(app, ""));
+    const Run whole = run("");
+    REQUIRE_MESSAGE(whole.err.empty(), whole.err);
+    REQUIRE(!whole.out.empty());
+    writeIn(dir, "app.prime", withImport(app, "import</std/math>"));
+    const Run linked = run(libraries);
+    CHECK_MESSAGE(linked.err.empty(), linked.err);
+    CHECK(linked.exitCode == whole.exitCode);
+    CHECK(linked.out == whole.out);
+  }
+}
+
 } // namespace
 
 TEST_CASE("stdlib libraries for color and vector link together and match the whole build") {
@@ -326,6 +365,58 @@ TEST_CASE("stdlib files that need the other files of their module are roots of l
     CHECK(run.err.find("unknown ") == std::string::npos);
     CHECK(run.err.find("unsupported binding type") == std::string::npos);
   }
+}
+
+TEST_CASE("a program that links the matrix library gives the whole-build value for the operators") {
+  const std::string app = R"(@IMPORT@
+import /std/math/*
+
+[return<i32> effects(io_out)]
+main() {
+  [Mat2] m{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Vec2] v{Vec2{1.0f32, 1.0f32}}
+  [Mat2] product{multiply(m, m)}
+  [Vec2] image{multiply(m, v)}
+  [Mat2] sum{plus(m, m)}
+  [Mat2] difference{minus(m, m)}
+  print_line(convert<i32>(product.m00))
+  print_line(convert<i32>(product.m11))
+  print_line(convert<i32>(image.x))
+  print_line(convert<i32>(sum.m10))
+  print_line(convert<i32>(difference.m11))
+  [Mat3] a{Mat3{1.0f32, 0.0f32, 0.0f32, 0.0f32, 2.0f32, 0.0f32, 0.0f32, 0.0f32, 3.0f32}}
+  [Mat3] b{multiply(a, a)}
+  [Mat4] c{Mat4{}}
+  [Mat4] d{plus(c, c)}
+  print_line(convert<i32>(b.m22))
+  print_line(convert<i32>(d.m33))
+  return(0)
+}
+)";
+  checkOperatorsLinkLikeTheWholeBuild(
+      "library_stdlib_matrix_operators", app, {"math/vector.prime", "math/matrix.prime"});
+}
+
+TEST_CASE(
+    "a program that links the quaternion library gives the whole-build value for the operators") {
+  const std::string app = R"(@IMPORT@
+import /std/math/*
+
+[return<i32> effects(io_out)]
+main() {
+  [Quat] q{Quat{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] product{multiply(q, q)}
+  [Quat] sum{plus(q, q)}
+  [Quat] difference{minus(q, q)}
+  print_line(convert<i32>(product.x))
+  print_line(convert<i32>(product.w))
+  print_line(convert<i32>(sum.y))
+  print_line(convert<i32>(difference.z))
+  return(0)
+}
+)";
+  checkOperatorsLinkLikeTheWholeBuild(
+      "library_stdlib_quaternion_operators", app, {"math/vector.prime", "math/quaternion.prime"});
 }
 
 TEST_SUITE_END();

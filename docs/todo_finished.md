@@ -2689,6 +2689,8 @@ are left unarchived.
 | TODO-6284 | A stdlib file named as a library root does not see the other files of its module | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6285 | `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6286 | A `string` literal does not convert to `StringView` inside `/std/build/build.prime` and `/std/text/view.pri... | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6287 | A program that links the `/std/math/matrix` or quaternion library cannot use the operators on Mat and Quat | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6290 | An imported function the call graph does not reach is inlined with an empty body and returns zero | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 
 <!-- INDEX-END -->
 

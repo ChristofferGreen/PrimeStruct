@@ -23,6 +23,7 @@
 #include "IrLowererVectorRecordLayoutHelpers.h"
 #include "primec/ir/StdlibCollectionPaths.h"
 #include "primec/semantics/HostDefinitions.h"
+#include "primec/semantics/ImportedDefinitions.h"
 #include "primec/support/SourceLocationMapper.h"
 
 #include <limits>
@@ -493,7 +494,8 @@ bool emitInlineDefinitionCallImpl(
                                   ir_lowerer::isLifecycleHelperPath(callee.fullPath);
     if (setupStage.realCallAllowStructs && realCallReservationIndex.count(callee.fullPath) == 0 &&
         &callee != setupStage.entryDef &&
-        (lifecycleReentry || !ir_lowerer::isTinyInlineLeaf(callee)) &&
+        (lifecycleReentry || !ir_lowerer::isTinyInlineLeaf(callee) ||
+         isImportedDefinition(callee)) &&
         ir_lowerer::isRealCallShapeEligible(
             callee,
             ir_lowerer::RealCallShapeContext{&setupStage.defMap,
@@ -507,6 +509,12 @@ bool emitInlineDefinitionCallImpl(
       realCallReservationIndex.emplace(
           callee.fullPath, static_cast<uint64_t>(setupStage.realCallEligibleOrder.size()));
       setupStage.realCallEligibleOrder.push_back(callee.fullPath);
+    }
+    // A function a library defines has no body to inline: a call that is not a real call would run nothing and
+    // yield a zero value.
+    if (isImportedDefinition(callee) && realCallReservationIndex.count(callee.fullPath) == 0) {
+      error = "imported function " + callee.fullPath + " cannot be called on this target";
+      return false;
     }
     // The address ABI (the VM and the optimizing C++ emitters): the call site binds the parameters exactly as an
     // inlined call would, in its own frame, and passes each parameter local's value - a scalar, or the address of a
