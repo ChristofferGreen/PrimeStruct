@@ -680,6 +680,11 @@ std::string manifestEntryLeafName(const std::string &fullPath) {
   return lastSlash == std::string::npos ? fullPath : fullPath.substr(lastSlash + 1);
 }
 
+std::string manifestEntryParentPath(const std::string &fullPath) {
+  const size_t lastSlash = fullPath.find_last_of('/');
+  return lastSlash == std::string::npos ? std::string() : fullPath.substr(0, lastSlash);
+}
+
 bool computeLazyStdlibModuleClosureSource(
     std::vector<LazyStdlibModule> &modules,
     const std::string &seedText,
@@ -689,59 +694,121 @@ bool computeLazyStdlibModuleClosureSource(
   std::deque<std::string> pendingTexts;
   pendingTexts.push_back(seedText);
 
-  while (!pendingTexts.empty()) {
-    const std::string text = std::move(pendingTexts.front());
-    pendingTexts.pop_front();
+  // A manifest entry `/Type/name` whose parent `/Type` is itself an entry is a method of that type.
+  std::unordered_map<std::string,
+                     std::pair<const LazyStdlibModule *, const StdlibSymbolManifestEntry *>>
+      entriesByPath;
+  for (const LazyStdlibModule &module : modules) {
+    if (!module.active) {
+      continue;
+    }
+    for (const StdlibSymbolManifestEntry &entry : module.entries) {
+      entriesByPath.emplace(entry.path, std::make_pair(&module, &entry));
+    }
+  }
+  auto isReached = [&](const LazyStdlibModule &owner, const StdlibSymbolManifestEntry &entry) {
+    if (owner.includedPaths.count(entry.path) > 0) {
+      return true;
+    }
+    return std::any_of(previouslyExtracted.begin(),
+                       previouslyExtracted.end(),
+                       [&](const LazyStdlibExtractedSymbol &done) {
+                         return done.module == &owner && done.entry->startLine <= entry.startLine &&
+                                done.entry->endLine >= entry.endLine;
+                       });
+  };
+  // A method is taken only once its type is: a call spelled `.name(` names the method of the receiver's
+  // type, and a receiver's type is spelled by the text that reaches it.
+  auto methodWaitsForType = [&](const StdlibSymbolManifestEntry &entry) {
+    const auto parent = entriesByPath.find(manifestEntryParentPath(entry.path));
+    return parent != entriesByPath.end() &&
+           !isReached(*parent->second.first, *parent->second.second);
+  };
 
-    for (LazyStdlibModule &module : modules) {
-      if (!module.active) {
+  auto includeEntry = [&](LazyStdlibModule &module, const StdlibSymbolManifestEntry &entry) {
+    if (module.loadedSource.path.empty() &&
+        !loadManifestModuleSource(module.sourceFile.string(), module.loadedSource, error)) {
+      return false;
+    }
+    std::string extractedText;
+    bool isNamespace = false;
+    if (!extractAndVerifyManifestedSymbolSource(
+            entry, module.loadedSource, extractedText, error, &isNamespace)) {
+      return false;
+    }
+    module.includedPaths.insert(entry.path);
+    if (isNamespace) {
+      // A stale or hand-written manifest entry for a `namespace` block: its members are manifested on their own.
+      return true;
+    }
+    extracted.push_back(LazyStdlibExtractedSymbol{&module, &entry, extractedText});
+    pendingTexts.push_back(extractedText);
+    return true;
+  };
+
+  std::vector<std::pair<LazyStdlibModule *, const StdlibSymbolManifestEntry *>> waitingMethods;
+  while (true) {
+    while (!pendingTexts.empty()) {
+      const std::string text = std::move(pendingTexts.front());
+      pendingTexts.pop_front();
+
+      for (LazyStdlibModule &module : modules) {
+        if (!module.active) {
+          continue;
+        }
+        for (const StdlibSymbolManifestEntry &entry : module.entries) {
+          if (isReached(module, entry)) {
+            continue;
+          }
+          const std::string leaf = manifestEntryLeafName(entry.path);
+          bool matched = containsWholeWord(text, leaf);
+          if (!matched) {
+            const std::string sugarStructLeaf = constructorSugarStructLeafName(leaf);
+            matched = !sugarStructLeaf.empty() && containsWholeWord(text, sugarStructLeaf);
+          }
+          if (!matched) {
+            const std::string helperTypeLeaf = operatorHelperTypeLeafName(leaf);
+            matched = !helperTypeLeaf.empty() && containsWholeWord(text, helperTypeLeaf);
+          }
+          if (!matched) {
+            continue;
+          }
+          if (methodWaitsForType(entry)) {
+            const bool known =
+                std::any_of(waitingMethods.begin(), waitingMethods.end(), [&](const auto &waiting) {
+                  return waiting.second == &entry;
+                });
+            if (!known) {
+              waitingMethods.emplace_back(&module, &entry);
+            }
+            continue;
+          }
+          if (!includeEntry(module, entry)) {
+            return false;
+          }
+        }
+      }
+    }
+    // A method named earlier whose type has been reached since is taken now; its text is scanned in turn.
+    bool tookWaiting = false;
+    for (size_t index = 0; index < waitingMethods.size();) {
+      auto [module, entry] = waitingMethods[index];
+      if (isReached(*module, *entry)) {
+        waitingMethods.erase(waitingMethods.begin() + static_cast<std::ptrdiff_t>(index));
         continue;
       }
-      for (const StdlibSymbolManifestEntry &entry : module.entries) {
-        if (module.includedPaths.count(entry.path) > 0) {
-          continue;
-        }
-        // A symbol whose lines sit inside one an earlier scan spliced is already in the source.
-        if (std::any_of(previouslyExtracted.begin(),
-                        previouslyExtracted.end(),
-                        [&](const LazyStdlibExtractedSymbol &done) {
-                          return done.module == &module &&
-                                 done.entry->startLine <= entry.startLine &&
-                                 done.entry->endLine >= entry.endLine;
-                        })) {
-          continue;
-        }
-        const std::string leaf = manifestEntryLeafName(entry.path);
-        bool matched = containsWholeWord(text, leaf);
-        if (!matched) {
-          const std::string sugarStructLeaf = constructorSugarStructLeafName(leaf);
-          matched = !sugarStructLeaf.empty() && containsWholeWord(text, sugarStructLeaf);
-        }
-        if (!matched) {
-          const std::string helperTypeLeaf = operatorHelperTypeLeafName(leaf);
-          matched = !helperTypeLeaf.empty() && containsWholeWord(text, helperTypeLeaf);
-        }
-        if (!matched) {
-          continue;
-        }
-        if (module.loadedSource.path.empty() &&
-            !loadManifestModuleSource(module.sourceFile.string(), module.loadedSource, error)) {
-          return false;
-        }
-        std::string extractedText;
-        bool isNamespace = false;
-        if (!extractAndVerifyManifestedSymbolSource(
-                entry, module.loadedSource, extractedText, error, &isNamespace)) {
-          return false;
-        }
-        module.includedPaths.insert(entry.path);
-        if (isNamespace) {
-          // A stale or hand-written manifest entry for a `namespace` block: its members are manifested on their own.
-          continue;
-        }
-        extracted.push_back(LazyStdlibExtractedSymbol{&module, &entry, extractedText});
-        pendingTexts.push_back(extractedText);
+      if (methodWaitsForType(*entry)) {
+        ++index;
+        continue;
       }
+      waitingMethods.erase(waitingMethods.begin() + static_cast<std::ptrdiff_t>(index));
+      if (!includeEntry(*module, *entry)) {
+        return false;
+      }
+      tookWaiting = true;
+    }
+    if (!tookWaiting) {
+      break;
     }
   }
 

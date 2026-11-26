@@ -68,13 +68,15 @@ When semantic behavior changes intentionally shift memory usage:
 
 ### Current Budget Notes
 
-- `math_vector:ast-semantic` keeps a hard cap of `18832500` bytes. Lazy
+- `math_vector:ast-semantic` keeps a hard cap of `13365000` bytes. Lazy
   import of `/std/math` (a `.psmeta` per file) publishes the definitions the
-  program reaches instead of the whole module, so the fixture (which now
-  calls `Vec2.length()`, so its call-target counts stay meaningful) was
-  observed at `13910016` bytes on the release runner, down from `25735168`
-  with the whole module. The cap is the observed value plus 35 percent;
-  `math_vector:semantic-product` keeps `25447500` (observed `18841600`).
+  program reaches instead of the whole module, and the closure scan takes a
+  method (`/Type/name`) only once its type is reached, so the fixture (which
+  calls `Vec2.length()`, so its call-target counts stay meaningful) lists 7
+  definitions instead of 43 and was observed at `9830400` bytes on the
+  release runner, down from `13910016`. The cap is the observation plus 35
+  percent; `math_vector:semantic-product` keeps `14175000` (observed
+  `10403840`, down from `18841600`).
 - `imported_math_body:ast-semantic` keeps a hard cap of `13365000` bytes
   (observed `9830400` on the release runner after the lazy `/std/math`
   import, down from `25657344`; the observation plus 35 percent).

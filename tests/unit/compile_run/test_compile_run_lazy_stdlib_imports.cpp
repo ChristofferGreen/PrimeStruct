@@ -194,10 +194,36 @@ main() {
        pos = dump.find("\n  definitions", pos + 1)) {
     ++definitionLines;
   }
-  // The whole math module is 99 definitions; the name-based scan takes Vec2 and the definitions its calls name.
+  // The whole math module is 99 definitions; the scan takes Vec2 and the methods it calls, not the
+  // `length` of every other math type.
   CHECK(definitionLines > 0);
-  CHECK(definitionLines < 60);
+  CHECK(definitionLines <= 10);
+  CHECK(dump.find("/std/math/Vec3") == std::string::npos);
+  CHECK(dump.find("/std/math/Quat") == std::string::npos);
   CHECK(dump.find("/std/math/Mat4") == std::string::npos);
+}
+
+TEST_CASE(
+    "a method call takes the method of the receiver type and no other type's method of that name") {
+  const std::string source = R"(
+import /std/math/Vec3
+
+[return<int>]
+main() {
+  [Vec3] v{Vec3{[x] 0.0f32, [y] 3.0f32, [z] 4.0f32}}
+  return(convert<i32>(v.length()))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_vec3_method.prime", source);
+  const std::string dumpPath = (testScratchPath("") / "primec_lazy_math_vec3_method.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 5);
+  CHECK(runCommand("./primec --dump-stage=semantic-product " + srcPath + " --entry /main > " +
+                   dumpPath) == 0);
+  const std::string dump = readFile(dumpPath);
+  CHECK(dump.find("/std/math/Vec3/length") != std::string::npos);
+  CHECK(dump.find("/std/math/Vec2/length") == std::string::npos);
+  CHECK(dump.find("/std/math/Vec4/length") == std::string::npos);
+  CHECK(dump.find("/std/math/Quat") == std::string::npos);
 }
 
 TEST_CASE("matrix, quaternion and color operators run through the lazy math import") {
