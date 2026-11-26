@@ -237,6 +237,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-11 (found with TODO-6129)
   - parallel_track: binding-float-compat
+  - decision (owner, 2026-11-26): widening only. An `f64` value does not initialize an `f32` binding, as assignment already refuses it; only lossless widening is implicit, and narrowing needs `convert<f32>(...)`. Apply the same rule to the other scalar pairs the helper accepts, and update docs/spec/type-system.md.
   - scope: `[f32] z{2.5f64}` compiles (`isFloatBindingCompatible` in SemanticsValidatorBindingInitializerRules.cpp lets `f32` and `f64` initialize each other), while `[f32 mut] w{1.0f32}` followed by `w = 2.5f64` is `assign value type mismatch: expected f32, got f64` (TODO-6129, docs/spec/type-system.md: assignment takes the exact type). The same helper accepts `i32`, `bool` and the other scalars for the software `integer`, `decimal` and `complex` bindings. The spec has no implicit float narrowing, and clarity says a binding and an assignment agree. Not decided whether `f32` from `f64` stays an allowed initializer (C++ narrows in `float z = 2.5;` but not in `float z{2.5}`): the owner decides.
   - implementation_notes: options: (a) reject `f64` into `f32` in the binding like the assignment, and fix the stdlib and tests that rely on it; (b) allow the widening `f32` into `f64` only, in both places; (c) keep both float widths interchangeable in both places and document it as the one implicit conversion (then the assignment check changes). Count the programs that rely on it before choosing; do not pick without that count.
   - acceptance:
@@ -355,6 +356,7 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - created_at: 2026-11-20
   - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
   - parallel_track: native-arena-stale-text
+  - decision (owner, 2026-11-26): option (b). The regions of an ended arena are protected (`mprotect` no access) until a later arena reuses them, so a stale read or write faults instead of passing silently; report it with the VM fault text where the signal handler can, and measure the cost per arena end.
   - scope: Ending a native `StringArena` writes the free magic into the header of every block it made, so a later `__pstext_free` of that text reports "invalid heap free address: the block is already free" (exit 3), but every other use of it is unchecked: `capacity`, `usable` and `length` answer 0, and a read or write of its bytes touches the arena's region, which stays mapped and which the next arena reuses (a write then corrupts that arena's blocks without any message). The VM faults on any use ("invalid byte address in IR"). Repro: `[String mut] escaped{String{}}`, open a `StringArena`, `escaped = stringFromI32(7i32)`, close the arena, call `escaped.clear()` and print: native prints and exits 3 only at the destroy of `escaped`; the VM stops at `clear()`.
   - implementation_notes: options for the owner (docs/todo.md TODO-5956 decided to keep the regions mapped): (a) leave as is and document it (done in docs/spec/strings-and-views.md); (b) protect the regions of an ended arena (`mprotect` no access) until the next arena reuses them, so a stale use is a SIGSEGV instead of silent; (c) check the header magic in the byte memory loads and stores of the native backend, which costs every load and store. Not decided; do not pick one without the owner.
   - acceptance:
@@ -638,10 +640,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6281: A public function with a `ReadSlice<u8>` parameter is refused as a library function
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (found with TODO-6279)
   - parallel_track: lib-shapes
+  - decision (owner, 2026-11-26): borrowed slices cross the library ABI as a pointer and a count. A `ReadSlice<T>`/`WriteSlice<T>` parameter of a public library function is passed as its data address and element count, so `/std/http` can be a library root.
   - blocked_on: owner decision, which parameter shapes the library ABI takes
   - scope: with the type check of TODO-6279 passed, `primec --emit=lib stdlib/std/http/http.prime` says `public function /std/http/parseRequestBytes cannot be compiled into a library: parameter `bytes` has a type (`ReadSlice<u8>`) the address ABI does not pass: a scalar, a struct outside the collections, or a reference or pointer to one`. This is the designed shape rule (a collection record is not passed), so `/std/http` is a library root only after a decision on borrowed collection parameters (see TODO-6173 for the sum case); until then the way out is a root file of scalar and struct functions, or building the library from a file that wraps the parser.
   - acceptance:
@@ -665,10 +668,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (found by TODO-6282)
   - parallel_track: lib-shapes
+  - decision (owner, 2026-11-26): option (C), the real fix now. A `Function` holds a function address (index) and an environment, and a call is an indirect call, so a library box dispatches closures of the program that links it; the tag table goes. Split into one leaf per back end if it is larger than one commit.
   - blocked_on: owner decision, how a library's `Function` box dispatches closures of the program that links it
   - scope: the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp). A library that holds such a field owns that dispatch: its interface carries the box with the completed `Copy` and `Destroy` and an imported `call`, so a consumer reads, copies and calls the handlers the library built. A consumer that passes its own lambda where the library takes the `Function` (`router.add(3i32, []([Request] request, [Reference<Request>] response) {...})` against `/web/Router/add`) stops with `unknown call target: /__fn_box`, so a library of `/std/http/server` style handlers cannot take handlers from the program. Options: (A) refuse it with a diagnostic that names the box and the library (cheap, keeps the limit); (B) the consumer owns a second box of the same type under its own name and the library takes a pointer to a call routine: needs a callback ABI; (C) one dispatch by function address (a `Function` holds a function index and an environment, the call is an indirect call): changes the box layout and every back end, removes the tag table, and is the real fix; (D) the link regenerates the box with the closures of every module: the archive then carries code per consumer, against the separate-compilation point.
   - acceptance:
