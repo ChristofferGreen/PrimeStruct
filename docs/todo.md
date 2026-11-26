@@ -661,9 +661,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: lazy import of the math module; no change to the math API.
   - repro: `build-release/primec --dump-stage=semantic-product benchmarks/semantic_memory/fixtures/math_vector.prime --entry /bench/main | grep -c "^  definitions"`.
 
-- [ ] TODO-6296: Indexing an array literal of structs is refused by the VM, exe and native
+- [~] TODO-6296: Indexing an array literal of structs is refused by the VM, exe and native
   - owner: ai
   - status: ready
+  - claimed_by: worker-structarr (worktree-agent-aa12da6cac787ea77), 2026-11-26
   - created_at: 2026-11-26
   - phase: Collections (found by TODO-6294)
   - parallel_track: struct-arrays
