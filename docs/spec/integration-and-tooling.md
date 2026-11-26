@@ -337,6 +337,10 @@ Not every stdlib file is a library root: a public function whose parameter or re
 stdlib/std/http/http.prime` names `parseRequestBytes` and its `ReadSlice<u8>` parameter. The way out is a root file of
 scalar and struct functions (or one that wraps the parser behind them); a program that only needs the file's code
 imports it as source, `import /std/http/*`.
+`stdlib/std/gfx/gfx.prime` is refused the same way (`Device/create_mesh` takes an `array`), and
+`stdlib/std/build_runner/build_runner.prime` is not a root of its own: it calls the `build` function of the program
+that links it. The stdlib files that are refused for a missing name rather than a shape (matrix, quaternion, image, web,
+ui/native, build, text/view, collections/map) are tracked as bugs in `docs/todo.md`, not as rules.
 
 **The marker.** `[imported(<library>)]` declares a function the library defines. The declaration has an empty body and
 an explicit return type, is not generic, and names exactly one library; each rule is a semantic diagnostic

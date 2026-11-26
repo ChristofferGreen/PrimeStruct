@@ -648,6 +648,47 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
+- [ ] TODO-6284: A stdlib file named as a library root does not see the other files of its module
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
+  - parallel_track: lib-shapes
+  - scope: `primec --emit=lib stdlib/std/math/matrix.prime` says `unknown return type: Vec2 on /std/math/mat2_mul_vec2_internal`; quaternion says the same for `Vec3`; `stdlib/std/web/web.prime` says `unknown call target: fragmentScript` (fragment_script.prime is a sibling); `stdlib/std/ui/native/native.prime` says `unsupported binding type: Command` (a type of /std/ui/events); `stdlib/std/image/image.prime` says `unknown return type: ImageError on /ImageError/read_unsupported` (its root-level helpers name a struct the importer's `import /std/image/*` brings). The same text comes out of `--emit=vm --entry` for a program that starts with `import<"stdlib/std/math/matrix.prime">`, so this is not a library rule: a file named by its path is read as one user file, while `import /std/math/*` reads the whole directory (and these files work that way). Adding `import /std/math/*` to matrix.prime gives `duplicate definition: /std/math/Mat2`, because the stdlib pass then reads matrix.prime a second time as a module file. Fix: the stdlib pass marks the root file (when it lies under the stdlib directory) as seen before it reads a module, and the files above gain the import of their own module (and of `/std/ui/events/*`, `/std/web/fragment_script`), so each is a self-contained root; a library of one of them then owns the roots of that file only (the rule of the stdlib libraries in docs/spec/integration-and-tooling.md).
+  - acceptance:
+    - `--emit=lib` of matrix, quaternion, image, web and ui/native builds (or names a shape rule, not a missing name), and a library of matrix links with the vector library and gives the whole-program result on the VM
+    - the unchanged programs that import the modules as source give the same results
+    - full release gate green
+  - stop_rule: the stdlib pass (src/pipeline/CompilePipelineStdlib.cpp) reading a root that is itself a stdlib file, and the imports of those files; no change to the library ABI.
+  - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o m.psa`.
+
+- [ ] TODO-6285: `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
+  - parallel_track: lib-shapes
+  - scope: `primec --emit=lib stdlib/std/collections/map.prime` stops with `unknown import path: /std/collections/equality/*` (no source line). `/std/collections/equality` is a file of the `/std/collections` directory, not a module root of `stdlib/std/modules.psmeta`, and a user program that writes `import /std/collections/equality/*` gets the same message, while `import /std/collections/*` loads it. The same refusal comes out of `--emit=vm --entry`, so it is not a library rule. Either the files of the directory that other stdlib files import by name get a module root (equality, errors, vector are importable already: `import /std/collections/vector/*` works), or map.prime imports the directory.
+  - acceptance:
+    - `--emit=lib stdlib/std/collections/map.prime` builds or names a shape rule (a map's public functions take collection records, so a shape rule is the likely answer, which is then documented in docs/spec/integration-and-tooling.md)
+    - a program that imports map as before gives the same result
+    - full release gate green
+  - stop_rule: the import path of `equality`; no change to the library ABI.
+  - repro: `primec --emit=lib stdlib/std/collections/map.prime -o map.psa`.
+
+- [ ] TODO-6286: A `string` literal does not convert to `StringView` inside `/std/build/build.prime` and `/std/text/view.prime` read as a root
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
+  - parallel_track: lib-shapes
+  - scope: `primec --emit=lib stdlib/std/build/build.prime` says `argument type mismatch for /std/build/Compiler/emit parameter kind: expected /std/text/view/StringView` at `settings.emit("lib")` in `Build/library` (settings is a `[Compiler mut]` local copied from a parameter); `stdlib/std/text/view.prime` says `unsupported binding type: StringView` at `[StringView] part{parts[i]}` in `/std/text/String/opPlusMany` (a method of a `String` written in the view file, naming the view type bare). Both come out of `--emit=vm --entry` with `import<"<path of the file>">` and a user program of `import /std/text/*` and `import /std/text/view/*`, and neither happens when the module is imported (`import /std/build/*`, `import /std/text/view/*`), and a user struct with the same method shape converts the literal (`tool.emit("lib")` with a `[StringView] kind` parameter, in a program that imports `/std/text/view/*`). So it is a name resolution or conversion-rule difference for a stdlib file read as user source, in src/semantics/TemplateMonomorphTextViewConversions.cpp (`namesStringView`) and the binding type check. Find the difference, then fix it where the stdlib file is read.
+  - acceptance:
+    - `--emit=lib` of build.prime and view.prime builds or names a shape rule; `--emit=vm --entry` of a program that imports either file by path gives the result of importing the module
+    - full release gate green
+  - stop_rule: the two diagnostics above; no change to the library ABI.
+  - repro: `primec --emit=lib stdlib/std/build/build.prime -o b.psa`; `primec --emit=lib stdlib/std/text/view.prime -o v.psa`.
+
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
   - status: deferred
