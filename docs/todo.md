@@ -649,9 +649,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6288: Library code outside the slice and container primitives is not `[unsafe]`
+- [~] TODO-6288: Library code outside the slice and container primitives is not `[unsafe]`
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
   - created_at: 2026-11-26
   - phase: Safety (user decision 2026-11-26 on the slice constructors of TODO-5511/TODO-6198)
   - parallel_track: stdlib-safe-slices
