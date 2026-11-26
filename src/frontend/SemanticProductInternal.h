@@ -130,15 +130,26 @@ inline std::string formatSemanticRequirementOperandList(
   return out.str();
 }
 
-inline void appendSemanticHeaderLine(std::ostringstream &out, std::string_view label, const std::string &value) {
-  out << "  " << label << ": " << value << "\n";
+inline void
+appendSemanticHeaderLine(std::string &out, std::string_view label, const std::string &value) {
+  out += "  ";
+  out += label;
+  out += ": ";
+  out += value;
+  out += '\n';
 }
 
-inline void appendSemanticIndexedLine(std::ostringstream &out,
-                               std::string_view label,
-                               size_t index,
-                               const std::string &value) {
-  out << "  " << label << "[" << index << "]: " << value << "\n";
+inline void appendSemanticIndexedLine(std::string &out,
+                                      std::string_view label,
+                                      size_t index,
+                                      const std::string &value) {
+  out += "  ";
+  out += label;
+  out += '[';
+  out += std::to_string(index);
+  out += "]: ";
+  out += value;
+  out += '\n';
 }
 
 inline std::string formatSemanticSourceLocation(int line, int column) {

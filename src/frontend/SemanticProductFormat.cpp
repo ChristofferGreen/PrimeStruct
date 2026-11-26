@@ -12,8 +12,17 @@ namespace primec {
 using namespace semantic_product_detail;
 
 std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
-  std::ostringstream out;
-  out << "semantic_product {\n";
+  // One line per entry: reserving the estimate up front avoids the doubling copies of a growing string.
+  constexpr size_t EstimatedLineBytes = 320;
+  const size_t lineCount =
+      semanticProgram.definitions.size() + semanticProgram.executions.size() +
+      semanticProgram.directCallTargets.size() + semanticProgram.methodCallTargets.size() +
+      semanticProgram.callableSummaries.size() + semanticProgram.bindingFacts.size() +
+      semanticProgram.returnFacts.size() + semanticProgram.queryFacts.size() +
+      semanticProgram.tryFacts.size() + semanticProgram.onErrorFacts.size();
+  std::string out;
+  out.reserve(lineCount * EstimatedLineBytes);
+  out += "semantic_product {\n";
   appendSemanticHeaderLine(out, "entry_path", quoteSemanticString(semanticProgram.entryPath));
   for (size_t i = 0; i < semanticProgram.sourceImports.size(); ++i) {
     appendSemanticIndexedLine(out, "source_imports", i, quoteSemanticString(semanticProgram.sourceImports[i]));
@@ -753,8 +762,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle));
   }
-  out << "}\n";
-  return out.str();
+  out += "}\n";
+  return out;
 }
 
 } // namespace primec

@@ -648,19 +648,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [~] TODO-6293: Each non-template stdlib math definition costs about a megabyte of semantic-product memory
+- [ ] TODO-6297: A program that imports one `/std/math` type validates and publishes the whole math module
   - owner: ai
   - status: ready
-  - claimed_by: sem-memory (worktree-agent-aa3d7d67dd84774e0), 2026-11-26
   - created_at: 2026-11-26
-  - phase: Compiler memory (found by the scalar operator helpers)
+  - phase: Compiler memory (found by TODO-6293)
   - parallel_track: semantic-memory
-  - scope: making the 12 scalar helpers of matrix.prime and quaternion.prime non-template (`[auto] scale` became `[f32] scale`) raised the `semantic-product` phase of `primec --dump-stage=semantic-product` on a program that imports only `/std/math/Vec2` from 37-39 MB to 44-47 MB (`python3 scripts/semantic_memory_benchmark.py --primec build-release/primec --repo-root . --fixtures math_vector --phases semantic-product`); removing the helpers gives 34 MB. About a megabyte per definition is far more than the facts of a dozen small bodies need, and a program that does not use a matrix pays it. The budget for `imported_math_body`, `math_vector` and `math_vector_matrix` was raised to 51 MB (benchmarks/semantic_memory_budget_policy.json) to land the operator fix. Find what the product keeps per definition (or why unused library definitions are validated at all when the program imports one type) and reduce it.
+  - scope: `primec --dump-stage=semantic-product benchmarks/semantic_memory/fixtures/math_vector.prime` (imports only `/std/math/Vec2`) lists 99 definitions: Vec2, Vec3, Vec4, the colors, quaternion and matrix helpers. `/std/math` is a directory of four files (color, matrix, quaternion, vector) with no `.psmeta` symbol manifest and no single source file, so lazy stdlib import (`resolveSingleFileStdlibModuleSource` in src/pipeline/CompilePipelineStdlib.cpp) declines it and the whole module is spliced, validated and published (11978 facts, a 3.4 MB dump, about 10 MB of validation memory and 8 MB for the publication snapshot). Make the module lazy-eligible (a manifest per file, or one module file) so a program pays for the definitions its closure uses.
   - acceptance:
-    - the `math_vector` and `imported_math_body` semantic-product peaks are back under 40 MB and the policy budget is lowered again
-    - full release gate green
-  - stop_rule: the semantic-product memory of unused imported definitions; no change to language behaviour.
-  - repro: the benchmark command above with and without the helpers.
+    - the product of math_vector lists only the definitions the program reaches (Vec2 and what it calls); semantic-product peak of math_vector is at most 28 MB and the budget in benchmarks/semantic_memory_budget_policy.json is lowered again
+    - programs that use matrix, quaternion and color helpers still compile and run (math conformance tests); full release gate green
+  - stop_rule: lazy import of the math module; no change to the math API.
+  - repro: `build-release/primec --dump-stage=semantic-product benchmarks/semantic_memory/fixtures/math_vector.prime --entry /bench/main | grep -c "^  definitions"`.
 
 - [ ] TODO-6296: Indexing an array literal of structs is refused by the VM, exe and native
   - owner: ai
