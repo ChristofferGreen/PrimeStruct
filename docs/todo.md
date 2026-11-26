@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6299: The lazy stdlib closure scan matches a method by its bare name, so one `length` call pulls 42 math definitions
+- [~] TODO-6299: The lazy stdlib closure scan matches a method by its bare name, so one `length` call pulls 42 math definitions
   - owner: ai
   - status: ready
+  - claimed_by: worker-math (worktree agent-a2b5d9abbd298c1d8), 2026-11-26
   - created_at: 2026-11-26
   - phase: Compiler memory (found by TODO-6297)
   - parallel_track: semantic-memory
