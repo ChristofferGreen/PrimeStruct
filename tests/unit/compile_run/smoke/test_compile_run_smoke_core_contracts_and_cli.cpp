@@ -93,6 +93,21 @@ main() {
   CHECK(runCommand("./primevm " + srcPath + " --entry /main" + optFlags) == 7);
 }
 
+TEST_CASE("primevm runs a String program with ir inline") {
+  const std::string source = R"(
+import /std/text/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [String] text{stringFrom("hello")}
+  return(text.count())
+}
+)";
+  const std::string srcPath = writeTemp("primevm_ir_inline_string.prime", source);
+  CHECK(runCommand("./primevm " + srcPath + " --entry /main") == 5);
+  CHECK(runCommand("./primevm " + srcPath + " --entry /main --ir-inline") == 5);
+}
+
 TEST_CASE("primevm accepts explicit emit vm compatibility flag") {
   const std::string source = R"(
 [return<int>]

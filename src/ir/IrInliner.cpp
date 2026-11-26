@@ -117,7 +117,13 @@ bool inlineIrModuleCalls(IrModule &module, std::string &error) {
       uint64_t nextLocal = localCounts[functionIndex];
       bool changedFunction = false;
 
-      for (const auto &instruction : function.instructions) {
+      // Jump targets are instruction indices, and inlining a callee shifts every
+      // later instruction, so remember where each original instruction landed.
+      std::vector<uint64_t> newIndex(function.instructions.size() + 1, 0);
+      for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
+           ++instructionIndex) {
+        const auto &instruction = function.instructions[instructionIndex];
+        newIndex[instructionIndex] = rewritten.size();
         if (instruction.op != IrOpcode::Call && instruction.op != IrOpcode::CallVoid) {
           rewritten.push_back(instruction);
           continue;
@@ -148,6 +154,13 @@ bool inlineIrModuleCalls(IrModule &module, std::string &error) {
       }
 
       if (changedFunction) {
+        newIndex[function.instructions.size()] = rewritten.size();
+        for (auto &instruction : rewritten) {
+          if ((instruction.op == IrOpcode::Jump || instruction.op == IrOpcode::JumpIfZero) &&
+              instruction.imm < newIndex.size()) {
+            instruction.imm = newIndex[static_cast<size_t>(instruction.imm)];
+          }
+        }
         function.instructions = std::move(rewritten);
         localCounts[functionIndex] = nextLocal;
         leafInlineable[functionIndex] =

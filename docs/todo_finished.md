@@ -2677,6 +2677,7 @@ are left unarchived.
 | TODO-6270 | Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI) | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6272 | The threaded native arena guard finds a `SharedString` only by function names | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

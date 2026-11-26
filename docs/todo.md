@@ -129,7 +129,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
-| TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | deferred | ir-inline-strings |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
@@ -510,20 +509,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [~] TODO-6273: `--ir-inline` makes invalid IR of a program with a `String`
-  - owner: ai
-  - status: ready
-  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: IR optimizer (found with TODO-6272)
-  - parallel_track: ir-inline-strings
-  - scope: The post-validation IR inliner (`--ir-inline`) breaks the stack depth of a function it inlines into. `primec --emit=vm --ir-inline --entry /main prog.prime` on a program that only makes a `String` (`[String] s{stringFrom("hello")}` and `print_line(s.count())`) ends with `VM IR validation error: invalid IR instruction 251 in /main: paths reach this block with different operand stack depths`; without the flag it compiles. Not on the queue: the flag is off by default and no gate case uses it with a `String`.
-  - acceptance:
-    - the program above compiles and runs with `--ir-inline`, and a test inlines a call whose callee has an early `return` inside a loop
-    - full release gate green
-  - stop_rule: the inliner pass only.
-  - repro: `./build-release/primec --emit=vm --ir-inline --entry /main prog.prime -o out.vm` for the program above.
-
 - [ ] TODO-6128: Wasm refuses tasks, atomics, channels and the lock effect
   - owner: ai
   - status: deferred

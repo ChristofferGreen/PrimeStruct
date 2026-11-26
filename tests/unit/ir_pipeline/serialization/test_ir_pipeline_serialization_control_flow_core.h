@@ -425,6 +425,92 @@ TEST_CASE("ir inlining pass keeps recursive call opcodes") {
   CHECK(result == 24);
 }
 
+TEST_CASE("ir inlining pass retargets jumps of the caller") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  // if (1) { 5 } else { 9 } + helper(): the jump over the else arm and the
+  // branch to it cross the inlined call.
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 6});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::Jump, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::PushI32, 9});
+  mainFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  primec::IrFunction helperFn;
+  helperFn.name = "/helper";
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 100});
+  helperFn.instructions.push_back({primec::IrOpcode::PushI32, 20});
+  helperFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  helperFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(helperFn));
+
+  std::string error;
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  REQUIRE(primec::inlineIrModuleCalls(module, error));
+  CHECK(error.empty());
+  CHECK(module.functions[0].instructions.size() > 10);
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 125);
+}
+
+TEST_CASE("ir inlining pass keeps a callee that returns early inside a loop") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+
+  primec::IrFunction mainFn;
+  mainFn.name = "/main";
+  mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+  mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  // local0 = 0; loop: if (local0 == 3) return local0; local0 += 1; goto loop
+  primec::IrFunction loopFn;
+  loopFn.name = "/loop";
+  loopFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::PushI32, 3});
+  loopFn.instructions.push_back({primec::IrOpcode::CmpEqI32, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::JumpIfZero, 8});
+  loopFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::LoadLocal, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::PushI32, 1});
+  loopFn.instructions.push_back({primec::IrOpcode::AddI32, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::StoreLocal, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::Jump, 2});
+  loopFn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+  loopFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+  module.functions.push_back(std::move(mainFn));
+  module.functions.push_back(std::move(loopFn));
+
+  std::string error;
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+  REQUIRE(primec::inlineIrModuleCalls(module, error));
+  REQUIRE(primec::validateIrModule(module, primec::IrValidationTarget::Vm, error));
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 3);
+}
+
 TEST_CASE("ir inlining pass rejects invalid call targets") {
   primec::IrModule module;
   module.entryIndex = 0;
