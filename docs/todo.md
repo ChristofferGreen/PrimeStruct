@@ -117,7 +117,6 @@ of sync with them.
 | TODO-5806 | Sessions: a session store and the handler API | deferred | web-sessions |
 | TODO-5821 | The first toolbar of a launch does not hold up the first frame | deferred | startup-toolbar |
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
-| TODO-6117 | Native text used after its arena ended is read and written silently | ready | native-arena-stale-text |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
 | TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
@@ -140,6 +139,7 @@ of sync with them.
 | TODO-6276 | `optexe` libraries carry a C++ unit | deferred | lib-backend |
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
+| TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -162,7 +162,7 @@ of sync with them.
 ### Priority Lanes
 
 - Startup, first (docs/NativeUiPlan.md section 1, "Where a launch goes"): TODO-5603, TODO-5821
-- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): TODO-6117
+- Native PrimeScroll, direct native backend (docs/NativeUiPlan.md): deferred TODO-6306 (the cost of protecting arena regions)
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test) (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
@@ -334,21 +334,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the numbers of (1) to (3), with the load average, are in docs/NativeUiPlan.md section 1 and docs/todo_log.md; anything over its expectation gets a TODO
   - stop_rule: measurement only.
   - notes: step (3) needs a quiet machine and a person (or an agent allowed to show windows) at the Mac; the guard counts images, not milliseconds.
-
-- [~] TODO-6117: Native text used after its arena ended is read and written silently
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
-  - created_at: 2026-11-20
-  - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
-  - parallel_track: native-arena-stale-text
-  - decision (owner, 2026-11-26): option (b). The regions of an ended arena are protected (`mprotect` no access) until a later arena reuses them, so a stale read or write faults instead of passing silently; report it with the VM fault text where the signal handler can, and measure the cost per arena end.
-  - scope: Ending a native `StringArena` writes the free magic into the header of every block it made, so a later `__pstext_free` of that text reports "invalid heap free address: the block is already free" (exit 3), but every other use of it is unchecked: `capacity`, `usable` and `length` answer 0, and a read or write of its bytes touches the arena's region, which stays mapped and which the next arena reuses (a write then corrupts that arena's blocks without any message). The VM faults on any use ("invalid byte address in IR"). Repro: `[String mut] escaped{String{}}`, open a `StringArena`, `escaped = stringFromI32(7i32)`, close the arena, call `escaped.clear()` and print: native prints and exits 3 only at the destroy of `escaped`; the VM stops at `clear()`.
-  - implementation_notes: options for the owner (docs/todo.md TODO-5956 decided to keep the regions mapped): (a) leave as is and document it (done in docs/spec/strings-and-views.md); (b) protect the regions of an ended arena (`mprotect` no access) until the next arena reuses them, so a stale use is a SIGSEGV instead of silent; (c) check the header magic in the byte memory loads and stores of the native backend, which costs every load and store. Not decided; do not pick one without the owner.
-  - acceptance:
-    - the decided option, with a native matrix case that uses text after its arena ended and the expected fault
-    - full release gate green
-  - stop_rule: stale arena text on the arm64 native backend only.
 
 - [ ] TODO-5536: Small, lazily loaded bytecode for apps
   - owner: ai
@@ -637,6 +622,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: how operator helpers reach the program; no change to the operators.
   - repro: the lazy-import test with an untyped site (2 rounds) in tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp.
+
+- [ ] TODO-6306: Ending and reusing a native string arena costs two system calls
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-26
+  - phase: Native PrimeScroll (found with the stale arena text leaf)
+  - parallel_track: native-arena-stale-text
+  - blocked_on: a program whose arena churn shows in a profile (the cost is about 1.9 microseconds per arena that reuses a region)
+  - scope: the native arena protects the regions of an ended arena (`mprotect` no access) and gives them their access back when the next arena takes one, so each arena that reuses a region makes two system calls: 3,000,000 arenas of one small text took 0.19 to 0.25 s before (about 0.07 microseconds each) and 5.9 to 6.1 s after (about 2.0), measured in a quiet moment on macOS arm64 (docs/todo_log.md). A protect of one page costs the same as one of the whole 256 KiB region, so the cost is the call, not the pages.
+  - implementation_notes: options for the owner: (a) accept it (an arena per frame costs microseconds); (b) keep the most recently ended region unprotected until the next arena end, which spends no call on a loop of one arena at a time and leaves the last stale text readable; (c) protect lazily, when more than N regions sit on the free list. Each option weakens the fault for the newest stale text.
+  - acceptance:
+    - the owner picks an option, or closes the leaf as (a)
+  - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
+  - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai

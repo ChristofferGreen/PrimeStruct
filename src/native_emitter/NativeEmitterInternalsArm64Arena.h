@@ -8,12 +8,14 @@
 // first region is its record, which links to the enclosing arena) and the list of regions free to reuse.
 //
 // A block of an arena has its own header magic (HeapHeaderMagicArena): freeing it does nothing. Ending the arena
-// writes the free magic into every block it made, so text used after its arena ended meets the heap's own message for
-// a block that is already free (exit code 3) instead of reading what a later arena wrote there. A region of the standard
-// size stays mapped and goes on the free list for the next arena (a use after that sees the new
-// arena's text, as the VM's recycled chunks do). A larger region, made for one block that did not fit, is unmapped,
-// so a loop of arenas with large text runs in bounded memory; text of such a block used after its arena ended is a
-// fault of the system (SIGSEGV), not a silent read.
+// writes the free magic into every block it made and takes all access away from its regions (`mprotect` with no
+// access), so text used after its arena ended is a fault: a read, a write or a free of it stops the program with
+// the VM's text for a byte address outside any live region (exit code 3), instead of reading or corrupting what a
+// later arena wrote there. A region of the standard size stays mapped, protected, on the free list; the next arena
+// that takes it gives its access back first (a use of the old text after that sees the new arena's text, as the
+// VM's recycled chunks do). A larger region, made for one block that did not fit, is unmapped, so a loop of arenas
+// with large text runs in bounded memory; a use of such text faults the same way. The handler that reports the
+// fault (`SIGBUS` and `SIGSEGV`) is installed when the first region is mapped.
 //
 // A threaded module gives every thread arenas of its own, as the VM gives every task thread a text heap of its own:
 // the innermost arena and the list of free regions live in the allocator state of the running thread (the same
@@ -121,6 +123,14 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovImm64(16, SysMmap);
     emit(encodeSvc());
   };
+  // mprotect(region in `regionReg`, the standard region size, `prot`): the syscall changes x0, x1 and x2.
+  const auto emitMprotect = [&](uint8_t regionReg, uint64_t prot) {
+    emitMovReg(0, regionReg);
+    emitMovImm64(1, RegionBytes);
+    emitMovImm64(2, prot);
+    emitMovImm64(16, SysMprotect);
+    emit(encodeSvc());
+  };
   // `counter` (a state offset of the program's counters) changes by the value of `delta`: plain loads and stores in a
   // module without threads; in a threaded module an atomic add on the data segment's counter (x9 is the thread's own
   // state there), through `address` and `discard`.
@@ -155,6 +165,8 @@ inline void Arm64Emitter::emitArenaRuntime() {
     usesRoutine[static_cast<size_t>(call.second)] = true;
   }
   size_t entries[3] = {0, 0, 0};
+  // The SUB sp of each handler installation; the ADR that names the handler follows it.
+  std::vector<size_t> handlerInstalls;
 
   // ---- begin: a region (a free one, or a new mapping) that becomes the innermost arena's record ----
   if (usesRoutine[static_cast<size_t>(ArenaRoutine::Begin)]) {
@@ -162,6 +174,10 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitArenaStateAddress();
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     const size_t noFreeRegion = cbz(0);
+    emitMovReg(11, 0);
+    // The free region gets its access back before its link is read.
+    emitMprotect(11, MmapProtReadWrite);
+    emitMovReg(0, 11);
     load(1, 0, NextOffset);
     store(1, 9, arm64_text::ArenaFreeRegionsOffset);
     emitMovImm64(1, 1);
@@ -170,6 +186,24 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovImm64(10, RegionBytes);
     emitMmap(10);
     const size_t mapFailed = branch(CondCode::Hs);
+    emitMovReg(11, 0);
+    handlerInstalls.push_back(here());
+    // A `struct __sigaction` (the handler, its trampoline, the mask and the flags) on the stack.
+    emit(encodeSubSpImm(32));
+    emit(encodeAdr(2, 0)); // patched to the handler
+    store(2, 31, 0);
+    store(2, 31, 8);
+    emitMovImm64(3, 0);
+    store(3, 31, 16);
+    for (const uint64_t signal : {SignalBus, SignalSegv}) {
+      emitMovImm64(0, signal);
+      emitAddRegImm(1, 31, 0);
+      emitMovImm64(2, 0);
+      emitMovImm64(16, SysSigaction);
+      emit(encodeSvc());
+    }
+    emit(encodeAddSpImm(32));
+    emitMovReg(0, 11);
     emitMovImm64(1, 0);
     bindJump(gotRegion);
     // x0 = the region, x1 = whether it was used before.
@@ -252,6 +286,8 @@ inline void Arm64Emitter::emitArenaRuntime() {
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     store(0, 2, NextOffset);
     store(2, 9, arm64_text::ArenaFreeRegionsOffset);
+    // Text of the arena used from here on faults; x7 still holds the older region.
+    emitMprotect(2, MmapProtNone);
     const size_t regionDone = jump();
     // A larger region (made for one block that did not fit a standard one) goes back to the system: munmap(region,
     // bytes). The syscall changes x0 and x1 only; x7 still holds the older region.
@@ -295,6 +331,10 @@ inline void Arm64Emitter::emitArenaRuntime() {
     emitMovReg(10, 6);
     load(0, 9, arm64_text::ArenaFreeRegionsOffset);
     const size_t noFreeRegion = cbz(0);
+    emitMovReg(11, 0);
+    // The free region gets its access back before its link is read.
+    emitMprotect(11, MmapProtReadWrite);
+    emitMovReg(0, 11);
     load(1, 0, NextOffset);
     store(1, 9, arm64_text::ArenaFreeRegionsOffset);
     emitMovImm64(1, 1);
@@ -347,6 +387,16 @@ inline void Arm64Emitter::emitArenaRuntime() {
     bind(mapFailed, CondCode::Hs);
     emitMovImm64(0, 0);
     emit(encodeRet());
+  }
+
+  // ---- fault: the handler of SIGBUS and SIGSEGV (also its own trampoline); it reports the VM's text and exits ----
+  if (!handlerInstalls.empty()) {
+    const size_t handler = here();
+    for (const size_t install : handlerInstalls) {
+      const size_t adr = install + 1;
+      patchWord(adr, encodeAdr(2, static_cast<int32_t>((handler - adr) * 4)));
+    }
+    emitFaultMessage("VM error: invalid byte address in IR\n");
   }
 
   for (size_t call = firstStateCall; call < heapCurStateCalls_.size(); ++call) {

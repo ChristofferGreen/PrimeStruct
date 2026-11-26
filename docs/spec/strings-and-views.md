@@ -273,11 +273,15 @@ is a valid `[host]` parameter and result type and crosses as the block's `u64` a
   that class takes it back; a block above 64 KiB is unmapped and counts nothing); `heapLiveBlocks()` is one counter for
   every thread of a program, where the VM counts the heap of the running thread; it also counts the frames of tasks.
   A `StringArena` maps its regions (256 KiB, or one block's size when that is larger) and hands blocks out by bumping;
-  ending it writes the free magic into every block it made and puts its standard regions on a list the next arena
-  reuses, so text used after its arena ended meets the heap's message for a free block ("invalid heap free address: the
-  block is already free", exit code 3) while its region is unused, and the text of the next arena once it is reused. A
-  region larger than the standard one is unmapped when its arena ends (a loop of arenas with large text runs in
-  bounded memory), so text of such a block used afterwards is a fault of the system (SIGSEGV), not a silent read. A module with tasks gives every thread arenas of its own (the innermost arena and the free
+  ending it writes the free magic into every block it made, takes all access away from its regions (`mprotect`, no
+  access) and puts its standard regions on a list the next arena reuses (the next arena that takes one gives its
+  access back first). Text used after its arena ended is therefore a fault, not a silent read or write: a read, a
+  write or a free of it stops the program with "VM error: invalid byte address in IR" (exit code 3; the VM names the
+  address) while its region is unused, and it sees the text of the next arena once the region is reused, as the
+  VM's recycled chunks do. A region larger than the standard one is unmapped when its arena ends (a loop of arenas
+  with large text runs in bounded memory), so text of such a block used afterwards faults the same way. The handler
+  (`SIGBUS` and `SIGSEGV`) is installed when the first region is mapped. Each arena that reuses a region costs two
+  system calls, about 1.9 microseconds (measurements in docs/todo_log.md). A module with tasks gives every thread arenas of its own (the innermost arena and the free
   regions are in the thread's allocator state, as each VM task thread has a text heap of its own; a thread's free
   regions stay with its state for the next thread that takes it). A block freed on another thread than the one whose
   arena holds it is ignored, as the arena's end gives it back. A threaded module that also has a `SharedString` (found by

@@ -147,7 +147,7 @@ main() {
   runStringProgram(program);
 }
 
-TEST_CASE("text used after its arena ended stops the program with the heap's message") {
+TEST_CASE("text freed after its arena ended stops the program") {
   program_matrix::ProgramCase program;
   program.name = "string_arenas_use_after_end";
   program.source = R"(
@@ -168,8 +168,85 @@ main() {
 )";
   program.exitCode = 3;
   program.stdoutText = "1\nafter\n";
-  // The native backend has the heap's own message for a block that is already free; the VM and optexe name the address.
-  program.nativeStderr = "invalid heap free address: the block is already free\n";
+  // The native backend protects the regions of an ended arena, so the destroy of the text reads a region it cannot
+  // access and reports the VM's text without the address; the VM and optexe name the address.
+  program.nativeStderr = "VM error: invalid byte address in IR\n";
+  runStringProgram(program);
+}
+
+TEST_CASE("text written after its arena ended stops the program at the write") {
+  program_matrix::ProgramCase program;
+  program.name = "string_arenas_write_after_end";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] escaped{String{}}
+  if(true) {
+    [StringArena] arena{beginStringArena()}
+    escaped = stringFromI32(7i32)
+    print_line(escaped.count())
+  }
+  escaped.clear()
+  print_line("after")
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "1\n";
+  program.nativeStderr = "VM error: invalid byte address in IR\n";
+  runStringProgram(program);
+}
+
+TEST_CASE("large text used after its arena ended stops the program") {
+  program_matrix::ProgramCase program;
+  program.name = "string_arenas_large_use_after_end";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [String mut] escaped{String{}}
+  if(true) {
+    [StringArena] arena{beginStringArena()}
+    escaped = stringFilled(300000i32, 66u8)
+    print_line(escaped.count())
+  }
+  escaped.clear()
+  print_line("after")
+  return(0i32)
+}
+)";
+  program.exitCode = 3;
+  program.stdoutText = "300000\n";
+  program.nativeStderr = "VM error: invalid byte address in IR\n";
+  runStringProgram(program);
+}
+
+TEST_CASE("an arena that reuses the regions of an ended arena works on them") {
+  program_matrix::ProgramCase program;
+  program.name = "string_arenas_reuse_after_end";
+  program.source = R"(
+import /std/text/*
+import /std/text/view/*
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [i32 mut] total{0i32}
+  for([i32 mut] round{0i32}, round < 50i32, round++) {
+    [StringArena] arena{beginStringArena()}
+    [String] text{stringFromI32(round)}
+    total = total + text.count()
+  }
+  print_line(total)
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "90\n";
   runStringProgram(program);
 }
 

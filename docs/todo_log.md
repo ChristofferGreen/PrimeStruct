@@ -7,6 +7,17 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-6306
+
+- 2026-11-26 (TODO-6117, release build, macOS arm64, `primec --emit=native`, one program: 3,000,000 times `[StringArena] arena{beginStringArena()}` around `[String] text{stringFromI32(round)}`, then a print; `/usr/bin/time -p`, 5 runs):
+
+  | Build | Real | Per arena |
+  | --- | --- | --- |
+  | before (regions of an ended arena stay mapped, read and write) | 0.19 to 0.25 s | about 0.07 microseconds |
+  | after (regions protected at the end, access given back by the next arena that reuses one) | 5.9 to 6.1 s (first run 11 s) | about 2.0 microseconds |
+
+  The added cost is two system calls per arena that reuses a region (`mprotect` no access at the end, `mprotect` read and write at the begin), about 1 microsecond each. Protecting one 16 KiB page instead of the whole 256 KiB region took the same time (5.5 to 6.1 s), so the call dominates, not the pages. The handler installation (two `sigaction` calls) happens once, when the first region is mapped. Measured in a quiet moment; the machine was loaded later (load average above 100) and then both builds ran 5 to 30 times slower, with the same ratio.
+
 ## TODO-5931
 
 - 2026-11-20 (TODO-5931, release build, macOS arm64, `primec --emit=vm`, loaded machine, alternating runs, min of 20, instructions retired via `/usr/bin/time -l`; twice, identical instruction counts):

@@ -13,6 +13,7 @@
 #include "NativeEmitterRegAlloc.h"
 
 #if defined(__APPLE__)
+#include <signal.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #endif
@@ -43,8 +44,13 @@ constexpr uint64_t SysMmap = SYS_mmap;
 constexpr uint64_t SysMmap = 197;
 #endif
 constexpr uint64_t SysMunmap = SYS_munmap;
+constexpr uint64_t SysMprotect = SYS_mprotect;
+constexpr uint64_t SysSigaction = SYS_sigaction;
 constexpr uint64_t SysExit = SYS_exit;
 constexpr uint64_t MmapProtReadWrite = static_cast<uint64_t>(PROT_READ | PROT_WRITE);
+constexpr uint64_t MmapProtNone = static_cast<uint64_t>(PROT_NONE);
+constexpr uint64_t SignalBus = static_cast<uint64_t>(SIGBUS);
+constexpr uint64_t SignalSegv = static_cast<uint64_t>(SIGSEGV);
 #if defined(MAP_ANON)
 constexpr uint64_t MmapFlagsPrivateAnon = static_cast<uint64_t>(MAP_PRIVATE | MAP_ANON);
 #else
@@ -58,8 +64,13 @@ constexpr uint64_t SysClose = 0;
 constexpr uint64_t SysFsync = 0;
 constexpr uint64_t SysMmap = 0;
 constexpr uint64_t SysMunmap = 0;
+constexpr uint64_t SysMprotect = 0;
+constexpr uint64_t SysSigaction = 0;
 constexpr uint64_t SysExit = 0;
 constexpr uint64_t MmapProtReadWrite = 0;
+constexpr uint64_t MmapProtNone = 0;
+constexpr uint64_t SignalBus = 0;
+constexpr uint64_t SignalSegv = 0;
 constexpr uint64_t MmapFlagsPrivateAnon = 0;
 #endif
 constexpr uint64_t HeapHeaderMagic = 0x5053484541503031ull;
