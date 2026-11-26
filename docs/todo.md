@@ -648,9 +648,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6295: `plus`, `minus`, `multiply` and `divide` of vectors are rejected, though the docs and a GLSL test describe them
+- [~] TODO-6295: `plus`, `minus`, `multiply` and `divide` of vectors are rejected, though the docs and a GLSL test describe them
   - owner: ai
   - status: ready
+  - claimed_by: vec-ops agent (worktree-agent-a613651e767729f16), 2026-11-26
   - created_at: 2026-11-26
   - phase: Test quality (found by the audit of TODO-6292)
   - parallel_track: test-honesty
