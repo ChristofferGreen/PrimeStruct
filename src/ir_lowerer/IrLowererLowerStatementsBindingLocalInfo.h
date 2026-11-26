@@ -382,16 +382,21 @@
       const bool referencesVector =
           (info.kind == LocalInfo::Kind::Reference && info.referenceToVector) ||
           (info.kind == LocalInfo::Kind::Pointer && info.pointerToVector);
-      if ((info.kind == LocalInfo::Kind::Vector || referencesVector) &&
-          info.valueKind == LocalInfo::ValueKind::Unknown && info.vectorStructElementSlotCount == 0) {
+      if ((info.kind == LocalInfo::Kind::Vector || info.kind == LocalInfo::Kind::Array ||
+           referencesVector) &&
+          info.valueKind == LocalInfo::ValueKind::Unknown &&
+          info.vectorStructElementSlotCount == 0) {
         for (const auto &transform : bindingTypeExprRef.transforms) {
           if (transform.templateArgs.size() != 1) {
             continue;
           }
           std::string elementTypeText;
-          if (normalizeCollectionBindingTypeName(transform.name) == "vector") {
+          const std::string collectionName = normalizeCollectionBindingTypeName(transform.name);
+          if ((info.kind == LocalInfo::Kind::Vector && collectionName == "vector") ||
+              (info.kind == LocalInfo::Kind::Array && collectionName == "array")) {
             elementTypeText = transform.templateArgs.front();
-          } else if (referencesVector && (transform.name == "Reference" || transform.name == "Pointer")) {
+          } else if (referencesVector &&
+                     (transform.name == "Reference" || transform.name == "Pointer")) {
             std::string wrappedBase;
             std::string wrappedArg;
             if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), wrappedBase,
@@ -406,6 +411,15 @@
           // A struct element, or a builtin vector element stored as an inline record.
           std::string elementStructPath;
           StructSlotLayoutInfo elementLayout;
+          // An array of structs stores each element's slots inline after the count.
+          if (info.kind == LocalInfo::Kind::Array) {
+            if (resolveStructTypeName(
+                    elementTypeText, bindingTypeExprRef.namespacePrefix, elementStructPath) &&
+                resolveStructSlotLayout(elementStructPath, elementLayout)) {
+              info.vectorStructElementSlotCount = elementLayout.totalSlots;
+            }
+            break;
+          }
           if (ir_lowerer::resolveBuiltinVectorElementStructPath(
                   elementTypeText,
                   bindingTypeExprRef.namespacePrefix,

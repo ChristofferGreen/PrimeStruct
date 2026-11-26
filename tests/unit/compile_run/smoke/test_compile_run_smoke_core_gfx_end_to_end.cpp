@@ -386,16 +386,68 @@ TEST_CASE("an array literal of structs counts its elements across backends") {
                            3);
 }
 
-TEST_CASE("indexing an array literal of structs is still refused on the vm") {
+namespace {
+
+std::string structArrayProgram(const std::string &body) {
   std::string source = StructArrayLiteralSource;
-  source.replace(source.find("return(count(points))"), 21, "return(points[1i32].id)");
-  const std::string srcPath = writeTemp("compile_struct_array_literal_index.prime", source);
+  const std::string marker = "return(count(points))";
+  source.replace(source.find(marker), marker.size(), body);
+  return source;
+}
+
+void expectStructArrayProgramRuns(const std::string &name,
+                                  const std::string &body,
+                                  int expectedExit) {
+  const std::string srcPath = writeTemp(name + ".prime", structArrayProgram(body));
+  const std::string exePath = (testScratchPath("") / ("primec_" + name + "_exe")).string();
+  const std::string nativePath = (testScratchPath("") / ("primec_" + name + "_native")).string();
+  expectRunsAcrossBackends("./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main",
+                           exePath,
+                           "./primec --emit=vm " + srcPath + " --entry /main",
+                           "./primec --emit=native " + srcPath + " -o " + nativePath +
+                               " --entry /main",
+                           nativePath,
+                           expectedExit);
+}
+
+} // namespace
+
+TEST_CASE("indexing an array of structs reads a field across backends") {
+  expectStructArrayProgramRuns("struct_array_index_field", "return(points[1i32].id)", 4);
+}
+
+TEST_CASE("indexing an array of structs by a computed index reads the last element") {
+  expectStructArrayProgramRuns("struct_array_index_computed",
+                               "[i32] last{minus(count(points), 1i32)}\n  return(points[last].id)",
+                               5);
+}
+
+TEST_CASE("indexing an array of structs copies an element into a binding across backends") {
+  expectStructArrayProgramRuns(
+      "struct_array_index_copy",
+      "[Point] chosen{points[2i32]}\n  return(plus(chosen.id, convert<i32>(chosen.x)))",
+      8);
+}
+
+TEST_CASE("indexing an array of structs out of range is a runtime error") {
+  const std::string srcPath = writeTemp("compile_struct_array_index_range.prime",
+                                        structArrayProgram("return(points[3i32].id)"));
+  const std::string nativePath =
+      (testScratchPath("") / "primec_struct_array_index_range_native").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_struct_array_index_range_exe").string();
   const std::string errPath =
-      (testScratchPath("") / "primec_struct_array_literal_index_err.txt").string();
+      (testScratchPath("") / "primec_struct_array_index_range_err.txt").string();
   CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main 2> " +
-                   quoteShellArg(errPath)) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports at() on numeric/bool/string arrays") !=
-        std::string::npos);
+                   quoteShellArg(errPath)) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand("./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main") ==
+        0);
+  CHECK(runCommand(nativePath + " 2> " + quoteShellArg(errPath)) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
+  CHECK(runCommand("./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main") == 0);
+  CHECK(runCommand(exePath + " 2> " + quoteShellArg(errPath)) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_SUITE_END();

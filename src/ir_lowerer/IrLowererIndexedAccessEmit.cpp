@@ -19,6 +19,15 @@ bool usesCollectionVectorValueStorage(const ArrayVectorAccessTargetInfo &targetI
           isCollectionVectorTypeText(targetInfo.structTypeName));
 }
 
+// An array local of structs keeps each element's slots inline after the count.
+bool isInlineStructArrayTarget(const ArrayVectorAccessTargetInfo &targetInfo) {
+  return targetInfo.isArrayOrVectorTarget && !targetInfo.isArgsPackTarget &&
+         !targetInfo.isVectorTarget && !targetInfo.isSoaVector && !targetInfo.isKeyValueTarget &&
+         !targetInfo.isWrappedKeyValueTarget &&
+         targetInfo.elemKind == LocalInfo::ValueKind::Unknown && targetInfo.elemSlotCount > 0 &&
+         targetInfo.structTypeName.empty();
+}
+
 } // namespace
 
 StringTableAccessEmitResult tryEmitStringTableAccessLoad(
@@ -236,12 +245,14 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       !targetInfo.isArgsPackTarget && targetInfo.isSoaVector && !targetInfo.structTypeName.empty();
   const bool isDirectVectorStructTarget =
       !targetInfo.isArgsPackTarget && targetInfo.isVectorTarget && !targetInfo.structTypeName.empty();
+  const bool isDirectArrayStructTarget = isInlineStructArrayTarget(targetInfo);
   if (!targetInfo.isArrayOrVectorTarget ||
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isMapArgsPackTarget && !isWrappedMapArgsPackTarget &&
-       !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget && !isPointerSoaVectorArgsPackTarget &&
-       !isBorrowedVectorArgsPackTarget && !isBorrowedSoaVectorArgsPackTarget &&
-       !isDirectSoaVectorStructTarget && !isDirectVectorStructTarget)) {
+       !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget &&
+       !isPointerSoaVectorArgsPackTarget && !isBorrowedVectorArgsPackTarget &&
+       !isBorrowedSoaVectorArgsPackTarget && !isDirectSoaVectorStructTarget &&
+       !isDirectVectorStructTarget && !isDirectArrayStructTarget)) {
     error =
         "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
         "args<Struct>/args<map<K, V>>/args<Pointer<T>>/args<Reference<T>>/"
@@ -362,7 +373,8 @@ bool emitArrayVectorIndexedAccess(
                             targetUsesVectorStorageLayout,
                             1,
                             elementSlotCount,
-                            loadElementValue && !isInlineStructVectorElement,
+                            loadElementValue && !isInlineStructVectorElement &&
+                                !isInlineStructArrayTarget(arrayVectorTargetInfo),
                             allocTempLocal,
                             emitArrayIndexOutOfBounds,
                             instructionCount,

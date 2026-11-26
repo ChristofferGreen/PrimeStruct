@@ -614,6 +614,25 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     return info;
   }
+  // An array of structs keeps each element's slots inline: size the element from its local or its type.
+  if (hasSemanticTargetFact && info.isArrayOrVectorTarget && !info.isVectorTarget &&
+      !info.isSoaVector && !info.isKeyValueTarget &&
+      info.elemKind == LocalInfo::ValueKind::Unknown && info.structTypeName.empty()) {
+    int32_t slots = 0;
+    if (target.kind == Expr::Kind::Name) {
+      if (auto it = localsIn.find(target.name);
+          it != localsIn.end() && it->second.kind == LocalInfo::Kind::Array) {
+        slots = it->second.vectorStructElementSlotCount;
+      }
+    }
+    if (slots <= 0 && !info.elementTypeText.empty()) {
+      slots = vectorElementSlotCountFromTypeText(info.elementTypeText, target.namespacePrefix);
+    }
+    if (slots > 0) {
+      info.elemSlotCount = slots;
+      return info;
+    }
+  }
   if (hasSemanticTargetFact && resolveCallArrayVectorAccessTargetInfo) {
     ArrayVectorAccessTargetInfo inferred;
     if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
