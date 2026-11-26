@@ -335,9 +335,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: measurement only.
   - notes: step (3) needs a quiet machine and a person (or an agent allowed to show windows) at the Mac; the guard counts images, not milliseconds.
 
-- [ ] TODO-6117: Native text used after its arena ended is read and written silently
+- [~] TODO-6117: Native text used after its arena ended is read and written silently
   - owner: ai
   - status: ready
+  - claimed_by: worker-slice-f32 (agent-aa91cfeed42c4b6e2), 2026-11-26
   - created_at: 2026-11-20
   - phase: Native PrimeScroll (docs/NativeUiPlan.md; found with TODO-5956)
   - parallel_track: native-arena-stale-text
