@@ -195,11 +195,10 @@ main() {
     ++definitionLines;
   }
   // The whole math module is 99 definitions; the scan takes Vec2 and the methods it calls, not the
-  // `length` of every other math type. The 11 are `main`, `Vec2`, its two namespaces, `length`,
-  // `lengthSquared` and the five `[private]` `vec2_*_internal` operator helpers that spelling the
-  // type pulls in, as for the matrix and quaternion types.
+  // `length` of every other math type, and no operator helper while the program calls no operator.
+  // The 6 are `main`, `Vec2`, its two namespaces, `length` and `lengthSquared`.
   CHECK(definitionLines > 0);
-  CHECK(definitionLines <= 11);
+  CHECK(definitionLines <= 6);
   CHECK(dump.find("/std/math/Vec3") == std::string::npos);
   CHECK(dump.find("/std/math/Quat") == std::string::npos);
   CHECK(dump.find("/std/math/Mat4") == std::string::npos);
@@ -305,6 +304,28 @@ main() {
   CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 12);
   CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath +
                    " --entry /main") == 12);
+}
+
+TEST_CASE("an operator reached only through an inferred receiver takes its helpers and runs") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] q{Quat{}}
+  [auto] r{multiply(q, Vec3{[x] 0.0f32, [y] 3.0f32, [z] 4.0f32})}
+  [auto] s{plus(r, r)}
+  return(convert<i32>(s.length()))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_inferred_operator.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_lazy_math_inferred_operator").string();
+  const int expected =
+      runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath + " --entry /main");
+  CHECK(expected > 0);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == expected);
+  CHECK(runCommand("./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main") == 0);
+  CHECK(runCommand(exePath) == expected);
 }
 
 TEST_CASE("a method on an image error returned by a function runs without naming the type") {

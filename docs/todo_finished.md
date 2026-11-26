@@ -2702,6 +2702,7 @@ are left unarchived.
 | TODO-6297 | A program that imports one `/std/math` type validates and publishes the whole math module | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6299 | The lazy stdlib closure scan matches a method by its bare name, so one `length` call pulls 42 math definitions | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6300 | The semantic-memory trend check fails once in a build directory whose history predates a budget change | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6301 | Lazy import takes a type's operator helpers even when no operator of that type is used | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 
 <!-- INDEX-END -->
 
