@@ -391,4 +391,22 @@ TEST_CASE("library link: the same bytecode however the libraries are listed") {
   CHECK(first.out.find("/more/seven") != std::string::npos);
 }
 
+TEST_CASE("library link: a generic function holding a lambda is a function of the archive") {
+  const std::filesystem::path dir = testScratchPath("library_link_lambda");
+  const std::string source =
+      "[namespace summary(\"Lambdas.\")]\nlam {\n  [public return<T>]\n"
+      "  through<T>([T] a) {\n    [auto] f{[]([T] v) { return(v) }}\n    return(f(a))\n  }\n}\n";
+  const std::string app = "[return<i32>]\nmain() {\n  return(through<i32>(9i32))\n}\n";
+  writeIn(dir, "lam.prime", source);
+  writeIn(dir, "app.prime", "import<\"lam.prime\">\nimport /lam/*\n" + app);
+  const Run whole = runApp(dir, "vm", "");
+  REQUIRE_MESSAGE(whole.exitCode == 9, whole.err);
+
+  const std::string lib = buildLibrary(dir, "lam", source);
+  writeIn(dir, "app.prime", "import</lam>\nimport /lam/*\n" + app);
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(lib));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 9);
+}
+
 TEST_SUITE_END();

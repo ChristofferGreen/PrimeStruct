@@ -68,20 +68,42 @@ void appendBodyArguments(std::string &out, const Expr &expr) {
 
 void appendCall(std::string &out, const Expr &expr) {
   if (expr.isLambda) {
+    // Entries are comma separated: a capture such as `ref response` holds spaces itself.
     out += "[";
-    for (size_t i = 0; i < expr.lambdaCaptures.size(); ++i) {
-      out += i == 0 ? "" : " ";
-      out += expr.lambdaCaptures[i];
+    bool first = true;
+    auto separate = [&]() {
+      out += first ? "" : ", ";
+      first = false;
+    };
+    for (const std::string &capture : expr.lambdaCaptures) {
+      separate();
+      out += capture;
     }
     for (const Expr &capture : expr.lambdaInitCaptures) {
-      out += " ";
-      appendExpr(out, capture);
+      separate();
+      for (const Transform &transform : capture.transforms) {
+        out += transform.name + " ";
+      }
+      out += capture.name + "{";
+      appendArgs(out, capture, 0);
+      out += "}";
     }
     for (const Transform &transform : expr.transforms) {
-      out += " " + transform.name;
+      separate();
+      out += transform.name;
       appendTemplateArgs(out, transform.templateArgs);
     }
     out += "] ";
+    // A lambda is `[captures]<templates>(params) { body }`; it has no name.
+    appendTemplateArgs(out, expr.templateArgs);
+    out += "(";
+    for (size_t i = 0; i < expr.args.size(); ++i) {
+      out += i == 0 ? "" : ", ";
+      out += declarationParameterText(expr.args[i]);
+    }
+    out += ")";
+    appendBodyArguments(out, expr);
+    return;
   }
   if (expr.isMethodCall && !expr.args.empty()) {
     appendExpr(out, expr.args.front());

@@ -140,7 +140,6 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6276 | `optexe` libraries carry a C++ unit | deferred | lib-backend |
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
-| TODO-6278 | A program that links the `/std/http/server` library fails to parse its interface | ready | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -614,20 +613,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - to be written when TODO-6276 is done: split into an object writer leaf per format and the linker-step leaf
   - stop_rule: do not start before it is split into leaves.
-
-- [~] TODO-6278: A program that links the `/std/http/server` library fails to parse its interface
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib-lambda-text (worktree-agent-a01e03e2a8f1b4a9f), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (found by TODO-6275)
-  - parallel_track: lib-backend
-  - scope: `primec --emit=lib stdlib/std/http/server.prime -o server.psa` succeeds, but `primec --emit=optexe --library server.psa examples/apps/http_hello/main.prime` stops with `server.psa:157:28: error: Parse error: transform list cannot be empty [PSC1003]` at `[mut] untilSignal{[] lambda() { return(stopRequested()) }}`: the interface text written for the archive carries a body (a generic function) with a lambda whose empty transform list `[]` the parser then refuses. Found with the `build-release/primec` of 2026-11-25 07:28; recheck on current master first, and close as not reproducible with the commit that fixed it if it is gone. Fix: the interface writer prints a lambda without an empty `[]`, or the parser takes an empty transform list on a lambda, as the spec says.
-  - acceptance:
-    - the repro links and `http_hello` built with `--library server.psa` runs as the source build does (`/` answers 200)
-    - a test builds a library with a generic function holding a lambda and compiles a program against it
-  - stop_rule: the interface text of a lambda only; `stdlib/std/http/http.prime` as a root is TODO-6032.
-  - repro: `./build-release/primec --emit=lib stdlib/std/http/server.prime -o /tmp/server.psa` then `./build-release/primec --emit=optexe --library /tmp/server.psa examples/apps/http_hello/main.prime -o /tmp/h --link-arg stdlib/std/net/native/net_shim.cpp --link-arg stdlib/std/os/os_posix.cpp` (scratch paths of your own).
 
 - [ ] TODO-6219: `loadBytecode` of a script linked with a library says whether that library changed
   - owner: ai
