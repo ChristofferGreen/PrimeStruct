@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -259,6 +260,63 @@ std::string functionSymbol(size_t index) {
 // The function a task's thread enters: it unpacks the task block's arguments into the call.
 std::string taskEntrySymbol(size_t index) {
   return "ps_t" + std::to_string(index);
+}
+
+// The function an indirect call of `parameterCount` parameters enters: it picks the callee from the address.
+std::string indirectCallSymbol(uint64_t parameterCount) {
+  return "ps_call_indirect_" + std::to_string(parameterCount);
+}
+
+// The code behind CallIndirect and CallIndirectVoid (docs/spec/vm-design.md, Function addresses): one function per
+// parameter count an indirect call passes, a switch over every function that takes that many parameters, and the
+// faults of the VM for the addresses that name none. A module without indirect calls gets nothing.
+void emitIndirectCallRuntime(std::ostringstream &source, const IrModule &module) {
+  std::set<uint64_t> parameterCounts;
+  for (const IrFunction &function : module.functions) {
+    for (const IrInstruction &instruction : function.instructions) {
+      if (instruction.op == IrOpcode::CallIndirect || instruction.op == IrOpcode::CallIndirectVoid) {
+        parameterCounts.insert(instruction.imm);
+      }
+    }
+  }
+  if (parameterCounts.empty()) {
+    return;
+  }
+  source << "const uint32_t ps_function_parameters[] = {";
+  for (const IrFunction &function : module.functions) {
+    source << function.parameterCount << ", ";
+  }
+  source << "};\nconst char *const ps_function_names[] = {";
+  for (const IrFunction &function : module.functions) {
+    source << cStringLiteral(function.name) << ", ";
+  }
+  source << "};\n[[noreturn]] void ps_indirect_call_fault(uint64_t address, uint64_t passed) {\n"
+         << "  if (address == 0) {\n    ps_fault(\"indirect call through a null function address\");\n  }\n"
+         << "  if (address > " << module.functions.size()
+         << ") {\n    ps_fault(\"indirect call through an invalid function address\");\n  }\n"
+         << "  const size_t target = static_cast<size_t>(address - 1);\n"
+         << "  ps_fault(std::string(\"indirect call passes \") + std::to_string(passed) + \" parameters to \" +\n"
+         << "           ps_function_names[target] + \", which takes \" +\n"
+         << "           std::to_string(ps_function_parameters[target]));\n}\n";
+  for (const uint64_t parameterCount : parameterCounts) {
+    source << "uint64_t " << indirectCallSymbol(parameterCount) << "(Rt &rt, uint64_t address";
+    for (uint64_t i = 0; i < parameterCount; ++i) {
+      source << ", uint64_t a" << i;
+    }
+    source << ") {\n  switch (address) {\n";
+    for (size_t index = 0; index < module.functions.size(); ++index) {
+      if (module.functions[index].parameterCount != parameterCount) {
+        continue;
+      }
+      source << "  case " << index + 1 << ": return " << functionSymbol(index) << "(rt";
+      for (uint64_t i = 0; i < parameterCount; ++i) {
+        source << ", a" << i;
+      }
+      source << ");\n";
+    }
+    source << "  default: ps_indirect_call_fault(address, " << parameterCount << ");\n  }\n}\n";
+  }
+  source << "\n";
 }
 
 bool moduleUsesTasks(const IrModule &module) {
@@ -618,6 +676,31 @@ private:
       call += ")";
       if (op == IrOpcode::Call) {
         line(slot(depth - static_cast<int64_t>(callee.parameterCount)) + " = " + call + ";");
+      } else {
+        line(call + ";");
+      }
+      return true;
+    }
+    case IrOpcode::FunctionAddress:
+      if (instruction.imm >= module_.functions.size()) {
+        error = "optexe found an invalid function address in " + function_.name;
+        return false;
+      }
+      // The address of function imm is imm + 1, so that 0 names no function.
+      line(slot(depth) + " = " + hex(instruction.imm + 1) + ";");
+      return true;
+    case IrOpcode::CallIndirect:
+    case IrOpcode::CallIndirectVoid: {
+      // The address is the deepest of the call's `imm + 1` slots, the parameters follow it.
+      const int64_t parameterCount = static_cast<int64_t>(instruction.imm);
+      const int64_t base = depth - parameterCount - 1;
+      std::string call = indirectCallSymbol(instruction.imm) + "(rt, " + slot(base);
+      for (int64_t i = 0; i < parameterCount; ++i) {
+        call += ", " + slot(base + 1 + i);
+      }
+      call += ")";
+      if (op == IrOpcode::CallIndirect) {
+        line(slot(base) + " = " + call + ";");
       } else {
         line(call + ";");
       }
@@ -1017,6 +1100,7 @@ bool IrToOptCppEmitter::emitSource(const IrModule &module,
     }
     source << "\n";
   }
+  emitIndirectCallRuntime(source, module);
   for (size_t i = 0; i < module.functions.size(); ++i) {
     FunctionEmitter emitter(module, i, usesTasks, source);
     if (!emitter.emit(error)) {

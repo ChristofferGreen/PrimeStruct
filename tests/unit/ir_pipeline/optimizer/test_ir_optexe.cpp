@@ -412,3 +412,101 @@ TEST_CASE("optexe faults carry the VM's message and exit code 3") {
 TEST_CASE("optexe faults of the later programs carry the VM's message and exit code 3") {
   expectFaultsMatchVm(true);
 }
+
+// Function addresses (docs/spec/vm-design.md, Function addresses): the address of function i is i + 1, and an indirect
+// call enters the function its address names, which the compiled program picks with a switch over the functions of
+// that parameter count.
+namespace {
+
+primec::IrFunction indirectFunction(std::string name,
+                                    uint32_t parameterCount,
+                                    std::vector<primec::IrInstruction> instructions) {
+  primec::IrFunction function;
+  function.name = std::move(name);
+  function.parameterCount = parameterCount;
+  function.instructions = std::move(instructions);
+  return function;
+}
+
+// Function 1 doubles its parameter, function 2 adds a hundred, function 3 prints 7 and function 4 returns 9; the
+// entry is the given code.
+primec::IrModule indirectCallsModule(std::vector<primec::IrInstruction> mainInstructions) {
+  using primec::IrOpcode;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(indirectFunction("/main", 0, std::move(mainInstructions)));
+  module.functions.push_back(indirectFunction("/double",
+                                              1,
+                                              {{IrOpcode::StoreLocal, 0},
+                                               {IrOpcode::LoadLocal, 0},
+                                               {IrOpcode::LoadLocal, 0},
+                                               {IrOpcode::AddI32, 0},
+                                               {IrOpcode::ReturnI32, 0}}));
+  module.functions.push_back(indirectFunction("/add_hundred",
+                                              1,
+                                              {{IrOpcode::StoreLocal, 0},
+                                               {IrOpcode::LoadLocal, 0},
+                                               {IrOpcode::PushI32, 100},
+                                               {IrOpcode::AddI32, 0},
+                                               {IrOpcode::ReturnI32, 0}}));
+  module.functions.push_back(indirectFunction(
+      "/say",
+      0,
+      {{IrOpcode::PushI32, 7}, {IrOpcode::PrintI32, primec::PrintFlagNewline}, {IrOpcode::ReturnVoid, 0}}));
+  module.functions.push_back(
+      indirectFunction("/nine", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}}));
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("optexe indirect calls match the VM") {
+  using primec::IrOpcode;
+  // The argument count (1 under the test's run) picks /double; the sum is 10 + 105 + 9 = 124.
+  expectMatchesVm(indirectCallsModule({{IrOpcode::PushArgc, 0},
+                                       {IrOpcode::JumpIfZero, 4},
+                                       {IrOpcode::FunctionAddress, 1},
+                                       {IrOpcode::Jump, 5},
+                                       {IrOpcode::FunctionAddress, 2},
+                                       {IrOpcode::PushI32, 5},
+                                       {IrOpcode::CallIndirect, 1},
+                                       {IrOpcode::FunctionAddress, 2},
+                                       {IrOpcode::PushI32, 5},
+                                       {IrOpcode::CallIndirect, 1},
+                                       {IrOpcode::AddI32, 0},
+                                       {IrOpcode::FunctionAddress, 3},
+                                       {IrOpcode::CallIndirectVoid, 0},
+                                       {IrOpcode::FunctionAddress, 4},
+                                       {IrOpcode::CallIndirect, 0},
+                                       {IrOpcode::AddI32, 0},
+                                       {IrOpcode::ReturnI32, 0}}),
+                  "indirect_calls",
+                  2);
+}
+
+TEST_CASE("optexe indirect call faults carry the VM's message and exit code 3") {
+  using primec::IrOpcode;
+  expectMatchesVm(indirectCallsModule({{IrOpcode::PushI64, 0},
+                                       {IrOpcode::PushI32, 5},
+                                       {IrOpcode::CallIndirect, 1},
+                                       {IrOpcode::ReturnI32, 0}}),
+                  "indirect_null",
+                  0);
+  expectMatchesVm(indirectCallsModule({{IrOpcode::PushI64, 9},
+                                       {IrOpcode::PushI32, 5},
+                                       {IrOpcode::CallIndirect, 1},
+                                       {IrOpcode::ReturnI32, 0}}),
+                  "indirect_invalid",
+                  0);
+}
+
+TEST_CASE("optexe indirect call with the wrong parameter count faults like the VM") {
+  using primec::IrOpcode;
+  expectMatchesVm(indirectCallsModule({{IrOpcode::FunctionAddress, 1},
+                                       {IrOpcode::PushI32, 5},
+                                       {IrOpcode::PushI32, 6},
+                                       {IrOpcode::CallIndirect, 2},
+                                       {IrOpcode::ReturnI32, 0}}),
+                  "indirect_arity",
+                  0);
+}

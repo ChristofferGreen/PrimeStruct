@@ -2711,6 +2711,7 @@ are left unarchived.
 | TODO-6304 | Benchmark-mode validation workers drop the operator helper demand | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

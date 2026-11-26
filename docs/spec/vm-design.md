@@ -251,13 +251,15 @@
   1`). A `Function` value holds such an address and its environment (docs/spec/value-lifecycle.md, Function values).
   The VM's step kernel runs the opcodes (the call removes the address from under the parameters and enters the callee
   as a `Call` does; a debug session steps through it and a task runs it); the fast kernel does not prepare a module
-  that has one, so such a program runs on the step kernel until TODO-6311. IR validation accepts the opcodes for the VM,
-  serialized bytecode and `Any`. Every other target takes the linked module through `expandIndirectCalls`
+  that has one, so such a program runs on the step kernel until TODO-6311. The optimized C++ emitters (`optcpp`, `optexe`) emit
+  `FunctionAddress` as the constant and `CallIndirect` as a call of a generated `ps_call_indirect_<p>` function, a
+  switch over every function with `p` parameters, with the VM's three faults and exit code 3. IR validation accepts the
+  opcodes for the VM, the optimized C++ targets, serialized bytecode and `Any`. Every other target takes the linked module through `expandIndirectCalls`
   (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
   `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
   address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
-  opcodes itself (docs/todo.md: TODO-6309 for `optexe`, TODO-6311 to TODO-6314 for the rest).
+  opcodes itself (docs/todo.md: TODO-6311 to TODO-6314).
 - **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
   once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result
   can differ from `MulF32` then `AddF32` (and the `F64` forms), which round twice (immediate 0, no fault). The `fma`

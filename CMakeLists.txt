@@ -4414,10 +4414,10 @@ if(PRIMESTRUCT_BUILD_TESTS)
     string(REPLACE "." "_" suiteId "${suite}")
     set(testName "PrimeStruct_${suiteId}")
     if(suite STREQUAL "primestruct.ir.optexe")
-      # 9 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry; shards of two timed out at
+      # 12 cases that each build optexe programs: 66 to 111 s in loaded gates as one entry; shards of two timed out at
       # 300 s in the TODO-5981 gate (ir_optexe_7_8), so one case per shard (the fault programs are two cases,
       # TODO-6027).
-      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 9 1 300 "--test-suite=${suite}")
+      primestructAddDoctestShards("${testName}" PrimeStruct_ir_optimizer_tests 12 1 300 "--test-suite=${suite}")
       continue()
     endif()
     if(suite STREQUAL "primestruct.ir.optexe_tasks")

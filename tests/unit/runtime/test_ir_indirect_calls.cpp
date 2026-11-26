@@ -121,15 +121,16 @@ TEST_CASE("indirect calls: a target that does not run them refuses the module un
   std::string error;
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Native, error));
   CHECK(error.find("function address opcodes") != std::string::npos);
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::OptCpp, error));
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Cpp, error));
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Wasm, error));
-  // The VM and serialized bytecode run them.
+  // The VM, the optimized C++ emitters and serialized bytecode run them.
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Serialized, error), error);
   expandIndirectCalls(module);
   CHECK_FALSE(irModuleHasIndirectCalls(module));
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Native, error), error);
-  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Cpp, error), error);
 }
 
 TEST_CASE("indirect calls: the VM calls the function the address names") {

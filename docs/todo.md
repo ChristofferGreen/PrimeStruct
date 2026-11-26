@@ -141,12 +141,11 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | in_progress | lib-shapes |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | ready | lib-shapes |
-| TODO-6311 | The VM fast kernel runs `CallIndirect` | blocked | lib-shapes-backends |
-| TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | blocked | lib-shapes-backends |
-| TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | blocked | lib-shapes-backends |
-| TODO-6314 | The simple C++ emitters emit `CallIndirect` | blocked | lib-shapes-backends |
+| TODO-6311 | The VM fast kernel runs `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -663,20 +662,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
 
-- [~] TODO-6309: `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (third layer of TODO-6283)
-  - parallel_track: lib-shapes
-  - scope: src/backend/IrToOptCppEmitter.cpp emits `CallIndirect` as a call of a generated switch over the functions of the matching parameter count (`ps_call_indirect_N(rt, address, a0, ...)`), a fault with the VM's message for the three bad addresses, and `FunctionAddress` as the constant; threads and tasks are unchanged. The optimized C++ targets leave the expansion list.
-  - acceptance:
-    - the TODO-6307 module compiled with `--emit=exe` of the optimized emitter gives the VM's result, and the faults give the VM's messages
-    - full release gate green
-  - stop_rule: the optimized C++ emitter; the simple C++ emitters are TODO-6314.
-  - repro: the TODO-6307 module through the optimized C++ emitter.
-
 - [ ] TODO-6310: Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes
   - owner: ai
   - status: ready
@@ -693,12 +678,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6311: The VM fast kernel runs `CallIndirect`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6308
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (back ends of TODO-6283)
   - parallel_track: lib-shapes-backends
-  - depends_on: TODO-6308
   - scope: src/runtime/VmFastKernel.cpp and VmFastKernelPrepare.cpp prepare a module that holds the opcodes (a dispatch label per opcode, the call through the table of prepared functions, the faults of TODO-6308), so a program with `Function` values runs on the fast kernel instead of the step kernel. Measure a web request loop before and after.
   - acceptance:
     - the programs that fall back to the step kernel today because of the opcodes run on the fast kernel with the same output and faults; the measurement is in docs/todo_log.md
@@ -708,12 +691,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6312: arm64 and x86_64 native and the JIT emit `CallIndirect`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6308
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (back ends of TODO-6283)
   - parallel_track: lib-shapes-backends
-  - depends_on: TODO-6308
   - scope: the native emitters (src/native_emitter) keep a table of function entry addresses and emit the indirect call (`blr` on arm64, `call` through a register on x86_64) with the argument registers or stack of a `Call`; the JIT (src/native_emitter/NativeJit.cpp) the same. The native target leaves the expansion list of TODO-6307.
   - acceptance:
     - the closure programs of the program matrix run on native without the expansion on the machines that can run them; the x86_64 half is built and run where an x86_64 machine exists, else deferred with a note
@@ -723,12 +704,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6313: Wasm emits `call_indirect` for `CallIndirect`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6308
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (back ends of TODO-6283)
   - parallel_track: lib-shapes-backends
-  - depends_on: TODO-6308
   - scope: src/wasm_emitter emits a function table (an `elem` section of the functions whose address is taken) and `call_indirect` with the type of the callee's signature, in both profiles. The wasm targets leave the expansion list.
   - acceptance:
     - the wasm closure programs of the program matrix pass without the expansion, and a call through a null address traps
@@ -738,12 +717,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6314: The simple C++ emitters emit `CallIndirect`
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6309
+  - status: ready
   - created_at: 2026-11-26
   - phase: Modules and libraries (back ends of TODO-6283)
   - parallel_track: lib-shapes-backends
-  - depends_on: TODO-6309
   - scope: src/backend/IrToCppEmitter*.cpp (the `cpp` and `exe` targets) emit the opcodes as the optimized emitter does after TODO-6309 (a switch over the functions of a parameter count). The Cpp target leaves the expansion list.
   - acceptance:
     - the closure programs of the program matrix pass on `cpp` and `exe` without the expansion

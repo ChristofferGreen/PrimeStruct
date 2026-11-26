@@ -202,7 +202,7 @@ bool prepareIrModule(Program &program,
 
   // A target that does not run the function address opcodes takes the linked module through their expansion.
   if (validationTarget != IrValidationTarget::Serialized && validationTarget != IrValidationTarget::Any &&
-      validationTarget != IrValidationTarget::Vm) {
+      validationTarget != IrValidationTarget::Vm && validationTarget != IrValidationTarget::OptCpp) {
     expandIndirectCalls(ir);
   }
 

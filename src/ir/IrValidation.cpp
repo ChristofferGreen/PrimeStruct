@@ -335,13 +335,13 @@ bool validateFunction(const IrModule &module,
     if ((inst.op == IrOpcode::FunctionAddress || inst.op == IrOpcode::CallIndirect ||
          inst.op == IrOpcode::CallIndirectVoid) &&
         target != IrValidationTarget::Any && target != IrValidationTarget::Serialized &&
-        target != IrValidationTarget::Vm) {
+        target != IrValidationTarget::Vm && target != IrValidationTarget::OptCpp) {
       return failInstruction(
           functionIndex,
           function.name,
           instructionIndex,
-          "function address opcodes are only supported by the vm and serialized bytecode (a "
-          "target runs the module through expandIndirectCalls)",
+          "function address opcodes are only supported by the vm, the optimized C++ targets and "
+          "serialized bytecode (a target runs the module through expandIndirectCalls)",
           error);
     }
     if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&
