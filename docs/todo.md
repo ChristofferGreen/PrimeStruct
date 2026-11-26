@@ -129,6 +129,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
+| TODO-6288 | Library code outside the slice and container primitives is not `[unsafe]` | ready | stdlib-safe-slices |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -662,6 +663,22 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the operator rewrite of the lowerer and the interface of the two stdlib files; no change to the library ABI.
   - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o matrix.psa`, `primec --emit=lib stdlib/std/math/vector.prime -o vector.psa`, then `primec --emit=vm --library matrix.psa --library vector.psa app.prime --entry /main` with `import</std/math>`, `import /std/math/*` and `[Mat2] p{multiply(m, m)}`.
+
+- [ ] TODO-6288: Library code outside the slice and container primitives is not `[unsafe]`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Safety (user decision 2026-11-26 on the slice constructors of TODO-5511/TODO-6198)
+  - parallel_track: stdlib-safe-slices
+  - decision: the user keeps the slice pointer and count `[private]` and `readSliceMake`/`writeSliceMake` `[public unsafe_api]`, but "a library is something you use in order to get safety": library code is not marked `[unsafe]` where it can be avoided. An `[unsafe]` body is trusted and unchecked (aliasing checks off for the whole body) while safe code calls it without seeing that, so unsafety stays in a few small primitives (the slice module, container storage internals) and the rest of the stdlib gets safe operations.
+  - scope: commit be009c339 marked whole high-level definitions `[unsafe]` only to reach a slice's pointer with `dataUnsafe()`: `/std/http/parseRequestBytes` (stdlib/std/http/http.prime), the socket loops and slot helpers of stdlib/std/http/server.prime (`work_slot`, `read_slot`, `drain_slot`, `wait_ready` and their helpers), the `StringView` byte view, text-from-bytes and `stringFromUtf8Lossy` (stdlib/std/text/view.prime), and the net callers (stdlib/std/net/net.prime). Give them safe operations instead, each written once next to its primitive: host calls that take a `ReadSlice<u8>`/`WriteSlice<u8>` (pointer and count passed together, so they cannot disagree) where they take a pointer and a length today (`recv`, `send`, `utf8ErrorOffset`); a safe `StringView` from a `ReadSlice<u8>` in the view module; bounds-checked subslicing. Then drop `[unsafe]` from the callers.
+  - acceptance:
+    - the definitions listed in scope are not `[unsafe]` and do not call `dataUnsafe()`; `dataUnsafe()` callers are only the primitives
+    - a count of `[unsafe]` and `[unsafe_api]` definitions in stdlib/ before and after, recorded in docs/todo_log.md, with a one-line reason for each `[unsafe]` definition that remains outside the container and slice internals
+    - docs/spec/type-system.md and docs/spec/strings-and-views.md state the rule: stdlib code above the primitives is safe
+    - the http, net and text tests and fixtures pass unchanged in behaviour; full release gate green
+  - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
+  - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
