@@ -1143,7 +1143,7 @@ namespace std {
       if(i > 0i32) {
         out.appendBytes(separator.data, separator.fieldLength)
       }
-      [StringView] part{parts[i]}
+      [/std/text/view/StringView] part{parts[i]}
       out.appendBytes(part.data, part.fieldLength)
     }
     return(out)
@@ -1269,13 +1269,13 @@ namespace std {
   /std/text/String/opPlusMany([/std/text/String] self, [args</std/text/view/StringView>] parts) {
     [i32 mut] total{self.fieldLength}
     for([i32 mut] i{0i32}, i < parts.count(), i++) {
-      [StringView] part{parts[i]}
+      [/std/text/view/StringView] part{parts[i]}
       total = total + part.fieldLength
     }
     [String mut] out{stringWithCapacity(total)}
     out.appendBytes(self.data, self.fieldLength)
     for([i32 mut] i{0i32}, i < parts.count(), i++) {
-      [StringView] part{parts[i]}
+      [/std/text/view/StringView] part{parts[i]}
       out.appendBytes(part.data, part.fieldLength)
     }
     return(out)

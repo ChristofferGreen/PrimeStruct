@@ -98,6 +98,24 @@ bool declaresTargetBinding(const std::vector<Expr> &bindings,
   return false;
 }
 
+// The struct a receiver's type name stands for, seen from `namespacePrefix`: a name written bare in a method of a struct
+// is the struct of the enclosing namespace (`Compiler` in `/std/build/Build` is `/std/build/Compiler`), so the
+// namespaces around the method are tried from the innermost out.
+std::string resolveReceiverTypePath(const std::string &typeName,
+                                    const std::string &namespacePrefix,
+                                    const Context &ctx) {
+  std::string scope = namespacePrefix;
+  while (true) {
+    const std::string path =
+        resolveStructLikeTypePathForTemplatedVectorFallback(typeName, scope, ctx);
+    if (!path.empty() || scope.empty()) {
+      return path;
+    }
+    const size_t slash = scope.rfind('/');
+    scope = slash == std::string::npos ? std::string() : scope.substr(0, slash);
+  }
+}
+
 // The definitions a call or method call can target, before monomorphization: one, or the same-arity overloads of a
 // family in overload order. A generic candidate is null (its parameter types are not known here).
 std::vector<const Definition *> conversionCallees(const Expr &expr, const ExpectedTypeScope &scope) {
@@ -113,8 +131,10 @@ std::vector<const Definition *> conversionCallees(const Expr &expr, const Expect
         return {};
       }
       const bool borrowed = receiverInfo.typeName == "Reference" || receiverInfo.typeName == "Pointer";
-      receiverPath = resolveStructLikeTypePathForTemplatedVectorFallback(
-          borrowed ? receiverInfo.typeTemplateArg : receiverInfo.typeName, scope.namespacePrefix, ctx);
+      receiverPath =
+          resolveReceiverTypePath(borrowed ? receiverInfo.typeTemplateArg : receiverInfo.typeName,
+                                  scope.namespacePrefix,
+                                  ctx);
     }
     if (receiverPath.empty() || receiverPath.front() != '/') {
       return {};

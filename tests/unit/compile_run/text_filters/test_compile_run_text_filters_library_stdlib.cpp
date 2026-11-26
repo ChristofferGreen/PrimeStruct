@@ -264,4 +264,36 @@ TEST_CASE("the map module builds as a stdlib library") {
   CHECK(content.manifest.stdlibModules.front().file == "std/collections/map.prime");
 }
 
+TEST_CASE("a string literal converts to a StringView for a local of a struct of the namespace") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_local_literal");
+  writeIn(
+      dir,
+      "app.prime",
+      "import /std/text/*\nimport /std/text/view/*\n"
+      "namespace app {\n"
+      "  [public struct]\n  Tool() {\n    [public i32 mut] n{0i32}\n"
+      "    [mut]\n    emit([StringView] kind) { this.n = kind.count() }\n  }\n"
+      "  [public struct]\n  Runner() {\n    [public i32 mut] m{0i32}\n"
+      "    [mut]\n    run([Tool copy] tool) {\n"
+      "      [Tool mut] settings{tool}\n      settings.emit(\"lib\")\n"
+      "      this.m = settings.n\n    }\n  }\n}\n"
+      "import /app/*\n"
+      "[return<i32>]\nmain() {\n  [Runner mut] r{Runner{}}\n  r.run(Tool{})\n  return(r.m)\n}\n");
+  const Run run = runApp(dir, "");
+  CHECK_MESSAGE(run.err.empty(), run.err);
+  CHECK(run.exitCode == 3);
+}
+
+TEST_CASE("the build and text view modules are not refused for a missing name as roots") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_build_view");
+  buildLibrary(dir, stdlibFile(dir, "/std/build/*", "build/build.prime"), "build");
+  const Run view = shell(dir,
+                         "./primec --emit=lib " +
+                             quoteShellArg(stdlibFile(dir, "/std/text/view/*", "text/view.prime")) +
+                             " -o " + quoteShellArg((dir / "view.psa").string()));
+  CHECK(view.exitCode != 0);
+  CHECK(view.err.find("parameter `parts` is an argument pack") != std::string::npos);
+  CHECK(view.err.find("unsupported binding type") == std::string::npos);
+}
+
 TEST_SUITE_END();
