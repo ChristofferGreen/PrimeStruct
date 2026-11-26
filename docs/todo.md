@@ -648,6 +648,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
+- [ ] TODO-6301: Lazy import takes a type's operator helpers even when no operator of that type is used
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Compiler memory (found with the vector operators)
+  - parallel_track: semantic-memory
+  - scope: the lazy stdlib closure scan (src/pipeline/CompilePipelineStdlib.cpp) takes every `vecN_*_internal`, `matN_*_internal` and `quat_*_internal` operator helper as soon as its type is spelled, because the operator rewrite names the helper after the scan. Since the vector operators landed, a program that imports one `Vec2` and calls `length()` publishes 11 definitions instead of 6 (test `a program that imports one math type publishes only the definitions it reaches` in tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp, limit raised from 10 to 11). Take a helper only when the text has a call of its operator (`plus`, `minus`, `multiply`, `divide` or the infix form) that can reach that type, or let the rewrite request the helper.
+  - acceptance:
+    - the Vec2 `length()` program publishes at most 6 definitions again and the test limit goes back down; programs that use the operators still run on the VM and optexe through lazy import and through a linked library
+    - full release gate green
+  - stop_rule: which operator helpers the lazy scan takes; no change to the operators.
+  - repro: the test above with its limit set to 6.
+
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
   - status: deferred
