@@ -666,9 +666,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
   - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
 
-- [ ] TODO-6292: No test passes by accepting the unsupported-call error it should catch
+- [~] TODO-6292: No test passes by accepting the unsupported-call error it should catch
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
   - created_at: 2026-11-26
   - phase: Test quality (found with TODO-6287)
   - parallel_track: test-honesty
