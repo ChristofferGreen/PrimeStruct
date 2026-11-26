@@ -649,9 +649,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [ ] TODO-6302: Lazy import guesses which operator helpers a program needs from its text
+- [~] TODO-6302: Lazy import guesses which operator helpers a program needs from its text
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: opguess (worktree-agent-a31d9d5fc218accae), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found with the lazy operator helper scan)
   - parallel_track: semantic-memory
