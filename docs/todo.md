@@ -510,9 +510,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [ ] TODO-6273: `--ir-inline` makes invalid IR of a program with a `String`
+- [~] TODO-6273: `--ir-inline` makes invalid IR of a program with a `String`
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
   - created_at: 2026-11-26
   - phase: IR optimizer (found with TODO-6272)
   - parallel_track: ir-inline-strings
