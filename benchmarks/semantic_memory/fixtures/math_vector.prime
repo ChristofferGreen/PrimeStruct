@@ -3,6 +3,7 @@ import /std/math/Vec2
 namespace bench {
 [return<i32>]
 main() {
-  return(1i32)
+  [Vec2] v{Vec2{[x] 3.0f32, [y] 4.0f32}}
+  return(convert<i32>(v.length()))
 }
 }

@@ -9,16 +9,16 @@
     {
       "fixture": "imported_math_body",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 25657344,
-      "soft_max_worst_peak_rss_bytes": 30552064,
-      "max_worst_peak_rss_bytes": 31195136
+      "baseline_worst_peak_rss_bytes": 9900000,
+      "soft_max_worst_peak_rss_bytes": 12375000,
+      "max_worst_peak_rss_bytes": 13365000
     },
     {
       "fixture": "imported_math_body",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 36500000,
-      "soft_max_worst_peak_rss_bytes": 38500000,
-      "max_worst_peak_rss_bytes": 39900000
+      "baseline_worst_peak_rss_bytes": 9900000,
+      "soft_max_worst_peak_rss_bytes": 12375000,
+      "max_worst_peak_rss_bytes": 13365000
     },
     {
       "fixture": "inline_math_body",
@@ -51,30 +51,30 @@
     {
       "fixture": "math_vector",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 25735168,
-      "soft_max_worst_peak_rss_bytes": 30552064,
-      "max_worst_peak_rss_bytes": 31281152
+      "baseline_worst_peak_rss_bytes": 13950000,
+      "soft_max_worst_peak_rss_bytes": 17437500,
+      "max_worst_peak_rss_bytes": 18832500
     },
     {
       "fixture": "math_vector",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 36500000,
-      "soft_max_worst_peak_rss_bytes": 38500000,
-      "max_worst_peak_rss_bytes": 39900000
+      "baseline_worst_peak_rss_bytes": 18850000,
+      "soft_max_worst_peak_rss_bytes": 23562500,
+      "max_worst_peak_rss_bytes": 25447500
     },
     {
       "fixture": "math_vector_matrix",
       "phase": "ast-semantic",
-      "baseline_worst_peak_rss_bytes": 25665536,
-      "soft_max_worst_peak_rss_bytes": 30396416,
-      "max_worst_peak_rss_bytes": 31199232
+      "baseline_worst_peak_rss_bytes": 10100000,
+      "soft_max_worst_peak_rss_bytes": 12625000,
+      "max_worst_peak_rss_bytes": 13635000
     },
     {
       "fixture": "math_vector_matrix",
       "phase": "semantic-product",
-      "baseline_worst_peak_rss_bytes": 36500000,
-      "soft_max_worst_peak_rss_bytes": 38500000,
-      "max_worst_peak_rss_bytes": 39900000
+      "baseline_worst_peak_rss_bytes": 11600000,
+      "soft_max_worst_peak_rss_bytes": 14500000,
+      "max_worst_peak_rss_bytes": 15660000
     },
     {
       "fixture": "no_import",

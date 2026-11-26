@@ -176,15 +176,17 @@ bool sourceMentionsCaseInsensitive(const std::string &text, std::string_view nee
 bool shouldSkipMathWildcardStdlibModule(const std::vector<std::string> &sourceImports,
                                         const std::string &source);
 
-bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
-                               const std::vector<std::string> &sourceImports,
-                               const std::vector<std::string> &implicitKeys,
-                               std::string &source,
-                               std::string &error,
-                               ExpandedSource *expandedSource = nullptr,
-                               const std::unordered_set<std::string> &excludedKeys = {},
-                               std::string *unresolvedImport = nullptr,
-                               const std::vector<OwnedStdlibModule> *ownedModules = nullptr);
+bool appendStdlibModuleSources(
+    const std::vector<std::string> &importPaths,
+    const std::vector<std::string> &sourceImports,
+    const std::vector<std::string> &implicitKeys,
+    std::string &source,
+    std::string &error,
+    ExpandedSource *expandedSource = nullptr,
+    const std::unordered_set<std::string> &excludedKeys = {},
+    std::string *unresolvedImport = nullptr,
+    const std::vector<OwnedStdlibModule> *ownedModules = nullptr,
+    std::unordered_set<std::string> *lazyKeysImportedByModules = nullptr);
 
 // PRIMESTRUCT_FORCE_LAZY_STDLIB_IMPORTS forces lazy expansion on
 // regardless of Options::experimentalLazyStdlibImports/the CLI flag, so the
@@ -209,6 +211,13 @@ bool lazyStdlibImportsEnabled(const Options &options);
 // through to the normal whole-file splice unchanged).
 std::optional<std::filesystem::path> resolveSingleFileStdlibModuleSource(
     const std::vector<std::string> &importPaths, const std::string &key);
+
+// The source files a lazy import of module `key` draws from: the single file
+// `resolveSingleFileStdlibModuleSource` finds, or, for a module directory of
+// several files, every `.prime` file in it (sorted by path) when each one has a
+// sibling `.psmeta` manifest. Empty when the module is not lazy-eligible.
+std::vector<std::filesystem::path>
+resolveLazyStdlibModuleSources(const std::vector<std::string> &importPaths, const std::string &key);
 
 std::optional<std::filesystem::path> stdlibSymbolManifestPathForSource(
     const std::filesystem::path &sourceFile);
@@ -238,6 +247,8 @@ struct LazyStdlibModule {
   std::filesystem::path sourceFile;
   std::vector<StdlibSymbolManifestEntry> entries;
   std::unordered_set<std::string> includedPaths;
+  // The closure scan reads a module only while it is active.
+  bool active = true;
   // The module source, read and text-filtered on its first extracted symbol
   // and shared by the rest (empty path until then).
   ManifestModuleSource loadedSource;
@@ -259,10 +270,12 @@ struct LazyStdlibExtractedSymbol {
   std::string text;
 };
 
-bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules,
-                                          const std::string &seedText,
-                                          std::vector<LazyStdlibExtractedSymbol> &extracted,
-                                          std::string &error);
+bool computeLazyStdlibModuleClosureSource(
+    std::vector<LazyStdlibModule> &modules,
+    const std::string &seedText,
+    std::vector<LazyStdlibExtractedSymbol> &extracted,
+    std::string &error,
+    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted = {});
 
 bool isGraphicsImportPath(const std::string &importPath);
 

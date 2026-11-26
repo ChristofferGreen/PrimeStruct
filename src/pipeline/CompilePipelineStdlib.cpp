@@ -100,7 +100,8 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
                                ExpandedSource *expandedSource,
                                const std::unordered_set<std::string> &excludedKeys,
                                std::string *unresolvedImport,
-                               const std::vector<OwnedStdlibModule> *ownedModules) {
+                               const std::vector<OwnedStdlibModule> *ownedModules,
+                               std::unordered_set<std::string> *lazyKeysImportedByModules) {
   std::error_code ec;
   std::deque<std::string> pendingKeys;
   std::unordered_set<std::string> queuedKeys;
@@ -236,6 +237,13 @@ bool appendStdlibModuleSources(const std::vector<std::string> &importPaths,
     const std::string key = pendingKeys.front();
     pendingKeys.pop_front();
     if (!processedKeys.insert(key).second) {
+      continue;
+    }
+    // A lazy module is read by the closure scan, which also covers the text of the modules spliced here.
+    if (excludedKeys.count(key) > 0) {
+      if (lazyKeysImportedByModules != nullptr) {
+        lazyKeysImportedByModules->insert(key);
+      }
       continue;
     }
     bool keyResolved = false;
@@ -551,6 +559,50 @@ std::optional<std::filesystem::path> resolveSingleFileStdlibModuleSource(
   return std::nullopt;
 }
 
+std::vector<std::filesystem::path>
+resolveLazyStdlibModuleSources(const std::vector<std::string> &importPaths,
+                               const std::string &key) {
+  if (const auto single = resolveSingleFileStdlibModuleSource(importPaths, key);
+      single.has_value()) {
+    return {*single};
+  }
+  if (key.size() <= std::string("/std/").size()) {
+    return {};
+  }
+  std::error_code ec;
+  for (const auto &pathText : importPaths) {
+    std::filesystem::path root(pathText);
+    if (root.filename() != "stdlib") {
+      continue;
+    }
+    const std::filesystem::path moduleRoot = root / "std" / key.substr(std::string("/std/").size());
+    if (!std::filesystem::is_directory(moduleRoot, ec)) {
+      continue;
+    }
+    std::vector<std::filesystem::path> files;
+    bool allManifested = true;
+    for (const auto &dirEntry : std::filesystem::recursive_directory_iterator(moduleRoot, ec)) {
+      if (ec) {
+        return {};
+      }
+      if (!dirEntry.is_regular_file(ec) || dirEntry.path().extension() != ".prime") {
+        continue;
+      }
+      if (!std::filesystem::exists(
+              std::filesystem::path(dirEntry.path()).replace_extension(".psmeta"), ec)) {
+        allManifested = false;
+        break;
+      }
+      files.push_back(dirEntry.path());
+    }
+    if (allManifested && files.size() > 1) {
+      std::sort(files.begin(), files.end());
+      return files;
+    }
+  }
+  return {};
+}
+
 std::optional<std::filesystem::path> stdlibSymbolManifestPathForSource(
     const std::filesystem::path &sourceFile) {
   std::filesystem::path manifestPath = sourceFile;
@@ -606,15 +658,34 @@ std::string constructorSugarStructLeafName(const std::string &factoryLeaf) {
   return structName;
 }
 
+// An operator on a matrix or quaternion (`multiply(m, v)`, `plus(a, b)`) is
+// rewritten after the text scan to a call of a helper named
+// `<type, lower case>_<operation>_internal` (`mat4_mul_vec4_internal`), whose
+// name appears nowhere in the source. Given such a helper leaf, returns the
+// type a call site spells (`Mat4`), or empty for any other leaf.
+std::string operatorHelperTypeLeafName(const std::string &helperLeaf) {
+  constexpr std::string_view suffix = "_internal";
+  const size_t typeEnd = helperLeaf.find('_');
+  if (typeEnd == std::string::npos || typeEnd == 0 || helperLeaf.size() <= suffix.size() ||
+      helperLeaf.compare(helperLeaf.size() - suffix.size(), suffix.size(), suffix) != 0) {
+    return {};
+  }
+  std::string typeName = helperLeaf.substr(0, typeEnd);
+  typeName.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(typeName.front())));
+  return typeName;
+}
+
 std::string manifestEntryLeafName(const std::string &fullPath) {
   const size_t lastSlash = fullPath.find_last_of('/');
   return lastSlash == std::string::npos ? fullPath : fullPath.substr(lastSlash + 1);
 }
 
-bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules,
-                                          const std::string &seedText,
-                                          std::vector<LazyStdlibExtractedSymbol> &extracted,
-                                          std::string &error) {
+bool computeLazyStdlibModuleClosureSource(
+    std::vector<LazyStdlibModule> &modules,
+    const std::string &seedText,
+    std::vector<LazyStdlibExtractedSymbol> &extracted,
+    std::string &error,
+    const std::vector<LazyStdlibExtractedSymbol> &previouslyExtracted) {
   std::deque<std::string> pendingTexts;
   pendingTexts.push_back(seedText);
 
@@ -623,8 +694,21 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
     pendingTexts.pop_front();
 
     for (LazyStdlibModule &module : modules) {
+      if (!module.active) {
+        continue;
+      }
       for (const StdlibSymbolManifestEntry &entry : module.entries) {
         if (module.includedPaths.count(entry.path) > 0) {
+          continue;
+        }
+        // A symbol whose lines sit inside one an earlier scan spliced is already in the source.
+        if (std::any_of(previouslyExtracted.begin(),
+                        previouslyExtracted.end(),
+                        [&](const LazyStdlibExtractedSymbol &done) {
+                          return done.module == &module &&
+                                 done.entry->startLine <= entry.startLine &&
+                                 done.entry->endLine >= entry.endLine;
+                        })) {
           continue;
         }
         const std::string leaf = manifestEntryLeafName(entry.path);
@@ -632,6 +716,10 @@ bool computeLazyStdlibModuleClosureSource(std::vector<LazyStdlibModule> &modules
         if (!matched) {
           const std::string sugarStructLeaf = constructorSugarStructLeafName(leaf);
           matched = !sugarStructLeaf.empty() && containsWholeWord(text, sugarStructLeaf);
+        }
+        if (!matched) {
+          const std::string helperTypeLeaf = operatorHelperTypeLeafName(leaf);
+          matched = !helperTypeLeaf.empty() && containsWholeWord(text, helperTypeLeaf);
         }
         if (!matched) {
           continue;

@@ -408,10 +408,9 @@ TEST_CASE("semantic memory budget policy artifacts are checked in") {
   CHECK(policy.find("\"fixture\": \"math_star_repro\"") != std::string::npos);
   CHECK(policy.find("\"phase\": \"semantic-product\"") != std::string::npos);
   CHECK(policy.find("\"fixture\": \"math_vector\"") != std::string::npos);
-  CHECK(policy.find("\"max_worst_peak_rss_bytes\": 31281152") !=
-        std::string::npos);
+  CHECK(policy.find("\"max_worst_peak_rss_bytes\": 18832500") != std::string::npos);
   CHECK(note.find("Sustained-Window Rule") != std::string::npos);
-  CHECK(note.find("`math_vector:ast-semantic` keeps a hard cap of `31281152` bytes") !=
+  CHECK(note.find("`math_vector:ast-semantic` keeps a hard cap of `18832500` bytes") !=
         std::string::npos);
   CHECK(note.find("Unified Semantic-Product Index Evidence") != std::string::npos);
   CHECK(note.find("`40` total rows") != std::string::npos);

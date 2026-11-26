@@ -68,39 +68,23 @@ When semantic behavior changes intentionally shift memory usage:
 
 ### Current Budget Notes
 
-- `math_vector:ast-semantic` keeps a hard cap of `31281152` bytes after the
-  2026-08-13 `docs/CompilerArenaAllocator.md` arena-allocator change
-  (TODO-5233/5234) added a per-allocation header, observed as `25735168`
-  bytes on the release runner (up from the prior cap's `24608768`-byte
-  observation - the prior cap's headroom was already nearly exhausted by
-  earlier same-day work, and this change's own modest, understood
-  ~11-12% RSS addition for stdlib-importing fixtures used the rest). The
-  new cap preserves roughly 13% headroom over the newly observed value
-  while updating the baseline row to match.
-- `imported_math_body:ast-semantic` keeps a hard cap of `31195136` bytes
-  after the same 2026-08-13 arena-allocator change, observed as
-  `25657344` bytes on the release runner (up from the prior cap's
-  `25395200`-byte observation, same cause as `math_vector:ast-semantic`
-  above). The new cap preserves roughly 13% headroom over the newly
-  observed value while updating the baseline row to match.
-- `math_vector_matrix:ast-semantic` keeps a hard cap of `31199232` bytes
-  after the same 2026-08-13 arena-allocator change, observed as
-  `25665536` bytes on the release runner (up from the prior cap's
-  `24494080`-byte observation, same cause as `math_vector:ast-semantic`
-  above). The new cap preserves roughly 13% headroom over the newly
-  observed value while updating the baseline row to match.
-- `imported_math_body:semantic-product` keeps a hard cap of `44521882` bytes
-  after May 23, 2026 release artifacts observed `42401792` bytes on the release
-  runner. The cap preserves roughly 5% headroom over that observed value while
-  leaving the baseline row unchanged for future comparison.
-- `math_vector:semantic-product` keeps a hard cap of `43713332` bytes after
-  May 23, 2026 release artifacts observed `41631744` bytes on the release
-  runner. The cap preserves roughly 5% headroom over that observed value while
-  leaving the baseline row unchanged for future comparison.
-- `math_vector_matrix:semantic-product` keeps a hard cap of `42560717` bytes
-  after May 23, 2026 release artifacts observed `40534016` bytes on the release
-  runner. The cap preserves roughly 5% headroom over that observed value while
-  leaving the baseline row unchanged for future comparison.
+- `math_vector:ast-semantic` keeps a hard cap of `18832500` bytes. Lazy
+  import of `/std/math` (a `.psmeta` per file) publishes the definitions the
+  program reaches instead of the whole module, so the fixture (which now
+  calls `Vec2.length()`, so its call-target counts stay meaningful) was
+  observed at `13910016` bytes on the release runner, down from `25735168`
+  with the whole module. The cap is the observed value plus 35 percent;
+  `math_vector:semantic-product` keeps `25447500` (observed `18841600`).
+- `imported_math_body:ast-semantic` keeps a hard cap of `13365000` bytes
+  (observed `9830400` on the release runner after the lazy `/std/math`
+  import, down from `25657344`; the observation plus 35 percent).
+- `math_vector_matrix:ast-semantic` keeps a hard cap of `13635000` bytes
+  (observed `10043392` after the lazy `/std/math` import, down from
+  `25665536`; the observation plus 35 percent).
+- `imported_math_body:semantic-product` keeps a hard cap of `13365000` bytes
+  and `math_vector_matrix:semantic-product` one of `15660000` bytes (observed
+  `9830400` and `11567104` after the lazy `/std/math` import; the observation
+  plus 35 percent).
 - `non_math_large_include:ast-semantic` keeps a hard cap of `62223975` bytes
   after May 23, 2026 release artifacts observed `59260928` bytes on the
   release runner. The cap preserves roughly 5% headroom over that observed

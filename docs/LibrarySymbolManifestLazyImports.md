@@ -497,6 +497,15 @@ shows the used/total ratio for a typical test is extremely lopsided (a
 handful of functions/types out of hundreds of transitively-included
 definitions).
 
+Update: `/std/math` is lazy-eligible. A module directory of several files is read
+lazily when every `.prime` file in it has a sibling `.psmeta` (`/std/math` has four:
+color, matrix, quaternion, vector), so a program that imports one math type publishes
+the definitions it reaches instead of the whole module (the semantic-product peak of
+`math_vector` fell from about 35 MB to about 10 MB). The closure scan also treats a
+matrix or quaternion operator helper (`mat4_mul_vec4_internal`) as used when the
+program spells its type (`Mat4`), because the operator rewrite names the helper after
+the text scan, and it scans the text of modules spliced whole for lazy symbols.
+
 `--dump-stage ast` on an unused `import /std/image/*` shows **784 total
 definitions** get parsed into the AST (image.prime's own definitions plus
 whatever it transitively imports itself). A representative real test

@@ -143,40 +143,65 @@ bool runCompilePipelineImportStage(const Options &options,
       if (!seenCandidateKeys.insert(key).second) {
         continue;
       }
-      const std::optional<std::filesystem::path> sourceFile =
-          resolveSingleFileStdlibModuleSource(options.importPaths, key);
-      if (!sourceFile.has_value()) {
+      const std::vector<std::filesystem::path> sourceFiles =
+          resolveLazyStdlibModuleSources(options.importPaths, key);
+      if (sourceFiles.empty()) {
         continue;
       }
-      // A module whose file is the root is in the source whole: reading it lazily too would define it twice.
-      {
+      // Every file of the module is read lazily or none is: a file left out would never be spliced.
+      std::vector<LazyStdlibModule> keyModules;
+      bool eligible = true;
+      for (const std::filesystem::path &sourceFile : sourceFiles) {
+        // A module whose file is the root is in the source whole: reading it lazily too would define it twice.
         std::error_code rootEc;
-        if (std::filesystem::equivalent(*sourceFile, options.inputPath, rootEc)) {
-          continue;
+        if (std::filesystem::equivalent(sourceFile, options.inputPath, rootEc)) {
+          eligible = false;
+          break;
         }
+        // A file the import resolver already spliced (`import</std/math>`) is in the source whole.
+        if (std::any_of(out.expandedSource.units.begin(),
+                        out.expandedSource.units.end(),
+                        [&](const SourceUnit &unit) {
+                          if (unit.kind != SourceUnitKind::Import) {
+                            return false;
+                          }
+                          std::error_code unitEc;
+                          return std::filesystem::equivalent(sourceFile, unit.displayPath, unitEc);
+                        })) {
+          eligible = false;
+          break;
+        }
+        // A module a linked library stands for is not read, lazily or whole.
+        if (std::any_of(
+                ownedModules.begin(), ownedModules.end(), [&](const OwnedStdlibModule &owned) {
+                  return owned.file ==
+                         stdlibRelativeFile(std::filesystem::absolute(sourceFile).string());
+                })) {
+          eligible = false;
+          break;
+        }
+        const std::optional<std::filesystem::path> manifestPath =
+            stdlibSymbolManifestPathForSource(sourceFile);
+        if (!manifestPath.has_value()) {
+          eligible = false;
+          break;
+        }
+        LazyStdlibModule module;
+        module.key = key;
+        module.sourceFile = sourceFile;
+        if (!readStdlibSymbolManifest(manifestPath->string(), module.entries, error)) {
+          diagnosticSink.setSummary(error);
+          return false;
+        }
+        keyModules.push_back(std::move(module));
       }
-      // A module a linked library stands for is not read, lazily or whole.
-      if (std::any_of(
-              ownedModules.begin(), ownedModules.end(), [&](const OwnedStdlibModule &owned) {
-                return owned.file ==
-                       stdlibRelativeFile(std::filesystem::absolute(*sourceFile).string());
-              })) {
+      if (!eligible) {
         continue;
-      }
-      const std::optional<std::filesystem::path> manifestPath =
-          stdlibSymbolManifestPathForSource(*sourceFile);
-      if (!manifestPath.has_value()) {
-        continue;
-      }
-      LazyStdlibModule module;
-      module.key = key;
-      module.sourceFile = *sourceFile;
-      if (!readStdlibSymbolManifest(manifestPath->string(), module.entries, error)) {
-        diagnosticSink.setSummary(error);
-        return false;
       }
       lazyKeys.insert(key);
-      lazyModules.push_back(std::move(module));
+      for (LazyStdlibModule &module : keyModules) {
+        lazyModules.push_back(std::move(module));
+      }
     }
 
     // A lazy module's own top-level `import` lines (e.g. image.prime's
@@ -253,8 +278,8 @@ bool runCompilePipelineImportStage(const Options &options,
   // incorrectly skips including /std/math, leaving ColorRGBA undefined.
   // Extracting first ensures every heuristic downstream sees the same
   // source content a whole-file splice would have produced.
+  std::vector<LazyStdlibExtractedSymbol> extracted;
   if (!lazyModules.empty()) {
-    std::vector<LazyStdlibExtractedSymbol> extracted;
     if (!computeLazyStdlibModuleClosureSource(lazyModules, out.source, extracted, error)) {
       diagnosticSink.setSummary(error);
       return false;
@@ -271,6 +296,8 @@ bool runCompilePipelineImportStage(const Options &options,
     }
   }
 
+  const std::size_t sourceSizeBeforeModules = out.source.size();
+  std::unordered_set<std::string> lazyKeysImportedByModules;
   if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
     std::string unresolvedImport;
     if (!appendStdlibModuleSources(options.importPaths,
@@ -281,7 +308,8 @@ bool runCompilePipelineImportStage(const Options &options,
                                    &out.expandedSource,
                                    lazyKeys,
                                    &unresolvedImport,
-                                   &ownedModules)) {
+                                   &ownedModules,
+                                   &lazyKeysImportedByModules)) {
       if (const auto span = findImportPathSpan(out.expandedSource, unresolvedImport);
           span.has_value()) {
         DiagnosticSinkRecord record;
@@ -301,6 +329,32 @@ bool runCompilePipelineImportStage(const Options &options,
       if (!keys.empty() &&
           resolveSingleFileStdlibModuleSource(options.importPaths, keys.front()).has_value()) {
         lazyKeys.insert(keys.front());
+      }
+    }
+    // A module spliced whole that imports a lazy module uses symbols of it the user's own text never names:
+    // scan the spliced text for those modules too.
+    if (!lazyKeysImportedByModules.empty() && out.source.size() > sourceSizeBeforeModules) {
+      for (LazyStdlibModule &module : lazyModules) {
+        module.active = lazyKeysImportedByModules.count(module.key) > 0;
+      }
+      std::vector<LazyStdlibExtractedSymbol> lateExtracted;
+      if (!computeLazyStdlibModuleClosureSource(lazyModules,
+                                                out.source.substr(sourceSizeBeforeModules),
+                                                lateExtracted,
+                                                error,
+                                                extracted)) {
+        diagnosticSink.setSummary(error);
+        return false;
+      }
+      if (!lateExtracted.empty()) {
+        ExpandedSourceBuilder sourceBuilder(out.expandedSource);
+        for (const LazyStdlibExtractedSymbol &symbol : lateExtracted) {
+          sourceBuilder.appendGenerated("\n", "<lazy-stdlib-separator>");
+          const std::size_t unitId = sourceBuilder.addUnit(
+              SourceUnitKind::Stdlib, symbol.module->sourceFile.string(), symbol.module->key, 1, 1);
+          sourceBuilder.appendSegment(unitId, symbol.text, 1, 1);
+        }
+        out.source = out.expandedSource.text;
       }
     }
   }

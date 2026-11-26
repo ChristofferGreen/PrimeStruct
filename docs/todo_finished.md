@@ -2698,6 +2698,7 @@ are left unarchived.
 | TODO-6293 | Each non-template stdlib math definition costs about a megabyte of semantic-product memory | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6294 | An array literal of structs is refused by every backend, so six gfx conformance programs never ran | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6296 | Indexing an array literal of structs is refused by the VM, exe and native | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6297 | A program that imports one `/std/math` type validates and publishes the whole math module | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

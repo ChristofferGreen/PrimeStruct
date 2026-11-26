@@ -173,4 +173,54 @@ main() {
   CHECK(readFile(outPath) == "queue_submit_failed\n");
 }
 
+TEST_CASE("a program that imports one math type publishes only the definitions it reaches") {
+  const std::string source = R"(
+import /std/math/Vec2
+
+[return<int>]
+main() {
+  [Vec2] v{Vec2{[x] 3.0f32, [y] 4.0f32}}
+  return(convert<i32>(v.length()))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_vec2_only.prime", source);
+  const std::string dumpPath = (testScratchPath("") / "primec_lazy_math_vec2_only.txt").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 5);
+  CHECK(runCommand("./primec --dump-stage=semantic-product " + srcPath + " --entry /main > " +
+                   dumpPath) == 0);
+  const std::string dump = readFile(dumpPath);
+  size_t definitionLines = 0;
+  for (size_t pos = dump.find("\n  definitions"); pos != std::string::npos;
+       pos = dump.find("\n  definitions", pos + 1)) {
+    ++definitionLines;
+  }
+  // The whole math module is 99 definitions; the name-based scan takes Vec2 and the definitions its calls name.
+  CHECK(definitionLines > 0);
+  CHECK(definitionLines < 60);
+  CHECK(dump.find("/std/math/Mat4") == std::string::npos);
+}
+
+TEST_CASE("matrix, quaternion and color operators run through the lazy math import") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Mat2] m{Mat2{}}
+  [Vec2] v{Vec2{[x] 1.0f32, [y] 2.0f32}}
+  [Vec2] r{multiply(m, v)}
+  [Quat] q{Quat{}}
+  [Vec3] p{Vec3{[x] 1.0f32, [y] 0.0f32, [z] 0.0f32}}
+  [Vec3] rotated{multiply(q, p)}
+  [ColorRGBA] c{ColorRGBA{0.5f32, 0.5f32, 0.5f32, 1.0f32}}
+  return(plus(plus(convert<i32>(r.x), convert<i32>(rotated.y)), convert<i32>(c.a)))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_operators.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_lazy_math_operators").string();
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 1);
+  CHECK(runCommand("./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main") == 0);
+  CHECK(runCommand(exePath) == 1);
+}
+
 TEST_SUITE_END();
