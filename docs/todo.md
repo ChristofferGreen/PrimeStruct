@@ -141,7 +141,7 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | ready | lib-shapes |
+| TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | in_progress | lib-shapes |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | ready | lib-shapes |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | blocked | lib-shapes-backends |
 | TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | blocked | lib-shapes-backends |
@@ -663,9 +663,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
 
-- [ ] TODO-6309: `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect`
+- [~] TODO-6309: `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect`
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (third layer of TODO-6283)
   - parallel_track: lib-shapes
