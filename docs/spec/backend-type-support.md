@@ -57,6 +57,11 @@
   scalar scale/divide, `MatN * VecN` interop, matching matrix-matrix multiply, quaternion Hamilton products,
   quaternion-`Vec3` rotation, and the explicit quaternion conversion helpers `quat_to_mat3`, `quat_to_mat4`, and
   `mat3_to_quat`.
+- **Vector arithmetic (current):** `plus`/`minus` of two vectors of the same type, `multiply(v, scalar)`,
+  `multiply(scalar, v)` and `divide(v, scalar)` work for `Vec2`, `Vec3` and `Vec4` on the VM, the C++ emitters
+  (`exe`, `optexe`) and GLSL. They lower through `[private]` `vecN_*_internal` helpers of `/std/math`, the way the
+  matrix and quaternion operators do; scalars that are not `f32` are wrapped in `convert<f32>`. Vector times vector and
+  vector divided by vector are rejected.
 - **GLSL effects/capabilities (current):** `io_out`, `io_err`, and `pathspace_*` metadata entries are accepted; other
   effects/capabilities are rejected. `print*` calls are accepted but emitted as no-op expressions.
 - **GLSL determinism (current):** only local scalar plus nominal vector/matrix bindings are allowed; no static storage

@@ -148,7 +148,8 @@ main() {
       GLSL now lowers nominal `Vec2`/`Vec3`/`Vec4`, `Quat`, `Mat2`/`Mat3`/`Mat4` values, direct vector/quaternion/matrix
       field access, component-wise vector/quaternion `plus`/`minus`, vector/quaternion scalar scale/divide, `MatN *
       VecN` interop, matching matrix-matrix multiply, quaternion-quaternion Hamilton products, quaternion-`Vec3`
-      rotation, and the explicit conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`.
+      rotation, and the explicit conversion helpers `quat_to_mat3`, `quat_to_mat4`, and `mat3_to_quat`. `VecN` `plus`/`minus`,
+      scalar scale and divide also run on the VM and the C++ emitters (`[private]` `vecN_*_internal` helpers).
     - `multiply` is allowed for: scalar scaling (`S * VecN`, `VecN * S`, `S * Mat`, `Mat * S`, `S * Quat`, `Quat * S`),
       matrix-vector (`Mat * VecN` with compatible inner dimension), matrix-matrix (`MatRxC * MatCxK`),
       quaternion-quaternion (Hamilton product), and quaternion-vector rotation (`Quat * Vec3`).

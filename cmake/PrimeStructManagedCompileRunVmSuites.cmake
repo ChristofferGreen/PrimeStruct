@@ -140,7 +140,7 @@ addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.math"
                                   SHARD_PREFIX "math_helpers_11_12"
                                   SOURCE_FILE "*test_compile_run_vm_math.cpp"
                                   RANGE_FIRST 11
-                                  RANGE_LAST 11
+                                  RANGE_LAST 17
                                   CASES_PER_SHARD 1)
 addPrimeStructManagedDoctestSuite("primestruct.compile.run.vm.outputs"
                                   TIMEOUT 300

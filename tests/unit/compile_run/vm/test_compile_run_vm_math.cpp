@@ -270,4 +270,177 @@ main() {
             "/std/math/Mat3") != std::string::npos);
 }
 
+TEST_CASE("runs vm Vec2 plus minus scale and divide exactly") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] base{Vec2{1.0f32, 2.0f32}}
+  [Vec2] other{Vec2{8.0f32, 6.0f32}}
+  [Vec2] sum{plus(base, other)}
+  [Vec2] diff{minus(base, other)}
+  [Vec2] left{multiply(2i32, base)}
+  [Vec2] right{multiply(other, 0.5f32)}
+  [Vec2] div{divide(other, 4.0f32)}
+  [f32] totalError{
+    abs(sum.x - 9.0f32) +
+    abs(sum.y - 8.0f32) +
+    abs(diff.x - -7.0f32) +
+    abs(diff.y - -4.0f32) +
+    abs(left.x - 2.0f32) +
+    abs(left.y - 4.0f32) +
+    abs(right.x - 4.0f32) +
+    abs(right.y - 3.0f32) +
+    abs(div.x - 2.0f32) +
+    abs(div.y - 1.5f32)
+  }
+  return(convert<int>(totalError == 0.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vec2_arithmetic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("runs vm Vec3 plus minus scale and divide exactly") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec3] base{Vec3{1.0f32, 2.0f32, 3.0f32}}
+  [Vec3] other{Vec3{8.0f32, 6.0f32, 4.0f32}}
+  [Vec3] sum{plus(base, other)}
+  [Vec3] diff{minus(base, other)}
+  [Vec3] left{multiply(2i32, base)}
+  [Vec3] right{multiply(other, 0.5f32)}
+  [Vec3] div{divide(other, 4.0f32)}
+  [f32] totalError{
+    abs(sum.x - 9.0f32) +
+    abs(sum.y - 8.0f32) +
+    abs(sum.z - 7.0f32) +
+    abs(diff.x - -7.0f32) +
+    abs(diff.y - -4.0f32) +
+    abs(diff.z - -1.0f32) +
+    abs(left.x - 2.0f32) +
+    abs(left.y - 4.0f32) +
+    abs(left.z - 6.0f32) +
+    abs(right.x - 4.0f32) +
+    abs(right.y - 3.0f32) +
+    abs(right.z - 2.0f32) +
+    abs(div.x - 2.0f32) +
+    abs(div.y - 1.5f32) +
+    abs(div.z - 1.0f32)
+  }
+  return(convert<int>(totalError == 0.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vec3_arithmetic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("runs vm Vec4 plus minus scale and divide exactly") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec4] base{Vec4{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Vec4] other{Vec4{8.0f32, 6.0f32, 4.0f32, 2.0f32}}
+  [Vec4] sum{plus(base, other)}
+  [Vec4] diff{minus(base, other)}
+  [Vec4] left{multiply(2i32, base)}
+  [Vec4] right{multiply(other, 0.5f32)}
+  [Vec4] div{divide(other, 4.0f32)}
+  [f32] totalError{
+    abs(sum.x - 9.0f32) +
+    abs(sum.y - 8.0f32) +
+    abs(sum.z - 7.0f32) +
+    abs(sum.w - 6.0f32) +
+    abs(diff.x - -7.0f32) +
+    abs(diff.y - -4.0f32) +
+    abs(diff.z - -1.0f32) +
+    abs(diff.w - 2.0f32) +
+    abs(left.x - 2.0f32) +
+    abs(left.y - 4.0f32) +
+    abs(left.z - 6.0f32) +
+    abs(left.w - 8.0f32) +
+    abs(right.x - 4.0f32) +
+    abs(right.y - 3.0f32) +
+    abs(right.z - 2.0f32) +
+    abs(right.w - 1.0f32) +
+    abs(div.x - 2.0f32) +
+    abs(div.y - 1.5f32) +
+    abs(div.z - 1.0f32) +
+    abs(div.w - 0.5f32)
+  }
+  return(convert<int>(totalError == 0.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vec4_arithmetic.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
+}
+
+TEST_CASE("rejects vm vector plus of different vector types") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] lhs{Vec2{1.0f32, 2.0f32}}
+  [Vec3] rhs{Vec3{1.0f32, 2.0f32, 3.0f32}}
+  [Vec2] value{plus(lhs, rhs)}
+  return(convert<int>(value.x))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vector_plus_mismatch.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_math_vector_plus_mismatch.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("plus requires matching vector operand types") != std::string::npos);
+}
+
+TEST_CASE("rejects vm vector multiply of two vectors") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] lhs{Vec2{1.0f32, 2.0f32}}
+  [Vec2] value{multiply(lhs, lhs)}
+  return(convert<int>(value.x))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vector_multiply_vectors.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_math_vector_multiply_vectors.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("multiply requires a vector and a scalar operand") !=
+        std::string::npos);
+}
+
+TEST_CASE("rejects a program call of a private vector helper") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] lhs{Vec2{1.0f32, 2.0f32}}
+  [Vec2] value{/std/math/vec2_add_internal(lhs, lhs)}
+  return(convert<int>(value.x))
+}
+)";
+  const std::string srcPath = writeTemp("vm_math_vector_private_helper.prime", source);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_math_vector_private_helper.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("/std/math/vec2_add_internal is private") != std::string::npos);
+}
+
 TEST_SUITE_END();

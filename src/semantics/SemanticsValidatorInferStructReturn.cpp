@@ -275,12 +275,26 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       return inferPickExprStructReturnPath(expr, params, locals);
     }
     std::string builtinName;
-    if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
-        expr.args.size() == 2) {
+    if (getBuiltinOperatorName(expr, builtinName) &&
+        (builtinName == "plus" || builtinName == "minus") && expr.args.size() == 2) {
       const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
       const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
-      if (isMatrixQuaternionTypePath(leftType) && leftType == rightType) {
+      if ((isMatrixQuaternionTypePath(leftType) || isVectorTypePath(leftType)) &&
+          leftType == rightType) {
         return leftType;
+      }
+    }
+    if (getBuiltinOperatorName(expr, builtinName) &&
+        (builtinName == "multiply" || builtinName == "divide") && expr.args.size() == 2) {
+      const std::string leftType = inferStructReturnPath(expr.args[0], params, locals);
+      const std::string rightType = inferStructReturnPath(expr.args[1], params, locals);
+      if (isVectorTypePath(leftType) && rightType.empty() &&
+          isInferStructReturnNumericScalarExpr(expr.args[1], params, locals)) {
+        return leftType;
+      }
+      if (builtinName == "multiply" && isVectorTypePath(rightType) && leftType.empty() &&
+          isInferStructReturnNumericScalarExpr(expr.args[0], params, locals)) {
+        return rightType;
       }
     }
     if (getBuiltinOperatorName(expr, builtinName) && builtinName == "multiply" && expr.args.size() == 2) {

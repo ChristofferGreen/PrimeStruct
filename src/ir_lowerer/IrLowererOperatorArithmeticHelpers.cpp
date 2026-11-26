@@ -13,6 +13,19 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string vectorHelperBaseForPath(const std::string &typePath) {
+  if (typePath == "/std/math/Vec2") {
+    return "/std/math/vec2";
+  }
+  if (typePath == "/std/math/Vec3") {
+    return "/std/math/vec3";
+  }
+  if (typePath == "/std/math/Vec4") {
+    return "/std/math/vec4";
+  }
+  return "";
+}
+
 std::string matrixHelperBaseForPath(const std::string &typePath) {
   if (typePath == "/std/math/Mat2") {
     return "/std/math/mat2";
@@ -129,12 +142,36 @@ bool rewriteMathArithmeticCall(const Expr &expr,
   const std::string leftType = inferStructExprPath(expr.args[0], localsIn);
   const std::string rightType = inferStructExprPath(expr.args[1], localsIn);
   const std::string resultType = inferStructExprPath(expr, localsIn);
+  const std::string leftVectorBase = vectorHelperBaseForPath(leftType);
+  const std::string rightVectorBase = vectorHelperBaseForPath(rightType);
   const std::string leftMatrixBase = matrixHelperBaseForPath(leftType);
   const std::string rightMatrixBase = matrixHelperBaseForPath(rightType);
   const std::string leftQuaternionBase = quaternionHelperBaseForPath(leftType);
   const std::string rightQuaternionBase = quaternionHelperBaseForPath(rightType);
   const LocalInfo::ValueKind leftKind = inferExprKind(expr.args[0], localsIn);
   const LocalInfo::ValueKind rightKind = inferExprKind(expr.args[1], localsIn);
+  if (builtin == "plus" && !leftVectorBase.empty() && leftType == rightType) {
+    rewriteHelperCall(expr, leftVectorBase + "_add_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "minus" && !leftVectorBase.empty() && leftType == rightType) {
+    rewriteHelperCall(expr, leftVectorBase + "_sub_internal", rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && !leftVectorBase.empty() && isNumericScalarKind(rightKind)) {
+    rewriteScalarHelperCall(expr, leftVectorBase + "_scale_internal", 1, rightKind, rewrittenExpr);
+    return true;
+  }
+  if (builtin == "multiply" && isNumericScalarKind(leftKind) && !rightVectorBase.empty()) {
+    rewriteScalarHelperCall(
+        expr, rightVectorBase + "_scale_left_internal", 0, leftKind, rewrittenExpr);
+    return true;
+  }
+  if (builtin == "divide" && !leftVectorBase.empty() && isNumericScalarKind(rightKind)) {
+    rewriteScalarHelperCall(
+        expr, leftVectorBase + "_div_scalar_internal", 1, rightKind, rewrittenExpr);
+    return true;
+  }
   if (builtin == "plus" && !leftMatrixBase.empty() && leftType == rightType) {
     rewriteHelperCall(expr, leftMatrixBase + "_add_internal", rewrittenExpr);
     return true;

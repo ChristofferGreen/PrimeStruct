@@ -2697,6 +2697,7 @@ are left unarchived.
 | TODO-6292 | No test passes by accepting the unsupported-call error it should catch | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6293 | Each non-template stdlib math definition costs about a megabyte of semantic-product memory | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6294 | An array literal of structs is refused by every backend, so six gfx conformance programs never ran | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6295 | `plus`, `minus`, `multiply` and `divide` of vectors are rejected, though the docs and a GLSL test describe... | [undated.md](todo_archive/undated.md) | - |
 | TODO-6296 | Indexing an array literal of structs is refused by the VM, exe and native | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6297 | A program that imports one `/std/math` type validates and publishes the whole math module | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6299 | The lazy stdlib closure scan matches a method by its bare name, so one `length` call pulls 42 math definitions | [2026-11.md](todo_archive/2026-11.md) | - |

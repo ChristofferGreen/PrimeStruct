@@ -671,7 +671,9 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
     are rejected, as are mixed integer/float operands.
   - Draft matrix/quaternion operators follow an explicit compatibility matrix with no implicit conversions:
     `plus`/`minus` require matching envelopes, `multiply` allows scalar scale + matrix/vector + matrix/matrix +
-    quaternion/quaternion + quaternion/`Vec3`, and `divide` allows only composite-by-scalar.
+    quaternion/quaternion + quaternion/`Vec3`, and `divide` allows only composite-by-scalar. `Vec2`/`Vec3`/`Vec4`
+    follow the same shape rules: `plus`/`minus` of two vectors of one type, `multiply` with a scalar on either side,
+    and `divide` of a vector by a scalar.
   - Pointer arithmetic is only defined for `plus`/`minus` with a pointer on the left and an integer offset on the
     right (`i32`, `i64`, `u64`). Pointer + pointer is rejected, and a pointer on the right is rejected.
   - Comparisons (`greater_than`, `less_than`, `greater_equal`, `less_equal`, `equal`, `not_equal`) accept

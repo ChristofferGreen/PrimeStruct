@@ -1073,7 +1073,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("glsl emitter rejects documented vector arithmetic operators") {
+TEST_CASE("glsl emitter lowers documented vector arithmetic operators") {
   const std::string source = R"(
 import /std/math/*
 
@@ -1100,16 +1100,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_glsl_support_vector_arithmetic.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_glsl_support_vector_arithmetic.err").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_glsl_support_vector_arithmetic.glsl").string();
 
-  const std::string compileCmd = "./primec --emit=glsl " + srcPath +
-                                 " -o /dev/null --entry /main 2> " + quoteShellArg(errPath);
-  // Plus, minus, multiply and divide of two vectors, or of a vector and a scalar, are rejected by the semantic
-  // pass before any backend sees them; the GLSL text this program was meant to produce is not pinned by any test.
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("arithmetic operators require numeric operands") !=
-        std::string::npos);
+  const std::string compileCmd = "./primec --emit=glsl " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(outPath) + " --entry /main";
+  REQUIRE(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  // The shader is the IR path (a stack machine), not a per-operator expression such as `(a + b)`.
+  CHECK(output.find("#version 450") != std::string::npos);
+  CHECK(output.find("int ps_entry_0(inout int stack[1024], inout int sp)") != std::string::npos);
 }
 
 TEST_CASE("glsl emitter handles math constants") {

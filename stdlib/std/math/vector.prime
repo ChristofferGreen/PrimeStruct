@@ -67,6 +67,45 @@ namespace std {
     }
   }
 
+  [private return<Vec2> effects(none)]
+  vec2_add_internal([Vec2] left, [Vec2] right) {
+    return(Vec2{
+      left.x + right.x,
+      left.y + right.y
+    })
+  }
+
+  [private return<Vec2> effects(none)]
+  vec2_sub_internal([Vec2] left, [Vec2] right) {
+    return(Vec2{
+      left.x - right.x,
+      left.y - right.y
+    })
+  }
+
+  [private return<Vec2> effects(none)]
+  vec2_scale_internal([Vec2] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec2{
+      value.x * scalar,
+      value.y * scalar
+    })
+  }
+
+  [private return<Vec2> effects(none)]
+  vec2_scale_left_internal([f32] scale, [Vec2] value) {
+    return(vec2_scale_internal(value, scale))
+  }
+
+  [private return<Vec2> effects(none)]
+  vec2_div_scalar_internal([Vec2] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec2{
+      value.x / scalar,
+      value.y / scalar
+    })
+  }
+
   [public struct]
   Vec3() {
     [public f32] x{0.0}
@@ -176,6 +215,49 @@ namespace std {
     }
   }
 
+  [private return<Vec3> effects(none)]
+  vec3_add_internal([Vec3] left, [Vec3] right) {
+    return(Vec3{
+      left.x + right.x,
+      left.y + right.y,
+      left.z + right.z
+    })
+  }
+
+  [private return<Vec3> effects(none)]
+  vec3_sub_internal([Vec3] left, [Vec3] right) {
+    return(Vec3{
+      left.x - right.x,
+      left.y - right.y,
+      left.z - right.z
+    })
+  }
+
+  [private return<Vec3> effects(none)]
+  vec3_scale_internal([Vec3] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec3{
+      value.x * scalar,
+      value.y * scalar,
+      value.z * scalar
+    })
+  }
+
+  [private return<Vec3> effects(none)]
+  vec3_scale_left_internal([f32] scale, [Vec3] value) {
+    return(vec3_scale_internal(value, scale))
+  }
+
+  [private return<Vec3> effects(none)]
+  vec3_div_scalar_internal([Vec3] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec3{
+      value.x / scalar,
+      value.y / scalar,
+      value.z / scalar
+    })
+  }
+
   [public struct]
   Vec4() {
     [public f32] x{0.0}
@@ -245,6 +327,53 @@ namespace std {
     normalize([Vec4] self) {
       return(self.toNormalized())
     }
+  }
+
+  [private return<Vec4> effects(none)]
+  vec4_add_internal([Vec4] left, [Vec4] right) {
+    return(Vec4{
+      left.x + right.x,
+      left.y + right.y,
+      left.z + right.z,
+      left.w + right.w
+    })
+  }
+
+  [private return<Vec4> effects(none)]
+  vec4_sub_internal([Vec4] left, [Vec4] right) {
+    return(Vec4{
+      left.x - right.x,
+      left.y - right.y,
+      left.z - right.z,
+      left.w - right.w
+    })
+  }
+
+  [private return<Vec4> effects(none)]
+  vec4_scale_internal([Vec4] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec4{
+      value.x * scalar,
+      value.y * scalar,
+      value.z * scalar,
+      value.w * scalar
+    })
+  }
+
+  [private return<Vec4> effects(none)]
+  vec4_scale_left_internal([f32] scale, [Vec4] value) {
+    return(vec4_scale_internal(value, scale))
+  }
+
+  [private return<Vec4> effects(none)]
+  vec4_div_scalar_internal([Vec4] value, [f32] scale) {
+    [f32] scalar{scale}
+    return(Vec4{
+      value.x / scalar,
+      value.y / scalar,
+      value.z / scalar,
+      value.w / scalar
+    })
   }
   }
 }

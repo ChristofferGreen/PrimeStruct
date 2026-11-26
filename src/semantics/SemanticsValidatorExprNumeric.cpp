@@ -318,7 +318,8 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     result.valid = isNumericExpr(params, locals, left);
     return result;
   };
-  auto classifyMatrixQuaternionDivide = [&](const Expr &left, const Expr &right) -> MatrixQuaternionDivideInfo {
+  auto classifyMatrixQuaternionDivide = [&](const Expr &left,
+                                            const Expr &right) -> MatrixQuaternionDivideInfo {
     const std::string leftMathType = inferMatrixQuaternionTypePath(left, params, locals);
     const std::string rightMathType = inferMatrixQuaternionTypePath(right, params, locals);
     if (leftMathType.empty() && rightMathType.empty()) {
@@ -326,8 +327,19 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
     }
     MatrixQuaternionDivideInfo result;
     result.handled = true;
-    result.valid = !leftMathType.empty() && rightMathType.empty() && isNumericExpr(params, locals, right);
+    result.valid =
+        !leftMathType.empty() && rightMathType.empty() && isNumericExpr(params, locals, right);
     return result;
+  };
+  // A vector scaled by a numeric scalar (either order for multiply, vector on the left for divide).
+  auto isVectorScalarOperation =
+      [&](const Expr &left, const Expr &right, bool scalarMayLead) -> bool {
+    if (!inferVectorTypePath(left, params, locals).empty()) {
+      return inferVectorTypePath(right, params, locals).empty() &&
+             isNumericExpr(params, locals, right);
+    }
+    return scalarMayLead && !inferVectorTypePath(right, params, locals).empty() &&
+           isNumericExpr(params, locals, left);
   };
   auto validateArgs = [&]() -> bool {
     for (const auto &arg : expr.args) {
@@ -390,6 +402,15 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
                                          " requires matching matrix/quaternion operand types");
           }
           useMatrixQuaternionShapeRules = true;
+        } else {
+          const std::string leftVectorType = inferVectorTypePath(expr.args[0], params, locals);
+          const std::string rightVectorType = inferVectorTypePath(expr.args[1], params, locals);
+          if (!leftVectorType.empty() || !rightVectorType.empty()) {
+            if (leftVectorType != rightVectorType) {
+              return failNumericDiagnostic(builtinName + " requires matching vector operand types");
+            }
+            useMatrixQuaternionShapeRules = true;
+          }
         }
       }
       if (useMatrixQuaternionShapeRules) {
@@ -404,6 +425,13 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
           }
           return validateArgs();
         }
+        if (isVectorScalarOperation(expr.args[0], expr.args[1], true)) {
+          return validateArgs();
+        }
+        if (!inferVectorTypePath(expr.args[0], params, locals).empty() ||
+            !inferVectorTypePath(expr.args[1], params, locals).empty()) {
+          return failNumericDiagnostic("multiply requires a vector and a scalar operand");
+        }
       }
       if (builtinName == "divide") {
         MatrixQuaternionDivideInfo divideInfo = classifyMatrixQuaternionDivide(expr.args[0], expr.args[1]);
@@ -413,6 +441,13 @@ bool SemanticsValidator::validateNumericBuiltinExpr(const std::vector<ParameterI
                 "divide requires matrix/quaternion composite-by-scalar operands");
           }
           return validateArgs();
+        }
+        if (isVectorScalarOperation(expr.args[0], expr.args[1], false)) {
+          return validateArgs();
+        }
+        if (!inferVectorTypePath(expr.args[0], params, locals).empty() ||
+            !inferVectorTypePath(expr.args[1], params, locals).empty()) {
+          return failNumericDiagnostic("divide requires a vector divided by a scalar");
         }
       }
       if (!isNumericExpr(params, locals, expr.args[0]) || !isNumericExpr(params, locals, expr.args[1])) {

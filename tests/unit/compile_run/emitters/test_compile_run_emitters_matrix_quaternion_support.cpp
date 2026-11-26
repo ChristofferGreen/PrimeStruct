@@ -126,6 +126,46 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+TEST_CASE("runs C++ vector arithmetic on exe and optexe") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Vec2] base2{Vec2{1.0f32, 2.0f32}}
+  [Vec2] other2{Vec2{8.0f32, 6.0f32}}
+  [Vec3] base3{Vec3{1.0f32, 2.0f32, 3.0f32}}
+  [Vec4] base4{Vec4{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Vec4] other4{Vec4{8.0f32, 6.0f32, 4.0f32, 2.0f32}}
+  [Vec2] sum2{plus(base2, other2)}
+  [Vec2] diff2{minus(base2, other2)}
+  [Vec2] left2{multiply(2i32, base2)}
+  [Vec2] div2{divide(other2, 4.0f32)}
+  [Vec3] right3{multiply(base3, 0.5f32)}
+  [Vec4] sum4{plus(base4, other4)}
+  [Vec4] diff4{minus(base4, other4)}
+  [f32] totalError{
+    abs(sum2.x - 9.0f32) + abs(sum2.y - 8.0f32) +
+    abs(diff2.x + 7.0f32) + abs(diff2.y + 4.0f32) +
+    abs(left2.x - 2.0f32) + abs(left2.y - 4.0f32) +
+    abs(div2.x - 2.0f32) + abs(div2.y - 1.5f32) +
+    abs(right3.x - 0.5f32) + abs(right3.y - 1.0f32) + abs(right3.z - 1.5f32) +
+    abs(sum4.x - 9.0f32) + abs(sum4.y - 8.0f32) + abs(sum4.z - 7.0f32) + abs(sum4.w - 6.0f32) +
+    abs(diff4.x + 7.0f32) + abs(diff4.y + 4.0f32) + abs(diff4.z + 1.0f32) + abs(diff4.w - 2.0f32)
+  }
+  return(convert<int>(totalError == 0.0f32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_vector_arithmetic.prime", source);
+  for (const char *kind : {"exe", "optexe"}) {
+    const std::string exePath =
+        (testScratchPath("") / (std::string("primec_cpp_vector_arithmetic_") + kind)).string();
+    CHECK(runCommand(std::string("./primec --emit=") + kind + " " + quoteShellArg(srcPath) +
+                     " -o " + quoteShellArg(exePath) + " --entry /main") == 0);
+    CHECK(runCommand(quoteShellArg(exePath)) == 1);
+  }
+}
+
 TEST_CASE("C++ emitter keeps support-matrix plus mismatch diagnostics") {
   const std::string source = R"(
 import /std/math/*

@@ -195,9 +195,11 @@ main() {
     ++definitionLines;
   }
   // The whole math module is 99 definitions; the scan takes Vec2 and the methods it calls, not the
-  // `length` of every other math type.
+  // `length` of every other math type. The 11 are `main`, `Vec2`, its two namespaces, `length`,
+  // `lengthSquared` and the five `[private]` `vec2_*_internal` operator helpers that spelling the
+  // type pulls in, as for the matrix and quaternion types.
   CHECK(definitionLines > 0);
-  CHECK(definitionLines <= 10);
+  CHECK(definitionLines <= 11);
   CHECK(dump.find("/std/math/Vec3") == std::string::npos);
   CHECK(dump.find("/std/math/Quat") == std::string::npos);
   CHECK(dump.find("/std/math/Mat4") == std::string::npos);
