@@ -130,6 +130,8 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6288 | Library code outside the slice and container primitives is not `[unsafe]` | ready | stdlib-safe-slices |
+| TODO-6291 | Operator helpers of matrix and quaternion are private again and still reach a library | ready | lib-shapes |
+| TODO-6292 | No test passes by accepting the unsupported-call error it should catch | ready | test-honesty |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -678,6 +680,34 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the http, net and text tests and fixtures pass unchanged in behaviour; full release gate green
   - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
   - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
+
+- [ ] TODO-6291: Operator helpers of matrix and quaternion are private again and still reach a library
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (follow-up of TODO-6287)
+  - parallel_track: lib-shapes
+  - scope: TODO-6287 made the 21 `*_internal` helpers of stdlib/std/math/matrix.prime and the 7 of quaternion.prime `public` so a library interface carries them for the lowerer's operator rewrite (src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp). That lets user code call `mat2_mul_mat2_internal` directly, against the user's API rule (TODO-6197: users cannot call methods they should not on library objects; `[private]` hides). Make them `[private]` again and let the library interface carry a private definition that a compiler rewrite targets (an interface entry marked private: callable by the rewrite and by its own namespace, refused for a user call outside it with the usual private diagnostic). Do the same for any other rewrite target made public for the same reason.
+  - acceptance:
+    - the helpers are `[private]`; a user call of one outside `/std/math` is the private-access diagnostic, with a test
+    - the TODO-6287 library link tests still match the whole program on the VM and optexe
+    - full release gate green
+  - stop_rule: rewrite targets and the private entries of the library interface; no change to visibility rules for user code.
+  - repro: on master after 1b6a3115b, a user program calling `/std/math/mat2_mul_mat2_internal(m, m)` compiles.
+
+- [ ] TODO-6292: No test passes by accepting the unsupported-call error it should catch
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Test quality (found with TODO-6287)
+  - parallel_track: test-honesty
+  - scope: `runVmCommandOrExpectUnsupported` (tests/) treats a "vm backend only supports ... calls" lowering error as a pass, so `runs vm matrix arithmetic helpers with tolerance` and the quaternion test passed while the scalar operators were broken (TODO-6289). Audit every caller: a case where the target is meant to work asserts success; a case where a refusal is the intended behaviour asserts the exact refusal and names why; delete the helper if no honest use is left.
+  - acceptance:
+    - every caller is converted or justified in a comment next to it; a count before and after in the commit body
+    - cases that start failing are filed as leaves (TODO-6289 covers the matrix/quaternion scalar operators)
+    - full release gate green
+  - stop_rule: tests that accept an error as a pass; no compiler changes beyond what a converted test needs filed as its own leaf.
+  - repro: `grep -rn runVmCommandOrExpectUnsupported tests`.
 
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
