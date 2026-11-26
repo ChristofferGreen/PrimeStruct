@@ -980,6 +980,7 @@ main() {
   return(0i32)
 }
 )";
+  program.extraConfigs = {"wasm-wasi"};
   program.exitCode = 0;
   program.stdoutText = "0\n65\n0\n66\n1\n7\n";
   program_matrix::runProgramMatrix(program);
@@ -1058,6 +1059,7 @@ main() {
   return(0i32)
 }
 )";
+  program.extraConfigs = {"wasm-wasi"};
   program.exitCode = 0;
   program.stdoutText = "7\n-1\n7\n";
   program_matrix::runProgramMatrix(program);

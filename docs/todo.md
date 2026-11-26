@@ -129,7 +129,6 @@ of sync with them.
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
 | TODO-6142 | The recursion depth of Linux x86_64 native and `exe` is measured | deferred | runtime-faults |
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
-| TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | ready | wasm-opcode-gaps |
 | TODO-6273 | `--ir-inline` makes invalid IR of a program with a `String` | deferred | ir-inline-strings |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
@@ -171,7 +170,7 @@ of sync with them.
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Memory safety (docs/spec/type-system.md Memory safety): deferred TODO-5511 (tracker); ready outside Ready Now TODO-6198 (a `Slice` built over any pointer)
-- Backend parity: TODO-6271 (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
+- Backend parity:  (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -511,20 +510,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [~] TODO-6271: Wasm refuses two file programs with `unsupported control-flow pattern`
-  - owner: ai
-  - status: ready
-  - claimed_by: gap-worker (worktree agent-a3e01a58a3e56909d), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Backend parity (slice of TODO-6124)
-  - parallel_track: wasm-opcode-gaps
-  - scope: Two matrix programs compile for the VM but not for Wasm: `file_parameter_early_return` (`Wasm emit error: wasm emitter unsupported control-flow pattern in function: /main (IR instruction 267)`) and `file_open_string_parameter` (`... (IR instruction 224)`), both in tests/unit/program_matrix/test_program_matrix_results.cpp. The earlier count of this error (38 programs, TODO-6146) had dropped to none on 2026-11-21, so these two are new since: the file helpers' early `return` inside an inlined call whose `?` exits through the handler. Find the jump shape the structured Wasm emitter cannot express (print the IR with `--emit=ir` and read the instruction at the index) and lower it.
-  - acceptance:
-    - both programs list `wasm-wasi` in `extraConfigs` and agree with the VM under node
-    - full release gate green
-  - stop_rule: the two control-flow shapes; no change to the VM or native lowering.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep "control-flow pattern"` from the release build directory.
-
 - [ ] TODO-6273: `--ir-inline` makes invalid IR of a program with a `String`
   - owner: ai
   - status: deferred

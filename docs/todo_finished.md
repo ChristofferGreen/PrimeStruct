@@ -2675,6 +2675,7 @@ are left unarchived.
 | TODO-6267 | `stale semantic-product` lowering messages are not marked internal | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6269 | Wasm `PrintArgv` past the arguments traps without the VM's fault text | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6270 | Wasm real calls take struct, `Reference` and `vector` parameters (the address ABI) | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6271 | Wasm refuses two file programs with `unsupported control-flow pattern` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6272 | The threaded native arena guard finds a `SharedString` only by function names | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->

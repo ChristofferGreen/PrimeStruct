@@ -23,7 +23,24 @@ struct LoopRegion {
   size_t guardIndex = 0;
   size_t tailJumpIndex = 0;
   size_t endIndex = 0;
+  // Set when the guard leaves toward a join past the loop that an enclosing `block` ends at (the loop is the whole
+  // arm of an `if` whose else arm is skipped by the exits): the guard is a `br_if` of that label and the loop needs
+  // no `block` of its own.
+  bool exitsToLabel = false;
+  size_t exitTarget = 0;
 };
+
+constexpr size_t NoExitTarget = static_cast<size_t>(-1);
+
+// The innermost label a jump to IR index `target` leaves by, or null.
+const WasmJumpLabel *findJumpLabel(const WasmLocalLayout &layout, size_t target) {
+  for (size_t i = layout.jumpLabels.size(); i > 0; --i) {
+    if (layout.jumpLabels[i - 1].irTarget == target) {
+      return &layout.jumpLabels[i - 1];
+    }
+  }
+  return nullptr;
+}
 
 bool decodeJumpTarget(const IrFunction &function, const IrInstruction &inst, size_t &target) {
   const uint64_t instructionCount = static_cast<uint64_t>(function.instructions.size());
@@ -34,8 +51,12 @@ bool decodeJumpTarget(const IrFunction &function, const IrInstruction &inst, siz
   return true;
 }
 
-bool detectCanonicalLoopRegion(
-    const IrFunction &function, size_t loopHead, size_t end, LoopRegion &outRegion, std::string &error) {
+bool detectCanonicalLoopRegion(const IrFunction &function,
+                               const WasmLocalLayout &localLayout,
+                               size_t loopHead,
+                               size_t end,
+                               LoopRegion &outRegion,
+                               std::string &error) {
   bool found = false;
   LoopRegion candidate;
 
@@ -74,6 +95,20 @@ bool detectCanonicalLoopRegion(
         break;
       }
     }
+    candidate.exitsToLabel = false;
+    if (guardIndex == static_cast<size_t>(-1)) {
+      // A guard that leaves toward a join the enclosing code already has a label for (past the loop's end).
+      for (size_t j = loopHead; j < i; ++j) {
+        const IrInstruction &guard = function.instructions[j];
+        if (guard.op == IrOpcode::JumpIfZero && guard.imm > loopEnd &&
+            findJumpLabel(localLayout, static_cast<size_t>(guard.imm)) != nullptr) {
+          guardIndex = j;
+          candidate.exitsToLabel = true;
+          candidate.exitTarget = static_cast<size_t>(guard.imm);
+          break;
+        }
+      }
+    }
     if (guardIndex == static_cast<size_t>(-1)) {
       continue;
     }
@@ -95,18 +130,6 @@ bool detectCanonicalLoopRegion(
 std::string unsupportedControlFlow(const IrFunction &function, size_t index) {
   return "wasm emitter unsupported control-flow pattern in function: " + function.name +
          " (IR instruction " + std::to_string(index) + ")";
-}
-
-constexpr size_t NoExitTarget = static_cast<size_t>(-1);
-
-// The innermost label a jump to IR index `target` leaves by, or null.
-const WasmJumpLabel *findJumpLabel(const WasmLocalLayout &layout, size_t target) {
-  for (size_t i = layout.jumpLabels.size(); i > 0; --i) {
-    if (layout.jumpLabels[i - 1].irTarget == target) {
-      return &layout.jumpLabels[i - 1];
-    }
-  }
-  return nullptr;
 }
 
 void appendBranchToLabel(const WasmLocalLayout &layout,
@@ -357,8 +380,10 @@ bool emitIfArm(const IrFunction &function,
                const WasmRuntimeContext &runtime,
                std::vector<uint8_t> &out,
                std::string &error,
-               bool *outDiverges) {
-  const bool wrap = exitTarget != NoExitTarget && hasEscapingJump(function, start, end, exitTarget);
+               bool *outDiverges,
+               bool forceWrap = false) {
+  const bool wrap = exitTarget != NoExitTarget &&
+                    (forceWrap || hasEscapingJump(function, start, end, exitTarget));
   if (!wrap) {
     return emitInstructionRange(
         function, start, end, localLayout, functionTypes, runtime, out, error, outDiverges);
@@ -386,6 +411,23 @@ bool emitIfArm(const IrFunction &function,
   return true;
 }
 
+// The join of an `if` whose then arm [thenStart, elseStart) ends in a loop's back edge: the farthest forward target of
+// a jump in the arm that lies past the else arm's start, up to `end`; `NoExitTarget` when the arm has none.
+size_t loopArmJoin(const IrFunction &function, size_t thenStart, size_t elseStart, size_t end) {
+  size_t join = NoExitTarget;
+  for (size_t p = thenStart; p < elseStart; ++p) {
+    const IrInstruction &inst = function.instructions[p];
+    if ((inst.op != IrOpcode::Jump && inst.op != IrOpcode::JumpIfZero) || inst.imm <= elseStart ||
+        inst.imm > end) {
+      continue;
+    }
+    if (join == NoExitTarget || inst.imm > join) {
+      join = static_cast<size_t>(inst.imm);
+    }
+  }
+  return join;
+}
+
 bool emitIfRegion(const IrFunction &function,
                   size_t conditionIndex,
                   size_t trueStart,
@@ -398,7 +440,8 @@ bool emitIfRegion(const IrFunction &function,
                   const WasmRuntimeContext &runtime,
                   std::vector<uint8_t> &out,
                   std::string &error,
-                  bool *outDiverges) {
+                  bool *outDiverges,
+                  bool wrapTrueArm = false) {
   (void)conditionIndex;
   if (!consumeWasmCondition(localLayout, out, error, function.name)) {
     return false;
@@ -418,7 +461,8 @@ bool emitIfRegion(const IrFunction &function,
                  runtime,
                  trueCode,
                  error,
-                 &trueDiverges)) {
+                 &trueDiverges,
+                 wrapTrueArm)) {
     return false;
   }
   const std::vector<uint8_t> trueStack = localLayout.typeState.stack;
@@ -522,7 +566,8 @@ bool emitInstructionRange(const IrFunction &function,
     diverges = false;
     boundaries.push_back({index, out.size(), localLayout.typeState.stack.size()});
     LoopRegion loopRegion;
-    const bool isLoop = detectCanonicalLoopRegion(function, index, end, loopRegion, error);
+    const bool isLoop =
+        detectCanonicalLoopRegion(function, localLayout, index, end, loopRegion, error);
     const IrOpcode firstOp = function.instructions[index].op;
     if (isLoop || firstOp == IrOpcode::JumpIfZero || firstOp == IrOpcode::Jump) {
       const size_t operands = firstOp == IrOpcode::JumpIfZero ? 1 : 0;
@@ -557,12 +602,15 @@ bool emitInstructionRange(const IrFunction &function,
       }
     }
     if (isLoop) {
-      out.push_back(WasmOpBlock);
-      out.push_back(WasmBlockTypeVoid);
+      const uint32_t loopDepth = loopRegion.exitsToLabel ? 1 : 2;
+      if (!loopRegion.exitsToLabel) {
+        out.push_back(WasmOpBlock);
+        out.push_back(WasmBlockTypeVoid);
+      }
       out.push_back(WasmOpLoop);
       out.push_back(WasmBlockTypeVoid);
       std::vector<uint8_t> outerStack = enterWasmBlock(localLayout);
-      localLayout.controlDepth += 2;
+      localLayout.controlDepth += loopDepth;
 
       if (!emitInstructionRange(
               function,
@@ -580,7 +628,13 @@ bool emitInstructionRange(const IrFunction &function,
       }
       out.push_back(WasmOpI32Eqz);
       out.push_back(WasmOpBrIf);
-      appendU32Leb(1, out);
+      if (loopRegion.exitsToLabel) {
+        appendU32Leb(localLayout.controlDepth -
+                         findJumpLabel(localLayout, loopRegion.exitTarget)->depth,
+                     out);
+      } else {
+        appendU32Leb(1, out);
+      }
 
       if (!emitInstructionRange(
               function,
@@ -596,8 +650,10 @@ bool emitInstructionRange(const IrFunction &function,
       out.push_back(WasmOpBr);
       appendU32Leb(0, out);
       out.push_back(WasmOpEnd);
-      out.push_back(WasmOpEnd);
-      localLayout.controlDepth -= 2;
+      if (!loopRegion.exitsToLabel) {
+        out.push_back(WasmOpEnd);
+      }
+      localLayout.controlDepth -= loopDepth;
       leaveWasmBlock(localLayout, std::move(outerStack));
 
       index = loopRegion.endIndex;
@@ -636,8 +692,32 @@ bool emitInstructionRange(const IrFunction &function,
         if (tail.op == IrOpcode::Jump) {
           const size_t jumpTarget = static_cast<size_t>(tail.imm);
           if (jumpTarget <= target - 1) {
-            error = unsupportedControlFlow(function, index);
-            return false;
+            // The then arm ends in a loop's back edge: it never falls through, and its exits go to the join past the
+            // else arm that follows it.
+            const size_t join = loopArmJoin(function, thenStart, target, end);
+            if (join == NoExitTarget) {
+              error = unsupportedControlFlow(function, index);
+              return false;
+            }
+            if (!emitIfRegion(function,
+                              index,
+                              thenStart,
+                              target,
+                              target,
+                              join,
+                              join,
+                              localLayout,
+                              functionTypes,
+                              runtime,
+                              out,
+                              error,
+                              nullptr,
+                              true)) {
+              return false;
+            }
+            diverges = false;
+            index = join;
+            continue;
           }
           if (jumpTarget > end) {
             // The body ends in a jump out of the enclosing `if`/`else` (an early exit of one of its arms).
