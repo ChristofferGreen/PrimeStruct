@@ -615,9 +615,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - to be written when TODO-6276 is done: split into an object writer leaf per format and the linker-step leaf
   - stop_rule: do not start before it is split into leaves.
 
-- [ ] TODO-6278: A program that links the `/std/http/server` library fails to parse its interface
+- [~] TODO-6278: A program that links the `/std/http/server` library fails to parse its interface
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-lambda-text (worktree-agent-a01e03e2a8f1b4a9f), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found by TODO-6275)
   - parallel_track: lib-backend
