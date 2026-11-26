@@ -2902,6 +2902,27 @@ TEST_CASE("a private helper of the standard library is not callable by absolute 
         6,
         3);
   }
+  // The helpers the operator rewrite of a matrix or a quaternion targets are private too.
+  const std::vector<std::pair<std::string, std::string>> helpers = {
+      {"mat2_mul_mat2_internal", "[Mat2] value{/std/math/mat2_mul_mat2_internal(m, m)}"},
+      {"mat4_scale_internal", "[Mat4] value{/std/math/mat4_scale_internal(n, 2.0f32)}"},
+      {"quat_add_internal", "[Quat] value{/std/math/quat_add_internal(q, q)}"},
+  };
+  for (const auto &[name, use] : helpers) {
+    INFO(name);
+    const std::string source =
+        "import /std/math/*\n\n[return<int>]\nmain() {\n"
+        "  [Mat2] m{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}\n  [Mat4] n{Mat4{}}\n"
+        "  [Quat] q{Quat{1.0f32, 2.0f32, 3.0f32, 4.0f32}}\n  " +
+        use + "\n  return(0i32)\n}\n";
+    primec::SemanticDiagnosticInfo diagnosticInfo;
+    std::string error;
+    CHECK_FALSE(validateProgramReportingDiagnostic(source, "/main", error, diagnosticInfo));
+    CHECK_MESSAGE(error.find("/std/math/" + name +
+                             " is private: only definitions in /std/math may call it") !=
+                      std::string::npos,
+                  error);
+  }
 }
 
 TEST_CASE("a private definition written under /std is not callable from outside its namespace") {

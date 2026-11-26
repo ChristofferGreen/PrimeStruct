@@ -155,6 +155,12 @@ archive (`--emit=lib`, below, writes one) and read a library only when `--librar
 The interface holds the public (`public`, and not `private`) definitions, sorted by path inside nested
 `[namespace]` envelopes (a namespace's `summary` is printed on its envelope):
 
+A private entry the compiler itself calls is the one exception: the matrix and quaternion helpers an operator on `Mat2`,
+`Mat3`, `Mat4` or `Quat` is rewritten into (`mat2_mul_mat2_internal` and the like, listed by
+`isOperatorRewriteTargetPath`) are printed with `private`, so the library's code carries them and a program that links
+the library reaches them through its operators, while a call written in the program is refused with the usual
+private-definition diagnostic.
+
 - a struct in full: its transforms that say layout (`pod`, `handle`, `no_padding`, `align_bytes(..)`, ...), every field
   with its visibility, type and initializer, and its static fields;
 - an enum in its surface form (`Red = 0i32`, `enum<i64>` for another backing type). Validation rewrites an enum to a
@@ -234,7 +240,7 @@ module is read as for `--emit=interface`: a file with the files it imports, no e
 a missing entry, and an entry the module defines is lowered as that stub and dropped). `--with-sources` adds the
 module's `.prime` files. `--library` consumes it (Compiling against a library, below).
 
-**Code.** Lowering takes every public, non-generic function (a lifecycle helper excepted: it is expanded where it is used, so the interface carries it) and every private function a generic or a lifecycle helper reaches of the module's own sources as a root (`host` and
+**Code.** Lowering takes every public, non-generic function (a lifecycle helper excepted: it is expanded where it is used, so the interface carries it), the private operator helpers above, and every private function a generic or a lifecycle helper reaches of the module's own sources as a root (`host` and
 `compute` functions have no IR body and are left out), whether or not another definition calls it, and lowers what the
 roots call with them: a callee with two call sites or more, or a recursive one, is a function of the archive (a stdlib
 one such as `/std/collections/slice/Read` too, which the link shares with the program's own copy), and a callee with one call site is inlined into its caller as in any

@@ -7,6 +7,7 @@
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
 #include "primec/support/Json.h"
+#include "primec/support/OperatorRewriteTargets.h"
 #include "primec/support/Sha256.h"
 #include "primec/support/SourceLocationMapper.h"
 
@@ -130,6 +131,8 @@ bool functionHeader(const Definition &definition,
                     std::string &error) {
   if (hasTransform(definition.transforms, "public")) {
     words.push_back("public");
+  } else if (isOperatorRewriteTargetPath(definition.fullPath)) {
+    words.push_back("private");
   }
   // `mut` and `static` decide how a method is called (a `mut` method needs a mutable receiver).
   for (const char *flag : {"static", "mut", "compute", "unsafe"}) {
@@ -676,7 +679,8 @@ bool buildModuleInterface(const Program &program,
     if (definition.fullPath == entryPath || !definition.templateArgs.empty() ||
         (!definition.instanceOfTemplate.empty() && !functionBox) ||
         hasTransform(definition.transforms, "namespace") ||
-        (!functionBox && !isPublic(definition) && reachedPaths.count(definition.fullPath) == 0) ||
+        (!functionBox && !isPublic(definition) && reachedPaths.count(definition.fullPath) == 0 &&
+         !isOperatorRewriteTargetPath(definition.fullPath)) ||
         (!functionBox && !inModuleSources(source, definition))) {
       continue;
     }

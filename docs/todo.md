@@ -130,7 +130,6 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6288 | Library code outside the slice and container primitives is not `[unsafe]` | ready | stdlib-safe-slices |
-| TODO-6291 | Operator helpers of matrix and quaternion are private again and still reach a library | ready | lib-shapes |
 | TODO-6292 | No test passes by accepting the unsupported-call error it should catch | ready | test-honesty |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | deferred | wasm-concurrency |
 | TODO-6133 | The binding initializer accepts an f64 value for an `f32` binding, assignment does not | ready | binding-float-compat |
@@ -666,21 +665,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the http, net and text tests and fixtures pass unchanged in behaviour; full release gate green
   - stop_rule: the slice-pointer users of be009c339 and the primitives they need; container internals (`push`, `pop`, `at`, ...) stay as they are; no new language surface beyond the safe stdlib operations.
   - repro: `git show be009c339 -- stdlib/ | grep -E "^\+.*\[.*unsafe"` lists the definitions marked by that commit.
-
-- [~] TODO-6291: Operator helpers of matrix and quaternion are private again and still reach a library
-  - owner: ai
-  - status: ready
-  - claimed_by: worker-lib-scalar (worktree-agent-a93a2ac288626f9a7), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (follow-up of TODO-6287)
-  - parallel_track: lib-shapes
-  - scope: TODO-6287 made the 21 `*_internal` helpers of stdlib/std/math/matrix.prime and the 7 of quaternion.prime `public` so a library interface carries them for the lowerer's operator rewrite (src/ir_lowerer/IrLowererOperatorArithmeticHelpers.cpp). That lets user code call `mat2_mul_mat2_internal` directly, against the user's API rule (TODO-6197: users cannot call methods they should not on library objects; `[private]` hides). Make them `[private]` again and let the library interface carry a private definition that a compiler rewrite targets (an interface entry marked private: callable by the rewrite and by its own namespace, refused for a user call outside it with the usual private diagnostic). Do the same for any other rewrite target made public for the same reason.
-  - acceptance:
-    - the helpers are `[private]`; a user call of one outside `/std/math` is the private-access diagnostic, with a test
-    - the TODO-6287 library link tests still match the whole program on the VM and optexe
-    - full release gate green
-  - stop_rule: rewrite targets and the private entries of the library interface; no change to visibility rules for user code.
-  - repro: on master after 1b6a3115b, a user program calling `/std/math/mat2_mul_mat2_internal(m, m)` compiles.
 
 - [ ] TODO-6292: No test passes by accepting the unsupported-call error it should catch
   - owner: ai

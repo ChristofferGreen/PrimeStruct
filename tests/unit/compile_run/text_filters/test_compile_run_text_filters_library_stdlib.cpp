@@ -433,4 +433,32 @@ main() {
       "library_stdlib_quaternion_operators", app, {"math/vector.prime", "math/quaternion.prime"});
 }
 
+TEST_CASE("a program that links the matrix library cannot call an operator helper") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_private_operator_helper");
+  const std::string probe = stdlibFile(dir, "/std/math/*", "math/vector.prime");
+  const std::string stdDir =
+      probe.substr(0, probe.size() - std::string("math/vector.prime").size());
+  std::string libraries;
+  for (const std::string file : {"math/vector.prime", "math/matrix.prime"}) {
+    const std::string name = std::filesystem::path(file).stem().string();
+    libraries += " --library " + quoteShellArg(buildLibrary(dir, stdDir + file, name));
+  }
+  writeIn(dir,
+          "app.prime",
+          R"(import</std/math>
+import /std/math/*
+
+[return<i32>]
+main() {
+  [Mat2] m{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat2] p{/std/math/mat2_mul_mat2_internal(m, m)}
+  return(convert<i32>(p.m00))
+}
+)");
+  const Run run = runApp(dir, libraries);
+  CHECK(run.exitCode == 2);
+  CHECK(run.err.find("/std/math/mat2_mul_mat2_internal is private: only definitions in /std/math "
+                     "may call it") != std::string::npos);
+}
+
 TEST_SUITE_END();
