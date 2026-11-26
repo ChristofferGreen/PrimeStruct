@@ -211,6 +211,10 @@ std::vector<EffectCase> buildCases() {
   add(IrOpcode::Trap, 0, {pushI32(5)});
   add(IrOpcode::Call, 1, {pushI32(7), pushI32(3)}, "(two parameters)");
   add(IrOpcode::CallVoid, 2, {pushI32(7)}, "(one parameter)");
+  // The address of function 1 (/two) is 2 and of function 2 (/one_void) is 3; it is the deepest slot of the call.
+  add(IrOpcode::FunctionAddress, 1, {});
+  add(IrOpcode::CallIndirect, 2, {pushI32(2), pushI32(7), pushI32(3)}, "(two parameters)");
+  add(IrOpcode::CallIndirectVoid, 1, {pushI32(3), pushI32(7)}, "(one parameter)");
   add(IrOpcode::CallHost, 0, {pushI32(4), pushI32(5)}, "(i32,i32 -> i32)");
   add(IrOpcode::CallHost, 1, {pushI32(4)}, "(i32 -> void)");
 
@@ -485,12 +489,6 @@ TEST_CASE("every opcode has a stack effect case and a table entry") {
     // end it (tests/unit/runtime/test_vm_conditions.cpp).
     if (info.op == IrOpcode::TaskSpawn || info.op == IrOpcode::TaskWait ||
         info.op == IrOpcode::ConditionWait) {
-      continue;
-    }
-    // The function address opcodes are not run by the VM yet: their effects are checked in
-    // tests/unit/runtime/test_ir_indirect_calls.cpp, against the expansion that runs on the VM.
-    if (info.op == IrOpcode::FunctionAddress || info.op == IrOpcode::CallIndirect ||
-        info.op == IrOpcode::CallIndirectVoid) {
       continue;
     }
     CHECK_MESSAGE(covered.count(static_cast<uint8_t>(info.op)) == 1,

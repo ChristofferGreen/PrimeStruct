@@ -141,7 +141,6 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | in_progress | lib-shapes |
 | TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | ready | lib-shapes |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | ready | lib-shapes |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | blocked | lib-shapes-backends |
@@ -663,21 +662,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
-
-- [~] TODO-6308: The VM executes `FunctionAddress` and `CallIndirect`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (second layer of TODO-6283)
-  - parallel_track: lib-shapes
-  - scope: the step kernel (src/runtime/VmControlFlowOpcodeShared.cpp, VmExecutionKernel.cpp), the debug session and the task paths run the three opcodes with the faults TODO-6307 names; the fast kernel (and the preparation that checks a module for it) leaves a module that holds one on the step kernel until TODO-6311. The VM leaves the list of targets that take the expansion.
-  - acceptance:
-    - the TODO-6307 module runs on the VM without the expansion, and each fault (null address, address past the table, arity mismatch) has a test with its message
-    - a call through an address inside a task and under the debugger works
-    - full release gate green
-  - stop_rule: the VM kernels; no change to the fast kernel's opcode set.
-  - repro: the TODO-6307 test module with `validateIrModule(..., Vm)` and no expansion.
 
 - [ ] TODO-6309: `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect`
   - owner: ai

@@ -275,7 +275,8 @@ bool VmDebugAdapter::stackTrace(int64_t threadId, std::vector<VmDebugAdapterStac
     size_t mappedIp = frameSnapshot.instructionPointer;
     if (reverseIndex > 0 && mappedIp > 0 && mappedIp <= function.instructions.size()) {
       const IrInstruction &callSite = function.instructions[mappedIp - 1];
-      if (callSite.op == IrOpcode::Call || callSite.op == IrOpcode::CallVoid) {
+      if (callSite.op == IrOpcode::Call || callSite.op == IrOpcode::CallVoid ||
+          callSite.op == IrOpcode::CallIndirect || callSite.op == IrOpcode::CallIndirectVoid) {
         mappedIp -= 1;
       }
     }

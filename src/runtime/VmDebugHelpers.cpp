@@ -183,7 +183,8 @@ void VmDebugSession::appendMappedStackTrace(std::string &error) const {
     size_t traceIp = currentFrame.ip;
     if (reverseIndex > 0 && traceIp > 0 && traceIp <= function.instructions.size()) {
       const IrInstruction &callSite = function.instructions[traceIp - 1];
-      if (callSite.op == IrOpcode::Call || callSite.op == IrOpcode::CallVoid) {
+      if (callSite.op == IrOpcode::Call || callSite.op == IrOpcode::CallVoid ||
+          callSite.op == IrOpcode::CallIndirect || callSite.op == IrOpcode::CallIndirectVoid) {
         traceIp -= 1;
       }
     }

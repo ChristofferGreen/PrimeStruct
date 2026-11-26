@@ -100,7 +100,7 @@ template <bool TrackEvents>
       handleSharedVmControlFlowOpcode(inst,
                                       stack,
                                       fn.instructions.size(),
-                                      module.functions.size(),
+                                      module.functions,
                                       frames.size(),
                                       host.maxCallDepth(),
                                       frame.returnValueToCaller,
@@ -159,6 +159,11 @@ template <bool TrackEvents>
   case IrOpcode::PushF32:
   case IrOpcode::PushF64:
     stack.push_back(inst.imm);
+    ip += 1;
+    return VmKernelStepOutcome::Continue;
+  case IrOpcode::FunctionAddress:
+    // The address of function imm is imm + 1, so that 0 names no function.
+    stack.push_back(inst.imm + 1);
     ip += 1;
     return VmKernelStepOutcome::Continue;
   case IrOpcode::PushArgc: {

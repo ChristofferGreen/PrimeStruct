@@ -21,7 +21,7 @@ struct VmControlFlowOpcodeOutcome {
 VmControlFlowOpcodeOutcome handleSharedVmControlFlowOpcode(const IrInstruction &inst,
                                                            std::vector<uint64_t> &stack,
                                                            size_t instructionCount,
-                                                           size_t functionCount,
+                                                           const std::vector<IrFunction> &functions,
                                                            size_t frameCount,
                                                            size_t maxCallDepth,
                                                            bool currentFrameReturnsValueToCaller,

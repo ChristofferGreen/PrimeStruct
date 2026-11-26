@@ -5,7 +5,7 @@ namespace primec::vm_detail {
 VmControlFlowOpcodeOutcome handleSharedVmControlFlowOpcode(const IrInstruction &inst,
                                                            std::vector<uint64_t> &stack,
                                                            size_t instructionCount,
-                                                           size_t functionCount,
+                                                           const std::vector<IrFunction> &functions,
                                                            size_t frameCount,
                                                            size_t maxCallDepth,
                                                            bool currentFrameReturnsValueToCaller,
@@ -47,7 +47,7 @@ VmControlFlowOpcodeOutcome handleSharedVmControlFlowOpcode(const IrInstruction &
     }
     case IrOpcode::Call:
     case IrOpcode::CallVoid: {
-      if (inst.imm >= functionCount) {
+      if (inst.imm >= functions.size()) {
         error = "invalid call target in IR";
         outcome.result = VmControlFlowOpcodeResult::Fault;
         return outcome;
@@ -59,6 +59,47 @@ VmControlFlowOpcodeOutcome handleSharedVmControlFlowOpcode(const IrInstruction &
       }
       outcome.targetFunctionIndex = static_cast<size_t>(inst.imm);
       outcome.returnValueToCaller = inst.op == IrOpcode::Call;
+      ip += 1;
+      outcome.result = VmControlFlowOpcodeResult::Call;
+      return outcome;
+    }
+    case IrOpcode::CallIndirect:
+    case IrOpcode::CallIndirectVoid: {
+      // The address is the deepest of the call's `imm + 1` slots; the callee finds its parameters above it.
+      const size_t parameterCount = static_cast<size_t>(inst.imm);
+      if (stack.size() < parameterCount + 1) {
+        error = "IR stack underflow on indirect call";
+        outcome.result = VmControlFlowOpcodeResult::Fault;
+        return outcome;
+      }
+      const size_t addressIndex = stack.size() - parameterCount - 1;
+      const uint64_t address = stack[addressIndex];
+      if (address == 0) {
+        error = "indirect call through a null function address";
+        outcome.result = VmControlFlowOpcodeResult::Fault;
+        return outcome;
+      }
+      if (address > functions.size()) {
+        error = "indirect call through an invalid function address";
+        outcome.result = VmControlFlowOpcodeResult::Fault;
+        return outcome;
+      }
+      const size_t target = static_cast<size_t>(address - 1);
+      if (functions[target].parameterCount != parameterCount) {
+        error = "indirect call passes " + std::to_string(parameterCount) + " parameters to " +
+                functions[target].name + ", which takes " +
+                std::to_string(functions[target].parameterCount);
+        outcome.result = VmControlFlowOpcodeResult::Fault;
+        return outcome;
+      }
+      if (frameCount >= maxCallDepth) {
+        error = "VM call stack overflow";
+        outcome.result = VmControlFlowOpcodeResult::Fault;
+        return outcome;
+      }
+      stack.erase(stack.begin() + static_cast<std::ptrdiff_t>(addressIndex));
+      outcome.targetFunctionIndex = target;
+      outcome.returnValueToCaller = inst.op == IrOpcode::CallIndirect;
       ip += 1;
       outcome.result = VmControlFlowOpcodeResult::Call;
       return outcome;

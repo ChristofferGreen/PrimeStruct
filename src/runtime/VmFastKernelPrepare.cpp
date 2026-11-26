@@ -396,6 +396,11 @@ bool prepareFunction(const IrModule &module,
          instruction.op == IrOpcode::ConditionNotify)) {
       return false;
     }
+    // A call through an address is the step kernel's until the loop gets its own dispatch.
+    if (instruction.op == IrOpcode::FunctionAddress || instruction.op == IrOpcode::CallIndirect ||
+        instruction.op == IrOpcode::CallIndirectVoid) {
+      return false;
+    }
     // A call to a missing function is left to the step kernel, which faults on it when (and only
     // if) it runs, so the loop needs no target check.
     if ((instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) &&

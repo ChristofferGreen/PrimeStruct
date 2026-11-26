@@ -116,16 +116,89 @@ TEST_CASE("indirect calls: a version 41 module cannot hold the opcodes") {
   CHECK(error == "unsupported IR opcode");
 }
 
-TEST_CASE("indirect calls: a target without them refuses the module until it is expanded") {
+TEST_CASE("indirect calls: a target that does not run them refuses the module until it is expanded") {
   IrModule module = chosenAtRunTime();
   std::string error;
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Vm, error));
-  CHECK(error.find("function address opcodes") != std::string::npos);
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Native, error));
+  CHECK(error.find("function address opcodes") != std::string::npos);
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::OptCpp, error));
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Wasm, error));
+  // The VM and serialized bytecode run them.
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Serialized, error), error);
   expandIndirectCalls(module);
   CHECK_FALSE(irModuleHasIndirectCalls(module));
-  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Native, error), error);
+  REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
+}
+
+TEST_CASE("indirect calls: the VM calls the function the address names") {
+  const Run result = run(chosenAtRunTime());
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.value == 10);
+}
+
+TEST_CASE("indirect calls: the VM and the expansion agree on the other address and on void calls") {
+  IrModule module = chosenAtRunTime();
+  module.functions[0].instructions[0] = {IrOpcode::PushI32, 0};
+  const Run direct = run(module);
+  REQUIRE_MESSAGE(direct.ok, direct.error);
+  CHECK(direct.value == 105);
+  IrModule voidModule = moduleOf(
+      {functionOf("/main",
+                  0,
+                  {{IrOpcode::FunctionAddress, 1},
+                   {IrOpcode::CallIndirectVoid, 0},
+                   {IrOpcode::FunctionAddress, 2},
+                   {IrOpcode::CallIndirect, 0},
+                   {IrOpcode::ReturnI32, 0}}),
+       functionOf("/say", 0, {{IrOpcode::PushI32, 7}, {IrOpcode::PrintI32, Newline}, {IrOpcode::ReturnVoid, 0}}),
+       functionOf("/nine", 0, {{IrOpcode::PushI32, 9}, {IrOpcode::ReturnI32, 0}})});
+  const Run voidDirect = run(voidModule);
+  REQUIRE_MESSAGE(voidDirect.ok, voidDirect.error);
+  CHECK(voidDirect.out == "7\n");
+  CHECK(voidDirect.value == 9);
+  expandIndirectCalls(module);
+  const Run expanded = run(module);
+  REQUIRE_MESSAGE(expanded.ok, expanded.error);
+  CHECK(expanded.value == direct.value);
+}
+
+TEST_CASE("indirect calls: the VM faults on a null address, an address past the table and the wrong arity") {
+  IrModule module = chosenAtRunTime();
+  const auto runWith = [&](std::vector<IrInstruction> instructions) {
+    module.functions[0].instructions = std::move(instructions);
+    return run(module);
+  };
+  Run result = runWith({{IrOpcode::PushI64, 0}, {IrOpcode::PushI32, 5}, {IrOpcode::CallIndirect, 1}, {IrOpcode::ReturnI32, 0}});
+  CHECK_FALSE(result.ok);
+  CHECK(result.error == "indirect call through a null function address");
+  result = runWith({{IrOpcode::PushI64, 4}, {IrOpcode::PushI32, 5}, {IrOpcode::CallIndirect, 1}, {IrOpcode::ReturnI32, 0}});
+  CHECK_FALSE(result.ok);
+  CHECK(result.error == "indirect call through an invalid function address");
+  result = runWith({{IrOpcode::FunctionAddress, 1},
+                    {IrOpcode::PushI32, 5},
+                    {IrOpcode::PushI32, 6},
+                    {IrOpcode::CallIndirect, 2},
+                    {IrOpcode::ReturnI32, 0}});
+  CHECK_FALSE(result.ok);
+  CHECK(result.error == "indirect call passes 2 parameters to /double, which takes 1");
+}
+
+TEST_CASE("indirect calls: a task calls through an address") {
+  IrModule module = moduleOf({functionOf("/main",
+                                         0,
+                                         {{IrOpcode::TaskSpawn, 1}, {IrOpcode::TaskWait, 0}, {IrOpcode::ReturnI32, 0}}),
+                              functionOf("/worker",
+                                         0,
+                                         {{IrOpcode::FunctionAddress, 2},
+                                          {IrOpcode::PushI32, 21},
+                                          {IrOpcode::CallIndirect, 1},
+                                          {IrOpcode::ReturnI32, 0}}),
+                              doubler()});
+  const Run result = run(module);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.value == 42);
 }
 
 TEST_CASE("indirect calls: the expansion calls the function the address names") {
