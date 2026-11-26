@@ -236,4 +236,32 @@ TEST_CASE("a stdlib library keeps the stdlib imports of its module") {
   CHECK_FALSE(depsRead(dir, "stdlib/std/path/path.prime"));
 }
 
+TEST_CASE("a stdlib file that defines its names at the root is an importable module") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_equality_import");
+  writeIn(dir,
+          "app.prime",
+          "import /std/collections/equality/*\n[return<i32>]\nmain() {\n"
+          "  if(7i32.equal(7i32)) { return(42i32) }\n  return(1i32)\n}\n");
+  const Run run = runApp(dir, "");
+  CHECK_MESSAGE(run.err.empty(), run.err);
+  CHECK(run.exitCode == 42);
+
+  writeIn(dir,
+          "typo.prime",
+          "import /std/collections/nosuch/*\n[return<i32>]\nmain() { return(0i32) }\n");
+  const Run typo = shell(
+      dir, "./primec --emit=vm " + quoteShellArg((dir / "typo.prime").string()) + " --entry /main");
+  CHECK(typo.exitCode != 0);
+  CHECK(typo.err.find("unknown import path: /std/collections/nosuch/*") != std::string::npos);
+}
+
+TEST_CASE("the map module builds as a stdlib library") {
+  const std::filesystem::path dir = testScratchPath("library_stdlib_map");
+  const std::string path =
+      buildLibrary(dir, stdlibFile(dir, "/std/collections/map/*", "collections/map.prime"), "map");
+  const primec::LibraryArchiveContent content = readArchive(path);
+  REQUIRE(content.manifest.stdlibModules.size() == 1);
+  CHECK(content.manifest.stdlibModules.front().file == "std/collections/map.prime");
+}
+
 TEST_SUITE_END();

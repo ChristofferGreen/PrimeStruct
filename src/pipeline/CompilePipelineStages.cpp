@@ -286,6 +286,16 @@ bool runCompilePipelineImportStage(const Options &options,
       diagnosticSink.setSummary(error);
       return false;
     }
+    // A wildcard import of a stdlib file that defines its names at the root (`/std/collections/equality` holds
+    // `/i32/equal`, nothing under its own path) has no definition under the imported path, and is not a typo
+    // either: the file was read. The import check takes such a key like a lazy one.
+    for (const auto &importPath : out.sourceStdImports) {
+      const std::vector<std::string> keys = collectStdlibAutoIncludeKeys(importPath);
+      if (!keys.empty() &&
+          resolveSingleFileStdlibModuleSource(options.importPaths, keys.front()).has_value()) {
+        lazyKeys.insert(keys.front());
+      }
+    }
   }
 
   return true;

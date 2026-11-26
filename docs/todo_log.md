@@ -15,7 +15,7 @@ open-work-only scope rule as `docs/todo.md` itself.
   | --- | --- | --- | --- | --- |
   | build/build.prime | `argument type mismatch for /std/build/Compiler/emit parameter kind: expected /std/text/view/StringView` (`settings.emit("lib")`) | same | compiler bug: a literal does not convert to `StringView` in the file read as a root | TODO-6286 |
   | build_runner/build_runner.prime | `unknown call target: /build` | same | intended: the runner calls the `build` function of the program that links it | none |
-  | collections/map.prime | `unknown import path: /std/collections/equality/*` | same | compiler/stdlib bug: `equality` is not an importable path | TODO-6285 |
+  | collections/map.prime | `unknown import path: /std/collections/equality/*` | same | compiler/stdlib bug: `equality` is not an importable path | fixed |
   | gfx/gfx.prime | `public function /std/gfx/Device/create_mesh cannot be compiled into a library: parameter `vertices` has a type (`array`) the address ABI does not pass` | builds and runs | intended shape rule (an `array` parameter is not a scalar, a struct or a reference to one); same family as TODO-6173 | none |
   | image/image.prime | `unknown return type: ImageError on /ImageError/read_unsupported` | same | compiler/stdlib bug: root-level helpers name a struct the importer brings | TODO-6284 |
   | math/matrix.prime | `unknown return type: Vec2 on /std/math/mat2_mul_vec2_internal` | same | compiler/stdlib bug: the file needs vector.prime of its directory | TODO-6284 |
