@@ -649,6 +649,32 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
+- [ ] TODO-6303: A program that uses a math operator is compiled twice
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Compiler performance (found with the typed operator helper demand)
+  - parallel_track: semantic-memory
+  - scope: `runCompilePipeline` (src/pipeline/CompilePipeline.cpp) runs `runCompilePipelineRound` again whenever `Program::operatorRewriteDemand` names a helper missing from `program.definitions`, so every program with a `Vec`, `Mat` or `Quat` operator parses, imports and validates twice. When a linked library supplies the helpers, the check can still see them as missing and run a round that changes nothing. Measure the compile time of a small operator program (lazy, whole-file, and with a linked math library) before and after, then remove the repeat: splice the demanded helpers and validate only them in the same round, or have the import stage take the operator helpers of each math type the validator can reach; library-supplied helpers count as present.
+  - acceptance:
+    - an operator program and a linked-library operator program each run one pipeline round (pinned by a test that counts rounds or by the dump timings), the times are recorded in docs/todo_log.md, and the lazy-import tests and Vec2 `length()` count (at most 6 definitions) still pass
+    - full release gate green
+  - stop_rule: the extra pipeline round; no change to the operators or to which helpers are taken.
+  - repro: `primec --emit=vm` of a program with `plus(a, b)` on two `Vec2`, timed with `--dump-stage` timings, against the same program calling `a.length()`.
+
+- [ ] TODO-6304: Benchmark-mode validation workers drop the operator helper demand
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found with the typed operator helper demand)
+  - parallel_track: semantic-memory
+  - scope: the definition-validation workers used in benchmark mode do not merge the operator helpers each worker records into `Program::operatorRewriteDemand` (src/semantics/SemanticsValidate.cpp), so a multi-worker run of a program that uses a `Vec`, `Mat` or `Quat` operator through lazy import does not take the helper and fails with an unknown helper in lowering, where the single-threaded default run succeeds.
+  - acceptance:
+    - the workers merge their demand in a deterministic (sorted) order; a test runs an operator program with more than one validation worker and gets the single-threaded result
+    - full release gate green
+  - stop_rule: merging the demand from the workers.
+  - repro: the unspaced-operator program of the lazy-import test `operators written without spaces on vectors take their helpers and run`, run with the benchmark validation worker option set above one.
+
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
   - status: deferred
