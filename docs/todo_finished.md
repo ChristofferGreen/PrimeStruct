@@ -2690,6 +2690,7 @@ are left unarchived.
 | TODO-6285 | `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6286 | A `string` literal does not convert to `StringView` inside `/std/build/build.prime` and `/std/text/view.pri... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6287 | A program that links the `/std/math/matrix` or quaternion library cannot use the operators on Mat and Quat | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6288 | Library code outside the slice and container primitives is not `[unsafe]` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6289 | The operators of a matrix or quaternion with a scalar (`multiply(m, 2.0f32)`, `divide(m, 2.0f32)`) are not... | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6290 | An imported function the call graph does not reach is inlined with an empty body and returns zero | [2026-11.md](todo_archive/2026-11.md) | 2026-11-26 |
 | TODO-6291 | Operator helpers of matrix and quaternion are private again and still reach a library | [2026-11.md](todo_archive/2026-11.md) | - |

@@ -631,12 +631,11 @@ namespace http {
 
   // Parses one request from raw bytes, which may end inside a UTF-8 sequence that has not fully arrived. Bytes that
   // are not UTF-8 answer 400.
-  [public unsafe return<Request> effects(none)]
+  [public return<Request> effects(none)]
   parseRequestBytes([ReadSlice<u8>] bytes, [i32] maxBodyBytes) {
     [i32] count{bytes.count()}
-    [i32] bad{utf8ErrorOffset(bytes.dataUnsafe(), count)}
-    [i32] validCount{if(bad < 0i32, then() { count }, else() { bad })}
-    [Request] request{parseRequest(StringView{[data] bytes.dataUnsafe(), [fieldLength] validCount}, maxBodyBytes)}
+    [i32 mut] bad{-1i32}
+    [Request] request{parseRequest(textValidPrefix(bytes, bad), maxBodyBytes)}
     if(bad < 0i32 || !request.needsMore()) {
       return(request)
     }

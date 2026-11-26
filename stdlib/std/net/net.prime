@@ -49,6 +49,8 @@ net_wake([i32] writer) {
 net_wake_drain([i32] reader) {
 }
 
+import /std/collections/slice/*
+
 namespace std {
 namespace net {
 
@@ -122,6 +124,25 @@ namespace net {
   [public return<i32> effects(net_io)]
   poll([Pointer<u8>] interest, [u64] length, [i32] timeoutMs) {
     return(net_poll(interest, length, timeoutMs))
+  }
+
+  // `recv` into a slice: reads up to `buffer.count()` bytes. The pointer and the length come from the same slice, so
+  // they cannot disagree; this is the small primitive the safe readers use.
+  [public unsafe return<i64> effects(net_io)]
+  recvInto([i32] socket, [WriteSlice<u8>] buffer, [i32] timeoutMs) {
+    return(net_recv(socket, buffer.dataUnsafe(), convert<u64>(buffer.count()), timeoutMs))
+  }
+
+  // `send` from a slice: writes all `data.count()` bytes.
+  [public unsafe return<i64> effects(net_io)]
+  sendFrom([i32] socket, [ReadSlice<u8>] data, [i32] timeoutMs) {
+    return(net_send(socket, data.dataUnsafe(), convert<u64>(data.count()), timeoutMs))
+  }
+
+  // `poll` over a slice: byte `fd` of `interest` marks the descriptor, `interest.count()` bytes in all.
+  [public unsafe return<i32> effects(net_io)]
+  pollWatch([WriteSlice<u8>] interest, [i32] timeoutMs) {
+    return(net_poll(interest.dataUnsafe(), convert<u64>(interest.count()), timeoutMs))
   }
 
   // Closes a socket. Returns 0 or a negative code.

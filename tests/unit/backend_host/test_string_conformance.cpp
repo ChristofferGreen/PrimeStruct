@@ -655,6 +655,13 @@ TEST_CASE("textFromBytes stops the program on invalid UTF-8") {
                            "  [String mut] s{/std/text/stringFrom(\"ab\")}\n";
   CHECK(failsToRun(head + "  s.pushByte(255u8)\n  [StringView] v{textFromBytes(s.view().bytes())}\n  return(v.count())\n}\n"));
   CHECK_FALSE(failsToRun(head + "  [StringView] v{textFromBytes(s.view().bytes())}\n  return(0i32)\n}\n"));
+  // textValidPrefix views the valid part of bytes that stop inside a bad sequence, and reports where.
+  CHECK_FALSE(failsToRun(head + "  s.pushByte(255u8)\n  [i32 mut] bad{-1i32}\n"
+                                "  [StringView] prefix{textValidPrefix(s.view().bytes(), bad)}\n"
+                                "  return(prefix.count() - 2i32 + bad - 2i32)\n}\n"));
+  CHECK_FALSE(failsToRun(head + "  [i32 mut] bad{0i32}\n"
+                                "  [StringView] prefix{textValidPrefix(s.view().bytes(), bad)}\n"
+                                "  return(prefix.count() - 2i32 + bad + 1i32)\n}\n"));
 }
 
 // ---- search, comparison, trimming, pieces and lines ------------------------------------------------

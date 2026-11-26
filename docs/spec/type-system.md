@@ -770,6 +770,13 @@ helper over `value` (docs/spec/transforms.md).
     (`ReadSlice<i32>{[data] location(x), [fieldCount] 1000i32}` is `private field is not accessible`, and a call of
     the constructors is `requires an unsafe definition`); it takes slices from `vector`, `array`, `String` and
     `StringView` views, which are `[unsafe]` definitions safe code may call.
+  - **Library code above the primitives is safe.** An `[unsafe]` body is trusted and unchecked (aliasing checks are off
+    for all of it) while safe code calls it without seeing that, so the stdlib keeps unsafety in a few small
+    primitives, each next to what it guards: the slice module, the container storage internals, and one primitive per
+    host call that takes a pointer and a length (`/std/net` `recvInto`, `sendFrom` and `pollWatch` take a slice, so the
+    pointer and the count cannot disagree) or per view over bytes (`/std/text/view` `utf8ErrorOffsetOfBytes`,
+    `textViewOfBytes`, `utf8SequenceAtBytes`). Everything that calls them (`parseRequestBytes`, `textFromBytes`,
+    `stringFromUtf8Lossy`, the `/std/http/server` loops) is a safe definition and never calls `dataUnsafe()`.
   - Parameters borrow their arguments by default (see Parameter Passing in `value-lifecycle.md`); a borrowed
     parameter cannot escape the call.
   - A pointer or reference to a local (`location(x)`) cannot escape the local's scope: returning it, storing it in a

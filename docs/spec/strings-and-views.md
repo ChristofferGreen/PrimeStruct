@@ -112,7 +112,8 @@ escapes via Function (root: <root>)`).
 `Slice<T, Read>` to `ReadSlice<T>` and `Slice<T, Write>` (or `ReadWrite`) to `WriteSlice<T>`; a read view has
 no write operations and `WriteSlice<T>.readOnly()` gives a read view of the same elements. The pointer and count are private; `readSliceMake` and `writeSliceMake` build a view over any pointer and are
 `[unsafe_api]` (only `[unsafe]` definitions call them). `dataUnsafe()` is the
-`[unsafe_api]` way to the pointer, for a host call. Views of a
+`[unsafe_api]` way to the pointer, for the one small `[unsafe]` primitive a host call or a text view needs: stdlib code
+above those primitives is safe and never calls it. Views of a
 `vector<T>` come from `/std/collections/vector/view<T>`, `slice<T>` and `sliceMut<T>`; a view narrows with
 `slice(start, end)` and keeps its capability. The operations are `count`, `empty`, `at`, `first`, `last`
 (`Maybe<T>`), `find`, `rfind`, `contains`, `occurrences` (spelled `count(value)` in the table), `equals`,
@@ -462,7 +463,9 @@ to compile the view code. `TextView` is taken by the native-UI widget.
   left alone on failure. The float conversion is the C library's, correctly rounded (`__pstext_parse_f64`).
 - **Code points and case:** `codePointCount()`, `codePointLength(offset)`, `codePointAt(offset)` (an i32), and
   `toAsciiLower()`/`toAsciiUpper()` (a `String`) and `equalsIgnoreAsciiCase(other)`; bytes 128 and up are left alone.
-- **Checking bytes:** `utf8ErrorOffset(data, count)` is the offset of the first byte that starts invalid UTF-8, or -1.
+- **Checking bytes:** `utf8ErrorOffset(data, count)` is the offset of the first byte that starts invalid UTF-8, or -1;
+  `utf8ErrorOffsetOfBytes(bytes)` is the same over a `ReadSlice<u8>`, and `textValidPrefix(bytes, badOffset)` views the
+  longest valid prefix of a slice and sets `badOffset` (the offset of the invalid byte, or -1).
 - **Search by byte set, replace:** `findFirstOf`, `findFirstNotOf`, `findLastOf`, `findLastNotOf` (and `...From(set, pos)`, with
   `std::string`'s position meaning) return an index or -1; `replaceAll(from, to)` gives a `String`; `toOwned()` copies a
   view into a `String`; `splitOwned(separator)` gives a `vector<String>`.

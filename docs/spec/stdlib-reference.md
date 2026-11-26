@@ -646,6 +646,10 @@ Linux and macOS:
 - `localPort(socket) -> i32`: the port a socket is bound to (the one picked for port 0).
 - `accept(listener, timeoutMs) -> i32`: the next connection.
 - `recv(socket, buffer, length, timeoutMs) -> i64`: reads up to `length` bytes; 0 means the peer closed.
+- `recvInto(socket, buffer, timeoutMs) -> i64`, `sendFrom(socket, data, timeoutMs) -> i64` and
+  `pollWatch(interest, timeoutMs) -> i32` are `recv`, `send` and `poll` over a `WriteSlice<u8>` / `ReadSlice<u8>` /
+  `WriteSlice<u8>`: the length is the slice's count, so the pointer and the length cannot disagree, and a caller needs
+  no `[unsafe]` or `dataUnsafe()`.
 - `send(socket, data, length, timeoutMs) -> i64`: writes all `length` bytes; a timeout or signal after some bytes
   returns the count written so far. A peer that has gone gives `closedCode()`, never `SIGPIPE`.
 - `poll(interest, length, timeoutMs) -> i32`: waits until one of the marked sockets is readable: a listener has a
