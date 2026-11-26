@@ -137,7 +137,10 @@ of sync with them.
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5932 | Libraries carry back-end code | ready | lib-backend |
+| TODO-5932 | Libraries carry back-end code | blocked | lib-backend |
+| TODO-6275 | Measure the back-end compile of a program that links a library | ready | lib-backend |
+| TODO-6276 | `optexe` libraries carry a C++ unit | blocked | lib-backend |
+| TODO-6277 | Native libraries are object files joined by a linker | blocked | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -165,7 +168,7 @@ of sync with them.
 - Native UI (docs/NativeUiPlan.md): bytecode size (TODO-6233 benchmark, TODO-6240 VM target, TODO-6232 source units, in this order; decision TODO-5536 after them); ready outside Ready Now  (the inline report) (the backend contract test) (shortcut parsing); deferred TODO-5533 (Windows and Linux backends, platform scope to decide)
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
-- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries, after TODO-6174 is measured), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
+- Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; blocked TODO-5932 (back-end code in libraries; split into TODO-6275 measure, TODO-6276 `optexe` unit, TODO-6277 native), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
 - Backend parity:  (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
@@ -567,22 +570,65 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [~] TODO-5932: Libraries carry back-end code
+- [ ] TODO-5932: Libraries carry back-end code
   - owner: ai
-  - status: ready
-  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
+  - status: blocked
+  - blocked_on: TODO-6275
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 13)
   - parallel_track: lib-backend
   - depends_on: TODO-5925
   - scope: IR-level libraries save the front end only; `--emit=optexe` and `--emit=native` still generate code for the whole merged module at every link. Separate back-end compilation needs libraries that carry per-library C++ translation units or machine code that a linker joins, which would also give C callers an `.a` file. The native backend writes executables directly and has no object writer. Needs scoping against both back ends before it starts; split it then.
   - acceptance:
-    - to be written when scoped: a library built once is not regenerated when only its consumer changes, and the link of the final executable is a real link
-  - stop_rule: do not start before it is split into leaves for `optexe` and for native.
-  - notes: deferred: needs scoping and an object writer.
+    - TODO-6275 is done and its `decision:` says whether a library of the stdlib's size pays; if it does, TODO-6276 (`optexe`) is done, and TODO-6277 (native) after it
+    - a library built once is not regenerated when only its consumer changes, and the link of the final executable is a real link
+  - stop_rule: tracker; the work is in TODO-6275, TODO-6276 and TODO-6277.
+  - notes: split 2026-11-26 into a measurement, an `optexe` leaf and a native leaf, as the owner's 2026-11-22 decision orders (A done as TODO-6174; B only if a real library measures more than 1 s of back-end compile; C not before B).
   - measured: 2026-11-21 (release build, macOS arm64; numbers in docs/todo_log.md under TODO-5932). `--emit=optexe` of an empty `main` takes 0.91 s, of which the front end is 0.02 s (69M instructions) and `clang++` parsing the runtime preamble's standard headers alone is 0.64 s (`-fsyntax-only`); a program of 24k generated lines (examples/apps/http_hello) takes 4.18 s, 1.29 s of it the front end (14.6G instructions) and about 2.9 s the C++ compile and link. So the back end is 98 percent of a small program (a fixed cost every translation unit pays) and about 70 percent of an http-sized one. The emitter writes one translation unit with the runtime in an unnamed namespace, passing the runtime as `Rt &rt` (src/backend/IrToOptCppRuntime.h), so a library unit could share it; a string table, host import declarations and struct layouts are per unit, and the optimizer's inlining across the library boundary is lost. The native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer.
   - options_to_decide: (A) cut the fixed cost first, without libraries: a precompiled header of the runtime preamble (measured: an empty `main` 0.70 s to 0.39 s), which every optexe and `exe` compile gains and which needs no library ABI. (B) optexe only: a library carries a C++ unit emitted from its own IR (roots with external linkage, names from their paths), the consumer unit declares them, a cache of the object files keyed by archive hash, compiler build id and flags; costs at least one translation unit of compile per library (0.4 s with the header above) and the loss of cross-library inlining, so it pays only for a library whose body is large. (C) native: an object writer for Mach-O and ELF plus a system linker step, also giving C callers an `.a`; large, and only after B proves out.
   - decision: 2026-11-22 (owner): option A first: TODO-6174 (precompiled header or trimmed includes), which every optexe and `exe` compile gains. B (a C++ unit per library) only if a real library measures more than 1 s of back-end compile of a typical program; C not before B. This block stays deferred until that measurement exists.
+
+- [ ] TODO-6275: Measure the back-end compile of a program that links a library
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (split from TODO-5932)
+  - parallel_track: lib-backend
+  - depends_on: TODO-6174
+  - scope: The owner's 2026-11-22 decision on TODO-5932 says a C++ unit per library (option B) is built only if a real library measures more than 1 s of back-end compile of a typical program, now that the runtime preamble is a precompiled header (TODO-6174: empty `main` 0.95 s, `examples/apps/http_hello` 3.33 s). Measure it: build the stdlib module a program uses most (`/std/http`, 24k generated lines in `http_hello`) as a library with `primec --emit=lib <root.prime> -o <name>.psa`, compile `http_hello` against it with `--library <name>.psa --emit=optexe`, and record the time of the C++ compile and link that belongs to the library's functions (the generated unit split by the functions the link merged from the archive) next to the time of the consumer's own functions, on a release build. Measurement and a decision only; no code in the compiler.
+  - acceptance:
+    - the numbers (seconds and share of the C++ compile, for the library part and the consumer part, with the precompiled header on) are in docs/todo_log.md under TODO-5932, and a `decision:` line on TODO-5932 says "B pays" (the library part is above 1 s) or "B does not pay yet" with the figure
+    - on "B pays", TODO-6276 is set `ready`; on "does not pay", TODO-6276 and TODO-6277 stay blocked and this tracker stays open until a larger library exists
+  - stop_rule: the measurement and the decision line only.
+  - repro: `./build-release/primec --emit=optexe --entry /main examples/apps/http_hello/main.prime -o out` timed with `time`, once with the library's functions linked from an archive (see docs/ModulesAndLibrariesPlan.md, section 9) and once from source.
+
+- [ ] TODO-6276: `optexe` libraries carry a C++ unit
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6275
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (split from TODO-5932)
+  - parallel_track: lib-backend
+  - depends_on: TODO-5925
+  - scope: Option B of TODO-5932, for `--emit=optexe` only: a library archive also carries a C++ translation unit emitted from its own IR (its roots with external linkage, names derived from their paths; the runtime shared through the precompiled header and `Rt &rt`, src/backend/IrToOptCppRuntime.h), and the consumer's unit declares them. The object files of libraries are cached by archive hash, compiler build id and flags, so a library built once is not recompiled when only its consumer changes. A string table, host import declarations and struct layouts are per unit (the 2026-11-21 measurement in TODO-5932); cross-library inlining is lost, which is why it pays only for a large library.
+  - acceptance:
+    - a program linked against a library builds to the same output as the whole-module `--emit=optexe`; the second build after a change in the consumer alone does not run the C++ compiler for the library unit (a test counts the compiler runs)
+    - a change in the library, in the compiler or in the flags recompiles it
+    - full release gate green
+  - stop_rule: `optexe` only; native is TODO-6277.
+  - notes: split again into the emitter, the cache and the link step when it starts, each with `scope`, `acceptance` and `stop_rule`, if it is larger than one gate-sized commit.
+
+- [ ] TODO-6277: Native libraries are object files joined by a linker
+  - owner: ai
+  - status: blocked
+  - blocked_on: TODO-6276
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (split from TODO-5932)
+  - parallel_track: lib-backend
+  - scope: Option C of TODO-5932: the native back end writes executables directly (src/native_emitter/NativeEmitterMachO.cpp, NativeEmitterElf.cpp) and has no object writer. A library would carry machine code in an object file (Mach-O and ELF writers, relocations, symbols) and the executable come from a system linker step; this also gives C callers an `.a` file. Large, and only after TODO-6276 has proved the cache and the link step on `optexe`. Needs its own scoping (object writer first, then the linker step) before code.
+  - acceptance:
+    - to be written when TODO-6276 is done: split into an object writer leaf per format and the linker-step leaf
+  - stop_rule: do not start before it is split into leaves.
 
 - [ ] TODO-6219: `loadBytecode` of a script linked with a library says whether that library changed
   - owner: ai
