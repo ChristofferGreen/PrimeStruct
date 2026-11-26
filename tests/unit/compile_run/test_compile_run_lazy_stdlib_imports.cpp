@@ -249,4 +249,78 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
+// Receivers whose type name is never spelled in the program text: the type is reached through an
+// inferred local, a method result or an operator result, so the method entry must follow it.
+TEST_CASE("a method chain reaches methods of types the text never spells") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [ColorRGB] c{ColorRGB{0.5f32, 0.5f32, 0.5f32}}
+  [auto] back{c.toSRGB().toLinear()}
+  return(convert<i32>(back.mulScalar(10.0f32).r))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_color_chain.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 5);
+  CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath +
+                   " --entry /main") == 5);
+}
+
+TEST_CASE("a method on an inferred vector result of a method chain runs") {
+  const std::string source = R"(
+import /std/math/Vec3
+
+[return<int>]
+main() {
+  [auto] a{Vec3{[x] 1.0f32, [y] 0.0f32, [z] 0.0f32}}
+  [auto] b{Vec3{[x] 0.0f32, [y] 1.0f32, [z] 0.0f32}}
+  [auto] c{a.cross(b).mulScalar(5.0f32).add(a)}
+  return(convert<i32>(c.length()))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_vec3_chain.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 5);
+  CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath +
+                   " --entry /main") == 5);
+}
+
+TEST_CASE("a method on a value inferred from a matrix or quaternion operator runs") {
+  const std::string source = R"(
+import /std/math/*
+
+[return<int>]
+main() {
+  [Quat] q{Quat{}}
+  [auto] m{quat_to_mat3(q)}
+  [auto] r{multiply(m, Vec3{[x] 3.0f32, [y] 4.0f32, [z] 0.0f32})}
+  [auto] rotated{multiply(q, Vec3{[x] 0.0f32, [y] 3.0f32, [z] 4.0f32})}
+  return(plus(convert<i32>(r.length()), convert<i32>(rotated.normalize().mulScalar(7.0f32).length())))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_math_operator_results.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 12);
+  CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath +
+                   " --entry /main") == 12);
+}
+
+TEST_CASE("a method on an image error returned by a function runs without naming the type") {
+  const std::string source = R"(
+import /std/image/*
+
+[return<int> effects(io_out)]
+main() {
+  [auto] err{imageReadUnsupported()}
+  print_line(err.why())
+  print_line(imageWriteUnsupported().why())
+  return(plus(err.status(), imageInvalidOperation().status()))
+}
+)";
+  const std::string srcPath = writeTemp("lazy_image_error_methods.prime", source);
+  CHECK(runCommand("./primec --emit=vm " + srcPath + " --entry /main") == 4);
+  CHECK(runCommand("./primec --emit=vm --whole-file-stdlib-imports " + srcPath +
+                   " --entry /main") == 4);
+}
+
 TEST_SUITE_END();
