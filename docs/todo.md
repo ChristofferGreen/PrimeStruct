@@ -635,6 +635,49 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 
+- [~] TODO-6279: A stdlib file whose struct holds a collection of structs is refused as a library root
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-http-lib-root (worktree-agent-a609f60a0e8336cf6), 2026-11-26
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found with TODO-6032)
+  - parallel_track: lib-shapes
+  - scope: `primec --emit=lib stdlib/std/http/http.prime` is refused with `unknown return type: Route on /std/collections/buffer_unchecked/bufferAlloc__t...`, which TODO-6032 counted among the 13 files that are "not self-contained as a root". It is not a rule of the library model: `primec --emit=vm --entry /std/http/pattern_matches stdlib/std/http/http.prime` fails the same way, so the file as the primary source is refused, and a program that imports it is not (the root wildcard import of `/std/http/*` resolves the bare `Route`). A method of `Router` (namespace `/std/http/Router`) reads `this.routes[i]` of a `vector<Route>`; `inferImplicitTemplateArgs` takes the element type from the field text as written, `Route`, and `resolveTypeString` leaves it bare because `resolveNameToPath` does not look outward from the struct's namespace, so `/std/collections/vector/at<Route>` and the `bufferAlloc<Route>` below it are instantiated with a name that the collection's own namespace cannot see. The explicit-argument path already writes such a struct with its path (`Channel</zed/Job>`); the implicit and the same-path helper paths did not.
+  - acceptance:
+    - a struct of a namespace that holds a `vector` of a struct of that namespace, read in a method of the first, compiles as the primary source in `/std/...` and in an application namespace
+    - a library built from a namespaced root with a router of handler routes links and gives the whole-program result (library link test)
+    - `primec --emit=lib stdlib/std/http/http.prime` passes the type check (it then names a shape, TODO-6281)
+    - full release gate green
+  - stop_rule: the bare struct name in an inferred or same-path template argument; no change to which helpers are real calls, to the library ABI or to the link.
+  - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa`; minimal: a `namespace std { namespace http { struct Route {[i32] id}  struct Router { [public vector<Route> mut] routes ... call() returns this.routes[0i32].id } } }` file with `--emit=vm --entry /std/http/f`.
+
+- [~] TODO-6280: A `Function` alias that names a struct of its namespace is not resolved in other namespaces
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worker-http-lib-root (worktree-agent-a609f60a0e8336cf6), 2026-11-26
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found with TODO-6279)
+  - parallel_track: lib-shapes
+  - scope: `[alias<Function<void, Request, Reference<Response>>>] RequestHandler()` in `/app` is expanded textually (SemanticsValidateTypeAliases.cpp) and the `Request` stays as written. A struct that holds a `RequestHandler` and sits in a `vector`, which the collection instantiates in `/std/collections`, makes the generated `/__Function2__t.../call` read `unsupported binding type: Request`; the same program works when the namespace is imported at the root, which hid it for `/std/http`.
+  - acceptance:
+    - the names in an alias target that a definition of the alias's namespace declares are written with their paths when the alias is expanded, and a program with the alias, a struct holding it and a `vector` of that struct builds without a root import
+    - full release gate green
+  - stop_rule: the alias target text; no change to alias parameters or to builtin names.
+  - repro: `namespace app { struct Request {...} alias Handler = Function<void, Request> ... struct Route { Handler mut handler } struct Router { vector<Route> routes ...push } }` as the primary source, `--emit=vm`: `unsupported binding type: Request`.
+
+- [ ] TODO-6281: A public function with a `ReadSlice<u8>` parameter is refused as a library function
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-26
+  - phase: Modules and libraries (found with TODO-6279)
+  - parallel_track: lib-shapes
+  - blocked_on: owner decision, which parameter shapes the library ABI takes
+  - scope: with the type check of TODO-6279 passed, `primec --emit=lib stdlib/std/http/http.prime` says `public function /std/http/parseRequestBytes cannot be compiled into a library: parameter `bytes` has a type (`ReadSlice<u8>`) the address ABI does not pass: a scalar, a struct outside the collections, or a reference or pointer to one`. This is the designed shape rule (a collection record is not passed), so `/std/http` is a library root only after a decision on borrowed collection parameters (see TODO-6173 for the sum case); until then the way out is a root file of scalar and struct functions, or building the library from a file that wraps the parser.
+  - acceptance:
+    - the owner picks the shapes; the leaf is then split into one leaf per shape
+  - stop_rule: no code before the decision.
+  - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
+
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
   - status: in_progress
