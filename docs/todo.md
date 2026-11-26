@@ -511,9 +511,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: float text only.
   - repro: `PRIMESTRUCT_MATRIX_WASM_COMPILE_ONLY=1 ./PrimeStruct_program_matrix_tests 2>&1 | grep -c "the string heap"` from the release build directory.
-- [ ] TODO-6271: Wasm refuses two file programs with `unsupported control-flow pattern`
+- [~] TODO-6271: Wasm refuses two file programs with `unsupported control-flow pattern`
   - owner: ai
   - status: ready
+  - claimed_by: gap-worker (worktree agent-a3e01a58a3e56909d), 2026-11-26
   - created_at: 2026-11-26
   - phase: Backend parity (slice of TODO-6124)
   - parallel_track: wasm-opcode-gaps
