@@ -661,9 +661,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the closure scan's method matching; no change to the manifests or the math API.
   - repro: `build-release/primec --dump-stage=semantic-product benchmarks/semantic_memory/fixtures/math_vector.prime --entry /bench/main | grep -c "^  definitions"`.
 
-- [ ] TODO-6300: The semantic-memory trend check fails once in a build directory whose history predates a budget change
+- [~] TODO-6300: The semantic-memory trend check fails once in a build directory whose history predates a budget change
   - owner: ai
   - status: ready
+  - claimed_by: worker-math (worktree agent-a2b5d9abbd298c1d8), 2026-11-26
   - created_at: 2026-11-26
   - phase: Test quality (found by TODO-6297)
   - parallel_track: test-honesty
