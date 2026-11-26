@@ -137,7 +137,7 @@ of sync with them.
 | TODO-6067 | x86_64 native emits FMA3 `vfmadd231sd` and `vfmadd231ss` | deferred | stdlib-math-fma |
 | TODO-5545 | Record the macOS AppKit manual smoke checklist | deferred | native-ui-macos-manual |
 | TODO-6019 | PrimeScroll built by `make.prime` starts as fast as the script's, measured by a person | ready | build-dogfood |
-| TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
+| TODO-5932 | Libraries carry back-end code | ready | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -567,9 +567,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - each item is recorded as passed or filed as a follow-up TODO
   - stop_rule: recording the manual run only.
 
-- [ ] TODO-5932: Libraries carry back-end code
+- [~] TODO-5932: Libraries carry back-end code
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
   - created_at: 2026-11-11
   - phase: Modules and libraries (docs/ModulesAndLibrariesPlan.md, section 13)
   - parallel_track: lib-backend
