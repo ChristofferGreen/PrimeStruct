@@ -649,6 +649,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
+- [ ] TODO-6305: An operator site the prediction cannot type validates the program twice
+  - owner: ai
+  - status: deferred
+  - created_at: 2026-11-26
+  - phase: Compiler performance (left open by the one-validation fix for operator programs)
+  - parallel_track: semantic-memory
+  - blocked_on: a program where the second round costs over 10% of its compile time, or a third way helpers are demanded
+  - scope: under lazy import, src/pipeline/OperatorHelperPrediction.cpp predicts the `Vec`/`Mat`/`Quat` operator helpers from parameters, typed bindings, brace constructors and nested operators, and `runCompilePipelineRound` restarts import and parse (not validation) to take them. A site it cannot type (`make_vector() + make_vector()`, a method result) still falls back to the validator's `Program::operatorRewriteDemand` and a second validated round, and a typed operator program still imports and parses twice. Two mechanisms now name the same helpers. The full fix lets validation splice a demanded helper mid-run (after template monomorphization has run over the existing definitions), so one pass covers every site and the prediction can go.
+  - acceptance:
+    - every operator program, typed or not, runs import, parse and validation once (`pipelineRounds` 1 and `pipelineRestarts` 0 in the lazy-import tests), the prediction component is deleted, and the Vec2 `length()` program stays at most 6 definitions
+    - full release gate green
+  - stop_rule: how operator helpers reach the program; no change to the operators.
+  - repro: the lazy-import test with an untyped site (2 rounds) in tests/unit/compile_run/test_compile_run_lazy_stdlib_imports.cpp.
+
 - [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
   - status: deferred
