@@ -662,9 +662,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the stdlib pass (src/pipeline/CompilePipelineStdlib.cpp) reading a root that is itself a stdlib file, and the imports of those files; no change to the library ABI.
   - repro: `primec --emit=lib stdlib/std/math/matrix.prime -o m.psa`.
 
-- [ ] TODO-6285: `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*`
+- [~] TODO-6285: `/std/collections/map.prime` as a library root fails on `import /std/collections/equality/*`
   - owner: ai
   - status: ready
+  - claimed_by: worker-lib-shapes (worktree-agent-abe55d3f222fd4a30), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (survey of the stdlib roots, table in docs/todo_log.md under TODO-6284)
   - parallel_track: lib-shapes
