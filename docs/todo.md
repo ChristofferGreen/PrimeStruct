@@ -142,7 +142,7 @@ of sync with them.
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
 | TODO-5977 | Semantics diagnostics go through one builder | deferred | reuse-diagnostic-builder |
-| TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | deferred | lifecycle-collection-slots |
+| TODO-6103 | Slots of `map<K, V>` and `soa<T>` storage | ready | lifecycle-collection-slots |
 
 ### Ready Now
 
@@ -631,9 +631,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: survey first; do not refactor before the table exists.
   - notes: deferred: needs the survey. Do not run alongside TODO-5960.
 
-- [ ] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
+- [~] TODO-6103: Slots of `map<K, V>` and `soa<T>` storage
   - owner: ai
-  - status: deferred
+  - status: ready
+  - claimed_by: agent-a8dbefa (worktree-agent-a8dbefa42903610f1), 2026-11-26
   - created_at: 2026-11-20
   - phase: Value lifecycle (docs/spec/value-lifecycle.md, uninitialized storage)
   - parallel_track: lifecycle-collection-slots
