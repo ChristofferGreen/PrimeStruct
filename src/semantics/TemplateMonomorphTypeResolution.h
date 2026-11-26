@@ -62,6 +62,12 @@ bool resolveTemplateArgumentList(std::vector<std::string> &args,
                                  std::string &error,
                                  bool &allConcreteOut);
 
+// The arguments of a `Function` type with every struct written with its path, so the instance does not depend on how a
+// struct was spelled (bare through an import, or with its path).
+void writeFunctionTypeArgumentPathsOut(std::vector<std::string> &args,
+                                       const std::string &namespacePrefix,
+                                       const Context &ctx);
+
 bool isRequirementSubstitutionIdentChar(char ch);
 
 std::string rewriteRequirementArgumentText(const std::string &text,

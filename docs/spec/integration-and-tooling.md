@@ -327,6 +327,11 @@ file (lazily or whole; `--emit-deps` does not list it) and splices the file's st
 `StringView` parameters; `import</std/path>` before it is allowed and does the same splice first. The modules of the
 family that have no library (matrix, quaternion) come from the stdlib source as before.
 
+A struct of a library that holds a `Function` field carries the field's box in the interface: the box struct, its
+`Copy` and `Destroy` (the dispatch over the closures the library converts to it) and an imported `call`. The box is
+final; a program's own closure cannot be converted to it (TODO-6283), so a library takes `Function` values only from its
+own code.
+
 Not every stdlib file is a library root: a public function whose parameter or result is a collection record (a
 `ReadSlice<u8>`, a `vector<T>`, a `Result`) is refused by the shape rule of the address ABI, so `primec --emit=lib
 stdlib/std/http/http.prime` names `parseRequestBytes` and its `ReadSlice<u8>` parameter. The way out is a root file of

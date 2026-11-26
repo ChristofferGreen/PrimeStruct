@@ -11,6 +11,7 @@
 #include "primec/support/SourceLocationMapper.h"
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <map>
 #include <set>
@@ -507,6 +508,54 @@ std::string closureHash(const std::string &root,
   return sha256Hex(lines);
 }
 
+// The struct of a `Function<R, A...>` type that a struct of the module holds: the box has no source of its own, so
+// the interface carries it as a plain struct for the consumer's layout.
+bool isFunctionBoxInstance(const Definition &definition) {
+  return definition.instanceOfTemplate.rfind("/__Function", 0) == 0;
+}
+
+// A method of such a box (`call`, `Copy`, `Destroy`): its body is the dispatch over the closures the module
+// converts to the box, so the interface carries the completed definition.
+bool isFunctionBoxMember(const Definition &definition) {
+  return definition.isNested && definition.fullPath.rfind("/__Function", 0) == 0 &&
+         parentDefinitionPath(definition.fullPath).find("__t") != std::string::npos;
+}
+
+// The closure structs (`/web/run__lambda0`) a box's `Copy` and `Destroy` name: their layout is part of the interface
+// of a box, since the consumer expands those helpers.
+std::set<std::string> functionBoxClosures(const Program &program) {
+  std::set<std::string> closures;
+  for (const Definition &definition : program.definitions) {
+    if (!isFunctionBoxMember(definition) || !isLifecycleHelper(definition)) {
+      continue;
+    }
+    const std::string text = genericDefinitionText(definition, definition.fullPath, {});
+    for (size_t at = text.find("__lambda"); at != std::string::npos;
+         at = text.find("__lambda", at + 1)) {
+      size_t first = at;
+      while (first > 0 && (std::isalnum(static_cast<unsigned char>(text[first - 1])) != 0 ||
+                           text[first - 1] == '_' || text[first - 1] == '/')) {
+        --first;
+      }
+      size_t last = at + 8;
+      while (last < text.size() && std::isdigit(static_cast<unsigned char>(text[last])) != 0) {
+        ++last;
+      }
+      closures.insert(text.substr(first, last - first));
+    }
+  }
+  return closures;
+}
+
+bool isBoxClosureDefinition(const std::set<std::string> &closures, const Definition &definition) {
+  for (const std::string &closure : closures) {
+    if (definition.fullPath == closure || definition.fullPath.rfind(closure + "/", 0) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool addInterfaceEntryStub(Program &program, const std::string &entryPath, std::string &error) {
@@ -620,12 +669,15 @@ bool buildModuleInterface(const Program &program,
     definitions.emplace(entry.first, entry.second);
     definedPaths.insert(entry.first);
   }
+  const std::set<std::string> boxClosures = functionBoxClosures(program);
   for (const Definition &definition : program.definitions) {
+    const bool functionBox = isFunctionBoxInstance(definition) || isFunctionBoxMember(definition) ||
+                             isBoxClosureDefinition(boxClosures, definition);
     if (definition.fullPath == entryPath || !definition.templateArgs.empty() ||
-        !definition.instanceOfTemplate.empty() ||
+        (!definition.instanceOfTemplate.empty() && !functionBox) ||
         hasTransform(definition.transforms, "namespace") ||
-        (!isPublic(definition) && reachedPaths.count(definition.fullPath) == 0) ||
-        !inModuleSources(source, definition)) {
+        (!functionBox && !isPublic(definition) && reachedPaths.count(definition.fullPath) == 0) ||
+        (!functionBox && !inModuleSources(source, definition))) {
       continue;
     }
     const auto category = facts.categories.find(definition.fullPath);
@@ -639,10 +691,12 @@ bool buildModuleInterface(const Program &program,
     }
     // A lifecycle helper is printed in full: the consumer expands it where a value is created, copied or destroyed.
     const auto parsedHelper = parsed.find(definition.fullPath);
-    if (item.nestedInStruct && isLifecycleHelper(definition) && parsedHelper != parsed.end()) {
-      item.displayText =
-          genericDefinitionText(*parsedHelper->second, lastSegment(definition.fullPath), {});
-      item.signatureText = genericDefinitionText(*parsedHelper->second, definition.fullPath, {});
+    const Definition *helperSource = parsedHelper != parsed.end() ? parsedHelper->second
+                                     : functionBox                ? &definition
+                                                                  : nullptr;
+    if (item.nestedInStruct && isLifecycleHelper(definition) && helperSource != nullptr) {
+      item.displayText = genericDefinitionText(*helperSource, lastSegment(definition.fullPath), {});
+      item.signatureText = genericDefinitionText(*helperSource, definition.fullPath, {});
     }
     items.push_back(std::move(item));
   }

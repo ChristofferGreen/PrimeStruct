@@ -225,6 +225,9 @@ PhaseStatus rewriteCollectionHelperTemplate(ExprRewriteContext &rc) {
           expr.templateArgs, mapping, allowedParams, namespacePrefix, ctx, error, allConcrete)) {
     return rc.done(false);
   }
+  if (expr.name.rfind("/__Function", 0) == 0) {
+    writeFunctionTypeArgumentPathsOut(expr.templateArgs, namespacePrefix, ctx);
+  }
   if (isPackAtIntrinsic) {
     if (expr.templateArgs.size() != 2) {
       error = "pack_at requires integer index and field-stem template arguments";

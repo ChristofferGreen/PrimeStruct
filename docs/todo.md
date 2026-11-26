@@ -648,20 +648,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: no code before the decision.
   - repro: `primec --emit=lib stdlib/std/http/http.prime -o http.psa` on a tree with TODO-6279 fixed.
 
-- [~] TODO-6282: A library of a struct with a `Function` field has an interface that does not define the box
+- [ ] TODO-6283: A program cannot convert its own closure to a `Function` type a library owns
   - owner: ai
-  - status: ready
-  - claimed_by: worker-lib-function-box (worktree-agent-ad5c379c25c3958fa), 2026-11-26
+  - status: deferred
   - created_at: 2026-11-26
-  - phase: Modules and libraries (found with TODO-6279)
+  - phase: Modules and libraries (found by TODO-6282)
   - parallel_track: lib-shapes
-  - scope: a library built from a namespaced root with `[alias<Function<void, Request, Reference<Request>>>] Handler()`, `Route` holding a `Handler` field and a `Router` holding a `vector<Route>` builds, but a program that links it stops with `web.psa:6:20: error: Semantic error: unknown struct type for layout: /__Function2__t...` at `Route`: the interface lists the struct and its field type, not the `Function` box struct the field names. Also, a `Function` instance is keyed by its type text, so an interface that spells `Request` with its path and a program that spells it bare through a root import name two different instances (`argument type mismatch for /std/http/Router/get parameter handler`); a library of `/std/http` needs both settled.
+  - blocked_on: owner decision, how a library's `Function` box dispatches closures of the program that links it
+  - scope: the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp). A library that holds such a field owns that dispatch: its interface carries the box with the completed `Copy` and `Destroy` and an imported `call`, so a consumer reads, copies and calls the handlers the library built. A consumer that passes its own lambda where the library takes the `Function` (`router.add(3i32, []([Request] request, [Reference<Request>] response) {...})` against `/web/Router/add`) stops with `unknown call target: /__fn_box`, so a library of `/std/http/server` style handlers cannot take handlers from the program. Options: (A) refuse it with a diagnostic that names the box and the library (cheap, keeps the limit); (B) the consumer owns a second box of the same type under its own name and the library takes a pointer to a call routine: needs a callback ABI; (C) one dispatch by function address (a `Function` holds a function index and an environment, the call is an indirect call): changes the box layout and every back end, removes the tag table, and is the real fix; (D) the link regenerates the box with the closures of every module: the archive then carries code per consumer, against the separate-compilation point.
   - acceptance:
-    - a library with a struct holding a `Function` field links and gives the whole-program result on the VM, with a library link test
-    - a `Function` written with a struct bare (through an import) and the same type written with its path are one type
+    - the owner picks the option; with A the diagnostic names the type and the library and has a test, with B to D a consumer closure passed to a library function runs on the VM and optexe with a library link test
     - full release gate green
-  - stop_rule: the interface of a `Function` box and the identity of its instances; no change to the library ABI.
-  - repro: the library of the test "library link: a method that reads a collection of the namespace's structs" with `Route` given `[public Handler mut] handler` and the alias above; `primec --emit=vm --library web.psa app.prime`.
+  - stop_rule: no code before the decision; the interface of a box is TODO-6282.
+  - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

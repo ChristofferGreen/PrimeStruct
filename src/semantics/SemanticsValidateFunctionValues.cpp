@@ -339,6 +339,21 @@ struct FunctionValueRewriter {
     return "void";
   }
 
+  // An instance a library's interface carries: its `call` is an imported declaration and its lifecycle helpers are
+  // already complete, so the library's dispatch over its closures is final.
+  bool isLibraryOwned(const std::string &functionPath) const {
+    const auto callIt = definitionIndex.find(functionPath + "/call");
+    if (callIt == definitionIndex.end()) {
+      return false;
+    }
+    for (const Transform &transform : program.definitions[callIt->second].transforms) {
+      if (transform.name == "imported") {
+        return true;
+      }
+    }
+    return false;
+  }
+
   bool completeInstance(const std::string &functionPath, const std::vector<std::string> &closures) {
     auto callIt = definitionIndex.find(functionPath + "/call");
     auto copyIt = definitionIndex.find(functionPath + "/Copy");
@@ -480,6 +495,14 @@ struct FunctionValueRewriter {
       }
     }
     for (const std::string &instance : instances) {
+      if (isLibraryOwned(instance)) {
+        if (!variants[instance].empty()) {
+          error = "a closure cannot be converted to " + instance +
+                  ": its dispatch belongs to the library that defines it";
+          return false;
+        }
+        continue;
+      }
       for (const std::string &closure : variants[instance]) {
         if (!checkSignature(instance, closure)) {
           return false;

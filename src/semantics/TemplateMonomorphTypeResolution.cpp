@@ -221,6 +221,65 @@ std::string qualifyStructArgument(const std::string &text,
   }
 }
 
+// The struct a name stands for, written with its path: the name tried in the enclosing namespaces outward, then the
+// root namespace with its imports. Empty when no non-generic definition answers to the name.
+std::string
+structPathOfName(const std::string &name, const std::string &namespacePrefix, const Context &ctx) {
+  std::string scope = namespacePrefix;
+  while (true) {
+    const std::string path =
+        resolveNameToPath(name, scope, scopedImportAliasesForNamespace(scope, ctx), ctx.sourceDefs);
+    const auto defIt = ctx.sourceDefs.find(path);
+    if (defIt != ctx.sourceDefs.end() && ctx.templateDefs.count(path) == 0 &&
+        isStructDefinition(defIt->second)) {
+      return path;
+    }
+    if (scope.empty()) {
+      return {};
+    }
+    const size_t slash = scope.find_last_of('/');
+    scope = slash == std::string::npos || slash == 0 ? std::string{} : scope.substr(0, slash);
+  }
+}
+
+// A `Function` type is keyed by the text of its arguments, so every struct in them is written with its path: the
+// same type spelled bare (through an import) and with its path is one type, at any depth (`Reference<Request>`).
+std::string writeStructPathsOut(const std::string &text,
+                                const std::string &namespacePrefix,
+                                const Context &ctx) {
+  std::string out;
+  size_t i = 0;
+  while (i < text.size()) {
+    const char ch = text[i];
+    const bool identStart = std::isalpha(static_cast<unsigned char>(ch)) != 0 || ch == '_';
+    if (!identStart) {
+      // A path or a number is copied as it is: a path is already canonical.
+      size_t j = i + 1;
+      if (ch == '/' || std::isdigit(static_cast<unsigned char>(ch)) != 0) {
+        while (j < text.size() && (std::isalnum(static_cast<unsigned char>(text[j])) != 0 ||
+                                   text[j] == '_' || text[j] == '/')) {
+          ++j;
+        }
+      }
+      out.append(text, i, j - i);
+      i = j;
+      continue;
+    }
+    size_t j = i;
+    while (j < text.size() &&
+           (std::isalnum(static_cast<unsigned char>(text[j])) != 0 || text[j] == '_')) {
+      ++j;
+    }
+    const std::string token = text.substr(i, j - i);
+    const bool generic = j < text.size() && text[j] == '<';
+    const std::string path =
+        generic ? std::string() : structPathOfName(token, namespacePrefix, ctx);
+    out += path.empty() ? token : path;
+    i = j;
+  }
+  return out;
+}
+
 bool appendResolvedTemplateArg(const std::string &arg,
                                const SubstMap &mapping,
                                const std::unordered_set<std::string> &allowedParams,
@@ -604,6 +663,9 @@ ResolvedType resolveTypeStringImpl(std::string input,
     recordExplicitTemplateArgFact(resolvedBasePath, result);
     return result;
   }
+  if (resolvedBasePath.rfind("/__Function", 0) == 0) {
+    writeFunctionTypeArgumentPathsOut(resolvedArgs, namespacePrefix, ctx);
+  }
   if (consumeExplicitTemplateArgFact(resolvedBasePath, result)) {
     recordExplicitTemplateArgFact(resolvedBasePath, result);
     return result;
@@ -619,6 +681,14 @@ ResolvedType resolveTypeStringImpl(std::string input,
   publishExplicitTemplateArgFact(resolvedBasePath, result);
   recordExplicitTemplateArgFact(resolvedBasePath, result);
   return result;
+}
+
+void writeFunctionTypeArgumentPathsOut(std::vector<std::string> &args,
+                                       const std::string &namespacePrefix,
+                                       const Context &ctx) {
+  for (std::string &arg : args) {
+    arg = writeStructPathsOut(arg, namespacePrefix, ctx);
+  }
 }
 
 ResolvedType resolveTypeString(std::string input,

@@ -522,4 +522,101 @@ main() {
   CHECK(whole.exitCode == 14);
 }
 
+TEST_CASE("library link: a struct with a Function field is a struct of the archive with its box") {
+  // The interface carries the box struct of the field, its copy and destroy helpers and the closure struct they name,
+  // so the consumer lays out `Route` and copies a handler the library built.
+  const std::filesystem::path dir = testScratchPath("library_link_function_box");
+  const std::string source = R"(
+import /std/collections/*
+
+namespace web {
+  [public struct]
+  Request() {
+    [public i32 mut] code{0i32}
+  }
+
+  [public alias<Function<void, Request, Reference<Request>>> effects(none)]
+  Handler() {}
+
+  [public struct]
+  Route() {
+    [public i32] id{0i32}
+    [public Handler mut] handler
+  }
+
+  [public struct]
+  Router() {
+    [public vector<Route> mut] routes{vector<Route>()}
+
+    [mut effects(heap_alloc)]
+    add([i32] id, [Handler move] handler) {
+      this.routes.push(Route{[id] id, [handler] handler})
+    }
+
+    [mut effects(heap_alloc), return<i32>]
+    handle([i32] value) {
+      [Request mut] request{Request{[code] value}}
+      [Request mut] response{Request{}}
+      this.routes[0i32].handler(request, response)
+      return(response.code + this.routes[0i32].id)
+    }
+  }
+
+  [public effects(heap_alloc), return<i32>]
+  run() {
+    [Router mut] router{Router{}}
+    router.add(3i32, []([Request] request, [Reference<Request>] response) { response.code = request.code + 1i32 })
+    return(router.handle(10i32))
+  }
+}
+)";
+  const std::string app = "[effects(heap_alloc) return<i32>]\nmain() {\n  return(/web/run())\n}\n";
+  writeIn(dir, "web.prime", source);
+  writeIn(dir, "app.prime", "import<\"web.prime\">\n" + app);
+  const Run whole = runApp(dir, "vm", "");
+  REQUIRE_MESSAGE(whole.exitCode == 14, whole.err);
+
+  const std::string lib = buildLibrary(dir, "web", source);
+  writeIn(dir, "app.prime", "import</web>\n" + app);
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(lib));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == 14);
+}
+
+TEST_CASE("a Function type is one type whether a struct in it is written bare or with its path") {
+  // `Request` reaches the root through an import and the namespace names it with its path: one instance, at any depth.
+  const std::filesystem::path dir = testScratchPath("function_type_identity");
+  writeIn(dir, "app.prime", R"(
+namespace web {
+  [public struct]
+  Request() {
+    [public i32 mut] code{0i32}
+  }
+
+  [public effects(heap_alloc), return<i32>]
+  apply([Function<void, /web/Request, Reference</web/Request>> mut] handler) {
+    [Request mut] request{Request{[code] 4i32}}
+    [Request mut] response{Request{}}
+    handler(request, response)
+    return(response.code)
+  }
+}
+
+import /web/*
+
+[effects(heap_alloc), return<i32>]
+use([Function<void, Request, Reference<Request>> mut] handler) {
+  return(/web/apply(handler))
+}
+
+[effects(heap_alloc) return<i32>]
+main() {
+  return(use([]([Request] request, [Reference<Request>] response) { response.code = request.code + 1i32 }))
+}
+)");
+  const Run run = runApp(dir, "vm", "");
+  CHECK_MESSAGE(run.err.empty(), run.err);
+  CHECK(run.exitCode == 5);
+}
+
 TEST_SUITE_END();
