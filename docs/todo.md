@@ -141,7 +141,7 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | blocked | lib-shapes |
-| TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | ready | lib-shapes |
+| TODO-6307 | IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them | in_progress | lib-shapes |
 | TODO-6308 | The VM executes `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
 | TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | blocked | lib-shapes |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | blocked | lib-shapes |
@@ -667,9 +667,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
   - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
 
-- [ ] TODO-6307: IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them
+- [~] TODO-6307: IR opcodes `FunctionAddress` and `CallIndirect`, and their expansion for targets without them
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (first layer of TODO-6283)
   - parallel_track: lib-shapes
