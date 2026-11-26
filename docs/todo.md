@@ -662,9 +662,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the extra pipeline round; no change to the operators or to which helpers are taken.
   - repro: `primec --emit=vm` of a program with `plus(a, b)` on two `Vec2`, timed with `--dump-stage` timings, against the same program calling `a.length()`.
 
-- [ ] TODO-6304: Benchmark-mode validation workers drop the operator helper demand
+- [~] TODO-6304: Benchmark-mode validation workers drop the operator helper demand
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: sonnet-agent (worktree agent-a0aa5cdab41cebab5), 2026-11-26
   - created_at: 2026-11-26
   - phase: Modules and libraries (found with the typed operator helper demand)
   - parallel_track: semantic-memory
