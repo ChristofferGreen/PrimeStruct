@@ -141,7 +141,6 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
-| TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | in_progress | lib-shapes-backends |
 | TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | ready | lib-shapes-backends |
@@ -655,20 +654,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: x86_64 native and JIT code generation of the opcodes.
   - repro: `--emit=native` on x86_64 of a program with `Function` values: its IR holds a compare chain instead of `CallIndirect`.
-
-- [~] TODO-6313: Wasm emits `call_indirect` for `CallIndirect`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: indirect-backends (worktree-agent-ad9091dc0b49a3412), 2026-11-27
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (back ends of TODO-6283)
-  - parallel_track: lib-shapes-backends
-  - scope: src/wasm_emitter emits a function table (an `elem` section of the functions whose address is taken) and `call_indirect` with the type of the callee's signature, in both profiles. The wasm targets leave the expansion list.
-  - acceptance:
-    - the wasm closure programs of the program matrix pass without the expansion, and a call through a null address traps
-    - full release gate green
-  - stop_rule: the Wasm emitter.
-  - repro: `--emit=wasm` of a program with `Function` values: its code holds a compare chain.
 
 - [ ] TODO-6314: The simple C++ emitters emit `CallIndirect`
   - owner: ai

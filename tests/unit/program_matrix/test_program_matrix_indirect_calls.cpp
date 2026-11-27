@@ -263,3 +263,76 @@ TEST_CASE("a call through a null address ends the program with exit code 3") {
 TEST_CASE("a call through an address past the table ends the program with exit code 3") {
   runFaultingIndirectProgram("indirect_call_address_past_table", "999u64");
 }
+
+namespace {
+
+// Wasm has no runtime-error exit for a bad address: `call_indirect` traps, which the node runner reports as 99.
+void runWasmTrappingIndirectProgram(const std::string &name, const std::string &address) {
+  program_matrix::ProgramCase program;
+  program.name = name;
+  program.source = R"(
+[return<i32>]
+add_one([i32] x) { return(x + 1i32) }
+
+[function_address("/add_one") return<u64>]
+add_one_address() {}
+
+[indirect_call return<i32>]
+call_one([u64] address, [i32] x) {}
+
+[return<u64>]
+bad_address([i32] which) {
+  if(which == 0i32) {
+    return(add_one_address())
+  }
+  return()" + address + R"()
+}
+
+[return<int>]
+main() {
+  return(call_one(bad_address(1i32), 4i32))
+}
+)";
+  program.exitCode = 99;
+  program.onlyConfigs = {"wasm-wasi"};
+  program_matrix::runProgramMatrix(program);
+}
+
+} // namespace
+
+TEST_CASE("wasm traps on a call through a null address") {
+  runWasmTrappingIndirectProgram("indirect_call_wasm_null_address", "0u64");
+}
+
+TEST_CASE("wasm traps on a call through an address past the table") {
+  runWasmTrappingIndirectProgram("indirect_call_wasm_address_past_table", "999u64");
+}
+
+TEST_CASE("an indirect call passes floats and a 64-bit integer") {
+  runIndirectProgram("indirect_call_mixed_parameter_types", R"(
+[return<f64>]
+blend([f64] a, [i64] n, [f32] b) { return(a * convert<f64>(n) + convert<f64>(b)) }
+
+[return<i32>]
+bump([i32] x) { return(x + 1i32) }
+
+[function_address("/blend") return<u64>]
+blend_address() {}
+
+[function_address("/bump") return<u64>]
+bump_address() {}
+
+[indirect_call return<f64>]
+call_blend([u64] address, [f64] a, [i64] n, [f32] b) {}
+
+[indirect_call return<i32>]
+call_bump([u64] address, [i32] x) {}
+
+[return<int>]
+main() {
+  [f64] value{call_blend(blend_address(), 2.5f64, 4i64, 1.5f32)}
+  return(convert<int>(value) + call_bump(bump_address(), 0i32))
+}
+)",
+                     12);
+}

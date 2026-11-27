@@ -603,7 +603,7 @@ bad_set() {
   the library's code makes the call through the address, and the program's conversion supplies the routines. A
   closure converted to the `Function` type of a library must not need more effects than that library's `call` declares
   (`Function<i32> cannot hold /main__lambda0 in /main: it has effects(io_out), which the library that defines the
-  Function does not allow`). The VM, `optexe` and arm64 native run `CallIndirect` as an indirect call; the other targets (x86_64 native, Wasm, the
+  Function does not allow`). The VM, `optexe`, arm64 native and Wasm run `CallIndirect` as an indirect call; the other targets (x86_64 native, the
   simple C++ emitters) take a compare chain of direct calls (`expandIndirectCalls`, docs/spec/vm-design.md) until they
   emit it themselves.
 - **Sendable by construction:** a `Function` may cross to another task (`MultithreadingPrototype.md`, Functions Are

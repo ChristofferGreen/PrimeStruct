@@ -192,6 +192,24 @@ bool WasmEmitter::emitModule(const IrModule &input,
     }
   }
 
+  // Calls through function addresses: a table with a thunk for every function whose address is taken, and the type of
+  // `call_indirect` per parameter count.
+  runtime.addressTaken = wasmAddressTakenFunctions(module);
+  const std::vector<uint32_t> indirectCounts = wasmIndirectParameterCounts(module, runtime.addressTaken);
+  if (!indirectCounts.empty()) {
+    runtime.indirectTypeIndex.assign(indirectCounts.back() + 1, UINT32_MAX);
+    for (const uint32_t count : indirectCounts) {
+      runtime.indirectTypeIndex[count] = static_cast<uint32_t>(types.size());
+      types.push_back(wasmIndirectSignature(count));
+    }
+  }
+  std::vector<std::pair<uint32_t, uint32_t>> tableElements;
+  for (size_t f = 0; f < module.functions.size(); ++f) {
+    if (runtime.addressTaken[f]) {
+      tableElements.emplace_back(static_cast<uint32_t>(f), nextHelperFunction++);
+    }
+  }
+
   // The parameter types come from what the calls pass, the IR local types from what the functions store.
   std::vector<std::vector<uint8_t>> irLocalTypes;
   if (!inferWasmLocalTypes(module, functionTypes, runtime, irLocalTypes, error)) {
@@ -292,6 +310,14 @@ bool WasmEmitter::emitModule(const IrModule &input,
     }
   }
 
+  for (const auto &[tableIndex, thunkFunction] : tableElements) {
+    (void)thunkFunction;
+    const IrFunction &callee = module.functions[tableIndex];
+    functionTypeIndexes.push_back(runtime.indirectTypeIndex[callee.parameterCount]);
+    codeBodies.push_back(buildWasmIndirectThunkBody(functionTypes[tableIndex],
+                                                    runtime.functionIndexOffset + tableIndex));
+  }
+
   std::vector<WasmExport> exports;
   if (module.entryIndex >= 0) {
     WasmExport exportEntry;
@@ -324,6 +350,11 @@ bool WasmEmitter::emitModule(const IrModule &input,
   }
   if (!encodeFunctionSection(functionTypeIndexes, payload, error) ||
       !appendSection(WasmSectionFunction, payload, out, error)) {
+    return false;
+  }
+  if (!indirectCounts.empty() &&
+      (!encodeTableSection(static_cast<uint32_t>(module.functions.size()), payload, error) ||
+       !appendSection(WasmSectionTable, payload, out, error))) {
     return false;
   }
   if (!memories.empty() &&
@@ -369,6 +400,11 @@ bool WasmEmitter::emitModule(const IrModule &input,
     return false;
   }
   if (!encodeExportSection(exports, payload, error) || !appendSection(WasmSectionExport, payload, out, error)) {
+    return false;
+  }
+  if (!tableElements.empty() &&
+      (!encodeElementSection(tableElements, payload, error) ||
+       !appendSection(WasmSectionElement, payload, out, error))) {
     return false;
   }
   if (!encodeCodeSection(codeBodies, payload, error) || !appendSection(WasmSectionCode, payload, out, error)) {

@@ -261,14 +261,22 @@
   functions, that subtracts 1, compares the index with the function count, loads a 32-bit offset from a table that
   follows it and `br`s there, so the callee returns to the call site; an address that is 0, past the table or of a
   function that was not emitted ends the program with exit code 3 (no message). The callee's parameter count is not
-  checked on native. A function that has `CallIndirect` keeps the stack form (it is not register-allocated). IR
+  checked on native. Wasm (both profiles) emits `FunctionAddress` as the `i64` constant `f + 1` and keeps a table of
+  `N` function references (one per IR function; an `elem` segment fills the slot of each function whose address the
+  module takes with a thunk of type `(i64 x p) -> i64` that converts its slots to the function's parameter types and
+  the result back, 0 for a void function). `CallIndirect p` converts the arguments to slots, turns the address into
+  the `i32` table index `address - 1` and runs `call_indirect` of the type of `p` slots; a null address, an address
+  past the table and a function of another parameter count trap (no VM message; the node runner of the program
+  matrix reports 99), and an address of 2^32 or more wraps in the `i32` index. The parameter types of a function
+  reached only through an address are the types the indirect calls pass, merged as for a `Call`, and the result of a
+  `CallIndirect` is the widest result type of the candidate functions (an `i32` and an `i64` result merge to `i64`). A function that has `CallIndirect` keeps the stack form (it is not register-allocated). IR
   validation accepts the
-  opcodes for the VM, arm64 native, the optimized C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
+  opcodes for the VM, arm64 native, Wasm, the optimized C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
   (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
   `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
   address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
-  opcodes itself (docs/todo.md: TODO-6313, TODO-6314 and TODO-6318, x86_64 native and the JIT).
+  opcodes itself (docs/todo.md: TODO-6314 and TODO-6318, x86_64 native and the JIT).
 - **Function address markers:** two compiler-internal definition markers give the opcodes a place in the source
   (`primec/semantics/FunctionAddressDefinitions.h`). Both have an empty body and an explicit return type.
   `[function_address("/path") return<u64>] address_of_def() {}` takes no parameters; a call of it is the address of the

@@ -932,6 +932,8 @@ bool irTargetRunsIndirectCalls(IrValidationTarget target) {
   case IrValidationTarget::Serialized:
   case IrValidationTarget::Vm:
   case IrValidationTarget::OptCpp:
+  case IrValidationTarget::Wasm:
+  case IrValidationTarget::WasmBrowser:
     return true;
   case IrValidationTarget::Native:
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))

@@ -18,6 +18,9 @@ constexpr uint8_t WasmOpI64And = 0x83;
 constexpr uint8_t WasmOpI64Ne = 0x52;
 constexpr uint8_t WasmOpI32WrapI64 = 0xa7;
 constexpr uint8_t WasmOpI64ExtendI32S = 0xac;
+constexpr uint8_t WasmOpI64Sub = 0x7d;
+constexpr uint8_t WasmOpCallIndirect = 0x11;
+constexpr uint8_t WasmOpDropValue = 0x1a;
 
 bool isInteger(uint8_t type) {
   return type == WasmTypeI32 || type == WasmTypeI64;
@@ -458,6 +461,101 @@ static bool emitFrameLoadLocal(const IrInstruction &inst,
   return true;
 }
 
+// `CallIndirect` and `CallIndirectVoid`: the stack holds the address below `imm` arguments. The arguments become raw
+// slots, the address minus one becomes the `i32` table index on top, and `call_indirect` calls the thunk that the table
+// holds there. The result is a slot that converts to the type the candidate functions return.
+static bool emitIndirectCall(const IrInstruction &inst,
+                      WasmLocalLayout &layout,
+                      const std::vector<WasmFunctionType> &functionTypes,
+                      const WasmRuntimeContext &runtime,
+                      std::vector<uint8_t> &out,
+                      std::string &error,
+                      const std::string &fn) {
+  WasmTypeState &state = layout.typeState;
+  const size_t count = static_cast<size_t>(inst.imm);
+  const bool returnsValue = inst.op == IrOpcode::CallIndirect;
+  uint8_t resultType = WasmTypeI64;
+  bool resultSeen = false;
+  for (size_t f = 0; f < functionTypes.size() && f < runtime.addressTaken.size(); ++f) {
+    if (!runtime.addressTaken[f] || functionTypes[f].params.size() != count) {
+      continue;
+    }
+    // The parameters of a function reached through an address have the types the calls pass.
+    if (state.inferring && state.observedParams != nullptr) {
+      std::vector<uint8_t> &observed = (*state.observedParams)[f];
+      for (size_t k = 0; k < count && k < observed.size(); ++k) {
+        uint8_t merged = WasmTypeUnknown;
+        if (!mergeWasmTypes(observed[k], stackType(layout, count - 1 - k), merged)) {
+          error = "wasm emitter call passes values of different kinds in function: " + fn;
+          return false;
+        }
+        if (merged != observed[k]) {
+          observed[k] = merged;
+          state.changed = true;
+        }
+      }
+    }
+    if (returnsValue && !functionTypes[f].results.empty()) {
+      // The functions an address may name return the widest of their types, as the branches of a join do.
+      uint8_t merged = WasmTypeUnknown;
+      if (!mergeWasmTypes(resultSeen ? resultType : WasmTypeUnknown, functionTypes[f].results[0], merged)) {
+        error = "wasm emitter indirect call reaches functions that return different kinds in function: " + fn;
+        return false;
+      }
+      resultType = merged;
+      resultSeen = true;
+    }
+  }
+  if (!state.inferring) {
+    if (count >= runtime.indirectTypeIndex.size() || runtime.indirectTypeIndex[count] == UINT32_MAX) {
+      error = "wasm emitter indirect call without a table in function: " + fn;
+      return false;
+    }
+    std::vector<uint8_t> wanted(count + 1, WasmTypeSlot);
+    wanted[0] = WasmTypeI64;
+    if (!coerceOperands(layout, wanted, out, error, fn)) {
+      return false;
+    }
+    std::vector<uint32_t> parked(count);
+    for (size_t k = count; k-- > 0;) {
+      parked[k] = acquireScratch(layout, WasmTypeSlot);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(parked[k], out);
+    }
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(1, out);
+    out.push_back(WasmOpI64Sub);
+    out.push_back(WasmOpI32WrapI64);
+    if (count > 0) {
+      const uint32_t index = acquireScratch(layout, WasmTypeI32);
+      out.push_back(WasmOpLocalSet);
+      appendU32Leb(index, out);
+      for (const uint32_t local : parked) {
+        out.push_back(WasmOpLocalGet);
+        appendU32Leb(local, out);
+      }
+      out.push_back(WasmOpLocalGet);
+      appendU32Leb(index, out);
+    }
+    out.push_back(WasmOpCallIndirect);
+    appendU32Leb(runtime.indirectTypeIndex[count], out);
+    out.push_back(0x00);
+    if (returnsValue) {
+      emitWasmSlotConversion(WasmTypeSlot, resultType, out);
+    } else {
+      out.push_back(WasmOpDropValue);
+    }
+    if (layout.addressed && runtime.hasHeap) {
+      emitWasmFramePointerReload(layout, runtime, out);
+    }
+  }
+  popTypes(layout, count + 1);
+  if (returnsValue) {
+    pushType(layout, resultType);
+  }
+  return true;
+}
+
 bool emitTypedInstruction(const IrInstruction &inst,
                           WasmLocalLayout &localLayout,
                           const std::vector<WasmFunctionType> &functionTypes,
@@ -752,6 +850,15 @@ bool emitTypedInstruction(const IrInstruction &inst,
     }
     return true;
   }
+  case IrOpcode::FunctionAddress:
+    // The address of function imm is imm + 1, so that 0 names no function.
+    out.push_back(WasmOpI64Const);
+    appendS64Leb(static_cast<int64_t>(inst.imm) + 1, out);
+    pushType(localLayout, WasmTypeI64);
+    return true;
+  case IrOpcode::CallIndirect:
+  case IrOpcode::CallIndirectVoid:
+    return emitIndirectCall(inst, localLayout, functionTypes, runtime, out, error, functionName);
   case IrOpcode::LoadIndirect:
     if (!coerceOperands(localLayout, {WasmTypeI64}, out, error, functionName)) {
       return false;

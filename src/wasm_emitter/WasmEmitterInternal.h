@@ -15,9 +15,11 @@ inline constexpr uint8_t WasmFunctionTypeTag = 0x60;
 inline constexpr uint8_t WasmSectionType = 1;
 inline constexpr uint8_t WasmSectionImport = 2;
 inline constexpr uint8_t WasmSectionFunction = 3;
+inline constexpr uint8_t WasmSectionTable = 4;
 inline constexpr uint8_t WasmSectionMemory = 5;
 inline constexpr uint8_t WasmSectionGlobal = 6;
 inline constexpr uint8_t WasmSectionExport = 7;
+inline constexpr uint8_t WasmSectionElement = 9;
 inline constexpr uint8_t WasmSectionCode = 10;
 inline constexpr uint8_t WasmSectionData = 11;
 
@@ -453,6 +455,11 @@ struct WasmRuntimeContext {
   uint32_t byteScratchAddr = 0;
   uint32_t numericScratchAddr = 0;
   uint32_t numericScratchBytes = 0;
+  // Calls through function addresses (WasmEmitterIndirect.cpp): per IR function, whether the module takes its address,
+  // and per parameter count the index of the type `(i64 x count) -> i64` that `call_indirect` and the thunks of the
+  // table share (`UINT32_MAX` for a count no call and no thunk uses).
+  std::vector<bool> addressTaken;
+  std::vector<uint32_t> indirectTypeIndex;
   std::vector<uint32_t> stringPtrs;
   std::vector<uint32_t> stringLens;
   std::vector<WasmMemoryLimit> memories;
@@ -709,6 +716,22 @@ bool emitWasmShortCircuitCondition(const IrFunction &function,
 
 // The code of the helper function behind `FmaF32` (`isF64` false; type (f32, f32, f32) -> f32) or `FmaF64`.
 WasmCodeBody buildWasmFmaHelperBody(bool isF64);
+
+// Calls through function addresses (WasmEmitterIndirect.cpp, docs/spec/vm-design.md, Function addresses). The address
+// of function `f` is `f + 1`, which is also the table index plus one: `call_indirect` of the address minus one traps
+// on a null address, an address past the table, an element no function fills (a function whose address is never taken)
+// and a thunk of another parameter count. Every function whose address is taken has a thunk of type
+// `(i64 x parameterCount) -> i64` (a void result is 0) that converts its slots to the function's parameter types.
+std::vector<bool> wasmAddressTakenFunctions(const IrModule &module);
+// The distinct parameter counts of the module's indirect calls and of the functions whose address it takes, ascending.
+std::vector<uint32_t> wasmIndirectParameterCounts(const IrModule &module, const std::vector<bool> &addressTaken);
+WasmFunctionType wasmIndirectSignature(uint32_t parameterCount);
+WasmCodeBody buildWasmIndirectThunkBody(const WasmFunctionType &callee, uint32_t calleeFunction);
+// The table of `entries` function references and its element segments (table index, wasm function index).
+bool encodeTableSection(uint32_t entries, std::vector<uint8_t> &payload, std::string &error);
+bool encodeElementSection(const std::vector<std::pair<uint32_t, uint32_t>> &elements,
+                          std::vector<uint8_t> &payload,
+                          std::string &error);
 
 // The code of the helper function behind an integer division on the WASI profile (type (T, T) -> T): a zero divisor
 // writes the VM's message to stderr and calls `proc_exit(3)`.
