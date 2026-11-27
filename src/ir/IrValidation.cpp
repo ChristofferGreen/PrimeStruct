@@ -335,12 +335,14 @@ bool validateFunction(const IrModule &module,
     if ((inst.op == IrOpcode::FunctionAddress || inst.op == IrOpcode::CallIndirect ||
          inst.op == IrOpcode::CallIndirectVoid) &&
         !irTargetRunsIndirectCalls(target)) {
+      const IrOpcodeInfo *info = irOpcodeInfo(inst.op);
       return failInstruction(
           functionIndex,
           function.name,
           instructionIndex,
-          "function address opcodes are only supported by the vm, arm64 native, the optimized C++ "
-          "targets and serialized bytecode (a target runs the module through expandIndirectCalls)",
+          std::string("calls through function addresses are not supported by this target: ") +
+              (info != nullptr ? info->name : "FunctionAddress") +
+              " (the vm, arm64 native, Wasm, the C++ targets and serialized bytecode run them)",
           error);
     }
     if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&

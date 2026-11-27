@@ -276,7 +276,7 @@
   (docs/todo.md, TODO-6317). On arm64 native, a function that has `CallIndirect` keeps the stack form (it is not
   register-allocated). IR
   validation accepts the
-  opcodes for the VM, arm64 native, Wasm, the C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
+  opcodes for the VM, arm64 native, Wasm, the C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). GLSL, which has no calls through addresses, refuses a module that has them in validation (`calls through function addresses are not supported by this target: FunctionAddress`, naming the first opcode found). x86_64 native and the Linux JIT still take the linked module through `expandIndirectCalls`
   (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
   `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an

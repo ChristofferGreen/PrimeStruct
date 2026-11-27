@@ -124,8 +124,14 @@ TEST_CASE("indirect calls: a target that does not run them refuses the module un
 #endif
   IrModule module = chosenAtRunTime();
   std::string error;
+  // GLSL has no calls through addresses and names the opcode it refuses (the first one of the entry function).
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Glsl, error));
-  CHECK(error.find("function address opcodes") != std::string::npos);
+  CHECK(error.find("FunctionAddress") != std::string::npos);
+  CHECK(error.find("calls through function addresses are not supported") != std::string::npos);
+  module.functions[0].instructions = {{IrOpcode::PushI64, 1}, {IrOpcode::PushI32, 5}, {IrOpcode::CallIndirect, 1}, {IrOpcode::ReturnI32, 0}};
+  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Glsl, error));
+  CHECK(error.find("CallIndirect") != std::string::npos);
+  module = chosenAtRunTime();
   CHECK(irTargetRunsIndirectCalls(IrValidationTarget::Cpp));
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Cpp, error), error);
   CHECK(irTargetRunsIndirectCalls(IrValidationTarget::Wasm));

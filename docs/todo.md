@@ -662,9 +662,9 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - phase: Modules and libraries (end of TODO-6283)
   - parallel_track: lib-shapes-backends
   - depends_on: TODO-6312, TODO-6313, TODO-6314, TODO-6318
-  - scope: `expandIndirectCalls` (src/ir/IrIndirectCallExpansion.cpp) and its call in `prepareIrModule` go once every target runs the opcodes (TODO-6312, TODO-6313 and TODO-6314 must all be closed first); GLSL, which has no calls through addresses, refuses a module that has them with a message that names the opcode.
+  - scope: `expandIndirectCalls` (src/ir/IrIndirectCallExpansion.cpp) and its call in `prepareIrModule` go once every target runs the opcodes. Done 2026-11-27: arm64 native, Wasm and the C++ targets run them, the expansion is run for x86_64 native only, and GLSL refuses a module that has them with a message that names the opcode (test in tests/unit/runtime/test_ir_indirect_calls.cpp). What is left: TODO-6318 (x86_64 native and the JIT) must close first, then delete the pass, its header, its tests and the x86_64 call.
   - acceptance:
-    - no source file mentions the expansion; GLSL names the opcode in its refusal and has a test
+    - no source file mentions the expansion
     - full release gate green
   - stop_rule: deleting the compatibility expansion.
   - repro: `grep expandIndirectCalls src` finds the pass today.

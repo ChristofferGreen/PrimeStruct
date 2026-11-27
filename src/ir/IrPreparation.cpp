@@ -200,8 +200,9 @@ bool prepareIrModule(Program &program,
     return false;
   }
 
-  // A target that does not run the function address opcodes takes the linked module through their expansion.
-  if (!irTargetRunsIndirectCalls(validationTarget)) {
+  // x86_64 native does not run the function address opcodes yet and takes the linked module through their expansion;
+  // the other targets that lack them (GLSL) refuse the module in validation.
+  if (validationTarget == IrValidationTarget::Native && !irTargetRunsIndirectCalls(validationTarget)) {
     expandIndirectCalls(ir);
   }
 
