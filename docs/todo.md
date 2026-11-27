@@ -138,6 +138,7 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6319 | arm64 native does not check the callee's parameter count on `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -594,6 +595,20 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: x86_64 native and JIT code generation of the opcodes.
   - repro: `--emit=native` on x86_64 of a program with `Function` values: its IR holds a compare chain instead of `CallIndirect`.
+
+- [ ] TODO-6319: arm64 native does not check the callee's parameter count on `CallIndirect`
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-27
+  - phase: Modules and libraries (back ends of TODO-6283; found with TODO-6317)
+  - parallel_track: lib-shapes-backends
+  - scope: `CallIndirect imm` (docs/spec/vm-design.md, Function addresses) faults when the address names a function with another parameter count than `imm`: the VM, `optexe` and the simple C++ emitters write `VM error: indirect call passes <imm> parameters to <function>, which takes <n>` and exit with code 3. arm64 native checks the address (null, past the table, a function that was not emitted) in `emitIndirectCallRuntime` (src/native_emitter/NativeEmitterInternalsArm64Indirect.h) but not the parameter count, so the call runs the function with the wrong number of stack slots and returns whatever those hold. Add a table of parameter counts next to the table of entries and compare it with `imm` in the dispatch routine; the fault is exit code 3 (the message may be absent as for the other native faults, the exit code must match).
+  - acceptance:
+    - the repro exits with code 3 on arm64 native, as on the VM
+    - a program-matrix case runs it on every config with the VM's exit code and message where the config prints one
+    - full release gate green
+  - stop_rule: the dispatch routine of `CallIndirect` on arm64 native; no change to the address ABI.
+  - repro: `[return<i32>] add_two([i32] a, [i32] b) { return(a + b) }`, `[function_address("/add_two") return<u64>] add_two_address() {}`, `[indirect_call return<i32>] call_one([u64] address, [i32] x) {}` and `main() { return(call_one(add_two_address(), 4i32)) }`: `primevm`, `--emit=optexe` and `--emit=exe` print `VM error: indirect call passes 1 parameters to /add_two, which takes 2` and exit 3; `--emit=native` on macOS arm64 (2026-11-27, release build) exits 4.
 
 - [ ] TODO-6315: The expansion of indirect calls is deleted
   - owner: ai
