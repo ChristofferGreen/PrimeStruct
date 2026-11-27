@@ -313,6 +313,48 @@ TEST_CASE("wasm traps on a call through an address past the table") {
   runWasmTrappingIndirectProgram("indirect_call_wasm_address_past_table", "999u64");
 }
 
+namespace {
+
+// A call that passes one parameter to a function that takes two: the VM, `optexe` and `exe` write the VM's message,
+// native code exits with 3 without one, and Wasm traps on the signature of `call_indirect`.
+const char *const WrongParameterCountSource = R"(
+[return<i32>]
+add_two([i32] a, [i32] b) { return(a + b) }
+
+[function_address("/add_two") return<u64>]
+add_two_address() {}
+
+[indirect_call return<i32>]
+call_one([u64] address, [i32] x) {}
+
+[return<int>]
+main() {
+  return(call_one(add_two_address(), 4i32))
+}
+)";
+
+} // namespace
+
+TEST_CASE("a call that passes another parameter count than the callee takes exits with code 3") {
+  program_matrix::ProgramCase program;
+  program.name = "indirect_call_wrong_parameter_count";
+  program.source = WrongParameterCountSource;
+  program.exitCode = 3;
+  program.vmStderr = "VM error: indirect call passes 1 parameters to /add_two, which takes 2\n";
+  program.cppStderr = program.vmStderr;
+  program.onlyConfigs = indirectConfigs();
+  program_matrix::runProgramMatrix(program);
+}
+
+TEST_CASE("wasm traps on a call that passes another parameter count than the callee takes") {
+  program_matrix::ProgramCase program;
+  program.name = "indirect_call_wasm_wrong_parameter_count";
+  program.source = WrongParameterCountSource;
+  program.exitCode = 99;
+  program.onlyConfigs = {"wasm-wasi"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("an indirect call passes floats and a 64-bit integer") {
   runIndirectProgram("indirect_call_mixed_parameter_types",
                      R"(

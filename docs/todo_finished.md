@@ -2723,6 +2723,7 @@ are left unarchived.
 | TODO-6314 | The simple C++ emitters emit `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6316 | The result block of a discarded struct call can lie outside the frame | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing re... | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6319 | arm64 native does not check the callee's parameter count on `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

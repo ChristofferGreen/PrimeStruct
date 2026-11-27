@@ -340,7 +340,9 @@ class Arm64Emitter {
   bool hasIndirectCalls() const {
     return !indirectCallSites_.empty();
   }
-  void emitIndirectCallRuntime(const std::vector<size_t> &functionOffsets, const std::vector<bool> &emitted);
+  void emitIndirectCallRuntime(const std::vector<size_t> &functionOffsets,
+                               const std::vector<uint32_t> &parameterCounts,
+                               const std::vector<bool> &emitted);
   void emitTaskWait();
   // Per-thread allocator states (NativeEmitterInternalsArm64ThreadHeap.h).
   void emitThreadHeapInit();

@@ -258,10 +258,10 @@
   emits `FunctionAddress` as the constant `f + 1` and keeps every function whose address is taken (it is emitted and
   takes its parameters from the value stack, not in registers); `CallIndirect p` moves the address from under the `p`
   parameters into `x16`, shifts the parameters up over its slot and `bl`s a dispatch routine, emitted once after the
-  functions, that subtracts 1, compares the index with the function count, loads a 32-bit offset from a table that
-  follows it and `br`s there, so the callee returns to the call site; an address that is 0, past the table or of a
-  function that was not emitted ends the program with exit code 3 (no message). The callee's parameter count is not
-  checked on native. Wasm (both profiles) emits `FunctionAddress` as the `i64` constant `f + 1` and keeps a table of
+  functions, that subtracts 1, compares the index with the function count, loads a 32-bit offset and the function's
+  parameter count from a table that follows it, compares the count with `p` (which the call site passes in `x17`) and
+  `br`s there, so the callee returns to the call site; an address that is 0, past the table or of a function that was
+  not emitted or takes another parameter count than `p` ends the program with exit code 3 (no message). Wasm (both profiles) emits `FunctionAddress` as the `i64` constant `f + 1` and keeps a table of
   `N` function references (one per IR function; an `elem` segment fills the slot of each function whose address the
   module takes with a thunk of type `(i64 x p) -> i64` that converts its slots to the function's parameter types and
   the result back, 0 for a void function). `CallIndirect p` converts the arguments to slots, turns the address into

@@ -359,7 +359,12 @@ bool buildNativeImage(const IrModule &module,
     }
   }
   if (emitter.hasIndirectCalls()) {
-    emitter.emitIndirectCallRuntime(functionOffsets, reachable);
+    std::vector<uint32_t> parameterCounts;
+    parameterCounts.reserve(module.functions.size());
+    for (const IrFunction &function : module.functions) {
+      parameterCounts.push_back(function.parameterCount);
+    }
+    emitter.emitIndirectCallRuntime(functionOffsets, parameterCounts, reachable);
   }
   emitter.emitHeapRuntime();
   emitter.emitArenaRuntime();
