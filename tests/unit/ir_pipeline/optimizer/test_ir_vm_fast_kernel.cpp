@@ -722,3 +722,62 @@ TEST_CASE("the output sink receives stdout and stderr bytes in program order on 
   }
   primec::testing::setVmFastKernelEnabled(true);
 }
+
+namespace {
+
+// /main calls through an address; /double (index 1) takes one parameter and /nine (index 2) none.
+primec::IrModule indirectCallModule(std::vector<primec::IrInstruction> mainCode) {
+  using optimizer_test::assemble;
+  using optimizer_test::functionOf;
+  primec::IrModule module;
+  module.entryIndex = 0;
+  module.functions.push_back(functionOf("/main", std::move(mainCode)));
+  module.functions.push_back(functionOf(
+      "/double", assemble({"StoreLocal 0", "LoadLocal 0", "LoadLocal 0", "AddI32", "ReturnI32"}), 1));
+  module.functions.push_back(functionOf("/nine", assemble({"PushI32 9", "ReturnI32"})));
+  return module;
+}
+
+} // namespace
+
+TEST_CASE("the flat loop runs calls through function addresses as the step kernel does") {
+  using optimizer_test::assemble;
+  // The value below the call survives: 100 + double(5), then a call with no parameters.
+  const primec::IrModule value = indirectCallModule(assemble({"PushI32 100",
+                                                              "FunctionAddress 1",
+                                                              "PushI32 5",
+                                                              "CallIndirect 1",
+                                                              "AddI32",
+                                                              "PrintI32 1",
+                                                              "FunctionAddress 2",
+                                                              "CallIndirect 0",
+                                                              "ReturnI32"}));
+  REQUIRE(primec::testing::vmFastKernelAccepts(value));
+  const BothKernels both = runBoth(value);
+  REQUIRE_MESSAGE(both.step.ok, both.step.error);
+  CHECK(both.fast == both.step);
+  CHECK(both.fast.output == "110\n");
+  CHECK(both.fast.result == 9);
+}
+
+TEST_CASE("the flat loop faults on a bad function address as the step kernel does") {
+  using optimizer_test::assemble;
+  const std::vector<std::pair<std::vector<primec::IrInstruction>, std::string>> cases = {
+      {assemble({"PushI64 0", "PushI32 5", "CallIndirect 1", "ReturnI32"}),
+       "indirect call through a null function address"},
+      {assemble({"PushI64 4", "PushI32 5", "CallIndirect 1", "ReturnI32"}),
+       "indirect call through an invalid function address"},
+      {assemble({"FunctionAddress 1", "PushI32 5", "PushI32 6", "CallIndirect 2", "ReturnI32"}),
+       "indirect call passes 2 parameters to /double, which takes 1"},
+      // The function calls itself through its own address until the call stack is full.
+      {assemble({"FunctionAddress 0", "CallIndirect 0", "ReturnI32"}), "VM call stack overflow"}};
+  for (const auto &[code, message] : cases) {
+    CAPTURE(message);
+    const primec::IrModule module = indirectCallModule(code);
+    REQUIRE(primec::testing::vmFastKernelAccepts(module));
+    const BothKernels both = runBoth(module);
+    CHECK_FALSE(both.step.ok);
+    CHECK(both.step.error == message);
+    CHECK(both.fast == both.step);
+  }
+}

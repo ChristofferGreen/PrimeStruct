@@ -250,8 +250,9 @@
   `indirect call through an invalid function address`, `indirect call passes 2 parameters to /double, which takes
   1`). A `Function` value holds such an address and its environment (docs/spec/value-lifecycle.md, Function values).
   The VM's step kernel runs the opcodes (the call removes the address from under the parameters and enters the callee
-  as a `Call` does; a debug session steps through it and a task runs it); the fast kernel does not prepare a module
-  that has one, so such a program runs on the step kernel until TODO-6311. The optimized C++ emitters (`optcpp`, `optexe`) emit
+  as a `Call` does; a debug session steps through it and a task runs it); the fast kernel runs them too (a dispatch label
+  each; the call removes the address by shifting the parameters down one slot, then enters the callee as a `Call`
+  does, with the step kernel's faults in the same order). The optimized C++ emitters (`optcpp`, `optexe`) emit
   `FunctionAddress` as the constant and `CallIndirect` as a call of a generated `ps_call_indirect_<p>` function, a
   switch over every function with `p` parameters, with the VM's three faults and exit code 3. IR validation accepts the
   opcodes for the VM, the optimized C++ targets, serialized bytecode and `Any`. Every other target takes the linked module through `expandIndirectCalls`

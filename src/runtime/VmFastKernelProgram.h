@@ -2,7 +2,9 @@
 
 #include <atomic>
 #include <cstddef>
+#include <algorithm>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "primec/ir/Ir.h"
@@ -221,12 +223,53 @@ struct FastFrame {
   bool returnsValue = false;
 };
 
+// Enters `callee`: records the caller in `frames`, places the callee's locals above the caller's in the arena
+// (growing it, which moves `locals`) and zeroes them. The callee starts at the first instruction.
+inline void enterFastCallFrame(std::vector<FastFrame> &frames,
+                               std::vector<uint64_t> &localsArena,
+                               size_t &localsBase,
+                               uint64_t *&locals,
+                               const FastFunction *&current,
+                               const FastInst *&ip,
+                               const FastFunction &callee,
+                               bool returnsValue) {
+  const size_t callerTop = localsBase + current->localCount;
+  frames.push_back({current, ip + 1, localsBase, returnsValue});
+  localsBase = callerTop;
+  // The arena always has room for four slots past the callee's locals' start.
+  if (localsBase + std::max<size_t>(callee.localCount, 4) > localsArena.size()) {
+    localsArena.resize(
+        std::max(localsArena.size() * 2, localsBase + std::max<size_t>(callee.localCount, 4)), 0);
+  }
+  locals = localsArena.data() + localsBase;
+  // Locals start at zero. Most functions have a handful, which a memset call would cost more to clear than
+  // the stores do: the first four are cleared unconditionally (slots past the callee's locals belong to no
+  // live frame), so the compiler cannot fold the stores into a variable-length memset.
+  locals[0] = 0;
+  locals[1] = 0;
+  locals[2] = 0;
+  locals[3] = 0;
+  if (callee.localCount > 4) [[unlikely]] {
+    std::fill_n(locals + 4, callee.localCount - 4, uint64_t{0});
+  }
+  current = &callee;
+  ip = callee.code.data();
+}
+
 // Prepares every function; false when any of them (or the entry) is not eligible for the fast
 // loop. With `forTasks` the task, atomic, mutex and condition opcodes are accepted too (the loop
 // hands them to the task scheduler, VmFastKernelTask below) and the entry may take parameters.
 bool prepareModule(const IrModule &module,
                    std::vector<FastFunction> &functions,
                    bool forTasks = false);
+
+// The function a `CallIndirect` of `parameterCount` parameters reaches through `address` (the function's
+// index + 1), or null with the fault of the step kernel in `error`: a null address, an address past the
+// functions, or a function with another parameter count.
+const FastFunction *findIndirectCallTarget(const std::vector<FastFunction> &functions,
+                                           uint64_t address,
+                                           size_t parameterCount,
+                                           std::string &error);
 
 // One call stack of a run with tasks (docs/spec/vm-design.md, Tasks): its operand stack, its locals
 // arena and its frames, kept between the points where the loop hands control to the scheduler.

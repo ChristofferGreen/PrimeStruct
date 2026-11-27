@@ -7,6 +7,17 @@ resolution note in `docs/todo_finished.md` and delete its section
 here - this file only ever tracks OPEN tasks' history, same
 open-work-only scope rule as `docs/todo.md` itself.
 
+## TODO-6311
+
+- 2026-11-27 (TODO-6311, release build, macOS arm64, `primec --emit=vm`, a loop of 5,000,000 calls of a `Function<i32, i32>` that the program reassigns on a branch never taken, so the call stays an indirect call; `/usr/bin/time -p`, 3 runs each, machine load average 70 to 130 from other workers, so only the ratio counts):
+
+  | Kernel | User time | Real |
+  | --- | --- | --- |
+  | step kernel (`PRIMEVM_KERNEL=step`, where a module with the opcodes ran before) | 1.04 to 1.06 s | 2.8 to 3.0 s |
+  | fast kernel | 0.11 to 0.12 s (compile included) | 0.15 to 0.22 s |
+
+  About 9 times less user time. The compare chain of the expansion was not measured on the VM: no target takes the expansion into the VM any more, and its cost is the chain length times a compare and a branch per call.
+
 ## TODO-6306
 
 - 2026-11-26 (TODO-6117, release build, macOS arm64, `primec --emit=native`, one program: 3,000,000 times `[StringArena] arena{beginStringArena()}` around `[String] text{stringFromI32(round)}`, then a print; `/usr/bin/time -p`, 5 runs):

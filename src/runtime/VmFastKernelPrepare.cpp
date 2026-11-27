@@ -396,11 +396,6 @@ bool prepareFunction(const IrModule &module,
          instruction.op == IrOpcode::ConditionNotify)) {
       return false;
     }
-    // A call through an address is the step kernel's until the loop gets its own dispatch.
-    if (instruction.op == IrOpcode::FunctionAddress || instruction.op == IrOpcode::CallIndirect ||
-        instruction.op == IrOpcode::CallIndirectVoid) {
-      return false;
-    }
     // A call to a missing function is left to the step kernel, which faults on it when (and only
     // if) it runs, so the loop needs no target check.
     if ((instruction.op == IrOpcode::Call || instruction.op == IrOpcode::CallVoid) &&
@@ -449,6 +444,27 @@ bool prepareFunction(const IrModule &module,
 }
 
 } // namespace
+
+const FastFunction *findIndirectCallTarget(const std::vector<FastFunction> &functions,
+                                           uint64_t address,
+                                           size_t parameterCount,
+                                           std::string &error) {
+  if (address == 0) {
+    error = "indirect call through a null function address";
+    return nullptr;
+  }
+  if (address > functions.size()) {
+    error = "indirect call through an invalid function address";
+    return nullptr;
+  }
+  const FastFunction &target = functions[static_cast<size_t>(address - 1)];
+  if (target.function->parameterCount != parameterCount) {
+    error = "indirect call passes " + std::to_string(parameterCount) + " parameters to " +
+            target.function->name + ", which takes " + std::to_string(target.function->parameterCount);
+    return nullptr;
+  }
+  return &target;
+}
 
 bool prepareModule(const IrModule &module, std::vector<FastFunction> &functions, bool forTasks) {
   if (module.entryIndex < 0 || static_cast<size_t>(module.entryIndex) >= module.functions.size()) {

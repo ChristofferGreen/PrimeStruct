@@ -140,6 +140,8 @@ VM_FAST_LOOP_ATTRIBUTES static bool runVmFastTaskImpl(const IrModule &module,
   }
   uint64_t *locals = localsArena.data() + localsBase;
   const FastInst *ip = task.ip;
+  const FastFunction *callee = nullptr;
+  bool calleeReturnsValue = false;
 
   // The slot an indirect address names, or false with the fault in `error`.
   const auto indirectSlot = [&](uint64_t address, uint64_t *&slot) -> bool {
@@ -277,6 +279,9 @@ VM_FAST_LOOP_ATTRIBUTES static bool runVmFastTaskImpl(const IrModule &module,
   table[OP(LoadStringLength)] = &&lbl_LoadStringLength;
   table[OP(Call)] = &&lbl_Call;
   table[OP(CallVoid)] = &&lbl_CallVoid;
+  table[OP(CallIndirect)] = &&lbl_CallIndirect;
+  table[OP(CallIndirectVoid)] = &&lbl_CallIndirectVoid;
+  table[OP(FunctionAddress)] = &&lbl_FunctionAddress;
   table[OP(ReturnVoid)] = &&lbl_ReturnVoid;
   table[OP(Trap)] = &&lbl_Trap;
   table[OP(ReturnI32)] = &&lbl_ReturnI32;
@@ -374,6 +379,11 @@ VM_FAST_LOOP_ATTRIBUTES static bool runVmFastTaskImpl(const IrModule &module,
     case OP(PushF64):
     lbl_PushF64:
       *sp++ = inst.imm;
+      ++ip;
+      DISPATCH();
+    case OP(FunctionAddress):
+    lbl_FunctionAddress:
+      *sp++ = inst.imm + 1; // the address of function imm, so that 0 names no function
       ++ip;
       DISPATCH();
     case OP(PushArgc):
@@ -914,40 +924,33 @@ VM_FAST_LOOP_ATTRIBUTES static bool runVmFastTaskImpl(const IrModule &module,
     case OP(Call):
     lbl_Call:
     case OP(CallVoid):
-    lbl_CallVoid: {
-        STOP_IF_REQUESTED();
-        // prepareModule only accepts modules whose call targets exist.
-        // The step kernel counts the current frame too.
-        if (frames.size() + 1 >= maxCallDepth) {
-          FAULT("VM call stack overflow");
-        }
-      const FastFunction &callee = functions[static_cast<size_t>(inst.imm)];
-      const size_t callerTop = localsBase + current->localCount;
-      frames.push_back({current, ip + 1, localsBase, inst.op == OP(Call)});
-      localsBase = callerTop;
-      // The arena always has room for four slots past the callee's locals' start.
-      if (localsBase + std::max<size_t>(callee.localCount, 4) > localsArena.size()) {
-        localsArena.resize(
-            std::max(localsArena.size() * 2, localsBase + std::max<size_t>(callee.localCount, 4)), 0);
+    lbl_CallVoid:
+      STOP_IF_REQUESTED();
+      callee = &functions[static_cast<size_t>(inst.imm)]; // prepareModule only accepts existing targets
+      calleeReturnsValue = inst.op == OP(Call);
+      goto enter_call;
+    // The address is the deepest of the call's `imm + 1` slots; removing it leaves the slots of a `Call`.
+    case OP(CallIndirect):
+    lbl_CallIndirect:
+    case OP(CallIndirectVoid):
+    lbl_CallIndirectVoid: {
+      STOP_IF_REQUESTED();
+      uint64_t *const addressSlot = sp - inst.imm - 1;
+      callee = findIndirectCallTarget(functions, *addressSlot, static_cast<size_t>(inst.imm), error);
+      if (callee == nullptr) [[unlikely]] {
+        return false;
       }
-      locals = localsArena.data() + localsBase;
-      // Locals start at zero. Most functions have a handful, which a memset call would cost
-      // more to clear than the stores do: the first four are cleared unconditionally (slots past
-      // the callee's locals belong to no live frame), so the compiler cannot fold the stores into
-      // a variable-length memset.
-      locals[0] = 0;
-      locals[1] = 0;
-      locals[2] = 0;
-      locals[3] = 0;
-      if (callee.localCount > 4) [[unlikely]] {
-        std::fill_n(locals + 4, callee.localCount - 4, uint64_t{0});
-      }
-      current = &callee;
-      ip = callee.code.data();
-      ensureStack(callee.stackHeadroom);
-      DISPATCH();
+      std::copy(addressSlot + 1, sp, addressSlot);
+      --sp;
+      calleeReturnsValue = inst.op == OP(CallIndirect);
     }
-
+    enter_call:
+      if (frames.size() + 1 >= maxCallDepth) {
+        FAULT("VM call stack overflow");
+      }
+      enterFastCallFrame(frames, localsArena, localsBase, locals, current, ip, *callee, calleeReturnsValue);
+      ensureStack(callee->stackHeadroom);
+      DISPATCH();
     // Each return form takes its value off the stack (an i32 sign-extended, an f32 as its low
     // 32 bits) and shares the frame pop.
     case OP(ReturnVoid):

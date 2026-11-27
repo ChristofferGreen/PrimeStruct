@@ -140,7 +140,6 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
-| TODO-6311 | The VM fast kernel runs `CallIndirect` | in_progress | lib-shapes-backends |
 | TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
@@ -642,20 +641,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the owner picks an option, or closes the leaf as (a)
   - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
   - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
-
-- [~] TODO-6311: The VM fast kernel runs `CallIndirect`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: indirect-backends (worktree-agent-ad9091dc0b49a3412), 2026-11-27
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (back ends of TODO-6283)
-  - parallel_track: lib-shapes-backends
-  - scope: src/runtime/VmFastKernel.cpp and VmFastKernelPrepare.cpp prepare a module that holds the opcodes (a dispatch label per opcode, the call through the table of prepared functions, the faults of TODO-6308), so a program with `Function` values runs on the fast kernel instead of the step kernel. Measure a web request loop before and after.
-  - acceptance:
-    - the programs that fall back to the step kernel today because of the opcodes run on the fast kernel with the same output and faults; the measurement is in docs/todo_log.md
-    - full release gate green
-  - stop_rule: the fast kernel.
-  - repro: a closure-calling loop on the VM runs on the step kernel (the fast kernel's preparation refuses the module).
 
 - [ ] TODO-6312: arm64 and x86_64 native and the JIT emit `CallIndirect`
   - owner: ai
