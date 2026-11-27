@@ -110,8 +110,9 @@ covers host calls (a module answers the string heap functions that `String` need
 and `_arena_end`, and on the WASI profile `_literal` and `_argument`; any other `__pstext_*` function (hashing, float
 text, whole-file reads and writes, directory listing) is refused with a note that names Wasm and the way out, the vm,
 the native backend or `optexe`, and a host function of the program has no Wasm import to name it), the graphics stdlib
-(`import /std/gfx/*` is `graphics stdlib runtime substrate unavailable for wasm-wasi target: /std/gfx/*`), tasks, atomics,
-mutexes and condition variables. `u8` values, `convert<u8>` and the byte opcodes run on Wasm (the byte regions of the
+(`import /std/gfx/*` is `graphics stdlib runtime substrate unavailable for wasm-wasi target: /std/gfx/*`), atomics,
+mutexes and condition variables (TODO-6321 and TODO-6322 add them). The WASI profile runs tasks single-threaded: a spawned call
+runs inline at its `spawn` (docs/spec/vm-design.md, Tasks, Wasm). `u8` values, `convert<u8>` and the byte opcodes run on Wasm (the byte regions of the
 string heap and `ZextU8`). The browser profile also refuses console
 and file output, program arguments and the bytes of a string literal (they need `--wasm-profile wasi`). Under the WASI
 profile a byte of a string literal read by a computed index (`text[i]`) runs from the module's string table; a position

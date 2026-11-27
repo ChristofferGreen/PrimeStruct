@@ -162,6 +162,19 @@
   method) runs inline, which is a legal schedule, and
   `--opt-report` says so: `lowering: spawn of /f runs inline: <reason>`.
   Every other backend runs every spawned call inline; a `Task<void>` spawn there is the call as a statement.
+  **Wasm (single-threaded, TODO-6128):** the WASI profile accepts the `task` effect and runs every spawned call inline at its
+  `spawn`, as the other backends do; `wait(t)` then reads a value that is already there, so a `TaskWait` never blocks.
+  This is the VM's default schedule exactly as long as no task blocks, and that is the rule that decides which programs
+  Wasm runs: the VM's schedule is eager (a task runs until it ends or blocks, then its spawner continues), so a program
+  whose tasks never block gives on Wasm the output and exit code it gives on the VM, whatever the VM's schedule seed. A
+  task blocks at exactly two places, a `MutexLock` of a lock another task holds and a `ConditionWait` (a `Channel` send
+  into a full queue, a receive from an empty one, or any wait on a condition whose predicate is false); a program whose
+  run reaches one needs a switch to another task, which one thread cannot make, so its answer depends on the
+  interleaving and Wasm refuses it. The refusal is raised at the blocking site when the run reaches it (exit code 3 and
+  a message that begins `wasm:` and names the single-threaded run and the opcode; TODO-6322 emits it), never by running
+  on silently, so the refusal never changes a result. `wasm-browser` has no effect bits at all and refuses every task
+  program. Atomics, mutexes, conditions and channels follow in TODO-6321 and TODO-6322 (`Atomic` operations as plain
+  memory operations, a `Channel` as the queue of its stdlib source).
 - **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The
   immediate is the width, 32 or 64 (anything else is invalid IR); the address is pushed first.
 

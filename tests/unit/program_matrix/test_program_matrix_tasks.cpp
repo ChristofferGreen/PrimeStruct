@@ -48,13 +48,47 @@ bool inFamily(const program_matrix::ExecutionConfig &config, TaskFamily family) 
   return false;
 }
 
+// The programs the Wasm config runs: a spawned call runs inline at its `spawn` and no task blocks (docs/spec/vm-design.md,
+// Tasks, Wasm). `PRIMESTRUCT_MATRIX_WASM_RUN=1` lists the ones that agree with the VM. Not listed: the programs that use
+// atomics, locks or channels (TODO-6321, TODO-6322) and `task_builtin_map_arguments` (TODO-6323).
+const std::vector<std::string> &wasmTaskPrograms() {
+  static const std::vector<std::string> programs = {
+      "task_two_i64_sums",
+      "task_void_result",
+      "task_void_no_return_transform",
+      "task_owned_arguments",
+      "task_spawn_in_loop",
+      "task_multi_wait_forms",
+      "task_inline_fallback",
+      "task_string_values",
+      "task_string_values_heap",
+      "task_return_wait",
+      "task_destructured_wait_types",
+      "task_destructuring_nested_blocks",
+      "task_vector_arguments",
+      "task_stdlib_vector_arguments",
+      "task_stdlib_map_arguments",
+      "task_owned_sum_arguments",
+      "task_wait_method_receiver",
+      "task_vector_inline_shapes",
+      "task_struct_multi_wait",
+      "task_closure_arguments",
+      "task_heap_churn",
+      "task_runtime_error",
+  };
+  return programs;
+}
+
 void runTaskProgram(program_matrix::ProgramCase program, TaskFamily family = TaskFamily::All) {
   // Every config but the old C++ emitter (`exe`), which is only run with PRIMESTRUCT_MATRIX_CONFIGS=all.
   for (const program_matrix::ExecutionConfig &config : taskConfigs()) {
-    // The opt-in Wasm config is not a task config either: Wasm has no tasks.
+    // The opt-in Wasm config is listed by name below (wasmTaskPrograms).
     if (config.name != "exe" && !config.optIn && inFamily(config, family)) {
       program.onlyConfigs.push_back(config.name);
     }
+  }
+  if (family == TaskFamily::All || family == TaskFamily::Compiled) {
+    program_matrix::listWasmIf(program, wasmTaskPrograms());
   }
   program_matrix::runProgramMatrix(program, taskConfigs());
 }

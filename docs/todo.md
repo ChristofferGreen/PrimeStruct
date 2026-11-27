@@ -127,7 +127,7 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | blocked | wasm-concurrency |
-| TODO-6320 | Wasm runs a spawned task inline and accepts the task effect | in_progress | wasm-concurrency |
+| TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | ready | inline-task-lowering |
 | TODO-6321 | Wasm runs the `Atomic` opcodes as plain memory operations | blocked | wasm-concurrency |
 | TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | blocked | wasm-concurrency |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -451,21 +451,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the programs that block are refused with a message that names Wasm, with matrix coverage
   - stop_rule: closing the three leaves; no change to the VM or native task models.
 
-- [~] TODO-6320: Wasm runs a spawned task inline and accepts the task effect
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
-  - created_at: 2026-11-27
-  - phase: Correctness audit 2026-10 (split from TODO-6128)
-  - parallel_track: wasm-concurrency
-  - scope: the Wasm validation target (src/ir/IrValidation.cpp, `KnownWasmWasiEffectMask`) rejects the `task` effect bit (and `lock`, `atomic`, `channel`) of a function with `unsupported effect mask bits for wasm target`, though lowering already turns `[spawn] f(...)` and `wait(t)` of a non-VM target into a call and its value (docs/spec/vm-design.md, Tasks: every other backend runs every spawned call inline). Accept `task` for `wasm-wasi` and write the interleaving rule of TODO-6128 and the single-threaded model into docs/spec/vm-design.md (Tasks) and docs/spec/integration-and-tooling.md (what Wasm does not run). `wasm-browser` keeps refusing every effect bit. `lock`, `atomic` and `channel` stay refused here, by the diagnostics of their own leaves.
-  - acceptance:
-    - the `task_*` matrix programs that use no atomic, lock or channel run on the `wasm-wasi` config with the VM's output and exit code
-    - a validation test covers the accepted `task` bit on `wasm-wasi` and the refusal on `wasm-browser`
-    - full release gate green
-  - stop_rule: the `task` effect bit and the spec text; no new opcode.
-  - repro: `[effects(task, io_out) return<int>] main() { [Task<i64>] low{[spawn] sum_to(1000i64)}; [i64] lowSum{wait(low)} print_line(lowSum) return(0i32) }` with a `sum_to([i64] n)` that loops: `primec --emit=wasm --wasm-profile wasi` reports `Wasm IR validation error: invalid IR function /main: unsupported effect mask bits for wasm target` (2026-11-27, the `task_two_i64_sums` program of the matrix cut to one task).
-
 - [ ] TODO-6321: Wasm runs the `Atomic` opcodes as plain memory operations
   - owner: ai
   - status: blocked
@@ -498,6 +483,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the four opcodes and the `lock` and `channel` effect bits on `wasm-wasi`.
   - repro: a `Channel<i32>` program of the matrix: `--emit=wasm --wasm-profile wasi` reports `channel operations are not supported by the wasm backend: ConditionWait` (2026-11-27).
+
+- [ ] TODO-6323: A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-27
+  - phase: Correctness audit 2026-10 (found with TODO-6320)
+  - parallel_track: inline-task-lowering
+  - scope: on every target that runs a spawned call inline (`exe`, `cpp`, Wasm; the VM, `optexe` and arm64 native start a task) the `task_builtin_map_arguments` program (tests/unit/program_matrix/test_program_matrix_tasks.cpp) prints `0` for `print_line(table.count())` where the VM prints `2` (the spawned `table_copy([map<i32, i32> copy] table)` or `table_eaten([map<i32, i32> move] table)` takes the spawner's map instead of a copy) and `2000` for the heap probe where the VM prints `0` (two live blocks, the two `Vector` buffers of a map, leak). The inline lowering of a spawn binds the argument with the call's parameter modes, which for a map `copy` argument does not copy and for a `move` argument is not the hand-over the task shape performs (docs/spec/vm-design.md, Tasks).
+  - acceptance:
+    - the program prints the VM's lines on `exe` and on Wasm and is listed in `wasmTaskPrograms()` (test_program_matrix_tasks.cpp)
+    - full release gate green
+  - stop_rule: the inline lowering of a spawned call whose parameter is a builtin `map<K, V>`; no change to the task shapes of the scheduler targets.
+  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 build-release/PrimeStruct_program_matrix_tests --test-suite=primestruct.program_matrix.tasks` reports `wasm-run: task_builtin_map_arguments: differ (stdout)`; or `primec --emit=exe` of the program prints `24 202 1006 29 0 0 2000` where `primevm` prints `24 202 1006 29 2 0 0` (2026-11-27, release build, macOS arm64).
 
 - [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
   - owner: ai

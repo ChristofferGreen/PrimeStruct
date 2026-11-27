@@ -24,7 +24,7 @@ constexpr uint64_t KnownEffectMask =
     EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic |
     EffectLock | EffectChannel | EffectBuildRun;
 constexpr uint64_t KnownWasmWasiEffectMask =
-    EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead;
+    EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead | EffectTask;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
 // Effects a shader can never have: GLSL has no sockets.
 constexpr uint64_t GlslRejectedEffectMask = EffectNetIo;

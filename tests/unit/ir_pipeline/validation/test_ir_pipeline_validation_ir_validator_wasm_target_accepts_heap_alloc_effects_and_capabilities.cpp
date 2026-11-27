@@ -29,6 +29,29 @@ TEST_CASE("ir validator wasm target accepts heap_alloc effects and capabilities"
   CHECK_ERROR_CONTAINS(error, "unsupported capability mask bits for wasm target");
 }
 
+TEST_CASE("ir validator wasm accepts the task effect and wasm-browser refuses it") {
+  primec::IrModule module;
+  module.entryIndex = 0;
+  primec::IrFunction fn;
+  fn.name = "/main";
+  fn.metadata.effectMask = primec::EffectTask | primec::EffectIoOut;
+  fn.metadata.capabilityMask = primec::EffectTask | primec::EffectIoOut;
+  fn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+  module.functions.push_back(fn);
+
+  std::string error;
+  CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK(error.empty());
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
+  CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm-browser target");
+
+  // The effects of locks, atomics and channels keep their own refusal until their leaves land.
+  module.functions[0].metadata.effectMask = primec::EffectTask | primec::EffectAtomic;
+  module.functions[0].metadata.capabilityMask = primec::EffectTask;
+  CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
+  CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm target");
+}
+
 TEST_CASE("ir validator wasm targets answer only the string heap statistic and allocation host "
           "functions") {
   const auto moduleCalling = [](const std::string &importName) {
