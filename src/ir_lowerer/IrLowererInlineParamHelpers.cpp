@@ -750,8 +750,10 @@ bool emitInlineDefinitionCallParameters(const InlineDefinitionCallParameters &pa
       }
       LocalInfo copiedParamInfo = paramInfo;
       copiedParamInfo.structTypeName = canonicalStructTypeName(paramInfo.structTypeName, argStruct);
-      if ((paramInfo.isMutable && !isCopyParam) ||
-          isMapLikeStructTypeName(copiedParamInfo.structTypeName)) {
+      // A builtin map `copy` parameter takes the copy path below like any other struct; a `move`, borrowed or
+      // temporary map argument is the callee's as it is.
+      if ((paramInfo.isMutable || isMapLikeStructTypeName(copiedParamInfo.structTypeName)) &&
+          !isCopyParam) {
         if (!emitExpr(*orderedArg, callerLocals)) {
           return false;
         }

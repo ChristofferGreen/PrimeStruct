@@ -600,4 +600,84 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A builtin `map<K, V>` `copy` parameter is the callee's own copy and a `move` parameter is the caller's map handed
+// over: a call must leave the caller's map whole and free every block, as must a binding of a map a call returns. A `vector` and a `String` follow the same rule.
+TEST_CASE("map, vector and String copy and move parameters of real calls own their value") {
+  program_matrix::ProgramCase program;
+  program.name = "builtin_map_copy_move_parameters";
+  program.source = R"(
+import /std/collections/*
+import /std/text/*
+
+[return<i32> effects(heap_alloc)]
+table_copy([map<i32, i32> copy] table) {
+  return(table.count() * 100i32 + table.at(1i32))
+}
+
+[return<i32> effects(heap_alloc)]
+table_eaten([map<i32, i32> move] table) {
+  return(table.count() * 1000i32 + table.at(1i32))
+}
+
+[return<i32> effects(heap_alloc)]
+list_copy([vector<i32> copy] values) {
+  return(values.count() * 100i32 + values[1i32])
+}
+
+[return<i32> effects(heap_alloc)]
+list_eaten([vector<i32> move] values) {
+  return(values.count() * 1000i32 + values[1i32])
+}
+
+[return<i32> effects(heap_alloc)]
+text_copy([String copy] text) {
+  return(text.count())
+}
+
+[return<i32> effects(heap_alloc)]
+text_eaten([String move] text) {
+  return(text.count() + 1i32)
+}
+
+[return<map<i32, i32>> effects(heap_alloc)]
+make_table([i32] value) {
+  [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)}
+  return(out)
+}
+
+[return<i32> effects(heap_alloc, io_out)]
+round() {
+  [map<i32, i32>] made{make_table(9i32)}
+  print_line(made.count() * 10i32 + made.at(1i32))
+  [map<i32, i32>] table{map<i32, i32>(1i32, 2i32, 3i32, 4i32)}
+  [map<i32, i32>] other{map<i32, i32>(1i32, 6i32)}
+  [vector<i32>] list{vector<i32>(1i32, 2i32, 3i32)}
+  [vector<i32>] other_list{vector<i32>(1i32, 5i32)}
+  [String mut] text{String{}}
+  text.append("a text long enough to live on the heap, yes it is")
+  print_line(table_copy(table))
+  print_line(table_eaten(other))
+  print_line(table.count())
+  print_line(list_copy(list))
+  print_line(list_eaten(other_list))
+  print_line(list.count())
+  print_line(text_copy(text))
+  print_line(text.count())
+  print_line(text_eaten(text))
+  return(0i32)
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  print_line(round())
+  print_line(heapLiveBlocks())
+  return(0i32)
+}
+)";
+  program.exitCode = 0;
+  program.stdoutText = "29\n202\n1006\n2\n302\n2005\n3\n49\n49\n50\n0\n0\n";
+  program.extraConfigs = {"wasm-wasi"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_SUITE_END();

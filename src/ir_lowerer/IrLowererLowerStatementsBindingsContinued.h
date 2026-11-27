@@ -122,9 +122,14 @@
               return false;
             }
             info.index = nextLocal++;
-            localsIn.emplace(stmt.name, info);
             function.instructions.push_back(
                 {IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+            // A map a definition returns by value is this binding's to destroy: its two buffers are freed when
+            // the scope ends.
+            if (initCallee != nullptr && returnsMapLikeValue(initCallee)) {
+              registerOwnedStructLocal(info);
+            }
+            localsIn.emplace(stmt.name, info);
             return true;
           }
         }

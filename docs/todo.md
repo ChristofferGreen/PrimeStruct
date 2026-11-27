@@ -126,7 +126,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | in_progress | inline-task-lowering |
+| TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | ready | inline-task-lowering |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -432,19 +432,18 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
 
-- [~] TODO-6323: A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks
+- [ ] TODO-6324: A discarded call result that is a builtin `map<K, V>` leaks its two buffers
   - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-a213ffcd5ee7fe4e2, 2026-11-27
+  - status: ready
   - created_at: 2026-11-27
-  - phase: Correctness audit 2026-10 (found with TODO-6320)
+  - phase: Correctness audit 2026-10 (found with TODO-6323)
   - parallel_track: inline-task-lowering
-  - scope: on every target that runs a spawned call inline (`exe`, `cpp`, Wasm; the VM, `optexe` and arm64 native start a task) the `task_builtin_map_arguments` program (tests/unit/program_matrix/test_program_matrix_tasks.cpp) prints `0` for `print_line(table.count())` where the VM prints `2` (the spawned `table_copy([map<i32, i32> copy] table)` or `table_eaten([map<i32, i32> move] table)` takes the spawner's map instead of a copy) and `2000` for the heap probe where the VM prints `0` (two live blocks, the two `Vector` buffers of a map, leak). The inline lowering of a spawn binds the argument with the call's parameter modes, which for a map `copy` argument does not copy and for a `move` argument is not the hand-over the task shape performs (docs/spec/vm-design.md, Tasks).
+  - scope: a statement `make_table(9i32)` whose definition returns `map<i32, i32>` builds the map and nothing drops it: the heap ends with the map's two `Vector` buffers live. A binding of the same result is freed (TODO-6323). Drop the temporary at the end of the statement, the way the lowering drops a discarded struct or `vector` result.
   - acceptance:
-    - the program prints the VM's lines on `exe` and on Wasm and is listed in `wasmTaskPrograms()` (test_program_matrix_tasks.cpp)
+    - a program that discards the result of a map-returning call reports `heapLiveBlocks()` back at its start on the VM, optexe and wasm-wasi, with a matrix case
     - full release gate green
-  - stop_rule: the inline lowering of a spawned call whose parameter is a builtin `map<K, V>`; no change to the task shapes of the scheduler targets.
-  - repro: `PRIMESTRUCT_MATRIX_WASM_RUN=1 build-release/PrimeStruct_program_matrix_tests --test-suite=primestruct.program_matrix.tasks` reports `wasm-run: task_builtin_map_arguments: differ (stdout)`; or `primec --emit=exe` of the program prints `24 202 1006 29 0 0 2000` where `primevm` prints `24 202 1006 29 2 0 0` (2026-11-27, release build, macOS arm64).
+  - stop_rule: the discarded result of a call that returns a builtin `map<K, V>` by value.
+  - repro: `[return<map<i32, i32>> effects(heap_alloc)] make_table([i32] value) { [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)} return(out) }` and `[return<i32> effects(heap_alloc)] round() { make_table(9i32) return(0i32) }`; `main` prints `round()` then `heapLiveBlocks()`: `primevm` prints `0` then `2` (2026-11-27, release build).
 
 - [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
   - owner: ai
