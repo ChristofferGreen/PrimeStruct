@@ -140,7 +140,7 @@ of sync with them.
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
-| TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | ready | lib-shapes-backends |
+| TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | in_progress | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -632,9 +632,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: deleting the compatibility expansion.
   - repro: `grep expandIndirectCalls src` finds the pass today.
 
-- [ ] TODO-6317: A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls
+- [~] TODO-6317: A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: closure-cpp (worktree-agent-af6798418ad5b46de), 2026-11-27
   - created_at: 2026-11-27
   - phase: Real calls (found by TODO-6283)
   - parallel_track: lib-shapes-backends
