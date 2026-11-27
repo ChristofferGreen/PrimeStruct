@@ -119,7 +119,6 @@ of sync with them.
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6261 | A `string` result of a program's own function keeps its call sites inline | in_progress | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
@@ -244,27 +243,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - no existing diagnostic or test output changes; full release gate green
   - stop_rule: recording and inference only; the call-site rule stays TODO-5688's.
   - repro: `grep -rn "requires .* effect" src/semantics/*.cpp` lists the sites; the measurement is in TODO-5688's scope.
-
-- [~] TODO-6261: A `string` result of a program's own function keeps its call sites inline
-  - owner: ai
-  - status: in_progress
-  - claimed_by: closure-cpp (worktree-agent-af6798418ad5b46de), 2026-11-27
-  - created_at: 2026-11-25
-  - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6255, the blocker the inline report names for `/std/image/ImageError/why`)
-  - parallel_track: bytecode-inline-blockers
-  - decision (owner, 2026-11-27): option 2. A `string` result becomes a real call when every call site of the function uses it only as a runtime index (an argument of `print_line`, `count()`, a file open or another real call), judged per function from its call sites; otherwise the function stays inline. Option 3 (the dynamic string-byte op on optexe and native) stays the long-term fix.
-  - scope: A function whose result is a `string` (the message of an error struct, `why()`) is refused for `unsupported-result` unless it is a root or an import of a library: 33 instructions added in the PNG module, and the same in every program that reads an error message. The body lowering and the call site already return a string as one slot, a table index; what the rule protects is that a string a call returns is a runtime index, and indexing one (`why()[0]`) is `LoadStringByteDynamic`, VM-only, so a program that compiled on optexe or native because the call was inlined (a static string) would stop compiling there. This needs a language decision, which is the user's.
-  - decision_needed: how a string result may be used after a real call. Options:
-    1. Allow `string` results of real calls everywhere and let a use that needs a static string (indexing; `count()` is fine) on a target without the dynamic op be an error that names the call ("cannot index the string result of /name: the call is not inlined"). Smallest change; a program that indexed an inlined result breaks on optexe and native.
-    2. Allow it when every call site of the function uses the result only as an argument that takes a runtime index (`print_line`, `count()`, a file open, another real call), judged per function from its call sites; otherwise keep it inline. No program breaks; the rule reads the call sites, as the string parameter rule reads the uses.
-    3. Keep the rule and add the dynamic string-byte op to optexe and native (the `String` of those targets is a leaf of the string lane), then lift the refusal.
-    Recommendation: option 2. It saves the 33 instructions without a new failure and without a new op; option 3 is the right long-term fix and makes option 2's check unnecessary.
-  - acceptance:
-    - the decision is recorded here and in docs/spec/value-lifecycle.md or docs/spec/vm-design.md as the rule that holds
-    - the report of the PNG program shows `ImageError/why` as `real call`, or the decision names why it stays inline
-    - full release gate green
-  - stop_rule: the `string` result rule of the real-call shape; no new string operations.
-  - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai

@@ -240,6 +240,76 @@ main() {
         std::string::npos);
 }
 
+// A `string` result is a one-slot table index. It is a real call when every call site of the function reads it as a
+// runtime index (`print_line`, `count()`, a file open, another real call); any other use keeps the function inline,
+// where the result is a static string that indexes on every target.
+namespace {
+
+std::string describeProgram(const std::string &extraStatements) {
+  return R"(
+[return<string> effects(none)]
+describe([i32] code) {
+  if(code == 1i32) {
+    return("one"utf8)
+  }
+  if(code == 2i32) {
+    return("two"utf8)
+  }
+  return("many"utf8)
+}
+
+[return<int> effects(io_out)]
+main() {
+  print_line(describe(1i32))
+  print_line(describe(2i32))
+  print_line(describe(9i32))
+)" + extraStatements +
+         R"(
+  return(count(describe(1i32)) + count(describe(9i32)))
+}
+)";
+}
+
+} // namespace
+
+TEST_CASE("inline-report shows a string result read only as an index as a real call") {
+  const std::filesystem::path path =
+      primec::testing::testScratchPath("inline_report_cli/string_result_index.prime");
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path) << describeProgram("");
+  const ReportResult report =
+      runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
+  CHECK(report.exitCode == 0);
+  CHECK(report.out.find("/describe: real call\n") != std::string::npos);
+  CHECK(report.out.find("unsupported-result") == std::string::npos);
+  const ReportResult vm = runCommand("./primevm " + path.string());
+  CHECK(vm.exitCode == 7);
+  CHECK(vm.out == "one\ntwo\nmany\n");
+  const std::filesystem::path exe = path.parent_path() / "string_result_index_optexe";
+  const ReportResult built =
+      runCommand("./primec --emit=optexe " + path.string() + " -o " + exe.string());
+  CHECK_MESSAGE(built.exitCode == 0, built.err);
+  const ReportResult optexe = runCommand(exe.string());
+  CHECK(optexe.exitCode == 7);
+  CHECK(optexe.out == vm.out);
+}
+
+TEST_CASE("inline-report keeps a string result inline when a call site binds it") {
+  const std::filesystem::path path =
+      primec::testing::testScratchPath("inline_report_cli/string_result_bound.prime");
+  std::filesystem::create_directories(path.parent_path());
+  std::ofstream(path) << describeProgram("  [string] kept{describe(2i32)}\n  print_line(kept)\n");
+  const ReportResult report =
+      runCommand("./primec --emit=vm --dump-stage inline-report " + path.string());
+  CHECK(report.exitCode == 0);
+  CHECK(report.out.find("/describe: unsupported-result: its result `string` is not one a real call "
+                        "returns") != std::string::npos);
+  CHECK(report.out.find("every call site uses it as a runtime index") != std::string::npos);
+  const ReportResult vm = runCommand("./primevm " + path.string());
+  CHECK(vm.exitCode == 7);
+  CHECK(vm.out == "one\ntwo\nmany\ntwo\n");
+}
+
 // The target-neutral listing lowers for the scalar ABI, where a sum parameter is not a scalar; primevm prints the
 // same text as primec without `--emit`.
 TEST_CASE("inline-report on the scalar target names the parameter that keeps a definition inline") {

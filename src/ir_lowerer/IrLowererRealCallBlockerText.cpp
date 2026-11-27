@@ -149,7 +149,10 @@ std::string describeAddressAbiBlocker(AddressAbiBlocker blocker, const Definitio
     return "its result " + (result.empty() ? std::string("type") : "`" + result + "`") +
            " is not one a real call returns: a scalar, `void`, `never` and a struct are and, for a "
            "function of a library, a `string`, a `Pointer`, a sum, a packed `Result` and a "
-           "`vector<T>`; a `Reference` is not";
+           "`vector<T>`; a `Reference` is not. A `string` result is a real call only when every "
+           "call site "
+           "uses it as a runtime index: an argument of `print_line` or `count()`, a file open or "
+           "another real call";
   }
   case AddressAbiBlocker::UsesTry:
     return "its body uses `try`";

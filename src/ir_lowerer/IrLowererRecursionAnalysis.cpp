@@ -5,6 +5,7 @@
 #include "IrLowererRealCallParameterTypes.h"
 #include "IrLowererReturnShapes.h"
 #include "IrLowererStringParameterUse.h"
+#include "IrLowererStringResultUse.h"
 #include "IrLowererScalarCallBlocker.h"
 
 #include "primec/ir_lowerer/IrLowererBindingTransformHelpers.h"
@@ -741,7 +742,8 @@ AddressAbiBlocker addressAbiShapeBlocker(const Definition &def,
     return AddressAbiBlocker::VectorResultNotOwned;
   }
   if (!hasScalarOrVoidReturn(def) && !hasTransformReturnType(def, "never") &&
-      !(context.allowSlotResults && hasSlotResultReturn(def)) && !hasPackedResultReturn(def) &&
+      !(context.allowSlotResults && hasSlotResultReturn(def)) &&
+      !(context.allowStringResult && hasStringResult(def)) && !hasPackedResultReturn(def) &&
       packedResultStructValuePath(def, structNames).empty() && structResultPath.empty() &&
       !(context.allowVectorResults && builtinVectorReturnType(def, structNames) != nullptr) &&
       !(context.allowCollections && builtinVectorReturnType(def, structNames) != nullptr)) {
@@ -1079,6 +1081,10 @@ computeRealCallEligibleDefinitionPaths(const Program &program,
     // result.
     RealCallShapeContext definitionContext = context;
     definitionContext.allowSlotResults = isImported || roots.find(path) != roots.end();
+    definitionContext.allowStringResult =
+        !definitionContext.allowSlotResults && allowStringParams && defIt != byPath.end() &&
+        hasStringResult(*defIt->second) &&
+        stringResultUsedOnlyAsIndexReads(byPath, reachable, *defIt->second);
     if (definitionContext.allowSlotResults) {
       definitionContext.structNames = &libraryStructNames;
       definitionContext.refuseSumParameters = true;

@@ -4,10 +4,6 @@
 
 namespace primec::ir_lowerer {
 
-namespace {
-
-// A call that opens the file at its one path argument: `File<Mode>(path)`, or the `/File/open...` helpers of the
-// file library that forward to it.
 bool isFileOpenWithPath(const Expr &call) {
   if (call.kind != Expr::Kind::Call || call.isMethodCall || call.args.size() != 1) {
     return false;
@@ -28,6 +24,8 @@ bool isFileOpenWithPath(const Expr &call) {
   }
   return false;
 }
+
+namespace {
 
 // Whether every use of the `string` parameter `name` in `expr` reads its runtime index: see
 // stringParameterUsedOnlyAsIndexReads.

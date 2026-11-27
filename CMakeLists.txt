@@ -642,6 +642,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererInlineReport.cpp
   src/ir_lowerer/IrLowererInlineExpansionCounter.cpp
   src/ir_lowerer/IrLowererStringParameterUse.cpp
+  src/ir_lowerer/IrLowererStringResultUse.cpp
   src/ir_lowerer/IrLowererScalarCallBlocker.cpp
   src/ir_lowerer/IrLowererDefinitionPathIndex.cpp
   src/ir_lowerer/IrLowererTaskSpawn.cpp

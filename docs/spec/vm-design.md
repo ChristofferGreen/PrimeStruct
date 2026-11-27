@@ -752,6 +752,16 @@
   emitters, which read a module string by a computed index, and only when the body uses it as `count()` or as the
   argument of `__pstext_literal` (`String.append`): the call passes the string's module-table index and the body reads
   a runtime string, where any other use (indexing expands to a branch per table string) stays inline.
+  A `string` result of a program's own function (one slot, a module-table index) is a real call on the same two
+  targets when every call site of the function, in the definitions the program reaches, uses the result only as a
+  runtime index: an argument of `print`, `print_line`, `print_error` or `print_line_error`, the operand of `count()`,
+  the path of a file open, or an argument that a real call's `string` parameter reads that way. The rule is judged
+  per function from its call sites (a call whose resolved path is the function, and any call whose name ends in its
+  leaf, which covers the `why` that `Result.why` calls); a binding, a return, a comparison or an index of the result
+  keeps the function inline, where a result that is a static string indexes on every target. Indexing a string a call
+  returned needs the dynamic string-byte operation, which only the VM has (`LoadStringByteDynamic`); the long-term fix
+  is that operation on `optexe` and native, which makes the call-site check unnecessary. A function reserved this way
+  still needs two or more call sites. The functions of a library take a `string` result whatever the call sites.
   `String.append` costs the same as inlined: its length check and `growFor`'s capacity check are inlined into the callers
   and the C++ emitters call the bulk move (`__pstext_move`) directly instead of through the by-name host dispatch.
   Wasm (both profiles) takes the address ABI too, since its frames have addresses (`AddressOfLocal`, `LoadIndirect`
