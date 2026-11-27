@@ -206,6 +206,21 @@ TEST_CASE("library link: the same program on optexe") {
   CHECK(linked.out == whole.out);
 }
 
+TEST_CASE("library link: the same program on exe, the simple C++ emitter") {
+  const std::filesystem::path dir = testScratchPath("library_link_exe");
+  writeIn(dir, "ui.prime", UiSource);
+  writeIn(dir, "app.prime", "import<\"ui.prime\">\nimport /ui/*\n" + AppBody);
+  const Run whole = runApp(dir, "exe", "");
+  REQUIRE_MESSAGE(whole.exitCode == 41, whole.err);
+
+  const std::string ui = buildLibrary(dir, "ui", UiSource);
+  writeIn(dir, "app.prime", "import</ui>\nimport /ui/*\n" + AppBody);
+  const Run linked = runApp(dir, "exe", "--library " + quoteShellArg(ui));
+  CHECK_MESSAGE(linked.err.empty(), linked.err);
+  CHECK(linked.exitCode == whole.exitCode);
+  CHECK(linked.out == whole.out);
+}
+
 TEST_CASE("library link: a target without the address ABI is refused") {
   const std::filesystem::path dir = testScratchPath("library_link_target");
   const std::string ui = buildLibrary(dir, "ui", UiSource);
@@ -213,9 +228,9 @@ TEST_CASE("library link: a target without the address ABI is refused") {
           "app.prime",
           "import</ui>\nimport /ui/*\n\n[return<i32>]\nmain() {\n  return(add(1i32, 2i32))\n}\n");
   const Run run = shell(dir,
-                        "./primec --emit=cpp --library " + quoteShellArg(ui) + " " +
+                        "./primec --emit=glsl --library " + quoteShellArg(ui) + " " +
                             quoteShellArg((dir / "app.prime").string()) + " -o " +
-                            quoteShellArg((dir / "app.cpp").string()));
+                            quoteShellArg((dir / "app.glsl").string()));
   CHECK(run.exitCode != 0);
   CHECK(run.err.find("linking a library needs a target with the address ABI") != std::string::npos);
   CHECK(run.err.find("/ui/add is imported from library ui") != std::string::npos);

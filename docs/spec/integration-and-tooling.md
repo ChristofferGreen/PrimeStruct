@@ -373,8 +373,8 @@ and `undefined symbol /ui/draw (library ui)` is reported for an import no librar
 
 - *ABI.* An imported function is always called with the address ABI the archive was lowered with (a struct, `mut`,
   `this` or a string is one slot, a struct result goes through a block of the caller). A target without it (x86_64
-  native, GLSL, the simple C++ emitters) is refused: `linking a library needs a target with the address ABI (the
-  vm, optexe, optcpp, wasm and arm64 native): /ui/add is imported from library ui`. A declaration whose shape the ABI cannot
+  native, GLSL) is refused: `linking a library needs a target with the address ABI (the
+  vm, optexe, optcpp, cpp, exe, wasm and arm64 native): /ui/add is imported from library ui`. A declaration whose shape the ABI cannot
   take is `imported function /f cannot be called on this target: <reason>`.
 - *Reachable functions only.* The program carries the functions it reaches, not the archive: the link starts from the
   functions the program imports and follows the calls of each definition through every supplied library (the closure is

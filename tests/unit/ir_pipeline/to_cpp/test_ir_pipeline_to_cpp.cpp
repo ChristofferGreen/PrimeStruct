@@ -360,7 +360,7 @@ TEST_CASE("ir to cpp emitter supports large local indices") {
   std::string error;
   CHECK(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("std::vector<uint64_t> locals(2049ull, 0ull);") != std::string::npos);
+  CHECK(cpp.find("PsLocals locals(stack, 2049ull);") != std::string::npos);
   CHECK(cpp.find("locals[2048] = stack[--sp];") != std::string::npos);
   CHECK(cpp.find("stack[sp++] = locals[2048];") != std::string::npos);
 }
@@ -379,7 +379,7 @@ TEST_CASE("ir to cpp emitter supports large address-of-local index") {
   std::string error;
   CHECK(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("std::vector<uint64_t> locals(4097ull, 0ull);") != std::string::npos);
+  CHECK(cpp.find("PsLocals locals(stack, 4097ull);") != std::string::npos);
 }
 
 TEST_CASE("ir to cpp emitter supports large file-read local index") {
@@ -397,7 +397,7 @@ TEST_CASE("ir to cpp emitter supports large file-read local index") {
   std::string error;
   CHECK(emitter.emitSource(module, cpp, error));
   CHECK(error.empty());
-  CHECK(cpp.find("std::vector<uint64_t> locals(2049ull, 0ull);") != std::string::npos);
+  CHECK(cpp.find("PsLocals locals(stack, 2049ull);") != std::string::npos);
   CHECK(cpp.find("locals[2048] = static_cast<uint64_t>(fileReadByte);") != std::string::npos);
 }
 

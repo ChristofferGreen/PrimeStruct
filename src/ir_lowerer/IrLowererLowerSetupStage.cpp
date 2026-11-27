@@ -51,9 +51,10 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.allowDynamicStrings = input.validationTarget == IrValidationTarget::Vm;
   stateOut.realCallEligibleOrder.clear();
   stateOut.realCallReservationIndex.clear();
-  // The address ABI needs a local address that names the same slot in every frame: the VM and optcpp number all live
-  // locals, and the arm64 native backend addresses locals by their machine address (a caller's frame stays in place
-  // while its callees run). The x86_64 native backend and its JIT keep the scalar ABI for now (TODO-5752).
+  // The address ABI needs a local address that names the same slot in every frame: the VM, optcpp and the simple C++
+  // emitters number all live locals, and the arm64 native backend addresses locals by their machine address (a
+  // caller's frame stays in place while its callees run). The x86_64 native backend and its JIT keep the scalar ABI
+  // for now (TODO-5752).
   constexpr bool NativeHasFrameAddresses =
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
       true;
@@ -69,6 +70,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
   stateOut.realCallAllowStructs =
       input.validationTarget == IrValidationTarget::Vm ||
       input.validationTarget == IrValidationTarget::OptCpp ||
+      input.validationTarget == IrValidationTarget::Cpp ||
       input.validationTarget == IrValidationTarget::Wasm ||
       input.validationTarget == IrValidationTarget::WasmBrowser ||
       (NativeHasFrameAddresses && input.validationTarget == IrValidationTarget::Native);
@@ -181,7 +183,7 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
         const Definition &definition = *stateOut.defMap.at(path);
         if (!stateOut.realCallAllowStructs) {
           errorOut = "linking a library needs a target with the address ABI (the vm, optexe, "
-                     "optcpp, wasm and arm64 "
+                     "optcpp, cpp, exe, wasm and arm64 "
                      "native): " +
                      path + " is imported from library " + importedLibraryName(definition);
           return false;

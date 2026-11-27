@@ -272,8 +272,8 @@
   `CallIndirect` is the widest result type of the candidate functions (an `i32` and an `i64` result merge to `i64`). The simple C++ emitters (`cpp`, `exe`) emit `FunctionAddress` as the
   constant and `CallIndirect` as a call of a generated `psCallIndirect<p>` function (the checks of the optimized
   emitter's `ps_call_indirect_<p>`, the VM's three messages on stderr and exit code 3) that shifts the parameters down
-  over the address on the shared stack and calls the matching function; they lower scalar parameters and results only
-  (docs/todo.md, TODO-6317). On arm64 native, a function that has `CallIndirect` keeps the stack form (it is not
+  over the address on the shared stack and calls the matching function; they take the address ABI of real calls, so a
+  `Function` of any signature the VM takes lowers there. On arm64 native, a function that has `CallIndirect` keeps the stack form (it is not
   register-allocated). IR
   validation accepts the
   opcodes for the VM, arm64 native, Wasm, the C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). GLSL, which has no calls through addresses, refuses a module that has them in validation (`calls through function addresses are not supported by this target: FunctionAddress`, naming the first opcode found). x86_64 native and the Linux JIT still take the linked module through `expandIndirectCalls`
@@ -294,9 +294,9 @@
   references pass as addresses and a struct result comes back through the caller's block, so every function an address
   can name has the parameters after the address and the result of the declaration) and the lowerer emits `CallIndirect`
   (`CallIndirectVoid` for a `void` result) with the callee's parameter count; the definition has no function in the
-  module. A one-slot `Pointer<T>` result is allowed. Targets without the call ABI of structs (x86_64 native and the
-  simple C++ emitters) take scalar parameters only, so a `Function` with a struct or `Reference` parameter does not
-  lower there yet (docs/todo.md, TODO-6317). The `Function` value of docs/spec/value-lifecycle.md is built on
+  module. A one-slot `Pointer<T>` result is allowed. A target without the call ABI of structs
+  (x86_64 native, which takes scalar parameters only until TODO-5752) does not lower a `Function` with a struct or
+  `Reference` parameter. The simple C++ emitters (`cpp`, `exe`) take the address ABI (below). The `Function` value of docs/spec/value-lifecycle.md is built on
   these two.
 - **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
   once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result
@@ -756,9 +756,12 @@
   and the C++ emitters call the bulk move (`__pstext_move`) directly instead of through the by-name host dispatch.
   Wasm (both profiles) takes the address ABI too, since its frames have addresses (`AddressOfLocal`, `LoadIndirect`
   and `StoreIndirect` on the shadow stack), so a recursive definition with a `vector`, struct or `Reference` parameter is a
-  real call there. The other targets keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
+  real call there. The simple C++ emitters (`cpp`, `exe`) take it too: their locals live in one array, a frame after the
+  frame of the caller, so a local address (slot index times 8) names the same slot in every frame, and the generated
+  `PsLocals` of a call reserves and zeroes its frame and gives it back at return. The other targets (x86_64 native and
+  the Linux JIT) keep the scalar ABI: a definition with scalar parameters and result and two or more call sites (or
   a recursive one) is a real call, a read-only method passing its receiver as slots rebuilt in the callee's frame. On
-  the scalar targets that run `Trap` (`cpp`/`exe`, x86_64 native) a `never` result counts as void, so `panic` is one
+  the scalar targets that run `Trap` (x86_64 native) a `never` result counts as void, so `panic` is one
   function there too instead of a copy of its body at every call site.
   `primec --emit=vm --dump-stage inline-report prog.prime` prints what these rules decided for one program: a
   header `inline_report_v1 definitions=<n>` and one line per definition a call site reached, most instructions added

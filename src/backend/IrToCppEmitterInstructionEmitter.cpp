@@ -212,8 +212,7 @@ bool emitInstruction(const IrInstruction &instruction,
         error = "IrToCppEmitter local index out of range at instruction " + std::to_string(index);
         return false;
       }
-      out << "        stack[sp++] = static_cast<uint64_t>(" << instruction.imm << "ull * " << IrSlotBytes
-          << "ull);\n";
+      out << "        stack[sp++] = locals.addressOf(" << instruction.imm << "ull);\n";
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;

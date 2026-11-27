@@ -1450,7 +1450,7 @@ main() {
   const std::string output = readFile(outPath);
   CHECK(output.find("if (!psLoadIndirect(stack, sp, locals, heap))") != std::string::npos);
   CHECK(output.find("if (!psStoreIndirect(stack, sp, locals, heap))") != std::string::npos);
-  CHECK(output.find("locals[static_cast<std::size_t>(index)] = value;") != std::string::npos);
+  CHECK(output.find("stack.frames[static_cast<std::size_t>(index)] = value;") != std::string::npos);
 }
 
 TEST_CASE("cpp emitter uses ir backend for pointer indirect paths") {

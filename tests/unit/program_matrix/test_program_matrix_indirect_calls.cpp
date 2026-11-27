@@ -8,12 +8,8 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.indirect_calls");
 
 namespace {
 
-// `exe` (the simple C++ emitter) takes scalar parameters only (docs/todo.md, TODO-6317), so a program lists it with `exe`.
-std::vector<std::string> indirectConfigs(bool exe) {
-  std::vector<std::string> configs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
-  if (exe) {
-    configs.push_back("exe");
-  }
+std::vector<std::string> indirectConfigs() {
+  std::vector<std::string> configs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2", "exe"};
   if (program_matrix::nativeSupported()) {
     configs.push_back("native-O0");
     configs.push_back("native-O2");
@@ -24,13 +20,12 @@ std::vector<std::string> indirectConfigs(bool exe) {
 void runIndirectProgram(const std::string &name,
                         const std::string &source,
                         int exitCode,
-                        bool wasm = true,
-                        bool exe = false) {
+                        bool wasm = true) {
   program_matrix::ProgramCase program;
   program.name = name;
   program.source = source;
   program.exitCode = exitCode;
-  program.onlyConfigs = indirectConfigs(exe);
+  program.onlyConfigs = indirectConfigs();
   if (wasm) {
     program.extraConfigs = {"wasm-wasi"};
   }
@@ -40,7 +35,8 @@ void runIndirectProgram(const std::string &name,
 } // namespace
 
 TEST_CASE("an indirect call enters the function its address names") {
-  runIndirectProgram("indirect_call_scalars", R"(
+  runIndirectProgram("indirect_call_scalars",
+                     R"(
 [return<i32>]
 add_one([i32] x) { return(x + 1i32) }
 
@@ -61,13 +57,12 @@ main() {
   return(call_one(add_one_address(), 4i32) + call_one(double_it_address(), 4i32))
 }
 )",
-                     13,
-                     true,
-                     true);
+                     13);
 }
 
 TEST_CASE("an address is a value chosen at run time") {
-  runIndirectProgram("indirect_call_chosen_at_run_time", R"(
+  runIndirectProgram("indirect_call_chosen_at_run_time",
+                     R"(
 [return<i32>]
 add_one([i32] x) { return(x + 1i32) }
 
@@ -98,9 +93,7 @@ main() {
   return(call_one(first, 10i32) * 100i32 + call_one(second, 10i32))
 }
 )",
-                     1120,
-                     true,
-                     true);
+                     1120);
 }
 
 TEST_CASE("an indirect call passes a struct and returns one") {
@@ -238,8 +231,8 @@ namespace {
 
 // The address is chosen at run time, so it is not folded: 0 is no function and 999 is past the table.
 void runFaultingIndirectProgram(const std::string &name, const std::string &address) {
-    runIndirectProgram(name,
-                       R"(
+  runIndirectProgram(name,
+                     R"(
 [return<i32>]
 add_one([i32] x) { return(x + 1i32) }
 
@@ -262,9 +255,8 @@ main() {
   return(call_one(bad_address(1i32), 4i32))
 }
 )",
-                       3,
-                       false,
-                       true);
+                     3,
+                     false);
 }
 
 } // namespace
@@ -322,7 +314,8 @@ TEST_CASE("wasm traps on a call through an address past the table") {
 }
 
 TEST_CASE("an indirect call passes floats and a 64-bit integer") {
-  runIndirectProgram("indirect_call_mixed_parameter_types", R"(
+  runIndirectProgram("indirect_call_mixed_parameter_types",
+                     R"(
 [return<f64>]
 blend([f64] a, [i64] n, [f32] b) { return(a * convert<f64>(n) + convert<f64>(b)) }
 
@@ -347,7 +340,65 @@ main() {
   return(convert<int>(value) + call_bump(bump_address(), 0i32))
 }
 )",
-                     12,
-                     true,
-                     true);
+                     12);
+}
+
+// A `Function` call is a call through an address with the signature of its instance, so struct, `Reference` and struct
+// result parameters take the address ABI on every target that runs it, `exe` and `cpp` included.
+TEST_CASE("a Function takes a struct and a Reference parameter") {
+  runIndirectProgram("function_struct_and_reference_parameters",
+                     R"(
+[struct]
+State() {
+  [i32 mut] total{0i32}
+}
+
+[struct]
+Event() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[return<void>]
+bump([Reference<State> mut] state, [Event] event) {
+  assign(state.total, state.total + event.x + event.y)
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [State mut] state{State{}}
+  [Function<void, Reference<State>, Event> mut] handler{bump}
+  handler(state, Event{3i32, 4i32})
+  handler(state, Event{1i32, 1i32})
+  return(state.total)
+}
+)",
+                     9,
+                     false);
+}
+
+TEST_CASE("a Function returns a struct and holds a lambda without captures") {
+  runIndirectProgram("function_struct_result_and_lambda",
+                     R"(
+[struct]
+Point() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[return<Point>]
+shift([Point] point) {
+  return(Point{[x] point.x + 1i32, [y] point.y + 10i32})
+}
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Function<Point, Point> mut] move_point{shift}
+  [Function<i32, i32> mut] twice{Function<i32, i32>{[]([i32] x) { return(x * 2i32) }}}
+  [Point] moved{move_point(Point{[x] 4i32, [y] 5i32})}
+  return(moved.x * 100i32 + moved.y + twice(3i32))
+}
+)",
+                     521,
+                     false);
 }

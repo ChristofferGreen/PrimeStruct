@@ -35,7 +35,7 @@ TEST_CASE("cpp-ir backend writes indirect local pointer paths") {
   CHECK(result.exitCode == 0);
 
   const std::string source = readTextFile(outputPath);
-  CHECK(source.find("stack[sp++] = static_cast<uint64_t>(0ull * 16ull);") != std::string::npos);
+  CHECK(source.find("stack[sp++] = locals.addressOf(0ull);") != std::string::npos);
   CHECK(source.find("if (!psLoadIndirect(stack, sp, locals, heap))") != std::string::npos);
   CHECK(source.find("if (!psStoreIndirect(stack, sp, locals, heap))") != std::string::npos);
   CHECK(source.find("if ((address % 16ull) != 0ull)") != std::string::npos);

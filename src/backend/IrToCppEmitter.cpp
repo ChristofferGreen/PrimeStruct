@@ -473,10 +473,41 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "    return slots[index];\n";
   body << "  }\n";
   body << "  std::deque<uint64_t> slots;\n";
+  body << "  std::vector<uint64_t> frames;\n";
+  body << "  std::size_t frameTop = 0;\n";
+  body << "};\n\n";
+  // The locals of every live call live in one array (PsStack::frames), a frame after the frame of its caller, so a
+  // local address (slot index * 8) names the same slot in every frame and a callee reads and writes the caller's places
+  // through the addresses it is passed (docs/spec/vm-design.md, Real calls).
+  body << "struct PsLocals {\n";
+  body << "  PsLocals(PsStack &stackIn, std::size_t count) : stack(stackIn), "
+          "base(stackIn.frameTop) {\n";
+  body << "    const std::size_t top = base + count;\n";
+  body << "    if (top > stack.frames.size()) {\n";
+  body << "      std::size_t newSize = stack.frames.empty() ? 4096ull : stack.frames.size();\n";
+  body << "      while (top > newSize) {\n";
+  body << "        newSize *= 2ull;\n";
+  body << "      }\n";
+  body << "      stack.frames.resize(newSize, 0ull);\n";
+  body << "    }\n";
+  body << "    for (std::size_t slot = base; slot < top; ++slot) {\n";
+  body << "      stack.frames[slot] = 0ull;\n";
+  body << "    }\n";
+  body << "    stack.frameTop = top;\n";
+  body << "  }\n";
+  body << "  ~PsLocals() { stack.frameTop = base; }\n";
+  body << "  PsLocals(const PsLocals &) = delete;\n";
+  body << "  PsLocals &operator=(const PsLocals &) = delete;\n";
+  body << "  uint64_t &operator[](std::size_t index) { return stack.frames[base + index]; }\n";
+  body << "  uint64_t addressOf(std::size_t index) const { return static_cast<uint64_t>(base + "
+          "index) * "
+       << IrSlotBytes << "ull; }\n";
+  body << "  PsStack &stack;\n";
+  body << "  std::size_t base;\n";
   body << "};\n\n";
   // The indirect loads and stores are the most frequent large instructions of struct-heavy programs: one shared
   // helper each keeps the emitted source small (inline, they were 46% of a 17 MB program).
-  body << "static bool psLoadIndirect(PsStack &stack, std::size_t &sp, std::vector<uint64_t> "
+  body << "static bool psLoadIndirect(PsStack &stack, std::size_t &sp, PsLocals "
           "&locals, "
           "VmHeapCore &heap) {\n";
   body << "  if (!psEnsureStack(sp, 1ull, \"load indirect\")) {\n";
@@ -497,14 +528,14 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "    return true;\n";
   body << "  }\n";
   body << "  uint64_t index = address / " << IrSlotBytes << "ull;\n";
-  body << "  if (index >= locals.size()) {\n";
+  body << "  if (index >= stack.frameTop) {\n";
   body << "    std::cerr << \"VM error: invalid indirect address in IR\\n\";\n";
   body << "    return false;\n";
   body << "  }\n";
-  body << "  stack[sp++] = locals[static_cast<std::size_t>(index)];\n";
+  body << "  stack[sp++] = stack.frames[static_cast<std::size_t>(index)];\n";
   body << "  return true;\n";
   body << "}\n\n";
-  body << "static bool psStoreIndirect(PsStack &stack, std::size_t &sp, std::vector<uint64_t> "
+  body << "static bool psStoreIndirect(PsStack &stack, std::size_t &sp, PsLocals "
           "&locals, "
           "VmHeapCore &heap) {\n";
   body << "  if (!psEnsureStack(sp, 2ull, \"store indirect\")) {\n";
@@ -525,11 +556,11 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
   body << "    heap.slots[heapIndex] = value;\n";
   body << "  } else {\n";
   body << "    uint64_t index = address / " << IrSlotBytes << "ull;\n";
-  body << "    if (index >= locals.size()) {\n";
+  body << "    if (index >= stack.frameTop) {\n";
   body << "      std::cerr << \"VM error: invalid indirect address in IR\\n\";\n";
   body << "      return false;\n";
   body << "    }\n";
-  body << "    locals[static_cast<std::size_t>(index)] = value;\n";
+  body << "    stack.frames[static_cast<std::size_t>(index)] = value;\n";
   body << "  }\n";
   body << "  stack[sp++] = value;\n";
   body << "  return true;\n";
@@ -565,7 +596,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
       const size_t chunkBegin = chunkIndex * DispatchChunkSize;
       const size_t chunkEnd = std::min(chunkBegin + DispatchChunkSize, instructionCount);
       body << "static int64_t " << irFunctionChunkSymbol(functionIndex, chunkIndex)
-           << "(PsStack &stack, std::size_t &sp, std::vector<uint64_t> &locals, "
+           << "(PsStack &stack, std::size_t &sp, PsLocals &locals, "
               "VmHeapCore &heap, std::size_t &pc, int argc, char **argv, bool &transfer) {\n";
       body << "  while (true) {\n";
       body << "    switch (pc) {\n";
@@ -589,7 +620,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
 
     body << "static int64_t " << irFunctionSymbol(functionIndex)
          << "(PsStack &stack, std::size_t &sp, VmHeapCore &heap, int argc, char **argv) {\n";
-    body << "  std::vector<uint64_t> locals(" << localCount << "ull, 0ull);\n";
+    body << "  PsLocals locals(stack, " << localCount << "ull);\n";
     body << "  std::size_t pc = 0;\n";
     body << "  while (true) {\n";
     body << "    bool transfer = false;\n";

@@ -9,7 +9,7 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.closures");
 namespace {
 
 std::vector<std::string> closureConfigs() {
-  std::vector<std::string> configs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  std::vector<std::string> configs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2", "exe"};
   if (program_matrix::nativeSupported()) {
     configs.push_back("native-O0");
     configs.push_back("native-O2");

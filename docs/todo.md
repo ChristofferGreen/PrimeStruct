@@ -140,7 +140,6 @@ of sync with them.
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
-| TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | in_progress | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -631,21 +630,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: deleting the compatibility expansion.
   - repro: `grep expandIndirectCalls src` finds the pass today.
-
-- [~] TODO-6317: A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls
-  - owner: ai
-  - status: in_progress
-  - claimed_by: closure-cpp (worktree-agent-af6798418ad5b46de), 2026-11-27
-  - created_at: 2026-11-27
-  - phase: Real calls (found by TODO-6283)
-  - parallel_track: lib-shapes-backends
-  - decision (owner, 2026-11-27): the address ABI. The simple C++ emitters (`cpp`, `exe`) pass structs, `Reference` parameters and struct results by address like the VM, `optexe` and arm64 native; x86_64 native gets it through TODO-5752. No inline dispatch chain comes back.
-  - scope: a `Function`'s `call` is a call through an `[indirect_call]` declaration of the instance's signature, which lowers as a real call (docs/spec/vm-design.md, Function addresses). The VM, `optexe`, arm64 native and Wasm take structs, `Reference` parameters and struct results through the address ABI. The targets with the scalar ABI (`--emit=exe` and `cpp`, x86_64 native) refuse the declaration, so a program with a `Function<void, Reference<State>, Event>` (a struct or a `Reference` among the parameters, or a struct result) stops with `function_address of /__fn_address_invoke_... names /__fn_invoke_..., which cannot be a real call on this target: its parameters or result do not fit the call ABI`; before TODO-6283 the dispatch was inline code and every signature lowered there. A `Function` whose parameters and result are scalars lowers everywhere. Options: the scalar targets get an expansion at lowering time for the call of a `Function` (the old inline chain, over the closures converted to the instance, which a library link cannot see), or they take the address ABI (TODO-5752 for x86_64 native).
-  - acceptance:
-    - `primec --emit=exe` of the repro runs and exits with the VM's code, with the owner's choice of option written in docs/spec/vm-design.md (Real calls) and this leaf's result
-    - full release gate green
-  - stop_rule: `Function` signatures with a struct, `Reference` or struct result on the scalar-ABI targets; no change to the address ABI targets.
-  - repro: a program with `[struct] State { [i32 mut] total{0i32} }`, `[struct] Event { [i32] x{0i32} [i32] y{0i32} }` and `[Function<void, Reference<State>, Event> mut] handler` called as `handler(state, event)`: `primec --emit=exe` fails as above, `--emit=vm` and `--emit=native` run it.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai
