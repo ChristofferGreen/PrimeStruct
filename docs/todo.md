@@ -127,7 +127,7 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | blocked | wasm-concurrency |
-| TODO-6320 | Wasm runs a spawned task inline and accepts the task effect | ready | wasm-concurrency |
+| TODO-6320 | Wasm runs a spawned task inline and accepts the task effect | in_progress | wasm-concurrency |
 | TODO-6321 | Wasm runs the `Atomic` opcodes as plain memory operations | blocked | wasm-concurrency |
 | TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | blocked | wasm-concurrency |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -451,9 +451,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the programs that block are refused with a message that names Wasm, with matrix coverage
   - stop_rule: closing the three leaves; no change to the VM or native task models.
 
-- [ ] TODO-6320: Wasm runs a spawned task inline and accepts the task effect
+- [~] TODO-6320: Wasm runs a spawned task inline and accepts the task effect
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
   - created_at: 2026-11-27
   - phase: Correctness audit 2026-10 (split from TODO-6128)
   - parallel_track: wasm-concurrency
