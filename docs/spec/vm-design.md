@@ -171,10 +171,10 @@
   into a full queue, a receive from an empty one, or any wait on a condition whose predicate is false); a program whose
   run reaches one needs a switch to another task, which one thread cannot make, so its answer depends on the
   interleaving and Wasm refuses it. The refusal is raised at the blocking site when the run reaches it (exit code 3 and
-  a message that begins `wasm:` and names the single-threaded run and the opcode; TODO-6322 emits it), never by running
+  a message that begins `wasm:` and names the single-threaded run and the opcode), never by running
   on silently, so the refusal never changes a result. `wasm-browser` has no effect bits at all and refuses every task
-  program. Atomics, mutexes, conditions and channels follow in TODO-6321 and TODO-6322 (`Atomic` operations as plain
-  memory operations, a `Channel` as the queue of its stdlib source).
+  program. Atomics are plain memory operations (Atomics), and locks, conditions and `Channel` run as described under
+  Mutexes and Conditions.
 - **Atomics (PSIR v35):** five opcodes work on one slot through its address, all sequentially consistent. The
   immediate is the width, 32 or 64 (anything else is invalid IR); the address is pushed first.
 
@@ -255,9 +255,13 @@
   blocked and round counts of `optexe`'s `OptCppWaitRuntime`, so a wait that can never finish is `deadlock: every
   task is waiting` there too (`src/native_emitter/NativeEmitterInternalsArm64Sync.h`; the entry function of a module
   with a lock or condition opcode writes the static initializers of the gate and the condition variable, and its
-  tasks count themselves as live and signal when they end). IR validation accepts the opcodes for the VM, serialized
-  IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `mutex operations are not supported by
-  the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `lock` is `1 << 14`.
+  tasks count themselves as live and signal when they end). The WASI profile of Wasm (TODO-6322) runs them on one thread,
+  as the VM's step kernel does where one call stack runs: `MutexLock` of a free lock stores 1 in the slot, `MutexUnlock`
+  of a lock that is not held is the VM's fault (`mutex unlocked by a task that does not hold it`), and `MutexLock` of a
+  lock that is held is a blocking site (below), because with one thread nobody can free it. IR validation accepts the
+  opcodes for the VM, serialized IR, the C++ emitters, arm64 native and the WASI profile and rejects them for the rest:
+  `mutex operations are not supported by the wasm-browser backend` (`glsl`; native on a host that is not arm64 macOS). The
+  effect mask bit of `lock` is `1 << 14`; the WASI profile accepts it.
 - **Function addresses (PSIR v42):** `FunctionAddress f` pushes the address of function `f`, which is `f + 1`, so that
   0 names no function; its immediate is an index into `IrModule::functions`, so the IR link renumbers it and a function
   that only an address names stays in the module (the link and the reachability walks use the operand class
@@ -364,10 +368,18 @@
   count has changed, and a notify adds one and signals when a thread sleeps (`OptCppConditionRuntime` in
   `src/backend/IrToOptCppRuntime.h`, pasted only into a module with condition opcodes, so other programs are
   unchanged). A thread that sleeps for a notify counts as waiting (Tasks on threads, below). arm64 native sleeps a condition
-  waiter on the same program-wide condition variable (the slot counts the notifies). IR validation accepts the
-  opcodes for the VM, serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL before it
-  looks at the atomic and mutex opcodes of the same module: `channel operations are not supported by the wasm
-  backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit of `channel` is `1 << 15`.
+  waiter on the same program-wide condition variable (the slot counts the notifies). The WASI profile of Wasm
+  (TODO-6322) runs `ConditionNotify` as a check of its address (it wakes nobody) and `ConditionWait` as a check that the
+  caller holds the lock (`condition wait by a task that does not hold the lock`) followed by a blocking site: a wait can
+  never be notified when one thread runs every task, so it ends the program with exit code 3 and the message `wasm: a
+  task would wait for a condition (ConditionWait): Wasm runs every task to its end at its spawn, so this program needs
+  another thread` (a held `MutexLock` ends it the same way with `... for a lock that is held (MutexLock) ...`); the
+  VM's `deadlock: every task is waiting` is the same situation where no other task can run. This is the refusal of the
+  interleaving rule (Tasks, Wasm): a `Channel` is its stdlib queue, whose send and receive never reach a wait while the
+  queue is neither full nor empty. IR validation accepts the opcodes for the VM, serialized IR, the C++ emitters, arm64
+  native and the WASI profile and rejects them for the rest before it looks at the atomic and mutex opcodes of the same
+  module: `channel operations are not supported by the wasm-browser backend` (`glsl`; native on a host that is not arm64
+  macOS). The effect mask bit of `channel` is `1 << 15`; the WASI profile accepts it.
 - **Tasks in a debug session (`VmDebugSession`, `--debug-json`, `--debug-dap`):** a program that spawns tasks runs in
   a debug session on the deterministic scheduler above (eager, or the seed of `setScheduleSeed` / `--vm-schedule-seed`),
   one instruction or one scheduler opcode per step, with the same results, output and exit code as a plain run. A debug

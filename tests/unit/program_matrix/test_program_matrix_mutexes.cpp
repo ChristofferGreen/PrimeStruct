@@ -10,6 +10,16 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.mutexes");
 
 namespace {
 
+// The programs of this file the Wasm config runs (TODO-6322).
+const std::vector<std::string> WasmPrograms = {"mutex_locked_again",
+                                               "mutex_locked_values",
+                                               "mutex_made_from_local",
+                                               "mutex_namespace_struct_body",
+                                               "mutex_tally",
+                                               "mutex_vector_append",
+                                               "mutex_vector_from_elements",
+                                               "init_builtin_vector_slot"};
+
 void runMutexProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
@@ -31,6 +41,7 @@ void runMutexProgram(program_matrix::ProgramCase program) {
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
   }
+  program_matrix::addWasmConfigIf(program, configs, WasmPrograms);
   program_matrix::runProgramMatrix(program, configs);
 }
 
@@ -45,11 +56,13 @@ std::filesystem::path writeSource(const std::string &name, const std::string &so
 }
 
 // What `primec --emit=<kind>` says about `source`.
-program_matrix::Outcome
-compileFor(const std::string &name, const std::string &kind, const std::string &source) {
+program_matrix::Outcome compileFor(const std::string &name,
+                                   const std::string &kind,
+                                   const std::string &source,
+                                   const std::string &flags = "") {
   const std::filesystem::path sourcePath = writeSource(name, source);
   const std::filesystem::path outPath = sourcePath.parent_path() / (name + "." + kind + ".out.bin");
-  return program_matrix::runCaptured("./primec --emit=" + kind + " " +
+  return program_matrix::runCaptured("./primec --emit=" + kind + flags + " " +
                                          program_matrix::quote(sourcePath.string()) + " -o " +
                                          program_matrix::quote(outPath.string()),
                                      sourcePath.parent_path() / (name + "." + kind));
@@ -354,6 +367,9 @@ main() {
   program.exitCode = 3;
   program.stdoutText = "";
   program.vmStderr = "VM error: mutex locked again by the task that holds it\n";
+  // One thread cannot tell a lock another task holds from one its own caller holds: the lock is a blocking site.
+  program.wasmStderr = "wasm: a task would wait for a lock that is held (MutexLock): Wasm runs "
+                       "every task to its end at its spawn, so this program needs another thread\n";
   runMutexProgram(program);
 }
 
@@ -445,15 +461,15 @@ main() {
   runMutexProgram(program);
 }
 
-TEST_CASE("the Wasm backend rejects a program with a mutex by name") {
+TEST_CASE("the browser Wasm profile rejects a program with a mutex by name") {
   if (program_matrix::corpusOnly()) {
     return; // not a concurrent program run (TODO-5900)
   }
-  // Making a mutex stores its lock and handle count with atomic opcodes, which the WASI profile runs (TODO-6321), so
-  // the first refusal is the lock opcode (TODO-6322 runs it).
-  const program_matrix::Outcome wasm = compileFor("mutex_rejected_wasm", "wasm", SmallMutexProgram);
+  // Making a mutex stores its lock and handle count with atomic opcodes, which this profile meets first.
+  const program_matrix::Outcome wasm = compileFor(
+      "mutex_rejected_wasm_browser", "wasm", SmallMutexProgram, " --wasm-profile browser");
   CHECK(wasm.exitCode != 0);
-  CHECK_MESSAGE(wasm.err.find("mutex operations are not supported by the wasm backend") !=
+  CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm-browser backend") !=
                     std::string::npos,
                 wasm.err);
 }

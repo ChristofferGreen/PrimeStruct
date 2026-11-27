@@ -431,6 +431,12 @@ struct WasmRuntimeContext {
   // a slot or the aligned bytes of a byte region; without byte regions an atomic cell is a slot (`slotAddress`).
   bool hasAtomics = false;
   uint32_t atomicCellFunction = 0;
+  // The module has lock or condition opcodes: `syncFault` (type (i32) -> ()) writes message `which` and ends the program
+  // with exit code 3 (WasmEmitterSync.cpp).
+  bool hasSync = false;
+  uint32_t syncFaultFunction = 0;
+  uint32_t syncMessageAddr[4] = {0, 0, 0, 0};
+  uint32_t syncMessageLength[4] = {0, 0, 0, 0};
   uint32_t growShadowStackFunction = 0;
   uint32_t stackOverflowMessageAddr = 0;
   uint32_t stackOverflowMessageLength = 0;
@@ -843,6 +849,16 @@ void emitWasmIndirectStore(uint32_t valueLocal,
                            std::vector<uint8_t> &out);
 // The code of the helper `slotAddress` (type (i64) -> i32).
 WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime);
+// The code of the helper `syncFault` (type (i32) -> ()).
+WasmCodeBody buildWasmSyncFaultHelperBody(const WasmRuntimeContext &runtime);
+// The messages of `syncFault`, indexed by its argument.
+const std::string &wasmSyncMessage(size_t which);
+// The lock and condition opcodes on one thread: `first` is the i32 local that holds the memory address of the lock (a
+// wait checks that its caller holds it; the condition cell is only checked to be a valid address).
+void emitWasmSyncOperation(IrOpcode op,
+                           std::vector<uint8_t> &out,
+                           const WasmRuntimeContext &runtime,
+                           uint32_t first);
 // The code of the helper `atomicCell` (type (i64) -> i32): the memory address of the cell an atomic opcode names.
 WasmCodeBody buildWasmAtomicCellHelperBody(const WasmRuntimeContext &runtime);
 // The code of the helper `statFault` (type (i64) -> ()): the VM's unknown-statistic message with the number it was

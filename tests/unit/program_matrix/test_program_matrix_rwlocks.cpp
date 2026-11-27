@@ -9,6 +9,9 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.rwlocks");
 
 namespace {
 
+// The programs of this file the Wasm config runs (TODO-6322).
+const std::vector<std::string> WasmPrograms = {"rwlock_no_torn_reads"};
+
 void runRwLockProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
@@ -30,6 +33,7 @@ void runRwLockProgram(program_matrix::ProgramCase program) {
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
   }
+  program_matrix::addWasmConfigIf(program, configs, WasmPrograms);
   program_matrix::runProgramMatrix(program, configs);
 }
 

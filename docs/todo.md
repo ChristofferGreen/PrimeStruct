@@ -126,9 +126,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | blocked | wasm-concurrency |
 | TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | ready | inline-task-lowering |
-| TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | in_progress | wasm-concurrency |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -168,7 +166,7 @@ of sync with them.
 - Effects (docs/spec/language-core.md, Effects): option B (an unannotated callee declares the default set) landed with `effects(none)`, the annotated stdlib and the call-site rule; deferred TODO-6231 (inference, optional, not needed by the decision)
 - Build system (docs/BuildSystemPlan.md; after the startup lane): TODO-6019
 - Modules and libraries (docs/ModulesAndLibrariesPlan.md; after the startup lane): TODO-5933 (`ScriptEngine::addLibrary`) and TODO-6216 (the source-hash compiler build id) landed; TODO-6218 (a link merges only the functions the program reaches) landed; TODO-6217 (`Script::libraries()` and the records in the bytecode) landed; deferred TODO-6219 (the check of the records at load, the options wait for the owner); TODO-6032 (`string` and `Pointer<T>` results) landed; deferred TODO-5932 (back-end code in libraries:  measured the library part of `/std/http` at 0.55 to 0.6 s, under the owner's 1 s trigger, so B does not pay yet; TODO-6276 `optexe` unit and TODO-6277 native stay deferred), TODO-6173 (a borrowed sum parameter, refused as a library root with its rule named) landed, TODO-6213 (the named refusal of sum, `Result` and error struct results) landed, TODO-6222 (a public `[sum]` in the interface and a sum result, option A) landed, TODO-6214 (`vector<T>` results), TODO-6215 (collections-root rule for library roots) and TODO-6223 (packed `Result` and error struct results) landed
-- Backend parity:  (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths), TODO-6128 (Wasm concurrency)
+- Backend parity:  (Wasm control-flow pattern of two file programs) (Wasm `PrintArgv` fault text); deferred TODO-6182 (Wasm file open errors) (Wasm string heap, byte operations, literals, arguments and `LoadStringLength` landed), TODO-6180 (Wasm text formatting and parsing of floats), TODO-6059, TODO-6051, TODO-6142 (Linux recursion depths) (Wasm concurrency)
 - Frontend and diagnostics (split from TODO-5520): deferred TODO-6081, TODO-6082, TODO-6085 (a different receiver text in worker query facts), TODO-6207 (the bare `push` on a stdlib `Vector` has no position)
 - Fused `fma` (IR opcodes `FmaF32` and `FmaF64`, done on the VM, the C++ emitters, arm64 native and GLSL): deferred TODO-6067 (x86_64 native FMA3, needs an x86_64 machine) (Wasm exact emulation)
 - macOS support: TODO-5545 (needs macOS)
@@ -433,38 +431,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
-
-- [ ] TODO-6128: Wasm refuses tasks, atomics, channels and the lock effect
-  - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6322
-  - created_at: 2026-11-20
-  - phase: Correctness audit 2026-10 (found with TODO-6090)
-  - parallel_track: wasm-concurrency
-  - depends_on: TODO-6320, TODO-6321, TODO-6322
-  - decision (owner, 2026-11-27): the single-threaded Wasm lowering: a task runs inline at its `spawn` (as x86_64 native runs them), `Atomic` operations are plain memory operations, and a `Channel` is a queue. Programs whose answer depends on interleaving stay refused with a diagnostic that names Wasm.
-  - interleaving rule (2026-11-27, goes into docs/spec/vm-design.md with TODO-6320): the VM's default schedule is eager, so a spawned task runs until it ends or blocks and its spawner then continues; a program whose tasks never block therefore prints and returns exactly what the inline run does. A task blocks at exactly two places: a `MutexLock` of a lock another task holds, and a `ConditionWait` (a `Channel` send into a full queue or receive from an empty one reaches it, as does any wait on a condition whose predicate is false). A program that reaches one of them needs a switch to another task, which a single-threaded run has not got, so it depends on interleaving and Wasm refuses it: the lock opcode and the wait opcode end the program with exit code 3 and a message that begins `wasm:` and names the single-threaded run and the opcode. A program is accepted when no run of it reaches a blocking site, which is a property of the run, not of the source: the refusal is raised at the blocking site when it is reached, never silently run, and it never changes a result. A `TaskWait` never blocks (the task has ended at its spawn), nor does a `ConditionNotify`, an `AtomicLoad`/`Store`/`Add`/`Exchange`/`CompareExchange` or a `MutexLock` of a free lock.
-  - scope: umbrella of TODO-6320 (tasks), TODO-6321 (atomics) and TODO-6322 (locks, conditions and channels), in this order. Matrix programs refused by Wasm because it has no concurrency: 32 concurrent programs (the `task_*` ones among them) with `invalid IR function /main: unsupported effect mask bits for wasm target`, 18 atomics programs (`atomic operations are not supported by the wasm backend`) and 16 channel programs (`channel operations are not supported by the wasm backend`), counted on 2026-11-20 with the Wasm config of TODO-6090.
-  - acceptance:
-    - the three leaves are done and the matrix programs that never block run on the Wasm config
-    - the programs that block are refused with a message that names Wasm, with matrix coverage
-  - stop_rule: closing the three leaves; no change to the VM or native task models.
-
-- [~] TODO-6322: Wasm runs locks, conditions and channels single-threaded and refuses a blocking site
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
-  - created_at: 2026-11-27
-  - phase: Correctness audit 2026-10 (split from TODO-6128)
-  - parallel_track: wasm-concurrency
-  - depends_on: TODO-6320, TODO-6321
-  - scope: `MutexLock`, `MutexUnlock`, `ConditionWait` and `ConditionNotify` on `wasm-wasi` (docs/spec/vm-design.md, Mutexes and Conditions), which `Mutex<T>.locked` and `Channel<T>` of `/std/sync` lower to, and the `lock` and `channel` effect bits. `MutexLock` of a free lock takes it, `MutexUnlock` frees it with the VM's fault for a lock that is free, `ConditionNotify` does nothing. `MutexLock` of a held lock and every `ConditionWait` are the blocking sites of the interleaving rule (TODO-6128): the program ends with exit code 3 and a `wasm:` message that names the single-threaded run and the opcode. The condition validation rule (`channel operations are not supported by the wasm backend`) stays for `wasm-browser`.
-  - acceptance:
-    - `Mutex` and `Channel` matrix programs whose tasks never block (a producer that sends no more than the capacity before the consumer receives) run on `wasm-wasi` with the VM's result
-    - a program that blocks (a receive from an empty channel, a send into a full one, a lock held across a spawn that takes it) exits with code 3 and the message of the rule, with matrix coverage and a doc line in docs/spec/vm-design.md
-    - full release gate green
-  - stop_rule: the four opcodes and the `lock` and `channel` effect bits on `wasm-wasi`.
-  - repro: a `Channel<i32>` program of the matrix: `--emit=wasm --wasm-profile wasi` reports `channel operations are not supported by the wasm backend: ConditionWait` (2026-11-27).
 
 - [ ] TODO-6323: A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks
   - owner: ai

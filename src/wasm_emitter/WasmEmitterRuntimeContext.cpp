@@ -139,6 +139,9 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::HeapAllocBytes) {
         runtime.hasBytes = true;
       }
+      runtime.hasSync = runtime.hasSync || inst.op == IrOpcode::MutexLock ||
+                        inst.op == IrOpcode::MutexUnlock || inst.op == IrOpcode::ConditionWait ||
+                        inst.op == IrOpcode::ConditionNotify;
       runtime.hasAtomics = runtime.hasAtomics || inst.op == IrOpcode::AtomicLoad ||
                            inst.op == IrOpcode::AtomicStore || inst.op == IrOpcode::AtomicAdd ||
                            inst.op == IrOpcode::AtomicExchange ||
@@ -403,6 +406,13 @@ bool buildWasiRuntimeContext(const IrModule &module,
           ReallocMessage, runtime.heapReallocMessageAddr, runtime.heapReallocMessageLength);
       appendMessage(
           OverflowMessage, runtime.heapOverflowMessageAddr, runtime.heapOverflowMessageLength);
+    }
+    if (runtime.hasSync) {
+      for (size_t which = 0; which < 4; ++which) {
+        appendMessage(wasmSyncMessage(which),
+                      runtime.syncMessageAddr[which],
+                      runtime.syncMessageLength[which]);
+      }
     }
     appendMessage(UnalignedMessage, runtime.unalignedMessageAddr, runtime.unalignedMessageLength);
     appendMessage(InvalidMessage, runtime.invalidMessageAddr, runtime.invalidMessageLength);

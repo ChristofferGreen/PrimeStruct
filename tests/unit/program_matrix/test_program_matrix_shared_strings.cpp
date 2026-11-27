@@ -34,14 +34,8 @@ void runSharedStringProgram(program_matrix::ProgramCase program) {
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
   }
-  // The WASI profile runs the atomics as plain memory operations on one thread (TODO-6321): the programs that never
-  // block agree with the VM under node.
-  if (program_matrix::listed(WasmPrograms, program.name)) {
-    program_matrix::ExecutionConfig wasm{"wasm-wasi", program_matrix::Backend::Wasm, 0, true};
-    wasm.optIn = true;
-    configs.push_back(wasm);
-    program.onlyConfigs.push_back("wasm-wasi");
-  }
+  // The WASI profile runs the programs of the list on one thread (docs/spec/vm-design.md, Tasks, Wasm).
+  program_matrix::addWasmConfigIf(program, configs, WasmPrograms);
   program_matrix::runProgramMatrix(program, configs);
 }
 

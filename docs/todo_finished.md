@@ -2549,6 +2549,7 @@ are left unarchived.
 | TODO-6125 | Integer division by zero under the WASI profile ends with `proc_exit(3)` and the VM's message | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6126 | `convert<i32>(round(x))` is "wasm emitter unsupported control-flow pattern" | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6127 | Wasm refuses u8 and byte memory opcodes and host calls | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6129 | Assigning a value of another scalar type to a scalar local or through a `Reference` is accepted | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
 | TODO-6130 | An unknown type inside a templated return type is not named | [2026-11.md](todo_archive/2026-11.md) | 2026-11-21 |
 | TODO-6132 | Gate entries that pass alone but fail in the gate (watchdog silence or hard cap) | [2026-11.md](todo_archive/2026-11.md) | 2026-11-20 |
@@ -2726,6 +2727,7 @@ are left unarchived.
 | TODO-6319 | arm64 native does not check the callee's parameter count on `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6320 | Wasm runs a spawned task inline and accepts the task effect | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6321 | Wasm runs the `Atomic` opcodes as plain memory operations | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

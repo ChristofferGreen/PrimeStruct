@@ -337,6 +337,8 @@ TEST_CASE("the wasm and glsl targets (and native off arm64 macOS) reject a modul
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Serialized, error), error);
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Cpp, error), error);
+  // The WASI profile runs the opcodes on one thread (TODO-6322).
+  CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Wasm, error), error);
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
   CHECK_MESSAGE(validateIrModule(module, IrValidationTarget::Native, error), error);
 #endif
@@ -344,7 +346,6 @@ TEST_CASE("the wasm and glsl targets (and native off arm64 macOS) reject a modul
 #if !(defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__)))
       {IrValidationTarget::Native, "native"},
 #endif
-      {IrValidationTarget::Wasm, "wasm"},
       {IrValidationTarget::WasmBrowser, "wasm-browser"},
       {IrValidationTarget::Glsl, "glsl"},
   };

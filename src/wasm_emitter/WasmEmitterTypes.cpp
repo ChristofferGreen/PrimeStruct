@@ -462,6 +462,32 @@ static bool emitFrameLoadLocal(const IrInstruction &inst,
   return true;
 }
 
+// The lock and condition opcodes on one thread (docs/spec/vm-design.md, Mutexes and Conditions): the operands are slot
+// addresses (a wait pops the lock, then the condition), each checked by `slotAddress`; WasmEmitterSync.cpp has what the
+// opcode does with them.
+static bool emitSyncOperation(const IrInstruction &inst,
+                              WasmLocalLayout &layout,
+                              const WasmRuntimeContext &runtime,
+                              std::vector<uint8_t> &out,
+                              std::string &error,
+                              const std::string &fn) {
+  const size_t operands = inst.op == IrOpcode::ConditionWait ? 2 : 1;
+  if (!coerceOperands(layout, std::vector<uint8_t>(operands, WasmTypeI64), out, error, fn)) {
+    return false;
+  }
+  WasmAsm a(out);
+  const uint32_t first = acquireScratch(layout, WasmTypeI32);
+  a.call(runtime.slotAddressFunction);
+  a.localSet(first);
+  if (operands == 2) {
+    a.call(runtime.slotAddressFunction);
+    a.drop();
+  }
+  popTypes(layout, operands);
+  emitWasmSyncOperation(inst.op, out, runtime, first);
+  return true;
+}
+
 // The five atomic opcodes (docs/spec/vm-design.md, Atomics) as plain memory operations: a module has one thread, so
 // each is its load and store on the 8 byte cell, the address checked by `atomicCell` (or `slotAddress` without byte
 // regions). The operands are the address and then `valueCount` values (the stack holds them bottom to top); a 32-bit
@@ -976,6 +1002,11 @@ bool emitTypedInstruction(const IrInstruction &inst,
   case IrOpcode::AtomicExchange:
   case IrOpcode::AtomicCompareExchange:
     return emitAtomicOperation(inst, localLayout, runtime, out, error, functionName);
+  case IrOpcode::MutexLock:
+  case IrOpcode::MutexUnlock:
+  case IrOpcode::ConditionWait:
+  case IrOpcode::ConditionNotify:
+    return emitSyncOperation(inst, localLayout, runtime, out, error, functionName);
   case IrOpcode::CallIndirect:
   case IrOpcode::CallIndirectVoid:
     return emitIndirectCall(inst, localLayout, functionTypes, runtime, out, error, functionName);

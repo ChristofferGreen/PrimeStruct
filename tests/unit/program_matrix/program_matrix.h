@@ -463,6 +463,20 @@ inline void listWasmIf(ProgramCase &program, const std::vector<std::string> &was
   (program.onlyConfigs.empty() ? program.extraConfigs : program.onlyConfigs).push_back("wasm-wasi");
 }
 
+// For a runner that builds its own config list (`runProgramMatrix(program, configs)`): adds the Wasm config to `configs`
+// and `onlyConfigs` when the program's name is in `wasmPrograms`.
+inline void addWasmConfigIf(ProgramCase &program,
+                            std::vector<ExecutionConfig> &configs,
+                            const std::vector<std::string> &wasmPrograms) {
+  if (!listed(wasmPrograms, program.name)) {
+    return;
+  }
+  ExecutionConfig wasm{"wasm-wasi", Backend::Wasm, 0, true};
+  wasm.optIn = true;
+  configs.push_back(wasm);
+  program.onlyConfigs.push_back("wasm-wasi");
+}
+
 // Runs the program through the configs. The caller's doctest case reports each
 // config separately through INFO/CHECK.
 inline void runProgramMatrix(const ProgramCase &listedProgram,

@@ -8531,7 +8531,7 @@ Total: 11696 test cases across 679 files.
 - a sender waiting on a full channel faults when the channel is closed
 - a task receiving from a channel nobody sends on is the deadlock fault
 - a struct of a namespace is a Channel, Mutex and vector element without its path
-- the Wasm backend rejects a program with a channel by name
+- the browser Wasm profile rejects a program with a channel by name
 
 ### test_program_matrix_closures.cpp
 
@@ -8828,7 +8828,7 @@ Total: 11696 test cases across 679 files.
 - locking a mutex again inside its own body faults
 - two tasks locking two mutexes in opposite order deadlock on a VM seed that interleaves them
 - a locked body names a struct of its namespace
-- the Wasm backend rejects a program with a mutex by name
+- the browser Wasm profile rejects a program with a mutex by name
 - init of a builtin vector into uninitialized storage stores the whole record
 - a Mutex made from a non-empty vector reads its elements back
 

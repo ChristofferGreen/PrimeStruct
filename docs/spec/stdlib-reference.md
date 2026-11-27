@@ -1323,8 +1323,9 @@ This prints `7` on the VM, under every schedule seed, and on `optexe`.
 - Locking a mutex again inside its own body ends the program with `mutex locked again by the task that holds it`
   (exit code 3). Two tasks that lock two mutexes in opposite orders can wait for each other for ever: the VM
   ends the program with `deadlock: every task is waiting` (exit code 3).
-- The lock and unlock are IR opcodes (docs/spec/vm-design.md, Mutexes); native, Wasm and GLSL reject the program
-  with `mutex operations are not supported by the native backend`.
+- The lock and unlock are IR opcodes (docs/spec/vm-design.md, Mutexes); GLSL, the browser Wasm profile and native off arm64 macOS reject
+  the program with `mutex operations are not supported by the <backend> backend`; the WASI profile of Wasm runs them on one
+  thread (a lock another task holds is a blocking site that ends the program with exit code 3).
 
 `RwLock<T>` is a `Mutex<T>` that lets tasks read together (docs/MultithreadingPrototype.md, RwLock).
 `RwLock<Tally>{Tally{}}` makes one holding a copy of the value; it is a sendable handle like `Mutex`. `read(body)`
@@ -1418,8 +1419,10 @@ This prints `4950` on the VM, under every schedule seed, and on `optexe`.
   the payload when the `pick` ends, unless an arm moved it out (`[String] owned{move(line)}`).
 - A task that receives from an open channel nobody sends on waits for ever: the VM and `optexe` end the program
   with `deadlock: every task is waiting` (exit code 3) once every task waits.
-- The waits are IR opcodes (docs/spec/vm-design.md, Conditions); native, Wasm and GLSL reject the program with
-  `channel operations are not supported by the native backend`.
+- The waits are IR opcodes (docs/spec/vm-design.md, Conditions); GLSL, the browser Wasm profile and native off arm64 macOS reject the
+  program with `channel operations are not supported by the <backend> backend`; the WASI profile of Wasm runs a `Channel`
+  on one thread: a send and a receive that find room or a value never wait, and one that would wait ends the program with
+  exit code 3 and a message that begins `wasm:`.
 
 ### JSON writer (`/std/json`)
 

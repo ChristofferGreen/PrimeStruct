@@ -176,10 +176,10 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(AtomicAdd, Sync, None, None, 0, 1, 0)                                                          \
   X(AtomicExchange, Sync, None, None, 0, 1, 0)                                                     \
   X(AtomicCompareExchange, Sync, None, None, 0, 1, 0)                                              \
-  X(MutexLock, Sync, None, None, 0, 0, 0)                                                          \
-  X(MutexUnlock, Sync, None, None, 0, 0, 0)                                                        \
-  X(ConditionWait, Sync, None, None, 0, 0, 0)                                                      \
-  X(ConditionNotify, Sync, None, None, 0, 0, 0)                                                    \
+  X(MutexLock, Sync, None, None, 0, 1, 0)                                                          \
+  X(MutexUnlock, Sync, None, None, 0, 1, 0)                                                        \
+  X(ConditionWait, Sync, None, None, 0, 1, 0)                                                      \
+  X(ConditionNotify, Sync, None, None, 0, 1, 0)                                                    \
   X(FmaF32, Other, None, F32, 1, 1, 1)                                                             \
   X(FmaF64, Other, None, F64, 1, 1, 1)                                                             \
   X(FunctionAddress, Other, None, U64, 0, 1, 1)                                                    \

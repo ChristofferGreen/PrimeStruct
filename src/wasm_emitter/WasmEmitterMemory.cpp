@@ -179,7 +179,9 @@ bool wasmModuleUsesLocalMemory(const IrModule &module) {
           inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||
           inst.op == IrOpcode::HeapRealloc || inst.op == IrOpcode::AtomicLoad ||
           inst.op == IrOpcode::AtomicStore || inst.op == IrOpcode::AtomicAdd ||
-          inst.op == IrOpcode::AtomicExchange || inst.op == IrOpcode::AtomicCompareExchange) {
+          inst.op == IrOpcode::AtomicExchange || inst.op == IrOpcode::AtomicCompareExchange ||
+          inst.op == IrOpcode::MutexLock || inst.op == IrOpcode::MutexUnlock ||
+          inst.op == IrOpcode::ConditionWait || inst.op == IrOpcode::ConditionNotify) {
         return true;
       }
     }

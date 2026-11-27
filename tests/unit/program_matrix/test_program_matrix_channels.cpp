@@ -30,6 +30,13 @@ void runOn(program_matrix::ProgramCase program,
   program_matrix::runProgramMatrix(program, configs);
 }
 
+// The programs of this file the Wasm config runs: no task of theirs blocks on one thread, or the blocking site is the
+// fault the program expects (TODO-6322).
+const std::vector<std::string> WasmPrograms = {"channel_close_wakes_sender",
+                                               "channel_namespace_struct_element",
+                                               "channel_receive_deadlock",
+                                               "channel_send_closed"};
+
 void runChannelProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
@@ -45,6 +52,11 @@ void runChannelProgram(program_matrix::ProgramCase program) {
     configs.push_back(std::move(config));
   }
   configs.push_back(program_matrix::vmThreadsConfig());
+  if (program_matrix::listed(WasmPrograms, program.name)) {
+    program_matrix::ExecutionConfig wasm{"wasm-wasi", program_matrix::Backend::Wasm, 0, true};
+    wasm.optIn = true;
+    configs.push_back(wasm);
+  }
   runOn(std::move(program), std::move(configs));
 }
 
@@ -59,11 +71,13 @@ std::filesystem::path writeSource(const std::string &name, const std::string &so
 }
 
 // What `primec --emit=<kind>` says about `source`.
-program_matrix::Outcome
-compileFor(const std::string &name, const std::string &kind, const std::string &source) {
+program_matrix::Outcome compileFor(const std::string &name,
+                                   const std::string &kind,
+                                   const std::string &source,
+                                   const std::string &flags = "") {
   const std::filesystem::path sourcePath = writeSource(name, source);
   const std::filesystem::path outPath = sourcePath.parent_path() / (name + "." + kind + ".out.bin");
-  return program_matrix::runCaptured("./primec --emit=" + kind + " " +
+  return program_matrix::runCaptured("./primec --emit=" + kind + flags + " " +
                                          program_matrix::quote(sourcePath.string()) + " -o " +
                                          program_matrix::quote(outPath.string()),
                                      sourcePath.parent_path() / (name + "." + kind));
@@ -567,6 +581,9 @@ main() {
   program.exitCode = 3;
   program.stdoutText = "";
   program.vmStderr = "VM error: deadlock: every task is waiting\n";
+  // One thread cannot wait for another task: the receive is a blocking site of the single-threaded run.
+  program.wasmStderr = "wasm: a task would wait for a condition (ConditionWait): Wasm runs every "
+                       "task to its end at its spawn, so this program needs another thread\n";
   runChannelProgram(program);
 }
 
@@ -629,14 +646,14 @@ main() {
   runChannelProgram(program);
 }
 
-TEST_CASE("the Wasm backend rejects a program with a channel by name") {
+TEST_CASE("the browser Wasm profile rejects a program with a channel by name") {
   if (program_matrix::corpusOnly()) {
     return; // not a concurrent program run (TODO-5900)
   }
-  const program_matrix::Outcome wasm =
-      compileFor("channel_rejected_wasm", "wasm", SmallChannelProgram);
+  const program_matrix::Outcome wasm = compileFor(
+      "channel_rejected_wasm_browser", "wasm", SmallChannelProgram, " --wasm-profile browser");
   CHECK(wasm.exitCode != 0);
-  CHECK_MESSAGE(wasm.err.find("channel operations are not supported by the wasm backend") !=
+  CHECK_MESSAGE(wasm.err.find("channel operations are not supported by the wasm-browser backend") !=
                     std::string::npos,
                 wasm.err);
 }

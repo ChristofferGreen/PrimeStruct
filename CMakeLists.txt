@@ -711,6 +711,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/wasm_emitter/WasmEmitterFileErrno.cpp
   src/wasm_emitter/WasmEmitterFma.cpp
   src/wasm_emitter/WasmEmitterIndirect.cpp
+  src/wasm_emitter/WasmEmitterSync.cpp
   src/wasm_emitter/WasmEmitterFunctionBodies.cpp
   src/wasm_emitter/WasmEmitterMemory.cpp
   src/wasm_emitter/WasmEmitterHeap.cpp
