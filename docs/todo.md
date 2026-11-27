@@ -126,7 +126,7 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | ready | inline-task-lowering |
+| TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | in_progress | inline-task-lowering |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -432,9 +432,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
 
-- [ ] TODO-6323: A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks
+- [~] TODO-6323: A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worktree-agent-a213ffcd5ee7fe4e2, 2026-11-27
   - created_at: 2026-11-27
   - phase: Correctness audit 2026-10 (found with TODO-6320)
   - parallel_track: inline-task-lowering
