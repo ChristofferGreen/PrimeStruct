@@ -171,11 +171,11 @@ enum class IrOpResult : uint8_t { None, Bool, I32, I64, U64, F32, F64 };
   X(Trap, Trap, None, None, 0, 1, 1)                                                               \
   X(TaskSpawn, Sync, None, None, 0, 0, 0)                                                          \
   X(TaskWait, Sync, None, None, 0, 0, 0)                                                           \
-  X(AtomicLoad, Sync, None, None, 0, 0, 0)                                                         \
-  X(AtomicStore, Sync, None, None, 0, 0, 0)                                                        \
-  X(AtomicAdd, Sync, None, None, 0, 0, 0)                                                          \
-  X(AtomicExchange, Sync, None, None, 0, 0, 0)                                                     \
-  X(AtomicCompareExchange, Sync, None, None, 0, 0, 0)                                              \
+  X(AtomicLoad, Sync, None, None, 0, 1, 0)                                                         \
+  X(AtomicStore, Sync, None, None, 0, 1, 0)                                                        \
+  X(AtomicAdd, Sync, None, None, 0, 1, 0)                                                          \
+  X(AtomicExchange, Sync, None, None, 0, 1, 0)                                                     \
+  X(AtomicCompareExchange, Sync, None, None, 0, 1, 0)                                              \
   X(MutexLock, Sync, None, None, 0, 0, 0)                                                          \
   X(MutexUnlock, Sync, None, None, 0, 0, 0)                                                        \
   X(ConditionWait, Sync, None, None, 0, 0, 0)                                                      \

@@ -11,6 +11,10 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.shared_strings");
 
 namespace {
 
+// The programs of this file the Wasm config runs: the owner count is an atomic cell in a byte region (TODO-6321).
+const std::vector<std::string> WasmPrograms = {
+    "shared_string_four_tasks", "shared_string_four_tasks_answers", "shared_string_one_block"};
+
 void runSharedStringProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
@@ -29,6 +33,14 @@ void runSharedStringProgram(program_matrix::ProgramCase program) {
   configs.push_back(program_matrix::vmThreadsConfig());
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
+  }
+  // The WASI profile runs the atomics as plain memory operations on one thread (TODO-6321): the programs that never
+  // block agree with the VM under node.
+  if (program_matrix::listed(WasmPrograms, program.name)) {
+    program_matrix::ExecutionConfig wasm{"wasm-wasi", program_matrix::Backend::Wasm, 0, true};
+    wasm.optIn = true;
+    configs.push_back(wasm);
+    program.onlyConfigs.push_back("wasm-wasi");
   }
   program_matrix::runProgramMatrix(program, configs);
 }

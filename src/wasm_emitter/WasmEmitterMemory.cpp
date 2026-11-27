@@ -177,7 +177,9 @@ bool wasmModuleUsesLocalMemory(const IrModule &module) {
           inst.op == IrOpcode::StoreIndirect || inst.op == IrOpcode::LoadU8 ||
           inst.op == IrOpcode::StoreU8 || inst.op == IrOpcode::HeapAllocBytes ||
           inst.op == IrOpcode::HeapAlloc || inst.op == IrOpcode::HeapFree ||
-          inst.op == IrOpcode::HeapRealloc) {
+          inst.op == IrOpcode::HeapRealloc || inst.op == IrOpcode::AtomicLoad ||
+          inst.op == IrOpcode::AtomicStore || inst.op == IrOpcode::AtomicAdd ||
+          inst.op == IrOpcode::AtomicExchange || inst.op == IrOpcode::AtomicCompareExchange) {
         return true;
       }
     }
@@ -361,6 +363,52 @@ WasmCodeBody buildWasmStatFaultHelperBody(const WasmRuntimeContext &runtime) {
   std::vector<uint8_t> &out = body.instructions;
   appendAddressFault(runtime.statMessageAddr, runtime.statMessageLength, runtime, out);
   out.push_back(WasmOpEnd);
+  return body;
+}
+
+// (i64 address) -> i32 memory address of the cell an atomic opcode names: a byte-region address must be a multiple of 8
+// with its 8 bytes in one live region (an unaligned one and one outside a live region fault with the indirect-address
+// messages, where the VM's atomic messages say `atomic`; the exit code is the VM's), any other address is a slot.
+WasmCodeBody buildWasmAtomicCellHelperBody(const WasmRuntimeContext &runtime) {
+  constexpr uint32_t Address = 0;
+  constexpr uint32_t Memory = 7;
+  WasmCodeBody body;
+  // The locals `appendAddressFault` uses (fd; value, rem; ptr, len, neg), then the memory address.
+  appendU32Leb(4, body.localDecls);
+  appendU32Leb(1, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  appendU32Leb(2, body.localDecls);
+  body.localDecls.push_back(WasmTypeI64);
+  appendU32Leb(3, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  appendU32Leb(1, body.localDecls);
+  body.localDecls.push_back(WasmTypeI32);
+  std::vector<uint8_t> &out = body.instructions;
+  WasmAsm a(out);
+  emitWasmIsByteAddress(a, Address);
+  a.ifThen();
+  a.localGet(Address);
+  a.i64Const(7);
+  a.i64And();
+  a.i64Eqz();
+  a.i32Eqz();
+  a.ifThen();
+  appendAddressFault(runtime.unalignedMessageAddr, runtime.unalignedMessageLength, runtime, out);
+  a.end();
+  a.localGet(Address);
+  a.i64Const(8);
+  a.call(runtime.byteFunction[static_cast<size_t>(WasmByteHelper::Span)]);
+  a.localTee(Memory);
+  a.i32Eqz();
+  a.ifThen();
+  appendAddressFault(runtime.invalidMessageAddr, runtime.invalidMessageLength, runtime, out);
+  a.end();
+  a.localGet(Memory);
+  a.ret();
+  a.end();
+  a.localGet(Address);
+  a.call(runtime.slotAddressFunction);
+  a.end();
   return body;
 }
 

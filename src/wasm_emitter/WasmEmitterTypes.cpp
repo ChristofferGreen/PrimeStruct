@@ -1,3 +1,4 @@
+#include "WasmEmitterAsm.h"
 #include "WasmEmitterHeap.h"
 #include "WasmEmitterInternal.h"
 
@@ -461,6 +462,119 @@ static bool emitFrameLoadLocal(const IrInstruction &inst,
   return true;
 }
 
+// The five atomic opcodes (docs/spec/vm-design.md, Atomics) as plain memory operations: a module has one thread, so
+// each is its load and store on the 8 byte cell, the address checked by `atomicCell` (or `slotAddress` without byte
+// regions). The operands are the address and then `valueCount` values (the stack holds them bottom to top); a 32-bit
+// width keeps the cell sign-extended like every `i32`. The result of a load, add and exchange is a slot, that of a
+// compare-exchange an `i32` 1 or 0.
+static bool emitAtomicOperation(const IrInstruction &inst,
+                                WasmLocalLayout &layout,
+                                const WasmRuntimeContext &runtime,
+                                std::vector<uint8_t> &out,
+                                std::string &error,
+                                const std::string &fn) {
+  size_t valueCount = 0;
+  switch (inst.op) {
+  case IrOpcode::AtomicStore:
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+    valueCount = 1;
+    break;
+  case IrOpcode::AtomicCompareExchange:
+    valueCount = 2;
+    break;
+  default:
+    break;
+  }
+  std::vector<uint8_t> wanted(valueCount + 1, WasmTypeUnknown);
+  wanted[0] = WasmTypeI64;
+  if (!coerceOperands(layout, wanted, out, error, fn)) {
+    return false;
+  }
+  const bool narrow = inst.imm == 32;
+  // Values from the top (the last operand) down: each becomes a raw slot in a local of its own.
+  std::vector<uint8_t> valueTypes(valueCount);
+  for (size_t k = 0; k < valueCount; ++k) {
+    valueTypes[k] = stackType(layout, k);
+  }
+  WasmAsm a(out);
+  std::vector<uint32_t> values(valueCount);
+  for (size_t k = 0; k < valueCount; ++k) {
+    emitWasmSlotConversion(valueTypes[k], WasmTypeSlot, out);
+    if (narrow) {
+      a.i32WrapI64();
+      a.i64ExtendI32S();
+    }
+    values[k] = acquireScratch(layout, WasmTypeSlot);
+    a.localSet(values[k]);
+  }
+  a.call(runtime.atomicCellFunction != 0 ? runtime.atomicCellFunction
+                                         : runtime.slotAddressFunction);
+  const uint32_t cell = acquireScratch(layout, WasmTypeI32);
+  a.localSet(cell);
+  const uint32_t before = acquireScratch(layout, WasmTypeSlot);
+  popTypes(layout, valueCount + 1);
+  const auto loadBefore = [&]() {
+    a.localGet(cell);
+    a.i64Load(0);
+    if (narrow) {
+      a.i32WrapI64();
+      a.i64ExtendI32S();
+    }
+    a.localSet(before);
+  };
+  const auto store = [&](uint32_t value) {
+    a.localGet(cell);
+    a.localGet(value);
+    a.i64Store(0);
+  };
+  switch (inst.op) {
+  case IrOpcode::AtomicLoad:
+    loadBefore();
+    a.localGet(before);
+    pushType(layout, WasmTypeSlot);
+    return true;
+  case IrOpcode::AtomicStore:
+    store(values[0]);
+    return true;
+  case IrOpcode::AtomicAdd:
+    loadBefore();
+    a.localGet(cell);
+    a.localGet(before);
+    a.localGet(values[0]);
+    a.i64Add();
+    if (narrow) {
+      a.i32WrapI64();
+      a.i64ExtendI32S();
+    }
+    a.i64Store(0);
+    a.localGet(before);
+    pushType(layout, WasmTypeSlot);
+    return true;
+  case IrOpcode::AtomicExchange:
+    loadBefore();
+    store(values[0]);
+    a.localGet(before);
+    pushType(layout, WasmTypeSlot);
+    return true;
+  default:
+    break;
+  }
+  // AtomicCompareExchange: values[0] is the desired value, values[1] the expected one.
+  loadBefore();
+  a.localGet(before);
+  a.localGet(values[1]);
+  a.i64Eq();
+  a.ifThen();
+  store(values[0]);
+  a.end();
+  a.localGet(before);
+  a.localGet(values[1]);
+  a.i64Eq();
+  pushType(layout, WasmTypeI32);
+  return true;
+}
+
 // `CallIndirect` and `CallIndirectVoid`: the stack holds the address below `imm` arguments. The arguments become raw
 // slots, the address minus one becomes the `i32` table index on top, and `call_indirect` calls the thunk that the table
 // holds there. The result is a slot that converts to the type the candidate functions return.
@@ -856,6 +970,12 @@ bool emitTypedInstruction(const IrInstruction &inst,
     appendS64Leb(static_cast<int64_t>(inst.imm) + 1, out);
     pushType(localLayout, WasmTypeI64);
     return true;
+  case IrOpcode::AtomicLoad:
+  case IrOpcode::AtomicStore:
+  case IrOpcode::AtomicAdd:
+  case IrOpcode::AtomicExchange:
+  case IrOpcode::AtomicCompareExchange:
+    return emitAtomicOperation(inst, localLayout, runtime, out, error, functionName);
   case IrOpcode::CallIndirect:
   case IrOpcode::CallIndirectVoid:
     return emitIndirectCall(inst, localLayout, functionTypes, runtime, out, error, functionName);

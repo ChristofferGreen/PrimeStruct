@@ -449,11 +449,11 @@ TEST_CASE("the Wasm backend rejects a program with a mutex by name") {
   if (program_matrix::corpusOnly()) {
     return; // not a concurrent program run (TODO-5900)
   }
-  // Making a mutex stores its lock and handle count with atomic opcodes, which this backend meets first; the
-  // mutex opcodes' own message is checked on hand-built IR in tests/unit/runtime/test_vm_mutexes.cpp.
+  // Making a mutex stores its lock and handle count with atomic opcodes, which the WASI profile runs (TODO-6321), so
+  // the first refusal is the lock opcode (TODO-6322 runs it).
   const program_matrix::Outcome wasm = compileFor("mutex_rejected_wasm", "wasm", SmallMutexProgram);
   CHECK(wasm.exitCode != 0);
-  CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm backend") !=
+  CHECK_MESSAGE(wasm.err.find("mutex operations are not supported by the wasm backend") !=
                     std::string::npos,
                 wasm.err);
 }

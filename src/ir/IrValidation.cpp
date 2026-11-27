@@ -23,8 +23,9 @@ constexpr uint64_t KnownEffectMask =
     EffectPathSpaceTake | EffectFileWrite | EffectGpuDispatch | EffectPathSpaceBind |
     EffectPathSpaceSchedule | EffectFileRead | EffectTask | EffectNetIo | EffectAtomic |
     EffectLock | EffectChannel | EffectBuildRun;
-constexpr uint64_t KnownWasmWasiEffectMask =
-    EffectIoOut | EffectIoErr | EffectHeapAlloc | EffectFileWrite | EffectFileRead | EffectTask;
+constexpr uint64_t KnownWasmWasiEffectMask = EffectIoOut | EffectIoErr | EffectHeapAlloc |
+                                             EffectFileWrite | EffectFileRead | EffectTask |
+                                             EffectAtomic;
 constexpr uint64_t KnownWasmBrowserEffectMask = 0ull;
 // Effects a shader can never have: GLSL has no sockets.
 constexpr uint64_t GlslRejectedEffectMask = EffectNetIo;
@@ -1002,7 +1003,8 @@ bool validateIrModule(const IrModule &module,
       for (size_t instructionIndex = 0; instructionIndex < function.instructions.size();
            ++instructionIndex) {
         const IrOpcode op = function.instructions[instructionIndex].op;
-        if (isAtomicOpcode(op) || isMutexOpcode(op)) {
+        // The WASI profile runs the atomic opcodes as plain memory operations (docs/spec/vm-design.md, Atomics).
+        if ((isAtomicOpcode(op) && target != IrValidationTarget::Wasm) || isMutexOpcode(op)) {
           return failInstruction(functionIndex,
                                  function.name,
                                  instructionIndex,

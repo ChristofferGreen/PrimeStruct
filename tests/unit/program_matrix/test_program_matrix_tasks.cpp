@@ -50,12 +50,13 @@ bool inFamily(const program_matrix::ExecutionConfig &config, TaskFamily family) 
 
 // The programs the Wasm config runs: a spawned call runs inline at its `spawn` and no task blocks (docs/spec/vm-design.md,
 // Tasks, Wasm). `PRIMESTRUCT_MATRIX_WASM_RUN=1` lists the ones that agree with the VM. Not listed: the programs that use
-// atomics, locks or channels (TODO-6321, TODO-6322) and `task_builtin_map_arguments` (TODO-6323).
+// locks or channels (TODO-6322) and `task_builtin_map_arguments` (TODO-6323); the atomic ones run (TODO-6321).
 const std::vector<std::string> &wasmTaskPrograms() {
   static const std::vector<std::string> programs = {
       "task_two_i64_sums",
       "task_void_result",
       "task_void_no_return_transform",
+      "task_void_multi_wait",
       "task_owned_arguments",
       "task_spawn_in_loop",
       "task_multi_wait_forms",

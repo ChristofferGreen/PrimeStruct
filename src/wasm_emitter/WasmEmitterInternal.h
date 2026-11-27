@@ -427,6 +427,10 @@ struct WasmRuntimeContext {
   uint32_t shadowBase = 0;
   uint32_t shadowSlots = 0;
   uint32_t slotAddressFunction = 0;
+  // The module has atomic opcodes and byte regions: `atomicCell` (type (i64) -> i32) names the 8 bytes of a cell that is
+  // a slot or the aligned bytes of a byte region; without byte regions an atomic cell is a slot (`slotAddress`).
+  bool hasAtomics = false;
+  uint32_t atomicCellFunction = 0;
   uint32_t growShadowStackFunction = 0;
   uint32_t stackOverflowMessageAddr = 0;
   uint32_t stackOverflowMessageLength = 0;
@@ -839,6 +843,8 @@ void emitWasmIndirectStore(uint32_t valueLocal,
                            std::vector<uint8_t> &out);
 // The code of the helper `slotAddress` (type (i64) -> i32).
 WasmCodeBody buildWasmSlotAddressHelperBody(const WasmRuntimeContext &runtime);
+// The code of the helper `atomicCell` (type (i64) -> i32): the memory address of the cell an atomic opcode names.
+WasmCodeBody buildWasmAtomicCellHelperBody(const WasmRuntimeContext &runtime);
 // The code of the helper `statFault` (type (i64) -> ()): the VM's unknown-statistic message with the number it was
 // asked for, then `proc_exit(3)`.
 WasmCodeBody buildWasmStatFaultHelperBody(const WasmRuntimeContext &runtime);

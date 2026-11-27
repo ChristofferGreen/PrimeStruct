@@ -186,6 +186,9 @@ bool WasmEmitter::emitModule(const IrModule &input,
       runtime.byteFunction[helper] = nextHelperFunction++;
     }
   }
+  if (runtime.hasAtomics && runtime.hasBytes) {
+    runtime.atomicCellFunction = nextHelperFunction++;
+  }
   if (runtime.hasText) {
     for (size_t helper = 0; helper < WasmTextHelperCount; ++helper) {
       runtime.textFunction[helper] = nextHelperFunction++;
@@ -301,6 +304,14 @@ bool WasmEmitter::emitModule(const IrModule &input,
       types.push_back(wasmByteHelperType(static_cast<WasmByteHelper>(helper)));
       codeBodies.push_back(buildWasmByteHelperBody(static_cast<WasmByteHelper>(helper), runtime));
     }
+  }
+  if (runtime.atomicCellFunction != 0) {
+    WasmFunctionType helperType;
+    helperType.params = {WasmTypeI64};
+    helperType.results = {WasmTypeI32};
+    functionTypeIndexes.push_back(static_cast<uint32_t>(types.size()));
+    types.push_back(std::move(helperType));
+    codeBodies.push_back(buildWasmAtomicCellHelperBody(runtime));
   }
   if (runtime.hasText) {
     for (size_t helper = 0; helper < WasmTextHelperCount; ++helper) {

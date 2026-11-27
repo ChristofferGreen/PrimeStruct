@@ -45,8 +45,8 @@ TEST_CASE("ir validator wasm accepts the task effect and wasm-browser refuses it
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::WasmBrowser, error));
   CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm-browser target");
 
-  // The effects of locks, atomics and channels keep their own refusal until their leaves land.
-  module.functions[0].metadata.effectMask = primec::EffectTask | primec::EffectAtomic;
+  // The effects of locks and channels keep their own refusal until their leaf lands (the atomic effect runs).
+  module.functions[0].metadata.effectMask = primec::EffectTask | primec::EffectLock;
   module.functions[0].metadata.capabilityMask = primec::EffectTask;
   CHECK_FALSE(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
   CHECK_ERROR_CONTAINS(error, "unsupported effect mask bits for wasm target");

@@ -128,7 +128,6 @@ of sync with them.
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | blocked | wasm-concurrency |
 | TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | ready | inline-task-lowering |
-| TODO-6321 | Wasm runs the `Atomic` opcodes as plain memory operations | in_progress | wasm-concurrency |
 | TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | blocked | wasm-concurrency |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
@@ -450,23 +449,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the three leaves are done and the matrix programs that never block run on the Wasm config
     - the programs that block are refused with a message that names Wasm, with matrix coverage
   - stop_rule: closing the three leaves; no change to the VM or native task models.
-
-- [~] TODO-6321: Wasm runs the `Atomic` opcodes as plain memory operations
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
-  - created_at: 2026-11-27
-  - phase: Correctness audit 2026-10 (split from TODO-6128)
-  - parallel_track: wasm-concurrency
-  - depends_on: TODO-6320
-  - scope: `AtomicLoad`, `AtomicStore`, `AtomicAdd`, `AtomicExchange` and `AtomicCompareExchange` with width 32 or 64 (docs/spec/vm-design.md, Atomics) on `wasm-wasi`: the validation rule that rejects them for Wasm (`atomic operations are not supported by the wasm backend`, src/ir/IrValidation.cpp) and the `atomic` effect bit go for `wasm-wasi`; the emitter turns each into the slot access of `LoadIndirect`/`StoreIndirect` and, for the 8 byte cell of a byte region (the owner count of a `SharedString`), the byte-region access, with the VM's address faults and the 32-bit sign extension. One thread, so no other instruction is needed. `wasm-browser` keeps the diagnostic.
-  - acceptance:
-    - the atomics matrix programs that spawn tasks which never block run on the `wasm-wasi` config with the VM's result
-    - an address fault test (unaligned, dead) matches the VM's exit code
-    - `wasm-browser` still reports a message that names Wasm
-    - full release gate green
-  - stop_rule: the five opcodes and the `atomic` effect bit on `wasm-wasi`.
-  - repro: an `Atomic<i64>` program of the matrix (`hits.add(1i64)`): `--emit=wasm --wasm-profile wasi` reports `atomic operations are not supported by the wasm backend` (2026-11-27).
 
 - [ ] TODO-6322: Wasm runs locks, conditions and channels single-threaded and refuses a blocking site
   - owner: ai

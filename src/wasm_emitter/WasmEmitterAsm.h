@@ -246,6 +246,9 @@ public:
   void i32WrapI64() {
     op(0xa7);
   }
+  void i64ExtendI32S() {
+    op(0xac);
+  }
   void i64ExtendI32U() {
     op(0xad);
   }

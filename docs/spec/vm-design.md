@@ -214,10 +214,15 @@
   `ldar`, `stlr`, `swpal`, `ldaddal` and `casal`, all sequentially consistent; a 32-bit operation computes in 64 bits
   on sign-extended operands (an add through a `casal` loop) so the cell stays sign-extended, and the byte-region
   cell form (the owner count of a `SharedString`) is the same instruction on the aligned address (native has no
-  region table, so an unaligned or dead cell is not checked). IR validation accepts the opcodes for the VM,
-  serialized IR, the C++ emitters and arm64 native and rejects them for Wasm and GLSL: `atomic operations are not
-  supported by the wasm backend` (`wasm-browser`, `glsl`; native on a host that is not arm64 macOS). The effect mask bit
-  of `atomic` is `1 << 13`.
+  region table, so an unaligned or dead cell is not checked). The WASI profile of Wasm (TODO-6321) runs them as plain
+  memory operations, since a module has one thread: each is the load and the store of the 8 byte cell (the address checked
+  as a slot by `slotAddress`, and, in a module with byte regions, as `atomicCell` does for a byte-region address: a
+  multiple of 8 with its 8 bytes in one live region; the faults are exit code 3 with the indirect-address message, where the
+  VM's text says `atomic`); a 32-bit width wraps and sign-extends the stored value, `AtomicAdd` wraps in the width, and
+  `AtomicCompareExchange` compares the sign-extended 32-bit values. IR validation accepts the opcodes for the VM,
+  serialized IR, the C++ emitters, arm64 native and the WASI profile and rejects them for the rest: `atomic operations are
+  not supported by the wasm-browser backend` (`glsl`; native on a host that is not arm64 macOS). The effect mask bit of
+  `atomic` is `1 << 13`; the WASI profile accepts it.
 - **Mutexes (PSIR v36):** `MutexLock` and `MutexUnlock` each pop the address of one heap slot, the lock, and push
   nothing (immediate 0). The slot holds 0 while the lock is free. `MutexLock` takes a free lock, waits for a held
   one, and faults with `mutex locked again by the task that holds it` when the caller holds it; `MutexUnlock`

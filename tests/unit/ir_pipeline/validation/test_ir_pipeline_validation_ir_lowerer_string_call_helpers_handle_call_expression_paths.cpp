@@ -639,10 +639,10 @@ TEST_CASE("ir validator wasm target rejects unsupported opcodes") {
   module.functions.push_back(fn);
   CHECK(primec::validateIrModule(module, primec::IrValidationTarget::Wasm, error));
 
-  // The refusals of atomics, channels and host calls name the opcode too.
+  // The refusals of locks, channels and host calls name the opcode too (the WASI profile runs the atomics).
   const std::pair<primec::IrOpcode, const char *> namedRefusals[] = {
-      {primec::IrOpcode::AtomicAdd,
-       "atomic operations are not supported by the wasm backend: AtomicAdd"},
+      {primec::IrOpcode::MutexLock,
+       "mutex operations are not supported by the wasm backend: MutexLock"},
       {primec::IrOpcode::ConditionNotify,
        "channel operations are not supported by the wasm backend: ConditionNotify"},
       {primec::IrOpcode::CallHost, "serialized bytecode: CallHost (a host function call)"},

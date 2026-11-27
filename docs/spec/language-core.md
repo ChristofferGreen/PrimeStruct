@@ -337,7 +337,8 @@ module {
   effect mask bit for `net_io` is `1 << 12`; masks written before it was added stay valid. `atomic` (`1 << 13`)
   is the effect of the `Atomic` operations of `/std/sync`: a definition that calls one without it gets `atomic
   operation requires atomic effect`. The effect is accepted everywhere, but only the VM and `optexe` run the
-  operations; native, Wasm and GLSL reject a module that has them (docs/spec/vm-design.md, Atomics). `lock`
+  operations; GLSL and the browser Wasm profile reject a module that has them, and the WASI profile runs them as plain memory
+  operations (docs/spec/vm-design.md, Atomics). `lock`
   (`1 << 14`) is the effect of `Mutex.locked` of `/std/sync`, with the same rule (`mutex operation requires lock
   effect`) and the same backends (docs/spec/vm-design.md, Mutexes). `channel` (`1 << 15`) is the effect of `send`,
   `receive` and `close` of a `Channel` of `/std/sync`, again with the same rule (`channel operation requires

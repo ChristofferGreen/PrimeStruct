@@ -9,6 +9,10 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.atomics");
 
 namespace {
 
+// The programs of this file the Wasm config runs (`PRIMESTRUCT_MATRIX_WASM_RUN=1` finds the ones that agree).
+const std::vector<std::string> WasmPrograms = {
+    "atomic_shared_add", "atomic_compare_exchange_spin", "atomic_operations", "atomic_cell_freed"};
+
 void runAtomicProgram(program_matrix::ProgramCase program) {
   std::vector<program_matrix::ExecutionConfig> configs = {
       {"vm-step-O0", program_matrix::Backend::VmStep, 0, false},
@@ -30,12 +34,22 @@ void runAtomicProgram(program_matrix::ProgramCase program) {
   for (const program_matrix::ExecutionConfig &config : configs) {
     program.onlyConfigs.push_back(config.name);
   }
+  // The WASI profile runs the atomics as plain memory operations on one thread (TODO-6321): the programs that never
+  // block agree with the VM under node.
+  if (program_matrix::listed(WasmPrograms, program.name)) {
+    program_matrix::ExecutionConfig wasm{"wasm-wasi", program_matrix::Backend::Wasm, 0, true};
+    wasm.optIn = true;
+    configs.push_back(wasm);
+    program.onlyConfigs.push_back("wasm-wasi");
+  }
   program_matrix::runProgramMatrix(program, configs);
 }
 
 // What `primec --emit=<kind>` says about `source`.
-program_matrix::Outcome
-compileFor(const std::string &name, const std::string &kind, const std::string &source) {
+program_matrix::Outcome compileFor(const std::string &name,
+                                   const std::string &kind,
+                                   const std::string &source,
+                                   const std::string &flags = "") {
   const std::filesystem::path dir =
       primec::testing::testScratchPath("program_matrix/" + name + "/x").parent_path();
   std::filesystem::create_directories(dir);
@@ -45,7 +59,7 @@ compileFor(const std::string &name, const std::string &kind, const std::string &
     file << source;
   }
   const std::filesystem::path outPath = dir / (name + "." + kind + ".out.bin");
-  return program_matrix::runCaptured("./primec --emit=" + kind + " " +
+  return program_matrix::runCaptured("./primec --emit=" + kind + flags + " " +
                                          program_matrix::quote(sourcePath.string()) + " -o " +
                                          program_matrix::quote(outPath.string()),
                                      dir / (name + "." + kind));
@@ -245,14 +259,14 @@ main() {
   runAtomicProgram(program);
 }
 
-TEST_CASE("the Wasm backend rejects a program with atomics by name") {
+TEST_CASE("the browser Wasm profile rejects a program with atomics by name") {
   if (program_matrix::corpusOnly()) {
     return; // not a concurrent program run (TODO-5900)
   }
-  const program_matrix::Outcome wasm =
-      compileFor("atomic_rejected_wasm", "wasm", SmallAtomicProgram);
+  const program_matrix::Outcome wasm = compileFor(
+      "atomic_rejected_wasm_browser", "wasm", SmallAtomicProgram, " --wasm-profile browser");
   CHECK(wasm.exitCode != 0);
-  CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm backend") !=
+  CHECK_MESSAGE(wasm.err.find("atomic operations are not supported by the wasm-browser backend") !=
                     std::string::npos,
                 wasm.err);
 }

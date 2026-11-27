@@ -1264,8 +1264,9 @@ main() {
 ```
 
 This prints `2000` on the VM, under every schedule seed, and on `optexe`, where the two tasks are threads. The
-operations are IR opcodes (docs/spec/vm-design.md, Atomics); native, Wasm and GLSL do not have them yet and reject
-the program with `atomic operations are not supported by the native backend`.
+operations are IR opcodes (docs/spec/vm-design.md, Atomics); GLSL, the browser Wasm profile and native off arm64 macOS reject
+the program with `atomic operations are not supported by the <backend> backend`; the WASI profile of Wasm runs them as plain
+memory operations (one thread).
 
 `Mutex<T>` owns a value of a sendable type `T` in a heap cell and lets one task at a time reach it
 (docs/MultithreadingPrototype.md, Mutex). `Mutex<Tally>{Tally{}}` makes one holding that value (a temporary moves in, a place is copied once). It is a

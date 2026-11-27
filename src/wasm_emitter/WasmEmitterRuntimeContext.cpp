@@ -139,6 +139,10 @@ bool buildWasiRuntimeContext(const IrModule &module,
       if (inst.op == IrOpcode::HeapAllocBytes) {
         runtime.hasBytes = true;
       }
+      runtime.hasAtomics = runtime.hasAtomics || inst.op == IrOpcode::AtomicLoad ||
+                           inst.op == IrOpcode::AtomicStore || inst.op == IrOpcode::AtomicAdd ||
+                           inst.op == IrOpcode::AtomicExchange ||
+                           inst.op == IrOpcode::AtomicCompareExchange;
       // `__pstext_argument` reads the arguments through `args_get`
       if (inst.op == IrOpcode::CallHost && inst.imm < runtime.textHostKinds.size() &&
           runtime.textHostKinds[static_cast<size_t>(inst.imm)] == NativeTextHost::Argument) {

@@ -298,7 +298,7 @@ TEST_CASE("wasm emitter rejects unsupported opcodes for this slice") {
 
   primec::IrFunction mainFn;
   mainFn.name = "/main";
-  mainFn.instructions.push_back({primec::IrOpcode::AtomicLoad, 0});
+  mainFn.instructions.push_back({primec::IrOpcode::MutexLock, 0});
   mainFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
   module.functions.push_back(mainFn);
 

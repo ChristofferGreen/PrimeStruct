@@ -1257,4 +1257,20 @@ main() {
   checkWasmMatchesVm("early_return_array_element", source, 9);
 }
 
+TEST_CASE("wasm ends the program on an atomic operation at a bad slot address like the vm") {
+  // The atomic cell is `base` moved 1000 slots on, past the live heap: both faults read `invalid indirect address`.
+  const std::string source = R"(
+import /std/sync/*
+
+[unsafe effects(atomic, heap_alloc), return<int>]
+main() {
+  [Pointer<i64>] base{/std/intrinsics/memory/alloc<i64>(2i32)}
+  /std/sync/__psatomic_store_i64(base, 5i64)
+  [Pointer<i64>] bad{/std/intrinsics/memory/at_unsafe(base, 1000i32)}
+  return(convert<int>(/std/sync/__psatomic_load_i64(bad)))
+}
+)";
+  checkWasmMatchesVm("atomic_bad_slot_address", source, 3);
+}
+
 TEST_SUITE_END();
