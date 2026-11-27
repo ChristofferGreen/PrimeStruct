@@ -221,3 +221,45 @@ main() {
 )",
                      14);
 }
+
+namespace {
+
+// The address is chosen at run time, so it is not folded: 0 is no function and 999 is past the table.
+void runFaultingIndirectProgram(const std::string &name, const std::string &address) {
+    runIndirectProgram(name,
+                       R"(
+[return<i32>]
+add_one([i32] x) { return(x + 1i32) }
+
+[function_address("/add_one") return<u64>]
+add_one_address() {}
+
+[indirect_call return<i32>]
+call_one([u64] address, [i32] x) {}
+
+[return<u64>]
+bad_address([i32] which) {
+  if(which == 0i32) {
+    return(add_one_address())
+  }
+  return()" + address + R"()
+}
+
+[return<int>]
+main() {
+  return(call_one(bad_address(1i32), 4i32))
+}
+)",
+                       3,
+                       false);
+}
+
+} // namespace
+
+TEST_CASE("a call through a null address ends the program with exit code 3") {
+  runFaultingIndirectProgram("indirect_call_null_address", "0u64");
+}
+
+TEST_CASE("a call through an address past the table ends the program with exit code 3") {
+  runFaultingIndirectProgram("indirect_call_address_past_table", "999u64");
+}

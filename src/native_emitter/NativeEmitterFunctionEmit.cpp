@@ -56,6 +56,10 @@ bool emitNativeFunctions(const IrModule &module,
           if (inst.op == IrOpcode::LoadStringByte && inst.imm >= module.stringTable.size()) {
             planError = "string index out of range";
           }
+          // The template of a call through an address does not save the registers a callee may change.
+          if (inst.op == IrOpcode::CallIndirect || inst.op == IrOpcode::CallIndirectVoid) {
+            planError = "indirect call";
+          }
         }
         registerAllocated[functionIndex] =
             planError.empty() && planNativeRegisterAllocation(
@@ -123,10 +127,12 @@ bool emitNativeFunctions(const IrModule &module,
         }
       }
     }
-    // A spawned function takes its parameters from the value stack: its thread entry pushes them there.
+    // A spawned function takes its parameters from the value stack: its thread entry pushes them there, and a
+    // function whose address is taken is called by a call through an address, which passes them there too.
     for (size_t caller = 0; caller < module.functions.size(); ++caller) {
       for (const IrInstruction &inst : module.functions[caller].instructions) {
-        if (inst.op == IrOpcode::TaskSpawn && inst.imm < module.functions.size()) {
+        if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::FunctionAddress) &&
+            inst.imm < module.functions.size()) {
           registerArguments[static_cast<size_t>(inst.imm)] = false;
         }
       }
@@ -652,6 +658,20 @@ bool emitNativeFunctions(const IrModule &module,
         callFixups.push_back({emitter.emitCallPlaceholder(), static_cast<size_t>(inst.imm)});
         break;
       }
+      case IrOpcode::FunctionAddress:
+        emitter.emitPushI64(inst.imm + 1); // the address of function imm, so that 0 names no function
+        break;
+      case IrOpcode::CallIndirect:
+      case IrOpcode::CallIndirectVoid:
+        if constexpr (kIsArm64) {
+          if (!emitter.emitIndirectCall(inst.imm, inst.op == IrOpcode::CallIndirect, error)) {
+            return false;
+          }
+          break;
+        } else {
+          error = "unsupported IR opcode for native backend";
+          return false;
+        }
       case IrOpcode::AtomicLoad:
       case IrOpcode::AtomicStore:
       case IrOpcode::AtomicAdd:

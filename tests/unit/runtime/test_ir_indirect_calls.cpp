@@ -117,13 +117,19 @@ TEST_CASE("indirect calls: a version 41 module cannot hold the opcodes") {
 }
 
 TEST_CASE("indirect calls: a target that does not run them refuses the module until it is expanded") {
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+  constexpr bool nativeRunsIndirectCalls = true;
+#else
+  constexpr bool nativeRunsIndirectCalls = false;
+#endif
   IrModule module = chosenAtRunTime();
   std::string error;
-  CHECK_FALSE(validateIrModule(module, IrValidationTarget::Native, error));
-  CHECK(error.find("function address opcodes") != std::string::npos);
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Cpp, error));
+  CHECK(error.find("function address opcodes") != std::string::npos);
   CHECK_FALSE(validateIrModule(module, IrValidationTarget::Wasm, error));
-  // The VM, the optimized C++ emitters and serialized bytecode run them.
+  // The VM, the optimized C++ emitters and serialized bytecode run them, and so does the arm64 native emitter.
+  CHECK(irTargetRunsIndirectCalls(IrValidationTarget::Native) == nativeRunsIndirectCalls);
+  CHECK(validateIrModule(module, IrValidationTarget::Native, error) == nativeRunsIndirectCalls);
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Vm, error), error);
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::OptCpp, error), error);
   REQUIRE_MESSAGE(validateIrModule(module, IrValidationTarget::Serialized, error), error);

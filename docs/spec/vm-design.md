@@ -254,13 +254,21 @@
   each; the call removes the address by shifting the parameters down one slot, then enters the callee as a `Call`
   does, with the step kernel's faults in the same order). The optimized C++ emitters (`optcpp`, `optexe`) emit
   `FunctionAddress` as the constant and `CallIndirect` as a call of a generated `ps_call_indirect_<p>` function, a
-  switch over every function with `p` parameters, with the VM's three faults and exit code 3. IR validation accepts the
-  opcodes for the VM, the optimized C++ targets, serialized bytecode and `Any`. Every other target takes the linked module through `expandIndirectCalls`
+  switch over every function with `p` parameters, with the VM's three faults and exit code 3. The arm64 native emitter
+  emits `FunctionAddress` as the constant `f + 1` and keeps every function whose address is taken (it is emitted and
+  takes its parameters from the value stack, not in registers); `CallIndirect p` moves the address from under the `p`
+  parameters into `x16`, shifts the parameters up over its slot and `bl`s a dispatch routine, emitted once after the
+  functions, that subtracts 1, compares the index with the function count, loads a 32-bit offset from a table that
+  follows it and `br`s there, so the callee returns to the call site; an address that is 0, past the table or of a
+  function that was not emitted ends the program with exit code 3 (no message). The callee's parameter count is not
+  checked on native. A function that has `CallIndirect` keeps the stack form (it is not register-allocated). IR
+  validation accepts the
+  opcodes for the VM, arm64 native, the optimized C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
   (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
   `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
   address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
-  opcodes itself (docs/todo.md: TODO-6311 to TODO-6314).
+  opcodes itself (docs/todo.md: TODO-6313, TODO-6314 and TODO-6318, x86_64 native and the JIT).
 - **Function address markers:** two compiler-internal definition markers give the opcodes a place in the source
   (`primec/semantics/FunctionAddressDefinitions.h`). Both have an empty body and an explicit return type.
   `[function_address("/path") return<u64>] address_of_def() {}` takes no parameters; a call of it is the address of the

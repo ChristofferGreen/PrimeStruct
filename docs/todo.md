@@ -140,7 +140,6 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
-| TODO-6312 | arm64 native emits `CallIndirect` | in_progress | lib-shapes-backends |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
@@ -642,20 +641,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the owner picks an option, or closes the leaf as (a)
   - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
   - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
-
-- [~] TODO-6312: arm64 native emits `CallIndirect`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: indirect-backends (worktree-agent-ad9091dc0b49a3412), 2026-11-27
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (back ends of TODO-6283)
-  - parallel_track: lib-shapes-backends
-  - scope: the arm64 native emitter (src/native_emitter, Mach-O) emits `FunctionAddress` as `f + 1`, keeps a table of function entry offsets in a dispatch routine it emits once, and emits `CallIndirect` as a shift of the parameters over the address slot and a `bl` of that routine, which faults with exit code 3 on an address that names no emitted function; a function whose address is taken is emitted and takes its parameters from the value stack. The arm64 native target leaves the expansion list. x86_64 native and the JIT are TODO-6318 (an x86_64 machine is needed to run them).
-  - acceptance:
-    - the closure programs of the program matrix run on arm64 native without the expansion
-    - full release gate green
-  - stop_rule: arm64 native code generation of the opcodes.
-  - repro: `--emit=native` of a program with `Function` values on arm64: its IR holds a compare chain instead of `CallIndirect`.
 
 - [ ] TODO-6318: x86_64 native and the JIT emit `CallIndirect`
   - owner: ai

@@ -2715,6 +2715,7 @@ are left unarchived.
 | TODO-6309 | `optexe` and `optcpp` emit `FunctionAddress` and `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6310 | Lowering turns `[indirect_call]` and `[function_address(<path>)]` definitions into the two opcodes | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6312 | arm64 native emits `CallIndirect` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6316 | The result block of a discarded struct call can lie outside the frame | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->

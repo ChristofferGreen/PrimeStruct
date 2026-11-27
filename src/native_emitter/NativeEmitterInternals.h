@@ -334,6 +334,13 @@ class Arm64Emitter {
     return threaded_;
   }
   bool emitTaskSpawn(uint32_t parameterCount, size_t targetFunction, std::string &error);
+  // Calls through function addresses (NativeEmitterInternalsArm64Indirect.h): one call site, and the dispatch routine
+  // with its table once the functions are emitted.
+  bool emitIndirectCall(uint64_t parameterCount, bool returnsValue, std::string &error);
+  bool hasIndirectCalls() const {
+    return !indirectCallSites_.empty();
+  }
+  void emitIndirectCallRuntime(const std::vector<size_t> &functionOffsets, const std::vector<bool> &emitted);
   void emitTaskWait();
   // Per-thread allocator states (NativeEmitterInternalsArm64ThreadHeap.h).
   void emitThreadHeapInit();
@@ -887,6 +894,8 @@ class Arm64Emitter {
   };
   std::vector<TaskSpawnCall> taskSpawnCalls_;
   std::vector<size_t> taskWaitCalls_;
+  // The BL sites of CallIndirect, patched to the dispatch routine by emitIndirectCallRuntime.
+  std::vector<size_t> indirectCallSites_;
   bool threaded_ = false;
   bool sharedText_ = false;
   bool textStats_ = false;
@@ -925,6 +934,7 @@ class Arm64Emitter {
 #include "NativeEmitterInternalsArm64Heap.h"
 #include "NativeEmitterInternalsArm64Arena.h"
 #include "NativeEmitterInternalsArm64Tasks.h"
+#include "NativeEmitterInternalsArm64Indirect.h"
 #include "NativeEmitterInternalsArm64Sync.h"
 #include "NativeEmitterInternalsArm64ThreadHeap.h"
 #include "NativeEmitterInternalsArm64FloatRegisters.h"

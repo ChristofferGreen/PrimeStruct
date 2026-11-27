@@ -288,7 +288,7 @@ bool buildNativeImage(const IrModule &module,
     pending.pop_back();
     for (const IrInstruction &inst : module.functions[caller].instructions) {
       if ((inst.op == IrOpcode::Call || inst.op == IrOpcode::CallVoid ||
-           inst.op == IrOpcode::TaskSpawn) &&
+           inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::FunctionAddress) &&
           inst.imm < module.functions.size() && !reachable[static_cast<size_t>(inst.imm)]) {
         reachable[static_cast<size_t>(inst.imm)] = true;
         pending.push_back(static_cast<size_t>(inst.imm));
@@ -357,6 +357,9 @@ bool buildNativeImage(const IrModule &module,
       }
       hostImports.fixups.push_back({codeIndex, slot});
     }
+  }
+  if (emitter.hasIndirectCalls()) {
+    emitter.emitIndirectCallRuntime(functionOffsets, reachable);
   }
   emitter.emitHeapRuntime();
   emitter.emitArenaRuntime();

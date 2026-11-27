@@ -334,14 +334,13 @@ bool validateFunction(const IrModule &module,
     }
     if ((inst.op == IrOpcode::FunctionAddress || inst.op == IrOpcode::CallIndirect ||
          inst.op == IrOpcode::CallIndirectVoid) &&
-        target != IrValidationTarget::Any && target != IrValidationTarget::Serialized &&
-        target != IrValidationTarget::Vm && target != IrValidationTarget::OptCpp) {
+        !irTargetRunsIndirectCalls(target)) {
       return failInstruction(
           functionIndex,
           function.name,
           instructionIndex,
-          "function address opcodes are only supported by the vm, the optimized C++ targets and "
-          "serialized bytecode (a target runs the module through expandIndirectCalls)",
+          "function address opcodes are only supported by the vm, arm64 native, the optimized C++ "
+          "targets and serialized bytecode (a target runs the module through expandIndirectCalls)",
           error);
     }
     if ((inst.op == IrOpcode::TaskSpawn || inst.op == IrOpcode::TaskWait) &&
@@ -926,6 +925,24 @@ bool findGlslRecursionCycle(const IrModule &module, std::string &error) {
 }
 
 } // namespace
+
+bool irTargetRunsIndirectCalls(IrValidationTarget target) {
+  switch (target) {
+  case IrValidationTarget::Any:
+  case IrValidationTarget::Serialized:
+  case IrValidationTarget::Vm:
+  case IrValidationTarget::OptCpp:
+    return true;
+  case IrValidationTarget::Native:
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    return true;
+#else
+    return false;
+#endif
+  default:
+    return false;
+  }
+}
 
 bool validateIrModule(const IrModule &module,
                       IrValidationTarget target,
