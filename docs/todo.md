@@ -119,7 +119,7 @@ of sync with them.
 | TODO-5603 | The real-launch baseline, measured by a person | ready | startup |
 | TODO-5536 | Small, lazily loaded bytecode for apps | deferred | bytecode-startup |
 | TODO-6256 | A named key of a menu shortcut reaches AppKit as its name, not as a key | deferred | native-ui-shortcuts |
-| TODO-6261 | A `string` result of a program's own function keeps its call sites inline | deferred | bytecode-inline-blockers |
+| TODO-6261 | A `string` result of a program's own function keeps its call sites inline | in_progress | bytecode-inline-blockers |
 | TODO-5533 | Windows and Linux native UI backends | deferred | native-ui-platforms |
 | TODO-6059 | Native x86_64 float to integer conversion saturates | deferred | numeric-conversions |
 | TODO-6051 | Native x86_64 (ELF) division by zero is the VM's runtime fault | deferred | runtime-faults |
@@ -245,9 +245,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: recording and inference only; the call-site rule stays TODO-5688's.
   - repro: `grep -rn "requires .* effect" src/semantics/*.cpp` lists the sites; the measurement is in TODO-5688's scope.
 
-- [ ] TODO-6261: A `string` result of a program's own function keeps its call sites inline
+- [~] TODO-6261: A `string` result of a program's own function keeps its call sites inline
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: closure-cpp (worktree-agent-af6798418ad5b46de), 2026-11-27
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6255, the blocker the inline report names for `/std/image/ImageError/why`)
   - parallel_track: bytecode-inline-blockers
