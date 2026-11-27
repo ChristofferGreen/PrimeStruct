@@ -128,7 +128,7 @@ of sync with them.
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6128 | Wasm refuses tasks, atomics, channels and the lock effect | blocked | wasm-concurrency |
 | TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | ready | inline-task-lowering |
-| TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | blocked | wasm-concurrency |
+| TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | in_progress | wasm-concurrency |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -450,10 +450,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - the programs that block are refused with a message that names Wasm, with matrix coverage
   - stop_rule: closing the three leaves; no change to the VM or native task models.
 
-- [ ] TODO-6322: Wasm runs locks, conditions and channels single-threaded and refuses a blocking site
+- [~] TODO-6322: Wasm runs locks, conditions and channels single-threaded and refuses a blocking site
   - owner: ai
-  - status: blocked
-  - blocked_on: TODO-6321
+  - status: in_progress
+  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
   - created_at: 2026-11-27
   - phase: Correctness audit 2026-10 (split from TODO-6128)
   - parallel_track: wasm-concurrency
