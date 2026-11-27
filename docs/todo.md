@@ -252,10 +252,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6261: A `string` result of a program's own function keeps its call sites inline
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6255, the blocker the inline report names for `/std/image/ImageError/why`)
   - parallel_track: bytecode-inline-blockers
+  - decision (owner, 2026-11-27): option 2. A `string` result becomes a real call when every call site of the function uses it only as a runtime index (an argument of `print_line`, `count()`, a file open or another real call), judged per function from its call sites; otherwise the function stays inline. Option 3 (the dynamic string-byte op on optexe and native) stays the long-term fix.
   - scope: A function whose result is a `string` (the message of an error struct, `why()`) is refused for `unsupported-result` unless it is a root or an import of a library: 33 instructions added in the PNG module, and the same in every program that reads an error message. The body lowering and the call site already return a string as one slot, a table index; what the rule protects is that a string a call returns is a runtime index, and indexing one (`why()[0]`) is `LoadStringByteDynamic`, VM-only, so a program that compiled on optexe or native because the call was inlined (a static string) would stop compiling there. This needs a language decision, which is the user's.
   - decision_needed: how a string result may be used after a real call. Options:
     1. Allow `string` results of real calls everywhere and let a use that needs a static string (indexing; `count()` is fine) on a target without the dynamic op be an error that names the call ("cannot index the string result of /name: the call is not inlined"). Smallest change; a program that indexed an inlined result breaks on optexe and native.
@@ -268,14 +269,14 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the `string` result rule of the real-call shape; no new string operations.
   - repro: `primec --emit=vm --dump-stage inline-report benchmarks/startup/png.prime` (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: needs the user's decision (see decision_needed).
 
 - [ ] TODO-6268: A packed `Result` with a `Buffer` payload stays inline
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-25
   - phase: Native UI (docs/NativeUiPlan.md; left over from TODO-6263)
   - parallel_track: bytecode-inline-blockers
+  - decision (owner, 2026-11-27): option 1, keep it inline until a program shows the cost. Remaining work: record the rule in docs/spec/vm-design.md and close this leaf.
   - scope: A function returning `Result<Buffer<T>, E>` (a program that does not import `/std/result`) is refused for `unsupported-result`. On the VM the `Buffer` value of `Result.ok(upload(values))` is the array of the producer's frame (count and elements, a size known at run time), so the struct layout of `Buffer` (2 slots, `token` and `elementCount`) is not what the payload block holds: copying those slots into a block of the caller returned garbage from the second call on (`readback()[2]` printed 96 and 16 where 3 was expected; found with TODO-6263, program in the repro). A real call would copy the array by its count into a caller block whose size is run-time, or the producer would build the array in the caller's frame.
   - decision_needed: how a run-time sized payload crosses a real call. Options: 1. keep it inline (current); 2. the caller passes a block of a fixed capacity and the callee faults above it; 3. return the array through the heap. Recommendation: option 1 until a program shows the cost.
   - acceptance:
@@ -283,7 +284,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `Buffer` payloads of a packed `Result`; no change to struct payloads.
   - repro: `import /std/gfx/*` and a function returning `Result<Buffer<i32>, GfxError>` built with `Result.ok(/std/gfx/Buffer/upload(values))`; allow `Buffer` in `packedResultStructValuePath` (src/ir_lowerer/IrLowererReturnShapes.cpp) and call it twice into two locals, then `try` both and read `readback()[2]` (release build, macOS arm64, 2026-11-25).
-  - notes: deferred: needs the user's decision (see decision_needed).
 
 - [ ] TODO-6187: Node 24 crashes on a failed WASI `path_open` of an absolute path
   - owner: ai
@@ -474,10 +474,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6128: Wasm refuses tasks, atomics, channels and the lock effect
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-20
   - phase: Correctness audit 2026-10 (found with TODO-6090)
   - parallel_track: wasm-concurrency
+  - decision (owner, 2026-11-27): the single-threaded Wasm lowering: a task runs inline at its `spawn` (as x86_64 native runs them), `Atomic` operations are plain memory operations, and a `Channel` is a queue. Programs whose answer depends on interleaving stay refused with a diagnostic that names Wasm. Split into leaves (tasks, atomics, channels) if larger than one commit.
   - scope: Matrix programs refused by Wasm because it has no concurrency: 32 concurrent programs (the `task_*` ones among them) with `invalid IR function /main: unsupported effect mask bits for wasm target` (the effect bits of `spawn` and the related concurrency effects), 18 atomics programs (`atomic operations are not supported by the wasm backend`) and 16 channel programs (`channel operations are not supported by the wasm backend`), counted on 2026-11-20 with the Wasm config of TODO-6090. They are supported on the VM (also under `--vm-threads`), `optexe` and, partly, native. A single-threaded Wasm lowering (tasks run inline at the `spawn`, as the x86_64 native backend runs them, `Atomic` as plain memory operations, `Channel` as a queue) would run the programs whose answer does not depend on the interleaving; the shared-memory Wasm threads proposal is the other route. The owner decides which.
   - acceptance:
     - a decision recorded here between the inline lowering, Wasm threads and "refused with a diagnostic that names Wasm" (the diagnostic is today a validation error that names an effect mask)
@@ -595,11 +596,11 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
 
 - [ ] TODO-6219: `loadBytecode` of a script linked with a library says whether that library changed
   - owner: ai
-  - status: deferred
+  - status: ready
   - created_at: 2026-11-23
   - phase: Modules and libraries (split from TODO-6217: the check at load)
   - parallel_track: lib-embed
-  - blocked_on: owner decision, options below
+  - decision (owner, 2026-11-27): option A now: the records are information (`Script::libraries()`), and `loadBytecode` checks nothing. Option C (`ScriptEngine::loadBytecode`) comes when a host asks for the check. Remaining work: state this in the embedding spec and close this leaf.
   - scope: `Script::bytecode` records the name and interface hash of each library a script was linked with (done), and the code of each library is merged into the module, so the bytecode is self-contained and cannot run stale library code. TODO-6217 asked that `loadBytecode` also "check" the records so that a script compiled against a library that changed is refused at load. `Script::loadBytecode(bytes, name)` is static and holds no library, so there is nothing to compare the records with unless the caller supplies it. The question is what the check is.
   - question: what does `loadBytecode` compare the recorded libraries with, and what is refused?
   - options:
