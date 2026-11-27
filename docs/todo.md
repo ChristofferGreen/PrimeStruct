@@ -138,7 +138,7 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
-| TODO-6319 | arm64 native does not check the callee's parameter count on `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6319 | arm64 native does not check the callee's parameter count on `CallIndirect` | in_progress | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
@@ -596,9 +596,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: x86_64 native and JIT code generation of the opcodes.
   - repro: `--emit=native` on x86_64 of a program with `Function` values: its IR holds a compare chain instead of `CallIndirect`.
 
-- [ ] TODO-6319: arm64 native does not check the callee's parameter count on `CallIndirect`
+- [~] TODO-6319: arm64 native does not check the callee's parameter count on `CallIndirect`
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worktree-agent-ad0cac6d4c976ed67, 2026-11-27
   - created_at: 2026-11-27
   - phase: Modules and libraries (back ends of TODO-6283; found with TODO-6317)
   - parallel_track: lib-shapes-backends
