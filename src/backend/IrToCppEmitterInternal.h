@@ -44,6 +44,9 @@ inline constexpr CppIntegerOpHelper CppIntegerOpHelpers[] = {
 };
 
 void emitIntegerOpHelpers(std::ostringstream &out);
+// The call through a function address (IrToCppEmitterIndirect.cpp): a function per parameter count, and its name.
+void emitIndirectCallHelpers(std::ostringstream &out, const IrModule &module);
+std::string cppIndirectCallSymbol(uint64_t parameterCount);
 // Emits `if (!helper(stack, sp)) std::exit(3);` and the step to the next instruction; false when no helper matches.
 bool emitIntegerOpHelperCall(const char *operandType,
                              const char *op,

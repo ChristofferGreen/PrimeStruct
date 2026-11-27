@@ -692,6 +692,7 @@ set(PRIMESTRUCT_CODEGEN_SOURCES
   src/backend/IrToOptCppEmitter.cpp
   src/backend/IrToCppHostImports.cpp
   src/backend/IrToCppEmitterInstructionEmitter.cpp
+  src/backend/IrToCppEmitterIndirect.cpp
   src/backend/IrToCppEmitterPrintAndFileEmitter.cpp
   src/backend/IrToGlslEmitter.cpp
   src/backend/IrToGlslEmitterFunctionEmitter.cpp

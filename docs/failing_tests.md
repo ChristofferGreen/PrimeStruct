@@ -22,7 +22,7 @@ None.
 ## Current Failures
 
 <!-- compile.sh:failing-tests:start -->
-- Last updated: `2026-11-27T11:43:39Z`
+- Last updated: `2026-11-27T12:22:21Z`
 - Build type: `Release`
 - Build dir: `build-release`
 - Command: `ctest --test-dir build-release --output-on-failure --parallel 22`

@@ -15,6 +15,7 @@ from pathlib import Path
 
 ALLOWLIST = {
     "src/backend/IrToCppEmitter.cpp",
+    "src/backend/IrToCppEmitterIndirect.cpp",
     "src/backend/IrToCppEmitterInstructionEmitter.cpp",
     "src/backend/IrToCppEmitterPrintAndFileEmitter.cpp",
     "src/support/BenchmarkSink.cpp",

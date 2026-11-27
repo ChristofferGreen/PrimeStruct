@@ -541,6 +541,7 @@ bool IrToCppEmitter::emitSource(const IrModule &module, std::string &out, std::s
          << "(PsStack &stack, std::size_t &sp, VmHeapCore &heap, int argc, char **argv);\n";
   }
   body << "\n";
+  emitIndirectCallHelpers(body, module);
 
   std::vector<size_t> stringLengths;
   stringLengths.reserve(module.stringTable.size());

@@ -932,6 +932,7 @@ bool irTargetRunsIndirectCalls(IrValidationTarget target) {
   case IrValidationTarget::Serialized:
   case IrValidationTarget::Vm:
   case IrValidationTarget::OptCpp:
+  case IrValidationTarget::Cpp:
   case IrValidationTarget::Wasm:
   case IrValidationTarget::WasmBrowser:
     return true;

@@ -8,8 +8,12 @@ TEST_SUITE_BEGIN("primestruct.program_matrix.indirect_calls");
 
 namespace {
 
-std::vector<std::string> indirectConfigs() {
+// `exe` (the simple C++ emitter) takes scalar parameters only (docs/todo.md, TODO-6317), so a program lists it with `exe`.
+std::vector<std::string> indirectConfigs(bool exe) {
   std::vector<std::string> configs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2"};
+  if (exe) {
+    configs.push_back("exe");
+  }
   if (program_matrix::nativeSupported()) {
     configs.push_back("native-O0");
     configs.push_back("native-O2");
@@ -17,12 +21,16 @@ std::vector<std::string> indirectConfigs() {
   return configs;
 }
 
-void runIndirectProgram(const std::string &name, const std::string &source, int exitCode, bool wasm = true) {
+void runIndirectProgram(const std::string &name,
+                        const std::string &source,
+                        int exitCode,
+                        bool wasm = true,
+                        bool exe = false) {
   program_matrix::ProgramCase program;
   program.name = name;
   program.source = source;
   program.exitCode = exitCode;
-  program.onlyConfigs = indirectConfigs();
+  program.onlyConfigs = indirectConfigs(exe);
   if (wasm) {
     program.extraConfigs = {"wasm-wasi"};
   }
@@ -53,7 +61,9 @@ main() {
   return(call_one(add_one_address(), 4i32) + call_one(double_it_address(), 4i32))
 }
 )",
-                     13);
+                     13,
+                     true,
+                     true);
 }
 
 TEST_CASE("an address is a value chosen at run time") {
@@ -88,7 +98,9 @@ main() {
   return(call_one(first, 10i32) * 100i32 + call_one(second, 10i32))
 }
 )",
-                     1120);
+                     1120,
+                     true,
+                     true);
 }
 
 TEST_CASE("an indirect call passes a struct and returns one") {
@@ -251,7 +263,8 @@ main() {
 }
 )",
                        3,
-                       false);
+                       false,
+                       true);
 }
 
 } // namespace
@@ -334,5 +347,7 @@ main() {
   return(convert<int>(value) + call_bump(bump_address(), 0i32))
 }
 )",
-                     12);
+                     12,
+                     true,
+                     true);
 }

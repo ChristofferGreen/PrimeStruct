@@ -26,7 +26,7 @@ enum class IrValidationTarget {
 
 // Whether the back end behind `target` runs FunctionAddress, CallIndirect and CallIndirectVoid itself. The others
 // take the linked module through expandIndirectCalls. The VM, the optimized C++ emitters, serialized bytecode and
-// Wasm and arm64 native (a build for an arm64 Mac) run them.
+// the C++ emitters, Wasm and arm64 native (a build for an arm64 Mac) run them.
 bool irTargetRunsIndirectCalls(IrValidationTarget target);
 
 // A module that still has an import (primec/ir/IrLinker.h) is not runnable, and is refused unless `allowImports`: a

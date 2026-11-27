@@ -269,14 +269,19 @@
   past the table and a function of another parameter count trap (no VM message; the node runner of the program
   matrix reports 99), and an address of 2^32 or more wraps in the `i32` index. The parameter types of a function
   reached only through an address are the types the indirect calls pass, merged as for a `Call`, and the result of a
-  `CallIndirect` is the widest result type of the candidate functions (an `i32` and an `i64` result merge to `i64`). A function that has `CallIndirect` keeps the stack form (it is not register-allocated). IR
+  `CallIndirect` is the widest result type of the candidate functions (an `i32` and an `i64` result merge to `i64`). The simple C++ emitters (`cpp`, `exe`) emit `FunctionAddress` as the
+  constant and `CallIndirect` as a call of a generated `psCallIndirect<p>` function (the checks of the optimized
+  emitter's `ps_call_indirect_<p>`, the VM's three messages on stderr and exit code 3) that shifts the parameters down
+  over the address on the shared stack and calls the matching function; they lower scalar parameters and results only
+  (docs/todo.md, TODO-6317). On arm64 native, a function that has `CallIndirect` keeps the stack form (it is not
+  register-allocated). IR
   validation accepts the
-  opcodes for the VM, arm64 native, Wasm, the optimized C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
+  opcodes for the VM, arm64 native, Wasm, the C++ targets, serialized bytecode and `Any` (`irTargetRunsIndirectCalls`). Every other target takes the linked module through `expandIndirectCalls`
   (`primec/ir/IrIndirectCallExpansion.h`, run by `prepareIrModule`): `FunctionAddress f` becomes `PushI64 f + 1`, and a
   `CallIndirect p` stores its address and parameters to locals and compares the address with the address of each
   function whose address the module takes and that has `p` parameters, calling the match with a direct `Call`; an
   address that matches none ends the program with exit code 3. The expansion goes when the last back end runs the
-  opcodes itself (docs/todo.md: TODO-6314 and TODO-6318, x86_64 native and the JIT).
+  opcodes itself (docs/todo.md: TODO-6318, x86_64 native and the JIT; GLSL refuses the opcodes, TODO-6315).
 - **Function address markers:** two compiler-internal definition markers give the opcodes a place in the source
   (`primec/semantics/FunctionAddressDefinitions.h`). Both have an empty body and an explicit return type.
   `[function_address("/path") return<u64>] address_of_def() {}` takes no parameters; a call of it is the address of the

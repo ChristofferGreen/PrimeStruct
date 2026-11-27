@@ -602,6 +602,28 @@ bool emitInstruction(const IrInstruction &instruction,
       out << "        pc = " << nextIndex << ";\n";
       out << "        break;\n";
       return true;
+    case IrOpcode::FunctionAddress:
+      if (instruction.imm >= context.functionCount) {
+        error = "IrToCppEmitter function address out of range at instruction " + std::to_string(index);
+        return false;
+      }
+      // The address of function imm is imm + 1, so that 0 names no function.
+      out << "        stack[sp++] = " << instruction.imm + 1 << "ull;\n";
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
+    case IrOpcode::CallIndirect:
+    case IrOpcode::CallIndirectVoid:
+      out << "        int64_t callValue = " << cppIndirectCallSymbol(instruction.imm)
+          << "(stack, sp, heap, argc, argv);\n";
+      if (instruction.op == IrOpcode::CallIndirect) {
+        out << "        stack[sp++] = static_cast<uint64_t>(callValue);\n";
+      } else {
+        out << "        (void)callValue;\n";
+      }
+      out << "        pc = " << nextIndex << ";\n";
+      out << "        break;\n";
+      return true;
     case IrOpcode::CallHost: {
       if (context.hostImports == nullptr || instruction.imm >= context.hostImports->size()) {
         error = "IrToCppEmitter host import out of range at instruction " + std::to_string(index);
