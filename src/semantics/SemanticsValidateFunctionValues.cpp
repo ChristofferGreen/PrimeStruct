@@ -1,6 +1,8 @@
 #include "SemanticsValidateFunctionValues.h"
 
+#include "SemanticsFunctionRoutines.h"
 #include "SemanticsHelpers.h"
+#include "SemanticsValidateFunctionTypeRewrite.h"
 #include "SemanticsValidateLambdaClosures.h"
 #include "primec/frontend/Lexer.h"
 #include "primec/frontend/Parser.h"
@@ -65,14 +67,34 @@ const std::string &calleePath(const Expr &expr) {
   return expr.resolvedCallPath.empty() ? expr.name : expr.resolvedCallPath;
 }
 
+// The names an `effects` or `capabilities` transform of a definition declares.
+std::set<std::string> declaredNames(const Definition &def, const char *transformName) {
+  std::set<std::string> names;
+  for (const Transform &transform : def.transforms) {
+    if (transform.name == transformName) {
+      names.insert(transform.arguments.begin(), transform.arguments.end());
+    }
+  }
+  return names;
+}
+
+Transform namedTransformOf(const std::string &name, const std::vector<std::string> &arguments = {}) {
+  Transform transform;
+  transform.name = name;
+  transform.arguments = arguments;
+  return transform;
+}
+
 struct FunctionValueRewriter {
   Program &program;
   std::string &error;
   std::unordered_map<std::string, size_t> definitionIndex;
-  // Function instance path -> converted closure types, in order of first conversion (tag = position + 1).
+  // Function instance path -> converted closure types, in order of first conversion.
   std::map<std::string, std::vector<std::string>> variants;
   // (Function instance, closure type) -> the definition of its first conversion, for diagnostics.
   std::map<std::pair<std::string, std::string>, std::string> convertedIn;
+  // The closure types whose clone and release routines are written.
+  std::set<std::string> routinesWritten;
   std::string currentDefinition;
 
   const Definition *find(const std::string &path) const {
@@ -80,14 +102,24 @@ struct FunctionValueRewriter {
     return it == definitionIndex.end() ? nullptr : &program.definitions[it->second];
   }
 
-  // The Function instance a brace constructor builds: its name after monomorphization, or the one instance whose
-  // base matches when the name still carries its template arguments.
+  // The Function instance a brace constructor builds: its name after monomorphization.
   std::string functionInstanceOf(const Expr &expr) const {
     const std::string &path = calleePath(expr);
     if (find(path) != nullptr) {
       return path;
     }
     return {};
+  }
+
+  // A call of the getter of a routine's address, in the place of the placeholder of a conversion.
+  static Expr addressGetterCall(const std::string &path, const Expr &like) {
+    Expr call;
+    call.kind = Expr::Kind::Call;
+    call.name = path;
+    call.namespacePrefix = like.namespacePrefix;
+    call.sourceLine = like.sourceLine;
+    call.sourceColumn = like.sourceColumn;
+    return call;
   }
 
   void collect(Expr &expr) {
@@ -104,18 +136,27 @@ struct FunctionValueRewriter {
     if (functionPath.empty()) {
       return;
     }
-    Expr *tag = nullptr;
+    Expr *invoke = nullptr;
+    Expr *clone = nullptr;
+    Expr *release = nullptr;
     const Expr *env = nullptr;
     for (size_t i = 0; i < expr.args.size(); ++i) {
       const std::optional<std::string> &label = i < expr.argNames.size() ? expr.argNames[i] : std::nullopt;
-      if (label.has_value() && *label == "tag") {
-        tag = &expr.args[i];
-      } else if (label.has_value() && *label == "env") {
+      if (!label.has_value()) {
+        continue;
+      }
+      if (*label == "invoke") {
+        invoke = &expr.args[i];
+      } else if (*label == "clone") {
+        clone = &expr.args[i];
+      } else if (*label == "release") {
+        release = &expr.args[i];
+      } else if (*label == "env") {
         env = &expr.args[i];
       }
     }
-    if (tag == nullptr || env == nullptr || tag->kind != Expr::Kind::Literal || env->kind != Expr::Kind::Call ||
-        !isFunctionBoxPath(calleePath(*env))) {
+    if (invoke == nullptr || clone == nullptr || release == nullptr || env == nullptr ||
+        env->kind != Expr::Kind::Call || !isFunctionBoxPath(calleePath(*env))) {
       return;
     }
     const Definition *box = find(calleePath(*env));
@@ -127,15 +168,13 @@ struct FunctionValueRewriter {
       return;
     }
     std::vector<std::string> &known = variants[functionPath];
-    size_t index = 0;
-    while (index < known.size() && known[index] != closureType) {
-      ++index;
-    }
-    if (index == known.size()) {
+    if (std::find(known.begin(), known.end(), closureType) == known.end()) {
       known.push_back(closureType);
       convertedIn.emplace(std::make_pair(functionPath, closureType), currentDefinition);
     }
-    tag->literalValue = index + 1;
+    *invoke = addressGetterCall(functionInvokeAddressPath(functionPath, closureType), *invoke);
+    *clone = addressGetterCall(functionCloneAddressPath(closureType), *clone);
+    *release = addressGetterCall(functionReleaseAddressPath(closureType), *release);
   }
 
   // A type as written for a diagnostic and for comparison: namespaces and template-instance suffixes dropped
@@ -222,6 +261,15 @@ struct FunctionValueRewriter {
     return name;
   }
 
+  // `Function<R, A...>` as a diagnostic spells the type of an instance, from its `call`.
+  static std::string functionTypeName(const Definition &functionCall) {
+    std::string name = "Function<" + plainTypeText(returnTypeOf(functionCall));
+    for (const Expr &param : functionCall.parameters) {
+      name += ", " + plainTypeText(bindingTypeText(param));
+    }
+    return name + ">";
+  }
+
   // The closure's `call` must take the Function's arguments (`Function<i32, i32>` cannot hold a closure that takes a
   // string or two numbers); checked here, where both are concrete, so the diagnostic names the conversion.
   bool checkSignature(const std::string &functionPath, const std::string &closure) {
@@ -236,11 +284,7 @@ struct FunctionValueRewriter {
       }
     }
     const std::string returnType = returnTypeOf(*functionCall);
-    std::string functionName = "Function<" + plainTypeText(returnType);
-    for (const Expr &param : functionCall->parameters) {
-      functionName += ", " + plainTypeText(bindingTypeText(param));
-    }
-    functionName += ">";
+    const std::string functionName = functionTypeName(*functionCall);
     const auto siteIt = convertedIn.find(std::make_pair(functionPath, closure));
     const std::string site =
         siteIt == convertedIn.end() || siteIt->second.empty() ? std::string() : " in " + siteIt->second;
@@ -302,6 +346,30 @@ struct FunctionValueRewriter {
     return true;
   }
 
+  // A closure converted to the `Function` of a library runs where the library calls it, under the effects that
+  // library's `call` declares: the closure may not need more.
+  bool checkLibraryEffects(const std::string &functionPath, const std::string &closure) {
+    const Definition *libraryCall = find(functionPath + "/call");
+    const Definition *closureCall = find(closure + "/call");
+    if (libraryCall == nullptr || closureCall == nullptr) {
+      return true;
+    }
+    for (const char *kind : {"effects", "capabilities"}) {
+      const std::set<std::string> allowed = declaredNames(*libraryCall, kind);
+      for (const std::string &name : declaredNames(*closureCall, kind)) {
+        if (allowed.count(name) == 0) {
+          const auto siteIt = convertedIn.find(std::make_pair(functionPath, closure));
+          const std::string site =
+              siteIt == convertedIn.end() || siteIt->second.empty() ? std::string() : " in " + siteIt->second;
+          error = functionTypeName(*libraryCall) + " cannot hold " + closureDisplayName(closure) + site + ": it has " +
+                  kind + "(" + name + "), which the library that defines the Function does not allow";
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   bool parseBody(const std::string &body, std::vector<Expr> &statements) {
     // The lexer keeps a view of its source: keep the text alive while parsing.
     const std::string source = "__function_value_body() {\n" + body + "}\n";
@@ -339,8 +407,8 @@ struct FunctionValueRewriter {
     return "void";
   }
 
-  // An instance a library's interface carries: its `call` is an imported declaration and its lifecycle helpers are
-  // already complete, so the library's dispatch over its closures is final.
+  // An instance a library's interface carries: its `call` is an imported declaration, so the library's code makes the
+  // calls and a consumer only supplies the routines of its own closures.
   bool isLibraryOwned(const std::string &functionPath) const {
     const auto callIt = definitionIndex.find(functionPath + "/call");
     if (callIt == definitionIndex.end()) {
@@ -354,111 +422,178 @@ struct FunctionValueRewriter {
     return false;
   }
 
-  bool completeInstance(const std::string &functionPath, const std::vector<std::string> &closures) {
-    auto callIt = definitionIndex.find(functionPath + "/call");
-    auto copyIt = definitionIndex.find(functionPath + "/Copy");
-    auto destroyIt = definitionIndex.find(functionPath + "/Destroy");
-    if (callIt == definitionIndex.end() || copyIt == definitionIndex.end() || destroyIt == definitionIndex.end()) {
-      error = "internal error: Function instance without its methods: " + functionPath;
+  // Appends the definitions the text defines; one whose path exists already (a routine two conversions share, or the
+  // shared declarations of a second run) is left as it is.
+  bool addDefinitions(const std::string &text) {
+    std::vector<Definition> parsed;
+    if (!parseGeneratedDefinitions(text, parsed, error)) {
       return false;
     }
-    Definition &call = program.definitions[callIt->second];
-    const std::string returnType = returnTypeOf(call);
-    const bool returnsVoid = returnType == "void";
+    for (Definition &def : parsed) {
+      addDefinition(std::move(def));
+    }
+    return true;
+  }
+
+  void addDefinition(Definition def) {
+    if (definitionIndex.count(def.fullPath) != 0) {
+      return;
+    }
+    definitionIndex.emplace(def.fullPath, program.definitions.size());
+    program.definitions.push_back(std::move(def));
+  }
+
+  // The clone and release routines of a closure type and the getters of their addresses, written once.
+  bool writeClosureRoutines(const std::string &closure) {
+    if (!routinesWritten.insert(closure).second) {
+      return true;
+    }
+    return addDefinitions(functionCloneRoutineText(closure) + functionReleaseRoutineText(closure) +
+                          functionAddressGetterText(functionCloneAddressPath(closure), functionCloneRoutinePath(closure)) +
+                          functionAddressGetterText(functionReleaseAddressPath(closure),
+                                                    functionReleaseRoutinePath(closure)));
+  }
+
+  // The parameters `address` (a u64) and `env` (the closure's block) of the routines.
+  bool leadingParameters(std::vector<Expr> &out) {
+    std::vector<Definition> parsed;
+    if (!parseGeneratedDefinitions("[return<void>]\n__function_value_parameters([u64] address, [Pointer<i32>] env) {}\n",
+                                   parsed,
+                                   error) ||
+        parsed.empty() || parsed.front().parameters.size() != 2) {
+      return false;
+    }
+    out = std::move(parsed.front().parameters);
+    return true;
+  }
+
+  // A free definition with the signature of the instance's `call`: `extra` parameters first, then the `call`'s own.
+  Definition routineLike(const Definition &call, const std::string &path, std::vector<Expr> extra) {
+    Definition routine = call;
+    routine.fullPath = path;
+    routine.name = leafOf(path);
+    routine.namespacePrefix = "/";
+    routine.isNested = false;
+    routine.templateArgs.clear();
+    routine.templateArgIsPack.clear();
+    routine.templatePackBindings.clear();
+    routine.instanceOfTemplate.clear();
+    routine.instanceTemplateArgs.clear();
+    routine.instanceRequestedBy.clear();
+    routine.statements.clear();
+    routine.returnExpr.reset();
+    routine.hasReturnStatement = false;
+    routine.transforms.clear();
+    for (const Transform &transform : call.transforms) {
+      if (transform.name == "return") {
+        routine.transforms.push_back(transform);
+      }
+    }
+    for (const Expr &param : call.parameters) {
+      extra.push_back(param);
+    }
+    routine.parameters = std::move(extra);
+    return routine;
+  }
+
+  static std::string argumentNames(const Definition &call) {
     std::string arguments;
     for (size_t i = 0; i < call.parameters.size(); ++i) {
       arguments += (i == 0 ? "" : ", ") + call.parameters[i].name;
     }
-    const std::string reinterpret = "/std/intrinsics/memory/reinterpret";
+    return arguments;
+  }
 
-    // call: dispatch on the tag; the last closure type is the fallback branch.
-    std::string body = "  [Pointer<i32>] raw{this.env}\n";
-    std::set<std::string> effects;
-    std::set<std::string> capabilities;
-    for (size_t k = 0; k < closures.size(); ++k) {
-      const std::string &closure = closures[k];
-      const std::string invoke = "dereference(target).call(" + arguments + ")";
-      const std::string branch = "[Pointer<" + closure + "> mut] target{" + reinterpret + "<" + closure + ">(raw)}\n" +
-                                 (returnsVoid ? invoke + "\nreturn()\n" : "return(" + invoke + ")\n");
-      if (k + 1 < closures.size()) {
-        body += "  if(equal(this.tag, " + std::to_string(k + 1) + "i32)) {\n" + branch + "  }\n";
-      } else {
-        body += branch;
-      }
-      if (const Definition *closureCall = find(closure + "/call")) {
-        for (const Transform &transform : closureCall->transforms) {
-          if (transform.name == "effects") {
-            effects.insert(transform.arguments.begin(), transform.arguments.end());
-          } else if (transform.name == "capabilities") {
-            capabilities.insert(transform.arguments.begin(), transform.arguments.end());
-          }
+  // The routine that enters a closure type's `call` for an instance: it takes the block and the `Function`'s
+  // arguments, and its address is what the conversion stores in the `Function`.
+  bool writeInvokeRoutine(const std::string &functionPath, const std::string &closure) {
+    const Definition *call = find(functionPath + "/call");
+    if (call == nullptr) {
+      error = "internal error: Function instance without its call: " + functionPath;
+      return false;
+    }
+    std::vector<Expr> leading;
+    if (!leadingParameters(leading)) {
+      return false;
+    }
+    const std::string path = functionInvokeRoutinePath(functionPath, closure);
+    std::vector<Expr> envOnly;
+    envOnly.push_back(std::move(leading[1]));
+    Definition routine = routineLike(*call, path, std::move(envOnly));
+    routine.transforms.push_back(namedTransformOf("unsafe"));
+    if (const Definition *closureCall = find(closure + "/call")) {
+      for (const char *kind : {"effects", "capabilities"}) {
+        const std::set<std::string> names = declaredNames(*closureCall, kind);
+        if (!names.empty()) {
+          routine.transforms.push_back(namedTransformOf(kind, {names.begin(), names.end()}));
         }
       }
     }
-    if (closures.empty() && !returnsVoid) {
-      // Never constructed: no closure was converted to this Function type.
-      body += "  return(dereference(" + reinterpret + "<" + returnType + ">(raw)))\n";
-    }
-    if (!parseBody(body, call.statements)) {
+    if (!parseBody(functionInvokeBodyText(closure, argumentNames(*call), returnTypeOf(*call) == "void"),
+                   routine.statements)) {
       return false;
     }
-    refreshReturn(call);
+    refreshReturn(routine);
+    addDefinition(std::move(routine));
+    return addDefinitions(functionAddressGetterText(functionInvokeAddressPath(functionPath, closure), path));
+  }
+
+  // The `call` of an instance this program defines calls the routine its address names through a declaration of the
+  // instance's signature, so it declares the effects of every closure converted to the instance.
+  bool completeInstance(const std::string &functionPath, const std::vector<std::string> &closures) {
+    const auto callIt = definitionIndex.find(functionPath + "/call");
+    if (callIt == definitionIndex.end()) {
+      error = "internal error: Function instance without its call: " + functionPath;
+      return false;
+    }
+    std::set<std::string> effects;
+    std::set<std::string> capabilities;
+    for (const std::string &closure : closures) {
+      if (const Definition *closureCall = find(closure + "/call")) {
+        const std::set<std::string> closureEffects = declaredNames(*closureCall, "effects");
+        const std::set<std::string> closureCapabilities = declaredNames(*closureCall, "capabilities");
+        effects.insert(closureEffects.begin(), closureEffects.end());
+        capabilities.insert(closureCapabilities.begin(), closureCapabilities.end());
+      }
+    }
+    const Definition call = program.definitions[callIt->second];
+    std::vector<Expr> leading;
+    if (!leadingParameters(leading)) {
+      return false;
+    }
+    const std::string protoPath = functionCallDeclarationPath(functionPath);
+    Definition proto = routineLike(call, protoPath, std::move(leading));
+    proto.transforms.push_back(namedTransformOf("indirect_call"));
+    proto.transforms.push_back(namedTransformOf("unsafe"));
+    if (!effects.empty()) {
+      proto.transforms.push_back(namedTransformOf("effects", {effects.begin(), effects.end()}));
+    }
+    if (!capabilities.empty()) {
+      proto.transforms.push_back(namedTransformOf("capabilities", {capabilities.begin(), capabilities.end()}));
+    }
+    addDefinition(std::move(proto));
+
+    const std::string arguments = argumentNames(call);
+    const std::string invoke = protoPath + "(this.invoke, this.env" + (arguments.empty() ? "" : ", " + arguments) + ")";
+    const bool returnsVoid = returnTypeOf(call) == "void";
+    Definition &target = program.definitions[callIt->second];
+    if (!parseBody(returnsVoid ? "  " + invoke + "\n  return()\n" : "  return(" + invoke + ")\n", target.statements)) {
+      return false;
+    }
+    refreshReturn(target);
     std::vector<Transform> transforms;
-    for (Transform &transform : call.transforms) {
+    for (Transform &transform : target.transforms) {
       if (transform.name != "effects" && transform.name != "capabilities") {
         transforms.push_back(std::move(transform));
       }
     }
     if (!effects.empty()) {
-      Transform effectTransform;
-      effectTransform.name = "effects";
-      effectTransform.arguments.assign(effects.begin(), effects.end());
-      transforms.push_back(std::move(effectTransform));
+      transforms.push_back(namedTransformOf("effects", {effects.begin(), effects.end()}));
     }
     if (!capabilities.empty()) {
-      Transform capabilityTransform;
-      capabilityTransform.name = "capabilities";
-      capabilityTransform.arguments.assign(capabilities.begin(), capabilities.end());
-      transforms.push_back(std::move(capabilityTransform));
+      transforms.push_back(namedTransformOf("capabilities", {capabilities.begin(), capabilities.end()}));
     }
-    call.transforms = std::move(transforms);
-
-    // Copy: copy the tag, then clone the boxed closure into a block of its own.
-    std::string copyBody = "  assign(this.tag, other.tag)\n  assign(this.env, other.env)\n"
-                           "  [Pointer<i32>] raw{other.env}\n";
-    for (size_t k = 0; k < closures.size(); ++k) {
-      const std::string &closure = closures[k];
-      copyBody += "  if(equal(other.tag, " + std::to_string(k + 1) + "i32)) {\n"
-                  "    [Pointer<" + closure + "> mut] source{" + reinterpret + "<" + closure + ">(raw)}\n"
-                  "    [Pointer<uninitialized<" + closure + ">> mut] slot{/std/intrinsics/memory/alloc<uninitialized<" +
-                  closure + ">>(1i32)}\n"
-                  "    [" + closure + "] copied{dereference(source)}\n"
-                  "    init(dereference(slot), copied)\n"
-                  "    assign(this.env, " + reinterpret + "<i32>(slot))\n"
-                  "  }\n";
-    }
-    Definition &copy = program.definitions[copyIt->second];
-    if (!parseBody(copyBody, copy.statements)) {
-      return false;
-    }
-    refreshReturn(copy);
-
-    // Destroy: drop the boxed closure and free its block.
-    std::string destroyBody = "  [Pointer<i32>] raw{this.env}\n";
-    for (size_t k = 0; k < closures.size(); ++k) {
-      const std::string &closure = closures[k];
-      destroyBody += "  if(equal(this.tag, " + std::to_string(k + 1) + "i32)) {\n"
-                     "    [Pointer<uninitialized<" + closure + ">> mut] slot{" + reinterpret + "<uninitialized<" +
-                     closure + ">>(raw)}\n"
-                     "    drop(dereference(slot))\n"
-                     "    /std/intrinsics/memory/free(slot)\n"
-                     "  }\n";
-    }
-    Definition &destroy = program.definitions[destroyIt->second];
-    if (!parseBody(destroyBody, destroy.statements)) {
-      return false;
-    }
-    refreshReturn(destroy);
+    target.transforms = std::move(transforms);
     return true;
   }
 
@@ -479,13 +614,13 @@ struct FunctionValueRewriter {
     if (instances.empty()) {
       return true;
     }
-    for (Definition &def : program.definitions) {
-      currentDefinition = def.fullPath;
-      for (Expr &stmt : def.statements) {
+    for (size_t i = 0; i < program.definitions.size(); ++i) {
+      currentDefinition = program.definitions[i].fullPath;
+      for (Expr &stmt : program.definitions[i].statements) {
         collect(stmt);
       }
-      if (def.returnExpr.has_value()) {
-        collect(*def.returnExpr);
+      if (program.definitions[i].returnExpr.has_value()) {
+        collect(*program.definitions[i].returnExpr);
       }
     }
     currentDefinition.clear();
@@ -494,21 +629,21 @@ struct FunctionValueRewriter {
         collect(arg);
       }
     }
+    // The `Copy` and `Destroy` of every instance, a library's included, call the clone and release routines of the
+    // closure through these two declarations.
+    if (!addDefinitions(functionSharedCallDeclarationsText())) {
+      return false;
+    }
     for (const std::string &instance : instances) {
-      if (isLibraryOwned(instance)) {
-        if (!variants[instance].empty()) {
-          error = "a closure cannot be converted to " + instance +
-                  ": its dispatch belongs to the library that defines it";
-          return false;
-        }
-        continue;
-      }
-      for (const std::string &closure : variants[instance]) {
-        if (!checkSignature(instance, closure)) {
+      const bool libraryOwned = isLibraryOwned(instance);
+      const std::vector<std::string> closures = variants[instance];
+      for (const std::string &closure : closures) {
+        if (!checkSignature(instance, closure) || (libraryOwned && !checkLibraryEffects(instance, closure)) ||
+            !writeClosureRoutines(closure) || !writeInvokeRoutine(instance, closure)) {
           return false;
         }
       }
-      if (!completeInstance(instance, variants[instance])) {
+      if (!libraryOwned && !completeInstance(instance, closures)) {
         return false;
       }
     }
@@ -519,7 +654,7 @@ struct FunctionValueRewriter {
 } // namespace
 
 bool rewriteFunctionValues(Program &program, std::string &error) {
-  FunctionValueRewriter rewriter{program, error, {}, {}, {}, {}};
+  FunctionValueRewriter rewriter{program, error, {}, {}, {}, {}, {}};
   return rewriter.run();
 }
 

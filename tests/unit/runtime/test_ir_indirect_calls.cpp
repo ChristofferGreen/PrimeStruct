@@ -237,6 +237,34 @@ TEST_CASE("indirect calls: a void call and a call with no parameters") {
   CHECK(result.value == 9);
 }
 
+TEST_CASE("indirect calls: the expansion keeps what lies below the call and leaves arms stack-neutral") {
+  // `100 + callIndirect(double, 5)`: the value below the call survives, the result is stored in a local the arms
+  // join on, and a void function of the same parameter count is no candidate for a call that wants a value.
+  IrModule module = moduleOf({functionOf("/main",
+                                         0,
+                                         {{IrOpcode::PushI32, 100},
+                                          {IrOpcode::FunctionAddress, 1},
+                                          {IrOpcode::PushI32, 5},
+                                          {IrOpcode::CallIndirect, 1},
+                                          {IrOpcode::AddI32, 0},
+                                          {IrOpcode::ReturnI32, 0}}),
+                              doubler(),
+                              functionOf("/ignore", 1, {{IrOpcode::StoreLocal, 0}, {IrOpcode::ReturnVoid, 0}})});
+  module.functions[0].instructions.insert(module.functions[0].instructions.begin() + 1, {IrOpcode::FunctionAddress, 2});
+  module.functions[0].instructions.insert(module.functions[0].instructions.begin() + 2, {IrOpcode::Pop, 0});
+  expandIndirectCalls(module);
+  // The chain compares with the one function that returns a value (address 2) and not with /ignore (address 3).
+  size_t compares = 0;
+  for (const IrInstruction &instruction : module.functions[0].instructions) {
+    compares += instruction.op == IrOpcode::CmpEqI64 ? 1 : 0;
+    CHECK(instruction.op != IrOpcode::CallIndirect);
+  }
+  CHECK(compares == 1);
+  const Run result = run(module);
+  REQUIRE_MESSAGE(result.ok, result.error);
+  CHECK(result.value == 110);
+}
+
 TEST_CASE("indirect calls: a null address ends the program as a runtime error does") {
   IrModule module = chosenAtRunTime();
   module.functions[0].instructions = {{IrOpcode::PushI64, 0},

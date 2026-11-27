@@ -1,5 +1,6 @@
 #include "TemplateMonomorphCallableRewrites.h"
 
+#include "SemanticsValidateFunctionTypeRewrite.h"
 #include "SemanticsValidateLambdaClosures.h"
 #include "TemplateMonomorphFallbackTypeInference.h"
 #include "TemplateMonomorphMethodTargets.h"
@@ -491,22 +492,9 @@ bool closureArgument(Expr &arg,
   return true;
 }
 
-// `arg` becomes `/__Function1__t...{[tag] 0i32, [env] /__fn_box(arg)}`, the shape of the explicit conversion.
+// `arg` becomes `/__Function1__t...{[invoke] 0u64, [clone] 0u64, [release] 0u64, [env] /__fn_box(arg)}`, the shape of
+// the explicit conversion.
 void boxIntoFunction(Expr &arg, const std::string &functionPath) {
-  Expr tag;
-  tag.kind = Expr::Kind::Literal;
-  tag.literalValue = 0;
-  tag.intWidth = 32;
-  tag.namespacePrefix = arg.namespacePrefix;
-  tag.sourceLine = arg.sourceLine;
-  tag.sourceColumn = arg.sourceColumn;
-  Expr box;
-  box.kind = Expr::Kind::Call;
-  box.name = "/__fn_box";
-  box.sourceName = "Function";
-  box.namespacePrefix = arg.namespacePrefix;
-  box.sourceLine = arg.sourceLine;
-  box.sourceColumn = arg.sourceColumn;
   Expr function;
   function.kind = Expr::Kind::Call;
   function.name = functionPath;
@@ -515,12 +503,7 @@ void boxIntoFunction(Expr &arg, const std::string &functionPath) {
   function.isBraceConstructor = true;
   function.sourceLine = arg.sourceLine;
   function.sourceColumn = arg.sourceColumn;
-  box.args.push_back(std::move(arg));
-  box.argNames.push_back(std::nullopt);
-  function.args.push_back(std::move(tag));
-  function.argNames.push_back(std::string("tag"));
-  function.args.push_back(std::move(box));
-  function.argNames.push_back(std::string("env"));
+  semantics::fillFunctionConstruction(function, std::move(arg));
   arg = std::move(function);
 }
 

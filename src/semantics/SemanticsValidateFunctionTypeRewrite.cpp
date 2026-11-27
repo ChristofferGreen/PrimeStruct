@@ -115,30 +115,40 @@ bool rewriteFunctionTypes(Expr &expr, std::set<size_t> &arities, std::string &er
     const size_t arity = expr.templateArgs.size() - 1;
     arities.insert(arity);
     expr.name = "/__Function" + std::to_string(arity);
-    Expr tag;
-    tag.kind = Expr::Kind::Literal;
-    tag.literalValue = 0;
-    tag.intWidth = 32;
-    tag.namespacePrefix = expr.namespacePrefix;
-    tag.sourceLine = expr.sourceLine;
-    tag.sourceColumn = expr.sourceColumn;
-    Expr box;
-    box.kind = Expr::Kind::Call;
-    box.name = "/__fn_box";
-    box.sourceName = "Function";
-    box.namespacePrefix = expr.namespacePrefix;
-    box.sourceLine = expr.sourceLine;
-    box.sourceColumn = expr.sourceColumn;
-    box.args.push_back(std::move(expr.args.front()));
-    box.argNames.push_back(std::nullopt);
-    expr.args.clear();
-    expr.argNames.clear();
-    expr.args.push_back(std::move(tag));
-    expr.argNames.push_back(std::string("tag"));
-    expr.args.push_back(std::move(box));
-    expr.argNames.push_back(std::string("env"));
+    fillFunctionConstruction(expr, std::move(expr.args.front()));
   }
   return true;
+}
+
+void fillFunctionConstruction(Expr &construct, Expr closure) {
+  const auto placeholder = [&]() {
+    Expr zero;
+    zero.kind = Expr::Kind::Literal;
+    zero.literalValue = 0;
+    zero.intWidth = 64;
+    zero.isUnsigned = true;
+    zero.namespacePrefix = construct.namespacePrefix;
+    zero.sourceLine = construct.sourceLine;
+    zero.sourceColumn = construct.sourceColumn;
+    return zero;
+  };
+  Expr box;
+  box.kind = Expr::Kind::Call;
+  box.name = "/__fn_box";
+  box.sourceName = "Function";
+  box.namespacePrefix = construct.namespacePrefix;
+  box.sourceLine = construct.sourceLine;
+  box.sourceColumn = construct.sourceColumn;
+  box.args.push_back(std::move(closure));
+  box.argNames.push_back(std::nullopt);
+  construct.args.clear();
+  construct.argNames.clear();
+  for (const char *label : {"invoke", "clone", "release"}) {
+    construct.args.push_back(placeholder());
+    construct.argNames.push_back(std::string(label));
+  }
+  construct.args.push_back(std::move(box));
+  construct.argNames.push_back(std::string("env"));
 }
 
 bool parseGeneratedDefinitions(const std::string &text,
@@ -167,11 +177,16 @@ std::string functionShellText(size_t arity) {
         (i == 0 ? "" : ", ") + std::string("[A") + std::to_string(i) + "] a" + std::to_string(i);
   }
   const std::string name = "__Function" + std::to_string(arity);
-  // The bodies are placeholders: the function-values pass replaces them per instance once the closure types that
-  // are converted to it are known.
-  return "[struct]\n" + name + "<" + typeParams +
+  // A `Function` holds the addresses of the routines of its closure and the closure's heap block (docs/spec/
+  // value-lifecycle.md, Function values). `Copy` and `Destroy` are the same text for every instance: they reach the
+  // routines through their addresses. The `call` is a placeholder: the function-values pass writes it per instance,
+  // as a call through the address of the invoke routine.
+  return "[struct]\n" + name +
+         "<" + typeParams +
          "> {\n"
-         "  [i32 mut] tag{0i32}\n"
+         "  [u64 mut] invoke{0u64}\n"
+         "  [u64 mut] clone{0u64}\n"
+         "  [u64 mut] release{0u64}\n"
          "  [Pointer<i32> mut] env\n"
          "  [public mut unsafe return<R>]\n"
          "  call(" +
@@ -182,11 +197,19 @@ std::string functionShellText(size_t arity) {
          "  }\n"
          "  [unsafe effects(heap_alloc)]\n"
          "  Copy([Reference<Self>] other) {\n"
-         "    assign(this.tag, other.tag)\n"
+         "    assign(this.invoke, other.invoke)\n"
+         "    assign(this.clone, other.clone)\n"
+         "    assign(this.release, other.release)\n"
          "    assign(this.env, other.env)\n"
+         "    if(not_equal(other.clone, 0u64)) {\n"
+         "      assign(this.env, /__fn_clone_call(other.clone, other.env))\n"
+         "    }\n"
          "  }\n"
          "  [unsafe effects(heap_alloc)]\n"
          "  Destroy() {\n"
+         "    if(not_equal(this.release, 0u64)) {\n"
+         "      /__fn_release_call(this.release, this.env)\n"
+         "    }\n"
          "  }\n"
          "}\n";
 }

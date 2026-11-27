@@ -38,6 +38,16 @@ IrInstruction makeInstruction(IrOpcode op, uint64_t imm, const IrInstruction &li
   return instruction;
 }
 
+// Whether a function returns a value: it ends in a ReturnI32, ReturnI64, ReturnF32 or ReturnF64 (a function that
+// returns nothing ends in ReturnVoid). A target that types its functions (Wasm) needs the call of a value to name a
+// function that returns one.
+bool returnsValue(const IrFunction &function) {
+  return std::any_of(function.instructions.begin(), function.instructions.end(), [](const IrInstruction &instruction) {
+    return instruction.op == IrOpcode::ReturnI32 || instruction.op == IrOpcode::ReturnI64 ||
+           instruction.op == IrOpcode::ReturnF32 || instruction.op == IrOpcode::ReturnF64;
+  });
+}
+
 // The functions whose address the module takes, in index order.
 std::vector<uint64_t> addressTakenFunctions(const IrModule &module) {
   std::vector<bool> taken(module.functions.size(), false);
@@ -57,21 +67,25 @@ std::vector<uint64_t> addressTakenFunctions(const IrModule &module) {
   return out;
 }
 
-// The instructions that replace one indirect call, with jump targets given as offsets from the first of them.
-size_t expandedLength(size_t parameterCount, size_t candidates) {
+// The instructions that replace one indirect call.
+size_t expandedLength(size_t parameterCount, size_t candidates, bool hasResult) {
   // Stores of the parameters and the address, then per candidate: the compare (4), the loads of the parameters, the
-  // call and the jump to the end; and the trap after the chain.
-  return parameterCount + 1 + candidates * (4 + parameterCount + 2) + 1;
+  // call, the store of its result and the jump to the end; the trap after the chain; and the load of the result, where
+  // the arms join. The result goes through a local so that every arm leaves the operand stack as it found it, the
+  // shape a structured back end (Wasm) recovers.
+  const size_t resultSlots = hasResult ? 1 : 0;
+  return parameterCount + 1 + candidates * (4 + parameterCount + resultSlots + 2) + 1 + resultSlots;
 }
 
 void expandFunction(const IrModule &module, const std::vector<uint64_t> &taken, IrFunction &function) {
   const size_t count = function.instructions.size();
   const uint64_t base = freeLocalIndex(function);
   // The functions an indirect call of p parameters can reach.
-  const auto candidatesFor = [&](uint64_t parameterCount) {
+  const auto candidatesFor = [&](uint64_t parameterCount, bool wantsValue) {
     std::vector<uint64_t> out;
     for (const uint64_t index : taken) {
-      if (module.functions[static_cast<size_t>(index)].parameterCount == parameterCount) {
+      const IrFunction &candidate = module.functions[static_cast<size_t>(index)];
+      if (candidate.parameterCount == parameterCount && (!wantsValue || returnsValue(candidate))) {
         out.push_back(index);
       }
     }
@@ -84,7 +98,8 @@ void expandFunction(const IrModule &module, const std::vector<uint64_t> &taken, 
     const IrInstruction &instruction = function.instructions[i];
     next += isIndirectCallOpcode(instruction.op)
                 ? expandedLength(static_cast<size_t>(instruction.imm),
-                                 candidatesFor(instruction.imm).size())
+                                 candidatesFor(instruction.imm, instruction.op == IrOpcode::CallIndirect).size(),
+                                 instruction.op == IrOpcode::CallIndirect)
                 : 1;
   }
   newIndex[count] = next;
@@ -104,9 +119,14 @@ void expandFunction(const IrModule &module, const std::vector<uint64_t> &taken, 
       continue;
     }
     const uint64_t parameterCount = instruction.imm;
-    const std::vector<uint64_t> candidates = candidatesFor(parameterCount);
+    const std::vector<uint64_t> candidates =
+        candidatesFor(parameterCount, instruction.op == IrOpcode::CallIndirect);
+    const bool hasResult = instruction.op == IrOpcode::CallIndirect;
+    const uint64_t resultLocal = base + parameterCount + 1;
     const size_t start = out.size();
-    const size_t end = start + expandedLength(static_cast<size_t>(parameterCount), candidates.size());
+    const size_t length = expandedLength(static_cast<size_t>(parameterCount), candidates.size(), hasResult);
+    // The arms join where the result is loaded, or after the trap when there is none.
+    const size_t end = start + length - (hasResult ? 1 : 0);
     // The address is the deepest slot: store the parameters from the top, then the address.
     for (uint64_t parameter = parameterCount; parameter > 0; --parameter) {
       out.push_back(makeInstruction(IrOpcode::StoreLocal, base + parameter, instruction));
@@ -121,13 +141,17 @@ void expandFunction(const IrModule &module, const std::vector<uint64_t> &taken, 
       for (uint64_t parameter = 1; parameter <= parameterCount; ++parameter) {
         out.push_back(makeInstruction(IrOpcode::LoadLocal, base + parameter, instruction));
       }
-      out.push_back(makeInstruction(
-          instruction.op == IrOpcode::CallIndirect ? IrOpcode::Call : IrOpcode::CallVoid, candidate, instruction));
-      // The end of the expansion is the instruction after the trap, which the original code continues at.
+      out.push_back(makeInstruction(hasResult ? IrOpcode::Call : IrOpcode::CallVoid, candidate, instruction));
+      if (hasResult) {
+        out.push_back(makeInstruction(IrOpcode::StoreLocal, resultLocal, instruction));
+      }
       out.push_back(makeInstruction(IrOpcode::Jump, end, instruction));
       out[skip].imm = out.size();
     }
     out.push_back(makeInstruction(IrOpcode::Trap, RuntimeErrorExitCode, instruction));
+    if (hasResult) {
+      out.push_back(makeInstruction(IrOpcode::LoadLocal, resultLocal, instruction));
+    }
   }
   function.instructions = std::move(out);
 }

@@ -585,16 +585,26 @@ bad_set() {
   **Destroy** destroys the closure and frees the block.
 - **Nesting:** a closure may hold a `Function` of its own type (middleware: `Function<i32, i32>{[mut inner{next},
   mut seen{0i32}]([i32] x) { seen = seen + 1i32  return(inner(x) + seen) }}` wrapping a `Function<i32, i32>` it
-  was given), to any depth. The generated `Copy` and `Destroy` of the box then reach themselves through the
-  closure's field; the lowerer runs that reentry as a call of the helper instead of expanding it again (below), so
-  each copy has its own state and destroying the outermost one frees every block. Runs on the VM, `optexe` and
-  arm64 native; `--emit=exe` and the x86_64 native backend have no struct-passing calls and still report `does not
-  support recursive calls`.
-- **Lowering:** the closure pass spells `Function<R, A...>` as the struct `/__FunctionN<R, A...>` (a tag and the heap
-  address) and a conversion as `/__FunctionN<R, A...>{[tag] 0i32, [env] /__fn_box(closure)}`. After
-  monomorphization the `function-values` pass numbers the closure types converted to each `Function` instance and
-  writes its `call` (an `if` chain on the tag), `Copy` and `Destroy`. No IR change: dispatch is ordinary struct and
-  pointer code, so `Function` runs on the VM, native and `optexe` alike.
+  was given), to any depth. The `Copy` and `Destroy` of the box reach the closure's own `Copy` and `Destroy` through
+  the clone and release routines (below), which are calls through addresses, so no helper expands into itself: each
+  copy has its own state and destroying the outermost one frees every block.
+- **Lowering:** the closure pass spells `Function<R, A...>` as the struct `/__FunctionN<R, A...>` and a conversion as
+  `/__FunctionN<R, A...>{[invoke] 0u64, [clone] 0u64, [release] 0u64, [env] /__fn_box(closure)}`. The struct holds
+  three function addresses (`FunctionAddress` of docs/spec/vm-design.md: `index + 1`, so 0 is no function) and `env`,
+  the heap block that holds the closure. After monomorphization the `function-values` pass writes, for each closure type
+  converted to a `Function`, three routines and a getter of each one's address (`[function_address("/path")]`): the
+  invoke routine (`/__fn_invoke_...`, takes the block and the `Function`'s arguments and calls the closure's `call`
+  on it), the clone routine (`/__fn_clone_...`: copies the closure into a new block and returns it) and the release routine
+  (`/__fn_release_...`: destroys the closure and frees the block); the conversion's placeholders become calls of the
+  getters. The `call` of an instance is a call through the invoke address (`[indirect_call]`: `CallIndirect`),
+  `Copy` clones the block through the clone address and `Destroy` releases it through the release address (nothing when
+  the address is 0, a `Function` that holds no closure), in the same text for every instance. A `Function` is
+  therefore four slots, and a `Function` type of a library dispatches the closures of the program that links it:
+  the library's code makes the call through the address, and the program's conversion supplies the routines. A
+  closure converted to the `Function` type of a library must not need more effects than that library's `call` declares
+  (`Function<i32> cannot hold /main__lambda0 in /main: it has effects(io_out), which the library that defines the
+  Function does not allow`). The VM and `optexe` run `CallIndirect` as an indirect call; native code and Wasm take a
+  compare chain of direct calls (`expandIndirectCalls`, docs/spec/vm-design.md) until they emit it themselves.
 - **Sendable by construction:** a `Function` may cross to another task (`MultithreadingPrototype.md`, Functions Are
   Sendable), so every conversion, explicit or implicit, accepts only a closure whose captures are sendable (the
   spawn-argument rule of `language-core.md`): a capture that is a `Pointer`, a `Reference`, a view (`StringView`, a

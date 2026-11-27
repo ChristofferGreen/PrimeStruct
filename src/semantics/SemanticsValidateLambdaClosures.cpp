@@ -1,5 +1,6 @@
 #include "SemanticsValidateLambdaClosures.h"
 
+#include "SemanticsFunctionRoutines.h"
 #include "SemanticsValidateFunctionForwarders.h"
 #include "SemanticsValidateFunctionTypeRewrite.h"
 
@@ -208,8 +209,18 @@ public:
 
   bool rewriteFunctionValues() {
     for (const Definition &def : program_.definitions) {
-      if (def.fullPath == "/Function" || def.fullPath.rfind("/__Function", 0) == 0) {
-        return true;  // a user type named Function, or already rewritten
+      if (def.fullPath == "/Function") {
+        return true;  // a user type named Function
+      }
+      if (def.fullPath.rfind("/__Function", 0) == 0) {
+        // Already rewritten, or the box of a library's interface: a closure converted to it still needs the helper
+        // that moves it into the heap block, and the box's `Copy` and `Destroy` the two declarations.
+        const bool hasHelper = std::any_of(program_.definitions.begin(), program_.definitions.end(),
+                                           [](const Definition &candidate) {
+                                             return candidate.fullPath.rfind("/__fn_box", 0) == 0;
+                                           });
+        return hasHelper ||
+               parseGeneratedDefinitions(functionBoxText() + functionSharedCallDeclarationsText(), generated_, error_);
       }
     }
     std::set<size_t> arities;
@@ -246,7 +257,7 @@ public:
     if (arities.empty()) {
       return true;
     }
-    std::string text = functionBoxText();
+    std::string text = functionBoxText() + functionSharedCallDeclarationsText();
     for (size_t arity : arities) {
       text += functionShellText(arity);
     }

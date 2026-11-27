@@ -629,6 +629,111 @@ namespace web {
   CHECK(linked.exitCode == 14);
 }
 
+namespace {
+
+// A library whose `Router` takes handlers (`Function` values) from its callers, and builds one of its own in `run`.
+const char *const RouterLibrarySource = R"(
+import /std/collections/*
+
+namespace web {
+  [public struct]
+  Request() {
+    [public i32 mut] code{0i32}
+  }
+
+  [public alias<Function<void, Request, Reference<Request>>> effects(none)]
+  Handler() {}
+
+  [public struct]
+  Route() {
+    [public i32] id{0i32}
+    [public Handler mut] handler
+  }
+
+  [public struct]
+  Router() {
+    [public vector<Route> mut] routes{vector<Route>()}
+
+    [public mut effects(heap_alloc)]
+    add([i32] id, [Handler move] handler) {
+      this.routes.push(Route{[id] id, [handler] handler})
+    }
+
+    [public mut effects(heap_alloc), return<i32>]
+    handle([i32] value) {
+      [Request mut] request{Request{[code] value}}
+      [Request mut] response{Request{}}
+      this.routes[0i32].handler(request, response)
+      return(response.code + this.routes[0i32].id)
+    }
+  }
+
+  [public effects(heap_alloc), return<i32>]
+  run() {
+    [Router mut] router{Router{}}
+    router.add(3i32, []([Request] request, [Reference<Request>] response) { response.code = request.code + 1i32 })
+    return(router.handle(10i32))
+  }
+}
+)";
+
+// The program passes closures of its own where the library takes a `Function`: a plain one, one that captures and
+// changes state, and a copy of the router (its handlers are cloned, each with its own state).
+const char *const RouterAppBody = R"(
+[effects(heap_alloc) return<i32>]
+main() {
+  [/web/Router mut] router{/web/Router{}}
+  [i32] base{100i32}
+  router.add(3i32, [base]([/web/Request] request, [Reference</web/Request>] response) { response.code = request.code + base })
+  [i32] own{router.handle(10i32)}
+  return(/web/run() + own)
+}
+)";
+
+} // namespace
+
+TEST_CASE("library link: a program passes its own closure where a library takes a Function") {
+  // `/web/Router/add` takes a `Function` the library owns; the closure is the program's, and the library calls it
+  // through the address the program stores in the box. The library's own closure still works beside it.
+  const std::filesystem::path dir = testScratchPath("library_link_function_consumer_closure");
+  writeIn(dir, "web.prime", RouterLibrarySource);
+  writeIn(dir, "app.prime", "import<\"web.prime\">\n" + std::string(RouterAppBody));
+  const Run whole = runApp(dir, "vm", "");
+  REQUIRE_MESSAGE(whole.exitCode == 127, whole.err);
+
+  const std::string lib = buildLibrary(dir, "web", RouterLibrarySource);
+  writeIn(dir, "app.prime", "import</web>\n" + std::string(RouterAppBody));
+  for (const std::string emit : {"vm", "optexe"}) {
+    CAPTURE(emit);
+    const Run linked = runApp(dir, emit, "--library " + quoteShellArg(lib));
+    CHECK_MESSAGE(linked.err.empty(), linked.err);
+    CHECK(linked.exitCode == 127);
+  }
+}
+
+TEST_CASE("library link: a closure that needs more effects than the library's Function allows is refused") {
+  // The library's `Handler` is `effects(none)`; a closure that prints cannot be converted to it, since the library's
+  // `call` runs it under the effects the library declared.
+  const std::filesystem::path dir = testScratchPath("library_link_function_consumer_effects");
+  writeIn(dir, "web.prime", RouterLibrarySource);
+  const std::string lib = buildLibrary(dir, "web", RouterLibrarySource);
+  writeIn(dir, "app.prime", R"(import</web>
+
+[effects(heap_alloc, io_out) return<i32>]
+main() {
+  [/web/Router mut] router{/web/Router{}}
+  router.add(3i32, []([/web/Request] request, [Reference</web/Request>] response) {
+    print_line("handled"utf8)
+    response.code = request.code
+  })
+  return(router.handle(10i32))
+}
+)");
+  const Run linked = runApp(dir, "vm", "--library " + quoteShellArg(lib));
+  CHECK(linked.exitCode == 2);
+  CHECK(linked.err.find("which the library that defines the Function does not allow") != std::string::npos);
+}
+
 TEST_CASE("a Function type is one type whether a struct in it is written bare or with its path") {
   // `Request` reaches the root through an import and the namespace names it with its path: one instance, at any depth.
   const std::filesystem::path dir = testScratchPath("function_type_identity");

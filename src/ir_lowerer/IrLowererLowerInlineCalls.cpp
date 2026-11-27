@@ -749,12 +749,12 @@ bool emitInlineDefinitionCallImpl(
       function.instructions.push_back(
           {returnInfo.returnsVoid ? IrOpcode::CallVoid : IrOpcode::Call, *addressAbiCallImm});
       // Temporaries the parameters own (a call result or constructor passed as an argument) end with the call; the
-      // result waits in a local while they are destroyed. A frame's size is its highest local index, so the address
-      // of a result block also goes into a local allocated after the block, which keeps the block inside the frame.
+      // result waits in a local while they are destroyed. A frame's size is its highest local index, so the address of
+      // a result block (a discarded one too) goes into a local allocated after it, which keeps the block in the frame.
       const bool ownsTemporaries = !fileScopeStack.back().empty();
       int32_t resultLocal = -1;
       if (!returnInfo.returnsVoid && (ownsTemporaries || !requireValue || structResult)) {
-        if (requireValue) {
+        if (requireValue || structResult) {
           resultLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
         } else {
@@ -764,7 +764,7 @@ bool emitInlineDefinitionCallImpl(
       emitFileScopeCleanup(fileScopeStack.back());
       popFileScope();
       popInlineStack();
-      if (resultLocal >= 0) {
+      if (resultLocal >= 0 && requireValue) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal)});
       }
       return true;

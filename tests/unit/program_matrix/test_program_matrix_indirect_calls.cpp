@@ -164,6 +164,42 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+TEST_CASE("a real call whose struct result is discarded keeps its block inside the frame") {
+  // `discard` ends in a call whose two-slot result nobody reads: the block is the last thing of its frame, so native
+  // code, which sizes the frame by its highest local, must see a local after the block (TODO-6316).
+  runIndirectProgram("discarded_struct_result_block", R"(
+[struct]
+Pair {
+  [i32] first{0i32}
+  [i32] second{0i32}
+}
+
+[return<Pair>]
+make([i32 mut] total, [i32] x) {
+  total = total + x
+  total = total + 1i32
+  return(Pair{[first] total, [second] x})
+}
+
+[return<void>]
+discard([i32 mut] total, [i32] x) {
+  total = total + x
+  total = total + 1i32
+  total = total + 2i32
+  make(total, x)
+}
+
+[return<int>]
+main() {
+  [i32 mut] total{1i32}
+  discard(total, 3i32)
+  discard(total, 4i32)
+  return(total)
+}
+)",
+                     23);
+}
+
 TEST_CASE("an indirect call writes a place of the caller") {
   runIndirectProgram("indirect_call_mut_place", R"(
 [return<void>]

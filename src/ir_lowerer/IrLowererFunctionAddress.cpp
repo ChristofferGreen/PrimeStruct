@@ -23,7 +23,10 @@ bool lowerFunctionAddressCall(const Definition &getter,
               ", which is not a function a program can call through an address";
       return false;
     }
-    if (!isRealCallShapeEligible(target, callSiteRealCallContext(setupStage, target, false))) {
+    // A routine may return a one-slot `Pointer<T>`: the clone routine of a `Function` returns the new block.
+    RealCallShapeContext context = callSiteRealCallContext(setupStage, target, false);
+    context.allowSlotResults = true;
+    if (!isRealCallShapeEligible(target, context)) {
       error = "function_address of " + getter.fullPath + " names " + target.fullPath +
               ", which cannot be a real call on this target: its parameters or result do not fit the call ABI";
       return false;

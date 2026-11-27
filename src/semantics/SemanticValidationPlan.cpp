@@ -232,9 +232,8 @@ const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassMa
              SemanticValidationPassOwnership::SemanticCanonicalAst,
              SemanticValidationPassAction::MutatesAst,
              false,
-             "number the closure types converted to each Function instance, check their call "
-             "signatures, and "
-             "write its call, Copy and Destroy"},
+             "check the call signatures of the closure types converted to each Function instance, "
+             "write their invoke, clone and release routines, and write the instance's call"},
             {"compile-time-specialized-branch-pruning",
              SemanticValidationPassId::CompileTimeSpecializedBranchPruning,
              SemanticValidationPassKind::CoreCanonicalization,

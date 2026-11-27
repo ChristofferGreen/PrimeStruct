@@ -140,12 +140,12 @@ of sync with them.
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
-| TODO-6283 | A `Function` holds a function address and an environment, and a call is an indirect call | in_progress | lib-shapes |
 | TODO-6311 | The VM fast kernel runs `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6312 | arm64 and x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6313 | Wasm emits `call_indirect` for `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
+| TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | ready | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
 | TODO-5973 | SoA rewrite passes share one context and one walker | ready | reuse-soa-rewrites |
 | TODO-5976 | The semantic product publishes parsed types, and the lowerer stops re-parsing type text | deferred | reuse-type-model |
@@ -643,23 +643,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the cost of the protect and unprotect calls of arenas; no change to which stale uses fault under option (a).
   - repro: native `--emit=native` of a program that opens and ends `StringArena` 3,000,000 times around one `stringFromI32` (see docs/todo_log.md, TODO-6306).
 
-- [~] TODO-6283: A `Function` holds a function address and an environment, and a call is an indirect call
-  - owner: ai
-  - status: in_progress
-  - claimed_by: function-values (worktree-agent-a54922949ae16339b), 2026-11-27
-  - created_at: 2026-11-26
-  - phase: Modules and libraries (found by TODO-6282; split into TODO-6307..6310 and this leaf)
-  - parallel_track: lib-shapes
-  - decision (owner, 2026-11-26): option (C), the real fix now. A `Function` holds a function address (index) and an environment, and a call is an indirect call, so a library box dispatches closures of the program that links it; the tag table goes. One leaf per layer: TODO-6307 (IR opcodes and the expansion for targets without them), TODO-6308 (VM), TODO-6309 (`optexe`), TODO-6310 (lowering of the two definition markers), then this leaf (the language layer). Back ends that do not get the opcode in this run are TODO-6311 to TODO-6315.
-  - scope: today the box of a `Function` type (`/__Function2__t...`) dispatches by a tag over the closures converted to it, and its `call`, `Copy` and `Destroy` are generated from the closures of the one program (src/semantics/SemanticsValidateFunctionValues.cpp), so a consumer that passes its own lambda where a library takes the `Function` stops with `unknown call target: /__fn_box`. New layout: `__FunctionN<R, A...>` is `[u64 mut] invoke`, `[u64 mut] clone`, `[u64 mut] release` (the addresses, `index + 1`, of three routines of the closure type: enter its `call`, copy it into a new block, destroy it and free the block; 0 is no function) and `[Pointer<i32> mut] env` (the heap block of the closure, as `/__fn_box` makes it). `call` is a call through a `[indirect_call]` declaration of the instance's signature (`invoke`, `env`, the arguments), `Copy` clones the block through `clone` and `Destroy` releases it through `release` (nothing when `release` is 0). `Copy` and `Destroy` are the same text in every program, so the box needs no per-program completion and a library's box dispatches the closures of the program that links it. For each closure type the pass converts to a `Function` it writes the three routines and a `[function_address]` getter of each (TODO-6310), and the conversion stores the getters' addresses. A closure converted to a library's box must not need more effects than the library's `call` declares. The tag, the dispatch generation, the box's closure structs in the interface (`functionBoxClosures`) and the diagnostic for converting a closure to a library's box are deleted.
-  - acceptance:
-    - the repro runs: a consumer closure passed to a library function (`router.add(3i32, [](...) {...})`) works on the VM and `optexe` with a library link test (the library's own box and the consumer's closures both dispatched)
-    - a `Function` value copies (clones the closure state), destroys once, nests (a closure holding a `Function` of its own type) and passes between modules, on the VM, `optexe`, native and wasm (the last two through the expansion of TODO-6307); the whole program matrix of closures passes unchanged
-    - docs/spec/value-lifecycle.md (Function values, Lowering), docs/spec/vm-design.md (the opcodes), docs/spec/integration-and-tooling.md (a library takes `Function` values from its consumers) and docs/spec/type-system.md describe the layout; the old tag text is gone
-    - full release gate green
-  - stop_rule: the `Function` value layout and its call; no change to closure conversion rules or to which signatures a `Function` accepts.
-  - repro: the library of the test "library link: a struct with a Function field is a struct of the archive with its box" with `add` and `handle` made public; a program that links it and calls `router.add(3i32, []([Request] request, [Reference<Request>] response) { ... })`.
-
 - [ ] TODO-6311: The VM fast kernel runs `CallIndirect`
   - owner: ai
   - status: ready
@@ -726,6 +709,19 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: deleting the compatibility expansion.
   - repro: `grep expandIndirectCalls src` finds the pass today.
+
+- [ ] TODO-6317: A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-27
+  - phase: Real calls (found by TODO-6283)
+  - parallel_track: lib-shapes-backends
+  - scope: a `Function`'s `call` is a call through an `[indirect_call]` declaration of the instance's signature, which lowers as a real call (docs/spec/vm-design.md, Function addresses). The VM, `optexe`, arm64 native and Wasm take structs, `Reference` parameters and struct results through the address ABI. The targets with the scalar ABI (`--emit=exe` and `cpp`, x86_64 native) refuse the declaration, so a program with a `Function<void, Reference<State>, Event>` (a struct or a `Reference` among the parameters, or a struct result) stops with `function_address of /__fn_address_invoke_... names /__fn_invoke_..., which cannot be a real call on this target: its parameters or result do not fit the call ABI`; before TODO-6283 the dispatch was inline code and every signature lowered there. A `Function` whose parameters and result are scalars lowers everywhere. Options: the scalar targets get an expansion at lowering time for the call of a `Function` (the old inline chain, over the closures converted to the instance, which a library link cannot see), or they take the address ABI (TODO-5752 for x86_64 native).
+  - acceptance:
+    - `primec --emit=exe` of the repro runs and exits with the VM's code, with the owner's choice of option written in docs/spec/vm-design.md (Real calls) and this leaf's result
+    - full release gate green
+  - stop_rule: `Function` signatures with a struct, `Reference` or struct result on the scalar-ABI targets; no change to the address ABI targets.
+  - repro: a program with `[struct] State { [i32 mut] total{0i32} }`, `[struct] Event { [i32] x{0i32} [i32] y{0i32} }` and `[Function<void, Reference<State>, Event> mut] handler` called as `handler(state, event)`: `primec --emit=exe` fails as above, `--emit=vm` and `--emit=native` run it.
 
 - [~] TODO-5973: SoA rewrite passes share one context and one walker
   - owner: ai

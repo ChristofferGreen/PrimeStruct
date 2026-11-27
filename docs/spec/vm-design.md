@@ -273,7 +273,8 @@
   can name has the parameters after the address and the result of the declaration) and the lowerer emits `CallIndirect`
   (`CallIndirectVoid` for a `void` result) with the callee's parameter count; the definition has no function in the
   module. A one-slot `Pointer<T>` result is allowed. Targets without the call ABI of structs (x86_64 native and the
-  simple C++ emitters) take scalar parameters only. The `Function` value of docs/spec/value-lifecycle.md is built on
+  simple C++ emitters) take scalar parameters only, so a `Function` with a struct or `Reference` parameter does not
+  lower there yet (docs/todo.md, TODO-6317). The `Function` value of docs/spec/value-lifecycle.md is built on
   these two.
 - **Fused multiply-add (PSIR v40):** `FmaF32` and `FmaF64` pop `c`, then `b`, then `a` and push `a * b + c` rounded
   once, the result of C's `fmaf` and `fma` (`std::fma`); the product is not rounded before the addition, so the result

@@ -333,10 +333,13 @@ file (lazily or whole; `--emit-deps` does not list it) and splices the file's st
 `StringView` parameters; `import</std/path>` before it is allowed and does the same splice first. The modules of the
 family that have no library (matrix, quaternion) come from the stdlib source as before.
 
-A struct of a library that holds a `Function` field carries the field's box in the interface: the box struct, its
-`Copy` and `Destroy` (the dispatch over the closures the library converts to it) and an imported `call`. The box is
-final; a program's own closure cannot be converted to it (TODO-6283), so a library takes `Function` values only from its
-own code.
+A struct of a library that holds a `Function` field carries the field's box in the interface: the box struct (four
+slots: the addresses of the invoke, clone and release routines of its closure, and the closure's heap block), its `Copy`
+and `Destroy` (which clone and release the block through the addresses) and an imported `call` (which calls through the
+invoke address). The box holds no list of closures, so a program converts its own closure to it
+(a lambda passed to `router.add` of a library `Router`): the program writes the routines of its closure and the
+library's code calls them by address once the program and the library are linked. A closure may not need more effects
+than the library's `call` declares.
 
 **Slices.** A borrowed slice crosses the library boundary as a data address and an element count. A `ReadSlice<T>`
 or `WriteSlice<T>` parameter of a public library function (or of a function a library declares) is passed as the

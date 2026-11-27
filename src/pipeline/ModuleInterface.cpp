@@ -517,46 +517,12 @@ bool isFunctionBoxInstance(const Definition &definition) {
   return definition.instanceOfTemplate.rfind("/__Function", 0) == 0;
 }
 
-// A method of such a box (`call`, `Copy`, `Destroy`): its body is the dispatch over the closures the module
-// converts to the box, so the interface carries the completed definition.
+// A method of such a box (`call`, `Copy`, `Destroy`): the box has no source of its own, so the interface carries
+// them as definitions. `Copy` and `Destroy` call the routines of the closure through the addresses the box holds,
+// the same text for every box, and `call` is declared imported: the library's code calls through the address.
 bool isFunctionBoxMember(const Definition &definition) {
   return definition.isNested && definition.fullPath.rfind("/__Function", 0) == 0 &&
          parentDefinitionPath(definition.fullPath).find("__t") != std::string::npos;
-}
-
-// The closure structs (`/web/run__lambda0`) a box's `Copy` and `Destroy` name: their layout is part of the interface
-// of a box, since the consumer expands those helpers.
-std::set<std::string> functionBoxClosures(const Program &program) {
-  std::set<std::string> closures;
-  for (const Definition &definition : program.definitions) {
-    if (!isFunctionBoxMember(definition) || !isLifecycleHelper(definition)) {
-      continue;
-    }
-    const std::string text = genericDefinitionText(definition, definition.fullPath, {});
-    for (size_t at = text.find("__lambda"); at != std::string::npos;
-         at = text.find("__lambda", at + 1)) {
-      size_t first = at;
-      while (first > 0 && (std::isalnum(static_cast<unsigned char>(text[first - 1])) != 0 ||
-                           text[first - 1] == '_' || text[first - 1] == '/')) {
-        --first;
-      }
-      size_t last = at + 8;
-      while (last < text.size() && std::isdigit(static_cast<unsigned char>(text[last])) != 0) {
-        ++last;
-      }
-      closures.insert(text.substr(first, last - first));
-    }
-  }
-  return closures;
-}
-
-bool isBoxClosureDefinition(const std::set<std::string> &closures, const Definition &definition) {
-  for (const std::string &closure : closures) {
-    if (definition.fullPath == closure || definition.fullPath.rfind(closure + "/", 0) == 0) {
-      return true;
-    }
-  }
-  return false;
 }
 
 } // namespace
@@ -672,10 +638,8 @@ bool buildModuleInterface(const Program &program,
     definitions.emplace(entry.first, entry.second);
     definedPaths.insert(entry.first);
   }
-  const std::set<std::string> boxClosures = functionBoxClosures(program);
   for (const Definition &definition : program.definitions) {
-    const bool functionBox = isFunctionBoxInstance(definition) || isFunctionBoxMember(definition) ||
-                             isBoxClosureDefinition(boxClosures, definition);
+    const bool functionBox = isFunctionBoxInstance(definition) || isFunctionBoxMember(definition);
     if (definition.fullPath == entryPath || !definition.templateArgs.empty() ||
         (!definition.instanceOfTemplate.empty() && !functionBox) ||
         hasTransform(definition.transforms, "namespace") ||
