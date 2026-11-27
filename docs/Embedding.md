@@ -220,6 +220,12 @@ archives and without the host that compiled it. `Script::libraries()` names the 
 the hash of its interface at compile time; `saveBytecode` writes them beside the code (a `PSBN` bundle of version 2)
 and `loadBytecode` reads them back. A script that imports no library is saved as before, byte for byte.
 
+The records are information only. `loadBytecode` is static and holds no library, so it checks nothing against them: the
+bytecode is self-contained, a library archive that changed afterwards has no effect on a script compiled before it, and a
+host that wants to know whether its scripts are older than an archive compares `Script::libraries()` with the archive
+itself. A check at load (for example `ScriptEngine::loadBytecode`, which would compare the records with the libraries
+given to `addLibrary`) comes when a host asks for it.
+
 ## Bytecode compatibility
 
 Bytecode is the serialized `IrModule` (magic `RISP`, then a format version).

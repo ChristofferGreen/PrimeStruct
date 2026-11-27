@@ -137,7 +137,6 @@ of sync with them.
 | TODO-5932 | Libraries carry back-end code | deferred | lib-backend |
 | TODO-6276 | `optexe` libraries carry a C++ unit | deferred | lib-backend |
 | TODO-6277 | Native libraries are object files joined by a linker | deferred | lib-backend |
-| TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
@@ -575,26 +574,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - acceptance:
     - to be written when TODO-6276 is done: split into an object writer leaf per format and the linker-step leaf
   - stop_rule: do not start before it is split into leaves.
-
-- [ ] TODO-6219: `loadBytecode` of a script linked with a library says whether that library changed
-  - owner: ai
-  - status: ready
-  - created_at: 2026-11-23
-  - phase: Modules and libraries (split from TODO-6217: the check at load)
-  - parallel_track: lib-embed
-  - decision (owner, 2026-11-27): option A now: the records are information (`Script::libraries()`), and `loadBytecode` checks nothing. Option C (`ScriptEngine::loadBytecode`) comes when a host asks for the check. Remaining work: state this in the embedding spec and close this leaf.
-  - scope: `Script::bytecode` records the name and interface hash of each library a script was linked with (done), and the code of each library is merged into the module, so the bytecode is self-contained and cannot run stale library code. TODO-6217 asked that `loadBytecode` also "check" the records so that a script compiled against a library that changed is refused at load. `Script::loadBytecode(bytes, name)` is static and holds no library, so there is nothing to compare the records with unless the caller supplies it. The question is what the check is.
-  - question: what does `loadBytecode` compare the recorded libraries with, and what is refused?
-  - options:
-    - A. Nothing: the records are information (`Script::libraries()`), the bytecode is self-contained, and a changed archive has no effect on a script compiled before it. Costs: nothing built; a host that wants to know whether its scripts are older than an archive compares `libraries()` itself.
-    - B. `Script::loadBytecode(bytes, name, libraries)` with the archives (or their manifests) the host has: a recorded library that is missing or has another interface hash is `library ui changed since this script was compiled; rebuild` (the text of the compile-time check in `linkProgramLibraries`). Costs: a new overload in the runtime-only library, which must read an archive manifest (today only the full library does), and a host that passes none gets option A.
-    - C. `ScriptEngine::loadBytecode(bytes)`, a member that checks the records against the libraries the engine was given with `addLibrary` and then calls the static function. Costs: a second entry point for loading; the runtime-only library stays as it is.
-  - recommendation: A until a host asks for the check, then C: the engine already holds the archives and the compile-time check text, so the runtime-only library stays small. B only if a host without the full library needs it.
-  - acceptance:
-    - the option the owner picks is implemented with a positive and a negative test (the changed library is refused with a message that names it), or the leaf is closed as option A with the doc line that says the records are information
-    - full release gate green
-  - stop_rule: the check of the recorded libraries at load; no change to the record format of TODO-6217.
-  - repro: compile a script against `tools.psa`, `saveBytecode`, rebuild `tools.psa` with a changed public function, `loadBytecode` the bytes: the script loads and runs the code it was compiled with.
 
 
 - [ ] TODO-6305: An operator site the prediction cannot type validates the program twice
