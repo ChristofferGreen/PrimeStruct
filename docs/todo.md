@@ -141,7 +141,7 @@ of sync with them.
 | TODO-6219 | `loadBytecode` of a script linked with a library says whether that library changed | deferred | lib-embed |
 | TODO-6306 | Ending and reusing a native string arena costs two system calls | deferred | native-arena-stale-text |
 | TODO-6318 | x86_64 native and the JIT emit `CallIndirect` | ready | lib-shapes-backends |
-| TODO-6314 | The simple C++ emitters emit `CallIndirect` | ready | lib-shapes-backends |
+| TODO-6314 | The simple C++ emitters emit `CallIndirect` | in_progress | lib-shapes-backends |
 | TODO-6315 | The expansion of indirect calls is deleted | blocked | lib-shapes-backends |
 | TODO-6317 | A `Function` with a struct or `Reference` parameter does not lower on the targets without struct-passing real calls | ready | lib-shapes-backends |
 | TODO-5987 | The lowerer's include-only fragments become components | ready | lowerer-fragments |
@@ -655,9 +655,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: x86_64 native and JIT code generation of the opcodes.
   - repro: `--emit=native` on x86_64 of a program with `Function` values: its IR holds a compare chain instead of `CallIndirect`.
 
-- [ ] TODO-6314: The simple C++ emitters emit `CallIndirect`
+- [~] TODO-6314: The simple C++ emitters emit `CallIndirect`
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: indirect-backends (worktree-agent-ad9091dc0b49a3412), 2026-11-27
   - created_at: 2026-11-26
   - phase: Modules and libraries (back ends of TODO-6283)
   - parallel_track: lib-shapes-backends
