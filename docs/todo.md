@@ -127,7 +127,6 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | in_progress | inline-task-lowering |
-| TODO-6325 | The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all` | in_progress | matrix-slow-configs |
 | TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | ready | matrix-slow-configs |
 | TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | ready | stdlib-lookup |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -448,20 +447,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the discarded result of a call that returns a builtin `map<K, V>` by value.
   - repro: `[return<map<i32, i32>> effects(heap_alloc)] make_table([i32] value) { [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)} return(out) }` and `[return<i32> effects(heap_alloc)] round() { make_table(9i32) return(0i32) }`; `main` prints `round()` then `heapLiveBlocks()`: `primevm` prints `0` then `2` (2026-11-27, release build).
-
-- [~] TODO-6325: The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all`
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-ac70ae69ba7bf0b14, 2026-11-28
-  - created_at: 2026-11-28
-  - phase: Correctness audit 2026-10 (found checking a report that `--emit=exe` of `task_builtin_map_arguments` fails with an emission error about `std/text`)
-  - parallel_track: matrix-slow-configs
-  - scope: `runTaskProgram` in tests/unit/program_matrix/test_program_matrix_tasks.cpp lists every config but `exe` by name (`config.name != "exe"`), so no task program ever ran on `exe`, with or without `PRIMESTRUCT_MATRIX_CONFIGS=all`, though the comment above it says `exe` runs with `all`. The report could not be reproduced: at ecf5b354d `primec --emit=exe`, `--emit=cpp` and `--emit=optexe` of `task_builtin_map_arguments` compile and the binary prints the VM's output; with the exclusion removed all 34 task cases pass on every config including `exe` (1195 assertions), and all 588 program-matrix cases pass with `PRIMESTRUCT_MATRIX_CONFIGS=all` (0 programs fail on `exe`, 0 on `optexe-O2`). The message the report quotes is what `primec` prints when `stdlib` is not found (TODO-6327), which every backend prints alike. Drop the exclusion so the task cases run on `exe` with `all`.
-  - acceptance:
-    - `PRIMESTRUCT_MATRIX_CONFIGS=all PrimeStruct_program_matrix_tests --test-suite=primestruct.program_matrix.tasks` runs each task case on `exe` and passes
-    - full release gate green
-  - stop_rule: the one config list in `runTaskProgram`; no task program is skipped on `exe` by name.
-  - repro: remove `config.name != "exe" &&` from `runTaskProgram`, build `PrimeStruct_program_matrix_tests` and run the command above in `build-release` (2026-11-28, release build, macOS arm64: 34 passed).
 
 - [ ] TODO-6326: The gate never runs the `optexe` and `exe` program-matrix configs
   - owner: ai

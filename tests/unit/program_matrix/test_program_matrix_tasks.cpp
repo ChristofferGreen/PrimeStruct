@@ -82,10 +82,10 @@ const std::vector<std::string> &wasmTaskPrograms() {
 }
 
 void runTaskProgram(program_matrix::ProgramCase program, TaskFamily family = TaskFamily::All) {
-  // Every config but the old C++ emitter (`exe`), which is only run with PRIMESTRUCT_MATRIX_CONFIGS=all.
+  // Every config; the old C++ emitter (`exe`) and `optexe` run with PRIMESTRUCT_MATRIX_CONFIGS=all.
   for (const program_matrix::ExecutionConfig &config : taskConfigs()) {
     // The opt-in Wasm config is listed by name below (wasmTaskPrograms).
-    if (config.name != "exe" && !config.optIn && inFamily(config, family)) {
+    if (!config.optIn && inFamily(config, family)) {
       program.onlyConfigs.push_back(config.name);
     }
   }

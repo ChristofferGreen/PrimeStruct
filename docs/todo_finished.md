@@ -2729,6 +2729,7 @@ are left unarchived.
 | TODO-6321 | Wasm runs the `Atomic` opcodes as plain memory operations | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6322 | Wasm runs locks, conditions and channels single-threaded and refuses a blocking site | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6325 | The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all` | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 
