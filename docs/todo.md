@@ -127,7 +127,7 @@ of sync with them.
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
 | TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | ready | matrix-slow-configs |
-| TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | ready | stdlib-lookup |
+| TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | in_progress | stdlib-lookup |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -447,9 +447,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: the registration of the slow configs; no new matrix programs.
   - repro: `grep -rn PRIMESTRUCT_MATRIX_CONFIGS CMakeLists.txt cmake scripts` prints nothing (2026-11-28).
 
-- [ ] TODO-6327: `primec` finds `stdlib` only from the working directory or the source's own directories
+- [~] TODO-6327: `primec` finds `stdlib` only from the working directory or the source's own directories
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worktree-agent-a3331614a4e6ec44c, 2026-11-28
   - created_at: 2026-11-28
   - phase: Correctness audit 2026-10 (found with TODO-6325)
   - parallel_track: stdlib-lookup
