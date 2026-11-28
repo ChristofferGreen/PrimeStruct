@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | in_progress | inline-task-lowering |
 | TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | ready | matrix-slow-configs |
 | TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | ready | stdlib-lookup |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
@@ -433,20 +432,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
-
-- [~] TODO-6324: A discarded call result that is a builtin `map<K, V>` leaks its two buffers
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-ac70ae69ba7bf0b14, 2026-11-28
-  - created_at: 2026-11-27
-  - phase: Correctness audit 2026-10 (found with TODO-6323)
-  - parallel_track: inline-task-lowering
-  - scope: a statement `make_table(9i32)` whose definition returns `map<i32, i32>` builds the map and nothing drops it: the heap ends with the map's two `Vector` buffers live. A binding of the same result is freed (TODO-6323). Drop the temporary at the end of the statement, the way the lowering drops a discarded struct or `vector` result.
-  - acceptance:
-    - a program that discards the result of a map-returning call reports `heapLiveBlocks()` back at its start on the VM, optexe and wasm-wasi, with a matrix case
-    - full release gate green
-  - stop_rule: the discarded result of a call that returns a builtin `map<K, V>` by value.
-  - repro: `[return<map<i32, i32>> effects(heap_alloc)] make_table([i32] value) { [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)} return(out) }` and `[return<i32> effects(heap_alloc)] round() { make_table(9i32) return(0i32) }`; `main` prints `round()` then `heapLiveBlocks()`: `primevm` prints `0` then `2` (2026-11-27, release build).
 
 - [ ] TODO-6326: The gate never runs the `optexe` and `exe` program-matrix configs
   - owner: ai

@@ -382,6 +382,24 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
     if (std::string structPath = ownedTemporaryStructPath(stmtExpr, locals); !structPath.empty()) {
       return structPath;
     }
+    // A definition returning a builtin `map<K, V>` by value: the discarded map owns two buffers.
+    if (stmtExpr.kind == Expr::Kind::Call && !stmtExpr.isBinding && !stmtExpr.isMethodCall) {
+      if (const Definition *mapCallee = resolveDefinitionCall(stmtExpr)) {
+        const std::string mapPath = ir_lowerer::builtinMapReturnTypeText(*mapCallee).empty()
+                                        ? std::string{}
+                                        : inferStructExprPath(stmtExpr, locals);
+        if (!mapPath.empty() && ir_lowerer::structNeedsDestroyHelpers(
+                                    mapPath,
+                                    [&](const std::string &path) {
+                                      return ir_lowerer::findStackDestroyHelper(defMap, path);
+                                    },
+                                    [&](const std::string &path, StructSlotLayoutInfo &layoutOut) {
+                                      return resolveStructSlotLayout(path, layoutOut);
+                                    })) {
+          return mapPath;
+        }
+      }
+    }
     if (stmtExpr.kind != Expr::Kind::Call || stmtExpr.isBinding ||
         !ir_lowerer::isStructConstructorCallShape(stmtExpr)) {
       return std::string{};

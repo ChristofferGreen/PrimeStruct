@@ -32,22 +32,7 @@
       return nullptr;
     };
     auto returnsMapLikeValue = [&](const Definition *callee) {
-      if (callee == nullptr) {
-        return false;
-      }
-      for (const auto &transform : callee->transforms) {
-        if (transform.name != "return" || transform.templateArgs.empty()) {
-          continue;
-        }
-        std::string base;
-        std::string argText;
-        const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
-        if (splitTemplateTypeName(returnType, base, argText)) {
-          return normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) == "map";
-        }
-        return normalizeCollectionBindingTypeName(returnType) == "map";
-      }
-      return false;
+      return callee != nullptr && !ir_lowerer::builtinMapReturnTypeText(*callee).empty();
     };
     std::function<void(Expr &)> canonicalizeExplicitBuiltinKeyValueHelpers =
         [&](Expr &exprIn) {

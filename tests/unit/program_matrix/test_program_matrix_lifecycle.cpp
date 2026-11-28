@@ -1265,6 +1265,63 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// A discarded call result that a definition returns by value is destroyed at the end of its statement: a builtin
+// `map<K, V>` (its two buffers), a builtin vector and a `String`. The map one leaked before TODO-6324.
+TEST_CASE("discarded map, vector and String call results free what they own") {
+  program_matrix::ProgramCase program;
+  program.name = "discarded_map_vector_string_results";
+  program.source = R"(
+import /std/collections/*
+import /std/text/*
+
+[return<map<i32, i32>> effects(heap_alloc)]
+make_table([i32] value) {
+  [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)}
+  return(out)
+}
+
+[return<vector<i32>> effects(heap_alloc)]
+make_numbers([i32] value) {
+  [vector<i32>] out{vector<i32>(value, 2i32)}
+  return(out)
+}
+
+[return<String> effects(heap_alloc)]
+make_text() {
+  [String mut] text{String{}}
+  text.append("a string long enough to live on the heap for sure")
+  return(text)
+}
+
+[return<i32> effects(heap_alloc)]
+round() {
+  make_table(9i32)
+  make_numbers(3i32)
+  make_text()
+  return(7i32)
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  [u64] textBefore{stringHeapBytesInUse()}
+  repeat(50i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  [i32] leakedText{convert<i32>(stringHeapBytesInUse() - textBefore)}
+  print_line(leakedBlocks)
+  print_line(leakedText)
+  return(first + leakedBlocks * 10i32 + leakedText)
+}
+)";
+  program.exitCode = 7;
+  program.stdoutText = "0\n0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2", "wasm-wasi"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a discarded constructor statement runs Destroy once at its end") {
   program_matrix::ProgramCase program;
   program.name = "discarded_constructor_destroy_once";

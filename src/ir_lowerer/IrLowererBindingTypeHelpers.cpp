@@ -1058,4 +1058,19 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
   }
 }
 
+std::string builtinMapReturnTypeText(const Definition &callee) {
+  for (const auto &transform : callee.transforms) {
+    if (transform.name != "return" || transform.templateArgs.empty()) {
+      continue;
+    }
+    const std::string returnType = trimTemplateTypeText(transform.templateArgs.front());
+    std::string base;
+    std::string argText;
+    const std::string baseName =
+        splitTemplateTypeName(returnType, base, argText) ? trimTemplateTypeText(base) : returnType;
+    return normalizeCollectionBindingTypeName(baseName) == "map" ? returnType : std::string{};
+  }
+  return std::string{};
+}
+
 } // namespace primec::ir_lowerer

@@ -43,6 +43,8 @@ std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgra
                                            const std::string &text,
                                            SymbolId textId);
 std::string normalizeCollectionBindingTypeName(const std::string &name);
+// The type text of a definition's builtin `map<K, V>` return (a map it returns by value), or empty.
+std::string builtinMapReturnTypeText(const Definition &callee);
 bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText);
 bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr);
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr);
