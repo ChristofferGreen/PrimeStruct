@@ -1322,6 +1322,50 @@ main() {
   program_matrix::runProgramMatrix(program);
 }
 
+// The method form of the case above: `maker.make(9i32)` as a statement drops the map the method returns (TODO-6328).
+TEST_CASE("a discarded map returned by a method call is freed") {
+  program_matrix::ProgramCase program;
+  program.name = "discarded_map_method_result";
+  program.source = R"(
+import /std/collections/*
+import /std/text/*
+
+[struct]
+Maker() {
+  [i32] seed{1i32}
+
+  [return<map<i32, i32>> effects(heap_alloc)]
+  make([i32] value) {
+    [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)}
+    return(out)
+  }
+}
+
+[return<i32> effects(heap_alloc)]
+round() {
+  [Maker] maker{Maker{}}
+  maker.make(9i32)
+  return(7i32)
+}
+
+[return<int> effects(heap_alloc, io_out)]
+main() {
+  [i32] first{round()}
+  [i32] before{heapLiveBlocks()}
+  repeat(50i32) {
+    round()
+  }
+  [i32] leakedBlocks{heapLiveBlocks() - before}
+  print_line(leakedBlocks)
+  return(first + leakedBlocks * 10i32)
+}
+)";
+  program.exitCode = 7;
+  program.stdoutText = "0\n";
+  program.onlyConfigs = {"vm-step-O0", "vm-O0", "vm-O2", "optexe-O2", "wasm-wasi"};
+  program_matrix::runProgramMatrix(program);
+}
+
 TEST_CASE("a discarded constructor statement runs Destroy once at its end") {
   program_matrix::ProgramCase program;
   program.name = "discarded_constructor_destroy_once";

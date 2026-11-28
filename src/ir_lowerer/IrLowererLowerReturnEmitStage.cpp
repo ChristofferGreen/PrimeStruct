@@ -383,8 +383,11 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
       return structPath;
     }
     // A definition returning a builtin `map<K, V>` by value: the discarded map owns two buffers.
-    if (stmtExpr.kind == Expr::Kind::Call && !stmtExpr.isBinding && !stmtExpr.isMethodCall) {
-      if (const Definition *mapCallee = resolveDefinitionCall(stmtExpr)) {
+    if (stmtExpr.kind == Expr::Kind::Call && !stmtExpr.isBinding && !stmtExpr.isFieldAccess) {
+      const Definition *mapCallee = stmtExpr.isMethodCall
+                                        ? resolveMethodCallDefinition(stmtExpr, locals)
+                                        : resolveDefinitionCall(stmtExpr);
+      if (mapCallee != nullptr) {
         const std::string mapPath = ir_lowerer::builtinMapReturnTypeText(*mapCallee).empty()
                                         ? std::string{}
                                         : inferStructExprPath(stmtExpr, locals);

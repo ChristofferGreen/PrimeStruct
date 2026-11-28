@@ -2733,6 +2733,7 @@ are left unarchived.
 | TODO-6325 | The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all` | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6328 | A discarded method call result that is a builtin `map<K, V>` leaks its two buffers | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->
 

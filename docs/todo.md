@@ -126,7 +126,6 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6328 | A discarded method call result that is a builtin `map<K, V>` leaks its two buffers | in_progress | inline-task-lowering |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -431,20 +430,6 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
-
-- [~] TODO-6328: A discarded method call result that is a builtin `map<K, V>` leaks its two buffers
-  - owner: ai
-  - status: in_progress
-  - claimed_by: worktree-agent-a3331614a4e6ec44c, 2026-11-28
-  - created_at: 2026-11-28
-  - phase: Correctness audit 2026-10 (found checking TODO-6324)
-  - parallel_track: inline-task-lowering
-  - scope: the fix of TODO-6324 drops the map a discarded plain call `make_table(9i32)` returns, but its branch in `discardedTemporaryStructPath` (src/ir_lowerer/IrLowererLowerReturnEmitStage.cpp) skips method calls (`!stmtExpr.isMethodCall`), so the statement `maker.make(9i32)` of a helper that returns `map<i32, i32>` builds the map and nothing drops it. Resolve the method's definition the way `ownedTemporaryStructPath` does and drop the temporary at the end of the statement.
-  - acceptance:
-    - a program that discards the result of a map-returning method call reports `heapLiveBlocks()` back at its start on the VM, optexe and wasm-wasi, with a matrix case
-    - full release gate green
-  - stop_rule: the discarded result of a method call that returns a builtin `map<K, V>` by value.
-  - repro: `[struct] Maker() { [i32] seed{1i32} [return<map<i32, i32>> effects(heap_alloc)] make([i32] value) { [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)} return(out) } }`, `[return<i32> effects(heap_alloc)] round() { [Maker] maker{Maker{}} maker.make(9i32) return(7i32) }`, and a `main` that calls `round()` once, then 50 times between two `heapLiveBlocks()` reads (with `import /std/collections/*` and `import /std/text/*`): `primevm --entry /main` prints `100` (2026-11-28, release build).
 
 - [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
   - owner: ai
