@@ -177,7 +177,13 @@
   - **VM bytecode** – compact instruction set executed by the embedded interpreter/JIT.
 - **Tooling:** CLI compiler `primec`, plus the VM runner `primevm` and build/test helpers. The compiler accepts `--entry
   /path` to select the entry definition (default: `/main`). Import search roots are configured with `--import-path
-  <dir>` (or `-I <dir>`). Entry definitions currently accept either no parameters or a single `[array<string>]`
+  <dir>` (or `-I <dir>`). `primec` adds one default standard-library root (unless that directory is already a root), the
+  first `stdlib` directory that exists in this order: (1) next to the source file or in any of its parent
+  directories, nearest first; (2) in the working directory or any of its parents; (3) in the directory of the running
+  `primec` executable or any of its parents (a checkout's `build-*/primec` finds the checkout's `stdlib`); (4)
+  `<executable dir>/../share/primestruct/stdlib`, where `cmake --install` puts it. An explicit `--import-path` root is
+  always searched too. When an import of a standard-library module finds none, the error lists the directories
+  searched and names `--import-path <dir>`. Entry definitions currently accept either no parameters or a single `[array<string>]`
   parameter for command-line arguments; `args.count()` and `count(args)` are supported, and checked indexing is
   available via either `args[index]` or `args.at(index)` (`at_unsafe(args, index)` / `args.at_unsafe(index)` skips
   checks). String bindings may be initialised from checked/unchecked entry-arg indexing (print-only). The C++ emitter

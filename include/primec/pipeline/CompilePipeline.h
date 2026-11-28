@@ -12,6 +12,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <vector>
 
 namespace primec {
 
@@ -109,6 +110,11 @@ struct CompilePipelineFailureResult {
 
 using CompilePipelineResult =
     std::variant<CompilePipelineSuccessResult, CompilePipelineFailureResult>;
+
+// The `stdlib` directories addDefaultStdlibInclude considers, in precedence order: each directory of the source and
+// its parents, the working directory and its parents, the running executable's directory and its parents, then
+// `<executable dir>/../share/primestruct/stdlib` (the install location). The first that exists is used.
+std::vector<std::string> stdlibSearchCandidates(const std::string &inputPath);
 
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);
 

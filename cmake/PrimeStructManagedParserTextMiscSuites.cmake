@@ -15,7 +15,7 @@ addPrimeStructManagedDoctestSuite("primestruct.dumps.ast_ir"
 addPrimeStructManagedDoctestSuite("primestruct.imports.errors"
   TARGET PrimeStruct_misc_tests
   TIMEOUT 300
-  TOTAL_CASES 37
+  TOTAL_CASES 40
   CASES_PER_SHARD 10
 )
 addPrimeStructManagedDoctestSuite("primestruct.imports.resolver"

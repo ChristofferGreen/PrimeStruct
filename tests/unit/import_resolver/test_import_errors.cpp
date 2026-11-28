@@ -1,11 +1,15 @@
 #include "primec/frontend/ImportResolver.h"
+#include "primec/pipeline/BuildRunner.h"
+#include "primec/pipeline/CompilePipeline.h"
 #include "primec/testing/TestScratch.h"
 
 #include "third_party/doctest.h"
 
 #include <filesystem>
+#include <algorithm>
 #include <fstream>
 #include <string>
+#include <vector>
 
 namespace {
 std::filesystem::path importErrorsPath(std::string_view relativePath) {
@@ -487,6 +491,53 @@ TEST_CASE("versioned import fails when file missing") {
   primec::ImportResolver resolver;
   CHECK_FALSE(resolver.expandImports(srcPath, source, error, {includeRoot.string()}));
   CHECK(error.find("failed to read import") != std::string::npos);
+}
+
+TEST_CASE("a missing stdlib names the places searched and the flag") {
+  const std::string srcPath = writeTemp("stdlib_search_missing.prime", R"(
+import /std/text/*
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)");
+  primec::Options options;
+  options.inputPath = srcPath;
+  options.entryPath = "/main";
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  CHECK_FALSE(primec::runCompilePipeline(options, output, errorStage, error));
+  CHECK(error.find("stdlib import requested but matching stdlib modules were not found") !=
+        std::string::npos);
+  CHECK(error.find("no stdlib directory exists at") != std::string::npos);
+  CHECK(error.find((std::filesystem::path(srcPath).parent_path() / "stdlib").string()) !=
+        std::string::npos);
+  CHECK(error.find("--import-path <dir>") != std::string::npos);
+}
+
+TEST_CASE("stdlib search ends at the executable's checkout and install location") {
+  const std::filesystem::path exeDir =
+      std::filesystem::path(primec::selfExecutablePath("")).parent_path();
+  const std::vector<std::string> candidates = primec::stdlibSearchCandidates("");
+  REQUIRE_FALSE(candidates.empty());
+  const std::string installed =
+      (exeDir.parent_path() / "share" / "primestruct" / "stdlib").string();
+  CHECK(candidates.back() == installed);
+  CHECK(std::find(candidates.begin(), candidates.end(), (exeDir / "stdlib").string()) !=
+        candidates.end());
+}
+
+TEST_CASE("the default stdlib is found from the executable when the source and cwd are elsewhere") {
+  const std::filesystem::path previous = std::filesystem::current_path();
+  std::filesystem::current_path(std::filesystem::path(previous).root_path());
+  std::vector<std::string> importPaths;
+  primec::addDefaultStdlibInclude("/primestruct_no_such_dir/main.prime", importPaths);
+  std::filesystem::current_path(previous);
+  REQUIRE(importPaths.size() == 1);
+  CHECK(std::filesystem::path(importPaths.front()).filename() == "stdlib");
+  CHECK(std::filesystem::is_directory(importPaths.front()));
 }
 
 TEST_SUITE_END();

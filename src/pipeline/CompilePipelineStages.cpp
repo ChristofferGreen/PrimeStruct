@@ -82,6 +82,28 @@ bool validateGraphicsBackendSupport(const Program &program,
   return true;
 }
 
+// Names where a missing stdlib module was looked for, and how to add another place.
+static std::string describeStdlibSearch(const Options &options) {
+  std::string text = "; stdlib roots in use:";
+  bool anyRoot = false;
+  for (const std::string &path : options.importPaths) {
+    if (std::filesystem::path(path).filename() == "stdlib") {
+      text += (anyRoot ? ", " : " ") + path;
+      anyRoot = true;
+    }
+  }
+  if (!anyRoot) {
+    text += " none; no stdlib directory exists at";
+    std::string separator = " ";
+    for (const std::string &candidate : stdlibSearchCandidates(options.inputPath)) {
+      text += separator + candidate;
+      separator = ", ";
+    }
+  }
+  text += "; add one with --import-path <dir> (a directory named stdlib)";
+  return text;
+}
+
 bool runCompilePipelineImportStage(const Options &options,
                                    CompilePipelineImportStageState &out,
                                    std::string &error,
@@ -312,6 +334,9 @@ bool runCompilePipelineImportStage(const Options &options,
                                    &unresolvedImport,
                                    &ownedModules,
                                    &lazyKeysImportedByModules)) {
+      if (error.rfind("stdlib import requested but", 0) == 0) {
+        error += describeStdlibSearch(options);
+      }
       if (const auto span = findImportPathSpan(out.expandedSource, unresolvedImport);
           span.has_value()) {
         DiagnosticSinkRecord record;

@@ -40,6 +40,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include "primec/pipeline/BuildRunner.h"
 #include "primec/support/BenchmarkSink.h"
 #include "CompilePipelineInternal.h"
 #include "EmitDeps.h"
@@ -49,53 +50,70 @@
 namespace primec {
 using namespace compile_pipeline_detail;
 
+namespace {
 
-void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths) {
-  auto addFromBase = [&](const std::filesystem::path &base) -> bool {
-    std::error_code ec;
-    std::filesystem::path dir = base;
-    if (!std::filesystem::is_directory(dir, ec)) {
-      dir = dir.parent_path();
+// `stdlib` directories under `base` and each of its parents, nearest first.
+void appendStdlibAncestors(const std::filesystem::path &base,
+                           std::vector<std::string> &candidates) {
+  std::error_code ec;
+  std::filesystem::path dir = base;
+  if (!std::filesystem::is_directory(dir, ec)) {
+    dir = dir.parent_path();
+  }
+  for (std::filesystem::path current = dir; !current.empty(); current = current.parent_path()) {
+    candidates.push_back((current / "stdlib").string());
+    if (current == current.root_path()) {
+      break;
     }
-    for (std::filesystem::path current = dir; !current.empty(); current = current.parent_path()) {
-      std::filesystem::path candidate = current / "stdlib";
-      if (std::filesystem::exists(candidate, ec) && std::filesystem::is_directory(candidate, ec)) {
-        std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
-        std::string candidateText = absoluteCandidate.string();
-        for (const auto &path : importPaths) {
-          std::filesystem::path existing = std::filesystem::absolute(path, ec);
-          if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
-            return true;
-          }
-          if (path == candidateText) {
-            return true;
-          }
-        }
-        importPaths.push_back(candidateText);
-        return true;
-      }
-      if (current == current.root_path()) {
-        break;
-      }
-    }
-    return false;
-  };
+  }
+}
 
+} // namespace
+
+std::vector<std::string> stdlibSearchCandidates(const std::string &inputPath) {
+  std::vector<std::string> candidates;
+  std::error_code ec;
   if (!inputPath.empty()) {
-    std::error_code ec;
     std::filesystem::path resolved = std::filesystem::absolute(inputPath, ec);
     if (ec) {
       resolved = std::filesystem::path(inputPath);
     }
-    if (addFromBase(resolved)) {
-      return;
-    }
+    appendStdlibAncestors(resolved, candidates);
   }
-
-  std::error_code ec;
-  std::filesystem::path cwd = std::filesystem::current_path(ec);
+  const std::filesystem::path cwd = std::filesystem::current_path(ec);
   if (!ec) {
-    addFromBase(cwd);
+    appendStdlibAncestors(cwd, candidates);
+  }
+  // Last resort: the checkout or install the running executable belongs to.
+  const std::string self = selfExecutablePath("");
+  if (!self.empty()) {
+    const std::filesystem::path exeDir = std::filesystem::path(self).parent_path();
+    appendStdlibAncestors(exeDir, candidates);
+    candidates.push_back((exeDir.parent_path() / "share" / "primestruct" / "stdlib").string());
+  }
+  return candidates;
+}
+
+void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths) {
+  std::error_code ec;
+  for (const std::string &candidateText : stdlibSearchCandidates(inputPath)) {
+    const std::filesystem::path candidate(candidateText);
+    if (!std::filesystem::exists(candidate, ec) || !std::filesystem::is_directory(candidate, ec)) {
+      continue;
+    }
+    const std::filesystem::path absoluteCandidate = std::filesystem::absolute(candidate, ec);
+    const std::string absoluteText = absoluteCandidate.string();
+    for (const auto &path : importPaths) {
+      const std::filesystem::path existing = std::filesystem::absolute(path, ec);
+      if (!ec && std::filesystem::equivalent(existing, absoluteCandidate, ec)) {
+        return;
+      }
+      if (path == absoluteText) {
+        return;
+      }
+    }
+    importPaths.push_back(absoluteText);
+    return;
   }
 }
 
