@@ -4522,6 +4522,36 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestructAddDoctestShards("${testName}" PrimeStruct_program_matrix_tests ${suiteCases} ${suiteShardCases} 300
                                 "--test-suite=${suite}")
   endforeach()
+  # The slow configs of the matrix (TODO-6326): `optexe-O2` and `exe` compile every program with the host C++
+  # compiler, about 25 core-minutes for the whole matrix, so the entries above leave them out. These entries rerun the
+  # same cases with PRIMESTRUCT_MATRIX_CONFIGS=slow (the oracle config plus the slow configs only) in shards of
+  # PrimeStructProgramMatrixSlowShardCases cases, each under the liveness watchdog like the entries above, so ctest's
+  # parallelism spreads them. A program that fails to compile or runs wrong on either config fails its shard.
+  set(PrimeStructProgramMatrixSlowShardCases 3)
+  foreach(suite IN LISTS PrimeStructProgramMatrixTestSuites)
+    string(REPLACE "." "_" suiteId "${suite}")
+    string(REPLACE "primestruct.program_matrix." "" suiteShort "${suite}")
+    set(suiteCases "")
+    foreach(entry IN LISTS PrimeStructProgramMatrixCaseCounts)
+      if(entry MATCHES "^${suiteShort}=([0-9]+)$")
+        set(suiteCases "${CMAKE_MATCH_1}")
+      endif()
+    endforeach()
+    math(EXPR lastSlowShard "(${suiteCases} + ${PrimeStructProgramMatrixSlowShardCases} - 1) / ${PrimeStructProgramMatrixSlowShardCases} - 1")
+    foreach(index RANGE ${lastSlowShard})
+      math(EXPR first "${index} * ${PrimeStructProgramMatrixSlowShardCases} + 1")
+      math(EXPR last "${first} + ${PrimeStructProgramMatrixSlowShardCases} - 1")
+      if(last GREATER suiteCases)
+        set(last ${suiteCases})
+      endif()
+      primestructWatchedCommand(slowShardCommand 300 $<TARGET_FILE:PrimeStruct_program_matrix_tests>
+                                "--test-suite=${suite}" "--order-by=file" "--first=${first}" "--last=${last}")
+      set(slowTestName "PrimeStruct_${suiteId}_slow_${first}_${last}")
+      add_test(NAME ${slowTestName} COMMAND ${slowShardCommand})
+      set_tests_properties(${slowTestName} PROPERTIES TIMEOUT 300 LABELS "parallel-safe"
+                           ENVIRONMENT "PRIMESTRUCT_MATRIX_CONFIGS=slow")
+    endforeach()
+  endforeach()
   # The concurrent corpus (TODO-5900, tests/vm_threads_corpus.txt): every concurrent program runs on the eager
   # schedule and under `primevm --vm-threads` PrimeStructVmThreadsCorpusRepeats times, each threads run printing what
   # the eager run printed. A `matrix` entry is one case: one primevm process compiles the program once and runs the

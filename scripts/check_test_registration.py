@@ -59,10 +59,14 @@ def unwrap_watchdog(test: dict) -> dict:
 
 
 def is_corpus_entry(test: dict) -> bool:
-    """True for a PrimeStruct_vm_threads_corpus_* entry: a repeated run of already registered cases."""
+    """True for a PrimeStruct_vm_threads_corpus_* entry or a program-matrix `_slow_` entry (PRIMESTRUCT_MATRIX_CONFIGS):
+    a repeated run of already registered cases."""
     for prop in test.get("properties", []):
         if prop.get("name") == "ENVIRONMENT":
-            return any(str(item).startswith("PRIMESTRUCT_VM_THREADS_CORPUS=") for item in prop.get("value", []))
+            return any(
+                str(item).startswith(("PRIMESTRUCT_VM_THREADS_CORPUS=", "PRIMESTRUCT_MATRIX_CONFIGS="))
+                for item in prop.get("value", [])
+            )
     return False
 
 

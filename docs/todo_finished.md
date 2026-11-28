@@ -2731,6 +2731,7 @@ are left unarchived.
 | TODO-6323 | A spawned call with a builtin `map<K, V>` argument run inline empties the spawner's map and leaks two blocks | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6325 | The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all` | [2026-11.md](todo_archive/2026-11.md) | - |
+| TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | [2026-11.md](todo_archive/2026-11.md) | - |
 | TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | [2026-11.md](todo_archive/2026-11.md) | - |
 
 <!-- INDEX-END -->

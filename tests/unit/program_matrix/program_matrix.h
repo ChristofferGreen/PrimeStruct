@@ -13,6 +13,8 @@
 // Configs a program cannot run on are named in `skipConfigs`, with the reason as
 // a comment at the case, so a backend gap stays visible instead of disappearing.
 // PRIMESTRUCT_MATRIX_CONFIGS=all adds the slow configs (optexe, exe) to every case.
+// PRIMESTRUCT_MATRIX_CONFIGS=slow runs only the slow configs of every case, next to the first config as its oracle
+// (the gate's slow-config entries); a case with no slow config runs nothing.
 // The Wasm config (`wasm-wasi`, run under node) is opt-in per case: a program that Wasm supports lists it in
 // `extraConfigs` and then agrees with the VM on stdout and exit code; a machine without node skips it with a message.
 
@@ -189,9 +191,14 @@ try {
 }
 )";
 
+inline bool slowConfigsOnly() {
+  const char *value = std::getenv("PRIMESTRUCT_MATRIX_CONFIGS");
+  return value != nullptr && std::string(value) == "slow";
+}
+
 inline bool includeSlowConfigs() {
   const char *value = std::getenv("PRIMESTRUCT_MATRIX_CONFIGS");
-  return value != nullptr && std::string(value) == "all";
+  return value != nullptr && (std::string(value) == "all" || slowConfigsOnly());
 }
 
 inline std::string quote(const std::string &value) {
@@ -526,6 +533,24 @@ inline void runProgramMatrix(const ProgramCase &listedProgram,
       continue;
     }
     selected.push_back(config);
+  }
+  if (slowConfigsOnly()) {
+    // Keep the oracle (the first config) and the slow configs; a case that selected no slow config is not rerun.
+    const auto isSlow = [](const ExecutionConfig &config) { return config.slow && !config.optIn; };
+    bool anySlow = false;
+    for (const ExecutionConfig &config : selected) {
+      anySlow = anySlow || isSlow(config);
+    }
+    if (!anySlow) {
+      return;
+    }
+    std::vector<ExecutionConfig> kept;
+    for (const ExecutionConfig &config : selected) {
+      if (kept.empty() || isSlow(config)) {
+        kept.push_back(config);
+      }
+    }
+    selected = kept;
   }
   if (selected.empty() && !nodeAvailable() && listed(program.onlyConfigs, "wasm-wasi")) {
     return; // only the Wasm config was asked for and node is missing: skipped above with a message
