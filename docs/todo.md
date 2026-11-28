@@ -126,7 +126,10 @@ of sync with them.
 | TODO-6153 | Twelve gate tests hit the 295 s hard cap together and pass alone in under 11 s | deferred | flaky-tests |
 | TODO-6180 | Wasm formats and parses floats for `String` | deferred | wasm-bytes-host |
 | TODO-6274 | A slot of a `map<K, V>` or a `soa<T>` lowers | deferred | lifecycle-collection-slots |
-| TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | ready | inline-task-lowering |
+| TODO-6324 | A discarded call result that is a builtin `map<K, V>` leaks its two buffers | in_progress | inline-task-lowering |
+| TODO-6325 | The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all` | in_progress | matrix-slow-configs |
+| TODO-6326 | The gate never runs the `optexe` and `exe` program-matrix configs | ready | matrix-slow-configs |
+| TODO-6327 | `primec` finds `stdlib` only from the working directory or the source's own directories | ready | stdlib-lookup |
 | TODO-6081 | An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime | deferred | diagnostics-break-span |
 | TODO-6082 | `borrowed binding: v (root: v, sink: v)` names the sink | deferred | diagnostics-borrow-sink |
 | TODO-6085 | The semantics validator uses the shared demangle helper | blocked | diagnostics-demangle-semantics |
@@ -432,9 +435,10 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
   - stop_rule: `alloc`/`init`/`borrow`/`take`/`drop` of those slots only.
   - repro: `[Pointer<uninitialized<map<i32, i32>>> mut] table{/std/intrinsics/memory/alloc<uninitialized<map<i32, i32>>>(1i32)}` in a `[effects(heap_alloc), return<int>]` main with `primec --emit=vm`.
 
-- [ ] TODO-6324: A discarded call result that is a builtin `map<K, V>` leaks its two buffers
+- [~] TODO-6324: A discarded call result that is a builtin `map<K, V>` leaks its two buffers
   - owner: ai
-  - status: ready
+  - status: in_progress
+  - claimed_by: worktree-agent-ac70ae69ba7bf0b14, 2026-11-28
   - created_at: 2026-11-27
   - phase: Correctness audit 2026-10 (found with TODO-6323)
   - parallel_track: inline-task-lowering
@@ -444,6 +448,48 @@ Code reuse (docs/CodeReusePlan.md, section 17 for how to work it): these leaves 
     - full release gate green
   - stop_rule: the discarded result of a call that returns a builtin `map<K, V>` by value.
   - repro: `[return<map<i32, i32>> effects(heap_alloc)] make_table([i32] value) { [map<i32, i32>] out{map<i32, i32>(1i32, value, 3i32, 4i32)} return(out) }` and `[return<i32> effects(heap_alloc)] round() { make_table(9i32) return(0i32) }`; `main` prints `round()` then `heapLiveBlocks()`: `primevm` prints `0` then `2` (2026-11-27, release build).
+
+- [~] TODO-6325: The task program matrix runs the `exe` config with `PRIMESTRUCT_MATRIX_CONFIGS=all`
+  - owner: ai
+  - status: in_progress
+  - claimed_by: worktree-agent-ac70ae69ba7bf0b14, 2026-11-28
+  - created_at: 2026-11-28
+  - phase: Correctness audit 2026-10 (found checking a report that `--emit=exe` of `task_builtin_map_arguments` fails with an emission error about `std/text`)
+  - parallel_track: matrix-slow-configs
+  - scope: `runTaskProgram` in tests/unit/program_matrix/test_program_matrix_tasks.cpp lists every config but `exe` by name (`config.name != "exe"`), so no task program ever ran on `exe`, with or without `PRIMESTRUCT_MATRIX_CONFIGS=all`, though the comment above it says `exe` runs with `all`. The report could not be reproduced: at ecf5b354d `primec --emit=exe`, `--emit=cpp` and `--emit=optexe` of `task_builtin_map_arguments` compile and the binary prints the VM's output; with the exclusion removed all 34 task cases pass on every config including `exe` (1195 assertions), and all 588 program-matrix cases pass with `PRIMESTRUCT_MATRIX_CONFIGS=all` (0 programs fail on `exe`, 0 on `optexe-O2`). The message the report quotes is what `primec` prints when `stdlib` is not found (TODO-6327), which every backend prints alike. Drop the exclusion so the task cases run on `exe` with `all`.
+  - acceptance:
+    - `PRIMESTRUCT_MATRIX_CONFIGS=all PrimeStruct_program_matrix_tests --test-suite=primestruct.program_matrix.tasks` runs each task case on `exe` and passes
+    - full release gate green
+  - stop_rule: the one config list in `runTaskProgram`; no task program is skipped on `exe` by name.
+  - repro: remove `config.name != "exe" &&` from `runTaskProgram`, build `PrimeStruct_program_matrix_tests` and run the command above in `build-release` (2026-11-28, release build, macOS arm64: 34 passed).
+
+- [ ] TODO-6326: The gate never runs the `optexe` and `exe` program-matrix configs
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-28
+  - phase: Correctness audit 2026-10 (found with TODO-6325)
+  - parallel_track: matrix-slow-configs
+  - scope: `optexe-O2` and `exe` are `slow` configs of tests/unit/program_matrix/program_matrix.h: they run only with `PRIMESTRUCT_MATRIX_CONFIGS=all` or when a case lists them. No ctest entry, `scripts/compile.sh` or CMake file sets that variable, so a program that breaks on `optexe` or `exe` (the host C++ compiler paths) is never seen by the gate; the full run took about 25 minutes of one core on 2026-11-28, too long for the gate as it is. Add a gate entry that runs every case on those two configs in bounded shards (or a representative subset of each suite), each under the liveness watchdog, without raising any timeout.
+  - acceptance:
+    - a ctest entry runs program-matrix cases with `PRIMESTRUCT_MATRIX_CONFIGS=all` (the whole set across shards, or a documented subset per suite) and the added gate time is stated in the commit
+    - a program that fails to compile or runs wrong on `exe` or `optexe-O2` fails that entry
+    - full release gate green
+  - stop_rule: the registration of the slow configs; no new matrix programs.
+  - repro: `grep -rn PRIMESTRUCT_MATRIX_CONFIGS CMakeLists.txt cmake scripts` prints nothing (2026-11-28).
+
+- [ ] TODO-6327: `primec` finds `stdlib` only from the working directory or the source's own directories
+  - owner: ai
+  - status: ready
+  - created_at: 2026-11-28
+  - phase: Correctness audit 2026-10 (found with TODO-6325)
+  - parallel_track: stdlib-lookup
+  - scope: `primec` run from a directory that is not inside a checkout, on a source outside it, fails every backend with `stdlib import requested but matching stdlib modules were not found: import /std/text/* [PSC1001]` although `stdlib/` sits next to the build directory (`build-release/../stdlib`). The message names no search path and does not suggest `--import-path`. Look for `stdlib` next to the `primec` binary's checkout as a last resort, or name the paths searched in the message.
+  - acceptance:
+    - the repro compiles, or its message lists the paths searched and the flag that adds one
+    - a diagnostics test pins the choice
+    - full release gate green
+  - stop_rule: the `stdlib` root search and its message; no import-path redesign.
+  - repro: copy a program with `import /std/text/*` to a scratch directory outside the repo and run `<checkout>/build-release/primec --emit=vm prog.prime --entry /main` from there (2026-11-28, release build).
 
 - [ ] TODO-6081: An unknown `break` is reported at the user's `break`, not inside stdlib/std/file/file.prime
   - owner: ai
